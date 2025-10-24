@@ -50,6 +50,32 @@ endif
 PKG_CFLAGS += $(JSONCPP_CFLAGS)
 PKG_LIBS += $(JSONCPP_LIBS)
 
+# ================================
+# Boost ASIO support
+# ================================
+ifeq ($(UNAME_S),Darwin)
+    # macOS: Use Homebrew Boost
+    BOOST_LIBS := -L/opt/homebrew/lib -lboost_system
+    BOOST_CFLAGS := -I/opt/homebrew/include
+else ifeq ($(ARCH),arm64)
+    # Cross-compile ARM64: Use SDK paths if available
+    ifneq ($(SDK_DIR),)
+        BOOST_LIBS := -lboost_system
+        BOOST_CFLAGS := -I${SDK_DIR}/sysroots/cortexa53-crypto-poky-linux/usr/include
+    else
+        BOOST_LIBS := -lboost_system
+        BOOST_CFLAGS := -I/usr/include
+    endif
+else
+    # Linux: Standard system paths
+    BOOST_LIBS := -lboost_system
+    BOOST_CFLAGS := -I/usr/include
+endif
+
+# Add boost flags to existing variables
+PKG_CFLAGS += $(BOOST_CFLAGS)
+PKG_LIBS += $(BOOST_LIBS)
+
 CXXFLAGS := -Wall -Wextra -std=c++17 -g -O0 $(PKG_CFLAGS) \
 	    $(PKG_CDEFS) \
 	    -DOCA_RUN \
@@ -74,7 +100,9 @@ APP_COMMON_SOURCES       := ../common/workers/ConcreteGainActuator.cpp \
                            ../common/workers/ConcreteSwitchActuator.cpp \
                            ../common/workers/ZoneGroup.cpp \
                            ../common/OcaLiteControllerConfigManager.cpp \
-                           ../common/workers/FusionBlock.cpp
+                           ../common/workers/FusionBlock.cpp \
+                           ../common/UDPSender.cpp \
+                           ../common/FusionAudioBridge.cpp
 
 # Object files
 APP_OBJECTS                := $(patsubst %.cpp,$(BUILD_DIR)/%.o,$(APP_SOURCES))

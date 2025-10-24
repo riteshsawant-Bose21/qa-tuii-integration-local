@@ -1,5 +1,5 @@
 /*
- *  By downloading or using this file, the user agrees to be bound by the terms of the license 
+ *  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
@@ -25,7 +25,7 @@
 /**
  * The classID used for initialization.
  */
-#define OCA_GAIN_CLASSID      OCA_ACTUATOR_CLASSID,static_cast< ::OcaUint16>(5)
+#define OCA_GAIN_CLASSID OCA_ACTUATOR_CLASSID, static_cast<::OcaUint16>(5)
 
 // ---- Helper functions ----
 
@@ -40,16 +40,16 @@ public:
     enum MethodIndex
     {
         /** GetGain() */
-        GET_GAIN        = 1,
+        GET_GAIN = 1,
         /** SetGain() */
-        SET_GAIN        = 2
+        SET_GAIN = 2
     };
 
     /** Property indexes for the supported properties. */
     enum PropertyIndex
     {
         /** Gain in dB */
-        OCA_PROP_GAIN  = 1
+        OCA_PROP_GAIN = 1
     };
 
     /**
@@ -73,7 +73,7 @@ public:
      * @param[out] maxGain  Upper limit of the gain
      * @return Indicates whether the data was successfully retrieved.
      */
-    ::OcaLiteStatus GetGain(::OcaDB& gain, ::OcaDB& minGain, ::OcaDB& maxGain) const;
+    ::OcaLiteStatus GetGain(::OcaDB &gain, ::OcaDB &minGain, ::OcaDB &maxGain) const;
 
     /**
      * Sets the value of the Level property.
@@ -83,8 +83,10 @@ public:
      */
     ::OcaLiteStatus SetGain(::OcaDB gain);
 
-    virtual ::OcaLiteStatus Execute(const ::IOcaLiteReader& reader, const ::IOcaLiteWriter& writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID& methodID,
-                                    ::OcaUint32 parametersSize, const ::OcaUint8* parameters, ::OcaUint8** response);
+    ::OcaLiteStatus SetGainFromFusion(::OcaDB gain);
+
+    virtual ::OcaLiteStatus Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
+                                    ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response);
 
 protected:
     /**
@@ -97,9 +99,9 @@ protected:
      * @param[in]  minGain      Lower limit of the gain
      * @param[in]  maxGain      Upper limit of the gain
      */
-    OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString& role, const ::OcaLiteList< ::OcaLitePort>& ports, ::OcaDB minGain, ::OcaDB maxGain);
+    OcaLiteGain(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString &role, const ::OcaLiteList<::OcaLitePort> &ports, ::OcaDB minGain, ::OcaDB maxGain);
 
-    virtual const ::OcaLiteClassID& GetClassID() const
+    virtual const ::OcaLiteClassID &GetClassID() const
     {
         return CLASS_ID;
     }
@@ -113,7 +115,7 @@ protected:
      * @param[out]  gain    The value of the Gain property
      * @return Indicates whether the operation succeeded.
      */
-    virtual ::OcaLiteStatus GetGainValue(::OcaDB& gain) const;
+    virtual ::OcaLiteStatus GetGainValue(::OcaDB &gain) const;
 
     /**
      * Set the value of the Gain property. Must be implemented by derived classes
@@ -126,16 +128,16 @@ protected:
 
 private:
     /** The gain in dB */
-    ::OcaDB                                 m_gain;
+    ::OcaDB m_gain;
     /** Lower limit of the gain */
-    ::OcaDB                                 m_minGain;
+    ::OcaDB m_minGain;
     /** Upper limit of the gain */
-    ::OcaDB                                 m_maxGain;
+    ::OcaDB m_maxGain;
 
     /** private copy constructor, no copying of object allowed */
-    OcaLiteGain(const ::OcaLiteGain&);
+    OcaLiteGain(const ::OcaLiteGain &);
     /** private assignment operator, no assignment of object allowed */
-    ::OcaLiteGain& operator=(const ::OcaLiteGain&);
+    ::OcaLiteGain &operator=(const ::OcaLiteGain &);
 };
 
 #endif // OCALITEGAIN_H

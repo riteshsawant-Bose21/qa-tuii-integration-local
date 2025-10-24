@@ -28,11 +28,23 @@ public:
                            const ::OcaLiteList<::OcaBoolean> &positionEnable,
                            const std::string &zoneID);
 
-    virtual ~ConcreteSwitchActuator() {}
+    virtual ~ConcreteSwitchActuator();
+
+    /**
+     * @brief Handle source selection messages received from Fusion server and propagate to AES70 clients after updating internal state
+     * @param[in] sourceIndex The source index from Fusion server
+     */
+    void handleFusionSourceMessage(::OcaUint16 sourceIndex);
 
 protected:
-    // Store selected position internally (base also keeps its own). We mirror for potential future hardware logic.
+    /**
+     * @brief Set switch position implementation that forwards AES70 client requests to Fusion server without updating internal state
+     * @param[in] position The switch position to set
+     * @return Indicates whether the operation succeeded
+     */
     virtual ::OcaLiteStatus SetPositionValue(::OcaUint16 position) override;
+
+    // unused methods below - required to implement pure virtuals from base class
     virtual ::OcaLiteStatus SetPositionNameValue(::OcaUint16 index, const ::OcaLiteString &name) override;
     virtual ::OcaLiteStatus SetPositionNamesValue(const ::OcaLiteList<::OcaLiteString> &names) override;
     virtual ::OcaLiteStatus SetPositionEnabledValue(::OcaUint16 index, ::OcaBoolean enabled) override;
@@ -41,7 +53,7 @@ protected:
 private:
     /** The zone identifier from JSON configuration */
     std::string m_zoneID;
-    
+
     ConcreteSwitchActuator(const ConcreteSwitchActuator &);
     ConcreteSwitchActuator &operator=(const ConcreteSwitchActuator &);
 };

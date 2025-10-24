@@ -1,5 +1,5 @@
 /*
- *  By downloading or using this file, the user agrees to be bound by the terms of the license 
+ *  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  *
@@ -21,7 +21,7 @@
 /**
  * The classID used for initialization.
  */
-#define OCA_MUTE_CLASSID      OCA_ACTUATOR_CLASSID,static_cast< ::OcaUint16>(2)
+#define OCA_MUTE_CLASSID OCA_ACTUATOR_CLASSID, static_cast<::OcaUint16>(2)
 
 // ---- Helper functions ----
 
@@ -37,16 +37,16 @@ public:
     enum MethodIndex
     {
         /** GetState() */
-        GET_STATE   = 1,
+        GET_STATE = 1,
         /** SetState() */
-        SET_STATE   = 2
+        SET_STATE = 2
     };
 
     /** Property indexes for the supported properties. */
     enum PropertyIndex
     {
         /** Current state of the mute */
-        OCA_PROP_STATE  = 1
+        OCA_PROP_STATE = 1
     };
 
     /**
@@ -68,7 +68,7 @@ public:
      * @param[out] state    Output parameter that holds mute state (i.e. the value of the State property)
      * @return Indicates whether the data was successfully retrieved.
      */
-    ::OcaLiteStatus GetState(::OcaLiteMuteState& state) const;
+    ::OcaLiteStatus GetState(::OcaLiteMuteState &state) const;
 
     /**
      * Sets the mute state (i.e. value of the State property)
@@ -77,9 +77,10 @@ public:
      * @return Indicates whether the property was successfully set.
      */
     ::OcaLiteStatus SetState(::OcaLiteMuteState state);
+    ::OcaLiteStatus SetStateFromFusion(::OcaLiteMuteState state);
 
-    virtual ::OcaLiteStatus Execute(const ::IOcaLiteReader& reader, const ::IOcaLiteWriter& writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID& methodID,
-                                ::OcaUint32 parametersSize, const ::OcaUint8* parameters, ::OcaUint8** response);
+    virtual ::OcaLiteStatus Execute(const ::IOcaLiteReader &reader, const ::IOcaLiteWriter &writer, ::OcaSessionID sessionID, const ::OcaLiteMethodID &methodID,
+                                    ::OcaUint32 parametersSize, const ::OcaUint8 *parameters, ::OcaUint8 **response);
 
 protected:
     /**
@@ -90,9 +91,9 @@ protected:
      * @param[in]  role         The role of this instance.
      * @param[in]  ports        The OCA input and output ports.
      */
-    OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString& role, const ::OcaLiteList< ::OcaLitePort>& ports);
+    OcaLiteMute(::OcaONo objectNumber, ::OcaBoolean lockable, const ::OcaLiteString &role, const ::OcaLiteList<::OcaLitePort> &ports);
 
-    virtual const ::OcaLiteClassID& GetClassID() const
+    virtual const ::OcaLiteClassID &GetClassID() const
     {
         return CLASS_ID;
     }
@@ -108,7 +109,7 @@ protected:
      * @param[out]  state   The value of the state property
      * @return Indicates whether the operation succeeded.
      */
-    virtual ::OcaLiteStatus GetStateValue(::OcaLiteMuteState& state) const;
+    virtual ::OcaLiteStatus GetStateValue(::OcaLiteMuteState &state) const;
 
     /**
      * Set the value of the state property. Must be implemented by derived classes
@@ -123,12 +124,12 @@ protected:
 
 private:
     /** The mute state */
-    ::OcaLiteMuteState                          m_state;
+    ::OcaLiteMuteState m_state;
 
     /** private copy constructor, no copying of object allowed */
-    OcaLiteMute(const ::OcaLiteMute&);
+    OcaLiteMute(const ::OcaLiteMute &);
     /** private assignment operator, no assignment of object allowed */
-    ::OcaLiteMute& operator=(const ::OcaLiteMute&);
+    ::OcaLiteMute &operator=(const ::OcaLiteMute &);
 };
 
 #endif // OCALITEMUTE_H

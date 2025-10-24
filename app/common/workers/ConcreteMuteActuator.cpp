@@ -7,13 +7,9 @@
  *
  */
 
-// ---- Include system wide include files ----
-#include <iostream>
-
-// ---- FileInfo Macro ----
-
 // ---- Include local include files ----
 #include "ConcreteMuteActuator.h"
+#include "../FusionAudioBridge.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 
 // ---- Helper types and constants ----
@@ -70,29 +66,43 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
     OCA_LOG_INFO("====================================");
 }
 
+ConcreteMuteActuator::~ConcreteMuteActuator()
+{
+    // Destructor implementation - ensures vtable is properly generated
+}
+
 ::OcaLiteStatus ConcreteMuteActuator::SetStateValue(::OcaLiteMuteState muteState)
 {
+
+    // Set the mute state value called from some aes70 client
+    // This will make an update to Fusion and doesnt update internal state
+    // internal state is updated by fusion message handling
+
     try
     {
-        // Simulate setting the mute state in the actual audio processing hardware/software
-        // In a real implementation, this would interface with your DSP or audio hardware
 
         OCA_LOG_INFO_PARAMS("[MUTE] Setting mute state to %s (Gain ID: %s)",
                             muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
 
-        // Here you would typically:
-        // 1. Send the mute command to your audio processing hardware/DSP
-        // 2. Update internal audio processing parameters
-        // 3. Validate that the setting was successful
-
-        // Example hardware interface calls (commented out):
-        // audioHardware.setChannelMute(channelId, muteState == OCAMUTESTATE_MUTED);
-        // dspLibrary.updateMuteParameter(muteState);
-        // registerWrite(MUTE_REGISTER, muteState == OCAMUTESTATE_MUTED ? 1 : 0);
-
-        OCA_LOG_INFO_PARAMS("[MUTE] ✓ Mute state successfully set to %s (Gain ID: %s)",
-                            muteStateToString(muteState), m_gainID.empty() ? "N/A" : m_gainID.c_str());
-
+        if (!m_gainID.empty())
+        {
+            FusionAudioBridge &bridge = FusionAudioBridge::getInstance();
+            if (bridge.isInitialized())
+            {
+                bool muteStateBool = (muteState == OCAMUTESTATE_MUTED);
+                bridge.sendMuteToFusion(m_gainID, muteStateBool);
+                OCA_LOG_INFO_PARAMS("[MUTE] Sent mute state to Fusion: %s = %s",
+                                    m_gainID.c_str(), muteStateBool ? "MUTED" : "UNMUTED");
+            }
+            else
+            {
+                OCA_LOG_WARNING("[MUTE] FusionAudioBridge not initialized - mute state not sent to Fusion");
+            }
+        }
+        else
+        {
+            OCA_LOG_WARNING("[MUTE] No gain ID configured - mute state not sent to Fusion");
+        }
         return OCASTATUS_OK;
     }
     catch (const std::exception &e)
@@ -102,3 +112,33 @@ ConcreteMuteActuator::ConcreteMuteActuator(::OcaONo objectNumber,
     }
 }
 
+void ConcreteMuteActuator::handleFusionMuteMessage(bool muteState)
+{
+    try
+    {
+        ::OcaLiteMuteState ocaState = muteState ? OCAMUTESTATE_MUTED : OCAMUTESTATE_UNMUTED;
+
+        OCA_LOG_INFO_PARAMS("[MUTE] Handling Fusion mute message: %s (Gain ID: %s)",
+                            muteState ? "MUTED" : "UNMUTED", m_gainID.c_str());
+
+        // Set the mute value using the base class method
+        // This will update the internal state AND notify AES70 clients, but won't send back to Fusion
+
+        ::OcaLiteStatus status = SetStateFromFusion(ocaState);
+
+        if (OCASTATUS_OK == status)
+        {
+            OCA_LOG_INFO_PARAMS("[MUTE] ✓ Fusion mute state applied: %s (Gain ID: %s)",
+                                muteState ? "MUTED" : "UNMUTED", m_gainID.c_str());
+        }
+        else
+        {
+            OCA_LOG_ERROR_PARAMS("[MUTE] Failed to apply Fusion mute state: %s (Gain ID: %s)",
+                                 muteState ? "MUTED" : "UNMUTED", m_gainID.c_str());
+        }
+    }
+    catch (const std::exception &e)
+    {
+        OCA_LOG_ERROR_PARAMS("[MUTE] Exception in handleFusionMuteMessage: %s", e.what());
+    }
+}

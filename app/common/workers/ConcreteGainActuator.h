@@ -9,8 +9,6 @@
 #ifndef CONCRETEGAINACTUATOR_H
 #define CONCRETEGAINACTUATOR_H
 
-// ---- Include system wide include files ----
-
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
 
@@ -50,15 +48,19 @@ public:
     /**
      * Destructor.
      */
-    virtual ~ConcreteGainActuator() {}
+    virtual ~ConcreteGainActuator();
+
+    /**
+     * @brief Handle gain update messages received from Fusion server and propagate to AES70 clients after updating internal state
+     * @param gainValue The gain value in dB received from Fusion server
+     */
+    void handleFusionGainMessage(::OcaDB gainValue);
 
 protected:
     /**
-     * Set the value of the Gain property. This method performs the actual
-     * gain adjustment in the audio processing chain.
-     *
-     * @param[in]  gain     Input parameter that holds the value of the Gain property in dB.
-     * @return Indicates whether the operation succeeded.
+     * @brief Set gain value implementation that forwards AES70 client requests to Fusion server without updating internal state
+     * @param[in] gain The gain value in dB to set
+     * @return Indicates whether the operation succeeded
      */
     virtual ::OcaLiteStatus SetGainValue(::OcaDB gain) override;
 
