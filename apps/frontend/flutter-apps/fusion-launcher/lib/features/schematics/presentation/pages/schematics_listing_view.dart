@@ -865,7 +865,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 zoneId: zoneData.id,
                 bgColor: zoneData.color,
                 initiallyExpanded: false,
-                zoneDevices: _projectViewModel.getCircuitsInZone(zoneData.id),
+                zoneCircuits: _projectViewModel.getCircuitsInZone(zoneData.id),
                 subZones: _projectViewModel.getSubZonesForZone(parentZoneId: zoneData.id),
                 onZoneReorder: (String zoneId, int oldIndex, int newIndex) {
                   // setState(() {

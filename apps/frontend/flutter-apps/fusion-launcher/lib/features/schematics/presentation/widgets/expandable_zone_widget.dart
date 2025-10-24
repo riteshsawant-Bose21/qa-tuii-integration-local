@@ -15,7 +15,7 @@ class ExpandableZoneWidget extends StatefulWidget {
   final Color bgColor;
   final Function(String)? onDelete;
   final bool initiallyExpanded;
-  final List<CircuitModel> zoneDevices;
+  final List<CircuitModel> zoneCircuits;
   final List<SubZone> subZones;
   final Function(String zoneId, int oldIndex, int newIndex)? onZoneReorder;
   final Function(String zoneId, int oldIndex, int newIndex)? onSubZoneReorder;
@@ -33,7 +33,7 @@ class ExpandableZoneWidget extends StatefulWidget {
     this.onZoneReorder,
     this.onSubZoneReorder,
     this.onDeviceReorder,
-    required this.zoneDevices,
+    required this.zoneCircuits,
   });
 
   @override
@@ -154,7 +154,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Zone content (visible when expanded) - contains reorderable subzones
   Widget _buildZoneContent() {
-    if (widget.subZones.isEmpty && widget.zoneDevices.isEmpty) {
+    if (widget.subZones.isEmpty && widget.zoneCircuits.isEmpty) {
       // print("widget.subZones = ")
       return Container(
         color: widget.bgColor.withAlpha(60),
@@ -171,7 +171,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     return Column(
       children: <Widget>[
         /// Zone devices list
-        if (widget.zoneDevices.isNotEmpty) ...<Widget>[
+        if (widget.zoneCircuits.isNotEmpty) ...<Widget>[
           Container(
             color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
             padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
@@ -179,28 +179,37 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
               buildDefaultDragHandles: false,
-              itemCount: widget.zoneDevices.length,
+              itemCount: widget.zoneCircuits.length,
               onReorder: (int oldIndex, int newIndex) {
                 // widget.onDeviceReorder?.call(widget.subZoneId, oldIndex, newIndex);
               },
               itemBuilder: (BuildContext context, int index) {
-                final CircuitModel device = widget.zoneDevices[index];
-                final String deviceId = device.id;
-                final String deviceName = device.name;
-                final String location = widget.zoneName;
+                final CircuitModel circuitData = widget.zoneCircuits[index];
+                final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                final String deviceId = circuitData.id;
+                final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
 
                 return ReorderableDragStartListener(
                   key: ValueKey<String>(deviceId),
                   index: index,
                   child: CircuitDeviceWidget(
                     deviceId: deviceId,
-                    deviceName: deviceName,
+                    circuitDeviceName: speakers[index].name,
                     location: location,
-                    circuitDeviceName: '',
                     projectViewModel: _projectViewModel,
+                    onDecrementHardwareInCircuit: () {
+                      final Speaker speaker = speakers.last;
+                      serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                    },
+                    onIncrementHardwareInCircuit: () {
+                      final Speaker speaker = speakers.first.getClone();
+                      serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                      serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                    },
                     onRename: () {},
                     onDuplicate: () {},
                     onDelete: () {},
+                    circuitDeviceCount: speakers.length,
                   ),
                 );
               },
@@ -228,10 +237,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 index: index,
                 child: ExpandableSubZoneWidget(
                   name: subZone.name,
-                  subZoneId: "",
+                  subZoneId: subZone.id,
                   zoneId: widget.zoneId!,
                   subZoneDevices: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
                   onDeviceReorder: widget.onDeviceReorder,
+                  onDelete: (String subZoneId) {
+                    _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId!);
+                  },
                 ),
               );
             },
@@ -299,7 +311,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               child: FusionAppText(
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
               ),
@@ -316,6 +328,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   /// Subzone menu item with nested popup
   Widget _buildSubzoneMenuItem(BuildContext context, String? zoneId) {
     return PopupMenuButton<void>(
+      tooltip: "",
       offset: const Offset(254, 16),
       constraints: const BoxConstraints(maxWidth: 250),
       color: Theme.of(context).colorScheme.white,
@@ -330,7 +343,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             ),
           ],
       child: Container(
-        height: 26,
+        height: 34,
         padding: const EdgeInsets.symmetric(horizontal: 10),
         alignment: Alignment.centerLeft,
         child: Row(
@@ -339,7 +352,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             FusionAppText(
               text: "Sub zone",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 10,
+                fontSize: 12,
                 color: Theme.of(context).colorScheme.fusionTextViewColor,
               ),
             ),

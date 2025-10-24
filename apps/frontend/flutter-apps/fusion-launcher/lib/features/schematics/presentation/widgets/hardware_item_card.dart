@@ -127,65 +127,40 @@ class HardwareItemCard extends StatelessWidget {
               ),
 
               if (isSelected && itemId != null) ...<Widget>[
-                if ((isHovered || isSelected) && itemId != null) ...<Widget>[
-                  const SizedBox(width: 4),
-                  PopupMenuButton<String>(
-                    icon: Icon(
-                      Icons.more_vert,
-                      size: 14,
-                      color: Colors.grey[600],
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    color: Colors.white,
-                    itemBuilder:
-                        (BuildContext context) => <PopupMenuEntry<String>>[
-                          const PopupMenuItem<String>(
-                            value: 'rename',
-                            child: Row(
-                              children: <Widget>[
-                                Icon(Icons.edit, size: 12),
-                                SizedBox(width: 6),
-                                Text('Rename'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
-                            value: 'duplicate',
-                            child: Row(
-                              children: <Widget>[
-                                Icon(Icons.copy, size: 16),
-                                SizedBox(width: 8),
-                                Text('Duplicate'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuItem<String>(
-                            value: 'delete',
-                            child: Row(
-                              children: <Widget>[
-                                Icon(Icons.delete_outline, size: 16, color: Colors.red),
-                                SizedBox(width: 8),
-                                Text('Delete', style: TextStyle(color: Colors.red)),
-                              ],
-                            ),
-                          ),
-                        ],
-                    onSelected: (String value) {
-                      switch (value) {
-                        case 'rename':
-                          onRename?.call(itemId!);
-                          break;
-                        case 'duplicate':
-                          onDuplicate?.call(itemId!);
-                          break;
-                        case 'delete':
-                          onDelete?.call(itemId!);
-                          break;
-                      }
-                    },
+                const SizedBox(width: 4),
+                PopupMenuButton<ZoneMenuAction>(
+                  style: const ButtonStyle(
+                    overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
                   ),
-                ],
+                  offset: const Offset(0, 20),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
+                  color: Theme.of(context).colorScheme.white,
+                  menuPadding: EdgeInsets.zero,
+                  itemBuilder:
+                      (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
+                        /// --- Delete ---
+                        PopupMenuItem<ZoneMenuAction>(
+                          height: 26,
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                          onTap: () {
+                            onDelete?.call(itemId!);
+                          },
+                          child: FusionAppText(
+                            text: "Delete",
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.fusionTextViewColor,
+                            ),
+                          ),
+                        ),
+                      ],
+                  child: Icon(
+                    Icons.more_vert,
+                    size: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
               ],
             ],
           ),

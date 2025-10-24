@@ -143,17 +143,27 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
           final CircuitModel device = widget.subZoneDevices[index];
           print('Building device widget for ${device.name} at index $index');
           final String deviceId = device.id;
-          final String deviceName = device.name;
-          final String location = device.name;
+          final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: device.id).whereType<Speaker>().toList();
+          final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: device.id);
 
           return ReorderableDragStartListener(
             key: ValueKey<String>(deviceId),
             index: index,
             child: CircuitDeviceWidget(
               deviceId: deviceId,
-              deviceName: deviceName,
               location: location,
-              circuitDeviceName: '',
+              circuitDeviceName: speakers[index].name,
+              circuitDeviceCount: speakers.length,
+              onDecrementHardwareInCircuit: () {
+                final Speaker speaker = speakers.last;
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+              },
+              onIncrementHardwareInCircuit: () {
+                final Speaker speaker = speakers.first.getClone();
+                serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: device.id);
+              },
+
               projectViewModel: _projectViewModel,
               onRename: () {},
               onDuplicate: () {},
@@ -204,33 +214,17 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-            /// --- Edit ---
+            /// --- Delete ---
             PopupMenuItem<ZoneMenuAction>(
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               onTap: () {
-                widget.onEdit?.call(widget.zoneId!);
-              },
-              child: FusionAppText(
-                text: "Edit",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
-                ),
-              ),
-            ),
-
-            // --- Delete ---
-            PopupMenuItem<ZoneMenuAction>(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              onTap: () {
-                widget.onDelete?.call(widget.zoneId!);
+                widget.onDelete?.call(widget.subZoneId!);
               },
               child: FusionAppText(
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
               ),
