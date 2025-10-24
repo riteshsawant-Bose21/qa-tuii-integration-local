@@ -37,7 +37,10 @@ class FusionDsp extends HardwareComponent {
     super.outputPortsData,
     required super.locationEntity,
     this.sku = '',
-  }) : super(hardwareName: hardwareName ?? name);
+  }) : super(
+         hardwareName: hardwareName ?? name,
+         id: id ?? "FUSIONDSP${FusionUtils.shortStringUUID()}",
+       );
 
   @override
   String toString() {

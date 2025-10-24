@@ -226,8 +226,12 @@ extension ListeningAreaService on ProjectService {
   }
 
   //get Listing area available for zone, (ignore all listening area already assigned to other zones)
-  List<ListeningArea> getAvailableListeningAreasForZone(String zoneId) {
-    final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId).toSet();
+  List<ListeningArea> getAvailableListeningAreasForZone(String? zoneId) {
+    Set<String> zoneAreas = {};
+
+    if (zoneId != null) {
+      zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId).toSet();
+    }
 
     //get all listening areas which are not added to any of zoneListening, (listening areas with empty parents )
     final availableAreas = listeningAreas.getAll().where((la) {
@@ -239,6 +243,33 @@ extension ListeningAreaService on ProjectService {
     return [
       ...zoneAreas.map((id) => listeningAreas.get(id)).whereType<ListeningArea>(),
       ...availableAreas,
+    ];
+  }
+
+  //get Listing area available for zone, (ignore all listening area already assigned to other zones)
+  List<ListeningArea> getAvailableListeningAreasForSubZone({String? subZoneId, required String parentZone}) {
+    final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZone).toSet();
+
+    Set<String> subZoneAreas = {};
+    if (subZoneId != null) {
+      subZoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId).toSet();
+    }
+
+    //get all listening areas which are not added to any of zones sub zones, (listening areas with only parent zone  )
+    final availableAreas = zoneAreas.where((la) {
+      final parentZones = relationships.getParents(RelationshipType.zoneAreas, la);
+      //check if parentZones contains only main parentZone
+      return parentZones.length == 1 && parentZones.contains(parentZone);
+    }).toList();
+
+    final allAreas = [
+      ...subZoneAreas,
+      ...availableAreas,
+    ];
+
+    //return both zoneAreas and availableAreas
+    return [
+      ...allAreas.map((id) => listeningAreas.get(id)).whereType<ListeningArea>(),
     ];
   }
 }
