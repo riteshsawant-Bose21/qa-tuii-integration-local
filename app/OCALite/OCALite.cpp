@@ -898,8 +898,8 @@ bool TeardownCurrentConfiguration()
     ::OcaLiteCommandHandler::GetInstance().Shutdown();
 
     // // 2. Shutdown Subscription Manager
-    // OCA_LOG_INFO("Shutting down subscription manager...");
-    // ::OcaLiteSubscriptionManager::GetInstance().Shutdown();
+    OCA_LOG_INFO("Shutting down subscription manager...");
+    ::OcaLiteSubscriptionManager::GetInstance().Shutdown();
 
     // 3. Shutdown and Teardown Network
     if (g_ocp1Network)
@@ -1047,6 +1047,17 @@ bool RebuildConfiguration(const Json::Value &configJson)
     if (!ApplyZoneConfiguration(configJson))
     {
         OCA_LOG_ERROR("Failed to apply new zone configuration");
+        return false;
+    }
+
+    OCA_LOG_INFO("Reinitializing subscription manager after teardown...");
+    if (!::OcaLiteSubscriptionManager::GetInstance().SetNrEvents(1))
+    {
+        OCA_LOG_WARNING("SetNrEvents failed during subscription manager reinit");
+    }
+    if (!::OcaLiteSubscriptionManager::GetInstance().Initialize())
+    {
+        OCA_LOG_ERROR("Failed to reinitialize subscription manager");
         return false;
     }
 
