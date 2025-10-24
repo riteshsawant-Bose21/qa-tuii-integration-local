@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/features/schematics/presentation/pages/schematics_listing_view.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
-import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_keyboard_wrapper.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import 'schematics_main_panel.dart';
 
 class SchematicsPage extends StatefulWidget {
   const SchematicsPage({super.key});
@@ -17,7 +17,6 @@ class SchematicsPage extends StatefulWidget {
 
 class _SchematicsPageState extends State<SchematicsPage> {
   final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
-
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   @override
@@ -77,6 +76,8 @@ class _SchematicsPageState extends State<SchematicsPage> {
                   ),
                 ),
                 child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: <Widget>[
                     GestureDetector(
                       onTap: () {
@@ -122,7 +123,7 @@ class _SchematicsPageState extends State<SchematicsPage> {
 
               /// Main Panel
               Expanded(
-                child: isListingViewMode ? const SchematicsMainPanel() : const WiringPage(),
+                child: isListingViewMode ? const SchematicsListingview() : const WiringPage(),
               ),
             ],
           ),

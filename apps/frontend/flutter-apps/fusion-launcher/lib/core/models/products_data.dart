@@ -194,3 +194,27 @@ class RackData extends DeviceComponent {
     ),
   ];
 }
+
+class SwitchData extends DeviceComponent {
+  const SwitchData({
+    required super.assetPath,
+    required super.name,
+    required super.id,
+    required super.price,
+  });
+
+  static const List<SwitchData> demoSwitchs = <SwitchData>[
+    SwitchData(
+      assetPath: 'assets/images/products/rack2.png',
+      name: 'Switch 1',
+      id: '1',
+      price: 1000.0,
+    ),
+    SwitchData(
+      assetPath: 'assets/images/products/rack1.png',
+      name: 'Switch 2',
+      id: '2',
+      price: 2000.0,
+    ),
+  ];
+}

@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
-import 'expandable_popup_menu_widget.dart';
+import 'add_device_expandable_popup_menu_widget.dart';
 
 class CommonDevicesSectionWidget extends StatefulWidget {
   final double width;
@@ -11,6 +12,11 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   final String title;
   final Widget sectionContent;
   final Color backgroundColor;
+  final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
+  final List<ListeningArea> listeningAreas;
+  final List<Zone> zones;
+  final String? selectedDeviceId;
+  final Function(String deviceId, List<String> listeningAreaIds)? onAddDeviceToAreas;
 
   const CommonDevicesSectionWidget({
     super.key,
@@ -19,6 +25,11 @@ class CommonDevicesSectionWidget extends StatefulWidget {
     required this.title,
     required this.sectionContent,
     required this.backgroundColor,
+    this.onTapAddDevice,
+    this.listeningAreas = const <ListeningArea>[],
+    this.zones = const <Zone>[],
+    this.selectedDeviceId,
+    this.onAddDeviceToAreas,
   });
 
   @override
@@ -36,6 +47,8 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   late Animation<double> _searchAnimation;
   late Animation<double> _iconRotationAnimation;
   late Animation<double> _iconScaleAnimation;
+
+  List<String> _selectedListeningAreaIds = <String>[];
 
   @override
   void initState() {
@@ -115,6 +128,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   @override
   Widget build(BuildContext context) {
     return Container(
+      clipBehavior: Clip.none,
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
@@ -160,8 +174,13 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 ),
                                 const SizedBox(width: 4),
 
-                                /// Add button
-                                ExpandablePopupMenuWidget(sectionTitle: widget.title),
+                                /// Add button with listening areas support
+                                AddDeviceExpandablePopupMenuWidget(
+                                  sectionTitle: widget.title,
+                                  onTapAddDevice: widget.onTapAddDevice,
+                                  listeningAreas: widget.listeningAreas,
+                                  zones: widget.zones,
+                                ),
                               ],
                             ),
                           ),
@@ -209,9 +228,9 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
                                   child: Icon(
-                                    isSearchVisible ? Icons.close : Icons.search,
-                                    color: Colors.grey[400],
-                                    size: 16,
+                                    isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
+                                    color: Theme.of(context).colorScheme.greyDark,
+                                    size: 17,
                                   ),
                                 ),
                               ),
@@ -231,7 +250,6 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
             child: SingleChildScrollView(
               child: SizedBox(
                 width: widget.width,
-                // padding: const EdgeInsets.all(10),
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
                   child: widget.sectionContent,

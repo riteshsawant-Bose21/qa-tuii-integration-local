@@ -54,6 +54,11 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     return hardwareComponents.whereType<Amplifier>().toList();
   }
 
+  // get Processors/DSPs
+  List<FusionDsp> get fusionDsps {
+    return hardwareComponents.whereType<FusionDsp>().toList();
+  }
+
   List<FusionEndpoints> get fusionEndpoints {
     return hardwareComponents.whereType<FusionEndpoints>().toList();
   }
