@@ -1,4 +1,4 @@
-/*  By downloading or using this file, the user agrees to be bound by the terms of the license 
+/*  By downloading or using this file, the user agrees to be bound by the terms of the license
  *  agreement located in the LICENSE file in the root of this project
  *  as an original contracting party.
  */
@@ -19,7 +19,9 @@
 #include <OCC/ControlDataTypes/OcaLiteWorkerDataTypes.h>
 #include <OCC/ControlDataTypes/OcaLitePropertyChangedEventData.h>
 #include "Ocp1LiteMessageNotification.h"
-#include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>  //DEBUG
+#include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
+#include <OCC/ControlClasses/Workers/Actuators/OcaLiteMute.h>
+#include <OCC/ControlClasses/Workers/Actuators/OcaLiteSwitch.h>
 
 // ---- Helper types and constants ----
 
@@ -134,6 +136,55 @@ bool Ocp1LiteMessageNotification::Unmarshal(::OcaUint32& bytesLeft, const ::OcaU
 
        ::OcaDB gainVal = eventData.GetPropertyValue();
        UpdateNotificationValue(gainVal);
+
+       rc = OCASTATUS_OK;
+   }
+   else if (destClassIdf.GetClassID()== ::OcaLiteMute::CLASS_ID)
+   {
+       ::OcaLitePropertyID propertyID(::OcaLiteMute::CLASS_ID.GetFieldCount(),
+                                      OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+
+       // Initalized with dummy values
+       ::OcaLitePropertyChangedEventData<::OcaUint8> eventData(
+                        static_cast<::OcaONo>(1110),
+                        static_cast<const ::OcaLitePropertyID>(propertyID),
+                        static_cast<const ::OcaUint8>(1),
+                        OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+
+       eventData.Unmarshal(bytesLeft, source, reader);
+
+       WriteParameters(ocaONo,
+               static_cast<const ::OcaLiteMethodID>(methodId),
+               static_cast<const ::OcaLiteBlob>(context),
+               &eventData);
+
+       ::OcaUint8 muteVal = eventData.GetPropertyValue();
+       UpdateNotificationValue(muteVal);
+
+       rc = OCASTATUS_OK;
+   }
+   else if (destClassIdf.GetClassID()== ::OcaLiteSwitch::CLASS_ID)
+   {
+       ::OcaLitePropertyID propertyID(::OcaLiteMute::CLASS_ID.GetFieldCount(),
+                                      OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+
+       // Initalized with dummy values
+       ::OcaLitePropertyChangedEventData<::OcaUint16> eventData(
+                        static_cast<::OcaONo>(1110),
+                        static_cast<const ::OcaLitePropertyID>(propertyID),
+                        static_cast<const ::OcaUint16>(0),
+                        OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+
+       eventData.Unmarshal(bytesLeft, source, reader);
+
+       WriteParameters(ocaONo,
+               static_cast<const ::OcaLiteMethodID>(methodId),
+               static_cast<const ::OcaLiteBlob>(context),
+               &eventData);
+
+       ::OcaUint16 switchVal = eventData.GetPropertyValue();
+
+       UpdateNotificationValue(switchVal);
 
        rc = OCASTATUS_OK;
    }

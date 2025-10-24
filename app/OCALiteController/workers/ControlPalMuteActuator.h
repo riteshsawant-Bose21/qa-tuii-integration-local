@@ -14,6 +14,8 @@
 
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteMute.h>
+#include "../HostInterface/CommandInterface/CommandInterface.h"
+#include "../ControlPalMsgInterface.h"
 
 // ---- Referenced classes and types ----
 
@@ -28,7 +30,8 @@
  * This class provides a real implementation of the mute functionality
  * by implementing the pure virtual SetStateValue method from OcaLiteMute.
  */
-class ControlPalMuteActuator : public ::OcaLiteMute
+class ControlPalMuteActuator : public ::OcaLiteMute,
+                               public ControlPalMsgInterface<ControllerCmdIntfc>
 {
 public:
     /**
@@ -39,17 +42,27 @@ public:
      * @param[in] role            The role of this instance.
      * @param[in] ports           The OCA input and output ports.
      * @param[in] gainID          The gain identifier from JSON configuration (required)
+     * @param[in] commandQueue The pointer to the command queue object
      */
     ControlPalMuteActuator(::OcaONo objectNumber,
                          ::OcaBoolean lockable,
                          const ::OcaLiteString &role,
                          const ::OcaLiteList<::OcaLitePort> &ports,
-                         const std::string &gainID);
+                         const std::string &gainID,
+                         const ::OcaONo zoneONo,
+                         void *commandQue);
 
     /**
      * Destructor.
      */
     virtual ~ControlPalMuteActuator() {}
+
+    ::OcaONo GetZoneONo()
+    {
+        return m_zoneONo;
+    }
+
+    void SendValue();
 
 protected:
     /**
@@ -65,6 +78,9 @@ private:
 
     /** The gain identifier from JSON configuration */
     std::string m_gainID;
+
+    // ONo of the ZoneBlock
+    ::OcaONo    m_zoneONo;
 
     /** Copy constructor */
     ControlPalMuteActuator(const ControlPalMuteActuator &);

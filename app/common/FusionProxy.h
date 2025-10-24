@@ -30,7 +30,6 @@ class OcaLiteClassIdentification;
 class OcaLiteObjectIdentification;
 
 // ---- Helper types and constants ----
-#include "GeneralProxy.h"
 
 
 // ---- Helper functions ----
@@ -40,7 +39,7 @@ class OcaLiteObjectIdentification;
 /**
  * This is a proxy exposing all functionality we need, no class structures etc.
  */
-class FusionProxy //: public GeneralProxy
+class FusionProxy
 {
 public:
     /**
@@ -59,8 +58,9 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus FusionBlock_GetMembersRecursive(::OcaONo remoteObjectNumber,
-                                                    ::OcaLiteList< ::OcaLiteBlockMember>& members);
+    ::OcaLiteStatus FusionBlock_GetMembersRecursive(
+                                ::OcaONo remoteObjectNumber,
+                                ::OcaLiteList<::OcaLiteBlockMember>& members);
     
     /**
      * GetMembers from an OcaBlock
@@ -70,12 +70,41 @@ public:
      *
      * @return The resulting status.
      */
-    ::OcaLiteStatus FusionBlock_GetMembers(::OcaONo remoteObjectNumber,
-                                           ::OcaLiteList< ::OcaLiteObjectIdentification>& members);
+    ::OcaLiteStatus FusionBlock_GetMembers(
+            ::OcaONo remoteObjectNumber,
+            ::OcaLiteList< ::OcaLiteObjectIdentification>& members);
 
-    ::OcaLiteStatus ConcreteGainActuator_SetGain(::OcaONo remoteObjectNumber, ::OcaDB gainVal);
+        /**
+     * Get configuration details from the Controller Config Manager
+     *
+     * @param[in]  managerONo     The object number of the Config Manager (typically 8001)
+     * @param[in]  controllerId   The controller ID to get configuration for
+     * @param[out] configData     The configuration data as string
+     *
+     * @return The resulting status
+     */
+    ::OcaLiteStatus OcaControllerConfigManager_GetConfigDetails(
+                                         ::OcaONo managerONo,
+                                         const ::OcaLiteString &controllerId,
+                                         ::OcaLiteString &configData);
 
-    ::OcaLiteStatus ConcreteGainActuator_GetGain(::OcaONo remoteObjectNumber, ::OcaDB& gainVal);
+    ::OcaLiteStatus ConcreteGainActuator_SetGain(::OcaONo remoteObjectNumber,
+                                                 ::OcaDB gainVal);
+
+    ::OcaLiteStatus ConcreteGainActuator_GetGain(::OcaONo remoteObjectNumber,
+                                                 ::OcaDB& gainVal);
+
+    ::OcaLiteStatus ConcreteMuteActuator_SetMute(::OcaONo remoteObjectNumber,
+                                                 ::OcaLiteMuteState state);
+
+    ::OcaLiteStatus ConcreteMuteActuator_GetMute(::OcaONo remoteObjectNumber,
+                                                 ::OcaLiteMuteState& state);
+
+    ::OcaLiteStatus ConcreteSwitchActuator_SetSwitch(::OcaONo remoteObjectNumber,
+                                                     ::OcaUint16 position);
+
+    ::OcaLiteStatus ConcreteSwitchActuator_GetSwitch(::OcaONo remoteObjectNumber,
+                                                     ::OcaUint16& position);
 
 private:
     /** The session ID */
@@ -83,7 +112,7 @@ private:
     /** The network object number */
     ::OcaONo        m_networkObjectNumber;
     /** Buffer */
-    ::OcaUint8      m_buffer[10*1024];
+    ::OcaUint8      m_buffer[1024];
 };
 
 #endif //GENERAL_PROXY_H

@@ -85,7 +85,11 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
         rc = GetPositionValue(oldPosition);
         if (oldPosition != position)
         {
+#ifdef OCA_LITE_CONTROLLER   // Controllers will set the position value first
+            m_position = position;
+#endif
             rc = SetPositionValue(position);
+#ifndef OCA_LITE_CONTROLLER   // Controllers should not generate events
             if (OCASTATUS_OK == rc)
             {
                 m_position = position;
@@ -96,12 +100,13 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
                 {
                     ::OcaLitePropertyID propertyID(CLASS_ID.GetFieldCount(), static_cast< ::OcaUint16>(OCA_PROP_POSITION));
                     ::OcaLitePropertyChangedEventData< ::OcaUint16> eventData(GetObjectNumber(),
-                                                                          propertyID,
-                                                                          actualPosition,
-                                                                          OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
+                            propertyID,
+                            actualPosition,
+                            OCAPROPERTYCHANGETYPE_CURRENT_CHANGED);
                     PropertyChanged(eventData, propertyID);
                 }
             }
+#endif
 
         }
     }
@@ -328,6 +333,7 @@ OcaLiteSwitch::OcaLiteSwitch(::OcaONo objectNumber, ::OcaBoolean lockable, const
                 {
                     ::OcaUint8 numberOfParameters(0);
                     ::OcaUint16 position;
+
                     if (reader.Read(bytesLeft, &pCmdParameters, numberOfParameters) &&
                         (1 == numberOfParameters) &&
                         reader.Read(bytesLeft, &pCmdParameters, position))
