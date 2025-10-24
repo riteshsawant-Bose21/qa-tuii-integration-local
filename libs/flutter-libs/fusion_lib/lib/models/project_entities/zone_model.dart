@@ -34,6 +34,19 @@ class Zone {
     '#CDDC39', // Lime
     '#3F51B5', // Indigo
     '#009688', // Teal
+    '#FF5722', // Deep Orange
+    '#8BC34A', // Light Green
+    '#FFC107', // Amber
+    '#673AB7', // Deep Purple
+    '#03A9F4', // Light Blue
+    '#FFCDD2', // Light Pink
+    '#C5E1A5', // Pale Green
+    '#FFE082', // Pale Yellow
+    '#B39DDB', // Lavender
+    '#80DEEA', // Light Cyan
+    '#FFAB91', // Peach
+    '#AED581', // Mint Green
+    '#F48FB1', // Rose Pink
   ];
 
   static getRandomColor() {

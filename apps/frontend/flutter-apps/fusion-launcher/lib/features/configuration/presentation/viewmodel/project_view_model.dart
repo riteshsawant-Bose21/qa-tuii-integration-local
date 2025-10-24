@@ -37,7 +37,7 @@ enum SelectedItemType {
   switchs,
   zone,
   subzone,
-  device,
+  circuit,
 }
 
 class SelectedItem {

@@ -466,15 +466,13 @@ extension ColorExtends on ColorScheme {
 
   bool get isDarkMode => brightness == Brightness.dark;
   Color get primaryColor => isDarkMode ? _primaryColorD : _primaryColorL;
-  Color get fusionButtonColor =>
-      isDarkMode ? _fusionButtonColorL : _fusionButtonColorD;
+  Color get fusionButtonColor => isDarkMode ? _fusionButtonColorL : _fusionButtonColorD;
   Color get fusionButtonTextColor => isDarkMode ? _blackD : _blackL;
   Color get fusionTextViewColor => isDarkMode ? _blackL : _blackD;
   Color get fusionOutlinedButtonColor => isDarkMode ? _blackL : _blackD;
   Color get textFieldBorderColor => isDarkMode ? _borderColorD : _borderColorL;
   Color get textFieldLabelColor => isDarkMode ? _greyDarkD : _greyDarkL;
-  Gradient get gradientTextColor =>
-      isDarkMode ? _gradientTextColorDark : _gradientTextColorLight;
+  Gradient get gradientTextColor => isDarkMode ? _gradientTextColorDark : _gradientTextColorLight;
   Color get dividerColor => isDarkMode ? _dividerColorD : _dividerColorL;
   Color get softGray => isDarkMode ? _softGrayD : _softGrayL;
 
@@ -487,10 +485,8 @@ extension ColorExtends on ColorScheme {
   Color get black => isDarkMode ? _blackD : _blackL;
 
   /// app launcher background colors
-  Color get launcherBgColor1 =>
-      isDarkMode ? launcherBgColorDark1 : launcherBgColorLight1;
-  Color get launcherBgColor2 =>
-      isDarkMode ? launcherBgColorDark2 : launcherBgColorLight2;
+  Color get launcherBgColor1 => isDarkMode ? launcherBgColorDark1 : launcherBgColorLight1;
+  Color get launcherBgColor2 => isDarkMode ? launcherBgColorDark2 : launcherBgColorLight2;
 
   /// app text field colors
   Color get greyDark => isDarkMode ? _greyDarkD : _greyDarkL;
@@ -751,11 +747,11 @@ extension type FusionInputDecoration(InputDecoration _) {
       filled: true,
       fillColor: colorScheme.white,
       isDense: true,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.greyDark) : null,
       suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.greyDark) : null,
       hintStyle: TextStyle(
-        color: colorScheme.grey,
+        color: colorScheme.greyDark,
         fontSize: 12,
       ),
       border: OutlineInputBorder(

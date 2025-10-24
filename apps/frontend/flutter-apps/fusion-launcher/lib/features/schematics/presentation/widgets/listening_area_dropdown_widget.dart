@@ -10,6 +10,7 @@ class ListeningAreaDropdownWidget extends StatefulWidget {
   final List<Zone> zones;
   final List<String> selectedListeningAreaIds;
   final Function(List<String>, String floorId) onSelectionChanged;
+  final bool hideAddLocationButton;
 
   const ListeningAreaDropdownWidget({
     super.key,
@@ -17,6 +18,7 @@ class ListeningAreaDropdownWidget extends StatefulWidget {
     required this.zones,
     required this.selectedListeningAreaIds,
     required this.onSelectionChanged,
+    this.hideAddLocationButton = false,
   });
 
   @override
@@ -54,6 +56,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
   /// Create a new listening area
   void _createNewArea({required String floorId}) {
     if (_areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
+      // todo: Replace with actual area creation logic (e.g., user-defined vertices)
       final ListeningArea newListeningArea = ListeningArea(
         name: _areaNameController.text.trim(),
         vertices: <Offset>[
@@ -105,8 +108,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
     final String selectedId = widget.selectedListeningAreaIds.first;
 
     // Find the listening area by ID
-    final ListeningArea? selectedArea =
-        serviceLocator<ProjectViewModel>().getAllListeningAreas().where((ListeningArea area) => area.id == selectedId).firstOrNull;
+    final ListeningArea? selectedArea = widget.listeningAreas.where((ListeningArea area) => area.id == selectedId).firstOrNull;
 
     if (selectedArea != null) {
       final FloorModel? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: selectedArea.id);
@@ -171,12 +173,12 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                       ),
 
                       /// Listening Areas List
-                      if (serviceLocator<ProjectViewModel>().getAllListeningAreas().isNotEmpty)
+                      if (widget.listeningAreas.isNotEmpty)
                         Flexible(
                           child: SingleChildScrollView(
                             child: Column(
                               children:
-                                  serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
+                                  widget.listeningAreas.map((ListeningArea area) {
                                     final bool isSelected = widget.selectedListeningAreaIds.contains(area.id);
                                     final Zone? zoneData = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id);
                                     final FloorModel? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
@@ -188,12 +190,14 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                         decoration: BoxDecoration(
-                                          color: isSelected ? Colors.blue[50] : null,
+                                          color: isSelected ? Theme.of(context).colorScheme.grey : null,
                                         ),
                                         child: Row(
                                           children: <Widget>[
+                                            /// Radio Button
                                             Radio<String>(
                                               value: area.id,
+                                              activeColor: Theme.of(context).colorScheme.greyDark,
                                               groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
                                               onChanged: (String? value) {
                                                 if (value != null) {
@@ -226,140 +230,141 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                         ),
 
                       /// Create New Area Section
-                      Container(
-                        decoration: BoxDecoration(
-                          border: Border(
-                            top: BorderSide(color: Colors.grey[300]!),
+                      if (!widget.hideAddLocationButton)
+                        Container(
+                          decoration: BoxDecoration(
+                            border: Border(
+                              top: BorderSide(color: Colors.grey[300]!),
+                            ),
                           ),
-                        ),
-                        child: Column(
-                          children: <Widget>[
-                            /// Create New Area Header
-                            InkWell(
-                              onTap: () {
-                                setDropdownState(() {
-                                  _isCreateAreaExpanded = !_isCreateAreaExpanded;
-                                });
-                              },
-                              child: Container(
-                                padding: const EdgeInsets.all(12),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: "Create New Listening Area",
+                          child: Column(
+                            children: <Widget>[
+                              /// Create New Area Header
+                              InkWell(
+                                onTap: () {
+                                  setDropdownState(() {
+                                    _isCreateAreaExpanded = !_isCreateAreaExpanded;
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: "Create New Listening Area",
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.w500,
+                                          ),
+                                        ),
+                                      ),
+                                      Icon(
+                                        _isCreateAreaExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                                        size: 20,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              /// Create New Area Form
+                              if (_isCreateAreaExpanded)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[50],
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      /// Floor Dropdown
+                                      FusionAppText(
+                                        text: "Floor",
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontSize: 10,
                                           fontWeight: FontWeight.w500,
                                         ),
                                       ),
-                                    ),
-                                    Icon(
-                                      _isCreateAreaExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                      size: 20,
-                                      color: Colors.grey[600],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            /// Create New Area Form
-                            if (_isCreateAreaExpanded)
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey[50],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    /// Floor Dropdown
-                                    FusionAppText(
-                                      text: "Floor",
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Colors.grey[300]!),
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      child: DropdownButtonHideUnderline(
-                                        child: DropdownButton<String>(
-                                          hint: const FusionAppText(text: "Select floor"),
-                                          value: _selectedFloor,
-                                          isExpanded: true,
-                                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                                          items:
-                                              serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
-                                                return DropdownMenuItem<String>(
-                                                  value: floor.name,
-                                                  child: FusionAppText(
-                                                    text: floor.name,
-                                                    style: Theme.of(context).textTheme.bodySmall,
-                                                  ),
-                                                );
-                                              }).toList(),
-                                          onChanged: (String? newValue) {
-                                            if (newValue != null) {
-                                              setDropdownState(() {
-                                                _selectedFloor = newValue;
-                                                _selectedFloorId =
-                                                    serviceLocator<ProjectViewModel>()
-                                                        .getAllFloors()
-                                                        .firstWhere((FloorModel floor) => floor.name == newValue)
-                                                        .id;
-                                              });
-                                            }
-                                          },
+                                      const SizedBox(height: 4),
+                                      Container(
+                                        height: 36,
+                                        decoration: BoxDecoration(
+                                          border: Border.all(color: Colors.grey[300]!),
+                                          borderRadius: BorderRadius.circular(4),
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: DropdownButton<String>(
+                                            hint: const FusionAppText(text: "Select floor"),
+                                            value: _selectedFloor,
+                                            isExpanded: true,
+                                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                                            items:
+                                                serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
+                                                  return DropdownMenuItem<String>(
+                                                    value: floor.name,
+                                                    child: FusionAppText(
+                                                      text: floor.name,
+                                                      style: Theme.of(context).textTheme.bodySmall,
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                            onChanged: (String? newValue) {
+                                              if (newValue != null) {
+                                                setDropdownState(() {
+                                                  _selectedFloor = newValue;
+                                                  _selectedFloorId =
+                                                      serviceLocator<ProjectViewModel>()
+                                                          .getAllFloors()
+                                                          .firstWhere((FloorModel floor) => floor.name == newValue)
+                                                          .id;
+                                                });
+                                              }
+                                            },
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 12),
+                                      const SizedBox(height: 12),
 
-                                    /// Area Name Field
-                                    FusionAppText(
-                                      text: "Area Name",
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w500,
+                                      /// Area Name Field
+                                      FusionAppText(
+                                        text: "Area Name",
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w500,
+                                        ),
                                       ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    FusionTextField(
-                                      controller: _areaNameController,
-                                      hintText: "Enter area name",
-                                      decoration: FusionInputDecoration.fusionDense(
-                                        colorScheme: Theme.of(context).colorScheme,
-                                        hintText: 'Enter area name',
+                                      const SizedBox(height: 4),
+                                      FusionTextField(
+                                        controller: _areaNameController,
+                                        hintText: "Enter area name",
+                                        decoration: FusionInputDecoration.fusionDense(
+                                          colorScheme: Theme.of(context).colorScheme,
+                                          hintText: 'Enter area name',
+                                        ),
+                                        onChanged: (String value) {
+                                          setDropdownState(() {}); // Update button state
+                                        },
                                       ),
-                                      onChanged: (String value) {
-                                        setDropdownState(() {}); // Update button state
-                                      },
-                                    ),
 
-                                    const SizedBox(height: 12),
+                                      const SizedBox(height: 12),
 
-                                    /// Create and Select Button
-                                    FusionButton(
-                                      height: 36,
-                                      label: "Add",
-                                      isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
-                                      onTap: () {
-                                        _createNewArea(floorId: _selectedFloorId);
-                                      },
-                                    ),
-                                  ],
+                                      /// Create and Select Button
+                                      FusionButton(
+                                        height: 36,
+                                        label: "Add",
+                                        isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
+                                        onTap: () {
+                                          _createNewArea(floorId: _selectedFloorId);
+                                        },
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                     ],
                   ),
                 );
