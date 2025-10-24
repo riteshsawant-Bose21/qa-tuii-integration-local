@@ -588,8 +588,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                     children:
                                         serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
                                           /// Get available areas for the current zone/sub-zone context
-                                          final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZoneOrSubZone(
-                                            id: "",
+                                          final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone(
+                                            // zoneId: "",
                                           );
                                           final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
                                           final Zone? zoneData = projectViewModel.getZonesForListeningArea(areaId: area.id);

@@ -603,7 +603,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     StateSetter setPopupState,
     String zoneId,
   ) {
-    final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForZoneOrSubZone(id: zoneId);
+    final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForZone(zoneId: zoneId);
 
     final FloorModel? floorName = _projectViewModel.getFloorForListeningArea(areaId: area.id);
     final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);

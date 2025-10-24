@@ -157,9 +157,24 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           portNumber: 1,
                           type: PortType.wifi,
                           compatibleTypes: <PortType>[PortType.wifi],
+                          description: '',
                         ),
-                        PortData(name: 'USB', position: PortPosition.footerRight, portNumber: 2, type: PortType.usb, compatibleTypes: <PortType>[PortType.usb]),
-                        PortData(name: 'ble', position: PortPosition.footerRight, portNumber: 3, type: PortType.ble, compatibleTypes: <PortType>[PortType.ble]),
+                        PortData(
+                          name: 'USB',
+                          position: PortPosition.footerRight,
+                          portNumber: 2,
+                          type: PortType.usb,
+                          compatibleTypes: <PortType>[PortType.usb],
+                          description: '',
+                        ),
+                        PortData(
+                          name: 'ble',
+                          position: PortPosition.footerRight,
+                          portNumber: 3,
+                          type: PortType.ble,
+                          compatibleTypes: <PortType>[PortType.ble],
+                          description: '',
+                        ),
                       ],
                     );
                     serviceLocator<ProjectViewModel>().addHardware(hardware: source);

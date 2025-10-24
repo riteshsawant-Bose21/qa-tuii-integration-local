@@ -299,8 +299,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
         case SelectedItemType.endpoint:
         case SelectedItemType.processor:
         case SelectedItemType.controller:
-        case SelectedItemType.accessory:
-        case SelectedItemType.device:
+        case SelectedItemType.amplifier:
+        case SelectedItemType.racks:
+        case SelectedItemType.switchs:
+        case SelectedItemType.circuit:
           projectManager.removeHardware(_selectedDevice!.id);
           break;
         case SelectedItemType.zone:

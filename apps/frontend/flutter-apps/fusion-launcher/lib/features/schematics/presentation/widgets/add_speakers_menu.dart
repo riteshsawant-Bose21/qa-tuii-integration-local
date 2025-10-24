@@ -56,9 +56,8 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
       onCanceled: () {
         /// Clear selections when menu is closed without adding
         // setState(() {
-        //   _selectedPopupDevice = null;
-        //   _selectedListeningAreaIds.clear();
-        //   _expandedSection = null;
+        speakerData = null;
+        _selectedListeningAreaIds.clear();
         // });
       },
       padding: EdgeInsets.zero,
@@ -89,7 +88,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                   return SingleChildScrollView(
                     physics: const ClampingScrollPhysics(),
                     child: Padding(
-                      padding: const EdgeInsets.only(left: 16, right: 12, bottom: 12),
+                      padding: const EdgeInsets.only(left: 16, right: 12, bottom: 12, top: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
