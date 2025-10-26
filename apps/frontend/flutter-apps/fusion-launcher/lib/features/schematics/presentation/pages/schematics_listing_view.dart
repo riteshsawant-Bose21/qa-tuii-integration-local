@@ -88,7 +88,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   /// Sources [onTapAddDevice]
@@ -168,7 +167,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: Container(), // Not used when expandable is enabled
+                sectionContent: Container(),
                 enableExpandable: true,
                 expandableSections: <ExpandableSection>[
                   ExpandableSection(
@@ -183,7 +182,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   print("Adding hardware of type: ${item.type}");
@@ -220,20 +218,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 backgroundColor: Colors.white,
                 sectionContent: _buildSpeakersContent(),
                 listeningAreas: _projectViewModel.listeningAreas,
-                // zones: _projectViewModel.zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
-                onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                  // if (item is ProductQueryModel) {
-                  //   final Map<String, dynamic> newZone = <String, dynamic>{
-                  //     'id': 'zone_${DateTime.now().millisecondsSinceEpoch}',
-                  //     'name': 'New Zone',
-                  //     'color': Colors.lightBlueAccent[100],
-                  //   };
-                  //   setState(() {
-                  //     _reorderableZones.add(newZone);
-                  //   });
-                  // }
-                },
               ),
 
               /// Controllers
@@ -242,7 +227,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: Container(), // Not used when expandable is enabled
+                sectionContent: Container(),
                 enableExpandable: true,
                 expandableSections: <ExpandableSection>[
                   ExpandableSection(
@@ -252,7 +237,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is ProductQueryModel) {
@@ -263,11 +247,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     );
 
                     serviceLocator<ProjectViewModel>().addHardware(hardware: hardware);
-                    FusionToast.show(
+                    FusionToast.success(
                       context,
                       message: "Controller \"${item.name}\" added",
-                      icon: Icons.check_circle_outline,
-                      backgroundColor: Colors.green[600],
                     );
                   }
                 },
@@ -294,7 +276,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.racks ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is RackData) {
@@ -335,7 +316,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     );
   }
 
-  // Create a simple controllers list without expandable wrapper
+  /// Create a simple controllers list without expandable wrapper
   Widget _buildControllersList() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
@@ -694,32 +675,11 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               index: index,
               child: ExpandableZoneWidget(
                 zoneName: zoneData.name,
-                assetImagePath: 'assets/speaker.png',
                 zoneId: zoneData.id,
                 bgColor: zoneData.color,
                 initiallyExpanded: false,
                 zoneCircuits: _projectViewModel.getCircuitsInZone(zoneData.id),
                 subZones: _projectViewModel.getSubZonesForZone(parentZoneId: zoneData.id),
-                onSubZoneReorder: (String zoneId, int oldIndex, int newIndex) {
-                  // setState(() {
-                  //   final List<Map<String, dynamic>>? subZones = _reorderableSubZones[zoneId];
-                  //   if (subZones != null) {
-                  //     if (newIndex > oldIndex) newIndex -= 1;
-                  //     final Map<String, dynamic> item = subZones.removeAt(oldIndex);
-                  //     subZones.insert(newIndex, item);
-                  //   }
-                  // });
-                },
-                onDeviceReorder: (String subZoneId, int oldIndex, int newIndex) {
-                  // setState(() {
-                  //   final List<Map<String, dynamic>>? devices = _reorderableDevices[subZoneId];
-                  //   if (devices != null) {
-                  //     if (newIndex > oldIndex) newIndex -= 1;
-                  //     final Map<String, dynamic> item = devices.removeAt(oldIndex);
-                  //     devices.insert(newIndex, item);
-                  //   }
-                  // });
-                },
                 onDelete: (String id) {
                   serviceLocator<ProjectViewModel>().removeZone(zoneId: zoneData.id);
                   FusionToast.error(
