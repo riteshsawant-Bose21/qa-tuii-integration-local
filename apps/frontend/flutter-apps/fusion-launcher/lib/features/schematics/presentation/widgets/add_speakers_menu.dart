@@ -193,7 +193,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                             child: ListeningAreaDropdownWidget(
                               listeningAreas: listeningAreas,
                               hideAddLocationButton: true,
-                              zones: serviceLocator<ProjectViewModel>().zones,
+                              // zones: serviceLocator<ProjectViewModel>().zones,
                               selectedListeningAreaIds: _selectedListeningAreaIds,
                               onSelectionChanged: (List<String> selectedIds, String floorId) {
                                 _selectedListeningAreaIds = selectedIds;

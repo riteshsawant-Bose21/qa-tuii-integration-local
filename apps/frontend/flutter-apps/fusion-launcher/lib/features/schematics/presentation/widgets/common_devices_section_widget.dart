@@ -14,7 +14,7 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   final Color backgroundColor;
   final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
-  final List<Zone> zones;
+  // final List<Zone> zones;
   final String? selectedDeviceId;
   final Function(String deviceId, List<String> listeningAreaIds)? onAddDeviceToAreas;
 
@@ -31,7 +31,7 @@ class CommonDevicesSectionWidget extends StatefulWidget {
     required this.backgroundColor,
     this.onTapAddDevice,
     this.listeningAreas = const <ListeningArea>[],
-    this.zones = const <Zone>[],
+    // this.zones = const <Zone>[],
     this.selectedDeviceId,
     this.onAddDeviceToAreas,
     this.expandableSections,
@@ -279,7 +279,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                   sectionTitle: widget.title,
                                   onTapAddDevice: widget.onTapAddDevice,
                                   listeningAreas: widget.listeningAreas,
-                                  zones: widget.zones,
+                                  // zones: widget.zones,
                                 ),
                               ],
                             ),

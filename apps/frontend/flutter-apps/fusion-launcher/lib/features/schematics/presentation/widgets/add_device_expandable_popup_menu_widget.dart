@@ -13,14 +13,14 @@ class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
   final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
-  final List<Zone> zones;
+  // final List<Zone> zones;
 
   const AddDeviceExpandablePopupMenuWidget({
     super.key,
     required this.sectionTitle,
     this.onTapAddDevice,
     this.listeningAreas = const <ListeningArea>[],
-    this.zones = const <Zone>[],
+    // this.zones = const <Zone>[],
   });
 
   @override
@@ -420,7 +420,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                   width: double.infinity,
                   child: ListeningAreaDropdownWidget(
                     listeningAreas: widget.listeningAreas,
-                    zones: widget.zones,
+                    // zones: widget.zones,
                     selectedListeningAreaIds: _selectedListeningAreaIds,
                     onSelectionChanged: (List<String> selectedIds, String floorId) {
                       _selectedListeningAreaIds = selectedIds;

@@ -53,17 +53,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     return serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: hardwareId);
   }
 
-  List<Zone> get _zones => <Zone>[
-    Zone(
-      id: 'zone_1',
-      name: 'Zone 1',
-    ),
-    Zone(
-      id: 'zone_2',
-      name: 'Zone 2',
-    ),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -99,7 +88,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                zones: _zones,
+                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   /// Sources [onTapAddDevice]
@@ -194,7 +183,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                zones: _zones,
+                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   print("Adding hardware of type: ${item.type}");
@@ -231,7 +220,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 backgroundColor: Colors.white,
                 sectionContent: _buildSpeakersContent(),
                 listeningAreas: _projectViewModel.listeningAreas,
-                zones: _projectViewModel.zones,
+                // zones: _projectViewModel.zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   // if (item is ProductQueryModel) {
@@ -263,7 +252,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                zones: _zones,
+                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is ProductQueryModel) {
@@ -305,7 +294,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                zones: _zones,
+                // zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.racks ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is RackData) {
@@ -733,7 +722,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 },
                 onDelete: (String id) {
                   serviceLocator<ProjectViewModel>().removeZone(zoneId: zoneData.id);
-                  FusionToast.success(
+                  FusionToast.error(
                     context,
                     message: 'Zone "${zoneData.name}" deleted',
                   );

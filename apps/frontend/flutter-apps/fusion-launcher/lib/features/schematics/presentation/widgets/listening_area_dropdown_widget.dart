@@ -7,7 +7,6 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ListeningAreaDropdownWidget extends StatefulWidget {
   final List<ListeningArea> listeningAreas;
-  final List<Zone> zones;
   final List<String> selectedListeningAreaIds;
   final Function(List<String>, String floorId) onSelectionChanged;
   final bool hideAddLocationButton;
@@ -15,7 +14,6 @@ class ListeningAreaDropdownWidget extends StatefulWidget {
   const ListeningAreaDropdownWidget({
     super.key,
     required this.listeningAreas,
-    required this.zones,
     required this.selectedListeningAreaIds,
     required this.onSelectionChanged,
     this.hideAddLocationButton = false,
