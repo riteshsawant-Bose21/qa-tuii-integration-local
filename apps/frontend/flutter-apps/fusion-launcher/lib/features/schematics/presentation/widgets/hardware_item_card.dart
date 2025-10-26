@@ -13,6 +13,7 @@ class HardwareItemCard extends StatefulWidget {
   final Function(String)? onDelete;
   final Function(String)? onRename;
   final Function(String)? onDuplicate;
+  final String? highlightQuery;
 
   const HardwareItemCard({
     super.key,
@@ -26,6 +27,7 @@ class HardwareItemCard extends StatefulWidget {
     this.onRename,
     this.onDuplicate,
     this.zone,
+    this.highlightQuery,
   });
 
   @override
@@ -34,6 +36,48 @@ class HardwareItemCard extends StatefulWidget {
 
 class _HardwareItemCardState extends State<HardwareItemCard> {
   bool _isHovered = false;
+
+  /// Builds the device name with highlighted search query matches.
+  Widget _buildHighlightedName() {
+    final TextStyle baseStyle = Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 10);
+    final String query = (widget.highlightQuery ?? '').trim();
+    if (query.isEmpty) {
+      return FusionAppText(
+        text: widget.name,
+        maxLine: 1,
+        style: baseStyle,
+      );
+    }
+
+    final RegExp reg = RegExp(RegExp.escape(query), caseSensitive: false);
+    final List<TextSpan> spans = <TextSpan>[];
+    int lastIndex = 0;
+
+    for (final RegExpMatch m in reg.allMatches(widget.name)) {
+      if (m.start > lastIndex) {
+        spans.add(TextSpan(text: widget.name.substring(lastIndex, m.start), style: baseStyle));
+      }
+      spans.add(
+        TextSpan(
+          text: widget.name.substring(m.start, m.end),
+          style: baseStyle.copyWith(
+            fontWeight: FontWeight.w600,
+            backgroundColor: Colors.yellow[200],
+            color: Colors.black,
+          ),
+        ),
+      );
+      lastIndex = m.end;
+    }
+    if (lastIndex < widget.name.length) {
+      spans.add(TextSpan(text: widget.name.substring(lastIndex), style: baseStyle));
+    }
+
+    return RichText(
+      maxLines: 1,
+      text: TextSpan(children: spans),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,11 +116,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                         FusionImage.asset(widget.assetImagePath, width: 22, height: 22, fit: BoxFit.contain),
                         const SizedBox(width: 6),
                         Expanded(
-                          child: FusionAppText(
-                            text: widget.name,
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
-                          ),
+                          child: _buildHighlightedName(),
                         ),
                       ],
                     ),

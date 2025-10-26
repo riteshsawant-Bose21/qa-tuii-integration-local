@@ -61,6 +61,9 @@ class FusionTextField extends StatelessWidget {
   /// Border for the text field (default: transparent).
   final InputBorder? border;
 
+  /// Focus node for managing focus.
+  final FocusNode? focusNode;
+
   const FusionTextField({
     super.key,
     required this.hintText,
@@ -76,6 +79,7 @@ class FusionTextField extends StatelessWidget {
     this.decoration,
     this.textAlign = TextAlign.start,
     this.border,
+    this.focusNode,
   });
 
   @override
@@ -96,6 +100,7 @@ class FusionTextField extends StatelessWidget {
 
     return TextField(
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscureText,
       keyboardType: keyboardType,
       onChanged: onChanged,
