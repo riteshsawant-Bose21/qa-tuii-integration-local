@@ -22,9 +22,6 @@ class SchematicsListingview extends StatefulWidget {
 class _SchematicsListingviewState extends State<SchematicsListingview> {
   List<Speaker> _reorderableSpeakers = <Speaker>[];
 
-  final Map<String, List<Map<String, dynamic>>> _reorderableSubZones = <String, List<Map<String, dynamic>>>{};
-  final Map<String, List<Map<String, dynamic>>> _reorderableDevices = <String, List<Map<String, dynamic>>>{};
-
   static const double _speakersWidthRatio = 0.25; // 25% of available width
   static const double _normalColumnWidthRatio = 0.1875; // 18.75% each (4 columns = 75%)
 
@@ -34,45 +31,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   @override
   void initState() {
     super.initState();
-    _initializeReorderableLists();
-  }
-
-  void _initializeReorderableLists() {
-    // Initialize subzones for each zone
-    _reorderableSubZones['zone_1'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'subzone_1_1', 'name': 'Stage Area', 'zoneId': 'zone_1'},
-      <String, dynamic>{'id': 'subzone_1_2', 'name': 'Audience Area', 'zoneId': 'zone_1'},
-      <String, dynamic>{'id': 'subzone_1_3', 'name': 'VIP Section', 'zoneId': 'zone_1'},
-    ];
-
-    _reorderableSubZones['zone_2'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'subzone_2_1', 'name': 'Presentation Area', 'zoneId': 'zone_2'},
-      <String, dynamic>{'id': 'subzone_2_2', 'name': 'Seating Area', 'zoneId': 'zone_2'},
-    ];
-
-    // Initialize devices for each subzone
-    _reorderableDevices['subzone_1_1'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'device_1_1_1', 'name': 'Speaker 1', 'position': 'Front Left', 'subZoneId': 'subzone_1_1'},
-      <String, dynamic>{'id': 'device_1_1_2', 'name': 'Speaker 2', 'position': 'Front Right', 'subZoneId': 'subzone_1_1'},
-    ];
-
-    _reorderableDevices['subzone_1_2'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'device_1_2_1', 'name': 'Speaker 3', 'position': 'Center', 'subZoneId': 'subzone_1_2'},
-      <String, dynamic>{'id': 'device_1_2_2', 'name': 'Speaker 4', 'position': 'Rear', 'subZoneId': 'subzone_1_2'},
-    ];
-
-    _reorderableDevices['subzone_1_3'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'device_1_3_1', 'name': 'Speaker 5', 'position': 'Left Side', 'subZoneId': 'subzone_1_3'},
-    ];
-
-    _reorderableDevices['subzone_2_1'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'device_2_1_1', 'name': 'Speaker 6', 'position': 'Front Center', 'subZoneId': 'subzone_2_1'},
-    ];
-
-    _reorderableDevices['subzone_2_2'] = <Map<String, dynamic>>[
-      <String, dynamic>{'id': 'device_2_2_1', 'name': 'Speaker 7', 'position': 'Back Left', 'subZoneId': 'subzone_2_2'},
-      <String, dynamic>{'id': 'device_2_2_2', 'name': 'Speaker 8', 'position': 'Back Right', 'subZoneId': 'subzone_2_2'},
-    ];
   }
 
   @override
@@ -126,7 +84,20 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: _buildSourcesAndEndpointsContent(),
+                sectionContent: Container(), // Not used when expandable is enabled
+                enableExpandable: true,
+                expandableSections: <ExpandableSection>[
+                  ExpandableSection(
+                    title: "Sources",
+                    content: _buildSourcesContent(),
+                    initiallyExpanded: true,
+                  ),
+                  ExpandableSection(
+                    title: "Endpoints",
+                    content: _buildEndpointsContent(),
+                    initiallyExpanded: true,
+                  ),
+                ],
                 listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
@@ -208,7 +179,20 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: _buildProcessorsAndAmplifiers(),
+                sectionContent: Container(), // Not used when expandable is enabled
+                enableExpandable: true,
+                expandableSections: <ExpandableSection>[
+                  ExpandableSection(
+                    title: "Fusion Devices",
+                    content: _buildProcessorsContent(),
+                    initiallyExpanded: true,
+                  ),
+                  ExpandableSection(
+                    title: "Amplifiers",
+                    content: _buildAmplifiersContent(),
+                    initiallyExpanded: true,
+                  ),
+                ],
                 listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
@@ -269,7 +253,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: _buildControllersContent(),
+                sectionContent: Container(), // Not used when expandable is enabled
+                enableExpandable: true,
+                expandableSections: <ExpandableSection>[
+                  ExpandableSection(
+                    title: "Controllers",
+                    content: _buildControllersList(),
+                    initiallyExpanded: true,
+                  ),
+                ],
                 listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
@@ -298,7 +290,20 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 width: normalColumnWidth,
                 height: double.infinity,
                 backgroundColor: Colors.grey[200]!,
-                sectionContent: _buildAccessories(),
+                sectionContent: Container(), // Not used when expandable is enabled
+                enableExpandable: true,
+                expandableSections: <ExpandableSection>[
+                  ExpandableSection(
+                    title: "Racks",
+                    content: _buildRacksContent(),
+                    initiallyExpanded: true,
+                  ),
+                  ExpandableSection(
+                    title: "Switches",
+                    content: _buildSwitchesContent(),
+                    initiallyExpanded: true,
+                  ),
+                ],
                 listeningAreas: _projectViewModel.listeningAreas,
                 zones: _zones,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.racks ? _projectViewModel.selectedDevice?.id : null,
@@ -341,126 +346,49 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     );
   }
 
-  /// Combined Sources & Endpoints content with separate sections
-  Widget _buildSourcesAndEndpointsContent() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// Sources Section
-          FusionAppText(
-            text: "Sources",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
+  // Create a simple controllers list without expandable wrapper
+  Widget _buildControllersList() {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
 
-          /// Sources List
-          _buildSourcesContent(),
+        return CommonReorderableListView<FusionController>(
+          items: _projectViewModel.fusionControllers,
+          emptyMessage: "No controllers added yet",
+          onReorder: (int oldIndex, int newIndex) {
+            if (oldIndex < newIndex) {
+              newIndex -= 1;
+            }
+            final String hwToMove = _projectViewModel.fusionControllers[oldIndex].id;
+            final String hwAtNewIndex = _projectViewModel.fusionControllers[newIndex].id;
+            _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+            _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.controller);
+          },
+          keyExtractor: (FusionController controller) => controller.id,
+          itemBuilder: (BuildContext context, FusionController controller, int index) {
+            final bool isSelected = selectedDevice?.id == controller.id && selectedDevice?.type == SelectedItemType.controller;
 
-          const SizedBox(height: 16),
-
-          /// Endpoints Section
-          FusionAppText(
-            text: "Endpoints",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          /// Endpoints List
-          _buildEndpointsContent(),
-        ],
-      ),
-    );
-  }
-
-  /// Combined Processors & Amplifiers content with separate sections
-  Widget _buildProcessorsAndAmplifiers() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// Processors Section
-          FusionAppText(
-            text: "Fusion Devices",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          /// Processors List
-          _buildProcessorsContent(),
-
-          const SizedBox(height: 16),
-
-          /// Amplifiers Section
-          FusionAppText(
-            text: "Amplifiers",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          /// Amplifiers List
-          _buildAmplifiersContent(),
-        ],
-      ),
-    );
-  }
-
-  /// Amplifiers content using CommonReorderableListView
-  Widget _buildAccessories() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// Processors Section
-          FusionAppText(
-            text: "Racks",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          /// Processors List
-          _buildRacksContent(),
-
-          const SizedBox(height: 16),
-
-          /// Amplifiers Section
-          FusionAppText(
-            text: "Switches",
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Colors.black,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          /// Amplifiers List
-          _buildSwitchesContent(),
-        ],
-      ),
+            return HardwareItemCard(
+              name: controller.name,
+              assetImagePath: controller.assetImagePath,
+              itemId: controller.id,
+              zone: getZoneData(controller.id),
+              location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add Location",
+              isSelected: isSelected,
+              onTap: () => _projectViewModel.setSelectedDevice(controller.id, SelectedItemType.controller),
+              onDelete: (String id) {
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
+                FusionToast.error(
+                  context,
+                  message: 'Controller "${controller.name}" deleted',
+                );
+              },
+              onRename: (String id) => print('Rename controller $id'),
+              onDuplicate: (String id) => print('Duplicate controller $id'),
+            );
+          },
+        );
+      },
     );
   }
 
@@ -687,55 +615,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
         );
       },
-    );
-  }
-
-  /// Controllers content using CommonReorderableListView
-  Widget _buildControllersContent() {
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-
-          return CommonReorderableListView<FusionController>(
-            items: _projectViewModel.fusionControllers,
-            emptyMessage: "No controllers added yet",
-            onReorder: (int oldIndex, int newIndex) {
-              if (oldIndex < newIndex) {
-                newIndex -= 1;
-              }
-              final String hwToMove = _projectViewModel.fusionControllers[oldIndex].id;
-              final String hwAtNewIndex = _projectViewModel.fusionControllers[newIndex].id;
-              _projectViewModel.reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
-              _projectViewModel.setSelectedDevice(hwToMove, SelectedItemType.controller);
-            },
-            keyExtractor: (FusionController controller) => controller.id,
-            itemBuilder: (BuildContext context, FusionController controller, int index) {
-              final bool isSelected = selectedDevice?.id == controller.id && selectedDevice?.type == SelectedItemType.controller;
-
-              return HardwareItemCard(
-                name: controller.name,
-                assetImagePath: controller.assetImagePath,
-                itemId: controller.id,
-                zone: getZoneData(controller.id),
-                location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add Location",
-                isSelected: isSelected,
-                onTap: () => _projectViewModel.setSelectedDevice(controller.id, SelectedItemType.controller),
-                onDelete: (String id) {
-                  serviceLocator<ProjectViewModel>().removeHardware(hardwareId: id);
-                  FusionToast.error(
-                    context,
-                    message: 'Controller "${controller.name}" deleted',
-                  );
-                },
-                onRename: (String id) => print('Rename controller $id'),
-                onDuplicate: (String id) => print('Duplicate controller $id'),
-              );
-            },
-          );
-        },
-      ),
     );
   }
 
