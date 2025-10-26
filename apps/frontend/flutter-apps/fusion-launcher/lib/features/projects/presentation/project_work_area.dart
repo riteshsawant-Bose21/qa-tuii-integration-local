@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -29,6 +28,7 @@ import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/coverage_panel.dart';
+import '../widget/building/side_panle_widgets/devices_panel.dart';
 import '../widget/building/side_panle_widgets/properties_panel.dart';
 import '../widget/building/side_panle_widgets/schematic_properties.dart';
 import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
@@ -41,8 +41,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -474,6 +473,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                 isCollapsibleSection: false,
                                 dockItemWidget: () => const BuildingPlan(),
                               ),
+
                               DockItemConfig(
                                 id: "2",
                                 title: "COVERAGE",
@@ -505,7 +505,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       },
                                     ),
                               ),
-
                               DockItemConfig(
                                 id: "5",
                                 title: "PROPERTIES",
@@ -531,8 +530,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
-                                                (GenericHardwareComponent component) =>
-                                                    component.type == GenericHardwareComponentType.rack,
+                                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                                               )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
@@ -541,18 +539,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent &&
-                                                    component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
                               ),
                               DockItemConfig(
                                 id: "7",
-                                title: "ZONE & LISTENING AREAS",
-                                side: "right",
+                                title: "ZONES",
+                                side: "left",
                                 controller: zoneAreaController,
-                                initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                                initiallyExpanded: true,
                                 // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
                                 dockItemWidget: () => const ZoneAndListeningAreaPanel(),
                               ),
@@ -606,8 +603,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
-                                                (GenericHardwareComponent component) =>
-                                                    component.type == GenericHardwareComponentType.rack,
+                                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                                               )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
@@ -616,8 +612,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent &&
-                                                    component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
@@ -820,10 +815,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

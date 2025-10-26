@@ -178,6 +178,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                 listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
                                 floor: floor,
                                 floorPlanEntity: floor.floorPlan,
+                                selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
+                                selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
                                 onUpdateHardwareComponent: (HardwareComponent updatedHw) {
                                   final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
 

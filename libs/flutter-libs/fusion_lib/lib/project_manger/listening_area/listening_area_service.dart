@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
@@ -135,24 +133,36 @@ extension ListeningAreaService on ProjectService {
 
     final currentAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId);
     if (currentAreas.contains(listeningAreaId)) {
-      // Already linked; no-op
-      return;
+      // Check if it's also in any subzones of this zone - if so, remove from subzones
+      final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
+      for (final subZoneId in subZoneIds) {
+        final subZoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
+        if (subZoneAreas.contains(listeningAreaId)) {
+          relationships.unlink(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+        }
+      }
+      return; // Already linked to target zone, just removed from subzones
     }
 
-    // Find current zones where this ListeningArea exists
-    final currentZone = relationships
+    // Find current zones/subzones where this ListeningArea exists
+    final currentParents = relationships
         .getParents(
           RelationshipType.zoneAreas,
           listeningAreaId,
         )
         .toList();
 
-    //  Remove from any old zones first (cleanup old zone links)
-    for (final oldZoneId in currentZone) {
-      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+    // Remove from all current parents except the target zone
+    for (final parentId in currentParents) {
+      if (parentId != zoneId) {
+        relationships.unlink(RelationshipType.zoneAreas, parentId, listeningAreaId);
+      }
     }
 
-    relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
+    // Link to the new zone (if not already linked)
+    if (!currentParents.contains(zoneId)) {
+      relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
+    }
   }
 
   /// Remove ListeningArea from Zone, cleaning circuits + hardware references
@@ -196,13 +206,6 @@ extension ListeningAreaService on ProjectService {
 
     // Unlink listening area from zone
     relationships.unlink(RelationshipType.zoneAreas, zoneId, listeningAreaId);
-
-    final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
-
-    // Also remove from any subzones under this zone
-    for (final subZoneId in subZoneIds) {
-      removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
-    }
   }
 
   FloorModel? getFloorForListeningArea(String listeningAreaId) {

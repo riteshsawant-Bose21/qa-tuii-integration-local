@@ -108,6 +108,12 @@ extension SubZoneService on ProjectService {
       throw Exception('ListeningArea $listeningAreaId not found');
     }
 
+    // Check if already in this subzone
+    final currentSubzoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
+    if (currentSubzoneAreas.contains(listeningAreaId)) {
+      return; // Already linked; no-op
+    }
+
     //get parent zone
     final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, subZoneId);
 
@@ -115,15 +121,21 @@ extension SubZoneService on ProjectService {
       throw Exception('SubZone $subZoneId has no parent Zone');
     }
 
-    //get listening areas in parent zone
-    final parentsListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZoneId);
+    // Find all current parents (zones and subzones) where this listening area exists
+    final currentParents = relationships.getParents(RelationshipType.zoneAreas, listeningAreaId).toList();
 
-    //if listening area id is not in parents listening areas, throw exception
-    if (!parentsListeningAreas.contains(listeningAreaId)) {
-      throw Exception('ListeningArea $listeningAreaId is not part of parent Zone $parentZoneId');
+    // Remove from all current parents first
+    for (final parentId in currentParents) {
+      relationships.unlink(RelationshipType.zoneAreas, parentId, listeningAreaId);
     }
 
-    //link relationship
+    // Ensure the listening area is linked to the parent zone
+    final parentsListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZoneId);
+    if (!parentsListeningAreas.contains(listeningAreaId)) {
+      relationships.link(RelationshipType.zoneAreas, parentZoneId, listeningAreaId);
+    }
+
+    //link to subzone
     relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
   }
 
