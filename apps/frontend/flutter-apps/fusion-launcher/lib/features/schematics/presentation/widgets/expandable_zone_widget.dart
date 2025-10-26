@@ -10,27 +10,21 @@ import 'expandable_sub_zone_widgets.dart';
 
 class ExpandableZoneWidget extends StatefulWidget {
   final String zoneName;
-  final String assetImagePath;
   final String zoneId;
   final Color bgColor;
   final Function(String)? onDelete;
   final bool initiallyExpanded;
   final List<CircuitModel> zoneCircuits;
   final List<SubZone> subZones;
-  final Function(String zoneId, int oldIndex, int newIndex)? onSubZoneReorder;
-  final Function(String subZoneId, int oldIndex, int newIndex)? onDeviceReorder;
 
   const ExpandableZoneWidget({
     super.key,
     required this.zoneName,
-    required this.assetImagePath,
     required this.zoneId,
     required this.bgColor,
     this.onDelete,
     this.initiallyExpanded = false,
     required this.subZones,
-    this.onSubZoneReorder,
-    this.onDeviceReorder,
     required this.zoneCircuits,
   });
 
@@ -42,9 +36,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   late ValueNotifier<bool> _isZoneExpanded;
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   final TextEditingController _zoneNameController = TextEditingController();
-  List<String> _selectedListeningAreaIds = <String>[];
-  bool _showSubzonePopup = false;
-  bool _isKebabMenuOpen = false;
+  final List<String> _selectedListeningAreaIds = <String>[];
+  bool showSubzonePopup = false;
+  bool isKebabMenuOpen = false;
   bool isHovered = false;
 
   @override
@@ -202,7 +196,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     },
                     onRename: () {},
                     onDuplicate: () {},
-                    onDelete: () {},
+                    onDelete: () {
+                      _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
+                    },
                     circuitDeviceCount: speakers.length,
                   ),
                 );
@@ -225,8 +221,6 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               if (oldIndex < newIndex) {
                 newIndex -= 1;
               }
-              // final String zoneToMove = _projectViewModel.subZones[oldIndex].id;
-              // final String zoneAtNewIndex = _projectViewModel.s[newIndex].id;
               _projectViewModel.reOrderSubZoneInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
               _projectViewModel.setSelectedDevice(widget.subZones[oldIndex].id, SelectedItemType.subzone);
             },
@@ -238,9 +232,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 child: ExpandableSubZoneWidget(
                   name: subZone.name,
                   subZoneId: subZone.id,
-                  zoneId: widget.zoneId!,
+                  zoneId: widget.zoneId,
                   subZoneCircuit: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
-                  onDeviceReorder: widget.onDeviceReorder,
                   onDelete: (String subZoneId) {
                     _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId!);
                   },
@@ -334,9 +327,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       color: Theme.of(context).colorScheme.white,
       elevation: 8,
       padding: EdgeInsets.zero,
-      onOpened: () => setState(() => _showSubzonePopup = true),
+      onOpened: () => setState(() => showSubzonePopup = true),
       onCanceled: () {
-        setState(() => _showSubzonePopup = false);
+        setState(() => showSubzonePopup = false);
       },
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<void>>[
@@ -405,7 +398,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       // Clear the state
                       _zoneNameController.clear();
                       _selectedListeningAreaIds.clear();
-                      setState(() => _showSubzonePopup = false);
+                      setState(() => showSubzonePopup = false);
                     },
                     child: Icon(
                       Icons.close,
@@ -470,7 +463,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         // Clear the state
                         _zoneNameController.clear();
                         _selectedListeningAreaIds.clear();
-                        setState(() => _showSubzonePopup = false);
+                        setState(() => showSubzonePopup = false);
                       },
                     ),
                   ),

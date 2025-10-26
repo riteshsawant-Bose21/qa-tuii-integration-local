@@ -126,37 +126,40 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
 
               if (widget.isSelected && widget.itemId != null) ...<Widget>[
                 const SizedBox(width: 4),
-                PopupMenuButton<ZoneMenuAction>(
-                  style: const ButtonStyle(
-                    overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
-                  ),
-                  offset: const Offset(0, 20),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-                  color: Theme.of(context).colorScheme.white,
-                  menuPadding: EdgeInsets.zero,
-                  itemBuilder:
-                      (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-                        /// --- Delete ---
-                        PopupMenuItem<ZoneMenuAction>(
-                          height: 26,
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                          onTap: () {
-                            widget.onDelete?.call(widget.itemId!);
-                          },
-                          child: FusionAppText(
-                            text: "Delete",
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 12,
-                              color: Theme.of(context).colorScheme.fusionTextViewColor,
+                Material(
+                  color: Colors.transparent,
+                  child: PopupMenuButton<ZoneMenuAction>(
+                    style: const ButtonStyle(
+                      overlayColor: WidgetStatePropertyAll<Color>(Colors.transparent),
+                    ),
+                    offset: const Offset(0, 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
+                    color: Theme.of(context).colorScheme.white,
+                    menuPadding: EdgeInsets.zero,
+                    itemBuilder:
+                        (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
+                          /// --- Delete ---
+                          PopupMenuItem<ZoneMenuAction>(
+                            height: 26,
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                            onTap: () {
+                              widget.onDelete?.call(widget.itemId!);
+                            },
+                            child: FusionAppText(
+                              text: "Delete",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                                color: Theme.of(context).colorScheme.fusionTextViewColor,
+                              ),
                             ),
                           ),
-                        ),
-                      ],
-                  child: Icon(
-                    Icons.more_vert,
-                    size: 14,
-                    color: Colors.grey[600],
+                        ],
+                    child: Icon(
+                      Icons.more_vert,
+                      size: 14,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ),
               ],
