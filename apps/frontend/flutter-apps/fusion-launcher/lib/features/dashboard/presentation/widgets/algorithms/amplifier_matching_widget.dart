@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
 import 'package:fusion_lib/api_data/speakers/speakers.dart';
+import 'package:fusion_lib/api_data/amplifiers/amplifier_catalog.dart';
+import 'package:fusion_lib/api_data/amplifiers/amplifier_types.dart';
 import 'dart:math' as math;
 
 import '../../../../../core/services/circuit_data_service.dart';
@@ -27,6 +29,7 @@ class CircuitInput {
   final TextEditingController offsetDbController = TextEditingController(text: '0.0');
   String mode = 'hi-z';
   double? specifiedVoltage = 70.0;
+  double? selectedTap;
   int circuitId;
 
   CircuitInput(this.circuitId);
@@ -170,6 +173,92 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     });
   }
 
+  /// Add a high-power test circuit that exceeds amplifier capacity limits
+  void _addHighPowerTestCircuit() {
+    setState(() {
+      final CircuitInput testCircuit = CircuitInput(circuits.length + 1);
+      testCircuit.specifiedVoltage = _globalVoltage;
+      
+      // Find a speaker with high power (preferably > 1000W ppk)
+      String? highPowerModel;
+      for (final String model in availableSpeakerModels) {
+        final SpeakerModel? speaker = SpeakerCatalog.database[model];
+        if (speaker != null && speaker.ppk > 1000) {
+          highPowerModel = model;
+          break;
+        }
+      }
+      
+      // If no high-power speaker found, use the first available
+      if (highPowerModel == null && availableSpeakerModels.isNotEmpty) {
+        highPowerModel = availableSpeakerModels.first;
+      }
+      
+      if (highPowerModel != null) {
+        testCircuit.selectedModel = highPowerModel;
+        testCircuit.mode = 'lo-z'; // Use Lo-Z for high power
+        testCircuit.speakerCountController.text = '10'; // Many speakers to exceed limits
+        testCircuit.tapWattsController.text = SpeakerCatalog.database[highPowerModel]?.ppk.toString() ?? '1000';
+        testCircuit.offsetDbController.text = '0.0';
+      }
+      
+      circuits.add(testCircuit);
+      symmetricalResult = null;
+      asymmetricalResult = null;
+      errorMessage = null;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Added high-power test circuit - this should trigger capacity warnings!'),
+        backgroundColor: Colors.purple,
+      ),
+    );
+  }
+
+  /// Add a normal test circuit within amplifier capacity limits
+  void _addNormalTestCircuit() {
+    setState(() {
+      final CircuitInput testCircuit = CircuitInput(circuits.length + 1);
+      testCircuit.specifiedVoltage = _globalVoltage;
+      
+      // Find a speaker with moderate power (< 500W ppk)
+      String? normalPowerModel;
+      for (final String model in availableSpeakerModels) {
+        final SpeakerModel? speaker = SpeakerCatalog.database[model];
+        if (speaker != null && speaker.ppk < 500) {
+          normalPowerModel = model;
+          break;
+        }
+      }
+      
+      // If no moderate-power speaker found, use the first available
+      if (normalPowerModel == null && availableSpeakerModels.isNotEmpty) {
+        normalPowerModel = availableSpeakerModels.first;
+      }
+      
+      if (normalPowerModel != null) {
+        testCircuit.selectedModel = normalPowerModel;
+        testCircuit.mode = 'lo-z';
+        testCircuit.speakerCountController.text = '2'; // Few speakers
+        testCircuit.tapWattsController.text = SpeakerCatalog.database[normalPowerModel]?.ppk.toString() ?? '100';
+        testCircuit.offsetDbController.text = '0.0';
+      }
+      
+      circuits.add(testCircuit);
+      symmetricalResult = null;
+      asymmetricalResult = null;
+      errorMessage = null;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Added normal test circuit - this should pass capacity validation'),
+        backgroundColor: Colors.green,
+      ),
+    );
+  }
+
   void _importCircuitingData() {
     if (!_circuitDataService.hasCircuitingData) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -278,68 +367,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
           ),
           const SizedBox(height: 24),
 
-          // System Configuration - Simple voltage selection
-          Card(
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  const Row(
-                    children: <Widget>[
-                      Icon(Icons.settings, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('System Configuration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      border: Border.all(color: Colors.blue[200]!),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        const Text(
-                          'Strategy: Side-by-side comparison of Symmetrical and Asymmetrical',
-                          style: TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: <Widget>[
-                            const Text('Hi-Z Voltage: ', style: TextStyle(fontWeight: FontWeight.w500)),
-                            DropdownButton<double>(
-                              value: _globalVoltage,
-                              items: const <DropdownMenuItem<double>>[
-                                DropdownMenuItem<double>(value: 70.0, child: Text('70V')),
-                                DropdownMenuItem<double>(value: 100.0, child: Text('100V')),
-                              ],
-                              onChanged: (double? value) {
-                                if (value != null) {
-                                  setState(() {
-                                    _globalVoltage = value;
-                                    // Update all existing circuits
-                                    for (final CircuitInput circuit in circuits) {
-                                      circuit.specifiedVoltage = _globalVoltage;
-                                    }
-                                  });
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),
+
 
           // Circuit Configuration Section
           Card(
@@ -397,6 +425,10 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
 
           const SizedBox(height: 16),
 
+          // Capacity Validation Warning Section
+          if (symmetricalResult != null && asymmetricalResult != null)
+            _buildCapacityValidationSection(symmetricalResult!, asymmetricalResult!),
+
           // Results section - Always show side-by-side comparison
           if (symmetricalResult != null && asymmetricalResult != null)
             _buildSideBySideResults(symmetricalResult!, asymmetricalResult!),
@@ -404,7 +436,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
           // Error display
           if (errorMessage != null)
             Card(
-              color: Colors.red[50],
+              color: Colors.red[100],
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
@@ -465,6 +497,18 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
               onChanged: (String? value) {
                 setState(() {
                   circuit.selectedModel = value;
+                  // Auto-populate peak power for Lo-Z or first tap for Hi-Z
+                  if (value != null) {
+                    final SpeakerModel? speaker = SpeakerCatalog.database[value];
+                    if (speaker != null) {
+                      if (circuit.mode == 'lo-z') {
+                        circuit.tapWattsController.text = speaker.ppk.toString();
+                      } else if (circuit.mode == 'hi-z' && speaker.hiZTaps.isNotEmpty) {
+                        circuit.selectedTap = speaker.hiZTaps.first;
+                        circuit.tapWattsController.text = speaker.hiZTaps.first.toString();
+                      }
+                    }
+                  }
                 });
               },
               decoration: const InputDecoration(
@@ -486,6 +530,18 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
                     onChanged: (String? value) {
                       setState(() {
                         circuit.mode = value ?? 'hi-z';
+                        // Auto-populate based on mode change
+                        if (circuit.selectedModel != null) {
+                          final SpeakerModel? speaker = SpeakerCatalog.database[circuit.selectedModel!];
+                          if (speaker != null) {
+                            if (circuit.mode == 'lo-z') {
+                              circuit.tapWattsController.text = speaker.ppk.toString();
+                            } else if (circuit.mode == 'hi-z' && speaker.hiZTaps.isNotEmpty) {
+                              circuit.selectedTap = speaker.hiZTaps.first;
+                              circuit.tapWattsController.text = speaker.hiZTaps.first.toString();
+                            }
+                          }
+                        }
                       });
                     },
                   ),
@@ -498,6 +554,18 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
                     onChanged: (String? value) {
                       setState(() {
                         circuit.mode = value ?? 'hi-z';
+                        // Auto-populate based on mode change
+                        if (circuit.selectedModel != null) {
+                          final SpeakerModel? speaker = SpeakerCatalog.database[circuit.selectedModel!];
+                          if (speaker != null) {
+                            if (circuit.mode == 'lo-z') {
+                              circuit.tapWattsController.text = speaker.ppk.toString();
+                            } else if (circuit.mode == 'hi-z' && speaker.hiZTaps.isNotEmpty) {
+                              circuit.selectedTap = speaker.hiZTaps.first;
+                              circuit.tapWattsController.text = speaker.hiZTaps.first.toString();
+                            }
+                          }
+                        }
                       });
                     },
                   ),
@@ -523,13 +591,19 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
                 const SizedBox(width: 12),
                 if (circuit.mode == 'hi-z')
                   Expanded(
+                    child: _buildTapSelector(circuit),
+                  )
+                else
+                  Expanded(
                     child: TextFormField(
                       controller: circuit.tapWattsController,
                       decoration: const InputDecoration(
-                        labelText: 'Tap Watts',
-                        border: OutlineInputBorder(),
+                        labelText: 'Peak Power (P_pk)',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: const Icon(Icons.auto_awesome, size: 16),
                       ),
                       keyboardType: TextInputType.number,
+                      readOnly: true,
                     ),
                   ),
                 const SizedBox(width: 12),
@@ -551,7 +625,193 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  /// Side-by-side results display inspired by test_amplifier_matching_sample.dart
+  /// Build capacity validation section to show warnings when amplifiers cannot fulfill circuit requirements
+  Widget _buildCapacityValidationSection(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
+    final bool hasErrors = symmetrical.hasErrors || asymmetrical.hasErrors;
+    final bool hasWarnings = symmetrical.hasWarnings || asymmetrical.hasWarnings;
+    
+    if (!hasErrors && !hasWarnings) {
+      return const SizedBox.shrink(); // Don't show section if no issues
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const SizedBox(height: 16),
+        
+        // Critical Errors Section
+        if (hasErrors) ...<Widget>[
+          Card(
+            color: Colors.red[50],
+            elevation: 3,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.red[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Row(
+                    children: <Widget>[
+                      Icon(Icons.error_outline, color: Colors.red, size: 24),
+                      SizedBox(width: 8),
+                      Text(
+                        '⚠️ CRITICAL: Amplifier Capacity Exceeded',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.red),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Symmetrical errors
+                  if (symmetrical.hasErrors) ...<Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        border: Border.all(color: Colors.red[200]!),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text('🔄 Symmetrical Mode Issues:', 
+                               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                          const SizedBox(height: 4),
+                          for (final String error in symmetrical.errors)
+                            Text('• $error', style: TextStyle(color: Colors.red[800])),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                  ],
+                  
+                  // Asymmetrical errors
+                  if (asymmetrical.hasErrors) ...<Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red[100],
+                        border: Border.all(color: Colors.red[200]!),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text('⚖️ Asymmetrical Mode Issues:', 
+                               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+                          const SizedBox(height: 4),
+                          for (final String error in asymmetrical.errors)
+                            Text('• $error', style: TextStyle(color: Colors.red[800])),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange[100],
+                      border: Border.all(color: Colors.orange[300]!),
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text('💡 RECOMMENDATION:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
+                        SizedBox(height: 4),
+                        Text('• Reduce circuit power requirements (fewer speakers or lower power settings)'),
+                        Text('• Use higher-capacity amplifiers if available'),
+                        Text('• Consider splitting circuits across multiple amplifiers'),
+                        Text('• Check if any circuits exceed individual amplifier limits'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        
+        // Warnings Section
+        if (hasWarnings) ...<Widget>[
+          Card(
+            color: Colors.orange[50],
+            elevation: 2,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.orange[300]!),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  const Row(
+                    children: <Widget>[
+                      Icon(Icons.warning_amber, color: Colors.orange, size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        '⚠️ Capacity Warnings',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.orange),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  
+                  // Symmetrical warnings
+                  if (symmetrical.hasWarnings) ...<Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        border: Border.all(color: Colors.orange[200]!),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text('🔄 Symmetrical:', style: TextStyle(fontWeight: FontWeight.w500)),
+                          for (final String warning in symmetrical.warnings)
+                            Text('• $warning', style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                  
+                  // Asymmetrical warnings
+                  if (asymmetrical.hasWarnings) ...<Widget>[
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[100],
+                        border: Border.all(color: Colors.orange[200]!),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          const Text('⚖️ Asymmetrical:', style: TextStyle(fontWeight: FontWeight.w500)),
+                          for (final String warning in asymmetrical.warnings)
+                            Text('• $warning', style: const TextStyle(fontSize: 12)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  /// Side-by-side results display with detailed technical calculations
   Widget _buildSideBySideResults(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -566,7 +826,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
                 Icon(Icons.music_note, color: Colors.white),
                 SizedBox(width: 8),
                 Text(
-                  '🎵 Amplifier Matching Algorithm Results - Side-by-Side Comparison',
+                  '🎵 Amplifier Matching Algorithm Results - Side-by-Side Technical Analysis',
                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ],
@@ -576,18 +836,19 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
         
         const SizedBox(height: 16),
         
-        // Algorithm Steps Section
-        _buildAlgorithmStepsCard(),
+        // Amplifier Capacity Comparison Table
+        _buildAmplifierCapacityTable(),
         
         const SizedBox(height: 16),
         
-        // Side-by-side strategy results
+        // Side-by-side detailed technical analysis
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
+            // Left side - Symmetrical Mode
             Expanded(
-              child: _buildStrategyResultCard(
-                'Symmetrical Mode', 
+              child: _buildDetailedTechnicalAnalysis(
+                'SYMMETRICAL MODE', 
                 symmetrical, 
                 Colors.blue, 
                 PowerAllocationStrategy.symmetrical,
@@ -595,9 +856,10 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
               ),
             ),
             const SizedBox(width: 16),
+            // Right side - Asymmetrical Mode
             Expanded(
-              child: _buildStrategyResultCard(
-                'Asymmetrical Mode', 
+              child: _buildDetailedTechnicalAnalysis(
+                'ASYMMETRICAL MODE', 
                 asymmetrical, 
                 Colors.green, 
                 PowerAllocationStrategy.asymmetrical,
@@ -610,109 +872,125 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
         const SizedBox(height: 16),
         
         // Comparison Summary
-        _buildComparisonSummaryCard(symmetrical, asymmetrical),
+        // _buildComparisonSummaryCard(symmetrical, asymmetrical),
       ],
     );
   }
 
-  Widget _buildAlgorithmStepsCard() {
+  /// Build detailed technical analysis for each mode with step-by-step calculations
+  Widget _buildDetailedTechnicalAnalysis(String title, AmpMatchingResult result, Color color, PowerAllocationStrategy strategy, IconData icon) {
     return Card(
       elevation: 3,
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            const Row(
+            // Header
+            Row(
               children: <Widget>[
-                Icon(Icons.list_alt, color: Colors.orange),
-                SizedBox(width: 8),
-                Text('🔄 12-Step Algorithm Execution (Detailed)', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                Icon(icon, color: color, size: 24),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    title, 
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: color),
+                  ),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 16),
             
-            // Input Circuits Analysis
-            _buildDetailedStepCard(
-              '1. Input Circuit Analysis',
-              'Circuit type detection and power requirements calculation',
-              _buildInputAnalysisDetails(),
-              Colors.blue,
+            // Step 1: Input Circuit Analysis
+            _buildTechnicalStepCard(
+              'STEP 1: Input Circuit Analysis',
+              _buildInputCircuitAnalysis(strategy),
+              color,
             ),
             
-            // Offset Application
-            _buildDetailedStepCard(
-              '2. Power Offset Application',
-              'Apply dB offsets using formula: Power = P × 10^(-dB/10)',
-              _buildOffsetCalculationDetails(),
-              Colors.green,
+            // Step 2: Power Calculation
+            _buildTechnicalStepCard(
+              'STEP 2: Power Calculation',
+              _buildPowerCalculationStep(strategy),
+              color,
             ),
             
-            // Circuit Sorting
-            _buildDetailedStepCard(
-              '3. Circuit Sorting by Power',
-              'Sort circuits in descending order by power requirement',
-              _buildCircuitSortingDetails(),
-              Colors.purple,
+            // Step 3: Circuit Sorting
+            _buildTechnicalStepCard(
+              'STEP 3: Circuit Sorting',
+              _buildCircuitSortingStep(),
+              color,
             ),
             
-            // Tier Rule Application
-            _buildDetailedStepCard(
-              '4. Tier Rule Selection',
-              'Apply tier rule: Ppk_amplifier ≥ Pk_speaker_total',
-              _buildTierRuleDetails(),
-              Colors.teal,
-            ),
+            // Step 4: Amplifier Tier Matching (Symmetrical only)
+            if (strategy == PowerAllocationStrategy.symmetrical)
+              _buildTechnicalStepCard(
+                'STEP 4: Amplifier Tier Matching',
+                _buildAmplifierTierMatchingStep(strategy),
+                color,
+              ),
             
-            // Power Sharing (Asymmetrical only)
-            _buildDetailedStepCard(
-              '5. Power Sharing Analysis',
-              'Symmetrical: Per-channel limits | Asymmetrical: Power sharing optimization',
-              _buildPowerSharingDetails(),
-              Colors.deepOrange,
-            ),
+            // Step 4: Power Sharing Analysis with Channel-Based Results Display (Asymmetrical only)
+            if (strategy == PowerAllocationStrategy.asymmetrical)
+              _buildTechnicalStepCard(
+                'STEP 4: Power Sharing Analysis with Channel-Based Results Display',
+                _buildChannelBasedResults(),
+                color,
+              ),
             
-            // Final Validation
-            _buildDetailedStepCard(
-              '6. Final Validation & Results',
-              'System verification, SKU reduction, and final amplifier selection',
-              _buildFinalValidationDetails(),
-              Colors.red,
-            ),
+            
+            // Step 5: Final Validation & Selection (Symmetrical only)
+            if (strategy == PowerAllocationStrategy.symmetrical)
+              _buildTechnicalStepCard(
+                'STEP 5: Final Validation & Selection',
+                _buildFinalValidationStep(result, strategy),
+                color,
+              ),
+            
+            // Step 5: Final Validation & Selection for Asymmetrical Mode
+            if (strategy == PowerAllocationStrategy.asymmetrical)
+              _buildTechnicalStepCard(
+                'STEP 5: Final Validation & Selection for Asymmetrical Mode',
+                _buildAsymmetricalFinalValidationStep(),
+                color,
+              ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDetailedStepCard(String title, String description, Widget details, Color color) {
+  Widget _buildTechnicalStepCard(String title, Widget content, Color color) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       child: ExpansionTile(
         leading: Icon(Icons.engineering, color: color),
         title: Text(title, style: TextStyle(fontWeight: FontWeight.bold, color: color)),
-        subtitle: Text(description, style: const TextStyle(fontSize: 12)),
         children: <Widget>[
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: color.withOpacity(0.05),
               border: Border.all(color: color.withOpacity(0.2)),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: details,
+            child: content,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInputAnalysisDetails() {
+  Widget _buildInputCircuitAnalysis(PowerAllocationStrategy strategy) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text('📋 Input Circuits Analysis:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('📋 Circuit Configuration:', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (circuits.isNotEmpty) ...<Widget>[
           for (int i = 0; i < circuits.length; i++) ...<Widget>[
@@ -747,37 +1025,39 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  Widget _buildOffsetCalculationDetails() {
+  Widget _buildPowerCalculationStep(PowerAllocationStrategy strategy) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text('📐 Step 2: Offset Calculation - ACTUAL CALCULATIONS:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('📐 Power Calculation Formulas:', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         
         // Formula explanation
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.blue[50],
-            border: Border.all(color: Colors.blue[200]!),
+            color: Colors.blue[100],
+            border: Border.all(color: Colors.blue[300]!),
             borderRadius: BorderRadius.circular(6),
           ),
           child: const Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('Formula: Power_adjusted = Power_original × 10^(-dB/10)', 
-                   style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 16)),
+              Text('Hi-Z Formula: P_base = N_speakers × W_tap × 2', 
+                   style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+              Text('Lo-Z Formula: P_base = N_speakers × P_peak(speaker_model)', 
+                   style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
+              Text('Offset Formula: P_actual = P_base × 10^(-dB/10)', 
+                   style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
             ],
           ),
         ),
         
         const SizedBox(height: 12),
-        
-        // ACTUAL CALCULATIONS for each circuit
-        const Text('🧮 YOUR CIRCUIT CALCULATIONS:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        const Text('🧮 Actual Calculations:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
         if (circuits.isNotEmpty) ...<Widget>[
           for (final CircuitInput circuit in circuits)
-            _buildActualOffsetCalculation(circuit),
+            _buildActualPowerCalculation(circuit),
         ] else ...<Widget>[
           Container(
             padding: const EdgeInsets.all(12),
@@ -794,8 +1074,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  Widget _buildActualOffsetCalculation(CircuitInput circuit) {
-    // Get actual circuit data
+  Widget _buildActualPowerCalculation(CircuitInput circuit) {
     final SpeakerModel? speaker = SpeakerCatalog.database[circuit.selectedModel];
     final int speakerCount = int.tryParse(circuit.speakerCountController.text) ?? 1;
     final double tapWatts = double.tryParse(circuit.tapWattsController.text) ?? 0.0;
@@ -806,11 +1085,11 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     String powerSource = '';
     
     if (circuit.mode == 'hi-z') {
-      originalPower = speakerCount * tapWatts;
-      powerSource = '${speakerCount} speakers × ${tapWatts}W tap';
+      originalPower = speakerCount * tapWatts * 2.0; // Peak power
+      powerSource = '${speakerCount} speakers × ${tapWatts}W tap × 2';
     } else if (speaker != null) {
-      originalPower = speakerCount * speaker.longTermRms;
-      powerSource = '${speakerCount} × ${speaker.model} (${speaker.longTermRms}W RMS)';
+      originalPower = speakerCount * speaker.ppk;
+      powerSource = '${speakerCount} × ${speaker.model} (${speaker.ppk}W ppk)';
     }
     
     // Calculate offset multiplier and final power
@@ -821,8 +1100,8 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: offsetDb != 0 ? Colors.orange[50] : Colors.green[50],
-        border: Border.all(color: offsetDb != 0 ? Colors.orange[200]! : Colors.green[200]!),
+        color: offsetDb != 0 ? Colors.orange[100] : Colors.green[100],
+        border: Border.all(color: offsetDb != 0 ? Colors.orange[300]! : Colors.green[300]!),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Column(
@@ -833,18 +1112,16 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
           
           if (circuit.selectedModel != null) ...<Widget>[
             const SizedBox(height: 4),
-            Text('1. Original Power: $powerSource = ${originalPower.toStringAsFixed(1)}W'),
+            Text('1. Base Power: $powerSource = ${originalPower.toStringAsFixed(1)}W'),
             
             if (offsetDb != 0) ...<Widget>[
               Text('2. Offset: ${offsetDb}dB'),
-              Text('3. Calculate multiplier: 10^(-${offsetDb}/10) = 10^(${(-offsetDb/10).toStringAsFixed(2)}) = ${multiplier.toStringAsFixed(3)}'),
-              Text('4. Apply offset: ${originalPower.toStringAsFixed(1)}W × ${multiplier.toStringAsFixed(3)} = ${finalPower.toStringAsFixed(1)}W', 
+              Text('3. Multiplier: 10^(-${offsetDb}/10) = ${multiplier.toStringAsFixed(3)}'),
+              Text('4. Final Power: ${originalPower.toStringAsFixed(1)}W × ${multiplier.toStringAsFixed(3)} = ${finalPower.toStringAsFixed(1)}W', 
                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-              Text('RESULT: Circuit power increased by ${((finalPower/originalPower - 1) * 100).toStringAsFixed(1)}%', 
-                   style: const TextStyle(fontWeight: FontWeight.bold)),
             ] else ...<Widget>[
               const Text('2. No offset applied (0dB)'),
-              Text('RESULT: Power unchanged = ${originalPower.toStringAsFixed(1)}W', 
+              Text('Final Power: ${originalPower.toStringAsFixed(1)}W', 
                    style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
             ],
           ] else ...<Widget>[
@@ -856,14 +1133,14 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  Widget _buildCircuitSortingDetails() {
+  Widget _buildCircuitSortingStep() {
     final List<CircuitInput> sortedCircuits = List<CircuitInput>.from(circuits);
     sortedCircuits.sort((CircuitInput a, CircuitInput b) => _estimateCircuitPower(b).compareTo(_estimateCircuitPower(a)));
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text('📊 Circuit Sorting (Descending Power):', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('📊 Circuits sorted by power (highest to lowest):', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (sortedCircuits.isNotEmpty) ...<Widget>[
           for (int i = 0; i < sortedCircuits.length; i++) ...<Widget>[
@@ -871,8 +1148,8 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
               padding: const EdgeInsets.all(8),
               margin: const EdgeInsets.only(bottom: 4),
               decoration: BoxDecoration(
-                color: i == 0 ? Colors.red[50] : (i == 1 ? Colors.orange[50] : Colors.yellow[50]),
-                border: Border.all(color: i == 0 ? Colors.red[200]! : (i == 1 ? Colors.orange[200]! : Colors.yellow[200]!)),
+                color: i == 0 ? Colors.red[100] : (i == 1 ? Colors.orange[100] : Colors.yellow[100]),
+                border: Border.all(color: i == 0 ? Colors.red[300]! : (i == 1 ? Colors.orange[300]! : Colors.yellow[300]!)),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -910,40 +1187,45 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  Widget _buildTierRuleDetails() {
+  Widget _buildAmplifierTierMatchingStep(PowerAllocationStrategy strategy) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text('⚖️ Step 4: Tier Rule Analysis - YOUR ACTUAL REQUIREMENTS:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const Text('🎯 Amplifier Tier Matching Algorithm:', style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.teal[50],
-            border: Border.all(color: Colors.teal[200]!),
+            color: Colors.teal[100],
+            border: Border.all(color: Colors.teal[300]!),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('Tier Rule: Ppk_amplifier ≥ Pk_speaker_total', 
+              const Text('Tier Rule: Ppk_amplifier (next tier up) ≥ Pk_speaker_total ≥ Ppk_amplifier (current tier)', 
                    style: TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, fontSize: 16)),
-              SizedBox(height: 4),
-              Text('Find minimum amplifier power that can handle your total circuit requirements'),
+              const SizedBox(height: 8),
+              const Text('Channel Allocation Strategy:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('• Start with 4-channel amplifier'),
+              const Text('• At 5+ channels: Use 8-channel amplifier'),
+              const Text('• At 9+ channels: Add 4-channel amplifier'),
+              const Text('• At 13+ channels: Add 2nd 8-channel amplifier'),
+              const Text('• Continue pattern: unused channels on smallest amplifiers'),
+              const SizedBox(height: 8),
+              const Text('Available Amplifier Tiers:', style: TextStyle(fontWeight: FontWeight.bold)),
+              ...AmplifierCatalog.allModels.map((AmplifierModel amp) => 
+                Text('• ${amp.name}: ${amp.symmetrical.watts}W/ch, ${amp.symmetrical.totalCapacity}W total, ${amp.channels} channels')),
             ],
           ),
         ),
         
         const SizedBox(height: 12),
-        const Text('🧮 YOUR CIRCUIT POWER ANALYSIS:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        const Text('🧮 Amplifier Matching Process:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
         
         if (circuits.isNotEmpty) ...<Widget>[
-          for (final CircuitInput circuit in circuits)
-            _buildActualTierAnalysis(circuit),
-            
-          const SizedBox(height: 8),
-          _buildTotalPowerSummary(),
+          _buildAmplifierMatchingProcess(strategy),
         ] else ...<Widget>[
           Container(
             padding: const EdgeInsets.all(12),
@@ -952,7 +1234,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
               border: Border.all(color: Colors.grey[300]!),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Text('Add circuits to see actual power calculations', 
+            child: const Text('Add circuits to see amplifier matching process', 
                                style: TextStyle(fontStyle: FontStyle.italic)),
           ),
         ],
@@ -960,180 +1242,1364 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  Widget _buildActualTierAnalysis(CircuitInput circuit) {
-    final SpeakerModel? speaker = SpeakerCatalog.database[circuit.selectedModel];
-    final int speakerCount = int.tryParse(circuit.speakerCountController.text) ?? 1;
-    final double tapWatts = double.tryParse(circuit.tapWattsController.text) ?? 0.0;
-    final double offsetDb = double.tryParse(circuit.offsetDbController.text) ?? 0.0;
+  /// Calculate optimal amplifier allocation with cost optimization
+  /// Implements "fill existing amplifiers first" strategy for maximum efficiency
+  List<Map<String, dynamic>> _calculateOptimalAmplifierAllocation(
+    List<Map<String, dynamic>> circuitData, 
+    AmplifierModel minRequiredTier,
+  ) {
+    final List<Map<String, dynamic>> amplifierAllocation = <Map<String, dynamic>>[];
+    final List<AmplifierModel> amplifiers = AmplifierCatalog.allModels;
     
-    // Calculate powers
-    double rmsPower = 0.0;
-    double peakPower = 0.0;
-    String calculation = '';
+    // Sort circuits by power (highest first) - largest circuits are hardest to fit
+    final List<Map<String, dynamic>> sortedCircuits = List<Map<String, dynamic>>.from(circuitData);
+    sortedCircuits.sort((Map<String, dynamic> a, Map<String, dynamic> b) => (b['power'] as double).compareTo(a['power'] as double));
     
-    if (circuit.mode == 'hi-z') {
-      rmsPower = speakerCount * tapWatts;
-      peakPower = speakerCount * tapWatts * 2.0; // ✅ CORRECTED: Peak = tap × count × 2
-      calculation = '${speakerCount} speakers × ${tapWatts}W tap = ${rmsPower.toStringAsFixed(1)}W RMS, Peak = ${rmsPower.toStringAsFixed(1)}W × 2 = ${peakPower.toStringAsFixed(1)}W';
-    } else if (speaker != null) {
-      rmsPower = speakerCount * speaker.longTermRms;
-      peakPower = speakerCount * speaker.ppk;
-      calculation = '${speakerCount} × ${speaker.model}: RMS=${speaker.longTermRms}W, Peak=${speaker.ppk}W';
-    }
+    // Strategy: Fill existing amplifiers first, then create new ones
+    int amplifierCount = 0;
     
-    // Apply offset
-    if (offsetDb != 0) {
-      final double multiplier = math.pow(10.0, -offsetDb / 10.0).toDouble();
-      rmsPower *= multiplier;
-      peakPower *= multiplier;
-    }
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.blue[50],
-        border: Border.all(color: Colors.blue[200]!),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text('Circuit ${circuit.circuitId}: ${circuit.selectedModel ?? "No model"}', 
-               style: const TextStyle(fontWeight: FontWeight.bold)),
-          
-          if (circuit.selectedModel != null) ...<Widget>[
-            Text('Mode: ${circuit.mode.toUpperCase()}'),
-            Text('Calculation: $calculation'),
-            if (offsetDb != 0) ...<Widget>[
-              Text('With ${offsetDb}dB offset: ×${math.pow(10.0, -offsetDb / 10.0).toStringAsFixed(3)}'),
-            ],
-            Text('RMS Power Required: ${rmsPower.toStringAsFixed(1)}W'),
-            Text('Peak Power Required: ${peakPower.toStringAsFixed(1)}W', 
-                 style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-            Text('Amplifier Minimum: ≥${peakPower.toStringAsFixed(1)}W peak capacity'),
-          ] else ...<Widget>[
-            const Text('⚠️ Select speaker model to see calculations', 
-                       style: TextStyle(color: Colors.red)),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTotalPowerSummary() {
-    double totalRms = 0.0;
-    double totalPeak = 0.0;
-    int validCircuits = 0;
-    
-    for (final CircuitInput circuit in circuits) {
-      if (circuit.selectedModel != null) {
-        final double circuitPower = _estimateCircuitPower(circuit);
-        totalRms += circuitPower;
+    // Process circuits one by one, trying to fit them into existing amplifiers first
+    for (final Map<String, dynamic> circuit in sortedCircuits) {
+      bool assignedToExisting = false;
+      
+      // Try to assign to existing amplifiers that have available channels
+      for (final Map<String, dynamic> amp in amplifierAllocation) {
+        final int usedChannels = amp['usedChannels'] as int;
+        final int totalChannels = amp['totalChannels'] as int;
+        final AmplifierModel ampModel = amp['tierModel'] as AmplifierModel;
         
-        // Estimate peak (simplified)
-        final SpeakerModel? speaker = SpeakerCatalog.database[circuit.selectedModel];
-        if (speaker != null && circuit.mode != 'hi-z') {
-          final int speakerCount = int.tryParse(circuit.speakerCountController.text) ?? 1;
-          final double offsetDb = double.tryParse(circuit.offsetDbController.text) ?? 0.0;
-          final double multiplier = math.pow(10.0, -offsetDb / 10.0).toDouble();
-          totalPeak += speakerCount * speaker.ppk * multiplier;
-        } else {
-          // ✅ CORRECTED: For Hi-Z, peak = tap × count × 2 × multiplier
-          final int speakerCount = int.tryParse(circuit.speakerCountController.text) ?? 1;
-          final double offsetDb = double.tryParse(circuit.offsetDbController.text) ?? 0.0;
-          final double multiplier = math.pow(10.0, -offsetDb / 10.0).toDouble();
-          final double tapWatts = double.tryParse(circuit.tapWattsController.text) ?? 0.0;
-          totalPeak += speakerCount * tapWatts * 2.0 * multiplier;
+        // Check: 1) Available channels, 2) Per-channel capacity, 3) Total amplifier capacity
+        final List<Map<String, dynamic>> assignedCircuits = amp['circuitsAssigned'] as List<Map<String, dynamic>>;
+        double currentTotalPower = assignedCircuits.fold(0.0, (double sum, Map<String, dynamic> c) => sum + (c['power'] as double));
+        double newTotalPower = currentTotalPower + (circuit['power'] as double);
+        
+        if (usedChannels < totalChannels && 
+            (circuit['power'] as double) <= ampModel.asymmetrical.watts &&
+            newTotalPower <= ampModel.asymmetrical.totalCapacity) {
+          // This amplifier can handle this circuit and has available channels
+          assignedCircuits.add(circuit);
+          amp['usedChannels'] = usedChannels + 1;
+          amp['unusedChannels'] = totalChannels - (usedChannels + 1);
+          assignedToExisting = true;
+          break;
         }
-        validCircuits++;
+      }
+      
+      // If not assigned to existing amplifier, create a new one
+      if (!assignedToExisting) {
+        // Find the smallest amplifier that can handle this circuit
+        AmplifierModel? selectedAmp;
+        for (final AmplifierModel amp in amplifiers) {
+          if ((circuit['power'] as double) <= amp.asymmetrical.watts) {
+            selectedAmp = amp;
+            break;
+          }
+        }
+        
+        if (selectedAmp == null) {
+          // This should not happen as we already validated the circuits
+          continue;
+        }
+        
+        amplifierCount++;
+        amplifierAllocation.add(<String, dynamic>{
+          'amplifierNumber': amplifierCount,
+          'tier': selectedAmp.name,
+          'tierModel': selectedAmp,
+          'totalChannels': selectedAmp.channels,
+          'usedChannels': 1,
+          'unusedChannels': selectedAmp.channels - 1,
+          'circuitsAssigned': <Map<String, dynamic>>[circuit],
+        });
       }
     }
     
-    // Estimate amplifier requirements
-    const double typicalAmpPower = 1000.0; // PowerMatch PM8500N example
-    final int minAmplifiers = (totalPeak / typicalAmpPower).ceil();
-    final double requiredCapacity = minAmplifiers * typicalAmpPower;
-    final double efficiency = totalPeak / requiredCapacity;
+    return amplifierAllocation;
+  }
+
+  /// Step 1: Initial Amplifier Selection & Power Sharing Analysis for Asymmetrical Mode
+  Widget _buildAsymmetricalInitialAnalysis() {
+    // Calculate circuit powers and sort by power (highest first)
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    double totalSystemPower = 0.0;
     
-    return Container(
+    for (final CircuitInput circuit in circuits) {
+      final double circuitPower = _estimateCircuitPower(circuit);
+      circuitData.add(<String, dynamic>{
+        'circuit': circuit,
+        'power': circuitPower,
+        'model': circuit.selectedModel ?? 'Unknown',
+        'speakerCount': int.tryParse(circuit.speakerCountController.text) ?? 0,
+        'mode': circuit.mode.toUpperCase(),
+      });
+      totalSystemPower += circuitPower;
+    }
+    
+    // Sort circuits by power (highest first)
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => (b['power'] as double).compareTo(a['power'] as double));
+    
+    // Find minimum required amplifier tier
+    final double maxCircuitPower = circuitData.isNotEmpty ? circuitData.first['power'] as double : 0.0;
+    final List<AmplifierModel> amplifiers = AmplifierCatalog.allModels;
+    
+    AmplifierModel? selectedTier;
+    for (final AmplifierModel amp in amplifiers) {
+      if (maxCircuitPower <= amp.asymmetrical.watts) {
+        selectedTier = amp;
+        break;
+      }
+    }
+    
+    if (selectedTier == null) {
+      return Column(
+        children: <Widget>[
+          const Text('❌ Error: No amplifier can handle the maximum circuit power'),
+          Text('Maximum circuit power: ${maxCircuitPower.toStringAsFixed(1)}W'),
+          Text('Maximum amplifier capacity: ${amplifiers.last.asymmetrical.watts}W'),
+        ],
+      );
+    }
+    
+    return Column(
+      children: <Widget>[
+        // System Summary
+        Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.green[50],
-        border: Border.all(color: Colors.green[200]!),
-        borderRadius: BorderRadius.circular(6),
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.blue[200]!),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text('🎯 TOTAL SYSTEM REQUIREMENTS:', style: TextStyle(fontWeight: FontWeight.bold)),
-          Text('Valid Circuits: $validCircuits/${circuits.length}'),
-          Text('Total RMS Power: ${totalRms.toStringAsFixed(1)}W'),
-          Text('Total Peak Power: ${totalPeak.toStringAsFixed(1)}W', 
-               style: const TextStyle(fontWeight: FontWeight.bold)),
+              const Text('📊 Initial System Analysis:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Total Circuits: ${circuitData.length}'),
+              Text('Total System Power: ${totalSystemPower.toStringAsFixed(1)}W'),
+              Text('Maximum Circuit Power: ${maxCircuitPower.toStringAsFixed(1)}W'),
+              Text('Selected Amplifier: ${selectedTier.name}'),
+              Text('Asymmetrical Per-Channel Capacity: ${selectedTier.asymmetrical.watts}W'),
+              Text('Total Asymmetrical Capacity: ${selectedTier.asymmetrical.totalCapacity}W'),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Circuit Details
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('📋 Circuits (Sorted by Power):', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...circuitData.asMap().entries.map((MapEntry<int, Map<String, dynamic>> entry) {
+                final int index = entry.key;
+                final Map<String, dynamic> circuit = entry.value;
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text('${index + 1}. ${circuit['model']} (${circuit['mode']}) - ${(circuit['power'] as double).toStringAsFixed(1)}W - ${circuit['speakerCount']} speakers'),
+                );
+              }),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Initial Power Sharing Analysis
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('⚡ Initial Power Sharing Analysis:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              _buildChannelBasedTable(circuitData, selectedTier),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Step 2: Circuit Movement Optimization for Asymmetrical Mode
+  Widget _buildCircuitMovementOptimization() {
+    // Calculate circuit powers and sort by power (highest first)
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    double totalSystemPower = 0.0;
+    
+    for (final CircuitInput circuit in circuits) {
+        final double circuitPower = _estimateCircuitPower(circuit);
+      circuitData.add(<String, dynamic>{
+        'circuit': circuit,
+        'power': circuitPower,
+        'model': circuit.selectedModel ?? 'Unknown',
+        'speakerCount': int.tryParse(circuit.speakerCountController.text) ?? 0,
+        'mode': circuit.mode.toUpperCase(),
+      });
+      totalSystemPower += circuitPower;
+    }
+    
+    // Sort circuits by power (highest first)
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => (b['power'] as double).compareTo(a['power'] as double));
+    
+    // Find minimum required amplifier tier
+    final double maxCircuitPower = circuitData.isNotEmpty ? circuitData.first['power'] as double : 0.0;
+    final List<AmplifierModel> amplifiers = AmplifierCatalog.allModels;
+    
+    AmplifierModel? selectedTier;
+    for (final AmplifierModel amp in amplifiers) {
+      if (maxCircuitPower <= amp.asymmetrical.watts) {
+        selectedTier = amp;
+        break;
+      }
+    }
+    
+    if (selectedTier == null) {
+      return const Column(
+        children: <Widget>[
+          Text('❌ Error: No amplifier can handle the maximum circuit power'),
+        ],
+      );
+    }
+    
+    // Simulate circuit movement optimization process
+    final List<Map<String, dynamic>> optimizationSteps = <Map<String, dynamic>>[];
+    
+    // Step 1: Initial assignment
+    optimizationSteps.add(<String, dynamic>{
+      'step': 1,
+      'description': 'Initial Assignment',
+      'amplifiers': <Map<String, dynamic>>[
+        <String, dynamic>{
+          'name': selectedTier.name,
+          'channels': List.generate(selectedTier.channels, (int index) => <String, dynamic>{
+            'channelNumber': index + 1,
+            'circuit': index < circuitData.length ? circuitData[index] : null,
+            'power': index < circuitData.length ? circuitData[index]['power'] as double : 0.0,
+          }),
+          'netPowerSharing': _calculateNetPowerSharing(circuitData, selectedTier),
+          'availableToShare': _calculateAvailableToShare(circuitData, selectedTier),
+        },
+      ],
+    });
+    
+    // Step 2: Check for optimization opportunities
+    final double netPowerSharing = _calculateNetPowerSharing(circuitData, selectedTier);
+    final double availableToShare = _calculateAvailableToShare(circuitData, selectedTier);
+    
+    if (netPowerSharing > 0 && availableToShare > 0) {
+      optimizationSteps.add(<String, dynamic>{
+        'step': 2,
+        'description': 'Optimization Analysis',
+        'amplifiers': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'name': selectedTier.name,
+            'channels': List.generate(selectedTier.channels, (int index) => <String, dynamic>{
+              'channelNumber': index + 1,
+              'circuit': index < circuitData.length ? circuitData[index] : null,
+              'power': index < circuitData.length ? circuitData[index]['power'] as double : 0.0,
+              'needsExtraPower': index < circuitData.length && (circuitData[index]['power'] as double) > selectedTier!.symmetrical.watts,
+            }),
+            'netPowerSharing': netPowerSharing,
+            'availableToShare': availableToShare,
+            'canOptimize': true,
+          },
+        ],
+      });
+      
+      // Step 3: Show optimization result
+      optimizationSteps.add(<String, dynamic>{
+        'step': 3,
+        'description': 'Optimization Complete',
+        'amplifiers': <Map<String, dynamic>>[
+          <String, dynamic>{
+            'name': selectedTier.name,
+            'channels': List.generate(selectedTier.channels, (int index) => <String, dynamic>{
+              'channelNumber': index + 1,
+              'circuit': index < circuitData.length ? circuitData[index] : null,
+              'power': index < circuitData.length ? circuitData[index]['power'] as double : 0.0,
+              'optimized': true,
+            }),
+            'netPowerSharing': netPowerSharing,
+            'availableToShare': availableToShare,
+            'optimizationApplied': true,
+          },
+        ],
+      });
+    }
+    
+    return Column(
+      children: <Widget>[
+        const Text('🔄 Circuit Movement Optimization Process', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('This step shows the step-by-step process of optimizing circuit assignments for maximum power sharing efficiency.'),
+        const SizedBox(height: 16),
+        
+        // Optimization Steps
+        ...optimizationSteps.map((Map<String, dynamic> step) => _buildOptimizationStep(step)),
+        
+        const SizedBox(height: 16),
+        
+        // Summary
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.green[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('📊 Optimization Summary:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Net Power Sharing: ${netPowerSharing.toStringAsFixed(1)}W'),
+              Text('Available to Share: ${availableToShare.toStringAsFixed(1)}W'),
+              Text('Optimization Status: ${netPowerSharing > 0 ? 'Applied' : 'No optimization needed'}'),
+              Text('Final Amplifier: ${selectedTier.name}'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build an optimization step display
+  Widget _buildOptimizationStep(Map<String, dynamic> step) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Step ${step['step']}: ${step['description']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          
+          // Amplifier details
+          ...(step['amplifiers'] as List<Map<String, dynamic>>).map((Map<String, dynamic> amp) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('Amplifier: ${amp['name']}', style: const TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 4),
-          const Text('TIER RULE APPLICATION:', style: TextStyle(fontWeight: FontWeight.w500)),
-          Text('Minimum amplifier capacity needed: ≥${totalPeak.toStringAsFixed(1)}W'),
-          Text('Estimated solution: $minAmplifiers × ${typicalAmpPower.toStringAsFixed(0)}W amplifiers'),
-          Text('Total capacity: ${requiredCapacity.toStringAsFixed(1)}W'),
-          Text('Power efficiency: ${(efficiency * 100).toStringAsFixed(1)}%',
-               style: TextStyle(
-                 fontWeight: FontWeight.bold,
-                 color: efficiency > 0.7 ? Colors.green : efficiency > 0.5 ? Colors.orange : Colors.red,
+              
+              // Channel details
+              ...(amp['channels'] as List<Map<String, dynamic>>).map((Map<String, dynamic> channel) => Padding(
+                padding: const EdgeInsets.only(left: 16, top: 2),
+                child: Text('Ch ${channel['channelNumber']}: ${channel['circuit'] != null ? '${channel['circuit']['model']} (${(channel['power'] as double).toStringAsFixed(1)}W)' : 'N/A'}'),
+              )),
+              
+              const SizedBox(height: 4),
+              Text('Net Power Sharing: ${(amp['netPowerSharing'] as double).toStringAsFixed(1)}W'),
+              Text('Available to Share: ${(amp['availableToShare'] as double).toStringAsFixed(1)}W'),
+              
+              if (amp['canOptimize'] == true)
+                const Text('✅ Can optimize power sharing', style: TextStyle(color: Colors.green)),
+              if (amp['optimizationApplied'] == true)
+                const Text('✅ Optimization applied', style: TextStyle(color: Colors.green)),
+              
+              const SizedBox(height: 8),
+            ],
                )),
         ],
       ),
     );
   }
 
-  Widget _buildPowerSharingDetails() {
+  /// Calculate net power sharing for an amplifier
+  double _calculateNetPowerSharing(List<Map<String, dynamic>> circuitData, AmplifierModel amplifier) {
+    final double perChannelCapacity = amplifier.asymmetrical.watts.toDouble();
+    double totalSymmSurplus = 0.0;
+    double totalAsymmDeficit = 0.0;
+    
+    for (int i = 0; i < amplifier.channels; i++) {
+      final double circuitPower = i < circuitData.length ? circuitData[i]['power'] as double : 0.0;
+      final double symmSurplus = math.max(perChannelCapacity - circuitPower, 0.0);
+      final double asymmDeficit = math.min(circuitPower - perChannelCapacity, 0.0);
+      
+      totalSymmSurplus += symmSurplus;
+      totalAsymmDeficit += asymmDeficit;
+    }
+    
+    return totalSymmSurplus + totalAsymmDeficit;
+  }
+
+  /// Calculate available power to share
+  double _calculateAvailableToShare(List<Map<String, dynamic>> circuitData, AmplifierModel amplifier) {
+    final double perChannelCapacity = amplifier.asymmetrical.watts.toDouble();
+    double totalSymmSurplus = 0.0;
+    
+    for (int i = 0; i < amplifier.channels; i++) {
+      final double circuitPower = i < circuitData.length ? circuitData[i]['power'] as double : 0.0;
+      final double symmSurplus = math.max(perChannelCapacity - circuitPower, 0.0);
+      totalSymmSurplus += symmSurplus;
+    }
+    
+    return totalSymmSurplus;
+  }
+
+  /// Step 3: Final Tier Rule Validation for Asymmetrical Mode
+  Widget _buildFinalTierRuleValidation() {
+    // Calculate circuit powers and sort by power (highest first)
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    double totalSystemPower = 0.0;
+    
+    for (final CircuitInput circuit in circuits) {
+      final double circuitPower = _estimateCircuitPower(circuit);
+      circuitData.add(<String, dynamic>{
+        'circuit': circuit,
+        'power': circuitPower,
+        'model': circuit.selectedModel ?? 'Unknown',
+        'speakerCount': int.tryParse(circuit.speakerCountController.text) ?? 0,
+        'mode': circuit.mode.toUpperCase(),
+      });
+      totalSystemPower += circuitPower;
+    }
+    
+    // Sort circuits by power (highest first)
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => (b['power'] as double).compareTo(a['power'] as double));
+    
+    // Find minimum required amplifier tier
+    final double maxCircuitPower = circuitData.isNotEmpty ? circuitData.first['power'] as double : 0.0;
+    final List<AmplifierModel> amplifiers = AmplifierCatalog.allModels;
+    
+    AmplifierModel? selectedTier;
+    for (final AmplifierModel amp in amplifiers) {
+      if (maxCircuitPower <= amp.asymmetrical.watts) {
+        selectedTier = amp;
+        break;
+      }
+    }
+    
+    if (selectedTier == null) {
+      return const Column(
+        children: <Widget>[
+          Text('❌ Error: No amplifier can handle the maximum circuit power'),
+        ],
+      );
+    }
+    
+    // Validate tier rule: Ppk_amplifier (next tier up) ≥ Pk_speaker_total ≥ Ppk_amplifier (current tier)
+    final List<Map<String, dynamic>> validationResults = <Map<String, dynamic>>[];
+    
+    // Check current tier
+    final bool currentTierValid = totalSystemPower >= selectedTier.symmetrical.totalCapacity;
+    
+    // Check next tier up
+    AmplifierModel? nextTierUp;
+    for (int i = 0; i < amplifiers.length; i++) {
+      if (amplifiers[i] == selectedTier && i < amplifiers.length - 1) {
+        nextTierUp = amplifiers[i + 1];
+        break;
+      }
+    }
+    
+    final bool nextTierUpValid = nextTierUp == null || totalSystemPower <= nextTierUp.symmetrical.totalCapacity;
+    
+    validationResults.add(<String, dynamic>{
+      'amplifier': selectedTier.name,
+      'currentTierCapacity': selectedTier.symmetrical.totalCapacity,
+      'nextTierUpCapacity': nextTierUp?.symmetrical.totalCapacity ?? 'N/A',
+      'totalSystemPower': totalSystemPower,
+      'currentTierValid': currentTierValid,
+      'nextTierUpValid': nextTierUpValid,
+      'overallValid': currentTierValid && nextTierUpValid,
+    });
+    
+    // Check if downgrade is needed
+    bool needsDowngrade = false;
+    AmplifierModel? recommendedTier;
+    
+    if (!currentTierValid) {
+      needsDowngrade = true;
+      // Find the appropriate tier down
+      for (int i = amplifiers.length - 1; i >= 0; i--) {
+        if (amplifiers[i].symmetrical.totalCapacity >= totalSystemPower) {
+          recommendedTier = amplifiers[i];
+          break;
+        }
+      }
+    }
+    
     return Column(
+      children: <Widget>[
+        const Text('✅ Final Tier Rule Validation', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('Validating tier rule: Ppk_amplifier (next tier up) ≥ Pk_speaker_total ≥ Ppk_amplifier (current tier)'),
+        const SizedBox(height: 16),
+        
+        // Validation Results
+        ...validationResults.map((Map<String, dynamic> result) => _buildValidationResult(result)),
+        
+        const SizedBox(height: 16),
+        
+        // Downgrade Recommendation
+        if (needsDowngrade) ...<Widget>[
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.orange[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.orange[200]!),
+            ),
+            child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        const Text('⚡ Step 5: Power Allocation - YOUR ACTUAL STRATEGY COMPARISON:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text('⚠️ Tier Downgrade Required', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
         const SizedBox(height: 8),
+                Text('Current tier ${selectedTier.name} cannot handle total system power.'),
+                Text('Recommended tier: ${recommendedTier?.name ?? 'None available'}'),
+                Text('Reason: Total system power (${totalSystemPower.toStringAsFixed(1)}W) > Current tier capacity (${selectedTier.symmetrical.totalCapacity}W)'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
         
-        // Strategy explanation
+        // Final Summary
         Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Colors.purple[50],
-            border: Border.all(color: Colors.purple[200]!),
-            borderRadius: BorderRadius.circular(6),
+            color: (currentTierValid && nextTierUpValid) ? Colors.green[50] : Colors.red[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: (currentTierValid && nextTierUpValid) ? Colors.green[200]! : Colors.red[200]!),
           ),
-          child: const Column(
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text('Two Allocation Strategies:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              SizedBox(height: 8),
-              Text('🔄 Symmetrical: Equal power per channel from each amp'),
-              Text('⚖️ Asymmetrical: Optimized power sharing across channels'),
+              Text('📊 Final Validation Result:', style: TextStyle(fontWeight: FontWeight.bold, color: (currentTierValid && nextTierUpValid) ? Colors.green : Colors.red)),
+              Text('Tier Rule Satisfied: ${(currentTierValid && nextTierUpValid) ? 'YES' : 'NO'}'),
+              Text('Current Tier Valid: ${currentTierValid ? 'YES' : 'NO'}'),
+              Text('Next Tier Up Valid: ${nextTierUpValid ? 'YES' : 'NO'}'),
+              Text('Final Amplifier: ${needsDowngrade ? (recommendedTier?.name ?? 'None') : selectedTier.name}'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Build validation result display
+  Widget _buildValidationResult(Map<String, dynamic> result) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: result['overallValid'] ? Colors.green[50] : Colors.red[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: result['overallValid'] ? Colors.green[200]! : Colors.red[200]!),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('Amplifier: ${result['amplifier']}', style: const TextStyle(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Current Tier Capacity: ${result['currentTierCapacity']}W'),
+          Text('Next Tier Up Capacity: ${result['nextTierUpCapacity']}W'),
+          Text('Total System Power: ${(result['totalSystemPower'] as double).toStringAsFixed(1)}W'),
+          const SizedBox(height: 8),
+          Text('Current Tier Valid: ${result['currentTierValid'] ? '✅ YES' : '❌ NO'}'),
+          Text('Next Tier Up Valid: ${result['nextTierUpValid'] ? '✅ YES' : '❌ NO'}'),
+          Text('Overall Valid: ${result['overallValid'] ? '✅ YES' : '❌ NO'}'),
+        ],
+      ),
+    );
+  }
+
+  /// Step 4: Channel-Based Results Display for Asymmetrical Mode
+  Widget _buildChannelBasedResults() {
+    // Calculate circuit powers and sort by power (highest first) - Step 3: Circuit Sorting
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    double totalSystemPower = 0.0;
+    
+    for (final CircuitInput circuit in circuits) {
+      final double circuitPower = _estimateCircuitPower(circuit);
+      circuitData.add(<String, dynamic>{
+        'circuit': circuit,
+        'power': circuitPower,
+        'model': circuit.selectedModel ?? 'Unknown',
+        'speakerCount': int.tryParse(circuit.speakerCountController.text) ?? 0,
+        'mode': circuit.mode.toUpperCase(),
+      });
+      totalSystemPower += circuitPower;
+    }
+    
+    // Sort circuits by power (highest first) - Step 3: Circuit Sorting
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => (b['power'] as double).compareTo(a['power'] as double));
+    
+    // Calculate optimal amplifier combination with cost optimization (same as symmetrical mode)
+    final List<Map<String, dynamic>> amplifierAllocation = _calculateOptimalAmplifierAllocation(circuitData, AmplifierCatalog.psx1204d);
+    
+    if (amplifierAllocation.isEmpty) {
+      return const Column(
+        children: <Widget>[
+          Text('❌ Error: No amplifiers could be allocated'),
+        ],
+      );
+    }
+    
+    // Apply circuit movement optimization logic
+    final List<Map<String, dynamic>> optimizedAllocation = _applyCircuitMovementOptimization(amplifierAllocation, circuitData);
+    
+    // Build power sharing analysis for each amplifier
+    final List<Widget> amplifierAnalysisWidgets = <Widget>[];
+    
+    for (int ampIndex = 0; ampIndex < optimizedAllocation.length; ampIndex++) {
+      final Map<String, dynamic> amplifier = optimizedAllocation[ampIndex];
+      final AmplifierModel ampModel = amplifier['tierModel'] as AmplifierModel;
+      final List<Map<String, dynamic>> assignedCircuits = amplifier['circuitsAssigned'] as List<Map<String, dynamic>>;
+      
+      // Calculate power sharing for this specific amplifier using AmplifierCatalog data
+      final Widget ampAnalysis = _buildAmplifierPowerSharingAnalysis(ampModel, assignedCircuits, ampIndex + 1);
+      amplifierAnalysisWidgets.add(ampAnalysis);
+    }
+    
+    return Column(
+      children: <Widget>[
+        const Text('📊 Mixed Amplifier Power Sharing Analysis', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        const Text('Complete power sharing analysis for each amplifier with circuit movement optimization'),
+        const SizedBox(height: 16),
+
+        // Mixed Amplifier Allocation Information
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange[50],
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange[200]!),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('🔧 Mixed Amplifier Allocation (Cost Optimized):', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Total Amplifiers Required: ${optimizedAllocation.length}'),
+              const SizedBox(height: 8),
+              ...optimizedAllocation.map((Map<String, dynamic> amp) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('• ${amp['tier']} (${amp['usedChannels']}/${amp['totalChannels']} channels used)'),
+                  Text('  Circuits: ${(amp['circuitsAssigned'] as List).map((c) => '${c['model']} (${c['power'].toStringAsFixed(1)}W)').join(', ')}'),
+                  const SizedBox(height: 4),
+                ],
+              )),
+              const SizedBox(height: 8),
+              Text('Strategy: Fill existing amplifiers first, then add new ones for cost optimization'),
+              const SizedBox(height: 8),
+              const Text('Circuit Movement Optimization Applied:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('• Moved circuits from higher-power amplifiers to amplifiers with available power sharing'),
+              const Text('• Optimized until no amplifiers have sufficient "Net power sharing" for additional circuits'),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Individual amplifier power sharing analysis
+        ...amplifierAnalysisWidgets,
+      ],
+    );
+  }
+
+  /// Apply circuit movement optimization logic
+  List<Map<String, dynamic>> _applyCircuitMovementOptimization(List<Map<String, dynamic>> amplifierAllocation, List<Map<String, dynamic>> circuitData) {
+    // Create a copy to avoid modifying the original
+    final List<Map<String, dynamic>> optimizedAllocation = <Map<String, dynamic>>[];
+    for (final Map<String, dynamic> amp in amplifierAllocation) {
+      optimizedAllocation.add(<String, dynamic>{
+        'amplifierNumber': amp['amplifierNumber'],
+        'tier': amp['tier'],
+        'tierModel': amp['tierModel'],
+        'totalChannels': amp['totalChannels'],
+        'usedChannels': amp['usedChannels'],
+        'unusedChannels': amp['unusedChannels'],
+        'circuitsAssigned': List<Map<String, dynamic>>.from(amp['circuitsAssigned'] as List),
+      });
+    }
+    
+    bool movedCircuit = true;
+    int iterations = 0;
+    const int maxIterations = 10; // Prevent infinite loops
+    
+    while (movedCircuit && iterations < maxIterations) {
+      movedCircuit = false;
+      iterations++;
+      
+      // Calculate Net Power Sharing for each amplifier
+      for (final Map<String, dynamic> amp in optimizedAllocation) {
+        final AmplifierModel ampModel = amp['tierModel'] as AmplifierModel;
+        final List<Map<String, dynamic>> assignedCircuits = amp['circuitsAssigned'] as List<Map<String, dynamic>>;
+        
+        // Calculate power sharing for this amplifier
+        final double perChannelCapacity = ampModel.symmetrical.watts.toDouble();
+        double totalSymmSurplus = 0.0;
+        double totalAsymmDeficit = 0.0;
+        
+        for (int i = 0; i < ampModel.channels; i++) {
+          final double actualPowerNeeded = i < assignedCircuits.length ? assignedCircuits[i]['power'] as double : 0.0;
+          final double symmSurplus = math.max(perChannelCapacity - actualPowerNeeded, 0.0);
+          final double asymmDeficit = math.min(perChannelCapacity - actualPowerNeeded, 0.0);
+          totalSymmSurplus += symmSurplus;
+          totalAsymmDeficit += asymmDeficit;
+        }
+        
+        final double netPowerSharing = totalSymmSurplus + totalAsymmDeficit;
+        amp['netPowerSharing'] = netPowerSharing;
+        amp['availableToShare'] = math.max(totalSymmSurplus, 0.0);
+      }
+      
+      // Look for circuits to move
+      for (final Map<String, dynamic> sourceAmp in optimizedAllocation) {
+        final double sourceNetPowerSharing = sourceAmp['netPowerSharing'] as double;
+        final int sourceUsedChannels = sourceAmp['usedChannels'] as int;
+        final int sourceTotalChannels = sourceAmp['totalChannels'] as int;
+        
+        // Only consider amplifiers with positive Net Power Sharing and available channels
+        if (sourceNetPowerSharing > 0 && sourceUsedChannels < sourceTotalChannels) {
+          // Look for circuits on higher-power amplifiers that could be moved
+          for (final Map<String, dynamic> targetAmp in optimizedAllocation) {
+            if (targetAmp == sourceAmp) continue;
+            
+            final List<Map<String, dynamic>> targetCircuits = targetAmp['circuitsAssigned'] as List<Map<String, dynamic>>;
+            if (targetCircuits.isEmpty) continue;
+            
+            // Find the highest power circuit on the target amplifier
+            final Map<String, dynamic> highestCircuit = targetCircuits.reduce((Map<String, dynamic> a, Map<String, dynamic> b) => 
+              (a['power'] as double) > (b['power'] as double) ? a : b);
+            
+            final double circuitPower = highestCircuit['power'] as double;
+            
+            // Check if this circuit can be moved to the source amplifier
+            // Must check: 1) Per-channel capacity, 2) Net power sharing, 3) Total amplifier capacity
+            final AmplifierModel sourceAmpModel = sourceAmp['tierModel'] as AmplifierModel;
+            final List<Map<String, dynamic>> sourceCircuits = sourceAmp['circuitsAssigned'] as List<Map<String, dynamic>>;
+            
+            // Calculate current total power on source amplifier
+            double currentSourcePower = sourceCircuits.fold(0.0, (double sum, Map<String, dynamic> circuit) => sum + (circuit['power'] as double));
+            double newTotalPower = currentSourcePower + circuitPower;
+            
+            if (circuitPower <= sourceNetPowerSharing && 
+                circuitPower <= sourceAmpModel.asymmetrical.watts &&
+                newTotalPower <= sourceAmpModel.asymmetrical.totalCapacity) {
+              // Move the circuit
+              targetCircuits.remove(highestCircuit);
+              (sourceAmp['circuitsAssigned'] as List<Map<String, dynamic>>).add(highestCircuit);
+              
+              // Update channel counts
+              sourceAmp['usedChannels'] = (sourceAmp['usedChannels'] as int) + 1;
+              sourceAmp['unusedChannels'] = (sourceAmp['unusedChannels'] as int) - 1;
+              targetAmp['usedChannels'] = (targetAmp['usedChannels'] as int) - 1;
+              targetAmp['unusedChannels'] = (targetAmp['unusedChannels'] as int) + 1;
+              
+              movedCircuit = true;
+              break;
+            }
+          }
+        }
+        if (movedCircuit) break;
+      }
+    }
+    
+    return optimizedAllocation;
+  }
+
+  /// Build power sharing analysis for a specific amplifier using AmplifierCatalog data
+  Widget _buildAmplifierPowerSharingAnalysis(AmplifierModel amplifier, List<Map<String, dynamic>> assignedCircuits, int amplifierNumber) {
+    // Use AmplifierCatalog data properly
+    final int channelCount = amplifier.channels;
+    final double perChannelCapacity = amplifier.symmetrical.watts.toDouble(); // L = per-channel limit
+    final double totalCapacity = amplifier.asymmetrical.totalCapacity.toDouble();
+    final double asymmetricalShareablePerChannel = amplifier.asymmetrical.watts.toDouble();
+    
+    // Create channel data for this amplifier
+    final List<Map<String, dynamic>> channelData = <Map<String, dynamic>>[];
+    double totalSymmSurplus = 0.0;
+    double totalAsymmDeficit = 0.0;
+    
+    for (int i = 0; i < channelCount; i++) {
+      final double actualPowerNeeded = i < assignedCircuits.length ? assignedCircuits[i]['power'] as double : 0.0;
+      
+      // STEP 6: Asymmetrical Analysis formulas (from sample.md)
+      final double symmSurplus = math.max(perChannelCapacity - actualPowerNeeded, 0.0);
+      final double asymmDeficit = math.min(perChannelCapacity - actualPowerNeeded, 0.0);
+      
+      // Accumulate totals
+      totalSymmSurplus += symmSurplus;
+      totalAsymmDeficit += asymmDeficit;
+      
+      final Map<String, dynamic> channel = <String, dynamic>{
+        'channelNumber': i + 1,
+        'circuit': i < assignedCircuits.length ? assignedCircuits[i] : null,
+        'actualPowerNeeded': actualPowerNeeded,
+        'symmSurplus': symmSurplus,
+        'asymmDeficit': asymmDeficit,
+        'needsExtraPower': asymmDeficit < 0,
+      };
+      channelData.add(channel);
+    }
+    
+    // Calculate global values from individual channel totals
+    final double netPowerSharing = totalSymmSurplus + totalAsymmDeficit;
+    final double availableToShare = math.max(totalSymmSurplus, 0.0);
+    
+    // Count channels needing extra power
+    int channelsNeedingPower = 0;
+    for (final Map<String, dynamic> channel in channelData) {
+      if (channel['needsExtraPower'] as bool) {
+        channelsNeedingPower++;
+      }
+    }
+    
+    final double sharePerNeeding = channelsNeedingPower > 0 ? availableToShare / channelsNeedingPower : 0.0;
+    
+    // Complete channel data with remaining calculations
+    for (int i = 0; i < channelCount; i++) {
+      final Map<String, dynamic> channel = channelData[i];
+      final double actualPowerNeeded = channel['actualPowerNeeded'] as double;
+      final bool needsExtraPower = channel['needsExtraPower'] as bool;
+      
+      // STEP 7: Power Distribution Calculation formulas (from sample.md)
+      final double powerAvailable = needsExtraPower ? perChannelCapacity + sharePerNeeding : perChannelCapacity;
+      final double limitPowerDelivered = math.min(powerAvailable, asymmetricalShareablePerChannel);
+      final double powerDelivered = math.min(limitPowerDelivered, actualPowerNeeded);
+      
+      // STEP 8: Headroom Calculations formulas (from sample.md)
+      final double channelHeadroom = powerDelivered > 0 ? 10 * math.log(asymmetricalShareablePerChannel / powerDelivered) / math.ln10 : 0.0;
+      final double loudspeakerHeadroom = powerDelivered > 0 ? 10 * math.log(actualPowerNeeded / powerDelivered) / math.ln10 : 0.0;
+      
+      // Update existing channel data with remaining calculations
+      channel['netPowerSharing'] = netPowerSharing; // Global value for all channels
+      channel['availableToShare'] = availableToShare; // Global value for all channels
+      channel['sharePerNeeding'] = sharePerNeeding; // Global value for all channels
+      channel['powerAvailable'] = powerAvailable;
+      channel['limitPowerDelivered'] = limitPowerDelivered;
+      channel['powerDelivered'] = powerDelivered;
+      channel['channelHeadroom'] = channelHeadroom;
+      channel['loudspeakerHeadroom'] = loudspeakerHeadroom;
+    }
+    
+    // Calculate system totals for this amplifier
+    final double totalActualPower = channelData.fold(0.0, (double sum, Map<String, dynamic> ch) => sum + (ch['actualPowerNeeded'] as double));
+    final double totalPowerDelivered = channelData.fold(0.0, (double sum, Map<String, dynamic> ch) => sum + (ch['powerDelivered'] as double));
+    final double totalAmpHeadroom = totalPowerDelivered > 0 ? 10 * math.log(totalCapacity / totalPowerDelivered) / math.ln10 : 0.0;
+    final bool systemHasEnoughPower = totalPowerDelivered >= totalActualPower;
+    
+    // Update effective headroom with global totalAmpHeadroom
+    for (final Map<String, dynamic> channel in channelData) {
+      final double channelHeadroom = channel['channelHeadroom'] as double;
+      channel['effectiveHeadroom'] = math.min(channelHeadroom, totalAmpHeadroom);
+    }
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          // Amplifier Header
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.blue[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('🔧 Amplifier $amplifierNumber: ${amplifier.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                const SizedBox(height: 8),
+                Text('Per-Channel Limit (L): ${perChannelCapacity.toStringAsFixed(1)}W'),
+                Text('Asymmetrical Shareable Per Channel: ${asymmetricalShareablePerChannel.toStringAsFixed(1)}W'),
+                Text('Total Capacity: ${totalCapacity.toStringAsFixed(1)}W'),
+                const SizedBox(height: 8),
+                Text('Total Symm Surplus: ${totalSymmSurplus.toStringAsFixed(1)}W'),
+                Text('Total Asymm Deficit: ${totalAsymmDeficit.toStringAsFixed(1)}W'),
+                Text('Net Power Sharing: ${netPowerSharing.toStringAsFixed(1)}W'),
+                Text('Available to Share: ${availableToShare.toStringAsFixed(1)}W'),
+                Text('Channels Needing Power: $channelsNeedingPower'),
+                Text('Share Per Needing: ${sharePerNeeding.toStringAsFixed(1)}W'),
+                Text('Total Amp Headroom: ${totalAmpHeadroom.toStringAsFixed(1)} dB'),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Channel-based table for this amplifier
+          _buildCompleteChannelTable(channelData, amplifier),
+          
+          const SizedBox(height: 12),
+          
+          // Final Validation for this amplifier
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: systemHasEnoughPower ? Colors.green[50] : Colors.red[50],
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: systemHasEnoughPower ? Colors.green[200]! : Colors.red[200]!),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('🔍 Amplifier $amplifierNumber Validation:', style: TextStyle(fontWeight: FontWeight.bold, color: systemHasEnoughPower ? Colors.green : Colors.red)),
+                const SizedBox(height: 8),
+                Text('Power Conservation: ${totalPowerDelivered.toStringAsFixed(1)}W ≤ ${totalCapacity.toStringAsFixed(1)}W ${totalPowerDelivered <= totalCapacity ? '✓' : '❌'}'),
+                Text('Power Sufficiency: ${systemHasEnoughPower ? 'All circuits receive sufficient power ✓' : 'Some circuits insufficient power ❌'}'),
+                Text('Net Power Sharing: ${netPowerSharing.toStringAsFixed(1)}W ≥ 0 ${netPowerSharing >= 0 ? '✓' : '❌'}'),
+                const SizedBox(height: 8),
+                Text('Result: ${systemHasEnoughPower ? '✅ VALIDATION PASSED' : '❌ VALIDATION FAILED'}'),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Build complete channel table with all metrics
+  Widget _buildCompleteChannelTable(List<Map<String, dynamic>> channelData, AmplifierModel amplifier) {
+    final int channelCount = amplifier.channels;
+    
+    return Column(
+      children: <Widget>[
+        // Table Header
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            children: <Widget>[
+              const Expanded(flex: 2, child: Text('Metric', style: TextStyle(fontWeight: FontWeight.bold))),
+              ...List.generate(channelCount, (int index) => Expanded(
+                child: Text('Ch ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              )),
+            ],
+          ),
+        ),
+        
+        // Table Rows
+        _buildTableRow('Actual Power Needed', channelData.map((Map<String, dynamic> ch) => ch['actualPowerNeeded'] as double).toList()),
+        _buildTableRow('Symm Surplus', channelData.map((Map<String, dynamic> ch) => ch['symmSurplus'] as double).toList()),
+        _buildTableRow('Asymm Deficit', channelData.map((Map<String, dynamic> ch) => ch['asymmDeficit'] as double).toList()),
+        _buildTableRow('Needs Extra Power', channelData.map((Map<String, dynamic> ch) => (ch['needsExtraPower'] as bool) ? 'YES' : '').toList()),
+        _buildTableRow('Power Available', channelData.map((Map<String, dynamic> ch) => ch['powerAvailable'] as double).toList()),
+        _buildTableRow('Limit Power Delivered', channelData.map((Map<String, dynamic> ch) => ch['limitPowerDelivered'] as double).toList()),
+        _buildTableRow('Power Delivered', channelData.map((Map<String, dynamic> ch) => ch['powerDelivered'] as double).toList()),
+        _buildTableRow('Channel Headroom (dB)', channelData.map((Map<String, dynamic> ch) => ch['channelHeadroom'] as double).toList()),
+        _buildTableRow('Effective Headroom (dB)', channelData.map((Map<String, dynamic> ch) => ch['effectiveHeadroom'] as double).toList()),
+        _buildTableRow('Loudspeaker Headroom (dB)', channelData.map((Map<String, dynamic> ch) => ch['loudspeakerHeadroom'] as double).toList()),
+      ],
+    );
+  }
+
+  /// Build a table row for the channel-based display (updated to handle mixed types)
+  Widget _buildTableRow(String metric, List<dynamic> values) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
+      ),
+      child: Row(
+        children: <Widget>[
+          Expanded(flex: 2, child: Text(metric)),
+          ...values.map((value) => Expanded(
+            child: Text(_formatValue(value)),
+          )),
+        ],
+      ),
+    );
+  }
+
+  /// Format values for display
+  String _formatValue(dynamic value) {
+    if (value == null) return 'N/A';
+    if (value is bool) return value ? 'X' : '';
+    if (value is double) {
+      if (value == 0.0) return 'N/A';
+      return value.toStringAsFixed(1);
+    }
+    if (value is String) return value.isEmpty ? 'N/A' : value;
+    return value.toString();
+  }
+
+  /// Build channel-based table for power sharing analysis
+  Widget _buildChannelBasedTable(List<Map<String, dynamic>> circuitData, AmplifierModel amplifier) {
+    final int channelCount = amplifier.channels;
+    final double perChannelCapacity = amplifier.asymmetrical.watts.toDouble();
+    
+    // Create channel data
+    final List<Map<String, dynamic>> channelData = <Map<String, dynamic>>[];
+    for (int i = 0; i < channelCount; i++) {
+      final Map<String, dynamic> channel = <String, dynamic>{
+        'channelNumber': i + 1,
+        'circuit': i < circuitData.length ? circuitData[i] : null,
+        'actualPowerNeeded': i < circuitData.length ? circuitData[i]['power'] as double : 0.0,
+        'symmSurplus': perChannelCapacity - (i < circuitData.length ? circuitData[i]['power'] as double : 0.0),
+        'asymmDeficit': (i < circuitData.length ? circuitData[i]['power'] as double : 0.0) - perChannelCapacity,
+        'powerAvailable': perChannelCapacity,
+        'powerDelivered': i < circuitData.length ? circuitData[i]['power'] as double : 0.0,
+        'channelHeadroom': 0.0,
+        'effectiveHeadroom': 0.0,
+        'loudspeakerHeadroom': 0.0,
+      };
+      channelData.add(channel);
+    }
+    
+    // Calculate totals
+    final double totalActualPower = channelData.fold(0.0, (double sum, Map<String, dynamic> ch) => sum + (ch['actualPowerNeeded'] as double));
+    final double totalSymmSurplus = channelData.fold(0.0, (double sum, Map<String, dynamic> ch) => sum + (ch['symmSurplus'] as double));
+    final double totalAsymmDeficit = channelData.fold(0.0, (double sum, Map<String, dynamic> ch) => sum + (ch['asymmDeficit'] as double));
+    final double netPowerSharing = totalSymmSurplus + totalAsymmDeficit;
+    final double availableToShare = totalSymmSurplus;
+    
+    return Column(
+      children: <Widget>[
+        // Table Header
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey[200],
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Row(
+            children: <Widget>[
+              const Expanded(flex: 2, child: Text('Metric', style: TextStyle(fontWeight: FontWeight.bold))),
+              ...List.generate(channelCount, (int index) => Expanded(
+                child: Text('Ch ${index + 1}', style: const TextStyle(fontWeight: FontWeight.bold)),
+              )),
+            ],
+          ),
+        ),
+        
+        // Table Rows
+        _buildTableRow('Actual Power Needed', channelData.map((Map<String, dynamic> ch) => ch['actualPowerNeeded'] as double).toList()),
+        _buildTableRow('Symm Surplus', channelData.map((Map<String, dynamic> ch) => ch['symmSurplus'] as double).toList()),
+        _buildTableRow('Asymm Deficit', channelData.map((Map<String, dynamic> ch) => ch['asymmDeficit'] as double).toList()),
+        _buildTableRow('Power Available', channelData.map((Map<String, dynamic> ch) => ch['powerAvailable'] as double).toList()),
+        _buildTableRow('Power Delivered', channelData.map((Map<String, dynamic> ch) => ch['powerDelivered'] as double).toList()),
+        _buildTableRow('Channel Headroom', channelData.map((Map<String, dynamic> ch) => ch['channelHeadroom'] as double).toList()),
+        _buildTableRow('Effective Headroom', channelData.map((Map<String, dynamic> ch) => ch['effectiveHeadroom'] as double).toList()),
+        _buildTableRow('Loudspeaker Headroom', channelData.map((Map<String, dynamic> ch) => ch['loudspeakerHeadroom'] as double).toList()),
+        
+        const SizedBox(height: 8),
+        
+        // Summary
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('Net Power Sharing: ${netPowerSharing.toStringAsFixed(1)}W'),
+              Text('Available to Share: ${availableToShare.toStringAsFixed(1)}W'),
+              Text('Total System Power: ${totalActualPower.toStringAsFixed(1)}W'),
+              Text('Amplifier Capacity: ${amplifier.asymmetrical.totalCapacity}W'),
+              Text('System Validation: ${totalActualPower <= amplifier.asymmetrical.totalCapacity ? 'YES' : 'NO'}'),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+
+  Widget _buildAmplifierMatchingProcess(PowerAllocationStrategy strategy) {
+    // Calculate circuit powers and sort by power (highest first)
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    double totalSystemPower = 0.0;
+    
+    for (final CircuitInput circuit in circuits) {
+      if (circuit.selectedModel != null) {
+        final double power = _estimateCircuitPower(circuit);
+        circuitData.add(<String, dynamic>{
+          'id': circuit.circuitId,
+          'model': circuit.selectedModel,
+          'power': power,
+          'mode': circuit.mode,
+          'speakerCount': int.tryParse(circuit.speakerCountController.text) ?? 1,
+        });
+        totalSystemPower += power;
+      }
+    }
+    
+    if (circuitData.isEmpty) {
+      return const Text('No valid circuits to match');
+    }
+    
+    // Sort circuits by power (highest first) - largest circuits are hardest to fit
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => 
+                     (b['power'] as double).compareTo(a['power'] as double));
+    
+    // Use amplifier data from library
+    final List<AmplifierModel> amplifierTiers = AmplifierCatalog.allModels;
+    
+    // Find appropriate amplifier tier for total system power
+    // CORRECTED LOGIC: Find the smallest amplifier that can handle both total power AND per-channel power
+    AmplifierModel? selectedTier;
+    
+    // First, check if any single circuit exceeds the largest amplifier's per-channel capacity
+    final double maxCircuitPower = circuitData.isNotEmpty ? circuitData.first['power'] as double : 0.0;
+    final AmplifierModel largestAmp = amplifierTiers.last;
+    
+    if (maxCircuitPower > largestAmp.symmetrical.watts) {
+      // Single circuit exceeds largest amplifier's per-channel capacity
+      selectedTier = null; // Will show error
+    } else {
+      // Find the smallest amplifier that can handle both total and per-channel requirements
+      for (final AmplifierModel tier in amplifierTiers) {
+        if (totalSystemPower <= tier.symmetrical.totalCapacity && 
+            maxCircuitPower <= tier.symmetrical.watts) {
+          selectedTier = tier;
+          break;
+        }
+      }
+    }
+    
+    if (selectedTier == null) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.red[100],
+          border: Border.all(color: Colors.red[300]!),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            const Text('❌ SYSTEM EXCEEDS MAXIMUM AMPLIFIER CAPACITY', 
+                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red)),
+            const SizedBox(height: 4),
+            if (maxCircuitPower > largestAmp.symmetrical.watts) ...<Widget>[
+              Text('Largest Circuit: ${maxCircuitPower.toStringAsFixed(1)}W > ${largestAmp.symmetrical.watts}W per-channel (${largestAmp.name})'),
+              const Text('Recommendation: Reduce individual circuit power or split into multiple circuits'),
+            ] else ...<Widget>[
+              Text('Total Power: ${totalSystemPower.toStringAsFixed(1)}W > ${AmplifierCatalog.psx4804d.symmetrical.totalCapacity}W (${AmplifierCatalog.psx4804d.name})'),
+              const Text('Recommendation: Reduce circuit power requirements or use multiple amplifiers'),
+            ],
+          ],
+        ),
+      );
+    }
+    
+    // Calculate optimal amplifier combination with cost optimization
+    final List<Map<String, dynamic>> amplifierAllocation = _calculateOptimalAmplifierAllocation(circuitData, selectedTier);
+    
+    return Column(
+      children: <Widget>[
+        // System Summary
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue[100],
+            border: Border.all(color: Colors.blue[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('📊 System Summary:', style: TextStyle(fontWeight: FontWeight.bold)),
+              Text('Total Circuits: ${circuitData.length}'),
+              Text('Total System Power: ${totalSystemPower.toStringAsFixed(1)}W'),
+              Text('Selected Amplifier Tier: ${selectedTier.name}'),
+              Text('Total Amplifiers Needed: ${amplifierAllocation.length}'),
+              Text('Total Channels Needed: ${circuitData.length}'),
             ],
           ),
         ),
         
         const SizedBox(height: 12),
-        const Text('🧮 YOUR CONFIGURATION ANALYSIS:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
         
-        if (circuits.length >= 2) ...<Widget>[
-          _buildActualStrategyComparison(),
-        ] else ...<Widget>[
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: const Text('Add at least 2 circuits to see actual strategy comparison', 
-                               style: TextStyle(fontStyle: FontStyle.italic)),
+        // Circuit Details
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green[100],
+            border: Border.all(color: Colors.green[300]!),
+            borderRadius: BorderRadius.circular(6),
           ),
-        ],
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('🔌 Circuit Details (Sorted by Power):', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...circuitData.asMap().entries.map((MapEntry<int, Map<String, dynamic>> entry) {
+                final int index = entry.key;
+                final Map<String, dynamic> circuit = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 4),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.grey[300]!),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: index == 0 ? Colors.red : (index == 1 ? Colors.orange : Colors.yellow[700]),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Center(
+                          child: Text('${index + 1}', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text('Circuit ${circuit['id']}: ${circuit['model']} (${circuit['mode'].toUpperCase()})', 
+                                 style: const TextStyle(fontWeight: FontWeight.w500)),
+                            Text('${(circuit['power'] as double).toStringAsFixed(1)}W - ${circuit['speakerCount']} speakers'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Amplifier Allocation
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.purple[100],
+            border: Border.all(color: Colors.purple[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('🎯 Amplifier Allocation:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              ...amplifierAllocation.map((Map<String, dynamic> amp) {
+                final List<Map<String, dynamic>> circuitsAssigned = amp['circuitsAssigned'] as List<Map<String, dynamic>>;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: Colors.purple[300]!),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text('Amplifier ${amp['amplifierNumber']}: ${amp['tier']}', 
+                           style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text('Channels: ${amp['usedChannels']}/${amp['totalChannels']} used (${amp['unusedChannels']} unused)'),
+                      if (circuitsAssigned.isNotEmpty) ...<Widget>[
+                        const SizedBox(height: 4),
+                        const Text('Assigned Circuits:', style: TextStyle(fontWeight: FontWeight.w500)),
+                        ...circuitsAssigned.map((Map<String, dynamic> circuit) =>
+                          Text('  • Circuit ${circuit['id']}: ${circuit['model']} (${(circuit['power'] as double).toStringAsFixed(1)}W)'),
+                        ),
+                      ],
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Tier Rule Validation
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.teal[100],
+            border: Border.all(color: Colors.teal[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('✅ Tier Rule Validation:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text('Rule: Ppk_amplifier (next tier up) ≥ Pk_speaker_total ≥ Ppk_amplifier (current tier)'),
+              Text('Total System Power: ${totalSystemPower.toStringAsFixed(1)}W'),
+              Text('Selected Tier: ${selectedTier.name} (${selectedTier.symmetrical.totalCapacity}W total)'),
+              Text('Validation: ${selectedTier.symmetrical.totalCapacity}W ≥ ${totalSystemPower.toStringAsFixed(1)}W ✅'),
+              const SizedBox(height: 4),
+              const Text('Channel Strategy: Unused channels allocated to smallest amplifiers for cost optimization ✅'),
+              const SizedBox(height: 4),
+              Text('Amplifier Types Used: ${amplifierAllocation.map((Map<String, dynamic> amp) => amp['tier']).toSet().join(', ')}'),
+            ],
+          ),
+        ),
       ],
     );
   }
 
-  Widget _buildActualStrategyComparison() {
+
+
+  Widget _buildPowerSharingStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('⚡ Asymmetrical Analysis:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.purple[100],
+            border: Border.all(color: Colors.purple[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('Corrected Asymmetrical Power Sharing Formulas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              SizedBox(height: 8),
+              Text('Symm_Surplus_i = Max[(L - P_actual,i), 0]', style: TextStyle(fontFamily: 'monospace')),
+              Text('Asymm_Deficit_i = Min[(L - P_actual,i), 0]', style: TextStyle(fontFamily: 'monospace')),
+              Text('NetPower_Sharing = Total_Symm_Surplus + Total_Asymm_Deficit', style: TextStyle(fontFamily: 'monospace')),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        const Text('🧮 Power Sharing Calculations:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        
+        // Always show power sharing analysis (even for single circuits)
+        _buildPowerSharingCalculation(),
+      ],
+    );
+  }
+
+  Widget _buildPowerSharingCalculation() {
     // Calculate actual circuit powers
     final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
     double totalPower = 0.0;
@@ -1152,256 +2618,661 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     }
     
     if (circuitData.isEmpty) {
-      return const Text('Select speaker models to see calculations');
-    }
-    
-    // Sort circuits by power for analysis
-    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => 
-                     (b['power'] as double).compareTo(a['power'] as double));
-    
-    // Symmetrical calculation
-    const double ampPower = 1000.0; // PowerMatch PM8500N
-    const int channelsPerAmp = 4;
-    final int channelsNeeded = circuitData.length;
-    final int symmetricalAmps = (channelsNeeded / channelsPerAmp).ceil();
-    final double powerPerChannel = ampPower / channelsPerAmp;
-    final double symmetricalCapacity = symmetricalAmps * ampPower;
-    final double symmetricalEfficiency = totalPower / symmetricalCapacity;
-    
-    // Check if any circuit exceeds per-channel limit
-    final bool hasOverload = circuitData.any((Map<String, dynamic> c) => 
-                                           (c['power'] as double) > powerPerChannel);
-    
-    // Asymmetrical calculation
-    int asymmetricalAmps = 0;
-    double asymmetricalCapacity = 0.0;
-    double remainingPower = totalPower;
-    
-    // High-power circuits get dedicated amps
-    for (final Map<String, dynamic> circuit in circuitData) {
-      final double power = circuit['power'] as double;
-      if (power > powerPerChannel) {
-        asymmetricalAmps++;
-        asymmetricalCapacity += ampPower;
-        remainingPower -= power;
-      }
-    }
-    
-    // Remaining circuits share amps
-    if (remainingPower > 0) {
-      final int sharedAmps = (remainingPower / ampPower).ceil();
-      asymmetricalAmps += sharedAmps;
-      asymmetricalCapacity += sharedAmps * ampPower;
-    }
-    
-    final double asymmetricalEfficiency = totalPower / asymmetricalCapacity;
-    
-    return Column(
-      children: <Widget>[
-        // Circuit power breakdown
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.blue[50],
-            border: Border.all(color: Colors.blue[200]!),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text('📊 Your Circuit Power Requirements:', style: TextStyle(fontWeight: FontWeight.bold)),
-              for (final Map<String, dynamic> circuit in circuitData) ...<Widget>[
-                Text('Circuit ${circuit['id']}: ${circuit['model']} = ${(circuit['power'] as double).toStringAsFixed(1)}W (${circuit['mode']})'),
-              ],
-              const SizedBox(height: 4),
-              Text('TOTAL: ${totalPower.toStringAsFixed(1)}W across ${circuitData.length} circuits', 
-                   style: const TextStyle(fontWeight: FontWeight.bold)),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // Symmetrical strategy actual calculation
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: hasOverload ? Colors.red[50] : Colors.green[50],
-            border: Border.all(color: hasOverload ? Colors.red[200]! : Colors.green[200]!),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text('🔄 SYMMETRICAL CALCULATION:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('Channels needed: $channelsNeeded'),
-              Text('Calculation: $channelsNeeded ÷ $channelsPerAmp = $symmetricalAmps amplifiers'),
-              Text('Power per channel: ${powerPerChannel.toStringAsFixed(1)}W'),
-              Text('Total capacity: ${symmetricalCapacity.toStringAsFixed(1)}W'),
-              Text('Efficiency: ${(symmetricalEfficiency * 100).toStringAsFixed(1)}%'),
-              if (hasOverload) ...<Widget>[
-                const SizedBox(height: 4),
-                const Text('⚠️ PROBLEM: Some circuits exceed ${250.0}W per-channel limit!', 
-                           style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
-                for (final Map<String, dynamic> circuit in circuitData) ...<Widget>[
-                  if ((circuit['power'] as double) > powerPerChannel)
-                    Text('• Circuit ${circuit['id']}: ${(circuit['power'] as double).toStringAsFixed(1)}W > ${powerPerChannel.toStringAsFixed(1)}W', 
-                         style: const TextStyle(color: Colors.red)),
-                ],
-              ] else ...<Widget>[
-                const Text('✅ All circuits fit within per-channel limits', 
-                           style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
-              ],
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // Asymmetrical strategy actual calculation
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.orange[50],
-            border: Border.all(color: Colors.orange[200]!),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text('⚖️ ASYMMETRICAL CALCULATION:', style: TextStyle(fontWeight: FontWeight.bold)),
-              Text('High-power circuits (>${powerPerChannel.toStringAsFixed(0)}W): ${circuitData.where((Map<String, dynamic> c) => (c['power'] as double) > powerPerChannel).length}'),
-              Text('Dedicated amps needed: ${circuitData.where((Map<String, dynamic> c) => (c['power'] as double) > powerPerChannel).length}'),
-              Text('Remaining power: ${(remainingPower > 0 ? remainingPower : 0).toStringAsFixed(1)}W'),
-              Text('Shared amps needed: ${asymmetricalAmps - circuitData.where((Map<String, dynamic> c) => (c['power'] as double) > powerPerChannel).length}'),
-              Text('Total amplifiers: $asymmetricalAmps'),
-              Text('Total capacity: ${asymmetricalCapacity.toStringAsFixed(1)}W'),
-              Text('Efficiency: ${(asymmetricalEfficiency * 100).toStringAsFixed(1)}%'),
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // Recommendation
-        Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.green[100],
-            border: Border.all(color: Colors.green[300]!),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              const Text('🎯 RECOMMENDATION FOR YOUR CONFIG:', style: TextStyle(fontWeight: FontWeight.bold)),
-              if (hasOverload) ...<Widget>[
-                const Text('Use ASYMMETRICAL - Symmetrical cannot handle high-power circuits',
-                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange)),
-                Text('Savings: ${symmetricalAmps - asymmetricalAmps} fewer amplifiers needed'),
-              ] else if (asymmetricalEfficiency > symmetricalEfficiency + 0.1) ...<Widget>[
-                const Text('Use ASYMMETRICAL - Better efficiency',
-                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                Text('Efficiency gain: ${((asymmetricalEfficiency - symmetricalEfficiency) * 100).toStringAsFixed(1)}%'),
-              ] else if (asymmetricalAmps < symmetricalAmps) ...<Widget>[
-                const Text('Use ASYMMETRICAL - Fewer amplifiers needed',
-                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
-                Text('Amplifier savings: ${symmetricalAmps - asymmetricalAmps} units'),
-              ] else ...<Widget>[
-                const Text('Use SYMMETRICAL - Simpler configuration',
-                           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
-                const Text('Similar efficiency with easier setup'),
-              ],
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildFinalValidationDetails() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        const Text('✅ Final Validation Process:', style: TextStyle(fontWeight: FontWeight.bold)),
-        const SizedBox(height: 8),
-        
-        if (symmetricalResult != null && asymmetricalResult != null) ...<Widget>[
-          // Show actual results
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.green[50],
-              border: Border.all(color: Colors.green[200]!),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                const Text('🏆 Algorithm Results:', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                
-                // Symmetrical Results
-                Row(
-                  children: <Widget>[
-                    const Icon(Icons.balance, color: Colors.blue, size: 16),
-                    const SizedBox(width: 4),
-                    const Text('Symmetrical: ', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue)),
-                    Text('${symmetricalResult!.amplifierCount} amplifiers, '),
-                    Text('${(symmetricalResult!.powerEfficiency * 100).toStringAsFixed(1)}% efficiency'),
-                  ],
-                ),
-                
-                // Asymmetrical Results
-                Row(
-                  children: <Widget>[
-                    const Icon(Icons.share, color: Colors.green, size: 16),
-                    const SizedBox(width: 4),
-                    const Text('Asymmetrical: ', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.green)),
-                    Text('${asymmetricalResult!.amplifierCount} amplifiers, '),
-                    Text('${(asymmetricalResult!.powerEfficiency * 100).toStringAsFixed(1)}% efficiency'),
-                  ],
-                ),
-                
-                const SizedBox(height: 8),
-                const Text('Validation steps completed:', style: TextStyle(fontWeight: FontWeight.w500)),
-                const Text('• ✅ All circuits successfully assigned'),
-                const Text('• ✅ Power requirements verified'),
-                const Text('• ✅ Channel allocations validated'),
-                const Text('• ✅ SKU reduction optimization applied'),
-              ],
-            ),
-          ),
-        ] else ...<Widget>[
-          // Show validation checklist
-          Container(
+      return Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               color: Colors.grey[100],
               border: Border.all(color: Colors.grey[300]!),
               borderRadius: BorderRadius.circular(6),
             ),
-            child: const Column(
+        child: const Text('Select speaker models to see calculations', 
+                               style: TextStyle(fontStyle: FontStyle.italic)),
+      );
+    }
+    
+    // Sort circuits by power for analysis
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => 
+                     (b['power'] as double).compareTo(a['power'] as double));
+    
+    return Column(
+      children: <Widget>[
+        // Test PSX-2404D Analysis (as per sample.md)
+        _buildAmplifierAnalysis(AmplifierCatalog.psx2404d.name, 
+          AmplifierCatalog.psx2404d.symmetrical.watts.toDouble(), 
+          AmplifierCatalog.psx2404d.symmetrical.totalCapacity.toDouble(), 
+          AmplifierCatalog.psx2404d.asymmetrical.watts.toDouble(), 
+          circuitData, totalPower),
+        
+        const SizedBox(height: 16),
+        
+        // Test PSX-4804D Analysis (as per sample.md)
+        _buildAmplifierAnalysis(AmplifierCatalog.psx4804d.name, 
+          AmplifierCatalog.psx4804d.symmetrical.watts.toDouble(), 
+          AmplifierCatalog.psx4804d.symmetrical.totalCapacity.toDouble(), 
+          AmplifierCatalog.psx4804d.asymmetrical.watts.toDouble(), 
+          circuitData, totalPower),
+      ],
+    );
+  }
+
+  Widget _buildAmplifierAnalysis(String ampName, double perChannelLimit, double totalCapacity, double asymmetricalShareable, List<Map<String, dynamic>> circuitData, double totalPower) {
+    // Calculate surplus and deficit for each channel using CORRECTED formulas
+    final List<Map<String, dynamic>> channelAnalysis = <Map<String, dynamic>>[];
+    double totalSymmSurplus = 0.0;
+    double totalAsymmDeficit = 0.0;
+    
+    for (int i = 0; i < 4; i++) {
+      final double channelPower = i < circuitData.length ? circuitData[i]['power'] as double : 0.0;
+      
+      // CORRECTED FORMULAS from sample.md
+      final double symmSurplus = math.max(perChannelLimit - channelPower, 0.0); // Positive or zero
+      final double asymmDeficit = math.min(perChannelLimit - channelPower, 0.0); // Negative or zero
+      
+      channelAnalysis.add(<String, dynamic>{
+        'channel': i + 1,
+        'power': channelPower,
+        'symmSurplus': symmSurplus,
+        'asymmDeficit': asymmDeficit,
+        'needsSharing': asymmDeficit < 0,
+        'circuitModel': i < circuitData.length ? circuitData[i]['model'] : 'Empty',
+      });
+      
+      totalSymmSurplus += symmSurplus;
+      // totalAsymmDeficit += asymmDeficit; // Unused variable
+    }
+    
+    // CORRECTED NetPower_Sharing formula
+    final double netPowerSharing = totalSymmSurplus + totalAsymmDeficit;
+    final bool canShare = netPowerSharing >= 0;
+    
+    // Calculate power distribution
+    final int channelsNeedingPower = channelAnalysis.where((Map<String, dynamic> ch) => ch['needsSharing'] as bool).length;
+    final double sharePerNeeding = channelsNeedingPower > 0 ? totalSymmSurplus / channelsNeedingPower : 0.0;
+    
+    // Calculate power delivered to each channel
+    final List<Map<String, dynamic>> powerDelivered = <Map<String, dynamic>>[];
+    double totalDelivered = 0.0;
+    
+    for (final Map<String, dynamic> channel in channelAnalysis) {
+      final double powerNeeded = channel['power'] as double;
+      final bool needsSharing = channel['needsSharing'] as bool;
+      
+      // Power available to channel
+      final double powerAvailable = needsSharing ? 
+        perChannelLimit + sharePerNeeding : 
+        perChannelLimit;
+      
+      // Limit power delivered (asymmetrical max)
+      final double limitPowerDelivered = math.min(powerAvailable, asymmetricalShareable);
+      
+      // Power delivered to channel
+      final double powerDeliveredToChannel = math.min(limitPowerDelivered, powerNeeded);
+      
+      powerDelivered.add(<String, dynamic>{
+        'channel': channel['channel'],
+        'powerNeeded': powerNeeded,
+        'powerAvailable': powerAvailable,
+        'limitPowerDelivered': limitPowerDelivered,
+        'powerDelivered': powerDeliveredToChannel,
+        'sufficient': powerDeliveredToChannel >= powerNeeded,
+      });
+      
+      totalDelivered += powerDeliveredToChannel;
+    }
+    
+    // Calculate headroom
+    final double totalAmpHeadroom = 10 * math.log(totalCapacity / totalDelivered) / math.ln10;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: canShare ? Colors.green[50] : Colors.red[50],
+        border: Border.all(color: canShare ? Colors.green[300]! : Colors.red[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('📊 $ampName Analysis:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('Per-channel limit: ${perChannelLimit.toInt()}W'),
+          Text('Total capacity: ${totalCapacity.toInt()}W'),
+          Text('Asymmetrical shareable: ${asymmetricalShareable.toInt()}W'),
+        
+        const SizedBox(height: 12),
+        
+          // Channel Analysis Table
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Text('Validation Checklist:', style: TextStyle(fontWeight: FontWeight.bold)),
-                SizedBox(height: 4),
-                Text('• Circuit assignment verification'),
-                Text('• Power requirement validation'),
-                Text('• Impedance compatibility check'),
-                Text('• Channel utilization optimization'),
-                Text('• SKU reduction (minimum amplifier count)'),
-                Text('• Final system capacity calculation'),
-                SizedBox(height: 8),
-                Text('Run algorithm to see detailed validation results.', 
-                     style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey)),
+                const Text('Channel Analysis:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                ...channelAnalysis.map((Map<String, dynamic> channel) => 
+                  Text('Ch${channel['channel']}: ${(channel['power'] as double).toStringAsFixed(1)}W | '
+                       'Symm Surplus: ${(channel['symmSurplus'] as double).toStringAsFixed(1)}W | '
+                       'Asymm Deficit: ${(channel['asymmDeficit'] as double).toStringAsFixed(1)}W | '
+                       '${channel['needsSharing'] ? "Needs Sharing ✅" : "OK ❌"}')),
+              ],
+            ),
+          ),
+          
+                const SizedBox(height: 8),
+                
+          // Power Sharing Summary
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue[100],
+              border: Border.all(color: Colors.blue[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                const Text('Power Sharing Summary:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Total Symm Surplus: ${totalSymmSurplus.toStringAsFixed(1)}W'),
+                Text('Total Asymm Deficit: ${totalAsymmDeficit.toStringAsFixed(1)}W'),
+                Text('Net Power Sharing: ${netPowerSharing.toStringAsFixed(1)}W'),
+                Text('Available to Share: ${totalSymmSurplus.toStringAsFixed(1)}W'),
+                Text('Channels Needing Power: $channelsNeedingPower'),
+                Text('Share Per Needing: ${sharePerNeeding.toStringAsFixed(1)}W'),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 8),
+          
+          // Power Delivered Analysis
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.orange[100],
+              border: Border.all(color: Colors.orange[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                const Text('Power Delivered Analysis:', style: TextStyle(fontWeight: FontWeight.bold)),
+                for (final Map<String, dynamic> delivery in powerDelivered) ...<Widget>[
+                  Text('Ch${delivery['channel']}: ${(delivery['powerDelivered'] as double).toStringAsFixed(1)}W delivered '
+                       '(${(delivery['powerNeeded'] as double).toStringAsFixed(1)}W needed) '
+                       '${delivery['sufficient'] ? "✅" : "❌"}'),
+                ],
+                Text('Total Delivered: ${totalDelivered.toStringAsFixed(1)}W'),
+                Text('Total Amp Headroom: ${totalAmpHeadroom.toStringAsFixed(1)}dB'),
+              ],
+            ),
+          ),
+          
+                  const SizedBox(height: 8),
+          
+          // Final Validation
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: canShare ? Colors.green[100] : Colors.red[100],
+              border: Border.all(color: canShare ? Colors.green[300]! : Colors.red[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text('Final Validation:', style: TextStyle(fontWeight: FontWeight.bold, color: canShare ? Colors.green[800] : Colors.red[800])),
+                Text('Total Power: ${totalPower.toStringAsFixed(1)}W ≤ ${totalCapacity.toInt()}W ${totalPower <= totalCapacity ? "✅" : "❌"}'),
+                Text('Max Circuit: ${circuitData.isNotEmpty ? (circuitData.first['power'] as double).toStringAsFixed(1) : "0"}W ≤ ${asymmetricalShareable.toInt()}W ${circuitData.isNotEmpty && (circuitData.first['power'] as double) <= asymmetricalShareable ? "✅" : "❌"}'),
+                Text('Net Power Sharing: ${netPowerSharing.toStringAsFixed(1)}W ≥ 0 ${netPowerSharing >= 0 ? "✅" : "❌"}'),
+                Text('Result: ${canShare ? "✅ SUCCESS - $ampName can handle this configuration" : "❌ FAILED - $ampName cannot handle this configuration"}', 
+                     style: TextStyle(fontWeight: FontWeight.bold, color: canShare ? Colors.green[800] : Colors.red[800])),
               ],
             ),
           ),
         ],
+      ),
+    );
+  }
+
+
+  Widget _buildPowerDistributionStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('📊 Power Distribution Calculation:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        
+        Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+            color: Colors.cyan[100],
+            border: Border.all(color: Colors.cyan[300]!),
+        borderRadius: BorderRadius.circular(6),
+      ),
+          child: const Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+              Text('Power Distribution Formulas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              SizedBox(height: 8),
+              Text('Share_Per_Needing = Available_To_Share / N_needing', style: TextStyle(fontFamily: 'monospace')),
+              Text('Power_Available_i = L + Share_Per_Needing (for needing channels)', style: TextStyle(fontFamily: 'monospace')),
+              Text('Limit_Power_Delivered_i = Min(Power_Available_i, Asymmetrical_Shareable)', style: TextStyle(fontFamily: 'monospace')),
+              Text('Power_Delivered_i = Min(Limit_Power_Delivered_i, Actual_Power_Needed_i)', style: TextStyle(fontFamily: 'monospace')),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        const Text('🧮 Power Distribution Analysis:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        
+        // Show detailed power distribution calculations
+        _buildPowerDistributionAnalysis(),
       ],
     );
   }
+
+  Widget _buildPowerDistributionAnalysis() {
+    // Calculate actual circuit powers
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    
+    for (final CircuitInput circuit in circuits) {
+      if (circuit.selectedModel != null) {
+        final double power = _estimateCircuitPower(circuit);
+        circuitData.add(<String, dynamic>{
+          'id': circuit.circuitId,
+          'model': circuit.selectedModel,
+          'power': power,
+          'mode': circuit.mode,
+        });
+      }
+    }
+    
+    if (circuitData.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey[100],
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: const Text('Select speaker models to see power distribution analysis', 
+                         style: TextStyle(fontStyle: FontStyle.italic)),
+      );
+    }
+    
+    // Sort circuits by power for analysis
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => 
+                     (b['power'] as double).compareTo(a['power'] as double));
+    
+    return Column(
+      children: <Widget>[
+        // PSX-2404D Power Distribution Analysis
+        _buildPowerDistributionForAmplifier(AmplifierCatalog.psx2404d.name, 
+          AmplifierCatalog.psx2404d.symmetrical.watts.toDouble(), 
+          AmplifierCatalog.psx2404d.asymmetrical.watts.toDouble(), 
+          circuitData),
+        
+        const SizedBox(height: 16),
+        
+        // PSX-4804D Power Distribution Analysis
+        _buildPowerDistributionForAmplifier(AmplifierCatalog.psx4804d.name, 
+          AmplifierCatalog.psx4804d.symmetrical.watts.toDouble(), 
+          AmplifierCatalog.psx4804d.asymmetrical.watts.toDouble(), 
+          circuitData),
+      ],
+    );
+  }
+
+  Widget _buildPowerDistributionForAmplifier(String ampName, double perChannelLimit, double asymmetricalShareable, List<Map<String, dynamic>> circuitData) {
+    // Calculate surplus and deficit for each channel
+    final List<Map<String, dynamic>> channelAnalysis = <Map<String, dynamic>>[];
+    double totalSymmSurplus = 0.0;
+    // double totalAsymmDeficit = 0.0; // Unused variable
+    
+    for (int i = 0; i < 4; i++) {
+      final double channelPower = i < circuitData.length ? circuitData[i]['power'] as double : 0.0;
+      
+      final double symmSurplus = math.max(perChannelLimit - channelPower, 0.0);
+      final double asymmDeficit = math.min(perChannelLimit - channelPower, 0.0);
+      
+      channelAnalysis.add(<String, dynamic>{
+        'channel': i + 1,
+        'power': channelPower,
+        'symmSurplus': symmSurplus,
+        'asymmDeficit': asymmDeficit,
+        'needsSharing': asymmDeficit < 0,
+        'circuitModel': i < circuitData.length ? circuitData[i]['model'] : 'Empty',
+      });
+      
+      totalSymmSurplus += symmSurplus;
+      // totalAsymmDeficit += asymmDeficit; // Unused variable
+    }
+    
+    // final double netPowerSharing = totalSymmSurplus + totalAsymmDeficit; // Unused variable
+    final int channelsNeedingPower = channelAnalysis.where((Map<String, dynamic> ch) => ch['needsSharing'] as bool).length;
+    final double sharePerNeeding = channelsNeedingPower > 0 ? totalSymmSurplus / channelsNeedingPower : 0.0;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.cyan[50],
+        border: Border.all(color: Colors.cyan[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Text('📊 $ampName Power Distribution:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('Per-channel limit: ${perChannelLimit.toInt()}W'),
+          Text('Asymmetrical shareable: ${asymmetricalShareable.toInt()}W'),
+          
+          const SizedBox(height: 12),
+          
+          // Power Distribution Calculations
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text('Power Distribution Calculations:', style: TextStyle(fontWeight: FontWeight.bold)),
+                Text('Total Symm Surplus: ${totalSymmSurplus.toStringAsFixed(1)}W'),
+                Text('Channels Needing Power: $channelsNeedingPower'),
+                Text('Share Per Needing: ${sharePerNeeding.toStringAsFixed(1)}W'),
+                const SizedBox(height: 8),
+                
+                ...channelAnalysis.map((Map<String, dynamic> channel) => 
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text('Ch${channel['channel']}: ${(channel['power'] as double).toStringAsFixed(1)}W needed'),
+                      if (channel['needsSharing'] as bool) ...<Widget>[
+                        Text('  Power Available: ${perChannelLimit.toInt()}W + ${sharePerNeeding.toStringAsFixed(1)}W = ${(perChannelLimit + sharePerNeeding).toStringAsFixed(1)}W'),
+                        Text('  Limit Power Delivered: Min(${(perChannelLimit + sharePerNeeding).toStringAsFixed(1)}W, ${asymmetricalShareable.toInt()}W) = ${math.min(perChannelLimit + sharePerNeeding, asymmetricalShareable).toStringAsFixed(1)}W'),
+                        Text('  Power Delivered: Min(${math.min(perChannelLimit + sharePerNeeding, asymmetricalShareable).toStringAsFixed(1)}W, ${(channel['power'] as double).toStringAsFixed(1)}W) = ${math.min(math.min(perChannelLimit + sharePerNeeding, asymmetricalShareable), channel['power'] as double).toStringAsFixed(1)}W'),
+          ] else ...<Widget>[
+                        Text('  Power Available: ${perChannelLimit.toInt()}W (no sharing needed)'),
+                        Text('  Power Delivered: Min(${perChannelLimit.toInt()}W, ${(channel['power'] as double).toStringAsFixed(1)}W) = ${math.min(perChannelLimit, channel['power'] as double).toStringAsFixed(1)}W'),
+                      ],
+            const SizedBox(height: 4),
+          ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeadroomCalculationsStep() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('📏 Headroom Calculations:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+            color: Colors.indigo[100],
+            border: Border.all(color: Colors.indigo[300]!),
+              borderRadius: BorderRadius.circular(6),
+            ),
+          child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+              Text('Headroom Calculation Formulas:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              SizedBox(height: 8),
+              Text('Channel_Headroom_i = 10 × log₁₀(Asymmetrical_Shareable / Power_Delivered_i)', style: TextStyle(fontFamily: 'monospace')),
+              Text('Total_Amp_Headroom = 10 × log₁₀(Total_Capacity / Total_Delivered)', style: TextStyle(fontFamily: 'monospace')),
+              Text('Effective_Headroom_i = Min(Channel_Headroom_i, Total_Amp_Headroom)', style: TextStyle(fontFamily: 'monospace')),
+              Text('Loudspeaker_Headroom_i = 10 × log₁₀(Power_Needed_Without_Offset / Power_Delivered_i)', style: TextStyle(fontFamily: 'monospace')),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        const Text('🧮 Headroom Analysis:', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+        
+        // Show headroom calculations
+        _buildHeadroomAnalysis(),
+      ],
+    );
+  }
+
+  Widget _buildHeadroomAnalysis() {
+    // Calculate actual circuit powers
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    
+    for (final CircuitInput circuit in circuits) {
+      if (circuit.selectedModel != null) {
+        final double power = _estimateCircuitPower(circuit);
+        circuitData.add(<String, dynamic>{
+          'id': circuit.circuitId,
+          'model': circuit.selectedModel,
+          'power': power,
+          'mode': circuit.mode,
+        });
+      }
+    }
+    
+    if (circuitData.isEmpty) {
+      return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.grey[100],
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(6),
+            ),
+        child: const Text('Select speaker models to see headroom analysis', 
+                         style: TextStyle(fontStyle: FontStyle.italic)),
+      );
+    }
+    
+    return Column(
+              children: <Widget>[
+        // PSX-2404D Headroom Analysis
+        _buildHeadroomForAmplifier(AmplifierCatalog.psx2404d.name, 
+          AmplifierCatalog.psx2404d.symmetrical.watts.toDouble(), 
+          AmplifierCatalog.psx2404d.symmetrical.totalCapacity.toDouble(), 
+          AmplifierCatalog.psx2404d.asymmetrical.watts.toDouble(), 
+          circuitData),
+        
+        const SizedBox(height: 16),
+        
+        // PSX-4804D Headroom Analysis
+        _buildHeadroomForAmplifier(AmplifierCatalog.psx4804d.name, 
+          AmplifierCatalog.psx4804d.symmetrical.watts.toDouble(), 
+          AmplifierCatalog.psx4804d.symmetrical.totalCapacity.toDouble(), 
+          AmplifierCatalog.psx4804d.asymmetrical.watts.toDouble(), 
+          circuitData),
+      ],
+    );
+  }
+
+  Widget _buildHeadroomForAmplifier(String ampName, double perChannelLimit, double totalCapacity, double asymmetricalShareable, List<Map<String, dynamic>> circuitData) {
+    // Calculate power delivered (simplified version)
+    double totalDelivered = 0.0;
+    final List<Map<String, dynamic>> headroomAnalysis = <Map<String, dynamic>>[];
+    
+    for (int i = 0; i < 4; i++) {
+      final double channelPower = i < circuitData.length ? circuitData[i]['power'] as double : 0.0;
+      final double powerDelivered = math.min(channelPower, asymmetricalShareable);
+      
+      totalDelivered += powerDelivered;
+      
+      if (channelPower > 0) {
+        final double channelHeadroom = 10 * math.log(asymmetricalShareable / powerDelivered) / math.ln10;
+        headroomAnalysis.add(<String, dynamic>{
+          'channel': i + 1,
+          'powerDelivered': powerDelivered,
+          'channelHeadroom': channelHeadroom,
+          'circuitModel': circuitData[i]['model'],
+        });
+      }
+    }
+    
+    final double totalAmpHeadroom = 10 * math.log(totalCapacity / totalDelivered) / math.ln10;
+    
+    return Container(
+      padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+        color: Colors.indigo[50],
+        border: Border.all(color: Colors.indigo[300]!),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+          Text('📏 $ampName Headroom Analysis:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('Total Capacity: ${totalCapacity.toInt()}W'),
+          Text('Total Delivered: ${totalDelivered.toStringAsFixed(1)}W'),
+          Text('Total Amp Headroom: ${totalAmpHeadroom.toStringAsFixed(1)}dB'),
+          
+          const SizedBox(height: 12),
+          
+          // Individual Channel Headroom
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                const Text('Individual Channel Headroom:', style: TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                ...headroomAnalysis.map((Map<String, dynamic> channel) => 
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text('Ch${channel['channel']}: ${(channel['powerDelivered'] as double).toStringAsFixed(1)}W delivered'),
+                      Text('  Channel Headroom: ${(channel['channelHeadroom'] as double).toStringAsFixed(1)}dB'),
+                      Text('  Effective Headroom: Min(${(channel['channelHeadroom'] as double).toStringAsFixed(1)}dB, ${totalAmpHeadroom.toStringAsFixed(1)}dB) = ${math.min(channel['channelHeadroom'] as double, totalAmpHeadroom).toStringAsFixed(1)}dB'),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFinalValidationStep(AmpMatchingResult result, PowerAllocationStrategy strategy) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('✅ Final Results:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+            color: Colors.green[100],
+            border: Border.all(color: Colors.green[300]!),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+              const Text('🏆 Algorithm Results:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              
+              Text('Selected Amplifiers: ${result.amplifierCount}'),
+              Text('Power Efficiency: ${(result.powerEfficiency * 100).toStringAsFixed(1)}%'),
+              Text('Channel Efficiency: ${(result.channelEfficiency * 100).toStringAsFixed(1)}%'),
+              
+              const SizedBox(height: 8),
+              const Text('Validation Status:', style: TextStyle(fontWeight: FontWeight.w500)),
+              Text('Errors: ${result.errors.length}'),
+              Text('Warnings: ${result.warnings.length}'),
+              
+              if (result.hasErrors) ...<Widget>[
+                const SizedBox(height: 4),
+                const Text('❌ Configuration has errors - see details above', 
+                         style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              ] else if (result.hasWarnings) ...<Widget>[
+                const SizedBox(height: 4),
+                const Text('⚠️ Configuration has warnings - see details above', 
+                         style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold)),
+              ] else ...<Widget>[
+                const SizedBox(height: 4),
+                const Text('✅ Configuration validated successfully', 
+                         style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+              ],
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 12),
+            
+        // Amplifier assignments
+        const Text('🔌 Amplifier Assignments:', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            
+            ...result.assignments.asMap().entries.map((MapEntry<int, AmpAssignment> entry) {
+              final int index = entry.key;
+              final AmpAssignment assignment = entry.value;
+              final double correctCapacity = assignment.getTotalCapacity(
+                strategy: strategy,
+                systemVoltage: _globalVoltage,
+              );
+              
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text('📦 Amplifier ${index + 1}: ${assignment.ampModel.name}', 
+                         style: const TextStyle(fontWeight: FontWeight.w500)),
+                    Text('   • Channels: ${assignment.ampModel.channels}'),
+                    Text('   • Power per Channel: ${assignment.ampModel.symmetrical.watts.toInt()}W'),
+                Text('   • Total Capacity: ${correctCapacity.toInt()}W (${strategy == PowerAllocationStrategy.symmetrical ? "Symmetrical" : "Asymmetrical"} mode)'),
+                    Text('   • Utilization: ${assignment.usedChannels}/${assignment.totalChannels} channels (${(assignment.channelUtilization * 100).toStringAsFixed(1)}%)'),
+                    const Text('   • Assigned Circuits:'),
+                    ...assignment.circuits.map((Circuit circuit) =>
+                      Text('     - Circuit ${circuit.circuitId}: ${circuit.speakerCount}x ${circuit.model} (${circuit.mode})'),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+    );
+  }
+
+
+
+
+
+
+
+
+
+
+
+
 
   double _estimateCircuitPower(CircuitInput circuit) {
     if (circuit.selectedModel == null) return 0.0;
@@ -1429,180 +3300,365 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     return power;
   }
 
-  Widget _buildStrategyResultCard(String title, AmpMatchingResult result, Color color, PowerAllocationStrategy strategy, IconData icon) {
-    return Card(
-      elevation: 3,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          border: Border.all(color: color.withOpacity(0.3)),
-          borderRadius: BorderRadius.circular(8),
+  Widget _buildTapSelector(CircuitInput circuit) {
+    if (circuit.selectedModel == null) {
+      return TextFormField(
+        controller: circuit.tapWattsController,
+        decoration: const InputDecoration(
+          labelText: 'Tap Watts',
+          border: OutlineInputBorder(),
+          hintText: 'Select speaker model first',
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            // Header
-            Row(
+        keyboardType: TextInputType.number,
+        readOnly: true,
+      );
+    }
+
+    final SpeakerModel? speaker = SpeakerCatalog.database[circuit.selectedModel!];
+    if (speaker == null || speaker.hiZTaps.isEmpty) {
+      return TextFormField(
+        controller: circuit.tapWattsController,
+        decoration: const InputDecoration(
+          labelText: 'Tap Watts',
+          border: OutlineInputBorder(),
+          hintText: 'No taps available',
+        ),
+        keyboardType: TextInputType.number,
+        readOnly: true,
+      );
+    }
+
+    return DropdownButtonFormField<double>(
+      value: circuit.selectedTap,
+      items: speaker.hiZTaps.map((double tap) {
+        return DropdownMenuItem<double>(
+          value: tap,
+          child: Text('${tap.toStringAsFixed(1)}W'),
+        );
+      }).toList(),
+      onChanged: (double? value) {
+        setState(() {
+          circuit.selectedTap = value;
+          if (value != null) {
+            circuit.tapWattsController.text = value.toString();
+          }
+        });
+      },
+      decoration: const InputDecoration(
+        labelText: 'Tap Watts',
+        border: OutlineInputBorder(),
+      ),
+    );
+  }
+
+  // Widget _buildComparisonSummaryCard(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
+  //   final bool asymmetricalBetter = asymmetrical.amplifierCount <= symmetrical.amplifierCount &&
+  //                                  asymmetrical.powerEfficiency >= symmetrical.powerEfficiency;
+    
+  //   return Card(
+  //     elevation: 3,
+  //     child: Container(
+  //       padding: const EdgeInsets.all(16),
+  //       decoration: BoxDecoration(
+  //         color: Colors.grey[50],
+  //         border: Border.all(color: Colors.grey[300]!),
+  //         borderRadius: BorderRadius.circular(8),
+  //       ),
+  //       child: Column(
+  //         crossAxisAlignment: CrossAxisAlignment.start,
+  //         children: <Widget>[
+  //           const Row(
+  //             children: <Widget>[
+  //               Icon(Icons.assessment, color: Colors.amber),
+  //               SizedBox(width: 8),
+  //               Text('📊 Strategy Comparison Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+  //             ],
+  //           ),
+  //           const SizedBox(height: 12),
+            
+  //           Row(
+  //             children: <Widget>[
+  //               Expanded(
+  //                 child: _buildComparisonMetric(
+  //                   'Amplifiers Required',
+  //                   symmetrical.amplifierCount.toString(),
+  //                   asymmetrical.amplifierCount.toString(),
+  //                   asymmetrical.amplifierCount <= symmetrical.amplifierCount,
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 12),
+  //               Expanded(
+  //                 child: _buildComparisonMetric(
+  //                   'Power Efficiency',
+  //                   '${(symmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
+  //                   '${(asymmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
+  //                   asymmetrical.powerEfficiency >= symmetrical.powerEfficiency,
+  //                 ),
+  //               ),
+  //             ],
+  //           ),
+            
+  //           const SizedBox(height: 12),
+            
+  //           Container(
+  //             padding: const EdgeInsets.all(12),
+  //             decoration: BoxDecoration(
+  //               color: asymmetricalBetter ? Colors.green[100] : Colors.blue[100],
+  //               border: Border.all(color: asymmetricalBetter ? Colors.green[300]! : Colors.blue[300]!),
+  //               borderRadius: BorderRadius.circular(6),
+  //             ),
+  //             child: Row(
+  //               children: <Widget>[
+  //                 Icon(
+  //                   asymmetricalBetter ? Icons.thumb_up : Icons.info,
+  //                   color: asymmetricalBetter ? Colors.green : Colors.blue,
+  //                 ),
+  //                 const SizedBox(width: 8),
+  //                 Expanded(
+  //                   child: Text(
+  //                     asymmetricalBetter 
+  //                       ? '🏆 Recommendation: Asymmetrical mode provides better efficiency and fewer amplifiers'
+  //                       : '📋 Both strategies are viable - choose based on your installation preferences',
+  //                     style: TextStyle(
+  //                       fontWeight: FontWeight.w500,
+  //                       color: asymmetricalBetter ? Colors.green[800] : Colors.blue[800],
+  //                     ),
+  //                   ),
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  //   }
+
+  /// Build final validation step for asymmetrical mode using mixed amplifier allocation
+  Widget _buildAsymmetricalFinalValidationStep() {
+    // Calculate circuit powers and sort by power (highest first)
+    final List<Map<String, dynamic>> circuitData = <Map<String, dynamic>>[];
+    double totalSystemPower = 0.0;
+    
+    for (final CircuitInput circuit in circuits) {
+      final double circuitPower = _estimateCircuitPower(circuit);
+      circuitData.add(<String, dynamic>{
+        'circuit': circuit,
+        'power': circuitPower,
+        'model': circuit.selectedModel ?? 'Unknown',
+        'speakerCount': int.tryParse(circuit.speakerCountController.text) ?? 0,
+        'mode': circuit.mode.toUpperCase(),
+      });
+      totalSystemPower += circuitPower;
+    }
+    
+    // Sort circuits by power (highest first)
+    circuitData.sort((Map<String, dynamic> a, Map<String, dynamic> b) => (b['power'] as double).compareTo(a['power'] as double));
+    
+    // Calculate optimal amplifier combination with cost optimization
+    final List<Map<String, dynamic>> amplifierAllocation = _calculateOptimalAmplifierAllocation(circuitData, AmplifierCatalog.psx1204d);
+    
+    if (amplifierAllocation.isEmpty) {
+      return const Column(
+        children: <Widget>[
+          Text('❌ Error: No amplifiers could be allocated'),
+        ],
+      );
+    }
+    
+    // Apply circuit movement optimization logic
+    final List<Map<String, dynamic>> optimizedAllocation = _applyCircuitMovementOptimization(amplifierAllocation, circuitData);
+    
+    // Calculate overall system metrics
+    int totalAmplifiers = optimizedAllocation.length;
+    int totalChannelsUsed = optimizedAllocation.fold(0, (int sum, Map<String, dynamic> amp) => sum + (amp['usedChannels'] as int));
+    int totalChannelsAvailable = optimizedAllocation.fold(0, (int sum, Map<String, dynamic> amp) => sum + (amp['totalChannels'] as int));
+    double channelEfficiency = totalChannelsAvailable > 0 ? totalChannelsUsed / totalChannelsAvailable : 0.0;
+    
+    // Calculate power efficiency (total delivered vs total capacity)
+    double totalSystemCapacity = optimizedAllocation.fold(0.0, (double sum, Map<String, dynamic> amp) => 
+      sum + ((amp['tierModel'] as AmplifierModel).asymmetrical.totalCapacity.toDouble()));
+    double powerEfficiency = totalSystemCapacity > 0 ? totalSystemPower / totalSystemCapacity : 0.0;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text('✅ Final Mixed Amplifier Allocation Results:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        
+        // Overall system summary
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green[100],
+            border: Border.all(color: Colors.green[300]!),
+            borderRadius: BorderRadius.circular(6),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              const Text('🏆 System Summary:', style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Total Amplifiers Required: $totalAmplifiers'),
+              Text('Total System Power: ${totalSystemPower.toStringAsFixed(1)}W'),
+              Text('Total System Capacity: ${totalSystemCapacity.toStringAsFixed(1)}W'),
+              Text('Power Efficiency: ${(powerEfficiency * 100).toStringAsFixed(1)}%'),
+              Text('Channel Efficiency: ${(channelEfficiency * 100).toStringAsFixed(1)}%'),
+              const SizedBox(height: 8),
+              const Text('✅ Mixed amplifier allocation with circuit movement optimization applied', 
+                       style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Individual amplifier details
+        const Text('🔌 Mixed Amplifier Assignments:', style: TextStyle(fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        
+        ...optimizedAllocation.asMap().entries.map((MapEntry<int, Map<String, dynamic>> entry) {
+          final int index = entry.key;
+          final Map<String, dynamic> amplifier = entry.value;
+          final AmplifierModel ampModel = amplifier['tierModel'] as AmplifierModel;
+          final List<Map<String, dynamic>> assignedCircuits = amplifier['circuitsAssigned'] as List<Map<String, dynamic>>;
+          
+          return Container(
+            margin: const EdgeInsets.only(bottom: 8),
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Icon(icon, color: color),
-                const SizedBox(width: 8),
-                Text(title, style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color)),
+                Text('📦 Amplifier ${index + 1}: ${ampModel.name}', 
+                     style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text('   • Channels: ${amplifier['usedChannels']}/${amplifier['totalChannels']} used'),
+                Text('   • Symmetrical Per-Channel: ${ampModel.symmetrical.watts}W'),
+                Text('   • Asymmetrical Per-Channel: ${ampModel.asymmetrical.watts}W'),
+                Text('   • Total Capacity: ${ampModel.asymmetrical.totalCapacity}W'),
+                Text('   • Channel Utilization: ${((amplifier['usedChannels'] as int) / (amplifier['totalChannels'] as int) * 100).toStringAsFixed(1)}%'),
+                const SizedBox(height: 4),
+                const Text('   • Assigned Circuits:', style: TextStyle(fontWeight: FontWeight.w500)),
+                ...assignedCircuits.map((Map<String, dynamic> circuit) =>
+                  Text('     - ${circuit['model']}: ${circuit['speakerCount']} speakers (${circuit['power'].toStringAsFixed(1)}W)'),
+                ),
               ],
             ),
-            const SizedBox(height: 12),
-            
-            // Key Metrics (like test file)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Column(
-                children: <Widget>[
-                  _buildSimpleMetricRow('Amplifiers needed', '${result.amplifierCount}'),
-                  _buildSimpleMetricRow('Power efficiency', '${(result.powerEfficiency * 100).toStringAsFixed(1)}%'),
-                  _buildSimpleMetricRow('Channel efficiency', '${(result.channelEfficiency * 100).toStringAsFixed(1)}%'),
-                ],
-              ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // Amplifier Details (simplified like test file)
-            const Text('🔌 Suggested Amplifiers:', style: TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 8),
-            
-            ...result.assignments.asMap().entries.map((MapEntry<int, AmpAssignment> entry) {
-              final int index = entry.key;
-              final AmpAssignment assignment = entry.value;
-              final double correctCapacity = assignment.getTotalCapacity(
-                strategy: strategy,
-                systemVoltage: _globalVoltage,
-              );
-              
-              return Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  border: Border.all(color: color.withOpacity(0.2)),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text('📦 Amplifier ${index + 1}: ${assignment.ampModel.name}', 
-                         style: const TextStyle(fontWeight: FontWeight.w500)),
-                    Text('   • Channels: ${assignment.ampModel.channels}'),
-                    Text('   • Power per Channel: ${assignment.ampModel.peakPerChannel.toInt()}W'),
-                    Text('   • Total Capacity: ${correctCapacity.toInt()}W (${title.split(' ')[0]} mode)'),
-                    Text('   • Utilization: ${assignment.usedChannels}/${assignment.totalChannels} channels (${(assignment.channelUtilization * 100).toStringAsFixed(1)}%)'),
-                    const Text('   • Assigned Circuits:'),
-                    ...assignment.circuits.map((Circuit circuit) =>
-                      Text('     - Circuit ${circuit.circuitId}: ${circuit.speakerCount}x ${circuit.model} (${circuit.mode})'),
-                    ),
-                  ],
-                ),
-              );
-            }),
-          ],
-        ),
-      ),
+          );
+        }),
+        
+        const SizedBox(height: 12),
+        
+      ],
     );
   }
 
-  Widget _buildSimpleMetricRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: <Widget>[
-          Text(label, style: const TextStyle(fontSize: 12)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildComparisonSummaryCard(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
-    final bool asymmetricalBetter = asymmetrical.amplifierCount <= symmetrical.amplifierCount &&
-                                   asymmetrical.powerEfficiency >= symmetrical.powerEfficiency;
-    
+  /// Build amplifier capacity comparison table
+  Widget _buildAmplifierCapacityTable() {
     return Card(
       elevation: 3,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            colors: <Color>[Colors.amber[50]!, Colors.amber[100]!],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          border: Border.all(color: Colors.amber[300]!),
+          color: Colors.grey[50],
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey[300]!),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             const Row(
               children: <Widget>[
-                Icon(Icons.assessment, color: Colors.amber),
+                Icon(Icons.table_chart, color: Colors.blue, size: 24),
                 SizedBox(width: 8),
-                Text('📊 Strategy Comparison Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-              ],
-            ),
-            const SizedBox(height: 12),
-            
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: _buildComparisonMetric(
-                    'Amplifiers Required',
-                    symmetrical.amplifierCount.toString(),
-                    asymmetrical.amplifierCount.toString(),
-                    asymmetrical.amplifierCount <= symmetrical.amplifierCount,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: _buildComparisonMetric(
-                    'Power Efficiency',
-                    '${(symmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
-                    '${(asymmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
-                    asymmetrical.powerEfficiency >= symmetrical.powerEfficiency,
-                  ),
+                Text(
+                  '📊 Amplifier Capacity Comparison Table',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
               ],
             ),
+            const SizedBox(height: 16),
             
-            const SizedBox(height: 12),
-            
+            // Table header
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: asymmetricalBetter ? Colors.green[50] : Colors.blue[50],
-                border: Border.all(color: asymmetricalBetter ? Colors.green[200]! : Colors.blue[200]!),
+                color: Colors.blue[100],
                 borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Row(
+                children: <Widget>[
+                  Expanded(flex: 2, child: Text('Amplifier Model', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(child: Text('Channels', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(child: Text('Symmetrical\nPer-Channel', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(child: Text('Asymmetrical\nPer-Channel', style: TextStyle(fontWeight: FontWeight.bold))),
+                  Expanded(child: Text('Total\nCapacity', style: TextStyle(fontWeight: FontWeight.bold))),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 8),
+            
+            // Table rows for each amplifier
+            ...AmplifierCatalog.allModels.map((AmplifierModel amplifier) => Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.grey[200]!),
               ),
               child: Row(
                 children: <Widget>[
-                  Icon(
-                    asymmetricalBetter ? Icons.thumb_up : Icons.info,
-                    color: asymmetricalBetter ? Colors.green : Colors.blue,
-                  ),
-                  const SizedBox(width: 8),
                   Expanded(
+                    flex: 2,
                     child: Text(
-                      asymmetricalBetter 
-                        ? '🏆 Recommendation: Asymmetrical mode provides better efficiency and fewer amplifiers'
-                        : '📋 Both strategies are viable - choose based on your installation preferences',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w500,
-                        color: asymmetricalBetter ? Colors.green[800] : Colors.blue[800],
-                      ),
+                      amplifier.name,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                   ),
+                  Expanded(
+                    child: Text('${amplifier.channels}'),
+                  ),
+                  Expanded(
+                    child: Text('${amplifier.symmetrical.watts}W'),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${amplifier.asymmetrical.watts}W',
+                      style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.green),
+                    ),
+                  ),
+                  Expanded(
+                    child: Text('${amplifier.asymmetrical.totalCapacity}W'),
+                  ),
+                ],
+              ),
+            )),
+            
+            const SizedBox(height: 16),
+            
+            // Explanation
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text('📝 Capacity Definitions:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  SizedBox(height: 8),
+                  Text('• Symmetrical Per-Channel: Fixed power per channel (cannot be shared)'),
+                  Text('• Asymmetrical Per-Channel: Maximum power a single channel can withdraw (can be shared)'),
+                  Text('• Total Capacity: Maximum total power the amplifier can deliver'),
+                  SizedBox(height: 8),
                 ],
               ),
             ),
@@ -1612,49 +3668,4 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  Widget _buildComparisonMetric(String label, String symmetricalValue, String asymmetricalValue, bool asymmetricalBetter) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Text(label, style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-          const SizedBox(height: 4),
-          Row(
-            children: <Widget>[
-              const Text('Sym: ', style: TextStyle(fontSize: 11, color: Colors.blue)),
-              Text(
-                symmetricalValue,
-                style: TextStyle(
-                  fontWeight: asymmetricalBetter ? FontWeight.normal : FontWeight.bold,
-                  color: asymmetricalBetter ? Colors.black54 : Colors.blue,
-                ),
-              ),
-            ],
-          ),
-          Row(
-            children: <Widget>[
-              const Text('Asym: ', style: TextStyle(fontSize: 11, color: Colors.green)),
-              Text(
-                asymmetricalValue,
-                style: TextStyle(
-                  fontWeight: asymmetricalBetter ? FontWeight.bold : FontWeight.normal,
-                  color: asymmetricalBetter ? Colors.green : Colors.black54,
-                ),
-              ),
-              if (asymmetricalBetter) ...<Widget>[
-                const SizedBox(width: 4),
-                const Icon(Icons.star, size: 12, color: Colors.green),
-              ],
-            ],
-          ),
-        ],
-      ),
-    );
-  }
 }

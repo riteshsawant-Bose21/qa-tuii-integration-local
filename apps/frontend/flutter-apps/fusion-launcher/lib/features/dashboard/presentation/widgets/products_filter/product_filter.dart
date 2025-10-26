@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/api_data/amplifiers/amplifier_catalog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 /// Enum for sorting options
@@ -92,14 +93,12 @@ class _ProductFilterPageState extends State<ProductFilterPage> {
       }
       
       // Load amplifiers
-      final String ampsJson = _fusionDevices.getAmplifiers();
-      if (ampsJson.isNotEmpty && ampsJson != '[]') {
-        final List<ProductItem> amplifiers = (jsonDecode(ampsJson) as List<dynamic>)
-            .map((dynamic json) => AmpModel.fromJson(json as Map<String, dynamic>))
-            .map((AmpModel amp) => ProductItem.fromAmplifier(amp))
-            .toList();
-        allProducts.addAll(amplifiers);
-      }
+      final List<ProductItem> amplifiers = <ProductItem>[
+        ProductItem.fromAmplifier(AmplifierCatalog.psx1204d),
+        ProductItem.fromAmplifier(AmplifierCatalog.psx2404d),
+        ProductItem.fromAmplifier(AmplifierCatalog.psx4804d),
+      ];
+      allProducts.addAll(amplifiers);
       
       // Load devices
       final String devicesJson = _fusionDevices.getDevices();
@@ -1278,16 +1277,18 @@ class ProductItem {
     );
   }
   
-  factory ProductItem.fromAmplifier(AmpModel amplifier) {
+  factory ProductItem.fromAmplifier(AmplifierModel amplifier) {
     return ProductItem(
       name: amplifier.name,
       type: 'Amplifier',
       price: null, // Amplifiers don't have price in the model
-      imageUrl: amplifier.imageUrl.isNotEmpty ? amplifier.imageUrl : null,
+      imageUrl: null, // Amplifiers don't have imageUrl in the model
       additionalInfo: <String, dynamic>{
-        'channels': amplifier.channels,
-        'peakPerChannel': amplifier.peakPerChannel,
-        'totalCapacity': amplifier.totalCapacity,
+        'channels': 4, // All amplifiers have 4 channels
+        'peakPerChannel': amplifier.symmetrical.watts,
+        'totalCapacity': amplifier.asymmetrical.watts,
+        'symmetricalPower': amplifier.symmetrical.watts,
+        'asymmetricalPower': amplifier.asymmetrical.watts,
       },
     );
   }
