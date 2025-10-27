@@ -20,9 +20,12 @@ class CanvasControlWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Listener(
       onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
+        print(
+          "[${event.runtimeType}]event Scale: ${event.scale} Current Scale: ${controller.state.canvasState.scale} Delta: ${event.scale - controller.state.canvasState.scale}",
+        );
         if (event.scale == 1) return;
         controller.onScaleUpdate(
-          event.scale - controller.state.canvasState.scale,
+          (event.scale - 1) * 0.1,
           event.localPosition,
         );
       },

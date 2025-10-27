@@ -20,7 +20,8 @@ extension CircuitService on ProjectService {
 
     //remove all the hardware in the circuit
     final hardwareIds = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
-    for (final hwId in hardwareIds) {
+    final hardwareIdsCopy = List<String>.from(hardwareIds);
+    for (final hwId in hardwareIdsCopy) {
       // Remove relationship links
       relationships.removeAllRelationships(hwId);
 
@@ -29,7 +30,8 @@ extension CircuitService on ProjectService {
     }
 
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, circuitId);
-    for (final connId in wireConnections) {
+    final wireConnectionsCopy = List<String>.from(wireConnections);
+    for (final connId in wireConnectionsCopy) {
       removeWiringConnection(connId);
     }
 

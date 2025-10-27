@@ -1,13 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
 import 'package:fusion_launcher/features/wiring_design/model/model.dart';
 import 'package:fusion_launcher/features/wiring_design/util/canvas_util.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/base_painter.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/models/project_entities/communication_ports.dart'
-    show PortPosition;
 
 part './component/base_component_painter.dart';
 part './component/circuit_component_painter.dart';
@@ -56,6 +57,44 @@ class ComponentPainter extends BasePainter {
     };
 
     comPainter.paint(canvas, size);
+    final LocationModel? location2 = component.data.location;
+    if (location2 == null) return;
+    final Zone? zone = getZoneData(component.data.id);
+    final String? locationName = getLocationName(location2.listeningAreaId);
+    final Offset offset = Offset(
+      component.position.dx,
+      component.position.dy + (component.size).height + 10,
+    );
+    if (zone != null) {
+      canvas.drawRect(
+        Rect.fromLTWH(offset.dx, offset.dy, 10, 30),
+        Paint()..color = zone.color,
+      );
+    }
+
+    drawText(
+      canvas: canvas,
+      text: zone?.name ?? locationName ?? "Eq. Location",
+      position: offset + const Offset(15, 5),
+      positionAlignment: Alignment.topLeft,
+    );
+  }
+
+  /// Get location name from listeningAreaId
+  String? getLocationName(String? listeningAreaId) {
+    if (listeningAreaId == null) return null;
+
+    final ListeningArea area = serviceLocator<ProjectViewModel>()
+        .getListeningArea(areaId: listeningAreaId);
+
+    return area.name;
+  }
+
+  /// Get zone data from hardwareId
+  Zone? getZoneData(String hardwareId) {
+    return serviceLocator<ProjectViewModel>().getZoneForHardware(
+      hardwareId: hardwareId,
+    );
   }
 
   @override

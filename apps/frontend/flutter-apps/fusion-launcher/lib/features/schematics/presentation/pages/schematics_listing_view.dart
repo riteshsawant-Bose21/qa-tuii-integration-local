@@ -208,40 +208,17 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       sku: item.id,
                       price: item.price,
                       portData: HardwarePortData(
-                        inputPorts: 5,
-                        outputPorts: 5,
+                        inputPorts: 0,
+                        outputPorts: 1,
                         inputPortType: PortType.analogInput,
                         outputPortType: PortType.analogOutput,
-                        compatibleInputTypes: <PortType>[PortType.analogInput, PortType.digitalInput],
-                        compatibleOutputTypes: <PortType>[PortType.analogOutput, PortType.digitalOutput],
+                        compatibleInputTypes: <PortType>[],
+                        compatibleOutputTypes: <PortType>[
+                          PortType.dspAnalogInput,
+                          PortType.endpointInput,
+                        ],
                         portPosition: PortPosition.topLeft,
                       ),
-                      communicationPorts: <PortData>[
-                        PortData(
-                          name: 'Wifi',
-                          position: PortPosition.footerRight,
-                          portNumber: 1,
-                          type: PortType.wifi,
-                          compatibleTypes: <PortType>[PortType.wifi],
-                          description: '',
-                        ),
-                        PortData(
-                          name: 'USB',
-                          position: PortPosition.footerRight,
-                          portNumber: 2,
-                          type: PortType.usb,
-                          compatibleTypes: <PortType>[PortType.usb],
-                          description: '',
-                        ),
-                        PortData(
-                          name: 'ble',
-                          position: PortPosition.footerRight,
-                          portNumber: 3,
-                          type: PortType.ble,
-                          compatibleTypes: <PortType>[PortType.ble],
-                          description: '',
-                        ),
-                      ],
                     );
                     serviceLocator<ProjectViewModel>().addHardware(hardware: source);
                     FusionToast.success(
@@ -530,7 +507,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               highlightQuery: _controllersSearchQuery,
               assetImagePath: controller.assetImagePath,
               itemId: controller.id,
-              location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add Location",
+              zone: getZoneData(controller.id),
+              location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(controller.id, SelectedItemType.controller),
               onDelete: (String id) {
@@ -583,7 +561,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               assetImagePath: source.assetImagePath,
               itemId: source.id,
               zone: getZoneData(source.id),
-              location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add Location",
+              location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(source.id, SelectedItemType.source),
               onDelete: (String id) {
@@ -636,7 +614,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               assetImagePath: endpoint.assetImagePath,
               itemId: endpoint.id,
               zone: getZoneData(endpoint.id),
-              location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add Location",
+              location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(endpoint.id, SelectedItemType.endpoint),
               onDelete: (String id) {
@@ -685,7 +663,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               highlightQuery: _processorsAmplifiersSearchQuery,
               assetImagePath: processor.assetImagePath,
               itemId: processor.id,
-              location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add Location",
+              zone: getZoneData(processor.id),
+              location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(processor.id, SelectedItemType.processor),
               onDelete: (String id) {
@@ -734,7 +713,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               highlightQuery: _processorsAmplifiersSearchQuery, // new
               assetImagePath: amplifier.assetImagePath,
               itemId: amplifier.id,
-              location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add Location",
+              zone: getZoneData(amplifier.id),
+              location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(amplifier.id, SelectedItemType.amplifier),
               onDelete: (String id) {
@@ -783,7 +763,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               highlightQuery: _accessoriesSearchQuery, // new
               assetImagePath: hardwareRack.assetImagePath,
               itemId: hardwareRack.id,
-              location: getLocationName(hardwareRack.locationEntity.listeningAreaId) ?? "Add Location",
+              zone: getZoneData(hardwareRack.id),
+              location: getLocationName(hardwareRack.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(hardwareRack.id, SelectedItemType.racks),
               onDelete: (String id) {
@@ -831,7 +812,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               highlightQuery: _accessoriesSearchQuery, // new
               assetImagePath: networkSwitch.assetImagePath,
               itemId: networkSwitch.id,
-              location: getLocationName(networkSwitch.locationEntity.listeningAreaId) ?? "Add Location",
+              zone: getZoneData(networkSwitch.id),
+              location: getLocationName(networkSwitch.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap: () => _projectViewModel.setSelectedDevice(networkSwitch.id, SelectedItemType.switchs),
               onDelete: (String id) {

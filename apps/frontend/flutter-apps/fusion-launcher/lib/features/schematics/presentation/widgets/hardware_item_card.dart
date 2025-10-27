@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_utils/app_enums.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
 class HardwareItemCard extends StatefulWidget {
   final String name;
@@ -113,53 +116,131 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                     /// device name
                     Row(
                       children: <Widget>[
-                        FusionImage.asset(widget.assetImagePath, width: 22, height: 22, fit: BoxFit.contain),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: _buildHighlightedName(),
+                        FusionImage.asset(
+                          widget.assetImagePath,
+                          width: 22,
+                          height: 22,
+                          fit: BoxFit.contain,
                         ),
+                        const SizedBox(width: 6),
+                        Expanded(child: _buildHighlightedName()),
                       ],
                     ),
                     const SizedBox(height: 6),
 
                     /// device location
-                    widget.zone != null
-                        ? Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: <Widget>[
-                              Container(
-                                width: 7,
-                                height: 16,
-                                decoration: BoxDecoration(
-                                  color: widget.zone?.color ?? Colors.transparent,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
+                    if (widget.zone != null)
+                      IntrinsicWidth(
+                        child: Tooltip(
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(2, 2),
                               ),
-                              const SizedBox(width: 6),
-                              Expanded(
-                                child: FusionAppText(
+                            ],
+                          ),
+                          textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          preferBelow: false,
+                          verticalOffset: -40,
+                          message: widget.zone?.name ?? "",
+                          waitDuration: const Duration(milliseconds: 300),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: <Widget>[
+                                Container(
+                                  width: 7,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: widget.zone?.color ?? Colors.transparent,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                FusionAppText(
                                   text: widget.zone?.name ?? "",
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
                                   maxLine: 1,
                                 ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      )
+                    else if (widget.location != null && widget.location != "Add location")
+                      IntrinsicWidth(
+                        child: Tooltip(
+                          decoration: BoxDecoration(
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(6),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 4,
+                                offset: const Offset(2, 2),
                               ),
                             ],
                           ),
-                        )
-                        : Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
-                            borderRadius: BorderRadius.circular(2),
-                            border: Border.all(color: Theme.of(context).colorScheme.greyDark, width: 1),
+                          textStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
                           ),
-                          child: FusionAppText(
-                            text: widget.location!,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                          preferBelow: false,
+                          verticalOffset: -40,
+                          message: widget.location ?? "",
+                          waitDuration: const Duration(milliseconds: 300),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: <Widget>[
+                                Container(
+                                  width: 7,
+                                  height: 16,
+                                  decoration: BoxDecoration(
+                                    color: Theme.of(context).colorScheme.grey,
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                FusionAppText(
+                                  text: widget.location ?? "",
+                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                  maxLine: 1,
+                                ),
+                              ],
+                            ),
                           ),
                         ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                          borderRadius: BorderRadius.circular(2),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.greyDark,
+                            width: 1,
+                          ),
+                        ),
+                        child: FusionAppText(
+                          text: "Add location",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                        ),
+                      ),
                   ],
                 ),
               ),
@@ -179,7 +260,6 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                     menuPadding: EdgeInsets.zero,
                     itemBuilder:
                         (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-                          /// --- Delete ---
                           PopupMenuItem<ZoneMenuAction>(
                             height: 26,
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),

@@ -419,12 +419,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 SizedBox(
                   width: double.infinity,
                   child: ListeningAreaDropdownWidget(
-                    listeningAreas: widget.listeningAreas,
-                    // zones: widget.zones,
+                    listeningAreas: serviceLocator<ProjectViewModel>().listeningAreas,
                     selectedListeningAreaIds: _selectedListeningAreaIds,
                     onSelectionChanged: (List<String> selectedIds, String floorId) {
                       _selectedListeningAreaIds = selectedIds;
-                      setMenuState(() {}); // Update popup menu UI
+                      setMenuState(() {});
                     },
                   ),
                 ),
@@ -441,7 +440,6 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 label: "Add Device",
                 isActive: canAddDevice,
                 onTap: () {
-                  print('Add device button pressed'); // Debug print
                   _addDeviceToSelectedAreas();
                 },
               ),
@@ -703,21 +701,21 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                     try {
                                       serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
 
-                                      /// Clear form and close expansion
-                                      areaNameController.clear();
+                                      /// Automatically select the newly created area and refresh UI
                                       setState(() {
+                                        _selectedListeningAreaIds = <String>[newListeningArea.id];
                                         isCreateAreaExpanded = false;
                                       });
+                                      setPopupState(() {});
+
+                                      /// Clear form
+                                      areaNameController.clear();
 
                                       /// Show success message
                                       FusionToast.success(
                                         context,
                                         message: "Listening area '${newListeningArea.name}' created successfully",
                                       );
-
-                                      /// Automatically select the newly created area
-                                      // widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
-                                      // Navigator.of(context).pop();
                                     } catch (e) {
                                       FusionToast.error(
                                         context,

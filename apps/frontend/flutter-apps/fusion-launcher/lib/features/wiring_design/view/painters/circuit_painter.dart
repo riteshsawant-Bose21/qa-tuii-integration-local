@@ -20,6 +20,7 @@ class CircuitPainter extends CustomPainter {
     painters.clear();
     canvas.save();
     final Offset offset = controller.canvasState.offset;
+    controller.canvasSize = size;
     canvas.translate(offset.dx, offset.dy);
     canvas.scale(controller.canvasState.scale);
 
@@ -69,7 +70,6 @@ class CircuitPainter extends CustomPainter {
           );
       intermediateWirePainter.paint(canvas, size);
     }
-
 
     canvas.restore();
   }

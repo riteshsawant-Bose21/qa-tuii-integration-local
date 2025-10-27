@@ -151,11 +151,35 @@ extension WiringStateMutation on WiringState {
     );
   }
 
+  IdleWiringState deleteElement(CanvasElement element) {
+    final List<CircuitComponent> updatedComponents = <CircuitComponent>[
+      ...components,
+    ];
+    final List<Wire> updatedWires = <Wire>[...wires];
+    // if (element is CircuitComponent) {
+    //   updatedComponents.remove(element);
+    //   updatedWires.removeWhere(
+    //     (Wire w) => w.from.parent == element || w.to.parent == element,
+    //   );
+    // } else
+    if (element is Wire) {
+      updatedWires.remove(element);
+    }
+    return IdleWiringState(
+      components: updatedComponents,
+      wires: updatedWires,
+      canvasState: canvasState,
+    );
+  }
+
   WiringState startMoving(CanvasElement element, Offset position) {
     if (element is CircuitPort) {
       return ConnectionProgressWiringState(
         components: components,
-        wires: wires,
+        wires:
+            wires
+                .where((Wire w) => w.from != element && w.to != element)
+                .toList(),
         port: element,
         canvasState: canvasState,
         destination: position,
