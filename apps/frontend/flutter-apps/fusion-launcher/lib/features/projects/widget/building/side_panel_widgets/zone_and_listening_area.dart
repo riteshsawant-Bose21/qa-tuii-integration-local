@@ -19,10 +19,26 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   final Set<String> _expandedZones = <String>{};
   final Set<String> _expandedListeningAreas = <String>{};
   final Set<String> _expandedSubZones = <String>{};
+  final Set<String> _expandedCircuitSections = <String>{};
 
   @override
   void initState() {
     super.initState();
+    _initializeExpandedStates();
+  }
+
+  void _initializeExpandedStates() {
+    // Expand all zones by default
+    final List<Zone> zones = serviceLocator<ProjectViewModel>().zones;
+    for (final Zone zone in zones) {
+      _expandedZones.add(zone.id);
+
+      // Expand all subzones within each zone by default
+      final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
+      for (final SubZone subZone in subZones) {
+        _expandedSubZones.add(subZone.id);
+      }
+    }
   }
 
   void _toggleZoneExpansion(String zoneId) {
@@ -51,6 +67,16 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         _expandedSubZones.remove(subZoneId);
       } else {
         _expandedSubZones.add(subZoneId);
+      }
+    });
+  }
+
+  void _toggleCircuitSectionExpansion(String circuitSectionId) {
+    setState(() {
+      if (_expandedCircuitSections.contains(circuitSectionId)) {
+        _expandedCircuitSections.remove(circuitSectionId);
+      } else {
+        _expandedCircuitSections.add(circuitSectionId);
       }
     });
   }
@@ -220,7 +246,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     if (listeningAreas.isNotEmpty)
                       ...listeningAreas.map((ListeningArea area) => _buildListeningAreaItem(area, zone))
                     else if (serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id).isEmpty && _getZoneCircuits(zone.id).isEmpty)
-                      _buildNoListeningAreasMessage(),
+                      _buildNoListeningAreasMessage(zone),
 
                     // Circuits directly under Zone
                     _buildZoneCircuitsSection(zone),
@@ -303,17 +329,17 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           },
                           itemBuilder:
                               (BuildContext context) => <PopupMenuEntry<String>>[
-                                const PopupMenuItem<String>(
-                                  value: 'add_circuit',
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      Icon(Icons.speaker_group, size: 16, color: Colors.blue),
-                                      SizedBox(width: 8),
-                                      Text('Add Circuit'),
-                                    ],
-                                  ),
-                                ),
+                                // const PopupMenuItem<String>(
+                                //   value: 'add_circuit',
+                                //   child: Row(
+                                //     mainAxisSize: MainAxisSize.min,
+                                //     children: <Widget>[
+                                //       Icon(Icons.speaker_group, size: 16, color: Colors.blue),
+                                //       SizedBox(width: 8),
+                                //       Text('Add Circuit'),
+                                //     ],
+                                //   ),
+                                // ),
                                 const PopupMenuItem<String>(
                                   value: 'add_subzone',
                                   child: Row(
@@ -336,7 +362,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                     children: <Widget>[
                                       Icon(Icons.add, size: 16, color: Colors.black54),
                                       SizedBox(width: 8),
-                                      Text('Add Listening Area'),
+                                      Text('Select Listening Areas'),
                                     ],
                                   ),
                                 ),
@@ -843,19 +869,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           padding: EdgeInsets.zero,
                           iconSize: 12,
                           position: PopupMenuPosition.under,
-                          icon: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                            decoration: BoxDecoration(
-                              color: Colors.blue[100],
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: const Icon(
-                              Icons.speaker_group,
-                              size: 8,
-                              color: Colors.blue,
-                            ),
+                          icon: const Icon(
+                            Icons.link_off,
+                            size: 12,
+                            color: Colors.redAccent,
                           ),
-                          tooltip: 'Circuit actions',
+                          tooltip: 'Remove from circuit',
                           onSelected: (String value) {
                             if (value == 'remove' && assignedCircuit != null) {
                               _removeSpeakerFromCircuit(speaker, assignedCircuit);
@@ -982,16 +1001,38 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       ),
                     ),
                     if (isInCircuit)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.blue[100],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: const Icon(
-                          Icons.speaker_group,
-                          size: 8,
-                          color: Colors.blue,
+                      SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: PopupMenuButton<String>(
+                          padding: EdgeInsets.zero,
+                          iconSize: 12,
+                          position: PopupMenuPosition.under,
+                          icon: const Icon(
+                            Icons.link_off,
+                            size: 12,
+                            color: Colors.redAccent,
+                          ),
+                          tooltip: 'Remove from circuit',
+                          onSelected: (String value) {
+                            if (value == 'remove' && assignedCircuit != null) {
+                              _removeSpeakerFromCircuit(speaker, assignedCircuit);
+                            }
+                          },
+                          itemBuilder:
+                              (BuildContext context) => <PopupMenuEntry<String>>[
+                                const PopupMenuItem<String>(
+                                  value: 'remove',
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: <Widget>[
+                                      Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
+                                      SizedBox(width: 6),
+                                      Text('Remove from Circuit', style: TextStyle(color: Colors.red)),
+                                    ],
+                                  ),
+                                ),
+                              ],
                         ),
                       ),
                   ],
@@ -1070,6 +1111,72 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
+  Widget _buildNoZoneCircuitsMessage() {
+    return Container(
+      margin: const EdgeInsets.only(left: 40, right: 16, top: 4, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Icon(
+            Icons.info_outline,
+            size: 10,
+            color: Colors.grey[500],
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: FusionAppText(
+              text: 'Drag speakers to create a circuit',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoSubZoneCircuitsMessage() {
+    return Container(
+      margin: const EdgeInsets.only(left: 56, right: 16, top: 4, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.grey[200]!, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.max,
+        children: <Widget>[
+          Icon(
+            Icons.info_outline,
+            size: 10,
+            color: Colors.grey[500],
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: FusionAppText(
+              text: 'Drag speakers to create a circuit',
+              style: TextStyle(
+                fontSize: 10,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildSubZonesSection(Zone zone) {
     final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
 
@@ -1085,7 +1192,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
   Widget _buildSubZoneItem(SubZone subZone, Zone zone) {
     final bool isExpanded = _expandedSubZones.contains(subZone.id);
-    final List<CircuitModel> circuits = serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZone.id);
     final List<ListeningArea> subZoneListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZone.id);
 
     return DragTarget<ListeningArea>(
@@ -1167,18 +1273,18 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             },
                             itemBuilder:
                                 (BuildContext context) => <PopupMenuEntry<String>>[
-                                  const PopupMenuItem<String>(
-                                    value: 'add_circuit',
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: <Widget>[
-                                        Icon(Icons.speaker_group, size: 16, color: Colors.blue),
-                                        SizedBox(width: 8),
-                                        Text('Add Circuit'),
-                                      ],
-                                    ),
-                                  ),
-                                  const PopupMenuDivider(),
+                                  // const PopupMenuItem<String>(
+                                  //   value: 'add_circuit',
+                                  //   child: Row(
+                                  //     mainAxisSize: MainAxisSize.min,
+                                  //     children: <Widget>[
+                                  //       Icon(Icons.speaker_group, size: 16, color: Colors.blue),
+                                  //       SizedBox(width: 8),
+                                  //       Text('Add Circuit'),
+                                  //     ],
+                                  //   ),
+                                  // ),
+                                  // const PopupMenuDivider(),
                                   const PopupMenuItem<String>(
                                     value: 'delete',
                                     child: Row(
@@ -1208,10 +1314,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                   children: <Widget>[
                     // Show listening areas in subzone
                     if (subZoneListeningAreas.isNotEmpty) ...subZoneListeningAreas.map((ListeningArea area) => _buildSubZoneListeningAreaItem(area, subZone)),
-                    // Show circuits in separate section
-                    if (circuits.isNotEmpty) _buildSubZoneCircuitsSection(subZone),
-                    // Show message if both are empty
-                    if (circuits.isEmpty && subZoneListeningAreas.isEmpty) _buildNoCircuitsMessage(),
+                    // Always show circuits section
+                    _buildSubZoneCircuitsSection(subZone),
+                    // Show message if listening areas are empty
+                    if (subZoneListeningAreas.isEmpty) _buildNoListeningAreaSubzoneMessage(),
                   ],
                 ),
                 secondChild: const SizedBox.shrink(),
@@ -1223,7 +1329,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  Widget _buildNoCircuitsMessage() {
+  Widget _buildNoListeningAreaSubzoneMessage() {
     return Container(
       margin: const EdgeInsets.only(left: 40, right: 16, top: 4, bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -1256,7 +1362,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  Widget _buildNoListeningAreasMessage() {
+  Widget _buildNoListeningAreasMessage(Zone zone) {
     return Container(
       margin: const EdgeInsets.fromLTRB(24, 8, 16, 8),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
@@ -1265,25 +1371,51 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         borderRadius: BorderRadius.circular(6),
         border: Border.all(color: Colors.grey[200]!, width: 1),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.max,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(
-            Icons.info_outline,
-            size: 12,
-            color: Colors.grey[500],
+          Row(
+            mainAxisSize: MainAxisSize.max,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                Icons.info_outline,
+                size: 12,
+                color: Colors.grey[500],
+              ),
+              const SizedBox(width: 12),
+              FusionAppText(
+                text: 'Select or drag listening areas',
+                style: TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey[600],
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          Flexible(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+
+          const SizedBox(height: 12),
+
+          GestureDetector(
+            onTap: () {
+              serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
+            },
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: <Widget>[
-                FusionAppText(
-                  text: 'No listening areas or subzones',
+                Icon(
+                  Icons.add_circle_outline,
+                  size: 12,
+                  color: Colors.blue[600],
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  'Select Listening Areas',
                   style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey[600],
+                    fontSize: 10,
+                    color: Colors.blue[600],
                     fontWeight: FontWeight.w500,
                   ),
                 ),
@@ -1467,80 +1599,207 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   Widget _buildZoneCircuitsSection(Zone zone) {
     final List<CircuitModel> circuits = _getZoneCircuits(zone.id);
 
-    if (circuits.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    return DragTarget<Speaker>(
+      onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
+        // Check if speaker is already in any circuit
+        if (_isSpeakerInAnyCircuit(details.data)) return false;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        // Circuits Section Header
-        Container(
-          padding: const EdgeInsets.fromLTRB(24, 8, 16, 4),
-          child: Row(
+        // Check if speaker can be added to this zone (not in a subzone)
+        final String? speakerZoneId = _getZoneIdForSpeaker(details.data);
+        final String? speakerSubZoneId = _getSubZoneIdForSpeaker(details.data);
+
+        // Speaker can only be added to zone circuit if it's in the same zone and not in any subzone
+        return speakerZoneId == zone.id && speakerSubZoneId == null;
+      },
+      onAcceptWithDetails: (DragTargetDetails<Speaker> details) {
+        _createNewCircuitWithSpeaker(details.data, zone.id, null);
+      },
+      builder: (BuildContext context, List<Speaker?> candidateItems, List<dynamic> rejectedItems) {
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
+
+        bool canAccept = false;
+        if (hasIncomingData && candidateItems.first != null) {
+          final Speaker candidateSpeaker = candidateItems.first!;
+          final String? speakerZoneId = _getZoneIdForSpeaker(candidateSpeaker);
+          final String? speakerSubZoneId = _getSubZoneIdForSpeaker(candidateSpeaker);
+
+          canAccept = !_isSpeakerInAnyCircuit(candidateSpeaker) && speakerZoneId == zone.id && speakerSubZoneId == null;
+        }
+
+        final String circuitSectionId = 'zone_${zone.id}';
+        final bool isExpanded = _expandedCircuitSections.contains(circuitSectionId);
+
+        return Container(
+          decoration:
+              hasIncomingData
+                  ? BoxDecoration(
+                    color: canAccept ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                  : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(
-                Icons.speaker_group,
-                size: 14,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${zone.name} circuits',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
+              // Circuits Section Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(24, 8, 16, 4),
+                child: InkWell(
+                  onTap: () => _toggleCircuitSectionExpansion(circuitSectionId),
+                  child: Row(
+                    children: <Widget>[
+                      // Expand/Collapse icon
+                      AnimatedRotation(
+                        duration: const Duration(milliseconds: 200),
+                        turns: isExpanded ? 0.25 : 0.0,
+                        child: Icon(
+                          Icons.keyboard_arrow_right,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.speaker_group,
+                        size: 14,
+                        color: Colors.black87,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${zone.name} circuits',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              // Expandable Circuit Items
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 250),
+                crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                firstChild: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (circuits.isNotEmpty) ...circuits.map((CircuitModel circuit) => _buildSimpleCircuitItem(circuit)) else _buildNoZoneCircuitsMessage(),
+                  ],
+                ),
+                secondChild: const SizedBox.shrink(),
+              ),
             ],
           ),
-        ),
-        // Circuit Items as simple names
-        ...circuits.map((CircuitModel circuit) => _buildSimpleCircuitItem(circuit)),
-      ],
+        );
+      },
     );
   }
 
   Widget _buildSubZoneCircuitsSection(SubZone subZone) {
     final List<CircuitModel> circuits = serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZone.id);
 
-    if (circuits.isEmpty) {
-      return const SizedBox.shrink();
-    }
+    return DragTarget<Speaker>(
+      onWillAcceptWithDetails: (DragTargetDetails<Speaker> details) {
+        // Check if speaker is already in any circuit
+        if (_isSpeakerInAnyCircuit(details.data)) return false;
 
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        // Circuits Section Header
-        Container(
-          padding: const EdgeInsets.fromLTRB(40, 8, 16, 4),
-          child: Row(
+        // Check if speaker can be added to this subzone
+        final String? speakerSubZoneId = _getSubZoneIdForSpeaker(details.data);
+
+        // Speaker can only be added to subzone circuit if it's in the same subzone
+        return speakerSubZoneId == subZone.id;
+      },
+      onAcceptWithDetails: (DragTargetDetails<Speaker> details) {
+        // Get the parent zone for this subzone
+        final String? parentZoneId = _getParentZoneIdForSubZone(subZone.id);
+        if (parentZoneId != null) {
+          _createNewCircuitWithSpeaker(details.data, parentZoneId, subZone.id);
+        }
+      },
+      builder: (BuildContext context, List<Speaker?> candidateItems, List<dynamic> rejectedItems) {
+        final bool hasIncomingData = candidateItems.isNotEmpty && candidateItems.first != null;
+
+        bool canAccept = false;
+        if (hasIncomingData && candidateItems.first != null) {
+          final Speaker candidateSpeaker = candidateItems.first!;
+          final String? speakerSubZoneId = _getSubZoneIdForSpeaker(candidateSpeaker);
+
+          canAccept = !_isSpeakerInAnyCircuit(candidateSpeaker) && speakerSubZoneId == subZone.id;
+        }
+
+        final String circuitSectionId = 'subzone_${subZone.id}';
+        final bool isExpanded = _expandedCircuitSections.contains(circuitSectionId);
+
+        return Container(
+          decoration:
+              hasIncomingData
+                  ? BoxDecoration(
+                    color: canAccept ? Colors.blue.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                  : null,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              Icon(
-                Icons.speaker_group,
-                size: 14,
-                color: Colors.grey[600],
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${subZone.name} Circuits',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey[600],
+              // Circuits Section Header
+              Container(
+                padding: const EdgeInsets.fromLTRB(40, 8, 16, 4),
+                child: InkWell(
+                  onTap: () => _toggleCircuitSectionExpansion(circuitSectionId),
+                  child: Row(
+                    children: <Widget>[
+                      // Expand/Collapse icon
+                      AnimatedRotation(
+                        duration: const Duration(milliseconds: 200),
+                        turns: isExpanded ? 0.25 : 0.0,
+                        child: Icon(
+                          Icons.keyboard_arrow_right,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.speaker_group,
+                        size: 14,
+                        color: Colors.black87,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          '${subZone.name} circuits',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.black87,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
+              // Expandable Circuit Items
+              AnimatedCrossFade(
+                duration: const Duration(milliseconds: 250),
+                crossFadeState: isExpanded ? CrossFadeState.showFirst : CrossFadeState.showSecond,
+                firstChild: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    if (circuits.isNotEmpty)
+                      ...circuits.map((CircuitModel circuit) => _buildSimpleCircuitItem(circuit, isSubZone: true))
+                    else
+                      _buildNoSubZoneCircuitsMessage(),
+                  ],
+                ),
+                secondChild: const SizedBox.shrink(),
+              ),
             ],
           ),
-        ),
-        // Circuit Items as simple names
-        ...circuits.map((CircuitModel circuit) => _buildSimpleCircuitItem(circuit, isSubZone: true)),
-      ],
+        );
+      },
     );
   }
 
@@ -1625,12 +1884,19 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
                 children: <Widget>[
-                  // Circuit icon
-                  const Icon(
-                    Icons.speaker_group,
-                    size: 12,
-                    color: Colors.black87,
-                  ),
+                  // Circuit icon - show actual speaker image if circuit has speakers
+                  if (circuitSpeakers.isNotEmpty)
+                    Image.asset(
+                      circuitSpeakers.first.assetImagePath,
+                      width: 14,
+                      height: 14,
+                    )
+                  else
+                    const Icon(
+                      Icons.speaker_group,
+                      size: 12,
+                      color: Colors.black87,
+                    ),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Column(
@@ -1722,6 +1988,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
     );
     serviceLocator<ProjectViewModel>().addZone(zone: zone);
+
+    // Automatically expand the newly added zone and its circuit section
+    setState(() {
+      _expandedZones.add(zone.id);
+      _expandedCircuitSections.add('zone_${zone.id}');
+    });
   }
 
   void _addSubZoneToZone(String zoneId) {
@@ -1731,6 +2003,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
     serviceLocator<ProjectViewModel>().addSubZone(subZone: newSubZone);
     serviceLocator<ProjectViewModel>().addSubZoneToZone(subZoneId: newSubZone.id, parentZoneId: zoneId);
+
+    // Automatically expand the newly added subzone and its circuit section
+    setState(() {
+      _expandedSubZones.add(newSubZone.id);
+      _expandedCircuitSections.add('subzone_${newSubZone.id}');
+    });
   }
 
   void _addListeningAreaToSubZone(String listeningAreaId, String subZoneId) {
@@ -1761,6 +2039,34 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         );
       },
     );
+  }
+
+  void _updateExpandedStates() {
+    // Add any new zones to the expanded set
+    final List<Zone> zones = serviceLocator<ProjectViewModel>().zones;
+    for (final Zone zone in zones) {
+      if (!_expandedZones.contains(zone.id)) {
+        _expandedZones.add(zone.id);
+      }
+
+      // Add any new zone circuit sections to the expanded set
+      if (!_expandedCircuitSections.contains('zone_${zone.id}')) {
+        _expandedCircuitSections.add('zone_${zone.id}');
+      }
+
+      // Add any new subzones to the expanded set
+      final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
+      for (final SubZone subZone in subZones) {
+        if (!_expandedSubZones.contains(subZone.id)) {
+          _expandedSubZones.add(subZone.id);
+        }
+
+        // Add any new subzone circuit sections to the expanded set
+        if (!_expandedCircuitSections.contains('subzone_${subZone.id}')) {
+          _expandedCircuitSections.add('subzone_${subZone.id}');
+        }
+      }
+    }
   }
 
   /// Helper methods for speaker circuit management
@@ -1884,6 +2190,42 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       // One is in a subzone, one is not - not allowed
       return false;
     }
+  }
+
+  /// Create a new circuit with the given speaker
+  void _createNewCircuitWithSpeaker(Speaker speaker, String zoneId, String? subZoneId) {
+    // Create a new circuit
+    final List<CircuitModel> existingCircuits =
+        subZoneId != null ? serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZoneId) : _getZoneCircuits(zoneId);
+
+    final CircuitModel newCircuit = CircuitModel(
+      name: 'Circuit ${existingCircuits.length + 1}',
+    );
+
+    // Add the circuit to the project
+    serviceLocator<ProjectViewModel>().addCircuit(circuit: newCircuit);
+
+    // Add the circuit to the appropriate zone or subzone
+    if (subZoneId != null) {
+      serviceLocator<ProjectViewModel>().addCircuitToSubZone(subZoneId: subZoneId, circuitId: newCircuit.id);
+    } else {
+      serviceLocator<ProjectViewModel>().addCircuitToZone(zoneId: zoneId, circuitId: newCircuit.id);
+    }
+
+    // Add the speaker to the circuit
+    serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: newCircuit.id);
+  }
+
+  /// Find the parent zone ID for a given subzone
+  String? _getParentZoneIdForSubZone(String subZoneId) {
+    final List<Zone> allZones = serviceLocator<ProjectViewModel>().getAllZones();
+    for (final Zone zone in allZones) {
+      final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
+      if (subZones.any((SubZone sz) => sz.id == subZoneId)) {
+        return zone.id;
+      }
+    }
+    return null;
   }
 }
 

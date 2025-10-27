@@ -25,6 +25,7 @@ class BuildingCanvas extends StatefulWidget {
   final Future<void> Function() onCalculateSpl;
   final SplPanelData splPanelData;
   final Function() onProductSelected;
+  final Function() onProductDeselected;
 
   const BuildingCanvas({
     super.key,
@@ -34,6 +35,7 @@ class BuildingCanvas extends StatefulWidget {
     required this.onCalculateSpl,
     required this.splPanelData,
     required this.onProductSelected,
+    required this.onProductDeselected,
   });
 
   @override
@@ -282,6 +284,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       );
                                     },
                                     listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
+                                    isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
                                   ),
                                 ),
 
@@ -333,36 +336,51 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                             padding: const EdgeInsets.only(bottom: 12.0),
                             child: ValueListenableBuilder<bool>(
                               valueListenable: widget.floorCanvasController.isListeningAreaSelectionActive,
-                              builder: (_, bool isActive, __) {
-                                return Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 8,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color:
-                                        isActive
-                                            ? FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 0.75)
-                                            : Colors.white,
-                                    borderRadius: BorderRadius.circular(24),
-                                    boxShadow: <BoxShadow>[
-                                      BoxShadow(
-                                        color: Colors.black.withAlpha((0.1 * 255).toInt()),
-                                        blurRadius: 4,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Builder(
-                                    builder: (BuildContext context) {
-                                      if (isActive) {
-                                        return Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: <Widget>[
-                                            Text(
-                                              'Select listening areas for ${widget.floorCanvasController.currentlySelectingZone!.name}',
-                                              style: TextStyle(
-                                                fontSize: 14,
+                              builder: (_, bool isListeningAreaSelectionActive, __) {
+                                if (isListeningAreaSelectionActive) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor).withValues(alpha: 1),
+                                      borderRadius: BorderRadius.circular(24),
+                                      boxShadow: <BoxShadow>[
+                                        BoxShadow(
+                                          color: Colors.black.withAlpha((0.1 * 255).toInt()),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: <Widget>[
+                                        Text(
+                                          'Select listening areas for ${widget.floorCanvasController.currentlySelectingZone!.name}',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color:
+                                                ThemeData.estimateBrightnessForColor(
+                                                          FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                        ) ==
+                                                        Brightness.light
+                                                    ? Colors.grey.shade800
+                                                    : Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        InkWell(
+                                          onTap: () {
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            widget.floorCanvasController.cancelListeningAreaSelection();
+                                          },
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(5),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
                                                               FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
@@ -370,95 +388,92 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                             Brightness.light
                                                         ? Colors.grey.shade800
                                                         : Colors.white,
+                                                width: 1,
                                               ),
+                                              borderRadius: BorderRadius.circular(10),
                                             ),
-                                            const SizedBox(width: 16),
-                                            InkWell(
-                                              onTap: () {
-                                                serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                                widget.floorCanvasController.cancelListeningAreaSelection();
-                                              },
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color:
-                                                        ThemeData.estimateBrightnessForColor(
-                                                                  FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
-                                                                ) ==
-                                                                Brightness.light
-                                                            ? Colors.grey.shade800
-                                                            : Colors.white,
-                                                    width: 1,
-                                                  ),
-                                                  borderRadius: BorderRadius.circular(10),
-                                                ),
 
-                                                child: Icon(
-                                                  Icons.close,
-                                                  size: 16,
-                                                  color:
-                                                      ThemeData.estimateBrightnessForColor(
-                                                                FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
-                                                              ) ==
-                                                              Brightness.light
-                                                          ? Colors.grey.shade800
-                                                          : Colors.white,
-                                                ),
-                                              ),
+                                            child: Icon(
+                                              Icons.close,
+                                              size: 16,
+                                              color:
+                                                  ThemeData.estimateBrightnessForColor(
+                                                            FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                          ) ==
+                                                          Brightness.light
+                                                      ? Colors.grey.shade800
+                                                      : Colors.white,
                                             ),
-                                            const SizedBox(width: 12),
-                                            InkWell(
-                                              onTap: () {
-                                                serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                                widget.floorCanvasController.completeListeningAreaSelection();
-                                              },
-                                              borderRadius: BorderRadius.circular(12),
-                                              child: Container(
-                                                padding: const EdgeInsets.all(5),
-                                                decoration: BoxDecoration(
-                                                  border: Border.all(
-                                                    color:
-                                                        ThemeData.estimateBrightnessForColor(
-                                                                  FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
-                                                                ) ==
-                                                                Brightness.light
-                                                            ? Colors.grey.shade800
-                                                            : Colors.white,
-                                                    width: 1,
-                                                  ),
-                                                  borderRadius: BorderRadius.circular(10),
-                                                ),
-                                                child: Icon(
-                                                  Icons.check,
-                                                  size: 16,
-                                                  color:
-                                                      ThemeData.estimateBrightnessForColor(
-                                                                FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
-                                                              ) ==
-                                                              Brightness.light
-                                                          ? Colors.grey.shade800
-                                                          : Colors.white,
-                                                ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        InkWell(
+                                          onTap: () {
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            widget.floorCanvasController.completeListeningAreaSelection();
+                                          },
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(5),
+                                            decoration: BoxDecoration(
+                                              border: Border.all(
+                                                color:
+                                                    ThemeData.estimateBrightnessForColor(
+                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            ) ==
+                                                            Brightness.light
+                                                        ? Colors.grey.shade800
+                                                        : Colors.white,
+                                                width: 1,
                                               ),
+                                              borderRadius: BorderRadius.circular(10),
                                             ),
-                                          ],
-                                        );
-                                      }
+                                            child: Icon(
+                                              Icons.check,
+                                              size: 16,
+                                              color:
+                                                  ThemeData.estimateBrightnessForColor(
+                                                            FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                          ) ==
+                                                          Brightness.light
+                                                      ? Colors.grey.shade800
+                                                      : Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }
+
+                                return Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
+                                  child: ValueListenableBuilder<bool>(
+                                    valueListenable: widget.floorCanvasController.isDrawing,
+                                    builder: (_, bool isDrawing, __) {
                                       return ValueListenableBuilder<bool>(
-                                        valueListenable: widget.floorCanvasController.isDrawing,
-                                        builder: (_, bool isDrawing, __) {
+                                        valueListenable: widget.floorCanvasController.isShowingSpl,
+                                        builder: (_, bool isShowingSpl, __) {
                                           return BuildingToolbar(
                                             onSplSelected: () {
                                               widget.floorCanvasController.toggleSpl();
                                               widget.onCalculateSpl();
                                               widget.onSplStateChanged(widget.floorCanvasController.isShowingSpl.value);
                                             },
+                                            onSplDisabled: () {
+                                              widget.floorCanvasController.setSpl(false);
+                                              widget.onSplStateChanged(false);
+                                            },
                                             onPanSelected: () {},
                                             onMoveSelected: () {},
-                                            onPencilSelected: () {
+                                            onDrawSelected: () {
                                               widget.floorCanvasController.toggleDraw();
+                                            },
+                                            onDrawingDisabled: () {
+                                              widget.floorCanvasController.setDraw(false);
                                             },
                                             onEditFloorPlanSelected: _showFloorPlanPicker,
                                             onTrashSelected: () {},
@@ -487,8 +502,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // DeviceType.rack
                                             },
                                             onProductSelected: widget.onProductSelected,
-                                            isPencilSelected: isDrawing,
-                                            isSplSelected: widget.floorCanvasController.isShowingSpl.value,
+                                            onProductDeselected: widget.onProductDeselected,
+                                            isDrawSelected: isDrawing,
+                                            isSplSelected: isShowingSpl,
                                           );
                                         },
                                       );

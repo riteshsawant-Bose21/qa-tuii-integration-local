@@ -462,6 +462,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                   onProductSelected: () {
                                     productsController.expand();
                                   },
+                                  onProductDeselected: () {
+                                    productsController.collapse();
+                                  },
                                 );
                               },
                             ),

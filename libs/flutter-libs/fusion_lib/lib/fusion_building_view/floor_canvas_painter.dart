@@ -40,6 +40,9 @@ class FloorCanvasPainter extends CustomPainter {
   //key value pair for listening area and its zone
   final Map<String, String> listeningAreaToZoneMap;
 
+  // Mode state
+  final bool isAcousticsMode;
+
   FloorCanvasPainter({
     required this.gridSize,
     required this.zoomScale,
@@ -58,6 +61,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.currentlySelectingZone,
     required this.splMax,
     required this.splMin,
+    required this.isAcousticsMode,
     this.previewPoint,
     this.highlightedIndex,
     this.selectedHardwareComponentId,
@@ -300,7 +304,7 @@ class FloorCanvasPainter extends CustomPainter {
       canvas.drawPath(path, selected ? strokeSelected : stroke);
 
       for (final ui.Offset p in poly) {
-        if (selected) {
+        if (selected && isAcousticsMode) {
           canvas.drawCircle(p, vertexSize, vertexPaint);
         }
       }
@@ -444,6 +448,11 @@ class FloorCanvasPainter extends CustomPainter {
     for (int i = 0; i < hardwareComponents.length; i++) {
       final HardwareComponent comp = hardwareComponents[i];
 
+      // In acoustics mode, only draw speakers and skip other hardware components
+      if (isAcousticsMode && comp is! Speaker) {
+        continue;
+      }
+
       final Rect dst = Rect.fromCenter(
         center: comp.pos,
         width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
@@ -509,8 +518,8 @@ class FloorCanvasPainter extends CustomPainter {
         }
       }
 
-      // draw selection border
-      if (comp.id == selectedHardwareComponentId) {
+      // draw selection border - in acoustics mode, only show selection for speakers
+      if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
         canvas.drawRect(
           Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
           Paint()
@@ -628,7 +637,8 @@ class FloorCanvasPainter extends CustomPainter {
         old.showSpl != showSpl ||
         old.hardwareComponents != hardwareComponents ||
         old.hardwareImages != hardwareImages ||
-        old.selectedHardwareComponentId != selectedHardwareComponentId;
+        old.selectedHardwareComponentId != selectedHardwareComponentId ||
+        old.isAcousticsMode != isAcousticsMode;
   }
 }
 
