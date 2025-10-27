@@ -140,10 +140,9 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
             }
         }
 
-        /* --- RFC3550 jitter (transit variance in RTP units, EWMA 1/16) --- */
+        /* --- RFC3550 jitter (transit variance), keep signed math then cast --- */
         if (w->rtp_clock_rate) {
             if (last_rtp_ts_valid) {
-                /* compute deltas first, then convert ns delta to RTP units */
                 s64 d_arrival_ns = (s64)s.arrival_phc_ns - (s64)w->last_arrival_ns;
                 s32 dR = rtp32_delta(s.rtp_ts, last_rtp_ts);
                 s32 dA = ns_delta_to_rtp_units(d_arrival_ns, w->rtp_clock_rate);
@@ -151,12 +150,30 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
                 s32 D = dA - dR;
                 if (D < 0) D = -D;
 
-                /* J = J + (|D|-J)/16 (RFC3550) in RTP units; cache ns for snapshot */
-                w->rfc3550_jitter_ts_fp += (u64)((s64)D - (s64)w->rfc3550_jitter_ts_fp) / 16;
-                w->rfc3550_jitter_ns = rtp_units_to_ns((u32)w->rfc3550_jitter_ts_fp, w->rtp_clock_rate);
+                /* J = J + (|D| - J)/16 */
+                s64 acc  = (s64)w->rfc3550_jitter_ts_fp;
+                s64 diff = (s64)D - acc;
+                acc += diff >> 4;
+                if (acc < 0) acc = 0;
+
+                w->rfc3550_jitter_ts_fp = (u64)acc;
+                w->rfc3550_jitter_ns    = rtp_units_to_ns((u32)acc, w->rtp_clock_rate);
             }
             last_rtp_ts = s.rtp_ts;
             last_rtp_ts_valid = true;
+        }
+
+        /* ---- path/e2e latencies (clamped to u32) ---- */
+        {
+            s64 path = (s64)s.arrival_phc_ns - (s64)s.recon_phc_ns;
+            if (path < 0) path = 0;
+            if (path > (s64)U32_MAX) path = (s64)U32_MAX;
+            w->path_latency_est_ns = (u32)path;
+
+            s64 e2e = (s64)s.sched_ns - (s64)s.recon_phc_ns;
+            if (e2e < 0) e2e = 0;
+            if (e2e > (s64)U32_MAX) e2e = (s64)U32_MAX;
+            w->e2e_playout_latency_ns = (u32)e2e;
         }
 
         w->last_arrival_ns = s.arrival_phc_ns;
@@ -211,6 +228,9 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         /* Mirror TX totals here so the snapshot is self-contained */
         m->snap.tx_packets_total = tx_pkts;
         m->snap.tx_bytes_total   = tx_bytes;
+
+        m->snap.path_latency_est_ns    = w->path_latency_est_ns;
+        m->snap.e2e_playout_latency_ns = w->e2e_playout_latency_ns;
     }
 
     /* === 3) JB depth stats (samples) === */
@@ -224,7 +244,6 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
     w->jb_depth_sum_samples += jb_depth_samples;
     w->jb_depth_count++;
 
-    m->snap.jb_target_samples    = w->jb_target_samples;
     m->snap.jb_depth_cur_samples = w->jb_depth_cur_samples;
     m->snap.jb_depth_min_samples = w->jb_depth_min_samples;
     m->snap.jb_depth_max_samples = w->jb_depth_max_samples;
@@ -286,7 +305,6 @@ struct fusion_cn_stream_metrics *fusion_cn_metrics_create(u32 sample_rate, u64 p
     m->win.jb_depth_count = 0;
 
     m->win.rtp_clock_rate = sample_rate;
-    m->win.jb_target_samples = fc_ns_to_samples(playout_delay, m->win.rtp_clock_rate);
 
     /* Snapshot starts empty; aggregator will fill */
     m->snap.ts_snapshot_ns = 0;

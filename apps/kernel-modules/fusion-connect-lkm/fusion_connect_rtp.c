@@ -389,15 +389,6 @@ struct fusion_cn_rtp_stream *fusion_cn_rtp_get_stream(struct fusion_cn_rtp_manag
     return NULL;
 }
 
-static inline void fc_rx_metrics_note(struct fusion_cn_rtp_stream *rtp,
-                                      u32 rtp_ts, u16 payload_len, 
-                                      u16 flags, u64 arrival_phc_ns)
-{
-    fusion_cn_metrics_rx_stash(rtp->metrics,
-                                rtp->current_seq_num, rtp_ts, arrival_phc_ns,
-                                payload_len, flags);
-}
-
 __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *rtp_mgr,
                                                  struct fusion_cn_rtp_packet *packet)
 {
@@ -418,6 +409,8 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
 
     bool marker, malformed, duplicate, reorder = false, late;
     u16 metrics_flags = 0;
+
+    current_phc_ns = rtp_mgr->ops->get_phc_ns();
 
     if (unlikely(!packet))
         return NF_ACCEPT;
@@ -482,7 +475,6 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
 
             /* timing */
             rtp_timestamp  = be32_to_cpu(packet->rtp.timestamp);
-            current_phc_ns = rtp_mgr->ops->get_phc_ns();
 
             /* sac = (phc * Fs) / 1e9 */
             current_sac = (((current_phc_ns >> (stream->info.sample_rate == 48000 ? 2 : 1)) * 3) / 15625);
@@ -568,7 +560,12 @@ __always_inline int fusion_cn_rtp_process_packet(struct fusion_cn_rtp_manager *r
             if (reorder)   metrics_flags |= FUSION_CN_PKTF_REORDERHINT;
             if (late)      metrics_flags |= FUSION_CN_PKTF_LATE;
 
-            fc_rx_metrics_note(stream, rtp_timestamp, payload_len, metrics_flags, current_phc_ns);
+            /* ---- stash sample (now includes recon/sched) ---- */
+            fusion_cn_metrics_rx_stash(stream->metrics,
+                                    seq_num, rtp_timestamp, current_phc_ns,
+                                    payload_len, metrics_flags,
+                                    reconstructed_phc_ns, sched_playout_ns);
+
 
             spin_unlock(&stream->lock);
             read_unlock_irqrestore(&rtp_mgr->lock, flags);

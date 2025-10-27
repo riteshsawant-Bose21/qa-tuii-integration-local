@@ -105,14 +105,10 @@ struct fusion_cn_metrics_snapshot
     uint32_t rfc3550_jitter_ns;
     uint32_t iat_min_ns, iat_p50_ns, iat_p99_ns;
 
-    uint32_t jb_target_samples;
     uint32_t jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     uint32_t resync_count;
-    uint64_t concealment_frames;
 
     uint32_t path_latency_est_ns, e2e_playout_latency_ns;
-
-    uint8_t  audio_present;
 
     /* TX */
     uint64_t tx_packets_total;
@@ -494,7 +490,7 @@ static bool get_all_metrics(NetlinkClient &client,
         return false;
     }
 
-    SPDLOG_DEBUG("GET_METRICS: err={} payload={}B sizeof(record)={}B sizeof(snapshot)={}B",
+    SPDLOG_TRACE("GET_METRICS: err={} payload={}B sizeof(record)={}B sizeof(snapshot)={}B",
                  reply.err, reply.data_size,
                  sizeof(fusion_cn_metrics_record),
                  sizeof(fusion_cn_metrics_snapshot));
@@ -1263,20 +1259,18 @@ void FusionConnectClient::process() {
                     SPDLOG_DEBUG(
                         "metrics RX stream={}: ts={} "
                         "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} "
-                        "iat_min={}us p50={}us p99={}us jitter={} "
-                        "jb: target={} cur={} min={} max={} avg={} "
-                        "lat: path={}ns e2e_playout={}ns "
-                        "audio: present={} ",
+                        "iat_min={}us p50={}us p99={}us jitter={}us "
+                        "jb: cur={} min={} max={} avg={} "
+                        "lat: path={}ns e2e_playout={}ns ",
                         r.stream_name, s.ts_snapshot_ns,
                         s.packets_total, s.bytes_total,
                         s.packets_lost, s.packets_reordered,
                         s.packets_dup, s.malformed_count, 
                         s.late_drop_count, s.burst_loss_max,
                         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
-                        s.jb_target_samples, s.jb_depth_cur_samples, s.jb_depth_min_samples,
+                        s.jb_depth_cur_samples, s.jb_depth_min_samples,
                         s.jb_depth_max_samples, s.jb_depth_avg_samples,
-                        s.path_latency_est_ns, s.e2e_playout_latency_ns,
-                        s.audio_present
+                        s.path_latency_est_ns, s.e2e_playout_latency_ns
                     );
                 }
             }

@@ -20,10 +20,14 @@ enum fusion_cn_pkt_flags
 struct fusion_cn_pkt_sample
 {
     u32  seq;
-    u32  rtp_ts;          /* RTP timestamp in sender rate domain */
-    u64  arrival_phc_ns;  /* reconstructed PHC ns (RX) */
+    u32  rtp_ts;           /* RTP timestamp in sender rate domain */
+    u64  arrival_phc_ns;   /* reconstructed PHC ns (RX) */
     u16  payload_len;
     u16  flags;
+
+    /* New: values known in RX path, consumed by aggregator */
+    u64  recon_phc_ns;     /* reconstructed sender time (ns) for this packet */
+    u64  sched_ns;         /* this packet's playout deadline (ns) */
 };
 
 struct fusion_cn_metrics_pcpu {
@@ -58,21 +62,16 @@ struct fusion_cn_metrics_window
     u32 iat_p99_ns;
 
     /* jitter buffer & deadlines (fed by ALSA / scheduler sites) */
-    u32 jb_target_samples;
     u32 jb_depth_cur_samples;
     u32 jb_depth_min_samples;
     u32 jb_depth_max_samples;
     u64 jb_depth_sum_samples;
     u32 jb_depth_count;
     u32 resync_count;
-    u64 concealment_frames;
 
     /* latency / clock (reserved for future) */
     u32 path_latency_est_ns;
     u32 e2e_playout_latency_ns;
-
-    /* audio presence (optional) */
-    u8  audio_present;
 
     /* TX timing (egress) – kept in window; mirror later if you expose */
     u64 tx_last_send_ns;
@@ -96,14 +95,10 @@ struct fusion_cn_metrics_snapshot
     u32 rfc3550_jitter_ns;
     u32 iat_min_ns, iat_p50_ns, iat_p99_ns;
 
-    u32 jb_target_samples;
     u32 jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
     u32 resync_count;
-    u64 concealment_frames;
 
     u32 path_latency_est_ns, e2e_playout_latency_ns;
-
-    u8  audio_present;
 
     /* TX */
     u64 tx_packets_total;
@@ -144,9 +139,10 @@ void fusion_cn_metrics_destroy(struct fusion_cn_stream_metrics *m);
 /* hot-path stash (inline) */
 static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m,
                                               u32 seq, u32 rtp_ts, u64 arrival_phc_ns,
-                                              u16 payload_len, u16 flags)
+                                              u16 payload_len, u16 flags,
+                                              u64 recon_phc_ns, u64 sched_ns)
 {
-    /* per-CPU counters */
+    /* per-CPU counters (unchanged) */
     {
         struct fusion_cn_metrics_pcpu *p = this_cpu_ptr(m->pcpu);
         u64_stats_update_begin(&p->syncp);
@@ -159,17 +155,18 @@ static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m
         u64_stats_update_end(&p->syncp);
     }
 
-    /* SPSC ring: reserve -> write -> publish with release */
+    /* SPSC ring write + publish */
     {
-        u32 i = READ_ONCE(m->wr_idx);         /* single producer -> safe */
+        u32 i = READ_ONCE(m->wr_idx);
         m->ring[i & m->ring_mask] = (struct fusion_cn_pkt_sample) {
-            .seq = seq,
-            .rtp_ts = rtp_ts,
+            .seq            = seq,
+            .rtp_ts         = rtp_ts,
             .arrival_phc_ns = arrival_phc_ns,
-            .payload_len = payload_len,
-            .flags = flags,
+            .payload_len    = payload_len,
+            .flags          = flags,
+            .recon_phc_ns   = recon_phc_ns,
+            .sched_ns       = sched_ns
         };
-        /* publish wr = i+1 with release semantics */
         smp_wmb();
         WRITE_ONCE(m->wr_idx, i + 1);
     }
@@ -205,12 +202,17 @@ static inline void fusion_cn_metrics_tx_stash(struct fusion_cn_stream_metrics *m
         WRITE_ONCE(m->win.tx_last_send_ns, send_phc_ns);
 
         if (scheduled_send_ns) {
-            u32 err = (u32)abs((s64)send_phc_ns - (s64)scheduled_send_ns);
+            u64 diff = (send_phc_ns > scheduled_send_ns)
+                    ? (send_phc_ns - scheduled_send_ns)
+                    : (scheduled_send_ns - send_phc_ns);
+            u32 err = (diff > U32_MAX) ? U32_MAX : (u32)diff;
+
             if (!m->win.tx_sched_err_abs_p50_ns)
                 m->win.tx_sched_err_abs_p50_ns = err;
             else
                 m->win.tx_sched_err_abs_p50_ns =
-                    m->win.tx_sched_err_abs_p50_ns + ((s32)err - (s32)m->win.tx_sched_err_abs_p50_ns) / 8;
+                    m->win.tx_sched_err_abs_p50_ns +
+                    ((s32)err - (s32)m->win.tx_sched_err_abs_p50_ns) / 8;
         }
     }
 }
