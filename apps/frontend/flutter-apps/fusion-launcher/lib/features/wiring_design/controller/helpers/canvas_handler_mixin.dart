@@ -5,15 +5,33 @@ mixin CanvasHandlerMixin on ChangeNotifier {
   CanvasState get canvasState;
 
   double get minScale => 0.5;
-  double get maxScale => 3.0;
+  double get maxScale => 5.0;
+
+  Size? canvasSize;
+
+  bool isWithinViewport(Offset position) {
+    final bool contains =
+        (-canvasState.offset & (canvasSize ?? const Size(100, 100))).contains(
+          position,
+        );
+    return contains;
+  }
+
+  void recenter(Offset center) {
+    setCanvasState(
+      canvasState.recenter(
+        center,
+        ((canvasSize ?? const Size(100, 100)) * 0.5),
+      ),
+    );
+  }
 
   void onPanStart(DragStartDetails details) {
     // Handle pan start if needed
   }
 
   void onPanUpdate(Offset delta) {
-    // canvasOffset += delta;
-    setCanvasState(canvasState.pan(delta));
+    setCanvasState(canvasState.pan(delta * (canvasState.scale)));
     notifyListeners();
   }
 

@@ -362,7 +362,7 @@ extension HardwareViewModel on ProjectViewModel {
           inputPortsData: <PortData>[],
           outputPortsData: <PortData>[
             PortData(
-              name: "Out",
+              name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
               compatibleTypes: <PortType>[

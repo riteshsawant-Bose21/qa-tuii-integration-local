@@ -46,14 +46,25 @@ class ComponentDb {
     return null;
   }
 
+  CircuitComponent? getCircuitComponent(String id) {
+    final CanvasElement? element = _mapping[id];
+    if (element is CircuitComponent) {
+      return element;
+    }
+    return null;
+  }
+
   ComponentData? getComponentData(String id) {
     return _dataMapping[id];
   }
 
-
   List<CircuitComponent> getAllComponents() {
-    return _mapping.values
-        .whereType<CircuitComponent>()
-        .toList(growable: false);
+    return _mapping.values.whereType<CircuitComponent>().toList(
+      growable: false,
+    );
+  }
+
+  void deleteWire(String id) {
+    _mapping.remove(id);
   }
 }

@@ -13,6 +13,7 @@ abstract class ComponentData {
   String get id;
   final String? image;
   final String label;
+  LocationModel? get location;
   final List<ComponentPort> inputPorts;
   final List<ComponentPort> outputPorts;
   final List<ComponentPort> comPorts;
@@ -43,6 +44,8 @@ class DeviceSchematicComponentData extends ComponentData {
     required this.data,
   });
 
+  @override
+  LocationModel? get location => data.locationEntity;
   static DeviceSchematicComponentData from(HardwareComponent hardware) {
     return DeviceSchematicComponentData(
       image: hardware.assetImagePath,
@@ -202,7 +205,8 @@ class SourceComponentData extends ComponentData {
     required super.outputPorts,
     required this.source,
   });
-
+  @override
+  LocationModel? get location => source.locationEntity;
   static SourceComponentData from(Source source) {
     return SourceComponentData(
       image: source.assetImagePath,
@@ -266,7 +270,8 @@ class ZoneComponentData extends ComponentData {
 
   @override
   String get id => zone.id;
-
+  @override
+  LocationModel? get location => null;
   @override
   Offset get portOffset => Offset.zero;
   @override
@@ -300,6 +305,8 @@ class SubZoneComponentData extends ComponentData {
     );
   }
 
+  @override
+  LocationModel? get location => null;
   @override
   String get id => zone.id;
 
@@ -346,7 +353,8 @@ class CircuitComponentData extends ComponentData {
 
   @override
   String get id => circuit.id;
-
+  @override
+  LocationModel? get location => null;
   @override
   Offset get portOffset => Offset(0, size.height / 2 - portRadius);
   @override
@@ -407,6 +415,8 @@ class SpeakerComponentData extends ComponentData {
 
   @override
   String get id => speaker.id;
+  @override
+  LocationModel? get location => speaker.locationEntity;
   @override
   Size get size => const Size(100, 100);
   @override
