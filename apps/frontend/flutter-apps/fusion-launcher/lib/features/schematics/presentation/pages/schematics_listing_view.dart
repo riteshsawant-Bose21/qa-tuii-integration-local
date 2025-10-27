@@ -153,6 +153,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 searchResultCount: _sourcesEndpointsResultCount(),
                 searchQuery: _sourcesEndpointsSearchQuery,
                 onSearchChanged: (String query) {
+                  _projectViewModel.clearSelections();
                   setState(() {
                     _sourcesEndpointsSearchQuery = query.toLowerCase();
                     if (_sourcesEndpointsSearchQuery.isEmpty) {
@@ -256,6 +257,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 searchResultCount: _processorsAmplifiersResultCount(),
                 searchQuery: _processorsAmplifiersSearchQuery,
                 onSearchChanged: (String q) {
+                  _projectViewModel.clearSelections();
+
                   setState(() {
                     _processorsAmplifiersSearchQuery = q.toLowerCase();
                     if (_processorsAmplifiersSearchQuery.isEmpty) {
@@ -336,12 +339,13 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 listeningAreas: _projectViewModel.listeningAreas,
                 selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
                 onSearchChanged: (String q) {
+                  _projectViewModel.clearSelections();
                   setState(() {
                     _speakersSearchQuery = q.toLowerCase();
                   });
                 },
-                searchResultCount: _speakersResultCount(), // new
-                searchQuery: _speakersSearchQuery, // new
+                searchResultCount: _speakersResultCount(),
+                searchQuery: _speakersSearchQuery,
               ),
 
               /// Controllers
@@ -353,8 +357,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 sectionContent: Container(),
                 enableExpandable: true,
                 searchResultCount: _controllersResultCount(),
-                searchQuery: _controllersSearchQuery, // new
+                searchQuery: _controllersSearchQuery,
                 onSearchChanged: (String q) {
+                  _projectViewModel.clearSelections();
                   setState(() {
                     _controllersSearchQuery = q.toLowerCase();
                   });
@@ -394,8 +399,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 sectionContent: Container(),
                 enableExpandable: true,
                 searchResultCount: _accessoriesResultCount(),
-                searchQuery: _accessoriesSearchQuery, // new
+                searchQuery: _accessoriesSearchQuery,
                 onSearchChanged: (String q) {
+                  _projectViewModel.clearSelections();
                   setState(() {
                     _accessoriesSearchQuery = q.toLowerCase();
                     if (_accessoriesSearchQuery.isEmpty) {

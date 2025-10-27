@@ -41,8 +41,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -531,8 +530,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
-                                                (GenericHardwareComponent component) =>
-                                                    component.type == GenericHardwareComponentType.rack,
+                                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                                               )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
@@ -541,8 +539,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent &&
-                                                    component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
@@ -595,6 +592,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                             mainArea: const SchematicsPage(),
                             dockItemList: <DockItemConfig>[
                               DockItemConfig(
+                                id: "5",
+                                title: "PROPERTIES",
+                                side: "right",
+                                alowUndock: false,
+                                dockItemWidget: () => const SchematicProperties(),
+                              ),
+                              DockItemConfig(
                                 id: "6",
                                 title: "COST CALCULATOR",
                                 side: "right",
@@ -606,8 +610,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
-                                                (GenericHardwareComponent component) =>
-                                                    component.type == GenericHardwareComponentType.rack,
+                                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                                               )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
@@ -616,30 +619,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent &&
-                                                    component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
                               ),
-                              DockItemConfig(
-                                id: "8",
-                                title: "PRODUCT QUERY",
-                                side: "right",
-                                dockItemWidget: () => const ProductQueryView(),
-                              ),
+                              // DockItemConfig(
+                              //   id: "8",
+                              //   title: "PRODUCT QUERY",
+                              //   side: "right",
+                              //   dockItemWidget: () => const ProductQueryView(),
+                              // ),
                               DockItemConfig(
                                 id: "10",
                                 title: "PRODUCT List",
                                 side: "left",
                                 dockItemWidget: () => const FusionAppText(text: "PRODUCT List"),
-                              ),
-                              DockItemConfig(
-                                id: "5",
-                                title: "PROPERTIES",
-                                side: "right",
-                                alowUndock: false,
-                                dockItemWidget: () => const SchematicProperties(),
                               ),
                             ],
                           );
@@ -820,10 +815,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

@@ -4,8 +4,6 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
 import '../others/fusion_expandable_tile_widget.dart';
-import '../text_views/fusion_app_text.dart';
-import 'fusion_dock_floating_panel.dart';
 
 class FusionDockSidebar extends StatelessWidget {
   final String side;
@@ -78,60 +76,6 @@ class FusionDockSidebar extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-}
-
-class SidebarPanel extends StatelessWidget {
-  final DockItem item;
-  final DockItemConfig config;
-  final void Function(DockItem, DraggableDetails) onUndock;
-  final void Function(DockItem, bool) onExpansionChanged;
-
-  const SidebarPanel({super.key, required this.item, required this.config, required this.onUndock, required this.onExpansionChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Theme(
-      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.white,
-          border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
-        ),
-        child: ExpansionTile(
-          minTileHeight: 24,
-          iconColor: Theme.of(context).colorScheme.greyLight,
-          collapsedIconColor: Theme.of(context).colorScheme.grey,
-          title: Draggable<DockItem>(
-            data: item,
-            feedback: FloatingWidget(
-              item: item,
-              config: config,
-              resizing: false,
-              onClose: () {},
-              // No-op for feedback
-              onResize: (_, __) {}, // No-op for feedback
-            ),
-
-            /// make the original widget semi transparent when dragging
-            childWhenDragging: Opacity(
-              opacity: 0.3,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
-              ),
-            ),
-
-            /// Only allow undocking if config allows it
-            onDragEnd: (details) => config.alowUndock ? onUndock(item, details) : null,
-            child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodySmall),
-          ),
-          initiallyExpanded: item.expanded,
-          onExpansionChanged: (val) => onExpansionChanged(item, val ?? false),
-          children: [config.dockItemWidget()],
-        ),
-      ),
     );
   }
 }
