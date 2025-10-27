@@ -10,13 +10,15 @@ class JsonFormatConverter {
     final List<Map<String, dynamic>> audioStreams = <Map<String, dynamic>>[];
 
     // Get the result section from DRO output
-    final Map<String, dynamic>? result = droOutput['result'] as Map<String, dynamic>?;
+    final Map<String, dynamic>? result =
+        droOutput['result'] as Map<String, dynamic>?;
     if (result == null) {
       return <String, dynamic>{"audio_streams": audioStreams};
     }
 
     // Process AES67 streams
-    final List<dynamic> aes67Streams = result['aes67_streams'] as List<dynamic>? ?? <dynamic>[];
+    final List<dynamic> aes67Streams =
+        result['aes67_streams'] as List<dynamic>? ?? <dynamic>[];
     for (final Map<String, dynamic> stream in aes67Streams) {
       final Map<String, dynamic> streamMap = stream;
       final String? direction = streamMap['direction'] as String?;
@@ -50,7 +52,8 @@ class JsonFormatConverter {
     }
 
     // Process Device Connections (Fusion Connect)
-    final List<dynamic> deviceConnections = result['device_connections'] as List<dynamic>? ?? <dynamic>[];
+    final List<dynamic> deviceConnections =
+        result['device_connections'] as List<dynamic>? ?? <dynamic>[];
     for (final Map<String, dynamic> connection in deviceConnections) {
       final Map<String, dynamic> connectionMap = connection;
 
@@ -73,7 +76,10 @@ class JsonFormatConverter {
   }
 
   /// Converts the input JSON format to the expected output format
-  static Map<String, dynamic> convertFormat(Map<String, dynamic> inputJson, List<FusionDevice> fusionDevices) {
+  static Map<String, dynamic> convertFormat(
+    Map<String, dynamic> inputJson,
+    List<FusionDevice> fusionDevices,
+  ) {
     // Create the base structure with only property_settings and user_setting as defaults
     final Map<String, dynamic> outputJson = <String, dynamic>{
       "request_id": _generateRequestId(),
@@ -103,7 +109,8 @@ class JsonFormatConverter {
     final List<Map<String, dynamic>> outputStreams = <Map<String, dynamic>>[];
 
     if (inputJson['hardwareComponents'] != null) {
-      final List<dynamic> hardwareComponents = inputJson['hardwareComponents'] as List<dynamic>;
+      final List<dynamic> hardwareComponents =
+          inputJson['hardwareComponents'] as List<dynamic>;
       for (int i = 0; i < hardwareComponents.length; i++) {
         final Map<String, dynamic> component = hardwareComponents[i];
         final Map<String, dynamic> comp = component;
@@ -138,9 +145,11 @@ class JsonFormatConverter {
             };
             inputStreams.add(inputStream);
           }
-        } else if (comp['componentType'] == 'speaker' && comp['type'] == 'aes67output' && _isHardwareComponentInsideAnyZone(component)) {
+        } else if (comp['componentType'] == 'speaker' &&
+            comp['type'] == 'aes67output' &&
+            _isHardwareComponentInsideAnyZone(component)) {
           // Create output stream for AES67 outputs
-          final String componentName = comp['name']?.toString() ?? comp['id']?.toString() ?? 'unknown';
+          //final String componentName = comp['name']?.toString() ?? comp['id']?.toString() ?? 'unknown';
           final Map<String, dynamic> outputStream = <String, dynamic>{
             "id": "FUSION_${comp['id']}",
             "name": "${comp['name']}",
@@ -166,7 +175,8 @@ class JsonFormatConverter {
       for (int i = 0; i < mixes.length; i++) {
         final Map<String, dynamic> mix = mixes[i];
         final Map<String, dynamic> mixMap = mix;
-        if (mixMap['sourceIds'] != null && (mixMap['sourceIds'] as List<dynamic>).isNotEmpty) {
+        if (mixMap['sourceIds'] != null &&
+            (mixMap['sourceIds'] as List<dynamic>).isNotEmpty) {
           final Map<String, dynamic> convertedMix = <String, dynamic>{
             "id": mixMap['id']?.toString() ?? _generateId(),
             "name": mixMap['name']?.toString() ?? "Unknown Mix",
@@ -233,7 +243,9 @@ class JsonFormatConverter {
       }
     }
 
-    Map<String, dynamic> userSetting = inputJson['userSetting'] as Map<String, dynamic>? ?? <String, dynamic>{};
+    Map<String, dynamic> userSetting =
+        inputJson['userSetting'] as Map<String, dynamic>? ??
+        <String, dynamic>{};
 
     final List<dynamic> maxDevices = <dynamic>[];
 
@@ -280,7 +292,8 @@ class JsonFormatConverter {
   ) {
     if (component['locationEntity'] == null) return false;
 
-    final Map<String, dynamic> locationEntity = component['locationEntity'] as Map<String, dynamic>;
+    final Map<String, dynamic> locationEntity =
+        component['locationEntity'] as Map<String, dynamic>;
     final String? zoneId = locationEntity['zoneId']?.toString();
 
     if (zoneId == null || zoneId.isEmpty) return false;
@@ -344,7 +357,10 @@ class JsonFormatConverter {
       final Map<String, dynamic> blockMap = block;
       final Map<String, dynamic> processedBlock = <String, dynamic>{
         "id": blockMap['id']?.toString() ?? _generateId(),
-        "algorithm": blockMap['algorithmId']?.toString() ?? blockMap['algorithm']?.toString() ?? '',
+        "algorithm":
+            blockMap['algorithmId']?.toString() ??
+            blockMap['algorithm']?.toString() ??
+            '',
         "algorithm_properties": <dynamic, dynamic>{},
         // "algorithm_properties": blockMap['properties'] as List<dynamic>,
       };
@@ -390,8 +406,10 @@ class JsonFormatConverter {
     for (int i = 0; i < hardwareComponents.length; i++) {
       final Map<String, dynamic> comp = hardwareComponents[i];
       final Map<String, dynamic> component = comp;
-      if (component['componentType'] == 'speaker' && component['locationEntity'] != null) {
-        final Map<String, dynamic> locationEntity = component['locationEntity'] as Map<String, dynamic>;
+      if (component['componentType'] == 'speaker' &&
+          component['locationEntity'] != null) {
+        final Map<String, dynamic> locationEntity =
+            component['locationEntity'] as Map<String, dynamic>;
         if (locationEntity['zoneId']?.toString() == zoneId) {
           zoneComponents.add(component);
         }

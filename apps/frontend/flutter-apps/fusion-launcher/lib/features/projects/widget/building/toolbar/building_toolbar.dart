@@ -59,7 +59,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                 onTap: widget.onMoveSelected,
                 isSelected: true,
               ),
-              if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
+              if (serviceLocator<ProjectViewModel>()
+                  .isInListeningAreaSelectionMode)
                 _buildToolItem(
                   assetIcon: Assets.pencilIcon,
                   "Pen",
@@ -68,7 +69,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                 ),
               _buildToolItem(
                 assetIcon: Assets.splIcon,
-                "Spl",
+                "SPL",
                 onTap: widget.onSplSelected,
                 isSelected: widget.isSplSelected,
               ),
@@ -99,7 +100,13 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     );
   }
 
-  Widget _buildToolItem(String tooltip, {String? assetIcon, IconData? icon, bool isSelected = false, required Function() onTap}) {
+  Widget _buildToolItem(
+    String tooltip, {
+    String? assetIcon,
+    IconData? icon,
+    bool isSelected = false,
+    required Function() onTap,
+  }) {
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -109,7 +116,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 2.0),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.green.withAlpha((0.3 * 255).toInt()) : Colors.transparent,
+            color:
+                isSelected
+                    ? Colors.green.withAlpha((0.3 * 255).toInt())
+                    : Colors.transparent,
             borderRadius: BorderRadius.circular(6.0),
           ),
           child:

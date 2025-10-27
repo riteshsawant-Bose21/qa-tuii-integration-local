@@ -32,12 +32,15 @@ class AssignDeviceButton extends StatefulWidget {
 
 class _AssignDeviceButtonState extends State<AssignDeviceButton> {
   Future<List<FusionDevice>> _fetchDevices() async {
-    final ResponseCallback<dynamic> responseCallback = await serviceLocator<FusionNetworkClient>().get(
-      api: FusionApiEndpoint.fusionDevice,
-    );
+    final ResponseCallback<dynamic> responseCallback =
+        await serviceLocator<FusionNetworkClient>().get(
+          api: FusionApiEndpoint.fusionDevice,
+        );
 
     if (responseCallback.success && responseCallback.data != null) {
-      return (responseCallback.data as List<dynamic>).map((dynamic e) => FusionDevice.fromJson(e as Map<String, dynamic>)).toList();
+      return (responseCallback.data as List<dynamic>)
+          .map((dynamic e) => FusionDevice.fromJson(e as Map<String, dynamic>))
+          .toList();
     } else {
       throw Exception(responseCallback.message);
     }
@@ -63,11 +66,12 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
       data['name'] = widget.fusionDeviceToMap.name;
     }
 
-    final ResponseCallback<dynamic> responseCallback = await serviceLocator<FusionNetworkClient>().patch(
-      api: FusionApiEndpoint.fusionDevice,
-      additionalPath: selectedDevice.id,
-      data: data,
-    );
+    final ResponseCallback<dynamic> responseCallback =
+        await serviceLocator<FusionNetworkClient>().patch(
+          api: FusionApiEndpoint.fusionDevice,
+          additionalPath: selectedDevice.id,
+          data: data,
+        );
 
     if (mounted) FusionUtils.hideLoader(context);
 
@@ -200,7 +204,9 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                           Text('Loading...'),
                         ],
                       );
-                    } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
+                    } else if (snapshot.hasError ||
+                        !snapshot.hasData ||
+                        snapshot.data!.isEmpty) {
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
@@ -223,18 +229,25 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                             final FusionDevice device = entry.value;
                             return device.id != widget.fusionDeviceToMap.id &&
                                 !widget.allFusionDevicesInProject.any(
-                                  (FusionDevice existingDevice) => existingDevice.id == device.id && existingDevice.status == FusionDeviceSetupStatus.completed,
+                                  (FusionDevice existingDevice) =>
+                                      existingDevice.id == device.id &&
+                                      existingDevice.status ==
+                                          FusionDeviceSetupStatus.completed,
                                 );
                           }).toList();
 
-                      final List<MapEntry<int, FusionDevice>> otherAssignedDevices =
+                      final List<MapEntry<int, FusionDevice>>
+                      otherAssignedDevices =
                           snapshot.data!.asMap().entries.where((
                             MapEntry<int, FusionDevice> entry,
                           ) {
                             final FusionDevice device = entry.value;
                             return device.id != widget.fusionDeviceToMap.id &&
                                 widget.allFusionDevicesInProject.any(
-                                  (FusionDevice existingDevice) => existingDevice.id == device.id && existingDevice.status == FusionDeviceSetupStatus.completed,
+                                  (FusionDevice existingDevice) =>
+                                      existingDevice.id == device.id &&
+                                      existingDevice.status ==
+                                          FusionDeviceSetupStatus.completed,
                                 );
                           }).toList();
 
@@ -250,7 +263,8 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            if (widget.fusionDeviceToMap.status == FusionDeviceSetupStatus.completed) ...<Widget>[
+                            if (widget.fusionDeviceToMap.status ==
+                                FusionDeviceSetupStatus.completed) ...<Widget>[
                               Row(
                                 children: <Widget>[
                                   Container(
@@ -281,13 +295,17 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                                   .asMap()
                                   .entries
                                   .where(
-                                    (MapEntry<int, FusionDevice> entry) => entry.value.id == widget.fusionDeviceToMap.id,
+                                    (MapEntry<int, FusionDevice> entry) =>
+                                        entry.value.id ==
+                                        widget.fusionDeviceToMap.id,
                                   )
                                   .map((MapEntry<int, FusionDevice> entry) {
                                     final int index = entry.key;
-                                    final FusionDevice device = entry.value.copyWith(
-                                      status: FusionDeviceSetupStatus.completed,
-                                    );
+                                    final FusionDevice device = entry.value
+                                        .copyWith(
+                                          status:
+                                              FusionDeviceSetupStatus.completed,
+                                        );
                                     return buildFusionDeviceCard(
                                       index,
                                       context,

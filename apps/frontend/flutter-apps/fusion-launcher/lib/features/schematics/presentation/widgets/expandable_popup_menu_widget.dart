@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/models/project_entities/location_model.dart';
-import 'package:fusion_lib/models/project_entities/source_model.dart';
 
 import '../../../../core/models/products_data.dart';
 import '../../../../core/service_locator.dart';
@@ -14,7 +12,8 @@ class ExpandablePopupMenuWidget extends StatefulWidget {
   const ExpandablePopupMenuWidget({super.key, required this.sectionTitle});
 
   @override
-  State<ExpandablePopupMenuWidget> createState() => _ExpandablePopupMenuWidgetState();
+  State<ExpandablePopupMenuWidget> createState() =>
+      _ExpandablePopupMenuWidgetState();
 }
 
 class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
@@ -89,7 +88,11 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
         ];
       },
       child: IconButton(
-        icon: Icon(Icons.add, size: 20, color: Theme.of(context).colorScheme.fusionTextViewColor),
+        icon: Icon(
+          Icons.add,
+          size: 20,
+          color: Theme.of(context).colorScheme.fusionTextViewColor,
+        ),
         onPressed: null,
         padding: EdgeInsets.zero,
         constraints: const BoxConstraints(),
@@ -106,7 +109,10 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection(
             title: 'MICROPHONES',
             isExpanded: _microphoneExpanded,
-            onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
+            onTap:
+                () => setMenuState(
+                  () => _microphoneExpanded = !_microphoneExpanded,
+                ),
             items: SourceData.microphoneItems,
           ),
 
@@ -114,7 +120,10 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection(
             title: 'MEDIA SOURCES',
             isExpanded: _mediaSourceExpanded,
-            onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
+            onTap:
+                () => setMenuState(
+                  () => _mediaSourceExpanded = !_mediaSourceExpanded,
+                ),
             items: SourceData.mediaSourceItems,
           ),
         ];
@@ -125,8 +134,13 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection(
             title: 'PROCESSORS & AMPLIFIERS',
             isExpanded: _processorsExpanded,
-            onTap: () => setMenuState(() => _processorsExpanded = !_processorsExpanded),
-            items: SourceData.microphoneItems, // Replace with actual processor items when available
+            onTap:
+                () => setMenuState(
+                  () => _processorsExpanded = !_processorsExpanded,
+                ),
+            items:
+                SourceData
+                    .microphoneItems, // Replace with actual processor items when available
           ),
         ];
 
@@ -136,8 +150,13 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection(
             title: 'END POINTS',
             isExpanded: _endPointsExpanded,
-            onTap: () => setMenuState(() => _endPointsExpanded = !_endPointsExpanded),
-            items: SourceData.microphoneItems, // Replace with actual endpoint items when available
+            onTap:
+                () => setMenuState(
+                  () => _endPointsExpanded = !_endPointsExpanded,
+                ),
+            items:
+                SourceData
+                    .microphoneItems, // Replace with actual endpoint items when available
           ),
         ];
 
@@ -148,15 +167,22 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
             title: 'RACKS',
             isExpanded: _racksExpanded,
             onTap: () => setMenuState(() => _racksExpanded = !_racksExpanded),
-            items: SourceData.microphoneItems, // Replace with actual rack items when available
+            items:
+                SourceData
+                    .microphoneItems, // Replace with actual rack items when available
           ),
 
           /// Other Devices Section
           _buildExpandableSection(
             title: 'OTHER DEVICES',
             isExpanded: _otherDevicesExpanded,
-            onTap: () => setMenuState(() => _otherDevicesExpanded = !_otherDevicesExpanded),
-            items: SourceData.microphoneItems, // Replace with actual other device items when available
+            onTap:
+                () => setMenuState(
+                  () => _otherDevicesExpanded = !_otherDevicesExpanded,
+                ),
+            items:
+                SourceData
+                    .microphoneItems, // Replace with actual other device items when available
           ),
         ];
 
@@ -166,7 +192,10 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection(
             title: 'MICROPHONES',
             isExpanded: _microphoneExpanded,
-            onTap: () => setMenuState(() => _microphoneExpanded = !_microphoneExpanded),
+            onTap:
+                () => setMenuState(
+                  () => _microphoneExpanded = !_microphoneExpanded,
+                ),
             items: SourceData.microphoneItems,
           ),
 
@@ -174,7 +203,10 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
           _buildExpandableSection(
             title: 'MEDIA SOURCES',
             isExpanded: _mediaSourceExpanded,
-            onTap: () => setMenuState(() => _mediaSourceExpanded = !_mediaSourceExpanded),
+            onTap:
+                () => setMenuState(
+                  () => _mediaSourceExpanded = !_mediaSourceExpanded,
+                ),
             items: SourceData.mediaSourceItems,
           ),
         ];
@@ -201,7 +233,9 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
             child: Row(
               children: <Widget>[
                 Icon(
-                  isExpanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
+                  isExpanded
+                      ? Icons.arrow_drop_up_rounded
+                      : Icons.arrow_drop_down_rounded,
                   size: 22,
                   color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
@@ -209,7 +243,9 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                 Expanded(
                   child: FusionAppText(
                     text: title,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall?.copyWith(fontSize: 11),
                   ),
                 ),
               ],
@@ -241,7 +277,10 @@ class _ExpandablePopupMenuWidgetState extends State<ExpandablePopupMenuWidget> {
                 padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.grey,
+                    width: 1,
+                  ),
                 ),
                 child: Row(
                   children: <Widget>[

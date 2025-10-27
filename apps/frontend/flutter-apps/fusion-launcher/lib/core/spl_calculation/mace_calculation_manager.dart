@@ -3,6 +3,8 @@ import 'dart:math' as math;
 import 'dart:math';
 import 'dart:ui';
 
+import 'package:flutter/foundation.dart';
+
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'ffi_constants.dart';
@@ -59,11 +61,13 @@ class SPLCalculationManager {
 
     // add each surface and its field points
     for (final ListeningArea cs in surfaces) {
-      final List<List<double>> poly3d = cs.vertices.map((Offset o) => <double>[o.dx, o.dy, 0.0]).toList();
+      final List<List<double>> poly3d =
+          cs.vertices.map((Offset o) => <double>[o.dx, o.dy, 0.0]).toList();
       engine.addSurface(poly3d);
 
       final List<Offset> pts = cs.getFieldPoints(resolutionSpacing);
-      final List<List<double>> list3d = pts.map((Offset o) => <double>[o.dx, o.dy, 0.0]).toList();
+      final List<List<double>> list3d =
+          pts.map((Offset o) => <double>[o.dx, o.dy, 0.0]).toList();
       final int fph = engine.addFieldPoints(list3d);
 
       final SPLCalculation sc = SPLCalculation(cs, fph);
@@ -139,7 +143,13 @@ class SPLCalculationManager {
 
     // Call the FFI method to get SPL data
     final List<Offset> pts = sc.surface.getFieldPoints(resolutionSpacing);
-    final List<double> splData = engine.getSplAt(fph, bwInt, freqHz, pts.length, weightingStr);
+    final List<double> splData = engine.getSplAt(
+      fph,
+      bwInt,
+      freqHz,
+      pts.length,
+      weightingStr,
+    );
 
     if (relative) {
       final List<double> relData = _getRelativeSpls(splData);
@@ -148,7 +158,9 @@ class SPLCalculationManager {
       }
     }
 
-    print('SPL Data for FPH $fph at ${freqHz}Hz (${bandwidth.toString().split('.').last}), total points ${splData.length}');
+    debugPrint(
+      'SPL Data for FPH $fph at ${freqHz}Hz (${bandwidth.toString().split('.').last}), total points ${splData.length}',
+    );
 
     // Update the SPLCalculation with the new data
     sc.spl = splData;
