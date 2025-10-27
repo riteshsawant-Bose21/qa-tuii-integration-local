@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
@@ -18,17 +20,72 @@ class SchematicPropertiesState extends State<SchematicProperties> {
   final TextEditingController propertyModelNameController = TextEditingController(text: "1"); // default value 1
 
   int get speakerQty => int.tryParse(speakerQtyController.text) ?? 1;
-  void speakerQtyModify(int value, bool increment) {
-    setState(() {
-      int newValue = increment ? speakerQty + 1 : speakerQty - 1;
-      if (newValue < 1) newValue = 1; // prevent negative values and zero
-      speakerQtyController.text = newValue.toString();
-    });
+
+  void speakerQtyModify({int? qty, bool shouldIncrement = true}) {
+    log("speakerQtyModify called with qty: $qty, shouldIncrement: $shouldIncrement");
+    final int newValue = shouldIncrement ? speakerQty + 1 : speakerQty - 1;
+    speakerQtyController.text = newValue.toString();
+
+    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
+
+    if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
+
+    final int totalSpearks =
+        projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList().length;
+
+    if (qty != null) {
+      if (qty > totalSpearks) {
+        log("Adding to exact qty: $qty");
+        final int toAdd = qty - totalSpearks;
+        for (int i = 0; i < toAdd; i++) {
+          addSpeaker();
+        }
+      } else if (qty < totalSpearks) {
+        final int toRemove = totalSpearks - qty;
+        log("Removing to exact qty: $qty");
+        for (int i = 0; i < toRemove; i++) {
+          removeSpeaker();
+        }
+      }
+    } else if (shouldIncrement) {
+      addSpeaker();
+    } else {
+      removeSpeaker();
+    }
+  }
+
+  void addSpeaker() {
+    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
+
+    if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
+    final List<Speaker> speakers =
+        projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
+
+    final Speaker speaker = speakers.first.getClone();
+    projectViewModel.addHardware(hardware: speaker, autoSave: false);
+    projectViewModel.addHardwareToCircuit(
+      hwId: speaker.id,
+      circuitId: selectedItem.id,
+    );
+  }
+
+  void removeSpeaker() {
+    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
+
+    if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
+    final List<Speaker> speakers =
+        projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
+    final Speaker speaker = speakers.last;
+    projectViewModel.removeHardwareFromCircuit(circuitId: selectedItem.id, hwId: speaker.id);
   }
 
   @override
   void dispose() {
     viewMoreExpansibleController.dispose();
+    propertyModelNameController.dispose();
     speakerQtyController.dispose();
     super.dispose();
   }
@@ -37,7 +94,10 @@ class SchematicPropertiesState extends State<SchematicProperties> {
   Widget build(BuildContext context) {
     final SelectedItem? selectedItem = context.watch<ProjectViewModel>().selectedDevice;
 
-    if (selectedItem?.id == null || selectedItem?.type == null) return const SizedBox.shrink();
+    if (selectedItem?.id == null || selectedItem?.type == null) {
+      // show message to select a device
+      return const _NoPropertiesWidget();
+    }
 
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
@@ -45,14 +105,22 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
     String? assetImagePath;
     if (selectedItem!.type == SelectedItemType.circuit) {
-      final List<HardwareComponent> hardwares = projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id);
-      if (hardwares.isEmpty) return const SizedBox.shrink();
-      selectedDevice = hardwares.first;
+      final List<Speaker> speakers =
+          projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
+
+      if (speakers.isEmpty) return const _NoPropertiesWidget();
+      selectedDevice = speakers.first;
       assetImagePath = selectedDevice.assetImagePath;
     } else {
       selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
       assetImagePath = selectedDevice?.assetImagePath;
     }
+
+    propertyModelNameController.text = selectedDevice?.name ?? '';
+    speakerQtyController.text =
+        selectedItem.type == SelectedItemType.circuit
+            ? projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().length.toString()
+            : '1';
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -93,6 +161,11 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                 child: TextField(
                   controller: propertyModelNameController,
                   maxLines: 1,
+                  textInputAction: TextInputAction.done,
+                  onSubmitted: (String value) {
+                    final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
+                    projectViewModel.updateHardware(hardware: hardware);
+                  },
                   style: Theme.of(context).textTheme.bodySmall,
                   decoration: const InputDecoration.collapsed(hintText: 'Enter model name'),
                 ),
@@ -112,7 +185,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
               ),
               Expanded(
                 child: FusionAppText(
-                  text: selectedDevice?.name ?? '',
+                  text: selectedDevice?.hardwareName ?? '',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -138,7 +211,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                           Icons.remove,
                           size: 17,
                         ),
-                        onTap: () => speakerQtyModify(speakerQty, false),
+                        onTap: () => speakerQtyModify(shouldIncrement: false),
                       ),
                       Flexible(
                         child: Container(
@@ -155,9 +228,10 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                             keyboardType: TextInputType.number,
                             maxLines: 1,
                             textAlign: TextAlign.center,
-                            onChanged: (String value) {
-                              final int modifiedQty = int.tryParse(value) ?? 0;
-                              if (modifiedQty == 0) speakerQtyController.text = "1";
+                            onSubmitted: (String value) {
+                              if (value.isEmpty) return;
+                              final int modifiedQty = int.tryParse(value) ?? 1;
+                              speakerQtyModify(qty: modifiedQty);
                             },
                             style: Theme.of(context).textTheme.bodySmall,
                             inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
@@ -170,7 +244,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                           Icons.add,
                           size: 17,
                         ),
-                        onTap: () => speakerQtyModify(speakerQty, true),
+                        onTap: () => speakerQtyModify(shouldIncrement: true),
                       ),
                     ],
                   ),
@@ -221,8 +295,10 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                     underline: const SizedBox.shrink(),
                     padding: const EdgeInsets.only(),
                     isExpanded: true,
+                    elevation: 1,
                     icon: const Icon(Icons.keyboard_arrow_down, size: 16),
                     isDense: true,
+                    dropdownColor: Colors.white,
                     onChanged: (ListeningArea? v) {
                       final LocationModel newLocation = LocationModel(
                         listeningAreaId: v?.id,
@@ -355,6 +431,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
           //         value: impedance,
           //         underline: const SizedBox.shrink(),
           //         icon: const Icon(Icons.keyboard_arrow_down, size: 16),
+          // dropdownColor: Colors.white,
           //         isDense: true,
           //         onChanged: (String? v) => setState(() => impedance = v ?? impedance),
           //         isExpanded: true,
@@ -459,6 +536,24 @@ class SectionHeader extends StatelessWidget {
     return FusionAppText(
       text: title,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black38),
+    );
+  }
+}
+
+class _NoPropertiesWidget extends StatelessWidget {
+  const _NoPropertiesWidget();
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: FusionAppText(
+          text: 'Select a device to view its properties',
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey),
+        ),
+      ),
     );
   }
 }
