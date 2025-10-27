@@ -106,14 +106,22 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                 }
 
                 currGain += newCmd.val.flt_val;
-                if ( (currGain >= minGain) && (currGain <= maxGain))
-                {
-                    gainObj->LastGainSet(currGain);
 
-                    // Send message to Device
-                    fusion_proxy.ConcreteGainActuator_SetGain(
-                            target->GetObjectNumber(), currGain);
+                // Clamp gain value
+                if (currGain < minGain)
+                {
+                    currGain = minGain;
                 }
+                else if (currGain > maxGain)
+                {
+                    currGain = maxGain;
+                }
+
+                gainObj->LastGainSet(currGain);
+
+                // Send message to Device
+                fusion_proxy.ConcreteGainActuator_SetGain(
+                        target->GetObjectNumber(), currGain);
             }
             break;
 
