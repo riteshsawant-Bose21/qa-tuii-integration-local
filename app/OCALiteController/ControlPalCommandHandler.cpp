@@ -91,8 +91,6 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                 ::ControlPalGainActuator *gainObj =
                     static_cast<::ControlPalGainActuator*>(target);
 
-                currGain = gainObj->LastGainGet();
-
                 // Verify no gain updates are currently in progress
                 if (gainObj->UpdatesDone())
                 {
@@ -102,17 +100,28 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                             minGain,
                             maxGain);
                 }
-
-                if ( ((currGain + newCmd.val.flt_val) >= minGain) &&
-                        ((currGain + newCmd.val.flt_val) <= maxGain))
+                else
                 {
-                    currGain += newCmd.val.flt_val;
-                    gainObj->LastGainSet(currGain);
-
-                    // Send message to Device
-                    fusion_proxy.ConcreteGainActuator_SetGain(
-                            target->GetObjectNumber(), currGain);
+                    currGain = gainObj->LastGainGet();
                 }
+
+                currGain += newCmd.val.flt_val;
+
+                // Clamp gain value
+                if (currGain < minGain)
+                {
+                    currGain = minGain;
+                }
+                else if (currGain > maxGain)
+                {
+                    currGain = maxGain;
+                }
+
+                gainObj->LastGainSet(currGain);
+
+                // Send message to Device
+                fusion_proxy.ConcreteGainActuator_SetGain(
+                        target->GetObjectNumber(), currGain);
             }
             break;
 

@@ -195,7 +195,7 @@ void ControllerMenu::run()
             }
 
             // No callback or message to send for zone cycle command
-            if ( idx != 0)
+            if (idx != 0)
             {
                 m_items[idx].cb(m_uiMsg);
                 SendValue();

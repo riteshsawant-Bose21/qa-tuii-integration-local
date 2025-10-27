@@ -10,7 +10,7 @@
 #define CONTROLPAL_GAINACTUATOR_H
 
 // ---- Include system wide include files ----
-
+#include <cmath>
 // ---- Include local include files ----
 #include <OCC/ControlClasses/Workers/Actuators/OcaLiteGain.h>
 #include "../HostInterface/CommandInterface/CommandInterface.h"
@@ -23,9 +23,15 @@
 // ---- Helper functions ----
 
 // ---- Class Definition ----
-#define LAST_GAIN_RESET_VAL (-999.0)  // A random large number unlikely to be
+#define GAIN_UPDATE_SENTINEL (-999.0)  // A random large number unlikely to be
                                       // set as gain level was selected to use
                                       // for this purpose.
+
+
+// We trumcate the Gain to 2 decimal places to get around float mismatches
+// between device and controller due to rounding of lower decimal places
+#define GAIN_VALUE_ROUND(x)        std::round(x*100.0f)/100.0f
+
 /**
  * ControlPal implementation of a gain actuator that actually performs gain adjustment.
  * This class inherits from OcaLiteGain and implements the pure virtual SetGainValue method.
@@ -75,12 +81,12 @@ public:
 
     void LastGainSet(::OcaDB val)
     {
-        m_lastGainSet = val;
+        m_lastGainSet = GAIN_VALUE_ROUND(val);
     }
 
     bool UpdatesDone()
     {
-        return (m_lastGainSet == LAST_GAIN_RESET_VAL);
+        return (m_lastGainSet == static_cast<::OcaDB>(GAIN_UPDATE_SENTINEL));
     }
 protected:
     /**
