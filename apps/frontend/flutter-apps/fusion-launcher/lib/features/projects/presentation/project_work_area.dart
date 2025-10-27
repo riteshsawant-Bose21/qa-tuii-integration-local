@@ -24,12 +24,12 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/circuit_test_widget.dart';
-import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
+import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
-import '../widget/building/side_panle_widgets/building_plan.dart';
-import '../widget/building/side_panle_widgets/properties_panel.dart';
-import '../widget/building/side_panle_widgets/schematic_properties.dart';
-import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
+import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/properties_panel.dart';
+import '../widget/building/side_panel_widgets/schematic_properties.dart';
+import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {

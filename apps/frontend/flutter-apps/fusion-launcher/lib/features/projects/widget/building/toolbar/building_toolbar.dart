@@ -275,13 +275,13 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     return <Widget>[
-      if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
-        _buildToolItem(
-          assetIcon: Assets.pencilIcon,
-          "Pen",
-          onTap: widget.onPencilSelected,
-          isSelected: widget.isPencilSelected,
-        ),
+      // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
+      _buildToolItem(
+        icon: Icons.polyline,
+        "Draw Listening Area",
+        onTap: widget.onPencilSelected,
+        isSelected: widget.isPencilSelected,
+      ),
       _buildToolItem(
         icon: Icons.speaker,
         "Add Speakers",

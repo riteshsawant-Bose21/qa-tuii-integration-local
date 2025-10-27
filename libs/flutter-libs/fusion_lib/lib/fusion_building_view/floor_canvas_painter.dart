@@ -214,20 +214,27 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size size) {
-    final ui.Paint pg = Paint()
-      ..color = Colors.grey.shade300.withValues(alpha: 0.5)
-      ..strokeWidth = 1 / zoomScale;
-    final double sx = -panOffset.dx / zoomScale, sy = -panOffset.dy / zoomScale;
-    final int cols = (size.width / zoomScale).ceil() + 2;
-    final int rows = (size.height / zoomScale).ceil() + 2;
+    const double dotRadius = 1.75;
 
-    for (int i = -1; i < cols; i++) {
-      final double x = (sx / gridSize).floor() * gridSize + i * gridSize;
-      canvas.drawLine(Offset(x, sy - gridSize), Offset(x, sy + rows * gridSize), pg);
-    }
-    for (int j = -1; j < rows; j++) {
-      final double y = (sy / gridSize).floor() * gridSize + j * gridSize;
-      canvas.drawLine(Offset(sx - gridSize, y), Offset(sx + cols * gridSize, y), pg);
+    final Paint paint = Paint()
+      ..color = Colors.grey.shade300.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+
+    // Find visible bounds in world coordinates
+    final double left = -panOffset.dx / zoomScale;
+    final double top = -panOffset.dy / zoomScale;
+    final double right = left + size.width / zoomScale;
+    final double bottom = top + size.height / zoomScale;
+
+    // Snap to grid so it always looks infinite
+    final double spacing = gridSize;
+    final double startX = (left ~/ spacing) * spacing;
+    final double startY = (top ~/ spacing) * spacing;
+
+    for (double x = startX; x < right; x += spacing) {
+      for (double y = startY; y < bottom; y += spacing) {
+        canvas.drawCircle(Offset(x, y), dotRadius / zoomScale, paint);
+      }
     }
   }
 

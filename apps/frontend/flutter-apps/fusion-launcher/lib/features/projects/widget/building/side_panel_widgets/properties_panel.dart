@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/floor_properties.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/floor_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
