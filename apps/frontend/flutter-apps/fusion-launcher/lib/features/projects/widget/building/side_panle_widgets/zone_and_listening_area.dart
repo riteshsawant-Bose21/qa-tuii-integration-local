@@ -1728,7 +1728,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final List<SubZone> existingSubZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zoneId);
     final SubZone newSubZone = SubZone(
       name: 'Subzone ${existingSubZones.length + 1}',
-      // parentZoneId: zoneId,
     );
     serviceLocator<ProjectViewModel>().addSubZone(subZone: newSubZone);
     serviceLocator<ProjectViewModel>().addSubZoneToZone(subZoneId: newSubZone.id, parentZoneId: zoneId);

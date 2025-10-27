@@ -27,8 +27,6 @@ import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
-import '../widget/building/side_panle_widgets/coverage_panel.dart';
-import '../widget/building/side_panle_widgets/devices_panel.dart';
 import '../widget/building/side_panle_widgets/properties_panel.dart';
 import '../widget/building/side_panle_widgets/schematic_properties.dart';
 import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
@@ -461,6 +459,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                   floorCanvasController: _floorCanvasController,
                                   onCalculateSpl: calculateSPL,
                                   splPanelData: _lastPanelData!,
+                                  onProductSelected: () {
+                                    productsController.expand();
+                                  },
                                 );
                               },
                             ),
@@ -474,37 +475,37 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                 dockItemWidget: () => const BuildingPlan(),
                               ),
 
-                              DockItemConfig(
-                                id: "2",
-                                title: "COVERAGE",
-                                side: "left",
-                                alowUndock: false,
-                                initiallyExpanded: true,
-                                isCollapsibleSection: true,
-                                dockItemWidget:
-                                    () => CoveragePanel(
-                                      onModeSelection: (bool value) {
-                                        if (value) {
-                                          zoneAreaController.expand();
-                                        }
-                                      },
-                                    ),
-                              ),
-
-                              DockItemConfig(
-                                id: "4",
-                                title: "DEVICES",
-                                side: "left",
-                                alowUndock: false,
-                                initiallyExpanded: true,
-                                isCollapsibleSection: true,
-                                dockItemWidget:
-                                    () => DevicesPanel(
-                                      onProductSelected: () {
-                                        productsController.expand();
-                                      },
-                                    ),
-                              ),
+                              // DockItemConfig(
+                              //   id: "2",
+                              //   title: "COVERAGE",
+                              //   side: "left",
+                              //   alowUndock: false,
+                              //   initiallyExpanded: true,
+                              //   isCollapsibleSection: true,
+                              //   dockItemWidget:
+                              //       () => CoveragePanel(
+                              //         onModeSelection: (bool value) {
+                              //           if (value) {
+                              //             zoneAreaController.expand();
+                              //           }
+                              //         },
+                              //       ),
+                              // ),
+                              //
+                              // DockItemConfig(
+                              //   id: "4",
+                              //   title: "DEVICES",
+                              //   side: "left",
+                              //   alowUndock: false,
+                              //   initiallyExpanded: true,
+                              //   isCollapsibleSection: true,
+                              //   dockItemWidget:
+                              //       () => DevicesPanel(
+                              //         onProductSelected: () {
+                              //           productsController.expand();
+                              //         },
+                              //       ),
+                              // ),
                               DockItemConfig(
                                 id: "5",
                                 title: "PROPERTIES",

@@ -24,6 +24,7 @@ class BuildingCanvas extends StatefulWidget {
   final FloorCanvasController floorCanvasController;
   final Future<void> Function() onCalculateSpl;
   final SplPanelData splPanelData;
+  final Function() onProductSelected;
 
   const BuildingCanvas({
     super.key,
@@ -32,6 +33,7 @@ class BuildingCanvas extends StatefulWidget {
     required this.floorCanvasController,
     required this.onCalculateSpl,
     required this.splPanelData,
+    required this.onProductSelected,
   });
 
   @override
@@ -453,6 +455,28 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             onFitSelected: () {
                                               widget.floorCanvasController.fitToView();
                                             },
+                                            onAddSpeakerSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(0); // DeviceType.speakers
+                                            },
+                                            onAddSourceSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // DeviceType.sources
+                                            },
+                                            onAddEndpointSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(2); // DeviceType.endpoints
+                                            },
+                                            onAddAmplifierSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(3); // DeviceType.amplifiers
+                                            },
+                                            onAddDspSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(4); // DeviceType.dsp
+                                            },
+                                            onAddControllerSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(5); // DeviceType.controllers
+                                            },
+                                            onAddRackSelected: () {
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // DeviceType.rack
+                                            },
+                                            onProductSelected: widget.onProductSelected,
                                             isPencilSelected: isDrawing,
                                             isSplSelected: widget.floorCanvasController.isShowingSpl.value,
                                           );
