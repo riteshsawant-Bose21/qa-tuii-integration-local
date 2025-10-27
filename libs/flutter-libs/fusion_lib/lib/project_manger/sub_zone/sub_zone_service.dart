@@ -20,6 +20,7 @@ extension SubZoneService on ProjectService {
 
     //remove all the circuits in the subzone
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
+
     // Create a copy to avoid concurrent modification during iteration
     final circuitIdsCopy = List<String>.from(circuitIds);
     for (final cId in circuitIdsCopy) {
@@ -127,7 +128,12 @@ extension SubZoneService on ProjectService {
     //  Remove from any old zones first (cleanup old zone links)
     final currentZoneCopy = List<String>.from(currentZone);
     for (final oldZoneId in currentZoneCopy) {
-      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      //check if its a zone or subzone
+      if (zones.exists(oldZoneId)) {
+        removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      } else if (subZones.exists(oldZoneId)) {
+        removeListeningAreaFromSubZone(listeningAreaId, oldZoneId);
+      }
     }
 
     relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);

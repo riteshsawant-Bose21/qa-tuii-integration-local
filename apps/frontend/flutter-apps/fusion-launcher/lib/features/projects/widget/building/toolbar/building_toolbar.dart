@@ -3,6 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/constants/assets_constants.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/models/device_item_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+enum ToolbarMode { acoustics, system }
 
 class BuildingToolbar extends StatefulWidget {
   final Function() onSplSelected;
@@ -12,6 +16,14 @@ class BuildingToolbar extends StatefulWidget {
   final Function() onEditFloorPlanSelected;
   final Function() onTrashSelected;
   final Function() onFitSelected;
+  final Function() onAddSpeakerSelected;
+  final Function() onAddSourceSelected;
+  final Function() onAddEndpointSelected;
+  final Function() onAddAmplifierSelected;
+  final Function() onAddDspSelected;
+  final Function() onAddControllerSelected;
+  final Function() onAddRackSelected;
+  final Function() onProductSelected;
   final bool isSplSelected;
   final bool isPencilSelected;
 
@@ -24,6 +36,14 @@ class BuildingToolbar extends StatefulWidget {
     required this.onEditFloorPlanSelected,
     required this.onTrashSelected,
     required this.onFitSelected,
+    required this.onAddSpeakerSelected,
+    required this.onAddSourceSelected,
+    required this.onAddEndpointSelected,
+    required this.onAddAmplifierSelected,
+    required this.onAddDspSelected,
+    required this.onAddControllerSelected,
+    required this.onAddRackSelected,
+    required this.onProductSelected,
     required this.isSplSelected,
     required this.isPencilSelected,
   });
@@ -33,6 +53,43 @@ class BuildingToolbar extends StatefulWidget {
 }
 
 class _BuildingToolbarState extends State<BuildingToolbar> {
+  ToolbarMode _currentMode = ToolbarMode.acoustics;
+
+  // Device item constants copied from DevicesPanel
+  static const List<DeviceItemModel> _microphoneItems = <DeviceItemModel>[
+    DeviceItemModel(sku: "gooseneck", name: "Gooseneck", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "hanging", name: "Hanging", image: "assets/images/products/hanging_mic.png"),
+    DeviceItemModel(sku: "condenser", name: "Condenser", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "dynamic", name: "Dynamic", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "shotgun", name: "Shotgun", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "pzm", name: "PZM", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "lavalier", name: "Lavalier", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "headset", name: "Headset", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "handheld", name: "Handheld", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "beltpack", name: "Beltpack", image: "assets/images/products/mic1.png"),
+    DeviceItemModel(sku: "paging", name: "Paging", image: "assets/images/products/paging_mic.png"),
+  ];
+
+  static const List<DeviceItemModel> _mediaSourceItems = <DeviceItemModel>[
+    DeviceItemModel(sku: "generic_mono", name: "Generic Mono", image: "assets/images/products/dvdplayer.png"),
+    DeviceItemModel(sku: "generic_stereo", name: "Generic Stereo", image: "assets/images/products/dvdplayer.png"),
+    DeviceItemModel(sku: "cd", name: "CD", image: "assets/images/products/dvdplayer.png"),
+    DeviceItemModel(sku: "sat_cable_hdmi", name: "Sat/Cable - HDMI", image: "assets/images/products/hdmi.png"),
+    DeviceItemModel(sku: "media_player", name: "Media Player", image: "assets/images/products/dvdplayer.png"),
+    DeviceItemModel(sku: "tuner", name: "Tuner", image: "assets/images/products/dvdplayer.png"),
+    DeviceItemModel(sku: "dvd_hdmi", name: "DVD - HDMI", image: "assets/images/products/hdmi.png"),
+    DeviceItemModel(sku: "bluray_hdmi", name: "BluRay HDMI", image: "assets/images/products/hdmi.png"),
+    DeviceItemModel(sku: "laptop_usb_hdmi", name: "Laptop - USB - or HDMI", image: "assets/images/products/laptop.png"),
+    DeviceItemModel(sku: "deskpc_usb_hdmi", name: "DeskPC - USB - or HDMI", image: "assets/images/products/laptop.png"),
+  ];
+
+  static const List<String> _rackOptions = <String>[
+    '4U',
+    '8U',
+    '12U',
+    '24U',
+  ];
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -53,49 +110,116 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              _buildToolItem(
-                assetIcon: Assets.moveIcon,
-                "Cursor",
-                onTap: widget.onMoveSelected,
-                isSelected: true,
-              ),
-              if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
-                _buildToolItem(
-                  assetIcon: Assets.pencilIcon,
-                  "Pen",
-                  onTap: widget.onPencilSelected,
-                  isSelected: widget.isPencilSelected,
+              // Mode Switch
+              _buildModeSwitch(),
+              const SizedBox(width: 12.0),
+
+              // Animated tool section with size transition
+              AnimatedSize(
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeInOutCubic,
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 300),
+                  transitionBuilder: (Widget child, Animation<double> animation) {
+                    return SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0.0, 0.5),
+                        end: Offset.zero,
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+                        ),
+                      ),
+                      child: FadeTransition(
+                        opacity: CurvedAnimation(
+                          parent: animation,
+                          curve: const Interval(0.0, 0.8, curve: Curves.easeInOutCubic),
+                        ),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: _buildModeSpecificTools(),
                 ),
-              _buildToolItem(
-                assetIcon: Assets.splIcon,
-                "Spl",
-                onTap: widget.onSplSelected,
-                isSelected: widget.isSplSelected,
-              ),
-              // _buildToolItem(
-              //   assetIcon: Assets.tableIcon,
-              //   "floor plan",
-              //   onTap: widget.onEditFloorPlanSelected,
-              // ),
-              // _buildToolItem(
-              //   assetIcon: Assets.panIcon,
-              //   "Hand",
-              //   onTap: widget.onPanSelected,
-              // ),
-              // _buildToolItem(
-              //   assetIcon: Assets.trashIcon,
-              //   "Delete",
-              //   onTap: widget.onTrashSelected,
-              // ),
-              _buildToolItem(
-                icon: Icons.fit_screen_rounded,
-                "Fit to screen",
-                onTap: widget.onFitSelected,
               ),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildModeSwitch() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(18.0),
+        border: Border.all(color: Colors.grey.shade300, width: 0.5),
+      ),
+      padding: const EdgeInsets.all(2.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          _buildModeTab(
+            label: "Acoustics",
+            isSelected: _currentMode == ToolbarMode.acoustics,
+            color: Colors.blue,
+            onTap: () {
+              _switchMode(ToolbarMode.acoustics);
+            },
+          ),
+          _buildModeTab(
+            label: "System",
+            isSelected: _currentMode == ToolbarMode.system,
+            color: Colors.green,
+            onTap: () {
+              _switchMode(ToolbarMode.system);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModeTab({
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+          borderRadius: BorderRadius.circular(16.0),
+          border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1.0) : null,
+          boxShadow:
+              isSelected
+                  ? <BoxShadow>[
+                    BoxShadow(
+                      color: color.withValues(alpha: 0.15),
+                      blurRadius: 3,
+                      offset: const Offset(0, 1),
+                    ),
+                  ]
+                  : null,
+        ),
+        child: AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOutCubic,
+          style: TextStyle(
+            color: isSelected ? _getDarkerShade(color) : Colors.black54,
+            fontSize: 13.0,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
+          child: Text(label),
+        ),
+      ),
     );
   }
 
@@ -107,28 +231,356 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           onTap();
         },
         child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 2.0),
+          margin: const EdgeInsets.symmetric(horizontal: 1.0),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.green.withAlpha((0.3 * 255).toInt()) : Colors.transparent,
+            color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(6.0),
+            border: Border.all(
+              color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+              width: 1,
+            ),
           ),
           child:
               icon != null
                   ? Padding(
-                    padding: const EdgeInsets.all(12.0),
+                    padding: const EdgeInsets.all(10.0),
                     child: Icon(
                       icon,
-                      size: 20.0,
-                      color: Colors.black54,
+                      size: 18.0,
+                      color: isSelected ? Colors.green.shade700 : Colors.black54,
                     ),
                   )
-                  : Image.asset(
-                    assetIcon!,
-                    width: 44.0,
-                    height: 44.0,
+                  : Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Image.asset(
+                      assetIcon!,
+                      width: 18.0,
+                      height: 18.0,
+                    ),
                   ),
         ),
       ),
     );
+  }
+
+  Widget _buildModeSpecificTools() {
+    return Row(
+      key: ValueKey<ToolbarMode>(_currentMode),
+      mainAxisSize: MainAxisSize.min,
+      children: _currentMode == ToolbarMode.acoustics ? _buildAcousticsTools() : _buildSystemTools(),
+    );
+  }
+
+  List<Widget> _buildAcousticsTools() {
+    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+
+    return <Widget>[
+      if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
+        _buildToolItem(
+          assetIcon: Assets.pencilIcon,
+          "Pen",
+          onTap: widget.onPencilSelected,
+          isSelected: widget.isPencilSelected,
+        ),
+      _buildToolItem(
+        icon: Icons.speaker,
+        "Add Speakers",
+        onTap: () {
+          widget.onAddSpeakerSelected();
+          widget.onProductSelected(); // Expand products panel
+        },
+        isSelected: currentDeviceIndex == 0,
+      ),
+      _buildSplTool(),
+      _buildToolItem(
+        icon: Icons.fit_screen_rounded,
+        "Fit to viewport",
+        onTap: widget.onFitSelected,
+      ),
+      // _buildToolItem(
+      //   assetIcon: Assets.tableIcon,
+      //   "Floor Plan",
+      //   onTap: widget.onEditFloorPlanSelected,
+      // ),
+    ];
+  }
+
+  List<Widget> _buildSystemTools() {
+    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
+
+    return <Widget>[
+      _buildSourcesToolWithMenu(
+        isSelected: currentDeviceIndex == 1,
+      ),
+      _buildToolItem(
+        icon: Icons.hub_outlined,
+        "Add Endpoints",
+        onTap: () {
+          widget.onAddEndpointSelected();
+          widget.onProductSelected(); // Expand products panel
+        },
+        isSelected: currentDeviceIndex == 2,
+      ),
+      _buildToolItem(
+        icon: Icons.amp_stories,
+        "Add Amplifiers",
+        onTap: () {
+          widget.onAddAmplifierSelected();
+          widget.onProductSelected(); // Expand products panel
+        },
+        isSelected: currentDeviceIndex == 3,
+      ),
+      _buildToolItem(
+        icon: Icons.memory,
+        "Add DSPs",
+        onTap: () {
+          widget.onAddDspSelected();
+          widget.onProductSelected(); // Expand products panel
+        },
+        isSelected: currentDeviceIndex == 4,
+      ),
+      _buildToolItem(
+        icon: Icons.tune,
+        "Add Controllers",
+        onTap: () {
+          widget.onAddControllerSelected();
+          widget.onProductSelected(); // Expand products panel
+        },
+        isSelected: currentDeviceIndex == 5,
+      ),
+      _buildRackToolWithMenu(
+        isSelected: currentDeviceIndex == 6,
+      ),
+      _buildToolItem(
+        icon: Icons.fit_screen_rounded,
+        "Fit to viewport",
+        onTap: widget.onFitSelected,
+      ),
+    ];
+  }
+
+  Widget _buildSourcesToolWithMenu({required bool isSelected}) {
+    return PopupMenuButton<DeviceItemModel>(
+      onSelected: (DeviceItemModel selectedItem) {
+        // Set device type index first
+        serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+
+        // Create product and set for addition
+        final ProductQueryModel product = ProductQueryModel(
+          name: selectedItem.name,
+          price: 0.0,
+          image: selectedItem.image,
+          type: ProductType.sources,
+          sku: selectedItem.sku,
+        );
+        serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+      },
+      constraints: const BoxConstraints(
+        maxHeight: 500,
+        maxWidth: 320,
+      ),
+      color: Colors.white,
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuEntry<DeviceItemModel>>[
+          const PopupMenuItem<DeviceItemModel>(
+            enabled: false,
+            child: Text(
+              'MICROPHONES',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+            ),
+          ),
+          ..._microphoneItems.map(
+            (DeviceItemModel item) => PopupMenuItem<DeviceItemModel>(
+              height: 30,
+              value: item,
+              child: Row(
+                children: <Widget>[
+                  Image.asset(
+                    item.image,
+                    height: 14,
+                    width: 14,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const PopupMenuDivider(),
+          const PopupMenuItem<DeviceItemModel>(
+            enabled: false,
+            child: Text(
+              'MEDIA SOURCES',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+            ),
+          ),
+          ..._mediaSourceItems.map(
+            (DeviceItemModel item) => PopupMenuItem<DeviceItemModel>(
+              height: 30,
+              value: item,
+              child: Row(
+                children: <Widget>[
+                  Image.asset(
+                    item.image,
+                    height: 14,
+                    width: 14,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      item.name,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ];
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1.0),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6.0),
+          border: Border.all(
+            color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Tooltip(
+          message: "Add Sources",
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Icon(
+              Icons.mic,
+              size: 18.0,
+              color: isSelected ? Colors.green.shade700 : Colors.black54,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRackToolWithMenu({required bool isSelected}) {
+    return PopupMenuButton<DeviceItemModel>(
+      onSelected: (DeviceItemModel selectedItem) {
+        // Set device type index first
+        serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // Rack index
+
+        // Create product and set for addition
+        final ProductQueryModel product = ProductQueryModel(
+          name: selectedItem.name,
+          price: 0.0,
+          image: selectedItem.image,
+          type: ProductType.racks,
+          sku: selectedItem.sku,
+        );
+        serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+      },
+      constraints: const BoxConstraints(
+        maxHeight: 500,
+        maxWidth: 320,
+      ),
+      color: Colors.white,
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuEntry<DeviceItemModel>>[
+          const PopupMenuItem<DeviceItemModel>(
+            enabled: false,
+            child: Text(
+              'RACK OPTIONS',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+            ),
+          ),
+          ..._rackOptions.map(
+            (String option) => PopupMenuItem<DeviceItemModel>(
+              height: 30,
+              value: DeviceItemModel(
+                sku: option.toLowerCase(),
+                name: '$option Rack',
+                image: 'assets/images/products/rack.png',
+              ),
+              child: Row(
+                children: <Widget>[
+                  Image.asset(
+                    'assets/images/products/rack.png',
+                    height: 14,
+                    width: 14,
+                  ),
+                  const SizedBox(width: 8),
+                  Text('$option Rack'),
+                ],
+              ),
+            ),
+          ),
+        ];
+      },
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 1.0),
+        decoration: BoxDecoration(
+          color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(6.0),
+          border: Border.all(
+            color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+            width: 1,
+          ),
+        ),
+        child: Tooltip(
+          message: "Add Racks",
+          child: Padding(
+            padding: const EdgeInsets.all(10.0),
+            child: Icon(
+              Icons.dns_outlined,
+              size: 18.0,
+              color: isSelected ? Colors.green.shade700 : Colors.black54,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSplTool() {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return _buildToolItem(
+          assetIcon: Assets.splIcon,
+          "Show SPL",
+          onTap: () {
+            widget.onSplSelected();
+            setState(() {});
+          },
+          isSelected: widget.isSplSelected,
+        );
+      },
+    );
+  }
+
+  void _switchMode(ToolbarMode newMode) {
+    if (widget.isSplSelected && newMode != ToolbarMode.acoustics) {
+      widget.onSplSelected();
+    }
+    if (_currentMode != newMode) {
+      // Reset all selections when switching modes
+      serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+      serviceLocator<ProjectViewModel>().setSelectedProductToAdd(null);
+
+      setState(() {
+        _currentMode = newMode;
+      });
+    }
+  }
+
+  Color _getDarkerShade(Color color) {
+    final HSLColor hsl = HSLColor.fromColor(color);
+    return hsl.withLightness((hsl.lightness * 0.6).clamp(0.0, 1.0)).toColor();
   }
 }

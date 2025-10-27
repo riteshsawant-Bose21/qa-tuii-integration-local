@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
@@ -135,12 +133,11 @@ extension ListeningAreaService on ProjectService {
 
     final currentAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId);
     if (currentAreas.contains(listeningAreaId)) {
-      // Already linked; no-op
-      return;
+      return; // Already linked to target zone, just removed from subzones
     }
 
-    // Find current zones where this ListeningArea exists
-    final currentZone = relationships
+    // Find current zones/subzones where this ListeningArea exists
+    final currentParents = relationships
         .getParents(
           RelationshipType.zoneAreas,
           listeningAreaId,
@@ -148,9 +145,14 @@ extension ListeningAreaService on ProjectService {
         .toList();
 
     //  Remove from any old zones first (cleanup old zone links)
-    final currentZoneCopy = List<String>.from(currentZone);
+    final currentZoneCopy = List<String>.from(currentParents);
     for (final oldZoneId in currentZoneCopy) {
-      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      //check if its a zone or subzone
+      if (zones.exists(oldZoneId)) {
+        removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      } else if (subZones.exists(oldZoneId)) {
+        removeListeningAreaFromSubZone(listeningAreaId, oldZoneId);
+      }
     }
 
     relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
@@ -212,9 +214,25 @@ extension ListeningAreaService on ProjectService {
     return floorId != null ? floors.get(floorId) : null;
   }
 
-  List<Zone> getZonesForListeningArea(String listeningAreaId) {
+  Zone? getZoneForListeningArea(String listeningAreaId) {
     final zoneIds = relationships.getParents(RelationshipType.zoneAreas, listeningAreaId);
-    return zoneIds.map((id) => zones.get(id)).where((z) => z != null).cast<Zone>().toList();
+
+    if (zoneIds.isEmpty) {
+      return null;
+    }
+    final String zoneId = zoneIds.first;
+
+    if (zones.exists(zoneId)) {
+      return zones.get(zoneId);
+    } else if (subZones.exists(zoneId)) {
+      //get parent zone of subzone
+      final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, zoneId);
+      if (parentZoneId != null) {
+        return zones.get(parentZoneId);
+      }
+    }
+
+    return null;
   }
 
   //Get All Listening Areas in the project
