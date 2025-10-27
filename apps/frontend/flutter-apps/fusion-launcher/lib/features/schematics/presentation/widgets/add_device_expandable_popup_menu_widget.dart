@@ -6,20 +6,21 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../../core/models/products_data.dart';
 import '../../../product_query/presentation/pages/product_query.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'create_new_location_widget.dart';
 import 'listening_area_dropdown_widget.dart';
 
 class AddDeviceExpandablePopupMenuWidget extends StatefulWidget {
   final String sectionTitle;
   final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
-  final List<Zone> zones;
+  // final List<Zone> zones;
 
   const AddDeviceExpandablePopupMenuWidget({
     super.key,
     required this.sectionTitle,
     this.onTapAddDevice,
     this.listeningAreas = const <ListeningArea>[],
-    this.zones = const <Zone>[],
+    // this.zones = const <Zone>[],
   });
 
   @override
@@ -65,7 +66,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
     }
 
     if (_selectedListeningAreaIds.isEmpty) {
-      FusionToast.error(context, message: "Please select a listening area first");
+      FusionToast.error(context, message: "Please select a location first");
       return;
     }
 
@@ -73,7 +74,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
       final FloorModel? floorData = projectViewModel.getFloorForListeningArea(areaId: _selectedListeningAreaIds.first);
 
       if (floorData == null) {
-        FusionToast.error(context, message: "Floor not found for selected listening area");
+        FusionToast.error(context, message: "Floor not found for selected location");
         return;
       }
 
@@ -116,7 +117,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
       tooltip: getSectionToolTip(),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(
-        maxHeight: 550,
+        maxHeight: 500,
         maxWidth: 300,
       ),
       shape: RoundedRectangleBorder(
@@ -133,7 +134,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             child: Container(
               width: 300,
               constraints: const BoxConstraints(
-                maxHeight: 520,
+                maxHeight: 460,
                 maxWidth: 300,
               ),
               child: StatefulBuilder(
@@ -401,14 +402,14 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             ),
           ),
 
-          /// Listening Area Selection Section
+          /// Location Selection Section
           Container(
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 FusionAppText(
-                  text: "Select Listening Area",
+                  text: "Select Location",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 10,
                     fontWeight: FontWeight.w600,
@@ -419,12 +420,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                   width: double.infinity,
                   child: ListeningAreaDropdownWidget(
                     listeningAreas: widget.listeningAreas,
-                    zones: widget.zones,
+                    // zones: widget.zones,
                     selectedListeningAreaIds: _selectedListeningAreaIds,
                     onSelectionChanged: (List<String> selectedIds, String floorId) {
                       _selectedListeningAreaIds = selectedIds;
                       setMenuState(() {}); // Update popup menu UI
-                      print('Listening areas selected: $selectedIds'); // Debug print
                     },
                   ),
                 ),
@@ -456,6 +456,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
   /// Builds a create zone section for speakers
   Widget _buildCreateZoneSection(StateSetter setMenuState) {
+    bool isCreateAreaExpanded = false;
+    final String selectedFloor = '';
+    final String selectedFloorId = '';
+    final TextEditingController areaNameController = TextEditingController();
+
     return Padding(
       padding: const EdgeInsets.all(10.0),
       child: Column(
@@ -528,7 +533,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 // Handle popup close if needed
               },
               constraints: const BoxConstraints(
-                maxHeight: 250,
+                maxHeight: 500,
                 maxWidth: 280,
               ),
               shape: RoundedRectangleBorder(
@@ -545,7 +550,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       builder: (BuildContext context, StateSetter setPopupState) {
                         return Container(
                           width: 280,
-                          constraints: const BoxConstraints(maxHeight: 220),
+                          constraints: const BoxConstraints(maxHeight: 460),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
@@ -584,6 +589,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                               /// Scrollable list of listening areas
                               Flexible(
                                 child: SingleChildScrollView(
+                                  physics: const ClampingScrollPhysics(),
                                   child: Column(
                                     children:
                                         serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
@@ -672,6 +678,59 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                         }).toList(),
                                   ),
                                 ),
+                              ),
+
+                              /// Create New Location Section
+                              CreateNewLocationWidget(
+                                areaNameController: areaNameController,
+                                isCreateAreaExpanded: isCreateAreaExpanded,
+                                setDropdownState: setPopupState,
+                                selectedFloor: selectedFloor,
+                                selectedFloorId: selectedFloorId,
+                                onCreateNewArea: ({required String floorId}) {
+                                  if (areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
+                                    // todo: Replace with actual area creation logic (e.g., user-defined vertices)
+                                    final ListeningArea newListeningArea = ListeningArea(
+                                      name: areaNameController.text.trim(),
+                                      vertices: <Offset>[
+                                        const Offset(0, 0),
+                                        const Offset(100, 0),
+                                        const Offset(100, 100),
+                                        const Offset(0, 100),
+                                      ],
+                                    );
+
+                                    try {
+                                      serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
+
+                                      /// Clear form and close expansion
+                                      areaNameController.clear();
+                                      setState(() {
+                                        isCreateAreaExpanded = false;
+                                      });
+
+                                      /// Show success message
+                                      FusionToast.success(
+                                        context,
+                                        message: "Listening area '${newListeningArea.name}' created successfully",
+                                      );
+
+                                      /// Automatically select the newly created area
+                                      // widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
+                                      // Navigator.of(context).pop();
+                                    } catch (e) {
+                                      FusionToast.error(
+                                        context,
+                                        message: "Failed to create listening area: $e",
+                                      );
+                                    }
+                                  } else {
+                                    FusionToast.error(
+                                      context,
+                                      message: "Please enter location name and select a floor",
+                                    );
+                                  }
+                                },
                               ),
                             ],
                           ),

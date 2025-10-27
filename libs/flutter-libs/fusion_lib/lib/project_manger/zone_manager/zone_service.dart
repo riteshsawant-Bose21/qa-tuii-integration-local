@@ -17,13 +17,15 @@ extension ZoneService on ProjectService {
 
     //remove all the subzones in zone
     final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId).toList();
-    for (final subZoneId in subZoneIds) {
+    final subZoneIdsCopy = List<String>.from(subZoneIds);
+    for (final subZoneId in subZoneIdsCopy) {
       removeSubZone(subZoneId);
     }
 
     //remove all the circuits in zone
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId).toList();
-    for (final circuitId in circuitIds) {
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final circuitId in circuitIdsCopy) {
       removeCircuit(circuitId);
     }
 
@@ -41,9 +43,7 @@ extension ZoneService on ProjectService {
       throw Exception('Zone $zoneId not found');
     }
 
-    print("inside update zone method");
     zones.add(updatedZone.id, updatedZone);
-    print("---- Updated Zone----");
   }
 
   // Get zone by id
@@ -96,8 +96,8 @@ extension ZoneService on ProjectService {
     if (!zones.exists(zoneId)) return;
 
     final hwChildren = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
-
-    for (final hwId in hwChildren) {
+    final hwChildrenCopy = List<String>.from(hwChildren);
+    for (final hwId in hwChildrenCopy) {
       relationships.unlink(RelationshipType.circuitHardware, circuitId, hwId);
     }
 

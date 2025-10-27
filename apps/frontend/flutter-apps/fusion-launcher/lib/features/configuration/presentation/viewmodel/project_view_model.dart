@@ -91,22 +91,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ProductQueryModel? selectedProductToAdd;
 
   /// Global hover and selection state management
-  SelectedItem? _hoveredDevice;
   SelectedItem? _selectedDevice;
 
-  SelectedItem? get hoveredDevice => _hoveredDevice;
-
   SelectedItem? get selectedDevice => _selectedDevice;
-
-  /// Update hover state
-  void setHoveredDevice(String? deviceId, SelectedItemType? type) {
-    final SelectedItem? newHoveredDevice = (deviceId != null && type != null) ? SelectedItem(id: deviceId, type: type) : null;
-
-    if (_hoveredDevice != newHoveredDevice) {
-      _hoveredDevice = newHoveredDevice;
-      emit(DeviceHoverChanged(_hoveredDevice));
-    }
-  }
 
   /// Update selection state
   void setSelectedDevice(String? deviceId, SelectedItemType? type) {
@@ -121,10 +108,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   /// Clear all selections
   void clearSelections() {
     bool changed = false;
-    if (_hoveredDevice != null) {
-      _hoveredDevice = null;
-      changed = true;
-    }
+
     if (_selectedDevice != null) {
       _selectedDevice = null;
       changed = true;

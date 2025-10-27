@@ -12,20 +12,18 @@ class ExpandableSubZoneWidget extends StatefulWidget {
   final String name;
   final String subZoneId;
   final String zoneId;
-  final List<CircuitModel> subZoneDevices;
+  final List<CircuitModel> subZoneCircuit;
   final Function(String)? onDelete;
   final Function(String)? onEdit;
-  final Function(String subZoneId, int oldIndex, int newIndex)? onDeviceReorder;
 
   const ExpandableSubZoneWidget({
     super.key,
     required this.name,
     required this.subZoneId,
     required this.zoneId,
-    required this.subZoneDevices,
+    required this.subZoneCircuit,
     this.onDelete,
     this.onEdit,
-    this.onDeviceReorder,
   });
 
   @override
@@ -35,6 +33,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
 class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   late ValueNotifier<bool> _isSubZoneExpanded;
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  bool _isHovered = false;
 
   @override
   void initState() {
@@ -55,21 +54,16 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? hoveredDevice = _projectViewModel.hoveredDevice;
-            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            final bool isSubZoneHovered = hoveredDevice?.id == widget.subZoneId && hoveredDevice?.type == SelectedItemType.subzone;
-            final bool isSubZoneSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
-
             return Column(
               children: <Widget>[
                 MouseRegion(
-                  onHover: (_) => _projectViewModel.setHoveredDevice(widget.subZoneId, SelectedItemType.subzone),
-                  onExit: (_) => _projectViewModel.setHoveredDevice(null, null),
+                  onEnter: (_) => setState(() => _isHovered = true),
+                  onExit: (_) => setState(() => _isHovered = false),
                   child: Container(
                     padding: const EdgeInsets.only(left: 30, right: 14),
                     height: 36,
                     decoration: BoxDecoration(
-                      color: isSubZoneHovered ? Theme.of(context).colorScheme.greyLight.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
+                      color: _isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
                     ),
                     child: Row(
                       children: <Widget>[
@@ -114,7 +108,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
 
   /// SubZone content - properly contained within ReorderableListView
   Widget _buildSubZoneContent() {
-    if (widget.subZoneDevices.isEmpty) {
+    if (widget.subZoneCircuit.isEmpty) {
       print("no devices in subzone ${widget.subZoneId}");
       return Container(
         color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
@@ -135,29 +129,46 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         buildDefaultDragHandles: false,
-        itemCount: widget.subZoneDevices.length,
+        itemCount: widget.subZoneCircuit.length,
         onReorder: (int oldIndex, int newIndex) {
-          widget.onDeviceReorder?.call(widget.subZoneId, oldIndex, newIndex);
+          if (oldIndex < newIndex) {
+            newIndex -= 1;
+          }
+          _projectViewModel.reOrderCircuitInZone(parentId: widget.subZoneId, oldIndex: oldIndex, newIndex: newIndex);
+          _projectViewModel.setSelectedDevice(widget.subZoneCircuit[oldIndex].id, SelectedItemType.circuit);
         },
         itemBuilder: (BuildContext context, int index) {
-          final CircuitModel device = widget.subZoneDevices[index];
-          print('Building device widget for ${device.name} at index $index');
+          final CircuitModel device = widget.subZoneCircuit[index];
           final String deviceId = device.id;
-          final String deviceName = device.name;
-          final String location = device.name;
+          final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: device.id).whereType<Speaker>().toList();
+          final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: device.id);
 
           return ReorderableDragStartListener(
             key: ValueKey<String>(deviceId),
             index: index,
             child: CircuitDeviceWidget(
               deviceId: deviceId,
-              deviceName: deviceName,
               location: location,
-              circuitDeviceName: '',
+              circuitDeviceName: device.name,
+              assetImagePath: speakers.first.assetImagePath,
+              circuitDeviceCount: speakers.length,
+              onDecrementHardwareInCircuit: () {
+                final Speaker speaker = speakers.last;
+                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+              },
+              onIncrementHardwareInCircuit: () {
+                final Speaker speaker = speakers.first.getClone();
+                serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: device.id);
+              },
+
               projectViewModel: _projectViewModel,
               onRename: () {},
               onDuplicate: () {},
-              onDelete: () {},
+              onDelete: () {
+                _projectViewModel.removeCircuitFromSubZone(subZoneId: widget.subZoneId, circuitId: deviceId);
+                ;
+              },
             ),
           );
         },
@@ -191,30 +202,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
     );
   }
 
-  Widget _buildAddDeviceButton(BuildContext context) {
-    return GestureDetector(
-      onTap: () => print('Add device to ${widget.name}'),
-      child: Row(
-        children: <Widget>[
-          Icon(
-            Icons.add,
-            size: 10,
-            color: Colors.grey[800],
-          ),
-          const SizedBox(width: 4),
-          FusionAppText(
-            text: "Speaker",
-            style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w400,
-              color: Colors.grey[800],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   /// Kebab menu for subzone actions
   Widget _buildKebabMenu(BuildContext context) {
     return PopupMenuButton<ZoneMenuAction>(
@@ -228,33 +215,17 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
-            /// --- Edit ---
+            /// --- Delete ---
             PopupMenuItem<ZoneMenuAction>(
               height: 26,
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
               onTap: () {
-                widget.onEdit?.call(widget.zoneId!);
-              },
-              child: FusionAppText(
-                text: "Edit",
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
-                ),
-              ),
-            ),
-
-            // --- Delete ---
-            PopupMenuItem<ZoneMenuAction>(
-              height: 26,
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-              onTap: () {
-                widget.onDelete?.call(widget.zoneId!);
+                widget.onDelete?.call(widget.subZoneId!);
               },
               child: FusionAppText(
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
               ),

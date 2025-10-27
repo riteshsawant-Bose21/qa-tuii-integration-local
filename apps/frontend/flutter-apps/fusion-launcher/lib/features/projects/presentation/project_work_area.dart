@@ -30,6 +30,7 @@ import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
 import '../widget/building/side_panle_widgets/coverage_panel.dart';
 import '../widget/building/side_panle_widgets/properties_panel.dart';
+import '../widget/building/side_panle_widgets/schematic_properties.dart';
 import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
 import '../widget/control_design_tab_switcher.dart';
 
@@ -40,7 +41,8 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea>
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -155,13 +157,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
 
-    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: currentFloor.id);
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
     if (floorListeningAreas.isEmpty) return;
 
     final List<Speaker> speakers = List<Speaker>.from(
       serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: currentFloor.id).whereType<Speaker>(),
     );
-    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: currentFloor.id);
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
 
     await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
 
@@ -185,7 +191,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
-    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: currentFloor.id);
+    final List<ListeningArea> floorListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+      floorId: currentFloor.id,
+    );
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
@@ -522,7 +530,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                       controllers: serviceLocator<ProjectViewModel>().fusionControllers,
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                              .where(
+                                                (GenericHardwareComponent component) =>
+                                                    component.type == GenericHardwareComponentType.rack,
+                                              )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
                                       fusionDevices: <FusionDsp>[],
@@ -530,7 +541,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent &&
+                                                    component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
@@ -593,7 +605,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                       controllers: serviceLocator<ProjectViewModel>().fusionControllers,
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
-                                              .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+                                              .where(
+                                                (GenericHardwareComponent component) =>
+                                                    component.type == GenericHardwareComponentType.rack,
+                                              )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
                                       fusionDevices: <FusionDsp>[],
@@ -601,7 +616,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent &&
+                                                    component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
@@ -623,7 +639,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                 title: "PROPERTIES",
                                 side: "right",
                                 alowUndock: false,
-                                dockItemWidget: () => const SizedBox(),
+                                dockItemWidget: () => const SchematicProperties(),
                               ),
                             ],
                           );
@@ -709,7 +725,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                   const SizedBox(height: 2),
                   FusionAppText(
                     text: "File_Version",
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
                   ),
                 ],
               ),
@@ -801,7 +819,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
+                          borderSide: BorderSide(
+                            color:
+                                _projectNameError != null
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                          ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                         isDense: true,
@@ -853,7 +876,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         FusionButton(
                           height: 28,
                           width: 84,
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            fontSize: 10,
+                            color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                          ),
 
                           label: "Edit Name",
                           onTap: () {

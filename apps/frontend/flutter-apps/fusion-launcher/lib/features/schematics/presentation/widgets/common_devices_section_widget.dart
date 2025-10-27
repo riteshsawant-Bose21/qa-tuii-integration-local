@@ -14,9 +14,13 @@ class CommonDevicesSectionWidget extends StatefulWidget {
   final Color backgroundColor;
   final void Function(dynamic item, String areaId, String floorId)? onTapAddDevice;
   final List<ListeningArea> listeningAreas;
-  final List<Zone> zones;
+  // final List<Zone> zones;
   final String? selectedDeviceId;
   final Function(String deviceId, List<String> listeningAreaIds)? onAddDeviceToAreas;
+
+  // New properties for expandable sections
+  final List<ExpandableSection>? expandableSections;
+  final bool enableExpandable;
 
   const CommonDevicesSectionWidget({
     super.key,
@@ -27,9 +31,11 @@ class CommonDevicesSectionWidget extends StatefulWidget {
     required this.backgroundColor,
     this.onTapAddDevice,
     this.listeningAreas = const <ListeningArea>[],
-    this.zones = const <Zone>[],
+    // this.zones = const <Zone>[],
     this.selectedDeviceId,
     this.onAddDeviceToAreas,
+    this.expandableSections,
+    this.enableExpandable = false,
   });
 
   @override
@@ -49,6 +55,9 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   late Animation<double> _iconScaleAnimation;
 
   List<String> _selectedListeningAreaIds = <String>[];
+
+  // Expansion state for sections
+  final Map<String, bool> _sectionExpansionState = <String, bool>{};
 
   @override
   void initState() {
@@ -92,6 +101,13 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
         curve: Curves.easeInOut,
       ),
     );
+
+    // Initialize expansion states
+    if (widget.expandableSections != null) {
+      for (final ExpandableSection section in widget.expandableSections!) {
+        _sectionExpansionState[section.title] = section.initiallyExpanded;
+      }
+    }
   }
 
   @override
@@ -123,6 +139,90 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
       _iconAnimationController.reverse();
     });
     _toggleSearch();
+  }
+
+  /// Helper method to build expandable section headers
+  Widget _buildExpandableHeader(String title, bool isExpanded, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 4.0),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
+              size: 16,
+              color: Colors.black,
+            ),
+            const SizedBox(width: 4),
+            FusionAppText(
+              text: title,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.black,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Helper method to build animated collapsible content
+  Widget _buildAnimatedContent(bool isExpanded, Widget content) {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+      height: isExpanded ? null : 0,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: isExpanded ? 1.0 : 0.0,
+        child:
+            isExpanded
+                ? Column(
+                  children: <Widget>[
+                    const SizedBox(height: 8),
+                    content,
+                  ],
+                )
+                : const SizedBox.shrink(),
+      ),
+    );
+  }
+
+  /// Build expandable content sections
+  Widget _buildExpandableContent() {
+    if (!widget.enableExpandable || widget.expandableSections == null) {
+      return widget.sectionContent;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(10.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children:
+            widget.expandableSections!.map((ExpandableSection section) {
+              final bool isExpanded = _sectionExpansionState[section.title] ?? true;
+
+              return Column(
+                children: <Widget>[
+                  _buildExpandableHeader(
+                    section.title,
+                    isExpanded,
+                    () {
+                      setState(() {
+                        _sectionExpansionState[section.title] = !isExpanded;
+                      });
+                    },
+                  ),
+                  _buildAnimatedContent(isExpanded, section.content),
+                  if (section != widget.expandableSections!.last) const SizedBox(height: 16),
+                ],
+              );
+            }).toList(),
+      ),
+    );
   }
 
   @override
@@ -179,7 +279,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                   sectionTitle: widget.title,
                                   onTapAddDevice: widget.onTapAddDevice,
                                   listeningAreas: widget.listeningAreas,
-                                  zones: widget.zones,
+                                  // zones: widget.zones,
                                 ),
                               ],
                             ),
@@ -245,14 +345,14 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
             ),
           ),
 
-          /// Content
+          /// Content with expandable support
           Expanded(
             child: SingleChildScrollView(
               child: SizedBox(
                 width: widget.width,
                 child: SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
-                  child: widget.sectionContent,
+                  child: widget.enableExpandable ? _buildExpandableContent() : widget.sectionContent,
                 ),
               ),
             ),
@@ -261,4 +361,17 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
       ),
     );
   }
+}
+
+/// Data class for expandable sections
+class ExpandableSection {
+  final String title;
+  final Widget content;
+  final bool initiallyExpanded;
+
+  const ExpandableSection({
+    required this.title,
+    required this.content,
+    this.initiallyExpanded = true,
+  });
 }
