@@ -15,7 +15,6 @@ class ExpandableSubZoneWidget extends StatefulWidget {
   final List<CircuitModel> subZoneCircuit;
   final Function(String)? onDelete;
   final Function(String)? onEdit;
-  final Function(String subZoneId, int oldIndex, int newIndex)? onDeviceReorder;
 
   const ExpandableSubZoneWidget({
     super.key,
@@ -25,7 +24,6 @@ class ExpandableSubZoneWidget extends StatefulWidget {
     required this.subZoneCircuit,
     this.onDelete,
     this.onEdit,
-    this.onDeviceReorder,
   });
 
   @override
@@ -141,7 +139,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
         },
         itemBuilder: (BuildContext context, int index) {
           final CircuitModel device = widget.subZoneCircuit[index];
-          print('Building device widget for ${device.name} at index $index');
           final String deviceId = device.id;
           final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: device.id).whereType<Speaker>().toList();
           final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: device.id);
@@ -168,7 +165,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               projectViewModel: _projectViewModel,
               onRename: () {},
               onDuplicate: () {},
-              onDelete: () {},
+              onDelete: () {
+                _projectViewModel.removeCircuitFromSubZone(subZoneId: widget.subZoneId, circuitId: deviceId);
+                ;
+              },
             ),
           );
         },

@@ -20,7 +20,10 @@ extension SubZoneService on ProjectService {
 
     //remove all the circuits in the subzone
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
-    for (final cId in circuitIds) {
+
+    // Create a copy to avoid concurrent modification during iteration
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final cId in circuitIdsCopy) {
       removeCircuit(cId);
     }
 
@@ -108,7 +111,30 @@ extension SubZoneService on ProjectService {
       throw Exception('ListeningArea $listeningAreaId not found');
     }
 
-    // Check if already in this subzone
+    final currentAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
+    if (currentAreas.contains(listeningAreaId)) {
+      // Already linked; no-op
+      return;
+    }
+
+    // Find current zones where this ListeningArea exists
+    final currentZone = relationships
+        .getParents(
+          RelationshipType.zoneAreas,
+          listeningAreaId,
+        )
+        .toList();
+
+    //  Remove from any old zones first (cleanup old zone links)
+    final currentZoneCopy = List<String>.from(currentZone);
+    for (final oldZoneId in currentZoneCopy) {
+      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+    }
+
+    relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+
+
+/*    // Check if already in this subzone
     final currentSubzoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
     if (currentSubzoneAreas.contains(listeningAreaId)) {
       return; // Already linked; no-op
@@ -136,7 +162,10 @@ extension SubZoneService on ProjectService {
     }
 
     //link to subzone
-    relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+    relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);*/
+
+
+
   }
 
   //remove Listening area from sub zone

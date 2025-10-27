@@ -133,14 +133,14 @@ extension ListeningAreaService on ProjectService {
 
     final currentAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId);
     if (currentAreas.contains(listeningAreaId)) {
-      // Check if it's also in any subzones of this zone - if so, remove from subzones
-      final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
-      for (final subZoneId in subZoneIds) {
-        final subZoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
-        if (subZoneAreas.contains(listeningAreaId)) {
-          relationships.unlink(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
-        }
-      }
+      // // Check if it's also in any subzones of this zone - if so, remove from subzones
+      // final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
+      // for (final subZoneId in subZoneIds) {
+      //   final subZoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
+      //   if (subZoneAreas.contains(listeningAreaId)) {
+      //     relationships.unlink(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+      //   }
+      // }
       return; // Already linked to target zone, just removed from subzones
     }
 
@@ -152,17 +152,25 @@ extension ListeningAreaService on ProjectService {
         )
         .toList();
 
-    // Remove from all current parents except the target zone
-    for (final parentId in currentParents) {
-      if (parentId != zoneId) {
-        relationships.unlink(RelationshipType.zoneAreas, parentId, listeningAreaId);
-      }
+    //  Remove from any old zones first (cleanup old zone links)
+    final currentZoneCopy = List<String>.from(currentParents);
+    for (final oldZoneId in currentZoneCopy) {
+      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
     }
 
-    // Link to the new zone (if not already linked)
-    if (!currentParents.contains(zoneId)) {
-      relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
-    }
+    // // Remove from all current parents except the target zone
+    // for (final parentId in currentParents) {
+    //   if (parentId != zoneId) {
+    //     relationships.unlink(RelationshipType.zoneAreas, parentId, listeningAreaId);
+    //   }
+    // }
+    //
+    // // Link to the new zone (if not already linked)
+    // if (!currentParents.contains(zoneId)) {
+    //   relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
+    // }
+
+    relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
   }
 
   /// Remove ListeningArea from Zone, cleaning circuits + hardware references
@@ -206,6 +214,14 @@ extension ListeningAreaService on ProjectService {
 
     // Unlink listening area from zone
     relationships.unlink(RelationshipType.zoneAreas, zoneId, listeningAreaId);
+
+    final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
+
+    // Also remove from any subzones under this zone
+    final subZoneIdsCopy = List<String>.from(subZoneIds);
+    for (final subZoneId in subZoneIdsCopy) {
+      removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
+    }
   }
 
   FloorModel? getFloorForListeningArea(String listeningAreaId) {
