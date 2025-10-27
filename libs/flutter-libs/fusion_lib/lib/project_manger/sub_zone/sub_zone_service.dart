@@ -128,44 +128,15 @@ extension SubZoneService on ProjectService {
     //  Remove from any old zones first (cleanup old zone links)
     final currentZoneCopy = List<String>.from(currentZone);
     for (final oldZoneId in currentZoneCopy) {
-      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      //check if its a zone or subzone
+      if (zones.exists(oldZoneId)) {
+        removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      } else if (subZones.exists(oldZoneId)) {
+        removeListeningAreaFromSubZone(listeningAreaId, oldZoneId);
+      }
     }
 
     relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
-
-
-/*    // Check if already in this subzone
-    final currentSubzoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
-    if (currentSubzoneAreas.contains(listeningAreaId)) {
-      return; // Already linked; no-op
-    }
-
-    //get parent zone
-    final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, subZoneId);
-
-    if (parentZoneId == null) {
-      throw Exception('SubZone $subZoneId has no parent Zone');
-    }
-
-    // Find all current parents (zones and subzones) where this listening area exists
-    final currentParents = relationships.getParents(RelationshipType.zoneAreas, listeningAreaId).toList();
-
-    // Remove from all current parents first
-    for (final parentId in currentParents) {
-      relationships.unlink(RelationshipType.zoneAreas, parentId, listeningAreaId);
-    }
-
-    // Ensure the listening area is linked to the parent zone
-    final parentsListeningAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZoneId);
-    if (!parentsListeningAreas.contains(listeningAreaId)) {
-      relationships.link(RelationshipType.zoneAreas, parentZoneId, listeningAreaId);
-    }
-
-    //link to subzone
-    relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);*/
-
-
-
   }
 
   //remove Listening area from sub zone

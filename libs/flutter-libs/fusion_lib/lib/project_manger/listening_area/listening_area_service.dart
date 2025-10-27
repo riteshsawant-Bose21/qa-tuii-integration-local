@@ -133,14 +133,6 @@ extension ListeningAreaService on ProjectService {
 
     final currentAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId);
     if (currentAreas.contains(listeningAreaId)) {
-      // // Check if it's also in any subzones of this zone - if so, remove from subzones
-      // final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
-      // for (final subZoneId in subZoneIds) {
-      //   final subZoneAreas = relationships.getChildren(RelationshipType.zoneAreas, subZoneId);
-      //   if (subZoneAreas.contains(listeningAreaId)) {
-      //     relationships.unlink(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
-      //   }
-      // }
       return; // Already linked to target zone, just removed from subzones
     }
 
@@ -155,20 +147,13 @@ extension ListeningAreaService on ProjectService {
     //  Remove from any old zones first (cleanup old zone links)
     final currentZoneCopy = List<String>.from(currentParents);
     for (final oldZoneId in currentZoneCopy) {
-      removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      //check if its a zone or subzone
+      if (zones.exists(oldZoneId)) {
+        removeListeningAreaFromZone(listeningAreaId, oldZoneId);
+      } else if (subZones.exists(oldZoneId)) {
+        removeListeningAreaFromSubZone(listeningAreaId, oldZoneId);
+      }
     }
-
-    // // Remove from all current parents except the target zone
-    // for (final parentId in currentParents) {
-    //   if (parentId != zoneId) {
-    //     relationships.unlink(RelationshipType.zoneAreas, parentId, listeningAreaId);
-    //   }
-    // }
-    //
-    // // Link to the new zone (if not already linked)
-    // if (!currentParents.contains(zoneId)) {
-    //   relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
-    // }
 
     relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
   }
@@ -229,9 +214,25 @@ extension ListeningAreaService on ProjectService {
     return floorId != null ? floors.get(floorId) : null;
   }
 
-  List<Zone> getZonesForListeningArea(String listeningAreaId) {
+  Zone? getZoneForListeningArea(String listeningAreaId) {
     final zoneIds = relationships.getParents(RelationshipType.zoneAreas, listeningAreaId);
-    return zoneIds.map((id) => zones.get(id)).where((z) => z != null).cast<Zone>().toList();
+
+    if (zoneIds.isEmpty) {
+      return null;
+    }
+    final String zoneId = zoneIds.first;
+
+    if (zones.exists(zoneId)) {
+      return zones.get(zoneId);
+    } else if (subZones.exists(zoneId)) {
+      //get parent zone of subzone
+      final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, zoneId);
+      if (parentZoneId != null) {
+        return zones.get(parentZoneId);
+      }
+    }
+
+    return null;
   }
 
   //Get All Listening Areas in the project
