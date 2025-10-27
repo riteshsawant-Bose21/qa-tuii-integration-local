@@ -20,7 +20,9 @@ extension SubZoneService on ProjectService {
 
     //remove all the circuits in the subzone
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
-    for (final cId in circuitIds) {
+    // Create a copy to avoid concurrent modification during iteration
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final cId in circuitIdsCopy) {
       removeCircuit(cId);
     }
 
