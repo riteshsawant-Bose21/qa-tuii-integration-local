@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
@@ -22,7 +20,6 @@ class SchematicPropertiesState extends State<SchematicProperties> {
   int get speakerQty => int.tryParse(speakerQtyController.text) ?? 1;
 
   void speakerQtyModify({int? qty, bool shouldIncrement = true}) {
-    log("speakerQtyModify called with qty: $qty, shouldIncrement: $shouldIncrement");
     final int newValue = shouldIncrement ? speakerQty + 1 : speakerQty - 1;
     speakerQtyController.text = newValue.toString();
 
@@ -36,14 +33,12 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
     if (qty != null) {
       if (qty > totalSpearks) {
-        log("Adding to exact qty: $qty");
         final int toAdd = qty - totalSpearks;
         for (int i = 0; i < toAdd; i++) {
           addSpeaker();
         }
       } else if (qty < totalSpearks) {
         final int toRemove = totalSpearks - qty;
-        log("Removing to exact qty: $qty");
         for (int i = 0; i < toRemove; i++) {
           removeSpeaker();
         }
