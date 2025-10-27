@@ -68,6 +68,7 @@ for instance in $instances; do
         
         rm -f /var/lib/fusion/fusion.db
                 
+        systemctl set-environment FUSION_PROFILE=true
         systemctl start fusion-server
         
         systemctl status fusion-server --no-pager

@@ -3,12 +3,13 @@ package main
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/go-ble/ble"
 )
