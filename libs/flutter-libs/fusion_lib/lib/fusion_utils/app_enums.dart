@@ -36,3 +36,13 @@ enum ZoneMenuAction {
   subzone,
   delete,
 }
+
+/// Device search scope enum (used for narrowing grouped section search results)
+enum DeviceSearchScope {
+  sources,
+  endpoints,
+  fusionDevices,
+  amplifiers,
+  racks,
+  switches,
+}
