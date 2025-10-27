@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/image_loader_service.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/helpers/connection_methods_extension.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/helpers/project_manager_methods.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_state.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_lib/di/service_locator.dart';
@@ -25,7 +26,7 @@ class CircuitController extends ChangeNotifier
     with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
   final ProjectViewModel projectManager;
   CircuitController(this.projectManager) {
-    initialize();
+    loadFromPM();
     _loadAllHardwareImages();
     cache.cacheForState(state);
     stack.push(state.toMap());
@@ -172,6 +173,17 @@ class CircuitController extends ChangeNotifier
   void setState(WiringState state) {
     this.state = state;
     notifyListeners();
+    switch (state) {
+      case ElementSelectionState(element: final CanvasElement element):
+        selectElementToPM(element.id);
+        break;
+      case ElementMovingState(element: final CanvasElement element):
+        selectElementToPM(element.id);
+        break;
+
+      default:
+        selectElementToPM(null);
+    }
   }
 
   void restoreState(Map<String, dynamic> map) {
@@ -210,6 +222,7 @@ class CircuitController extends ChangeNotifier
       if (changed['wires'] is! Map<dynamic, dynamic>) return;
       _saveWireModification(changed['wires'] ?? <dynamic, dynamic>{});
     }
+
     stack.push(state.toMap());
     notifyListeners();
   }
@@ -292,7 +305,16 @@ class CircuitController extends ChangeNotifier
       for (final dynamic id in removed) {
         final dynamic connectionId = id['id'];
         projectManager.removeWiringConnection(connectionId: connectionId);
+        componentDB.deleteWire(connectionId);
       }
+    }
+  }
+
+  void deleteSelectedElement() {
+    if (state is ElementSelectionState) {
+      setState(state.deleteElement((state as ElementSelectionState).element));
+
+      saveState();
     }
   }
 }

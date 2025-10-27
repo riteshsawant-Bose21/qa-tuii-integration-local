@@ -65,6 +65,9 @@ class CircuitView extends StatelessWidget {
             onRedo: () {
               controller.redo();
             },
+            onDelete: () {
+              controller.deleteSelectedElement();
+            },
             child: CanvasControlWrapper(
               circuitPainter: circuitPainter,
               controller: controller,

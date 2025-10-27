@@ -81,7 +81,7 @@ class CircuitComponent extends CanvasElement {
       final ComponentPort element = data.inputPorts[i];
       circuitComponent.addInputPort(
         CircuitPort(
-          id: "${data.id}_input_$i",
+          id: element.id,
           relativePosition: Offset(
             data.portRadius + WiringViewConstants.portSpacing,
             data.portRadius +
@@ -101,7 +101,8 @@ class CircuitComponent extends CanvasElement {
       final ComponentPort element = data.outputPorts[i];
       circuitComponent.addOutputPort(
         CircuitPort(
-          id: "${data.id}_output_$i",
+          id: element.id,
+
           relativePosition: Offset(
             size.width - data.portRadius - WiringViewConstants.portSpacing,
             data.portRadius +
@@ -171,7 +172,8 @@ class CircuitComponent extends CanvasElement {
 
       circuitComponent.addOtherPort(
         CircuitPort(
-          id: "${data.id}_other_$i",
+          id: element.id,
+
           relativePosition: Offset(
             data.portRadius + WiringViewConstants.portSpacing,
             currentHeight +
@@ -191,7 +193,8 @@ class CircuitComponent extends CanvasElement {
 
       circuitComponent.addOtherPort(
         CircuitPort(
-          id: "${data.id}_other_$i",
+          id: element.id,
+
           relativePosition: Offset(
             size.width - data.portRadius - WiringViewConstants.portSpacing,
             data.portRadius +
@@ -225,7 +228,8 @@ class CircuitComponent extends CanvasElement {
 
       circuitComponent.addOtherPort(
         CircuitPort(
-          id: "${data.id}_other_footerLeft_$i",
+          id: element.id,
+
           relativePosition: Offset(
             cuPortPosition,
             size.height - data.portRadius - WiringViewConstants.portSpacing,
@@ -246,7 +250,8 @@ class CircuitComponent extends CanvasElement {
       final ComponentPort element = footerCenter[i];
       circuitComponent.addOtherPort(
         CircuitPort(
-          id: "${data.id}_other_footerCenter_$i",
+          id: element.id,
+
           relativePosition: Offset(
             cuPortPosition,
             size.height - data.portRadius - WiringViewConstants.portSpacing,
@@ -266,7 +271,8 @@ class CircuitComponent extends CanvasElement {
       final ComponentPort element = footerRight[i];
       circuitComponent.addOtherPort(
         CircuitPort(
-          id: "${data.id}_other_footerRight_$i",
+          id: element.id,
+
           relativePosition: Offset(
             cuPortPosition,
             size.height - data.portRadius - WiringViewConstants.portSpacing,
