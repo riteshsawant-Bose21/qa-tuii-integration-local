@@ -631,7 +631,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                               ),
                               DockItemConfig(
                                 id: "10",
-                                title: "PRODUCT List",
+                                title: "PRODUCT LIST",
                                 side: "left",
                                 dockItemWidget: () => const WiringDeviceListView(),
                               ),

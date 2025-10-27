@@ -104,9 +104,20 @@ class CircuitController extends ChangeNotifier
       to: to,
       joints: path,
     );
+    WiringState currentState = state;
+    if (hasConnection(from)) {
+      for (final Wire eWire in cache.wireOfPort(from) ?? <Wire>[]) {
+        currentState = currentState.deleteElement(eWire);
+      }
+    }
+    if (hasConnection(to)) {
+      for (final Wire eWire in cache.wireOfPort(to) ?? <Wire>[]) {
+        currentState = currentState.deleteElement(eWire);
+      }
+    }
 
     componentDB.addWire(wire);
-    setState(state.addWire(wire));
+    setState(currentState.addWire(wire));
     saveState();
     cache.cacheForState(state);
   }
@@ -305,6 +316,7 @@ class CircuitController extends ChangeNotifier
       for (final dynamic id in removed) {
         final dynamic connectionId = id['id'];
         projectManager.removeWiringConnection(connectionId: connectionId);
+
         componentDB.deleteWire(connectionId);
       }
     }
@@ -313,7 +325,7 @@ class CircuitController extends ChangeNotifier
   void deleteSelectedElement() {
     if (state is ElementSelectionState) {
       setState(state.deleteElement((state as ElementSelectionState).element));
-
+      cache.cacheForState(state);
       saveState();
     }
   }

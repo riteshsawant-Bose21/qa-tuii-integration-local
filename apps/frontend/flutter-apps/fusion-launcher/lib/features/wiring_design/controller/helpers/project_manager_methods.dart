@@ -19,6 +19,11 @@ extension ProjectManagerMethods on CircuitController {
       print("Already selected existing item");
       return;
     }
+    if (state is ElementMovingState &&
+        (state as ElementMovingState).element.id == id) {
+      print("Already selected existing item");
+      return;
+    }
     final CanvasElement? element = componentDB.getComponent(id ?? "");
     print("[Selecting] Component : ${element?.id}");
     if (element != null) {

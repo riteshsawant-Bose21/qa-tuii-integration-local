@@ -31,7 +31,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
   }
 
   void onPanUpdate(Offset delta) {
-    setCanvasState(canvasState.pan(delta));
+    setCanvasState(canvasState.pan(delta * (canvasState.scale)));
     notifyListeners();
   }
 

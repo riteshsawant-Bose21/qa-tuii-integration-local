@@ -21,7 +21,7 @@ class CircuitModel {
        inputPort =
            inputPort ??
            PortData(
-             name: "cirInput",
+             name: "1",
              position: PortPosition.topLeft,
              description: PortType.circuitInput.description,
              portNumber: 1,
