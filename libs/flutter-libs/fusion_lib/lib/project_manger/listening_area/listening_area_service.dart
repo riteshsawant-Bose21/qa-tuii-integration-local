@@ -148,7 +148,8 @@ extension ListeningAreaService on ProjectService {
         .toList();
 
     //  Remove from any old zones first (cleanup old zone links)
-    for (final oldZoneId in currentZone) {
+    final currentZoneCopy = List<String>.from(currentZone);
+    for (final oldZoneId in currentZoneCopy) {
       removeListeningAreaFromZone(listeningAreaId, oldZoneId);
     }
 
@@ -200,7 +201,8 @@ extension ListeningAreaService on ProjectService {
     final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
 
     // Also remove from any subzones under this zone
-    for (final subZoneId in subZoneIds) {
+    final subZoneIdsCopy = List<String>.from(subZoneIds);
+    for (final subZoneId in subZoneIdsCopy) {
       removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
     }
   }
