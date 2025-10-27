@@ -54,7 +54,7 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                                            void *cmdQueue)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
       ControlPalMsgInterface(cmdQueue),
-      m_gainID(gainID), m_zoneONo(zoneONo), m_lastGainSet(LAST_GAIN_RESET_VAL)
+      m_gainID(gainID), m_zoneONo(zoneONo), m_lastGainSet(GAIN_UPDATE_SENTINEL)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalGainActuator Created ===");
@@ -91,10 +91,10 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         // Call fn. to send GAIN value command to frontend task
         SendValue();
 
-        if (gain == LastGainGet())
+        if (GAIN_VALUE_ROUND(gain) == LastGainGet())
         {
             // All gain notifications received, reset LastGain
-            m_lastGainSet = LAST_GAIN_RESET_VAL;
+            m_lastGainSet = GAIN_UPDATE_SENTINEL;
         }
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
