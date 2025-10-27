@@ -25,8 +25,8 @@ import (
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
+	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 )
@@ -95,13 +95,6 @@ func main() {
 	}
 	logger.Info("Initialized Project Service.")
 
-	// engine := gin.Default()
-
-	// // Setup Swagger
-	// engine.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
-
-	// Initialize API Service
-	// apiSvc, err := api.New(engine, productSVC)
 	// Initialize API Server
 	server, err := api.New(&api.Config{
 		Host: "localhost",
@@ -154,18 +147,4 @@ func main() {
 
 	logger.Info("Application stopped gracefully")
 
-	// Host := "localhost"
-	// Port := "8020"
-
-	// // Setup Swagger
-	// // Start server
-	// addr := fmt.Sprintf("%s:%s", Host, Port)
-	// logger.Info(fmt.Sprintf("Starting HTTP server at %s...", addr))
-	// Start server
-	// addr := fmt.Sprintf("%s:%s", Host, Port)
-	// logger.Info(fmt.Sprintf("Starting HTTP server at %s...", addr))
-
-	// if err := apiSvc.Engine().Run(fmt.Sprintf("%s:%s", Host, Port)); err != nil {
-	// 	logger.Fatal(fmt.Sprintf("Server error: %s", err))
-	// }
 }
