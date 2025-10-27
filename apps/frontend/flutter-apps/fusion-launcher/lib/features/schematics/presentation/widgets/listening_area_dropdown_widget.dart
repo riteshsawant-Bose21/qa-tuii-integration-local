@@ -171,61 +171,71 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                       ),
 
                       /// Listening Areas List
-                      if (widget.listeningAreas.isNotEmpty)
-                        Flexible(
-                          child: SingleChildScrollView(
-                            child: Column(
-                              children:
-                                  widget.listeningAreas.map((ListeningArea area) {
-                                    final bool isSelected = widget.selectedListeningAreaIds.contains(area.id);
-                                    final Zone? zoneData = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id);
-                                    final FloorModel? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
+                      widget.listeningAreas.isNotEmpty
+                          ? Flexible(
+                            child: SingleChildScrollView(
+                              child: Column(
+                                children:
+                                    widget.listeningAreas.map((ListeningArea area) {
+                                      final bool isSelected = widget.selectedListeningAreaIds.contains(area.id);
+                                      final Zone? zoneData = serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: area.id);
+                                      final FloorModel? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
 
-                                    return InkWell(
-                                      onTap: () {
-                                        _toggleListeningAreaSelection(area.id, floorName?.id ?? '');
-                                      },
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                                        decoration: BoxDecoration(
-                                          color: isSelected ? Theme.of(context).colorScheme.grey : null,
-                                        ),
-                                        child: Row(
-                                          children: <Widget>[
-                                            /// Radio Button
-                                            Radio<String>(
-                                              value: area.id,
-                                              activeColor: Theme.of(context).colorScheme.greyDark,
-                                              groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
-                                              onChanged: (String? value) {
-                                                if (value != null) {
-                                                  _toggleListeningAreaSelection(value, floorName?.id ?? '');
-                                                }
-                                              },
-                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: FusionAppText(
-                                                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
-                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 10),
+                                      return InkWell(
+                                        onTap: () {
+                                          _toggleListeningAreaSelection(area.id, floorName?.id ?? '');
+                                        },
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? Theme.of(context).colorScheme.grey : null,
+                                          ),
+                                          child: Row(
+                                            children: <Widget>[
+                                              /// Radio Button
+                                              Radio<String>(
+                                                value: area.id,
+                                                activeColor: Theme.of(context).colorScheme.greyDark,
+                                                groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
+                                                onChanged: (String? value) {
+                                                  if (value != null) {
+                                                    _toggleListeningAreaSelection(value, floorName?.id ?? '');
+                                                  }
+                                                },
+                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                               ),
-                                            ),
-                                            FusionAppText(
-                                              text: zoneData?.name ?? "No zone",
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                fontSize: 9,
-                                                color: Colors.grey[600],
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: FusionAppText(
+                                                  text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500, fontSize: 10),
+                                                ),
                                               ),
-                                            ),
-                                          ],
+                                              FusionAppText(
+                                                text: zoneData?.name ?? "No zone",
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  fontSize: 9,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ),
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  }).toList(),
+                                      );
+                                    }).toList(),
+                              ),
+                            ),
+                          )
+                          : Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: FusionAppText(
+                              text: "No locations available. Please create a new location.",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
                             ),
                           ),
-                        ),
 
                       /// Create New Location Section
                       if (!widget.hideAddLocationButton)
