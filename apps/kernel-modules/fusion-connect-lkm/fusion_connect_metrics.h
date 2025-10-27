@@ -15,7 +15,6 @@ enum fusion_cn_pkt_flags
     FUSION_CN_PKTF_DUP         = BIT(2),
     FUSION_CN_PKTF_REORDERHINT = BIT(3),
     FUSION_CN_PKTF_LATE        = BIT(4),
-    FUSION_CN_PKTF_EARLY       = BIT(5),
 };
 
 struct fusion_cn_pkt_sample
@@ -32,7 +31,7 @@ struct fusion_cn_metrics_pcpu {
     /* RX */
     u64 packets_total, bytes_total;
     u64 packets_dup, packets_marked, malformed_count;
-    u64 late_drop_count, early_drop_count;
+    u64 late_drop_count;
 
     /* TX */
     u64 tx_packets_total, tx_bytes_total;
@@ -65,22 +64,15 @@ struct fusion_cn_metrics_window
     u32 jb_depth_max_samples;
     u64 jb_depth_sum_samples;
     u32 jb_depth_count;
-    u64 deadline_miss_count;
     u32 resync_count;
     u64 concealment_frames;
 
     /* latency / clock (reserved for future) */
-    s32 skew_ppb;
-    s32 ptp_offset_ns;
-    s32 rtp_to_phc_err_ns;
     u32 path_latency_est_ns;
     u32 e2e_playout_latency_ns;
 
     /* audio presence (optional) */
     u8  audio_present;
-    s16 level_fast_dbfs;
-    s16 level_slow_dbfs;
-    u8  silence_ratio_pct;
 
     /* TX timing (egress) – kept in window; mirror later if you expose */
     u64 tx_last_send_ns;
@@ -94,10 +86,11 @@ struct fusion_cn_metrics_snapshot
 {
     u64 ts_snapshot_ns;
 
+    /* RX */
     u64 packets_total, bytes_total;
     u64 packets_lost, packets_reordered, packets_dup;
     u64 packets_marked, malformed_count;
-    u64 late_drop_count, early_drop_count;
+    u64 late_drop_count;
     u64 burst_loss_max;
 
     u32 rfc3550_jitter_ns;
@@ -105,22 +98,17 @@ struct fusion_cn_metrics_snapshot
 
     u32 jb_target_samples;
     u32 jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
-    u64 deadline_miss_count;
     u32 resync_count;
     u64 concealment_frames;
 
-    s32  skew_ppb, ptp_offset_ns, rtp_to_phc_err_ns;
     u32 path_latency_est_ns, e2e_playout_latency_ns;
 
     u8  audio_present;
-    s16  level_fast_dbfs, level_slow_dbfs;
-    u8  silence_ratio_pct;
 
-    /* TX totals */
+    /* TX */
     u64 tx_packets_total;
     u64 tx_bytes_total;
 
-    /* NEW: TX timing EMAs (exported from m->win by the kernel) */
     u32 tx_iat_min_ns;
     u32 tx_iat_p50_ns;
     u32 tx_iat_p99_ns;
@@ -168,7 +156,6 @@ static inline void fusion_cn_metrics_rx_stash(struct fusion_cn_stream_metrics *m
         if (flags & FUSION_CN_PKTF_MALFORMED) p->malformed_count++;
         if (flags & FUSION_CN_PKTF_DUP)       p->packets_dup++;
         if (flags & FUSION_CN_PKTF_LATE)      p->late_drop_count++;
-        if (flags & FUSION_CN_PKTF_EARLY)     p->early_drop_count++;
         u64_stats_update_end(&p->syncp);
     }
 

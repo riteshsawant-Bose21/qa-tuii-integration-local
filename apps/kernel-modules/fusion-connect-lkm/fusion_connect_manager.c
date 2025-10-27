@@ -19,11 +19,11 @@
 
 
 #define TIMER_BASE_INTERVAL_NS 333333
-#define EARLY_SLACK_NS         50000
 
 #ifndef abs64
 #define abs64(x) ((x) >= 0 ? (x) : -(x))
 #endif
+
 
 /* === Audio Frame Process deferral to kthread_worker (PREEMPT_RT-friendly) === */
 static struct kthread_worker *process_worker;
@@ -634,7 +634,7 @@ static int handle_add_stream(struct fusion_cn_manager *mgr, struct fusion_cn_ctr
     struct fusion_cn_stream_config *config;
     struct fusion_cn_rtp_stream *rtp_stream;
     struct fusion_cn_substream *alsa_stream;
-    struct fusion_cn_stream_metrics *stream_metrics;   /* FIXED TYPE */
+    struct fusion_cn_stream_metrics *stream_metrics;
     struct stream_node *stream_node;
     int ret;
     int direction;
@@ -802,20 +802,18 @@ static int handle_get_metrics(struct fusion_cn_manager *mgr,
                               struct fusion_cn_ctrl_msg *msg,
                               struct fusion_cn_ctrl_msg *reply)
 {
-    u64 req_handle;
+    u64 req_handle = 0;
     unsigned long flags;
     size_t count = 0, cap = 0;
-    bool one = false;
     struct fusion_cn_metrics_record *out = NULL;
 
     if (msg->data_size == sizeof(u64)) {
         req_handle = *(u64 *)msg->data;
-        one = (req_handle != 0);
     } else if (msg->data_size != 0) {
         return reply->err = -EINVAL;
     }
 
-    if (one) {
+    if (req_handle != 0) {
         /* fusion_cn_rtp_get_stream() acquires/releases mgr->rtp.lock internally */
         struct fusion_cn_rtp_stream *r = fusion_cn_rtp_get_stream(&mgr->rtp, req_handle);
         if (!r) {

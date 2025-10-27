@@ -165,14 +165,14 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
 
     /* === 2) Fold per-CPU counters into snapshot === */
     {
-        u64 pkts=0, bytes=0, dup=0, marked=0, mal=0, late_d=0, early_d=0;
+        u64 pkts=0, bytes=0, dup=0, marked=0, mal=0, late_d=0;
         u64 tx_pkts=0, tx_bytes=0;
         int cpu;
 
         for_each_possible_cpu(cpu) {
             const struct fusion_cn_metrics_pcpu *p = per_cpu_ptr(m->pcpu, cpu);
             unsigned int start;
-            u64 a,b,c,d,e,f,g, txp, txb;
+            u64 a,b,c,d,e,f, txp, txb;
 
             do {
                 start = u64_stats_fetch_begin(&p->syncp);
@@ -182,13 +182,12 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
                 d = p->packets_marked;
                 e = p->malformed_count;
                 f = p->late_drop_count;
-                g = p->early_drop_count;
                 txp = p->tx_packets_total;
                 txb = p->tx_bytes_total;
             } while (u64_stats_fetch_retry(&p->syncp, start));
 
             pkts   += a; bytes += b; dup += c; marked += d; mal += e;
-            late_d += f; early_d += g;
+            late_d += f;
             tx_pkts += txp; tx_bytes += txb;
         }
 
@@ -198,7 +197,6 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         m->snap.packets_marked   = marked;
         m->snap.malformed_count  = mal;
         m->snap.late_drop_count  = late_d;
-        m->snap.early_drop_count = early_d;
 
         m->snap.packets_reordered = w->packets_reordered;
         m->snap.packets_lost      = w->packets_lost;

@@ -18,6 +18,8 @@
 #define FUSION_CN_RTP_HASH_BITS 6
 #define FUSION_CN_NAME_MAX 32
 
+#define EARLY_SLACK_NS 50000
+
 struct fusion_cn_stream_config {
     u64 stream_handle;
     char stream_name[FUSION_CN_NAME_MAX];
@@ -64,7 +66,6 @@ struct fusion_cn_rtp_stream {
     spinlock_t lock;
     struct fusion_cn_stream_config info;
     struct fusion_cn_rtp_packet rtp_packet_base __aligned(64);
-    u32 ip_checksum_base;
     atomic_t is_running;
     u32 buf_size_in_frames;
     u32 buf_size_in_packets;

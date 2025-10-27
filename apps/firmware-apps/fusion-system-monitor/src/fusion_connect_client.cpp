@@ -95,10 +95,11 @@ struct fusion_cn_metrics_snapshot
 {
     uint64_t ts_snapshot_ns;
 
+    /* RX */
     uint64_t packets_total, bytes_total;
     uint64_t packets_lost, packets_reordered, packets_dup;
     uint64_t packets_marked, malformed_count;
-    uint64_t late_drop_count, early_drop_count;
+    uint64_t late_drop_count;
     uint64_t burst_loss_max;
 
     uint32_t rfc3550_jitter_ns;
@@ -106,22 +107,17 @@ struct fusion_cn_metrics_snapshot
 
     uint32_t jb_target_samples;
     uint32_t jb_depth_cur_samples, jb_depth_min_samples, jb_depth_max_samples, jb_depth_avg_samples;
-    uint64_t deadline_miss_count;
     uint32_t resync_count;
     uint64_t concealment_frames;
 
-    int32_t  skew_ppb, ptp_offset_ns, rtp_to_phc_err_ns;
     uint32_t path_latency_est_ns, e2e_playout_latency_ns;
 
     uint8_t  audio_present;
-    int16_t  level_fast_dbfs, level_slow_dbfs;
-    uint8_t  silence_ratio_pct;
 
-    /* TX totals */
+    /* TX */
     uint64_t tx_packets_total;
     uint64_t tx_bytes_total;
 
-    /* NEW: TX timing EMAs (exported from m->win by the kernel) */
     uint32_t tx_iat_min_ns;
     uint32_t tx_iat_p50_ns;
     uint32_t tx_iat_p99_ns;
@@ -498,10 +494,10 @@ static bool get_all_metrics(NetlinkClient &client,
         return false;
     }
 
-    // SPDLOG_DEBUG("GET_METRICS: err={} payload={}B sizeof(record)={}B sizeof(snapshot)={}B",
-    //              reply.err, reply.data_size,
-    //              sizeof(fusion_cn_metrics_record),
-    //              sizeof(fusion_cn_metrics_snapshot));
+    SPDLOG_DEBUG("GET_METRICS: err={} payload={}B sizeof(record)={}B sizeof(snapshot)={}B",
+                 reply.err, reply.data_size,
+                 sizeof(fusion_cn_metrics_record),
+                 sizeof(fusion_cn_metrics_snapshot));
 
     if (reply.err != 0) {
         SPDLOG_ERROR("GET_METRICS failed: err={}", reply.err);
@@ -537,7 +533,7 @@ static bool get_all_metrics(NetlinkClient &client,
     memcpy(out->data(), reply.data, reply.data_size);
     if (reply.data) free(reply.data);
 
-    // SPDLOG_DEBUG("GET_METRICS: {} record(s)", n);
+    SPDLOG_DEBUG("GET_METRICS: {} record(s)", n);
     return true;
 }
 
@@ -1248,42 +1244,41 @@ void FusionConnectClient::process() {
                     continue;
                 }
 
-                // if (tx) {
-                //     // TX: totals + TX timing EMAs (ns -> us)
-                //     SPDLOG_DEBUG(
-                //         "metrics TX stream={} ts={} "
-                //         "tx: pkts={} bytes={} iat_min={}us p50={}us p99={}us sched_err_p50={}us",
-                //         r.stream_name, s.ts_snapshot_ns,
-                //         s.tx_packets_total, s.tx_bytes_total,
-                //         s.tx_iat_min_ns / 1000,
-                //         s.tx_iat_p50_ns / 1000,
-                //         s.tx_iat_p99_ns / 1000,
-                //         s.tx_sched_err_abs_p50_ns / 1000
-                //     );
-                // } else {
-                //     // RX
-                //     SPDLOG_DEBUG(
-                //         "metrics RX stream={} ts={} "
-                //         "rx: pkts={} bytes={} lost={} reo={} dup={} marked={} malf={} late_drop={} early_drop={} burst_max={} "
-                //         "iat_min={}us p50={}us p99={}us jitter={}us "
-                //         "jb: target={} cur={} min={} max={} avg={} "
-                //         "sync: skew_ppb={} ptp_off={}ns rtp->phc={}ns "
-                //         "lat: path={}ns e2e_playout={}ns "
-                //         "audio: present={} fast_dbfs={} slow_dbfs={} silence={}%",
-                //         r.stream_name, s.ts_snapshot_ns,
-                //         s.packets_total, s.bytes_total,
-                //         s.packets_lost, s.packets_reordered,
-                //         s.packets_dup, s.packets_marked,
-                //         s.malformed_count, s.late_drop_count,
-                //         s.early_drop_count, s.burst_loss_max,
-                //         s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
-                //         s.jb_target_samples, s.jb_depth_cur_samples, s.jb_depth_min_samples,
-                //         s.jb_depth_max_samples, s.jb_depth_avg_samples,
-                //         s.skew_ppb, s.ptp_offset_ns, s.rtp_to_phc_err_ns,
-                //         s.path_latency_est_ns, s.e2e_playout_latency_ns,
-                //         s.audio_present, s.level_fast_dbfs, s.level_slow_dbfs, s.silence_ratio_pct
-                //     );
-                // }
+                if (tx) {
+                    // TX:
+                    SPDLOG_DEBUG(
+                        "nmetrics TX stream={}: ts={} "
+                        "pkts={} bytes={} "
+                        "iat_min={}us p50={}us p99={}us "
+                        "sched_err_p50={}us ",
+                        r.stream_name, s.ts_snapshot_ns,
+                        s.tx_packets_total, s.tx_bytes_total,
+                        s.tx_iat_min_ns / 1000,
+                        s.tx_iat_p50_ns / 1000,
+                        s.tx_iat_p99_ns / 1000,
+                        s.tx_sched_err_abs_p50_ns / 1000
+                    );
+                } else {
+                    // RX
+                    SPDLOG_DEBUG(
+                        "metrics RX stream={}: ts={} "
+                        "pkts={} bytes={} lost={} reo={} dup={} malf={} late_drop={} burst_max={} "
+                        "iat_min={}us p50={}us p99={}us jitter={} "
+                        "jb: target={} cur={} min={} max={} avg={} "
+                        "lat: path={}ns e2e_playout={}ns "
+                        "audio: present={} ",
+                        r.stream_name, s.ts_snapshot_ns,
+                        s.packets_total, s.bytes_total,
+                        s.packets_lost, s.packets_reordered,
+                        s.packets_dup, s.malformed_count, 
+                        s.late_drop_count, s.burst_loss_max,
+                        s.iat_min_ns / 1000, s.iat_p50_ns / 1000, s.iat_p99_ns / 1000, s.rfc3550_jitter_ns / 1000,
+                        s.jb_target_samples, s.jb_depth_cur_samples, s.jb_depth_min_samples,
+                        s.jb_depth_max_samples, s.jb_depth_avg_samples,
+                        s.path_latency_est_ns, s.e2e_playout_latency_ns,
+                        s.audio_present
+                    );
+                }
             }
         }
     }

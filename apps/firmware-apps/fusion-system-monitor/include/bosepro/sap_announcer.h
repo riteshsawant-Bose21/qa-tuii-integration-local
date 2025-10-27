@@ -65,7 +65,7 @@ private:
                 gmIdentity = line.substr(pos + strlen("gmIdentity"));
                 gmIdentity.erase(0, gmIdentity.find_first_not_of(" \t")); // Trim leading whitespace
                 gmIdentity.erase(gmIdentity.find_last_not_of(" \n\r\t") + 1); // Trim trailing whitespace
-                SPDLOG_DEBUG("Extracted gmIdentity: {}", gmIdentity);
+                SPDLOG_TRACE("Extracted gmIdentity: {}", gmIdentity);
                 break;
             }
         }
@@ -235,7 +235,7 @@ public:
         if (sendto(sock_fd, packet.c_str(), packet.size(), 0, (struct sockaddr*)&dest, sizeof(dest)) < 0) {
             SPDLOG_ERROR("Failed to send SAP for '{}': {}", ann.stream_name, strerror(errno));
         } else {
-            SPDLOG_INFO("{} {} (from {})", (ann.is_deleted ? "[SAP DELETE]" : "[SAP ANNOUNCE]"), ann.stream_name, system_ip);
+            SPDLOG_TRACE("{} {} (from {})", (ann.is_deleted ? "[SAP DELETE]" : "[SAP ANNOUNCE]"), ann.stream_name, system_ip);
         }
     }
 
