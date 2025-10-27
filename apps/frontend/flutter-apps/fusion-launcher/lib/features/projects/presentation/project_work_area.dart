@@ -633,6 +633,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                 id: "10",
                                 title: "PRODUCT LIST",
                                 side: "left",
+                                initiallyExpanded: true,
                                 dockItemWidget: () => const WiringDeviceListView(),
                               ),
                               DockItemConfig(
