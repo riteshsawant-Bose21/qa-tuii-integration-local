@@ -141,15 +141,16 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
-  List<HardwareComponent> getHardwareInSubZone({required String subZoneId}) {
-    try {
-      return projectManager.getHardwareInSubZone(subZoneId);
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for subzone: $e");
-      throwError("Failed to get hardware for subzone: $e");
-      return <HardwareComponent>[];
-    }
-  }
+  //
+  // List<HardwareComponent> getHardwareInSubZone({required String subZoneId}) {
+  //   try {
+  //     return projectManager.getHardwareInSubZone(subZoneId);
+  //   } catch (e) {
+  //     FusionLogger.log(tag: LogTag.project, message: "Failed to get hardware for subzone: $e");
+  //     throwError("Failed to get hardware for subzone: $e");
+  //     return <HardwareComponent>[];
+  //   }
+  // }
 
   void addCircuitToSubZone({required String subZoneId, required String circuitId, bool autoSave = true}) {
     try {
@@ -258,5 +259,15 @@ extension SubzoneViewModel on ProjectViewModel {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder subzones in zone: $e");
       throwError("Failed to reorder subzones in zone: $e");
     }
+  }
+
+  Zone? getZoneForSubZone({required String subZoneId}) {
+    try {
+      return projectManager.getZoneForSubZone(subZoneId: subZoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get zone for subzone: $e");
+      throwError("Failed to get zone for subzone: $e");
+    }
+    return null;
   }
 }

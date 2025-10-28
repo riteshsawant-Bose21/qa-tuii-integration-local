@@ -2,19 +2,20 @@ import 'package:bloc/bloc.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+export 'circuit/circuit_viewmodel.dart';
+
 ///Export all other view models extensions
 export 'floor/floor_view_model.dart';
 export 'hardware/hardware_view_model.dart';
 export 'listening_area/listening_area_view_model.dart';
-export 'source_set/source_set_view_model.dart';
-export 'zone/zone_view_model.dart';
-export 'project_properties/project_properties_view_model.dart';
-export 'undo_redo/undo_redo_view_model.dart';
-export 'project_images/project_image_view_model.dart';
-export 'wiring_connection/wiring_connection_view_model.dart';
-export 'subzones/subzone_view_model.dart';
-export 'circuit/circuit_viewmodel.dart';
 export 'processing_block/processing_block_viewmodel.dart';
+export 'project_images/project_image_view_model.dart';
+export 'project_properties/project_properties_view_model.dart';
+export 'source_set/source_set_view_model.dart';
+export 'subzones/subzone_view_model.dart';
+export 'undo_redo/undo_redo_view_model.dart';
+export 'wiring_connection/wiring_connection_view_model.dart';
+export 'zone/zone_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -26,6 +27,8 @@ enum ProjectMode {
   systemListingMode,
   systemWiringMode,
 }
+
+enum ToolbarMode { acoustics, system }
 
 enum SelectedItemType {
   source,
@@ -87,6 +90,8 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   int currentDeviceTypeIndex = -1;
 
   ProjectMode currentProjectMode = ProjectMode.systemListingMode;
+
+  ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
 
   ProductQueryModel? selectedProductToAdd;
 
@@ -264,6 +269,21 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void resetDeviceTypeIndex() {
     currentDeviceTypeIndex = -1;
+  }
+
+  void setToolbarMode(ToolbarMode mode) {
+    if (currentToolbarMode != mode) {
+      currentToolbarMode = mode;
+      // Reset selections when switching modes
+      changeDeviceTypeIndex(-1);
+      setSelectedProductToAdd(null);
+      emit(ToolbarModeChanged(mode));
+    }
+  }
+
+  void setSelectedProductToAdd(ProductQueryModel? product) {
+    selectedProductToAdd = product;
+    emit(ProductToAddChanged(product));
   }
 
   void setProjectMode(ProjectMode mode) {

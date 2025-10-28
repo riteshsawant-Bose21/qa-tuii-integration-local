@@ -209,4 +209,10 @@ extension SubZoneService on ProjectService {
 
     relationships.reOrder(RelationshipType.zoneSubZones, parentId, subZonesInZone);
   }
+
+  Zone getZoneForSubZone({required String subZoneId}) {
+    final zoneIds = relationships.getParent(RelationshipType.zoneSubZones, subZoneId);
+    if (zoneIds == null) throw Exception('SubZone does not have parent zone');
+    return zones.get(zoneIds)!;
+  }
 }

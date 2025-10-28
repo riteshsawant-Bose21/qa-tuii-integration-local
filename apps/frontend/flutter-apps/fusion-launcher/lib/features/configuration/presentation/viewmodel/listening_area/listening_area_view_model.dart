@@ -146,4 +146,19 @@ extension ListeningAreaViewModel on ProjectViewModel {
       return <String, String>{};
     }
   }
+
+  String getFullPathForListeningArea({required String areaId}) {
+    final FloorModel? floor = getFloorForListeningArea(areaId: areaId);
+    final ListeningArea listeningArea = getListeningArea(areaId: areaId);
+    return "${floor?.name}/${listeningArea.name}";
+  }
+
+  String getFullPathForHardware({required String hardwareId}) {
+    final ListeningArea? listeningArea = getListeningAreaForHardware(hardwareId: hardwareId);
+    final FloorModel? floor = getFloorForHardware(hardwareId: hardwareId);
+    if (listeningArea == null) {
+      return floor?.name ?? "";
+    }
+    return "${floor?.name}/${listeningArea.name}";
+  }
 }

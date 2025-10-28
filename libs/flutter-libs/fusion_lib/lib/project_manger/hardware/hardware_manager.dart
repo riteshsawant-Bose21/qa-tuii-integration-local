@@ -62,20 +62,6 @@ extension HardwareManager on ProjectManager {
     return projectService!.getAllHardwareInFloor(floorId);
   }
 
-  List<HardwareComponent> getHardwareInZone(String zoneId) {
-    if (projectService == null) {
-      throw Exception('No project is currently open');
-    }
-    return projectService!.getHardwareInZone(zoneId);
-  }
-
-  List<HardwareComponent> getAllNonPlacedHardwareInFloor(String floorId) {
-    if (projectService == null) {
-      throw Exception('No project is currently open');
-    }
-    return projectService!.getHardwareForFloorDirect(floorId);
-  }
-
   HardwareComponent getHardwareById(String hardwareId) {
     if (projectService == null) {
       throw Exception('No project is currently open');

@@ -75,6 +75,20 @@ class FloorCanvasController {
     _toggleSpl?.call();
   }
 
+  void setSpl(bool showSpl) {
+    if (isShowingSpl.value != showSpl) {
+      isShowingSpl.value = showSpl;
+      _toggleSpl?.call();
+    }
+  }
+
+  void setDraw(bool isDraw) {
+    if (isDrawing.value != isDraw) {
+      isDrawing.value = isDraw;
+      _toggleDraw?.call();
+    }
+  }
+
   void deselectAll() {
     _deselectAll?.call();
   }

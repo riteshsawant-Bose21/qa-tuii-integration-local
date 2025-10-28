@@ -84,14 +84,6 @@ extension SubZoneManager on ProjectManager {
     projectService!.removeCircuitFromSubZone(subZoneId, circuitId);
   }
 
-  //get hardware in SubZone
-  List<HardwareComponent> getHardwareInSubZone(String subZoneId) {
-    if (projectService == null) {
-      throw Exception('No project is currently open');
-    }
-    return projectService!.getHardwareInZone(subZoneId);
-  }
-
   void addListeningAreaToSubZone(String listeningAreaId, String subZoneId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
@@ -111,5 +103,12 @@ extension SubZoneManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     projectService!.reOrderSubZonesInZone(parentId, oldIndex, newIndex);
+  }
+
+  Zone getZoneForSubZone({required String subZoneId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZoneForSubZone(subZoneId: subZoneId);
   }
 }
