@@ -5,6 +5,9 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
 class HardwareItemCard extends StatefulWidget {
   final String name;
   final String assetImagePath;
@@ -150,7 +153,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                           ),
                           preferBelow: false,
                           verticalOffset: -40,
-                          message: widget.zone?.name ?? "",
+                          message: serviceLocator<ProjectViewModel>().getFullPathForHardware(hardwareId: widget.itemId ?? ""),
                           waitDuration: const Duration(milliseconds: 300),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -198,7 +201,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                           ),
                           preferBelow: false,
                           verticalOffset: -40,
-                          message: widget.location ?? "",
+                          message: serviceLocator<ProjectViewModel>().getFullPathForHardware(hardwareId: widget.itemId ?? ""),
                           waitDuration: const Duration(milliseconds: 300),
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
