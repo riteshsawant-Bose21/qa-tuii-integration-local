@@ -228,7 +228,7 @@ bool FusionAudioBridge::sendMessageToFusion(const std::string &jsonMessage)
 std::string FusionAudioBridge::createGainMessage(const std::string &gainID, double value)
 {
     std::ostringstream jsonStream;
-    jsonStream << "{\"action\":\"set\",\"settings\":{\"settings\":{\"audio\":{\""
+    jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
                << gainID << "\":{\"" << JSON_FIELD_GAIN << "\":" << std::fixed << std::setprecision(6) << value
                << "}}}}}";
     return jsonStream.str();
@@ -237,7 +237,7 @@ std::string FusionAudioBridge::createGainMessage(const std::string &gainID, doub
 std::string FusionAudioBridge::createMuteMessage(const std::string &gainID, bool muteState)
 {
     std::ostringstream jsonStream;
-    jsonStream << "{\"action\":\"set\",\"settings\":{\"settings\":{\"audio\":{\""
+    jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
                << gainID << "\":{\"" << JSON_FIELD_MUTE << "\":" << (muteState ? "true" : "false") << "}}}}}";
     return jsonStream.str();
 }
@@ -245,7 +245,7 @@ std::string FusionAudioBridge::createMuteMessage(const std::string &gainID, bool
 std::string FusionAudioBridge::createSourceMessage(const std::string &zoneID, ::OcaUint16 sourceIndex)
 {
     std::ostringstream jsonStream;
-    jsonStream << "{\"action\":\"set\",\"settings\":{\"settings\":{\"audio\":{\""
+    jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
                << zoneID << "\":{\"" << JSON_FIELD_INPUT << "\":" << sourceIndex << "}}}}}";
     return jsonStream.str();
 }
