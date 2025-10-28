@@ -179,10 +179,25 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       controller: propertyModelNameController,
                       maxLines: 1,
                       textInputAction: TextInputAction.done,
-                      onSubmitted: (String value) {
+                      onTapOutside: (PointerDownEvent event) {
+                        final String value = propertyModelNameController.text.trim();
                         if (value.isEmpty) return FusionToast.error(context, message: "Name should not be empty");
 
                         if (selectedItem.type == SelectedItemType.zone) {
+                          final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
+                          projectViewModel.updateZone(zone: zone!.copyWith(name: value));
+                        } else if (selectedItem.type == SelectedItemType.subzone) {
+                          final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
+                          projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
+                        } else {
+                          final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
+                          projectViewModel.updateHardware(hardware: hardware);
+                        }
+                      },
+                      onSubmitted: (String value) {
+                        if (value.trim().isEmpty) {
+                          return FusionToast.error(context, message: "Name should not be empty");
+                        } else if (selectedItem.type == SelectedItemType.zone) {
                           final Zone? zone = projectViewModel.getZone(zoneId: selectedItem.id);
                           projectViewModel.updateZone(zone: zone!.copyWith(name: value));
                         } else if (selectedItem.type == SelectedItemType.subzone) {
@@ -240,6 +255,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                         itemBuilder: (BuildContext context) {
                           return <PopupMenuEntry<String>>[
                             PopupMenuItem<String>(
+                              enabled: false,
                               child: Builder(
                                 builder: (BuildContext context) {
                                   final Zone? selectedZone = projectViewModel.getZone(zoneId: selectedItem.id);
@@ -447,10 +463,6 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                   if (selectedItem.type == SelectedItemType.zone) {
                     listeningAreas = projectViewModel.getAvailableListeningAreasForZone(zoneId: selectedItem.id);
                   } else if (selectedItem.type == SelectedItemType.subzone) {
-                    // final Zone? parentZone = projectViewModel.getZoneFor(hardwareId: selectedDevice!.id);
-                    // listeningAreas = projectViewModel.getAvailableListeningAreasForSubZone(
-                    //   parentZoneId: parentZone!.id,
-                    // );
                     listeningAreas = projectViewModel.getAvailableListeningAreasForZone();
                   } else {
                     listeningAreas = projectViewModel.getAllListeningAreas();
@@ -1077,10 +1089,22 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
         listeningAreaIds: selectedListeningAreaIds,
       );
     } else {
-      // projectViewModel.updateListeningAreasInSubZone(
-      //   subZoneId: widget.selectedItem.id,
-      //   listeningAreaIds: updatedListeningAreaIds,
-      // );
+      final List<String> selectedListeningAreaIds =
+          projectViewModel
+              .getListeningAreasInSubZone(subZoneId: widget.selectedItem.id)
+              .map((ListeningArea e) => e.id)
+              .toList();
+
+      if (selectedListeningAreaIds.contains(areaID)) {
+        selectedListeningAreaIds.remove(areaID);
+      } else {
+        selectedListeningAreaIds.add(areaID);
+      }
+
+      projectViewModel.updateListeningAreasInSubZone(
+        subZoneId: widget.selectedItem.id,
+        listeningAreaIds: selectedListeningAreaIds,
+      );
     }
 
     popupSetState(() {});
@@ -1093,205 +1117,229 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
 
     final List<ListeningArea> allListeningAreas = projectViewModel.getAllListeningAreas();
 
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: PopupMenuButton<String>(
-        color: Theme.of(context).colorScheme.white,
-        position: PopupMenuPosition.under,
-        itemBuilder: (BuildContext context) {
-          return <PopupMenuEntry<String>>[
-            PopupMenuItem<String>(
-              enabled: false,
-              padding: EdgeInsets.zero,
-              child: StatefulBuilder(
-                builder: (BuildContext context, void Function(void Function()) popupSetState) {
-                  return Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      /// Header with close button
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey[300]!),
-                          ),
-                        ),
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: FusionAppText(
-                                text: "Select Locations",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                            InkWell(
-                              onTap: Navigator.of(context).pop,
-                              child: Icon(
-                                Icons.close,
-                                size: 16,
-                                color: Theme.of(context).colorScheme.fusionTextViewColor,
-                              ),
-                            ),
-                          ],
+    return PopupMenuButton<String>(
+      color: Theme.of(context).colorScheme.white,
+      position: PopupMenuPosition.under,
+      child: Row(
+        children: <Widget>[
+          Expanded(
+            child: Builder(
+              builder: (BuildContext context) {
+                final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
+                List<ListeningArea> listeningAreas;
+
+                if (widget.selectedItem.type == SelectedItemType.zone) {
+                  listeningAreas = projectViewModel.getListeningAreasForZone(
+                    zoneId: widget.selectedItem.id,
+                  );
+                } else {
+                  listeningAreas = projectViewModel.getListeningAreasInSubZone(
+                    subZoneId: widget.selectedItem.id,
+                  );
+                }
+
+                return FusionAppText(
+                  text:
+                      listeningAreas.isEmpty
+                          ? "Select Location"
+                          : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
+                  maxLine: 1,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color:
+                        listeningAreas.isEmpty
+                            ? Theme.of(context).colorScheme.greyDark
+                            : Theme.of(context).textTheme.bodySmall?.color,
+                  ),
+                );
+              },
+            ),
+          ),
+          Icon(
+            Icons.keyboard_arrow_down,
+            size: 20,
+            color: Theme.of(context).colorScheme.greyDark,
+          ),
+        ],
+      ),
+      itemBuilder: (BuildContext context) {
+        return <PopupMenuEntry<String>>[
+          PopupMenuItem<String>(
+            enabled: false,
+            padding: EdgeInsets.zero,
+            child: StatefulBuilder(
+              builder: (BuildContext context, void Function(void Function()) popupSetState) {
+                List<ListeningArea> availableListeningAreas;
+                List<ListeningArea> zoneOrSubZoneListeningAreas;
+
+                if (widget.selectedItem.type == SelectedItemType.zone) {
+                  availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone();
+
+                  zoneOrSubZoneListeningAreas = projectViewModel.getListeningAreasForZone(
+                    zoneId: widget.selectedItem.id,
+                  );
+                } else {
+                  final Zone? zone = projectViewModel.getZoneForSubZone(subZoneId: widget.selectedItem.id);
+                  availableListeningAreas = projectViewModel.getAvailableListeningAreasForSubZone(
+                    parentZoneId: zone!.id,
+                  );
+
+                  zoneOrSubZoneListeningAreas = projectViewModel.getListeningAreasInSubZone(
+                    subZoneId: widget.selectedItem.id,
+                  );
+                }
+
+                allListeningAreas.sort((ListeningArea a, ListeningArea b) {
+                  final bool selected = zoneOrSubZoneListeningAreas.any((ListeningArea element) => element.id == a.id);
+                  final bool available = availableListeningAreas.any((ListeningArea element) => element.id == a.id);
+                  return selected || available ? -1 : 1;
+                });
+
+                return Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    /// Header with close button
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        border: Border(
+                          bottom: BorderSide(color: Colors.grey[300]!),
                         ),
                       ),
+                      child: Row(
+                        children: <Widget>[
+                          Expanded(
+                            child: FusionAppText(
+                              text: "Select Locations",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          InkWell(
+                            onTap: Navigator.of(context).pop,
+                            child: Icon(
+                              Icons.close,
+                              size: 16,
+                              color: Theme.of(context).colorScheme.fusionTextViewColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                      /// Scrollable list of listening areas
-                      Flexible(
-                        child: SingleChildScrollView(
-                          physics: const ClampingScrollPhysics(),
-                          child: Builder(
-                            builder: (BuildContext context) {
-                              final List<ListeningArea> availableListeningAreas =
-                                  projectViewModel.getAvailableListeningAreasForZone();
-                              return Column(
-                                children: <Widget>[
-                                  ...allListeningAreas.map(
-                                    (ListeningArea area) {
-                                      final FloorModel? floorName = projectViewModel.getFloorForListeningArea(
-                                        areaId: area.id,
-                                      );
+                    /// Scrollable list of listening areas
+                    Flexible(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Builder(
+                          builder: (BuildContext context) {
+                            return Column(
+                              children: <Widget>[
+                                ...allListeningAreas.map(
+                                  (ListeningArea area) {
+                                    final FloorModel? floorName = projectViewModel.getFloorForListeningArea(
+                                      areaId: area.id,
+                                    );
 
-                                      final Zone? zoneData = projectViewModel.getZonesForListeningArea(
-                                        areaId: area.id,
-                                      );
+                                    final Zone? zoneData = projectViewModel.getZonesForListeningArea(
+                                      areaId: area.id,
+                                    );
 
-                                      /// Check if this area is in the available list
-                                      final bool isAvailable = availableListeningAreas.any(
-                                        (ListeningArea availableArea) => availableArea.id == area.id,
-                                      );
+                                    /// Check if this area is in the available list
+                                    final bool isAvailable = availableListeningAreas.any(
+                                      (ListeningArea availableArea) => availableArea.id == area.id,
+                                    );
 
-                                      final bool isAlreadySelectedInZone = projectViewModel
+                                    bool isAlreadySelectedInZone;
+                                    if (widget.selectedItem.type == SelectedItemType.zone) {
+                                      isAlreadySelectedInZone = projectViewModel
                                           .getListeningAreasForZone(zoneId: widget.selectedItem.id)
                                           .any((ListeningArea element) => element.id == area.id);
+                                    } else {
+                                      isAlreadySelectedInZone = projectViewModel
+                                          .getListeningAreasInSubZone(subZoneId: widget.selectedItem.id)
+                                          .any((ListeningArea element) => element.id == area.id);
+                                    }
 
-                                      return InkWell(
-                                        onTap:
-                                            isAlreadySelectedInZone || isAvailable
-                                                ? () => onLocationSaveTap(area.id, popupSetState)
-                                                : null,
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                          child: Row(
-                                            children: <Widget>[
-                                              /// Checkbox for selection
-                                              SizedBox(
-                                                width: 14,
-                                                height: 4,
-                                                child: Checkbox(
-                                                  value: !isAvailable ? true : isAlreadySelectedInZone,
-                                                  activeColor: Theme.of(context).colorScheme.greyDark,
-                                                  onChanged:
-                                                      isAlreadySelectedInZone || isAvailable
-                                                          ? (bool? v) => onLocationSaveTap(area.id, popupSetState)
-                                                          : null,
-                                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                  visualDensity: VisualDensity.compact,
-                                                  shape: const RoundedRectangleBorder(
-                                                    borderRadius: BorderRadius.zero,
-                                                    side: BorderSide(width: 0.5),
-                                                  ),
+                                    return InkWell(
+                                      onTap:
+                                          isAlreadySelectedInZone || isAvailable
+                                              ? () => onLocationSaveTap(area.id, popupSetState)
+                                              : null,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                        child: Row(
+                                          children: <Widget>[
+                                            /// Checkbox for selection
+                                            SizedBox(
+                                              width: 14,
+                                              height: 4,
+                                              child: Checkbox(
+                                                value: !isAvailable ? true : isAlreadySelectedInZone,
+                                                activeColor: Theme.of(context).colorScheme.greyDark,
+                                                onChanged:
+                                                    !isAvailable && !isAlreadySelectedInZone
+                                                        ? null
+                                                        : (bool? v) => onLocationSaveTap(area.id, popupSetState),
+                                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                visualDensity: VisualDensity.compact,
+                                                shape: const RoundedRectangleBorder(
+                                                  borderRadius: BorderRadius.zero,
+                                                  side: BorderSide(width: 0.5),
                                                 ),
                                               ),
-                                              const SizedBox(width: 12),
+                                            ),
+                                            const SizedBox(width: 12),
 
-                                              /// Area and zone names
-                                              Expanded(
-                                                child: FusionAppText(
-                                                  text:
-                                                      area.name.isNotEmpty
-                                                          ? "${floorName?.name}/${area.name}"
-                                                          : 'Unnamed Area',
-                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 10,
-                                                    color:
-                                                        isAlreadySelectedInZone || isAvailable
-                                                            ? Theme.of(context).textTheme.bodySmall?.color
-                                                            : Colors.grey[400],
-                                                  ),
-                                                ),
-                                              ),
-                                              FusionAppText(
-                                                text: zoneData?.name ?? "No zone",
+                                            /// Area and zone names
+                                            Expanded(
+                                              child: FusionAppText(
+                                                text:
+                                                    area.name.isNotEmpty
+                                                        ? "${floorName?.name}/${area.name}"
+                                                        : 'Unnamed Area',
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  fontSize: 9,
+                                                  fontWeight: FontWeight.w500,
+                                                  fontSize: 10,
                                                   color:
-                                                      isAvailable
-                                                          ? Theme.of(context).colorScheme.greyDark
-                                                          : Theme.of(context).colorScheme.grey,
-                                                  fontWeight: FontWeight.w600,
+                                                      !isAvailable && !isAlreadySelectedInZone
+                                                          ? Colors.grey[400]
+                                                          : Theme.of(context).textTheme.bodySmall?.color,
                                                 ),
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                            FusionAppText(
+                                              text: zoneData?.name ?? "No zone",
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                fontSize: 9,
+                                                color:
+                                                    !isAvailable && !isAlreadySelectedInZone
+                                                        ? Theme.of(context).colorScheme.grey
+                                                        : Theme.of(context).colorScheme.greyDark,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                      );
-                                    },
-                                  ),
-                                ],
-                              );
-                            },
-                          ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ),
-                    ],
-                  );
-                },
-              ),
+                    ),
+                  ],
+                );
+              },
             ),
-          ];
-        },
-        child: Container(
-          height: 29,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: Builder(
-                  builder: (BuildContext context) {
-                    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-
-                    List<ListeningArea> listeningAreas;
-
-                    if (widget.selectedItem.type == SelectedItemType.zone) {
-                      listeningAreas = projectViewModel.getListeningAreasForZone(
-                        zoneId: widget.selectedItem.id,
-                      );
-                    } else {
-                      listeningAreas = projectViewModel.getListeningAreasInSubZone(
-                        subZoneId: widget.selectedItem.id,
-                      );
-                    }
-
-                    return FusionAppText(
-                      text:
-                          listeningAreas.isEmpty
-                              ? "Select Location"
-                              : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            listeningAreas.isEmpty
-                                ? Theme.of(context).colorScheme.greyDark
-                                : Theme.of(context).textTheme.bodySmall?.color,
-                      ),
-                    );
-                  },
-                ),
-              ),
-              Icon(
-                Icons.keyboard_arrow_down,
-                size: 20,
-                color: Theme.of(context).colorScheme.greyDark,
-              ),
-            ],
           ),
-        ),
-      ),
+        ];
+      },
     );
   }
 }
