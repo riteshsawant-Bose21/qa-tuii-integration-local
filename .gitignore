@@ -11,3 +11,7 @@ dist
 
 # inteli j .idea
 .idea
+
+# environment files
+.env
+.env.local
