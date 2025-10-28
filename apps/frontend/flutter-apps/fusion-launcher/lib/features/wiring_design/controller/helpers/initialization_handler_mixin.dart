@@ -150,6 +150,7 @@ extension InitializationHandlerMixin on CircuitController {
   void addCircuit(CircuitModel circuit, CircuitComponent subZoneComponent) {
     final List<HardwareComponent> hardwareForCircuit = projectManager
         .getHardwareForCircuit(circuitId: circuit.id);
+    if (hardwareForCircuit.isEmpty) return;
     final ComponentData? cirComData = componentDB.getComponentData(circuit.id);
     final CircuitComponentData cirCom =
         cirComData is CircuitComponentData

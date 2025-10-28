@@ -39,15 +39,6 @@ class WirePainter extends BasePainter {
     if (path != null) {
       canvas.drawPath(path!, paint);
     }
-    // for (var i = 0; i < wire.joints.length; i++) {
-    //   canvas.drawPoints(PointMode.polygon, [], paint);
-    // }
-    // for (var segment in wire.joints) {
-    //   canvas.drawOval(
-    //     Rect.fromCenter(center: segment, width: 10, height: 10),
-    //     paint,
-    //   );
-    // }
   }
 
   @override

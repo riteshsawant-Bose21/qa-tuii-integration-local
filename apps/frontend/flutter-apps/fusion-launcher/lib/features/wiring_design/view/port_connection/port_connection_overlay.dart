@@ -191,7 +191,7 @@ class _FusionExpansionPanelState extends State<FusionExpansionPanel> {
       alignment: Alignment.topCenter,
       child: Column(
         children: <Widget>[
-          GestureDetector(
+          InkWell(
             onTap: toggleExpanded,
             child: widget.titleBuilder(context, isExpanded),
           ),

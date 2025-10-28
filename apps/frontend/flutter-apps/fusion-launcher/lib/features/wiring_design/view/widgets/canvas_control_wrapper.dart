@@ -1,8 +1,9 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
+import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 
 import '../../controller/circuit_controller.dart';
+import '../../model/canvas_element.dart';
 import '../painters/circuit_painter.dart';
 
 class CanvasControlWrapper extends StatelessWidget {
@@ -20,9 +21,6 @@ class CanvasControlWrapper extends StatelessWidget {
   Widget build(BuildContext context) {
     return Listener(
       onPointerPanZoomUpdate: (PointerPanZoomUpdateEvent event) {
-        print(
-          "[${event.runtimeType}]event Scale: ${event.scale} Current Scale: ${controller.state.canvasState.scale} Delta: ${event.scale - controller.state.canvasState.scale}",
-        );
         if (event.scale == 1) return;
         controller.onScaleUpdate(
           (event.scale - 1) * 0.1,
@@ -32,40 +30,98 @@ class CanvasControlWrapper extends StatelessWidget {
       onPointerSignal: (PointerSignalEvent event) {
         if (event is PointerScrollEvent) {
           controller.onScaleUpdate(
-            event.scrollDelta.distance * 0.001 * event.scrollDelta.direction,
+            event.scrollDelta.distance * 0.001 * -event.scrollDelta.direction,
             event.localPosition,
           );
         }
       },
+      onPointerMove: (PointerMoveEvent event) {
+        if (controller.state is IdleWiringState) {
+          final Offset correctedPos = circuitPainter.correctPosition(
+            event.localPosition,
+          );
+          final CanvasElement? value = circuitPainter.isHit(correctedPos);
+          if (value != null) {
+            controller.onMoveStart(value, correctedPos);
+          } else {
+            controller.onMoveUpdate(
+              event.delta / controller.canvasState.scale,
+            );
+          }
+        } else if (controller.state is ElementSelectionState) {
+          final Offset correctedPos = circuitPainter.correctPosition(
+            event.localPosition,
+          );
+          final CanvasElement? value = circuitPainter.isHit(correctedPos);
+          if (value != null) {
+            controller.onMoveStart(value, correctedPos);
+          } else {
+            controller.onMoveUpdate(
+              event.delta / controller.canvasState.scale,
+            );
+          }
+        } else {
+          controller.onMoveUpdate(event.delta / controller.canvasState.scale);
+        }
+      },
+      onPointerUp: (PointerUpEvent event) {
+        final Offset correctedPos = circuitPainter.correctPosition(
+          event.localPosition,
+        );
+        final dynamic value = circuitPainter.isHit(correctedPos);
+        if (controller.state is ElementMovingState ||
+            controller.state is ConnectionProgressWiringState) {
+          controller.onMoveEnd(value, correctedPos);
+        } else {
+          controller.selectElement(value);
+        }
+      },
+
       child: ClipRect(
         child: GestureDetector(
-          onTapUp: (TapUpDetails details) {
-            final CanvasElement? value = circuitPainter.isHit(
-              circuitPainter.correctPosition(details.localPosition),
-            );
-            controller.selectElement(value);
-            // onTap(circuitPainter.correctPosition(details.localPosition));
-          },
-          onPanStart: (DragStartDetails details) {
-            final Offset correctedPos = circuitPainter.correctPosition(
-              details.localPosition,
-            );
-            final dynamic value = circuitPainter.isHit(correctedPos);
+          // onTapUp: (TapUpDetails details) {
+          //   final CanvasElement? value = circuitPainter.isHit(
+          //     circuitPainter.correctPosition(details.localPosition),
+          //   );
+          //   controller.selectElement(value);
+          //   // onTap(circuitPainter.correctPosition(details.localPosition));
+          // },
 
-            controller.onMoveStart(value, correctedPos);
-          },
-          onPanUpdate: (DragUpdateDetails details) {
-            controller.onMoveUpdate(
-              details.delta / controller.canvasState.scale,
-            );
-          },
-          onPanEnd: (DragEndDetails details) {
-            final Offset correctedPos = circuitPainter.correctPosition(
-              details.localPosition,
-            );
-            final dynamic value = circuitPainter.isHit(correctedPos);
-            controller.onMoveEnd(value, correctedPos);
-          },
+          // onPanStart: (DragStartDetails details) {
+          //   final Offset correctedPos = circuitPainter.correctPosition(
+          //     details.localPosition,
+          //   );
+          //   final dynamic value = circuitPainter.isHit(correctedPos);
+
+          //   controller.onMoveStart(value, correctedPos);
+          // },
+          // onPanUpdate: (DragUpdateDetails details) {
+          //   controller.onMoveUpdate(
+          //     details.delta / controller.canvasState.scale,
+          //   );
+          // },
+          // onPanEnd: (DragEndDetails details) {
+          // final Offset correctedPos = circuitPainter.correctPosition(
+          //   details.localPosition,
+          // );
+          // final dynamic value = circuitPainter.isHit(correctedPos);
+          // controller.onMoveEnd(value, correctedPos);
+          // },
+          // onTertiaryTapDown: (TapDownDetails details) {
+          //   final Offset correctedPos = circuitPainter.correctPosition(
+          //     details.localPosition,
+          //   );
+          //   controller.onMoveStart(null, correctedPos);
+          // },
+          // onTertiaryLongPressMoveUpdate: (LongPressMoveUpdateDetails details) {
+          //   controller.onMoveUpdate(details.localOffsetFromOrigin);
+          // },
+          // onTertiaryLongPressEnd: (LongPressEndDetails details) {
+          //   final Offset correctedPos = circuitPainter.correctPosition(
+          //     details.localPosition,
+          //   );
+          //   controller.onMoveEnd(null, correctedPos);
+          // },
           child: child,
         ),
       ),
