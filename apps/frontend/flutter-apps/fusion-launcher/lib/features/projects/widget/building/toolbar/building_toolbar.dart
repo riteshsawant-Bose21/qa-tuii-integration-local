@@ -349,6 +349,13 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     return <Widget>[
+      _buildToolItem(
+        icon: Icons.speaker,
+        "Add Speakers",
+        onTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
+        isSelected: currentDeviceIndex == 0,
+        selectedColor: Colors.blue,
+      ),
       _buildSourcesToolWithMenu(
         isSelected: currentDeviceIndex == 1,
       ),

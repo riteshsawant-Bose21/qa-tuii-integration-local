@@ -828,7 +828,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     final double minY = ys.reduce(min), maxY = ys.reduce(max);
     final double w = maxX - minX, h = maxY - minY;
     if (w == 0 || h == 0) return;
-    const double pad = 75.0;
+    const double pad = 50.0;
     final double availW = _viewportSize.width - 2 * pad;
     final double availH = _viewportSize.height - 2 * pad;
     if (availW <= 0 || availH <= 0) return;
@@ -838,7 +838,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     final double mY = (_viewportSize.height - h * tar) / 2;
     setState(() {
       _zoomScale = tar;
-      _panOffset = Offset(mX - minX * tar, mY - minY * tar);
+      _panOffset = Offset(mX - minX * tar, (mY - minY * tar) - 30);
       widget.onViewportCenterUpdated(getViewportCenter());
     });
     // widget.onCanvasZoomChanged(_zoomScale);
