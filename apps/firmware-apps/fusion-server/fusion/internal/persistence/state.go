@@ -379,19 +379,16 @@ func (sm *StateManager) GetFullStateDeepCopy() VersionedState {
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 
-	result := make(map[string]any)
+	state := sm.GetFullStateDeepCopy().State
 
-	state := sm.GetFullState().State
-
-	sm.RLock()
-	defer sm.RUnlock()
-
-	// The state returned still holds references to the internal map entries.
-	// and hence we need lock before doing a deep copy.
-	for key, entry := range state {
-		result[key] = utils.DeepCopy(entry.Data)
+	result := make(map[string]any, len(state))
+	for k, e := range state {
+		if e != nil {
+			result[k] = e.Data // already deep-copied inside GetFullStateDeepCopy
+		}
 	}
 	return result
+
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
