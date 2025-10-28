@@ -1047,107 +1047,51 @@ class _CreateZoneListeningAreaSelectorDropDown extends StatefulWidget {
   const _CreateZoneListeningAreaSelectorDropDown({required this.selectedItem});
 
   @override
-  State<_CreateZoneListeningAreaSelectorDropDown> createState() => __CreateZoneListeningAreaSelectorDropDownState();
+  State<_CreateZoneListeningAreaSelectorDropDown> createState() => _CreateZoneListeningAreaSelectorDropDownState();
 }
 
-class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneListeningAreaSelectorDropDown> {
+class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneListeningAreaSelectorDropDown> {
   bool isCreateAreaExpanded = false;
   final String selectedFloor = '';
   final String selectedFloorId = '';
   final TextEditingController areaNameController = TextEditingController();
-  List<String> _selectedListeningAreaIds = <String>[];
 
-  @override
-  void initState() {
-    super.initState();
-    getListeningAreaIds();
-  }
+  void onLocationSaveTap(String areaID, StateSetter popupSetState) {
+    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
-  void getListeningAreaIds() {
-    setState(() {
-      _selectedListeningAreaIds =
-          context
-              .read<ProjectViewModel>()
+    if (widget.selectedItem.type == SelectedItemType.zone) {
+      final List<String> selectedListeningAreaIds =
+          projectViewModel
               .getListeningAreasForZone(zoneId: widget.selectedItem.id)
               .map((ListeningArea e) => e.id)
               .toList();
-    });
-  }
 
-  void handleTap(ListeningArea area, StateSetter popupSetState) {
-    if (_selectedListeningAreaIds.contains(area.id)) {
-      _selectedListeningAreaIds.remove(area.id);
-    } else {
-      _selectedListeningAreaIds.add(area.id);
-    }
+      if (selectedListeningAreaIds.contains(areaID)) {
+        selectedListeningAreaIds.remove(areaID);
+      } else {
+        selectedListeningAreaIds.add(areaID);
+      }
 
-    log("Total lenght ${_selectedListeningAreaIds.length}");
-
-    setState(() {});
-    popupSetState(() {});
-  }
-
-  @override
-  void didChangeDependencies() {
-    getListeningAreaIds();
-    super.didChangeDependencies();
-  }
-
-  void onLocationSaveTap(StateSetter popupSetState) {
-    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-
-    Iterable<String> allgListeningAreasIds;
-
-    if (widget.selectedItem.type == SelectedItemType.zone) {
-      allgListeningAreasIds = projectViewModel
-          .getListeningAreasForZone(zoneId: widget.selectedItem.id)
-          .map((ListeningArea e) => e.id);
-    } else {
-      allgListeningAreasIds = projectViewModel
-          .getListeningAreasInSubZone(subZoneId: widget.selectedItem.id)
-          .map((ListeningArea e) => e.id);
-    }
-
-    Iterable<String> availableListeningAreaIds;
-    if (widget.selectedItem.type == SelectedItemType.zone) {
-      availableListeningAreaIds = projectViewModel.getAvailableListeningAreasForZone().map(
-        (ListeningArea e) => e.id,
-      );
-    } else {
-      final String? zoneID = projectViewModel.getZoneForSubZone(subZoneId: widget.selectedItem.id)?.id;
-      availableListeningAreaIds = projectViewModel
-          .getAvailableListeningAreasForSubZone(parentZoneId: zoneID!)
-          .map((ListeningArea e) => e.id);
-    }
-
-    final Iterable<String> existingListeningAreaIds = allgListeningAreasIds.where(
-      (String existingAreaId) => !availableListeningAreaIds.contains(existingAreaId),
-    );
-
-    final List<String> updatedListeningAreaIds = <String>[
-      ...existingListeningAreaIds,
-      ..._selectedListeningAreaIds,
-    ];
-
-    if (widget.selectedItem.type == SelectedItemType.zone) {
       projectViewModel.updateListeningAreasInZone(
         zoneId: widget.selectedItem.id,
-        listeningAreaIds: updatedListeningAreaIds,
+        listeningAreaIds: selectedListeningAreaIds,
       );
     } else {
-      projectViewModel.updateListeningAreasInSubZone(
-        subZoneId: widget.selectedItem.id,
-        listeningAreaIds: updatedListeningAreaIds,
-      );
+      // projectViewModel.updateListeningAreasInSubZone(
+      //   subZoneId: widget.selectedItem.id,
+      //   listeningAreaIds: updatedListeningAreaIds,
+      // );
     }
+
     popupSetState(() {});
     setState(() {});
-    Navigator.of(context).pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
+    final List<ListeningArea> allListeningAreas = projectViewModel.getAllListeningAreas();
 
     return Padding(
       padding: const EdgeInsets.all(10.0),
@@ -1205,12 +1149,7 @@ class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLi
                                   projectViewModel.getAvailableListeningAreasForZone();
                               return Column(
                                 children: <Widget>[
-                                  ...projectViewModel.getAllListeningAreas()
-                                  // .where((ListeningArea area) {
-                                  //   final Zone? zone = projectViewModel.getZonesForListeningArea(areaId: area.id);
-                                  //   return zone == null || zone.id == widget.zoneID;
-                                  // })
-                                  .map(
+                                  ...allListeningAreas.map(
                                     (ListeningArea area) {
                                       final FloorModel? floorName = projectViewModel.getFloorForListeningArea(
                                         areaId: area.id,
@@ -1225,14 +1164,15 @@ class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLi
                                         (ListeningArea availableArea) => availableArea.id == area.id,
                                       );
 
-                                      // final bool isCurrentlySelectedListeningAreaInZone = _selectedListeningAreaIds
-                                      //     .any((String element) => element == area.id);
-
-                                      // final bool canSelectOrDeselect =
-                                      //     isAvailable || isCurrentlySelectedListeningAreaInZone;
+                                      final bool isAlreadySelectedInZone = projectViewModel
+                                          .getListeningAreasForZone(zoneId: widget.selectedItem.id)
+                                          .any((ListeningArea element) => element.id == area.id);
 
                                       return InkWell(
-                                        onTap: isAvailable ? () => handleTap(area, popupSetState) : null,
+                                        onTap:
+                                            isAlreadySelectedInZone || isAvailable
+                                                ? () => onLocationSaveTap(area.id, popupSetState)
+                                                : null,
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                           child: Row(
@@ -1242,13 +1182,12 @@ class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLi
                                                 width: 14,
                                                 height: 4,
                                                 child: Checkbox(
-                                                  value:
-                                                      !isAvailable
-                                                          ? true
-                                                          : _selectedListeningAreaIds.contains(area.id),
+                                                  value: !isAvailable ? true : isAlreadySelectedInZone,
                                                   activeColor: Theme.of(context).colorScheme.greyDark,
                                                   onChanged:
-                                                      isAvailable ? (bool? v) => handleTap(area, popupSetState) : null,
+                                                      isAlreadySelectedInZone || isAvailable
+                                                          ? (bool? v) => onLocationSaveTap(area.id, popupSetState)
+                                                          : null,
                                                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                   visualDensity: VisualDensity.compact,
                                                   shape: const RoundedRectangleBorder(
@@ -1270,7 +1209,7 @@ class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLi
                                                     fontWeight: FontWeight.w500,
                                                     fontSize: 10,
                                                     color:
-                                                        isAvailable
+                                                        isAlreadySelectedInZone || isAvailable
                                                             ? Theme.of(context).textTheme.bodySmall?.color
                                                             : Colors.grey[400],
                                                   ),
@@ -1298,92 +1237,6 @@ class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLi
                             },
                           ),
                         ),
-                      ),
-
-                      /// Create New Location Section
-                      // CreateNewLocationWidget(
-                      //   areaNameController: areaNameController,
-                      //   isCreateAreaExpanded: isCreateAreaExpanded,
-                      //   setDropdownState: setState,
-                      //   selectedFloor: selectedFloor,
-                      //   selectedFloorId: selectedFloorId,
-                      //   onCreateNewArea: ({required String floorId}) {
-                      //     if (areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
-                      //       // todo: Replace with actual area creation logic (e.g., user-defined vertices)
-                      //       final ListeningArea newListeningArea = ListeningArea(
-                      //         name: areaNameController.text.trim(),
-                      //         vertices: <Offset>[
-                      //           const Offset(0, 0),
-                      //           const Offset(100, 0),
-                      //           const Offset(100, 100),
-                      //           const Offset(0, 100),
-                      //         ],
-                      //       );
-
-                      //       try {
-                      //         projectViewModel.addListeningArea(
-                      //           area: newListeningArea,
-                      //           floorId: floorId,
-                      //         );
-
-                      //         /// Automatically select the newly created area and refresh UI
-                      //         popupSetState(() {});
-                      //         setState(() {
-                      //           _selectedListeningAreaIds = <String>[newListeningArea.id];
-                      //           isCreateAreaExpanded = false;
-                      //         });
-
-                      //         /// Clear form
-                      //         areaNameController.clear();
-
-                      //         /// Show success message
-                      //         FusionToast.success(
-                      //           context,
-                      //           message: "Listening area '${newListeningArea.name}' created successfully",
-                      //         );
-                      //       } catch (e) {
-                      //         FusionToast.error(
-                      //           context,
-                      //           message: "Failed to create listening area: $e",
-                      //         );
-                      //       }
-                      //     } else {
-                      //       FusionToast.error(
-                      //         context,
-                      //         message: "Please enter location name and select a floor",
-                      //       );
-                      //     }
-                      //   },
-                      // ),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: <Widget>[
-                          Flexible(
-                            child: FusionOutlinedButton(
-                              width: double.infinity,
-                              label: "Cancel",
-                              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
-                              onTap: () {
-                                _selectedListeningAreaIds.clear();
-                                Navigator.of(context).pop();
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: FusionButton(
-                              width: double.infinity,
-                              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                fontSize: 10,
-                                color: Theme.of(context).colorScheme.fusionButtonTextColor,
-                              ),
-
-                              label: "Save",
-                              isActive: _selectedListeningAreaIds.isNotEmpty,
-                              onTap: () => onLocationSaveTap(popupSetState),
-                            ),
-                          ),
-                        ],
                       ),
                     ],
                   );
@@ -1419,6 +1272,7 @@ class __CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLi
                           listeningAreas.isEmpty
                               ? "Select Location"
                               : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
+                      maxLine: 1,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color:
                             listeningAreas.isEmpty
