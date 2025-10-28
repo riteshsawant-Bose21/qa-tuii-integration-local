@@ -2,7 +2,7 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { analogInput, aes67input, bluetooth }
+enum SourceType { analogInput, aes67input, bluetooth, usb }
 
 class Source extends HardwareComponent {
   /// Type of the source

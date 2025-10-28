@@ -8,6 +8,8 @@ import 'package:fusion_launcher/features/product_query/presentation/viewModel/pr
 import 'package:fusion_launcher/features/projects/models/device_item_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../../core/models/products_data.dart';
+
 enum _AcousticsToolType {
   draw,
   speakers,
@@ -65,34 +67,6 @@ class BuildingToolbar extends StatefulWidget {
 }
 
 class _BuildingToolbarState extends State<BuildingToolbar> {
-  // Device item constants copied from DevicesPanel
-  static const List<DeviceItemModel> _microphoneItems = <DeviceItemModel>[
-    DeviceItemModel(sku: "gooseneck", name: "Gooseneck", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "hanging", name: "Hanging", image: "assets/images/products/hanging_mic.png"),
-    DeviceItemModel(sku: "condenser", name: "Condenser", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "dynamic", name: "Dynamic", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "shotgun", name: "Shotgun", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "pzm", name: "PZM", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "lavalier", name: "Lavalier", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "headset", name: "Headset", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "handheld", name: "Handheld", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "beltpack", name: "Beltpack", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "paging", name: "Paging", image: "assets/images/products/paging_mic.png"),
-  ];
-
-  static const List<DeviceItemModel> _mediaSourceItems = <DeviceItemModel>[
-    DeviceItemModel(sku: "generic_mono", name: "Generic Mono", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "generic_stereo", name: "Generic Stereo", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "cd", name: "CD", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "sat_cable_hdmi", name: "Sat/Cable - HDMI", image: "assets/images/products/hdmi.png"),
-    DeviceItemModel(sku: "media_player", name: "Media Player", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "tuner", name: "Tuner", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "dvd_hdmi", name: "DVD - HDMI", image: "assets/images/products/hdmi.png"),
-    DeviceItemModel(sku: "bluray_hdmi", name: "BluRay HDMI", image: "assets/images/products/hdmi.png"),
-    DeviceItemModel(sku: "laptop_usb_hdmi", name: "Laptop - USB - or HDMI", image: "assets/images/products/laptop.png"),
-    DeviceItemModel(sku: "deskpc_usb_hdmi", name: "DeskPC - USB - or HDMI", image: "assets/images/products/laptop.png"),
-  ];
-
   static const List<String> _rackOptions = <String>[
     '4U',
     '8U',
@@ -411,8 +385,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildSourcesToolWithMenu({required bool isSelected}) {
-    return PopupMenuButton<DeviceItemModel>(
-      onSelected: (DeviceItemModel selectedItem) {
+    return PopupMenuButton<SourceData>(
+      onSelected: (SourceData selectedItem) {
         // Set device type index first
         serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
 
@@ -420,9 +394,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         final ProductQueryModel product = ProductQueryModel(
           name: selectedItem.name,
           price: 0.0,
-          image: selectedItem.image,
+          image: selectedItem.assetPath,
           type: ProductType.sources,
-          sku: selectedItem.sku,
+          sku: selectedItem.id,
         );
         serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
       },
@@ -432,22 +406,22 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       ),
       color: Colors.white,
       itemBuilder: (BuildContext context) {
-        return <PopupMenuEntry<DeviceItemModel>>[
-          const PopupMenuItem<DeviceItemModel>(
+        return <PopupMenuEntry<SourceData>>[
+          const PopupMenuItem<SourceData>(
             enabled: false,
             child: Text(
               'MICROPHONES',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
             ),
           ),
-          ..._microphoneItems.map(
-            (DeviceItemModel item) => PopupMenuItem<DeviceItemModel>(
+          ...SourceData.microphoneItems.map(
+            (SourceData item) => PopupMenuItem<SourceData>(
               height: 30,
               value: item,
               child: Row(
                 children: <Widget>[
                   Image.asset(
-                    item.image,
+                    item.assetPath,
                     height: 14,
                     width: 14,
                   ),
@@ -464,21 +438,21 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             ),
           ),
           const PopupMenuDivider(),
-          const PopupMenuItem<DeviceItemModel>(
+          const PopupMenuItem<SourceData>(
             enabled: false,
             child: Text(
               'MEDIA SOURCES',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
             ),
           ),
-          ..._mediaSourceItems.map(
-            (DeviceItemModel item) => PopupMenuItem<DeviceItemModel>(
+          ...SourceData.mediaSourceItems.map(
+            (SourceData item) => PopupMenuItem<SourceData>(
               height: 30,
               value: item,
               child: Row(
                 children: <Widget>[
                   Image.asset(
-                    item.image,
+                    item.assetPath,
                     height: 14,
                     width: 14,
                   ),
