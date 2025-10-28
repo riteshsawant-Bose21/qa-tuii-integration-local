@@ -189,10 +189,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         text: TextSpan(
           text: port.data.label ?? port.data.type.name,
           style: TextStyle(
-            color:
-                hasConnection
-                    ? painter.colorScheme.activePortFG
-                    : painter.colorScheme.inactivePortFG,
+            color: painter.colorScheme.inactivePortFG,
             fontSize: WiringViewConstants.portRadius * 0.75,
           ),
         ),

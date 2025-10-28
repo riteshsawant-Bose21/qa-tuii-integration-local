@@ -582,29 +582,39 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               ),
 
               /// Scrollable list
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 220),
-                child: SingleChildScrollView(
-                  child: Column(
-                    children:
-                        serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).map((ListeningArea area) {
-                          final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
-                          final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
-                          final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
-                          return _buildLocationItem(
-                            context: context,
-                            area: area,
-                            zoneId: zoneId,
-                            onStateUpdate: updateStates,
-                            availableAreas: availableAreas,
-                            zoneData: zoneData,
-                            isAvailable: isAvailable,
-                            floorData: floorData,
-                          );
-                        }).toList(),
+              serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).isEmpty
+                  ? Container(
+                    padding: const EdgeInsets.all(16),
+                    child: FusionAppText(
+                      text: "No locations found in this zone",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                      ),
+                    ),
+                  )
+                  : ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 220),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        children:
+                            serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).map((ListeningArea area) {
+                              final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+                              final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
+                              final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
+                              return _buildLocationItem(
+                                context: context,
+                                area: area,
+                                zoneId: zoneId,
+                                onStateUpdate: updateStates,
+                                availableAreas: availableAreas,
+                                zoneData: zoneData,
+                                isAvailable: isAvailable,
+                                floorData: floorData,
+                              );
+                            }).toList(),
+                      ),
+                    ),
                   ),
-                ),
-              ),
             ],
           ),
         );

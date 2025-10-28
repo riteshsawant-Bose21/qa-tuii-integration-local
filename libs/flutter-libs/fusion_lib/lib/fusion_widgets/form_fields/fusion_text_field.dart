@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// A customizable and reusable text field for the Fusion design system.
 ///
@@ -64,6 +65,11 @@ class FusionTextField extends StatelessWidget {
   /// Focus node for managing focus.
   final FocusNode? focusNode;
 
+  /// Maximum length of input text.
+  final int maxLength;
+
+  final List<TextInputFormatter>? inputFormatters;
+
   const FusionTextField({
     super.key,
     required this.hintText,
@@ -80,6 +86,8 @@ class FusionTextField extends StatelessWidget {
     this.textAlign = TextAlign.start,
     this.border,
     this.focusNode,
+    this.maxLength = 24,
+    this.inputFormatters,
   });
 
   @override
@@ -91,6 +99,7 @@ class FusionTextField extends StatelessWidget {
       hintStyle: hintStyle ?? theme.inputDecorationTheme.hintStyle,
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
+      counterText: '',
       border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
@@ -99,6 +108,7 @@ class FusionTextField extends StatelessWidget {
     );
 
     return TextField(
+      maxLength: maxLength,
       controller: controller,
       focusNode: focusNode,
       obscureText: obscureText,
@@ -107,6 +117,7 @@ class FusionTextField extends StatelessWidget {
       enabled: enabled,
       style: style ?? theme.textTheme.bodySmall,
       textAlign: textAlign,
+      inputFormatters: inputFormatters,
       decoration: decoration ?? defaultDecoration,
     );
   }

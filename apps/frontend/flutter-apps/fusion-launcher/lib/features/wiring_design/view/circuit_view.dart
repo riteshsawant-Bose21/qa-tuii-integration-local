@@ -81,24 +81,24 @@ class CircuitView extends StatelessWidget {
                     ),
                     if (overlay != null) overlay,
 
-                    Row(
-                      children: <Widget>[
-                        if (controller.stack.canUndo)
-                          IconButton(
-                            onPressed: () {
-                              controller.undo();
-                            },
-                            icon: const Icon(Icons.undo),
-                          ),
-                        if (controller.stack.canRedo)
-                          IconButton(
-                            onPressed: () {
-                              controller.redo();
-                            },
-                            icon: const Icon(Icons.redo),
-                          ),
-                      ],
-                    ),
+                    // Row(
+                    //   children: <Widget>[
+                    //     if (controller.stack.canUndo)
+                    //       IconButton(
+                    //         onPressed: () {
+                    //           controller.undo();
+                    //         },
+                    //         icon: const Icon(Icons.undo),
+                    //       ),
+                    //     if (controller.stack.canRedo)
+                    //       IconButton(
+                    //         onPressed: () {
+                    //           controller.redo();
+                    //         },
+                    //         icon: const Icon(Icons.redo),
+                    //       ),
+                    //   ],
+                    // ),
                   ],
                 ),
               ),

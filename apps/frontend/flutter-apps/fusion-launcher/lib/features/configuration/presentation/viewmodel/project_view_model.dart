@@ -84,7 +84,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedZoneId;
 
   /// Listening area selection mode flag
-  bool isInListeningAreaSelectionMode = false;
+  bool isInListeningAreaMode = false;
   bool isInZoneSelectionMode = false;
 
   int currentDeviceTypeIndex = -1;
@@ -242,17 +242,26 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(ProjectError(message: message));
   }
 
+  void exitSelectionModes() {
+    isInListeningAreaMode = false;
+    isInZoneSelectionMode = false;
+    currentSelectedListeningAreaId = null;
+    currentSelectedZoneId = null;
+    updateProject();
+  }
+
   void enterZoneSelectionMode(Zone zone) {
-    isInListeningAreaSelectionMode = false;
+    isInListeningAreaMode = false;
     isInZoneSelectionMode = true;
     currentSelectedZoneId = zone.id;
+    currentSelectedListeningAreaId = null;
     resetDeviceTypeIndex();
     emit(ZoneSelectionMode(zone));
   }
 
-  void enterListeningAreaSelectionMode() {
+  void enterListeningAreaMode() {
     isInZoneSelectionMode = false;
-    isInListeningAreaSelectionMode = true;
+    isInListeningAreaMode = true;
     currentSelectedZoneId = null;
     resetDeviceTypeIndex();
     emit(ListeningAreaSelectionMode());
@@ -261,7 +270,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void changeDeviceTypeIndex(int index) {
     currentDeviceTypeIndex = index;
     isInZoneSelectionMode = false;
-    isInListeningAreaSelectionMode = false;
+    isInListeningAreaMode = false;
     currentSelectedZoneId = null;
     print("Device type index changed to $index");
     emit(DeviceTypeIndexChanged(index));
