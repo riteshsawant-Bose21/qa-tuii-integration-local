@@ -226,8 +226,16 @@ int ep9512t_configure(struct endpoint *ep, struct config_sequence_cmd *cmd)
     // set up the i2c_client
     ret = endpoint_get_i2c_client(ep);
     if (ret) {
-        dev_err(&bd_drvdata->pdev->dev, "Failed to set i2c client for ep9512, ret=%d...\n", ret);
-        return ret;
+        // try one more time..
+        msleep(250);
+        ret = endpoint_get_i2c_client(ep);
+        if (ret) {
+            dev_err(&bd_drvdata->pdev->dev, "Failed to set i2c client for ep9512, ret=%d...\n", ret);
+
+            // try one more time..
+            msleep(250);
+            return ret;
+        }
     }
 
     for (i = 0; i < cmd->num_msgs; ++i) {
