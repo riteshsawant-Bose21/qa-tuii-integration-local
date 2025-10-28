@@ -602,7 +602,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
 
                 if (context.mounted) {
                   Navigator.of(context).pop();
-                  Navigator.pushNamed(context, Routes.projectPage);
+                  // Navigator.pushNamed(context, Routes.projectPage);
                 }
               },
               style: ElevatedButton.styleFrom(
