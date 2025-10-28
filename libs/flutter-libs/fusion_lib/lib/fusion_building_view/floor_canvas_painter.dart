@@ -40,6 +40,9 @@ class FloorCanvasPainter extends CustomPainter {
   //key value pair for listening area and its zone
   final Map<String, String> listeningAreaToZoneMap;
 
+  // Mode state
+  final bool isAcousticsMode;
+
   FloorCanvasPainter({
     required this.gridSize,
     required this.zoomScale,
@@ -58,6 +61,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.currentlySelectingZone,
     required this.splMax,
     required this.splMin,
+    required this.isAcousticsMode,
     this.previewPoint,
     this.highlightedIndex,
     this.selectedHardwareComponentId,
@@ -214,20 +218,27 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size size) {
-    final ui.Paint pg = Paint()
-      ..color = Colors.grey.shade300.withValues(alpha: 0.5)
-      ..strokeWidth = 1 / zoomScale;
-    final double sx = -panOffset.dx / zoomScale, sy = -panOffset.dy / zoomScale;
-    final int cols = (size.width / zoomScale).ceil() + 2;
-    final int rows = (size.height / zoomScale).ceil() + 2;
+    const double dotRadius = 1.75;
 
-    for (int i = -1; i < cols; i++) {
-      final double x = (sx / gridSize).floor() * gridSize + i * gridSize;
-      canvas.drawLine(Offset(x, sy - gridSize), Offset(x, sy + rows * gridSize), pg);
-    }
-    for (int j = -1; j < rows; j++) {
-      final double y = (sy / gridSize).floor() * gridSize + j * gridSize;
-      canvas.drawLine(Offset(sx - gridSize, y), Offset(sx + cols * gridSize, y), pg);
+    final Paint paint = Paint()
+      ..color = Colors.grey.shade300.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+
+    // Find visible bounds in world coordinates
+    final double left = -panOffset.dx / zoomScale;
+    final double top = -panOffset.dy / zoomScale;
+    final double right = left + size.width / zoomScale;
+    final double bottom = top + size.height / zoomScale;
+
+    // Snap to grid so it always looks infinite
+    final double spacing = gridSize;
+    final double startX = (left ~/ spacing) * spacing;
+    final double startY = (top ~/ spacing) * spacing;
+
+    for (double x = startX; x < right; x += spacing) {
+      for (double y = startY; y < bottom; y += spacing) {
+        canvas.drawCircle(Offset(x, y), dotRadius / zoomScale, paint);
+      }
     }
   }
 
@@ -293,7 +304,7 @@ class FloorCanvasPainter extends CustomPainter {
       canvas.drawPath(path, selected ? strokeSelected : stroke);
 
       for (final ui.Offset p in poly) {
-        if (selected) {
+        if (selected && isAcousticsMode) {
           canvas.drawCircle(p, vertexSize, vertexPaint);
         }
       }
@@ -437,6 +448,11 @@ class FloorCanvasPainter extends CustomPainter {
     for (int i = 0; i < hardwareComponents.length; i++) {
       final HardwareComponent comp = hardwareComponents[i];
 
+      // In acoustics mode, only draw speakers and skip other hardware components
+      if (isAcousticsMode && comp is! Speaker) {
+        continue;
+      }
+
       final Rect dst = Rect.fromCenter(
         center: comp.pos,
         width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
@@ -502,8 +518,8 @@ class FloorCanvasPainter extends CustomPainter {
         }
       }
 
-      // draw selection border
-      if (comp.id == selectedHardwareComponentId) {
+      // draw selection border - in acoustics mode, only show selection for speakers
+      if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
         canvas.drawRect(
           Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
           Paint()
@@ -621,7 +637,8 @@ class FloorCanvasPainter extends CustomPainter {
         old.showSpl != showSpl ||
         old.hardwareComponents != hardwareComponents ||
         old.hardwareImages != hardwareImages ||
-        old.selectedHardwareComponentId != selectedHardwareComponentId;
+        old.selectedHardwareComponentId != selectedHardwareComponentId ||
+        old.isAcousticsMode != isAcousticsMode;
   }
 }
 
