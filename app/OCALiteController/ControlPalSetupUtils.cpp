@@ -365,6 +365,8 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
                                 position);
 
         // Also sends updated value to front-end
+        newSelectorObj->SetPosition(position);
+
         newSelectorObj->SendConfigurationValue();
     }
 
