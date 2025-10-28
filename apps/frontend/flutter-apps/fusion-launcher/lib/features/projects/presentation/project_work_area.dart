@@ -282,6 +282,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                   floorCanvasController: _floorCanvasController,
                   onCalculateSpl: calculateSPL,
                   splPanelData: _lastPanelData!,
+                  onProductSelected: () {
+                    productsController.expand();
+                  },
+                  onProductDeselected: () {
+                    productsController.collapse();
+                  },
                 );
               },
             ),
@@ -294,38 +300,38 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 isCollapsibleSection: false,
                 dockItemWidget: () => const BuildingPlan(),
               ),
-              DockItemConfig(
-                id: "2",
-                title: "COVERAGE",
-                side: "left",
-                alowUndock: false,
-                initiallyExpanded: true,
-                isCollapsibleSection: true,
-                dockItemWidget:
-                    () => CoveragePanel(
-                      onModeSelection: (bool value) {
-                        if (value) {
-                          zoneAreaController.expand();
-                        }
-                      },
-                    ),
-              ),
 
-              DockItemConfig(
-                id: "4",
-                title: "DEVICES",
-                side: "left",
-                alowUndock: false,
-                initiallyExpanded: true,
-                isCollapsibleSection: true,
-                dockItemWidget:
-                    () => DevicesPanel(
-                      onProductSelected: () {
-                        productsController.expand();
-                      },
-                    ),
-              ),
+              // DockItemConfig(
+              //   id: "2",
+              //   title: "COVERAGE",
+              //   side: "left",
+              //   alowUndock: false,
+              //   initiallyExpanded: true,
+              //   isCollapsibleSection: true,
+              //   dockItemWidget:
+              //       () => CoveragePanel(
+              //         onModeSelection: (bool value) {
+              //           if (value) {
+              //             zoneAreaController.expand();
+              //           }
+              //         },
+              //       ),
+              // ),
 
+              // DockItemConfig(
+              //   id: "4",
+              //   title: "DEVICES",
+              //   side: "left",
+              //   alowUndock: false,
+              //   initiallyExpanded: true,
+              //   isCollapsibleSection: true,
+              //   dockItemWidget:
+              //       () => DevicesPanel(
+              //         onProductSelected: () {
+              //           productsController.expand();
+              //         },
+              //       ),
+              // ),
               DockItemConfig(
                 id: "5",
                 title: "PROPERTIES",
@@ -367,10 +373,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ),
               DockItemConfig(
                 id: "7",
-                title: "ZONE & LISTENING AREAS",
-                side: "right",
+                title: "ZONES",
+                side: "left",
                 controller: zoneAreaController,
-                initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                initiallyExpanded: true,
                 // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
                 dockItemWidget: () => const ZoneAndListeningAreaPanel(),
               ),
