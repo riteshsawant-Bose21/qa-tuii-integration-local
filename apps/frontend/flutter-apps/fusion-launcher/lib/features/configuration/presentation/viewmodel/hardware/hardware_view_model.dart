@@ -37,8 +37,7 @@ extension HardwareViewModel on ProjectViewModel {
       } else {
         FusionLogger.log(
           tag: LogTag.project,
-          message:
-              "No changes detected for hardware: ${hardware.id}, skipping update.",
+          message: "No changes detected for hardware: ${hardware.id}, skipping update.",
         );
       }
     } catch (e) {
@@ -143,12 +142,11 @@ extension HardwareViewModel on ProjectViewModel {
       if (autoSave) {
         recordSnapshot();
       }
-      final ResponseCallback<bool> responseCallback = projectManager
-          .moveHardware(
-            hardwareId,
-            listeningAreaId: listeningAreaId,
-            floorId: floorId,
-          );
+      final ResponseCallback<bool> responseCallback = projectManager.moveHardware(
+        hardwareId,
+        listeningAreaId: listeningAreaId,
+        floorId: floorId,
+      );
       if (autoSave) {
         saveProject();
       }
@@ -160,18 +158,6 @@ extension HardwareViewModel on ProjectViewModel {
         message: "Failed to move hardware: $e",
       );
       return ResponseCallback<bool>.failure("Failed to move hardware: $e");
-    }
-  }
-
-  List<HardwareComponent> getSpeakersInZone({required String zoneId}) {
-    try {
-      return projectManager.getHardwareInZone(zoneId);
-    } catch (e) {
-      FusionLogger.log(
-        tag: LogTag.project,
-        message: "Failed to get speakers for zone: $e",
-      );
-      return <HardwareComponent>[];
     }
   }
 
@@ -362,7 +348,7 @@ extension HardwareViewModel on ProjectViewModel {
           inputPortsData: <PortData>[],
           outputPortsData: <PortData>[
             PortData(
-              name: "Out",
+              name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
               compatibleTypes: <PortType>[

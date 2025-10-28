@@ -63,3 +63,13 @@ final class DeviceSelectionChanged extends ProjectViewModelState {
 }
 
 final class DeviceSelectionsCleared extends ProjectViewModelState {}
+
+final class ToolbarModeChanged extends ProjectViewModelState {
+  final ToolbarMode mode;
+  ToolbarModeChanged(this.mode);
+}
+
+final class ProductToAddChanged extends ProjectViewModelState {
+  final ProductQueryModel? product;
+  ProductToAddChanged(this.product);
+}

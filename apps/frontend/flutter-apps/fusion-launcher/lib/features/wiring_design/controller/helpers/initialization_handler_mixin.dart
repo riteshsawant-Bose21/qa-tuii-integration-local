@@ -12,17 +12,27 @@ import '../../model/circuit_port.dart';
 import '../circuit_controller.dart';
 
 extension InitializationHandlerMixin on CircuitController {
-  void initialize() {
+  void loadFromPM() {
     final List<Zone> zones = projectManager.zones;
     for (int i = 0; i < zones.length; i++) {
       final Zone zone = zones[i];
-      final ZoneComponentData componentData = ComponentDataFactory.fromZone(
-        zone,
+      final ComponentData? existingcomData = componentDB.getComponentData(
+        zone.id,
       );
-      final CircuitComponent component = CircuitComponent.from(
-        componentData,
-        null,
-      );
+      final ZoneComponentData componentData =
+          existingcomData is ZoneComponentData
+              ? existingcomData
+              : ComponentDataFactory.fromZone(
+                zone,
+              );
+      final CircuitComponent? existingCirComponent = componentDB
+          .getCircuitComponent(zone.id);
+      final CircuitComponent component =
+          existingCirComponent ??
+          CircuitComponent.from(
+            componentData,
+            null,
+          );
 
       componentDB.addComponent(component);
       componentDB.addComponentData(componentData);
@@ -32,14 +42,24 @@ extension InitializationHandlerMixin on CircuitController {
         parentZoneId: zone.id,
       );
       for (final SubZone subZone in subZones) {
-        final SubZoneComponentData subZoneData =
-            ComponentDataFactory.fromSubZone(
-              subZone,
-            );
-        final CircuitComponent subZoneComponent = CircuitComponent.from(
-          subZoneData,
-          component,
+        final ComponentData? subZoneComData = componentDB.getComponentData(
+          subZone.id,
         );
+        final SubZoneComponentData subZoneData =
+            subZoneComData is SubZoneComponentData
+                ? subZoneComData
+                : ComponentDataFactory.fromSubZone(
+                  subZone,
+                );
+
+        final CircuitComponent? existingSubZoneComponent = componentDB
+            .getCircuitComponent(subZone.id);
+        final CircuitComponent subZoneComponent =
+            existingSubZoneComponent ??
+            CircuitComponent.from(
+              subZoneData,
+              component,
+            );
 
         componentDB.addComponent(subZoneComponent);
         componentDB.addComponentData(subZoneData);
@@ -81,13 +101,18 @@ extension InitializationHandlerMixin on CircuitController {
       if (component is Speaker || component is HardwareRack) {
         continue;
       }
-      final ComponentData componentData = ComponentDataFactory.fromHardware(
-        component,
-      );
-      final CircuitComponent from = CircuitComponent.from(
-        componentData,
-        parent,
-      );
+
+      final ComponentData componentData =
+          componentDB.getComponentData(component.id) ??
+          ComponentDataFactory.fromHardware(
+            component,
+          );
+      final CircuitComponent from =
+          componentDB.getCircuitComponent(componentData.id) ??
+          CircuitComponent.from(
+            componentData,
+            parent,
+          );
 
       componentDB.addComponent(from);
       componentDB.addComponentData(componentData);
@@ -125,14 +150,20 @@ extension InitializationHandlerMixin on CircuitController {
   void addCircuit(CircuitModel circuit, CircuitComponent subZoneComponent) {
     final List<HardwareComponent> hardwareForCircuit = projectManager
         .getHardwareForCircuit(circuitId: circuit.id);
-    final CircuitComponentData cirCom = ComponentDataFactory.fromCircuit(
-      circuit,
-      hardwareForCircuit,
-    );
-    final CircuitComponent circuitComponent = CircuitComponent.from(
-      cirCom,
-      subZoneComponent,
-    );
+    final ComponentData? cirComData = componentDB.getComponentData(circuit.id);
+    final CircuitComponentData cirCom =
+        cirComData is CircuitComponentData
+            ? cirComData
+            : ComponentDataFactory.fromCircuit(
+              circuit,
+              hardwareForCircuit,
+            );
+    final CircuitComponent circuitComponent =
+        componentDB.getCircuitComponent(cirCom.id) ??
+        CircuitComponent.from(
+          cirCom,
+          subZoneComponent,
+        );
     componentDB.addComponent(circuitComponent);
     componentDB.addComponentData(cirCom);
     circuitComponent.setParent(subZoneComponent);

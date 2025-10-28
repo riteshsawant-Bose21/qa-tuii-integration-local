@@ -60,11 +60,9 @@ extension ListeningAreaManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    List<Zone> zones = projectService!.getZonesForListeningArea(listeningAreaId);
-    if (zones.length > 1) {
-      throw Exception('Listening Area found in multiple zones');
-    }
-    return zones.isNotEmpty ? zones.first : null;
+    Zone? zone = projectService!.getZoneForListeningArea(listeningAreaId);
+
+    return zone;
   }
 
   //Get All Listening Area

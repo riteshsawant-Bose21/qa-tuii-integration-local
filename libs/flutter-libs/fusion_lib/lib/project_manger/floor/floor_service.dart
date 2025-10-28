@@ -47,6 +47,16 @@ extension FloorService on ProjectService {
     return floor;
   }
 
+  FloorModel? getFloorForHardware({required String hardwareId}) {
+    final floorIds = relationships.getParents(RelationshipType.hardwareFloor, hardwareId);
+    if (floorIds.isNotEmpty) {
+      final floorId = floorIds.first;
+      final floor = floors.get(floorId);
+      return floor;
+    }
+    return null;
+  }
+
   // List<ListeningArea> getListeningAreasForFloor(String floorId) {
   //   final ids = relationships.getChildren(RelationshipType.floorListening, floorId);
   //   return ids.map((id) => listeningAreas.get(id)).where((a) => a != null).cast<ListeningArea>().toList();

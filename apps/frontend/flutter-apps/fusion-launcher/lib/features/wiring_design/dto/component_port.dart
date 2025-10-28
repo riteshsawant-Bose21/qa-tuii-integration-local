@@ -5,12 +5,12 @@ class ComponentPort {
   final String? label;
   final PortType type;
   final List<PortType> compatibleTypes;
-  final String data;
+  final String id;
   final PortPosition? position;
   final int index;
   final String? description;
   ComponentPort({
-    required this.data,
+    required this.id,
     this.image,
     this.label,
     required this.type,
@@ -26,7 +26,7 @@ class ComponentPort {
       'label': label,
       'type': type.name,
       'compatibleTypes': compatibleTypes.map((PortType e) => e.name).toList(),
-      'data': data,
+      'id': id,
     };
   }
 
@@ -49,7 +49,7 @@ class ComponentPort {
       label: portData.name,
       type: portData.type,
       compatibleTypes: portData.compatibleTypes,
-      data: portData.id,
+      id: portData.id,
     );
   }
 
@@ -69,7 +69,7 @@ class ComponentPort {
           ),
         ),
       ),
-      data: map['data'] as String,
+      id: map['id'] as String,
     );
   }
 
@@ -86,7 +86,7 @@ class ComponentPort {
         other.label == label &&
         other.type == type &&
         listEquals(other.compatibleTypes, compatibleTypes) &&
-        other.data == data;
+        other.id == id;
   }
 
   @override
@@ -95,6 +95,6 @@ class ComponentPort {
         label.hashCode ^
         type.hashCode ^
         compatibleTypes.hashCode ^
-        data.hashCode;
+        id.hashCode;
   }
 }

@@ -24,6 +24,10 @@ class FloorCanvas extends StatefulWidget {
   final double splMax;
   final SplPanelData splPanelData;
 
+  // selection state
+  final String? selectedHardwareId;
+  final String? selectedListeningAreaId;
+
   final FloorCanvasController controller;
 
   // mutation callbacks
@@ -43,6 +47,9 @@ class FloorCanvas extends StatefulWidget {
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
   final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
   final Map<String, String> listeningAreaToZoneMap;
+
+  // Mode state
+  final bool isAcousticsMode;
 
   const FloorCanvas({
     super.key,
@@ -71,6 +78,9 @@ class FloorCanvas extends StatefulWidget {
     required this.addNewHardwareComponent,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
+    required this.isAcousticsMode,
+    this.selectedHardwareId,
+    this.selectedListeningAreaId,
   });
 
   @override
@@ -142,6 +152,10 @@ class FloorCanvasState extends State<FloorCanvas> {
   void initState() {
     super.initState();
 
+    // Synchronize internal selection state with external parameters
+    _selectedHardwareComponentId = widget.selectedHardwareId;
+    _updateHighlightIndexFromSelectedListeningArea();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onViewportCenterUpdated(getViewportCenter());
     });
@@ -186,6 +200,16 @@ class FloorCanvasState extends State<FloorCanvas> {
   @override
   void didUpdateWidget(covariant FloorCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // Sync internal selection state when external selection parameters change
+    if (widget.selectedHardwareId != oldWidget.selectedHardwareId) {
+      _selectedHardwareComponentId = widget.selectedHardwareId;
+    }
+
+    if (widget.selectedListeningAreaId != oldWidget.selectedListeningAreaId) {
+      _updateHighlightIndexFromSelectedListeningArea();
+    }
+
     // if (widget.floorPlanEntity.id != oldWidget.floorPlanEntity.id) {
     //   _zoomScale = widget.floorPlanEntity.canvasZoom;
     //   _panOffset = widget.floorPlanEntity.canvasPan;
@@ -237,12 +261,16 @@ class FloorCanvasState extends State<FloorCanvas> {
                     hardwareImages: _hardwareImages,
                     listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
                     currentlySelectingZone: widget.controller.currentlySelectingZone,
-                    selectedListeningAreaIds: widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id).toList(),
+                    selectedListeningAreaIds: [
+                      ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
+                      if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
+                    ],
                     splMax: widget.splMax,
                     splMin: widget.splMin,
                     splPanelData: widget.splPanelData,
                     //prepare a map of listening area id to zone
                     listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
+                    isAcousticsMode: widget.isAcousticsMode,
                   ),
                 ),
               ),
@@ -411,6 +439,12 @@ class FloorCanvasState extends State<FloorCanvas> {
     if (e.buttons == kPrimaryMouseButton) {
       for (int i = widget.hardwareComponents.length - 1; i >= 0; i--) {
         final HardwareComponent sp = widget.hardwareComponents[i];
+
+        // In acoustics mode, only allow selection of speakers
+        if (widget.isAcousticsMode && sp is! Speaker) {
+          continue;
+        }
+
         // simplest circular hit‐test:
         final double hitRadius = widget.gridSize * 0.3;
         if ((worldPos - sp.pos).distance < hitRadius) {
@@ -502,8 +536,8 @@ class FloorCanvasState extends State<FloorCanvas> {
       return; // Don't process other interactions during selection
     }
 
-    // POLY‐VERTEX DRAG
-    if (e.buttons == kPrimaryMouseButton) {
+    // POLY‐VERTEX DRAG - only allow in acoustics mode
+    if (e.buttons == kPrimaryMouseButton && widget.isAcousticsMode) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
         final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
         for (int j = 0; j < poly.length; j++) {
@@ -521,8 +555,8 @@ class FloorCanvasState extends State<FloorCanvas> {
       }
     }
 
-    // POLY DRAG
-    if (e.buttons == kPrimaryMouseButton) {
+    // POLY DRAG - only allow in acoustics mode
+    if (e.buttons == kPrimaryMouseButton && widget.isAcousticsMode) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
         final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
         final ui.Path path = Path()..addPolygon(poly, true);
@@ -583,6 +617,21 @@ class FloorCanvasState extends State<FloorCanvas> {
       }
     }
 
+    // LISTENING AREA CLICK-TO-SELECT (system mode - identification only)
+    if (e.buttons == kPrimaryMouseButton && !widget.isAcousticsMode) {
+      for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
+        final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
+        final ui.Path path = Path()..addPolygon(poly, true);
+        if (path.contains(worldPos)) {
+          widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
+          setState(() {
+            _highlightIndex = i;
+          });
+          return;
+        }
+      }
+    }
+
     // 3) Simple select/deselect
     if (e.buttons == kPrimaryMouseButton) {
       final ui.Rect rect = Rect.fromLTWH(
@@ -620,6 +669,12 @@ class FloorCanvasState extends State<FloorCanvas> {
     // hardware component drag
     if (_isHardwareComponentDragging && _selectedHardwareComponentId != null) {
       final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
+
+      // In acoustics mode, only allow movement of speakers
+      if (widget.isAcousticsMode && hardwareComponent is! Speaker) {
+        return;
+      }
+
       final ui.Offset delta = worldPos - _hardwareComponentDragStart;
       setState(() => hardwareComponent.pos = _hardwareComponentOrigPos! + delta);
       // widget.onUpdateHardwareComponent(hardwareComponent);
@@ -635,8 +690,11 @@ class FloorCanvasState extends State<FloorCanvas> {
       return;
     }
 
-    // poly-vertex drag
+    // poly-vertex drag - only allow in acoustics mode
     if (_isListeningAreaVertexDragging && _dragIndex != null && _dragVertexIndex != null) {
+      if (!widget.isAcousticsMode) {
+        return;
+      }
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
       setState(() {
         cs.vertices[_dragVertexIndex!] = worldPos;
@@ -645,8 +703,11 @@ class FloorCanvasState extends State<FloorCanvas> {
       return;
     }
 
-    // poly drag
+    // poly drag - only allow in acoustics mode
     if (_isListeningAreaDragging && _dragIndex != null && _dragOriginal != null) {
+      if (!widget.isAcousticsMode) {
+        return;
+      }
       final ui.Offset delta = worldPos - _dragStartWorld!;
       final ListeningArea cs = widget.listeningAreas[_dragIndex!];
       final ListeningArea updated = cs.copyWith(vertices: _dragOriginal!.map((ui.Offset pt) => pt + delta).toList());
@@ -767,7 +828,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     final double minY = ys.reduce(min), maxY = ys.reduce(max);
     final double w = maxX - minX, h = maxY - minY;
     if (w == 0 || h == 0) return;
-    const double pad = 20.0;
+    const double pad = 50.0;
     final double availW = _viewportSize.width - 2 * pad;
     final double availH = _viewportSize.height - 2 * pad;
     if (availW <= 0 || availH <= 0) return;
@@ -777,7 +838,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     final double mY = (_viewportSize.height - h * tar) / 2;
     setState(() {
       _zoomScale = tar;
-      _panOffset = Offset(mX - minX * tar, mY - minY * tar);
+      _panOffset = Offset(mX - minX * tar, (mY - minY * tar) - 30);
       widget.onViewportCenterUpdated(getViewportCenter());
     });
     // widget.onCanvasZoomChanged(_zoomScale);
@@ -840,5 +901,19 @@ class FloorCanvasState extends State<FloorCanvas> {
       }
     }
     return intersections.isOdd;
+  }
+
+  /// Update the internal highlight index based on the external selected listening area ID
+  void _updateHighlightIndexFromSelectedListeningArea() {
+    if (widget.selectedListeningAreaId != null) {
+      // Find the index of the selected listening area
+      final int index = widget.listeningAreas.indexWhere((ListeningArea area) => area.id == widget.selectedListeningAreaId);
+      if (index != -1) {
+        _highlightIndex = index;
+      }
+    } else {
+      // No listening area selected externally, clear highlight
+      _highlightIndex = null;
+    }
   }
 }

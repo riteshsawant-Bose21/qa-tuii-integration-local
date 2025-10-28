@@ -91,4 +91,13 @@ extension FloorViewModel on ProjectViewModel {
       rethrow;
     }
   }
+
+  FloorModel? getFloorForHardware({required String hardwareId}) {
+    try {
+      return projectManager.getFloorForHardware(hardwareId: hardwareId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get floor for hardware: $e");
+      return null;
+    }
+  }
 }
