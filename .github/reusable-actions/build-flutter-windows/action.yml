@@ -97,7 +97,7 @@ runs:
         }}
       uses: actions/checkout@v4
       with:
-        path: C:\Users\Administrator\Documents
+        path: C:\Users\Administrator\actions-runner\_work\fusion-automation-build
         fetch-depth: 0 
 
     - name: Flutter Windows Automation build
@@ -122,7 +122,9 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
+        robocopy C:\Users\Administrator\actions-runner\_work\fusion-automation-build\fusion-monorepo C:\Users\Administrator\Documents\fusion-monorepo /E
         cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
+
         flutter pub get
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
