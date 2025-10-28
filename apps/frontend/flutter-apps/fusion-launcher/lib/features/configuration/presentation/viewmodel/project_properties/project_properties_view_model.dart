@@ -213,8 +213,8 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   }
 
   void setCurrentSelectedHardware(String? hardware) {
-    print("Setting current selected hardware to: $hardware");
     currentSelectedHardwareId = hardware;
+    updateProject();
   }
 
   void setCurrentSelectedListeningArea(String? area) {

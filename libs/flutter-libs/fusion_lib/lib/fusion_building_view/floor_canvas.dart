@@ -24,6 +24,10 @@ class FloorCanvas extends StatefulWidget {
   final double splMax;
   final SplPanelData splPanelData;
 
+  // selection state
+  final String? selectedHardwareId;
+  final String? selectedListeningAreaId;
+
   final FloorCanvasController controller;
 
   // mutation callbacks
@@ -71,6 +75,8 @@ class FloorCanvas extends StatefulWidget {
     required this.addNewHardwareComponent,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
+    this.selectedHardwareId,
+    this.selectedListeningAreaId,
   });
 
   @override
@@ -142,6 +148,10 @@ class FloorCanvasState extends State<FloorCanvas> {
   void initState() {
     super.initState();
 
+    // Synchronize internal selection state with external parameters
+    _selectedHardwareComponentId = widget.selectedHardwareId;
+    _updateHighlightIndexFromSelectedListeningArea();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       widget.onViewportCenterUpdated(getViewportCenter());
     });
@@ -186,6 +196,16 @@ class FloorCanvasState extends State<FloorCanvas> {
   @override
   void didUpdateWidget(covariant FloorCanvas oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // Sync internal selection state when external selection parameters change
+    if (widget.selectedHardwareId != oldWidget.selectedHardwareId) {
+      _selectedHardwareComponentId = widget.selectedHardwareId;
+    }
+
+    if (widget.selectedListeningAreaId != oldWidget.selectedListeningAreaId) {
+      _updateHighlightIndexFromSelectedListeningArea();
+    }
+
     // if (widget.floorPlanEntity.id != oldWidget.floorPlanEntity.id) {
     //   _zoomScale = widget.floorPlanEntity.canvasZoom;
     //   _panOffset = widget.floorPlanEntity.canvasPan;
@@ -237,7 +257,10 @@ class FloorCanvasState extends State<FloorCanvas> {
                     hardwareImages: _hardwareImages,
                     listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
                     currentlySelectingZone: widget.controller.currentlySelectingZone,
-                    selectedListeningAreaIds: widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id).toList(),
+                    selectedListeningAreaIds: [
+                      ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
+                      if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
+                    ],
                     splMax: widget.splMax,
                     splMin: widget.splMin,
                     splPanelData: widget.splPanelData,
@@ -840,5 +863,19 @@ class FloorCanvasState extends State<FloorCanvas> {
       }
     }
     return intersections.isOdd;
+  }
+
+  /// Update the internal highlight index based on the external selected listening area ID
+  void _updateHighlightIndexFromSelectedListeningArea() {
+    if (widget.selectedListeningAreaId != null) {
+      // Find the index of the selected listening area
+      final int index = widget.listeningAreas.indexWhere((ListeningArea area) => area.id == widget.selectedListeningAreaId);
+      if (index != -1) {
+        _highlightIndex = index;
+      }
+    } else {
+      // No listening area selected externally, clear highlight
+      _highlightIndex = null;
+    }
   }
 }

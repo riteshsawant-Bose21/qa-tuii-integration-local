@@ -29,7 +29,6 @@ import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panle_widgets/building_plan.dart';
-import '../widget/building/side_panle_widgets/coverage_panel.dart';
 import '../widget/building/side_panle_widgets/properties_panel.dart';
 import '../widget/building/side_panle_widgets/schematic_properties.dart';
 import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
@@ -42,8 +41,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -463,6 +461,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                   floorCanvasController: _floorCanvasController,
                                   onCalculateSpl: calculateSPL,
                                   splPanelData: _lastPanelData!,
+                                  onProductSelected: () {
+                                    productsController.expand();
+                                  },
                                 );
                               },
                             ),
@@ -475,38 +476,38 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                 isCollapsibleSection: false,
                                 dockItemWidget: () => const BuildingPlan(),
                               ),
-                              DockItemConfig(
-                                id: "2",
-                                title: "COVERAGE",
-                                side: "left",
-                                alowUndock: false,
-                                initiallyExpanded: true,
-                                isCollapsibleSection: true,
-                                dockItemWidget:
-                                    () => CoveragePanel(
-                                      onModeSelection: (bool value) {
-                                        if (value) {
-                                          zoneAreaController.expand();
-                                        }
-                                      },
-                                    ),
-                              ),
 
-                              DockItemConfig(
-                                id: "4",
-                                title: "DEVICES",
-                                side: "left",
-                                alowUndock: false,
-                                initiallyExpanded: true,
-                                isCollapsibleSection: true,
-                                dockItemWidget:
-                                    () => DevicesPanel(
-                                      onProductSelected: () {
-                                        productsController.expand();
-                                      },
-                                    ),
-                              ),
-
+                              // DockItemConfig(
+                              //   id: "2",
+                              //   title: "COVERAGE",
+                              //   side: "left",
+                              //   alowUndock: false,
+                              //   initiallyExpanded: true,
+                              //   isCollapsibleSection: true,
+                              //   dockItemWidget:
+                              //       () => CoveragePanel(
+                              //         onModeSelection: (bool value) {
+                              //           if (value) {
+                              //             zoneAreaController.expand();
+                              //           }
+                              //         },
+                              //       ),
+                              // ),
+                              //
+                              // DockItemConfig(
+                              //   id: "4",
+                              //   title: "DEVICES",
+                              //   side: "left",
+                              //   alowUndock: false,
+                              //   initiallyExpanded: true,
+                              //   isCollapsibleSection: true,
+                              //   dockItemWidget:
+                              //       () => DevicesPanel(
+                              //         onProductSelected: () {
+                              //           productsController.expand();
+                              //         },
+                              //       ),
+                              // ),
                               DockItemConfig(
                                 id: "5",
                                 title: "PROPERTIES",
@@ -532,8 +533,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
-                                                (GenericHardwareComponent component) =>
-                                                    component.type == GenericHardwareComponentType.rack,
+                                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                                               )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
@@ -542,18 +542,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent &&
-                                                    component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
                               ),
                               DockItemConfig(
                                 id: "7",
-                                title: "ZONE & LISTENING AREAS",
-                                side: "right",
+                                title: "ZONES",
+                                side: "left",
                                 controller: zoneAreaController,
-                                initiallyExpanded: serviceLocator<ProjectViewModel>().isInZoneSelectionMode,
+                                initiallyExpanded: true,
                                 // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
                                 dockItemWidget: () => const ZoneAndListeningAreaPanel(),
                               ),
@@ -607,8 +606,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                       racks:
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
-                                                (GenericHardwareComponent component) =>
-                                                    component.type == GenericHardwareComponentType.rack,
+                                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                                               )
                                               .toList(),
                                       amplifiers: <Amplifier>[],
@@ -617,8 +615,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                                               .where(
                                                 (HardwareComponent component) =>
-                                                    component is GenericHardwareComponent &&
-                                                    component.type == GenericHardwareComponentType.other,
+                                                    component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                                               )
                                               .toList(),
                                     ),
@@ -822,10 +819,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
