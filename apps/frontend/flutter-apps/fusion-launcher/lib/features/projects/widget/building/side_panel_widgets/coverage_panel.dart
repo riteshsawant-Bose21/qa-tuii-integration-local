@@ -39,13 +39,13 @@ class CoveragePanelState extends State<CoveragePanel> {
                   ),
                 ),
                 'Listening Area',
-                isSelected: serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode,
+                isSelected: serviceLocator<ProjectViewModel>().isInListeningAreaMode,
                 onTap: () {
-                  serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode);
-                  widget.onModeSelection(serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode);
+                  serviceLocator<ProjectViewModel>().setListeningAreaSelectionMode(!serviceLocator<ProjectViewModel>().isInListeningAreaMode);
+                  widget.onModeSelection(serviceLocator<ProjectViewModel>().isInListeningAreaMode);
                 },
                 onAddTap: () {
-                  serviceLocator<ProjectViewModel>().enterListeningAreaSelectionMode();
+                  serviceLocator<ProjectViewModel>().enterListeningAreaMode();
                 },
               ),
               _buildSubItem(

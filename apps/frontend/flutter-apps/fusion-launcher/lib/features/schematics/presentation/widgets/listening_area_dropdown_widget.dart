@@ -77,7 +77,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
         /// Show success message
         FusionToast.success(
           context,
-          message: "Listening area '${newListeningArea.name}' created successfully",
+          message: "Location '${newListeningArea.name}' created successfully",
         );
 
         /// Automatically select the newly created area
@@ -232,7 +232,6 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                               text: "No locations available. Please create a new location.",
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 fontSize: 10,
-                                color: Colors.grey[600],
                               ),
                             ),
                           ),

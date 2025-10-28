@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -158,6 +159,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           FusionTextField(
                             controller: numberOfSpeakers,
                             keyboardType: TextInputType.number,
+                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
                             hintText: "Enter zone name",
                             decoration: FusionInputDecoration.fusionDense(
                               colorScheme: Theme.of(context).colorScheme,
@@ -179,7 +181,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
 
                           const SizedBox(height: 16),
 
-                          /// ---- Listening Area ----
+                          /// ---- Location ----
                           FusionAppText(
                             text: "Select Listening Area",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -193,12 +195,10 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                             child: ListeningAreaDropdownWidget(
                               listeningAreas: listeningAreas,
                               hideAddLocationButton: true,
-                              // zones: serviceLocator<ProjectViewModel>().zones,
                               selectedListeningAreaIds: _selectedListeningAreaIds,
                               onSelectionChanged: (List<String> selectedIds, String floorId) {
                                 _selectedListeningAreaIds = selectedIds;
                                 setMenuState(() {}); // Update popup menu UI
-                                print('Listening areas selected: $selectedIds'); // Debug print
                               },
                             ),
                           ),
