@@ -5,6 +5,8 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/wiring_design/model/circuit_component.dart';
 import 'package:fusion_launcher/features/wiring_design/model/wire.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../dto/component_data.dart';
 import '../../dto/factory.dart';
@@ -176,16 +178,18 @@ extension InitializationHandlerMixin on CircuitController {
 
   void _initializePositions() {
     final double sourceX = -200;
-    final double amplifierX = 100.0;
-    final double speakerX = 700.0;
-    final double controllerX = 450.0;
-    final double accessoriesX = 600.0;
+    final double endpointsX = 100.0;
+    final double dspX = 600.0;
+    final double amplifierX = 1100.0;
+    final double speakerX = 1700.0;
+    final double controllerX = 2100.0;
 
     double sourceY = 0.0;
+    double endpointsY = 0.0;
+    double dspY = 0.0;
     double amplifierY = 0.0;
     double speakerY = 0.0;
-    final double controllerY = 0.0;
-    final double accessoriesY = 0.0;
+    double controllerY = 0.0;
 
     for (final CircuitComponent component in state.components) {
       if (component.data is SourceComponentData) {
@@ -197,20 +201,25 @@ extension InitializationHandlerMixin on CircuitController {
       } else if (component.data is DeviceSchematicComponentData) {
         final HardwareComponent hardware =
             (component.data as DeviceSchematicComponentData).data;
-        // if (hardware is Amplifier) {
-        log("Hardware Wiring Pos: ${hardware.wiringPos}");
-        component.changePosition(
-          hardware.wiringPos ?? Offset(amplifierX, amplifierY),
-        );
-        amplifierY += component.size.height + 100;
-
-        // } else if(hardware is Fusion){
-        //   component.changePosition(Offset(controllerX, controllerY));
-        //   continue;
-        // } else if(hardware is Accessory){
-        //   component.changePosition(Offset(accessoriesX, accessoriesY));
-        //   continue;
-        // }
+        if (hardware is Amplifier) {
+          log("Hardware Wiring Pos: ${hardware.wiringPos}");
+          component.changePosition(
+            hardware.wiringPos ?? Offset(amplifierX, amplifierY),
+          );
+          amplifierY += component.size.height + 100;
+        } else if (hardware is FusionEndpoints) {
+          component.changePosition(Offset(endpointsX, endpointsY));
+          endpointsY += component.size.height + 100;
+          continue;
+        } else if (hardware is FusionDsp) {
+          component.changePosition(Offset(dspX, dspY));
+          dspY += component.size.height + 100;
+          continue;
+        } else if (hardware is FusionController) {
+          component.changePosition(Offset(controllerX, controllerY));
+          controllerY += component.size.height + 100;
+          continue;
+        }
       } else if (component.data is SpeakerComponentData) {
         component.changePosition(
           (component.data as SpeakerComponentData).speaker.wiringPos ??
