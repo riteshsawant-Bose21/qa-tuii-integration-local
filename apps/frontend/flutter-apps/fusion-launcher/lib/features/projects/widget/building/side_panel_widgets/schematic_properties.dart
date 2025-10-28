@@ -202,86 +202,6 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ],
           ),
 
-          // if (<SelectedItemType>[
-          //   SelectedItemType.zone,
-          //   SelectedItemType.subzone,
-          // ].contains(selectedItem.type)) ...<Widget>[
-          //   Builder(
-          //     builder: (BuildContext context) {
-          //       log("Zone.zoneColors ${Zone.zoneColors.length}");
-
-          //       Object? selectedSoneOrSubZone;
-          //       Color? selectedColor;
-
-          //       // TODO: there is no method to find current zone and subzone.
-          //       if (selectedItem.type == SelectedItemType.zone) {
-          //         final Zone? currentZone = projectViewModel.getZone(zoneId: selectedItem.id);
-          //         selectedSoneOrSubZone = currentZone;
-          //         selectedColor = currentZone?.color;
-          //       } else if (selectedItem.type == SelectedItemType.subzone) {
-          //         // final Zone? currentSubZone = projectViewModel.getZoneForHardware(hardwareId: selectedDevice!.id);
-          //         // selectedSoneOrSubZone = currentSubZone;
-          //         // selectedColor = currentSubZone?.color;
-          //       }
-
-          //       return SizedBox(
-          //         width: double.infinity,
-          //         child: Wrap(
-          //           children: <Widget>[
-          //             ...Zone.zoneColors.map(
-          //               (String hexCode) {
-          //                 final Color color = hexToColor(hexCode);
-          //                 final bool isSelected = selectedColor == color;
-
-          //                 return GestureDetector(
-          //                   onTap: () {
-          //                     if (selectedSoneOrSubZone == null) return;
-
-          //                     if (selectedSoneOrSubZone is Zone) {
-          //                       projectViewModel.updateZone(zone: selectedSoneOrSubZone.copyWith(zoneColor: hexCode));
-          //                     } else if (selectedSoneOrSubZone is SubZone) {
-          //                       projectViewModel.updateSubZone(subZone: selectedSoneOrSubZone);
-          //                     }
-          //                   },
-          //                   child: Container(
-          //                     height: 24,
-          //                     width: 24,
-          //                     margin: const EdgeInsets.all(1),
-          //                     decoration: BoxDecoration(
-          //                       color: color,
-          //                       borderRadius: BorderRadius.circular(4),
-          //                       border:
-          //                           isSelected
-          //                               ? Border.all(
-          //                                 color: Theme.of(context).colorScheme.greyDark,
-          //                                 width: 2,
-          //                               )
-          //                               : null,
-          //                     ),
-          //                     child:
-          //                         isSelected
-          //                             ? Container(
-          //                               decoration: BoxDecoration(
-          //                                 color: Theme.of(context).colorScheme.greyDark.withOpacity(0.2),
-          //                                 borderRadius: BorderRadius.circular(4),
-          //                               ),
-          //                               child: const Icon(
-          //                                 Icons.check,
-          //                                 color: Colors.white,
-          //                                 size: 16,
-          //                               ),
-          //                             )
-          //                             : null,
-          //                   ),
-          //                 );
-          //               },
-          //             ),
-          //           ],
-          //         ),
-          //       );
-          //     },
-          //   ),
-          // ],
           if (selectedItem.type == SelectedItemType.zone) ...<Widget>[
             Builder(
               builder: (BuildContext context) {
@@ -298,14 +218,90 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                       ),
                     ),
                     Flexible(
-                      child: Container(
-                        height: 24,
-                        width: 24,
-                        alignment: Alignment.centerLeft,
-                        decoration: BoxDecoration(
-                          color: zone.color,
-                          borderRadius: BorderRadius.circular(4),
+                      child: PopupMenuButton<String>(
+                        position: PopupMenuPosition.under,
+                        shadowColor: Colors.transparent,
+                        color: Colors.white,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(6)),
+                          side: BorderSide(color: Colors.black12),
                         ),
+                        surfaceTintColor: Colors.transparent,
+                        tooltip: "Select zone color",
+                        child: Container(
+                          height: 24,
+                          width: 24,
+                          alignment: Alignment.centerLeft,
+                          decoration: BoxDecoration(
+                            color: zone.color,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                        ),
+                        itemBuilder: (BuildContext context) {
+                          return <PopupMenuEntry<String>>[
+                            PopupMenuItem<String>(
+                              child: Builder(
+                                builder: (BuildContext context) {
+                                  final Zone? selectedZone = projectViewModel.getZone(zoneId: selectedItem.id);
+                                  final Color? selectedColor = selectedZone?.color;
+
+                                  return Wrap(
+                                    children: <Widget>[
+                                      ...Zone.zoneColors.map(
+                                        (String hexCode) {
+                                          final Color color = hexToColor(hexCode);
+                                          final bool isSelected = selectedColor == color;
+
+                                          return GestureDetector(
+                                            onTap: () {
+                                              if (selectedZone == null) return;
+                                              projectViewModel.updateZone(
+                                                zone: selectedZone.copyWith(zoneColor: hexCode),
+                                              );
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Container(
+                                              height: 24,
+                                              width: 24,
+                                              margin: const EdgeInsets.all(1),
+                                              decoration: BoxDecoration(
+                                                color: color,
+                                                borderRadius: BorderRadius.circular(4),
+                                                border:
+                                                    isSelected
+                                                        ? Border.all(
+                                                          color: Theme.of(context).colorScheme.greyDark,
+                                                          width: 2,
+                                                        )
+                                                        : null,
+                                              ),
+                                              child:
+                                                  isSelected
+                                                      ? Container(
+                                                        decoration: BoxDecoration(
+                                                          color: Theme.of(
+                                                            context,
+                                                          ).colorScheme.greyDark.withOpacity(0.2),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: const Icon(
+                                                          Icons.check,
+                                                          color: Colors.white,
+                                                          size: 16,
+                                                        ),
+                                                      )
+                                                      : null,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ];
+                        },
                       ),
                     ),
                   ],
