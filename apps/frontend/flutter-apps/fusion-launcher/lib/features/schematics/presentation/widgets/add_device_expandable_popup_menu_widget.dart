@@ -592,7 +592,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                               /// Scrollable list of listening areas
                               Flexible(
                                 child:
-                                    projectViewModel.getAvailableListeningAreasForZone().isNotEmpty
+                                    serviceLocator<ProjectViewModel>().getAllListeningAreas().isNotEmpty
                                         ? SingleChildScrollView(
                                           physics: const ClampingScrollPhysics(),
                                           child: Column(
@@ -601,41 +601,39 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                                   final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
                                                   final Zone? zoneData = projectViewModel.getZonesForListeningArea(areaId: area.id);
 
-                                                  /// Get available areas for the current zone/sub-zone context
+                                                  /// Get available areas for the current zone/sub-zone
                                                   final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone();
 
-                                                  /// Check if this area is in the available list
-                                                  final bool isAvailable = availableListeningAreas.any(
-                                                    (ListeningArea availableArea) => availableArea.id == area.id,
-                                                  );
+                                                  /// Check availability
+                                                  final bool isAvailable = availableListeningAreas.any((ListeningArea a) => a.id == area.id);
+
+                                                  /// Whether this area is selected
+                                                  final bool isSelected = _selectedListeningAreaIds.contains(area.id);
 
                                                   return InkWell(
                                                     onTap:
                                                         isAvailable
                                                             ? () {
-                                                              if (_selectedListeningAreaIds.contains(area.id)) {
+                                                              if (isSelected) {
                                                                 _selectedListeningAreaIds.remove(area.id);
                                                               } else {
                                                                 _selectedListeningAreaIds.add(area.id);
                                                               }
-
-                                                              /// 2 state setters to update both popup and menu states
                                                               setPopupState(() {});
                                                               setMenuState(() {});
                                                             }
                                                             : null,
                                                     child: Container(
                                                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-
+                                                      color: isAvailable ? Colors.transparent : Colors.grey.withOpacity(0.05),
                                                       child: Row(
                                                         children: <Widget>[
                                                           /// Checkbox for selection
                                                           SizedBox(
                                                             width: 14,
-                                                            height: 4,
+                                                            height: 14,
                                                             child: Checkbox(
-                                                              value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
-                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              value: isAvailable ? isSelected : true,
                                                               onChanged:
                                                                   isAvailable
                                                                       ? (bool? checked) {
@@ -648,6 +646,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                                                         setMenuState(() {});
                                                                       }
                                                                       : null,
+                                                              activeColor: Theme.of(context).colorScheme.greyDark,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(
@@ -669,11 +668,14 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                                               ),
                                                             ),
                                                           ),
+
+                                                          /// Zone name
                                                           FusionAppText(
                                                             text: zoneData?.name ?? "No zone",
                                                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                               fontSize: 9,
-                                                              color: isAvailable ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                                                              color:
+                                                                  isAvailable ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.outline,
                                                               fontWeight: FontWeight.w600,
                                                             ),
                                                           ),
@@ -687,7 +689,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                         : Padding(
                                           padding: const EdgeInsets.all(12.0),
                                           child: FusionAppText(
-                                            text: "No available locations. Please create a new location.",
+                                            text: "No locations available.",
                                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                               fontSize: 10,
                                             ),
