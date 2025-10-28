@@ -54,7 +54,7 @@ mixin _CanvasElementsHandlerMixin on CanvasHandlerMixin {
         return;
       }
     }
-    self.setState(state.idle());
+    if (state is! IdleWiringState) self.setState(state.idle());
 
     saveState();
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/models/products_data.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
@@ -143,10 +144,10 @@ extension HardwareViewModel on ProjectViewModel {
         recordSnapshot();
       }
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(
-        hardwareId,
-        listeningAreaId: listeningAreaId,
-        floorId: floorId,
-      );
+            hardwareId,
+            listeningAreaId: listeningAreaId,
+            floorId: floorId,
+          );
       if (autoSave) {
         saveProject();
       }
@@ -336,6 +337,13 @@ extension HardwareViewModel on ProjectViewModel {
           outputPortsData: <PortData>[],
         );
       case ProductType.sources:
+        final SourceType type = SourceData.getSourceType(product.sku);
+        final PortType portType = switch (type) {
+          SourceType.analogInput ||
+          SourceType.aes67input => PortType.analogOutput,
+          SourceType.bluetooth => PortType.ble,
+          SourceType.usb => PortType.usb,
+        };
         return Source(
           locationEntity: locationEntity,
           name: product.name,
@@ -344,19 +352,25 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
-          type: SourceType.analogInput,
+          type: type,
           inputPortsData: <PortData>[],
           outputPortsData: <PortData>[
             PortData(
               name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: <PortType>[
-                PortType.dspAnalogInput,
-                PortType.endpointInput,
-              ],
-              type: PortType.analogOutput,
-              description: PortType.analogOutput.description,
+              compatibleTypes: switch (type) {
+                SourceType.analogInput || SourceType.aes67input => <PortType>[
+                  PortType.dspAnalogInput,
+                  PortType.endpointInput,
+                ],
+                SourceType.bluetooth => <PortType>[
+                  PortType.ble,
+                ],
+                SourceType.usb => <PortType>[PortType.usb],
+              },
+              type: portType,
+              description: portType.description,
             ),
           ],
         );

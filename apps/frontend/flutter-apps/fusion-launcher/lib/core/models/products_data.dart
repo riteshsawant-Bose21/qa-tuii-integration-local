@@ -99,14 +99,14 @@ class SourceData extends DeviceComponent {
       id: "laptop_usb_hdmi",
       name: "Laptop - USB - or HDMI",
       assetPath: "assets/images/products/laptop.png",
-      type: SourceType.analogInput,
+      type: SourceType.usb,
       price: 100.0,
     ),
     SourceData(
       id: "deskpc_usb_hdmi",
       name: "DeskPC - USB - or HDMI",
       assetPath: "assets/images/products/laptop.png",
-      type: SourceType.analogInput,
+      type: SourceType.usb,
       price: 100.0,
     ),
   ];

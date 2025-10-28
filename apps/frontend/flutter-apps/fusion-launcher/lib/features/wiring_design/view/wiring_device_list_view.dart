@@ -82,21 +82,23 @@ class _DeviceListSection extends StatelessWidget {
                     color: Colors.black,
                   ),
                 ),
-                Text(
-                  "$label (${sources.length})",
-                  style: Theme.of(
-                    context,
-                  ).textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
+                Expanded(
+                  child: Text(
+                    "$label (${sources.length})",
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
       content: Column(
-        spacing: 8,
+        spacing: 0,
         children: <Widget>[
           for (final HardwareComponent device in sources)
             Builder(
@@ -168,7 +170,7 @@ class _DeviceCard extends StatelessWidget {
         );
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
+        duration: const Duration(milliseconds: 200),
         decoration:
             isSelected
                 ? BoxDecoration(
