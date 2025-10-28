@@ -111,6 +111,17 @@ class SourceData extends DeviceComponent {
     ),
   ];
 
+  static SourceType getSourceType(String id) {
+    //search both microphone list and media list and return type
+    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems]) {
+      if (item.id == id) {
+        return item.type;
+      }
+    }
+
+    return SourceType.analogInput;
+  }
+
   static const List<SourceData> demoSources = <SourceData>[
     SourceData(
       assetPath: 'assets/images/products/mic1.png',
@@ -145,6 +156,7 @@ class SourceData extends DeviceComponent {
 
 class ControllerData extends DeviceComponent {
   final String sku;
+
   const ControllerData({
     required super.assetPath,
     required super.name,

@@ -8,6 +8,7 @@ enum RelationshipType {
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,
+  hardwareFloor,
   circuitHardware,
   zoneCircuits,
   wireConnection,

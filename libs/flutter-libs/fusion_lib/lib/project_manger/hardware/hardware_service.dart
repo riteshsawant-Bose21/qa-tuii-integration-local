@@ -12,7 +12,7 @@ extension HardwareService on ProjectService {
     // Link to the relevant parent(s). Use hardwareLocation relationship type.
     final loc = hw.locationEntity;
     if (loc.floorId != null) {
-      relationships.link(RelationshipType.hardwareLocation, loc.floorId!, hw.id);
+      relationships.link(RelationshipType.hardwareFloor, loc.floorId!, hw.id);
     }
 
     if (loc.listeningAreaId != null) {
@@ -132,6 +132,13 @@ extension HardwareService on ProjectService {
       relationships.unlink(RelationshipType.hardwareLocation, parentId, hardwareId);
     }
 
+    final prevFloorParents = relationships.getParents(RelationshipType.hardwareFloor, hardwareId).toList();
+
+    String parentFloorId = prevFloorParents.first;
+    if (parentFloorId != floorId) {
+      relationships.unlink(RelationshipType.hardwareFloor, parentFloorId, hardwareId);
+    }
+
     // 2) Clear existing location fields (we will populate new ones)
     loc.listeningAreaId = null;
     loc.floorId = null;
@@ -179,7 +186,7 @@ extension HardwareService on ProjectService {
       }
 
       loc.floorId = floorId;
-      relationships.link(RelationshipType.hardwareLocation, floorId, hardwareId);
+      relationships.link(RelationshipType.hardwareFloor, floorId, hardwareId);
 
       // updating Circuits after moving the hardware to floor only
       final hardwareCircuit = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
@@ -202,19 +209,8 @@ extension HardwareService on ProjectService {
     return hardware.getAll();
   }
 
-  // returns hardware objects directly (if some IDs were removed, filters nulls)
-  List<HardwareComponent> getHardwareForFloorDirect(String floorId) {
-    final ids = relationships.getChildren(RelationshipType.hardwareLocation, floorId);
-    return ids.map((id) => hardware.get(id)).whereType<HardwareComponent>().toList();
-  }
-
   List<HardwareComponent> getHardwareForListeningArea(String laId) {
     final ids = relationships.getChildren(RelationshipType.hardwareLocation, laId);
-    return ids.map((id) => hardware.get(id)).whereType<HardwareComponent>().toList();
-  }
-
-  List<HardwareComponent> getHardwareInZone(String zoneId) {
-    final ids = relationships.getChildren(RelationshipType.hardwareLocation, zoneId);
     return ids.map((id) => hardware.get(id)).whereType<HardwareComponent>().toList();
   }
 
@@ -222,19 +218,19 @@ extension HardwareService on ProjectService {
     final Set<String> resultIds = {};
 
     // hardware directly linked to the floor
-    resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, floorId));
+    resultIds.addAll(relationships.getChildren(RelationshipType.hardwareFloor, floorId));
 
     // all listening areas on this floor
-    final laIds = relationships.getChildren(RelationshipType.floorAreas, floorId);
-    for (final laId in laIds) {
-      resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, laId));
-
-      // zones that include this listening area
-      final zoneIds = relationships.getParents(RelationshipType.zoneAreas, laId);
-      for (final zoneId in zoneIds) {
-        resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, zoneId));
-      }
-    }
+    // final laIds = relationships.getChildren(RelationshipType.floorAreas, floorId);
+    // for (final laId in laIds) {
+    //   resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, laId));
+    //
+    //   // zones that include this listening area
+    //   final zoneIds = relationships.getParents(RelationshipType.zoneAreas, laId);
+    //   for (final zoneId in zoneIds) {
+    //     resultIds.addAll(relationships.getChildren(RelationshipType.hardwareLocation, zoneId));
+    //   }
+    // }
 
     return resultIds.map((id) => hardware.get(id)).whereType<HardwareComponent>().toList();
   }
@@ -256,7 +252,7 @@ extension HardwareService on ProjectService {
       hardware.add(hw.id, hw.copyWith(locationEntity: newLocation));
 
       if (newLocation.floorId == null && hw.locationEntity.floorId != null) {
-        relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.floorId!, hw.id);
+        relationships.unlink(RelationshipType.hardwareFloor, hw.locationEntity.floorId!, hw.id);
       }
       // if (newLocation.zoneId == null && hw.locationEntity.zoneId != null) {
       //   relationships.unlink(RelationshipType.hardwareLocation, hw.locationEntity.zoneId!, hw.id);

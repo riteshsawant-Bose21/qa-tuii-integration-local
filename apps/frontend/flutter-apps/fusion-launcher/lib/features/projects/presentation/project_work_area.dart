@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
-import 'package:fusion_launcher/features/projects/widget/building/side_panle_widgets/devices_panel.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
@@ -26,12 +25,12 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/circuit_test_widget.dart';
-import '../../schematics/presentation/widgets/cost_calcuator_widget.dart';
+import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
-import '../widget/building/side_panle_widgets/building_plan.dart';
-import '../widget/building/side_panle_widgets/properties_panel.dart';
-import '../widget/building/side_panle_widgets/schematic_properties.dart';
-import '../widget/building/side_panle_widgets/zone_and_listening_area.dart';
+import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/properties_panel.dart';
+import '../widget/building/side_panel_widgets/schematic_properties.dart';
+import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -463,6 +462,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                                   splPanelData: _lastPanelData!,
                                   onProductSelected: () {
                                     productsController.expand();
+                                  },
+                                  onProductDeselected: () {
+                                    productsController.collapse();
                                   },
                                 );
                               },

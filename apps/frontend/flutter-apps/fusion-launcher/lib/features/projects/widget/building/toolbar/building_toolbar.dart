@@ -1,18 +1,28 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/constants/assets_constants.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import 'package:fusion_launcher/features/projects/models/device_item_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum ToolbarMode { acoustics, system }
+import '../../../../../core/models/products_data.dart';
+
+enum _AcousticsToolType {
+  draw,
+  speakers,
+  spl,
+}
 
 class BuildingToolbar extends StatefulWidget {
   final Function() onSplSelected;
+  final Function() onSplDisabled;
   final Function() onPanSelected;
   final Function() onMoveSelected;
-  final Function() onPencilSelected;
+  final Function() onDrawSelected;
+  final Function() onDrawingDisabled;
   final Function() onEditFloorPlanSelected;
   final Function() onTrashSelected;
   final Function() onFitSelected;
@@ -24,15 +34,18 @@ class BuildingToolbar extends StatefulWidget {
   final Function() onAddControllerSelected;
   final Function() onAddRackSelected;
   final Function() onProductSelected;
+  final Function() onProductDeselected;
   final bool isSplSelected;
-  final bool isPencilSelected;
+  final bool isDrawSelected;
 
   const BuildingToolbar({
     super.key,
     required this.onSplSelected,
+    required this.onSplDisabled,
     required this.onPanSelected,
     required this.onMoveSelected,
-    required this.onPencilSelected,
+    required this.onDrawSelected,
+    required this.onDrawingDisabled,
     required this.onEditFloorPlanSelected,
     required this.onTrashSelected,
     required this.onFitSelected,
@@ -45,7 +58,8 @@ class BuildingToolbar extends StatefulWidget {
     required this.onAddRackSelected,
     required this.onProductSelected,
     required this.isSplSelected,
-    required this.isPencilSelected,
+    required this.isDrawSelected,
+    required this.onProductDeselected,
   });
 
   @override
@@ -53,36 +67,6 @@ class BuildingToolbar extends StatefulWidget {
 }
 
 class _BuildingToolbarState extends State<BuildingToolbar> {
-  ToolbarMode _currentMode = ToolbarMode.acoustics;
-
-  // Device item constants copied from DevicesPanel
-  static const List<DeviceItemModel> _microphoneItems = <DeviceItemModel>[
-    DeviceItemModel(sku: "gooseneck", name: "Gooseneck", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "hanging", name: "Hanging", image: "assets/images/products/hanging_mic.png"),
-    DeviceItemModel(sku: "condenser", name: "Condenser", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "dynamic", name: "Dynamic", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "shotgun", name: "Shotgun", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "pzm", name: "PZM", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "lavalier", name: "Lavalier", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "headset", name: "Headset", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "handheld", name: "Handheld", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "beltpack", name: "Beltpack", image: "assets/images/products/mic1.png"),
-    DeviceItemModel(sku: "paging", name: "Paging", image: "assets/images/products/paging_mic.png"),
-  ];
-
-  static const List<DeviceItemModel> _mediaSourceItems = <DeviceItemModel>[
-    DeviceItemModel(sku: "generic_mono", name: "Generic Mono", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "generic_stereo", name: "Generic Stereo", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "cd", name: "CD", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "sat_cable_hdmi", name: "Sat/Cable - HDMI", image: "assets/images/products/hdmi.png"),
-    DeviceItemModel(sku: "media_player", name: "Media Player", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "tuner", name: "Tuner", image: "assets/images/products/dvdplayer.png"),
-    DeviceItemModel(sku: "dvd_hdmi", name: "DVD - HDMI", image: "assets/images/products/hdmi.png"),
-    DeviceItemModel(sku: "bluray_hdmi", name: "BluRay HDMI", image: "assets/images/products/hdmi.png"),
-    DeviceItemModel(sku: "laptop_usb_hdmi", name: "Laptop - USB - or HDMI", image: "assets/images/products/laptop.png"),
-    DeviceItemModel(sku: "deskpc_usb_hdmi", name: "DeskPC - USB - or HDMI", image: "assets/images/products/laptop.png"),
-  ];
-
   static const List<String> _rackOptions = <String>[
     '4U',
     '8U',
@@ -92,65 +76,92 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        return SizedBox(
-          // padding: const EdgeInsets.all(8.0),
-          // decoration: BoxDecoration(
-          //   color: Colors.white,
-          //   borderRadius: BorderRadius.circular(8.0),
-          //   boxShadow: <BoxShadow>[
-          //     BoxShadow(
-          //       color: Colors.black.withAlpha((0.1 * 255).toInt()),
-          //       blurRadius: 4,
-          //       offset: const Offset(0, 2),
-          //     ),
-          //   ],
-          // ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              // Mode Switch
-              _buildModeSwitch(),
-              const SizedBox(width: 12.0),
-
-              // Animated tool section with size transition
-              AnimatedSize(
-                duration: const Duration(milliseconds: 400),
-                curve: Curves.easeInOutCubic,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 300),
-                  transitionBuilder: (Widget child, Animation<double> animation) {
-                    return SlideTransition(
-                      position: Tween<Offset>(
-                        begin: const Offset(0.0, 0.5),
-                        end: Offset.zero,
-                      ).animate(
-                        CurvedAnimation(
-                          parent: animation,
-                          curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
-                        ),
-                      ),
-                      child: FadeTransition(
-                        opacity: CurvedAnimation(
-                          parent: animation,
-                          curve: const Interval(0.0, 0.8, curve: Curves.easeInOutCubic),
-                        ),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: _buildModeSpecificTools(),
-                ),
-              ),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24.0),
+        boxShadow: <BoxShadow>[
+          // Main drop shadow
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 12.0,
+            offset: const Offset(0, 4),
+            spreadRadius: 0,
           ),
-        );
-      },
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24.0),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 6.0, sigmaY: 6.0),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.6),
+              borderRadius: BorderRadius.circular(24.0),
+            ),
+            padding: const EdgeInsets.symmetric(
+              horizontal: 4.0,
+              vertical: 2.0,
+            ),
+            child: BlocListener<ProjectViewModel, ProjectViewModelState>(
+              listenWhen: (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
+              listener: (BuildContext context, ProjectViewModelState state) {
+                if (state is ToolbarModeChanged && state.mode == ToolbarMode.system) {
+                  // Force SPL off when mode changes to system
+                  widget.onSplDisabled();
+                }
+              },
+              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      // Mode Switch
+                      _buildModeSwitch(),
+                      const SizedBox(width: 12.0),
+
+                      // Animated tool section with size transition
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 400),
+                        curve: Curves.easeInOutCubic,
+                        child: AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 300),
+                          transitionBuilder: (Widget child, Animation<double> animation) {
+                            return SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0.0, 0.5),
+                                end: Offset.zero,
+                              ).animate(
+                                CurvedAnimation(
+                                  parent: animation,
+                                  curve: const Interval(0.2, 1.0, curve: Curves.easeOutCubic),
+                                ),
+                              ),
+                              child: FadeTransition(
+                                opacity: CurvedAnimation(
+                                  parent: animation,
+                                  curve: const Interval(0.0, 0.8, curve: Curves.easeInOutCubic),
+                                ),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: _buildModeSpecificTools(),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 
   Widget _buildModeSwitch() {
+    final ToolbarMode currentMode = serviceLocator<ProjectViewModel>().currentToolbarMode;
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade100,
@@ -163,7 +174,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         children: <Widget>[
           _buildModeTab(
             label: "Acoustics",
-            isSelected: _currentMode == ToolbarMode.acoustics,
+            isSelected: currentMode == ToolbarMode.acoustics,
             color: Colors.blue,
             onTap: () {
               _switchMode(ToolbarMode.acoustics);
@@ -171,7 +182,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           ),
           _buildModeTab(
             label: "System",
-            isSelected: _currentMode == ToolbarMode.system,
+            isSelected: currentMode == ToolbarMode.system,
             color: Colors.green,
             onTap: () {
               _switchMode(ToolbarMode.system);
@@ -223,7 +234,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     );
   }
 
-  Widget _buildToolItem(String tooltip, {String? assetIcon, IconData? icon, bool isSelected = false, required Function() onTap}) {
+  Widget _buildToolItem(String tooltip, {String? assetIcon, IconData? icon, bool isSelected = false, required Function() onTap, Color? selectedColor}) {
+    final Color color = selectedColor ?? Colors.green;
+
     return Tooltip(
       message: tooltip,
       child: GestureDetector(
@@ -233,10 +246,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         child: Container(
           margin: const EdgeInsets.symmetric(horizontal: 1.0),
           decoration: BoxDecoration(
-            color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+            color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
             borderRadius: BorderRadius.circular(6.0),
             border: Border.all(
-              color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+              color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
               width: 1,
             ),
           ),
@@ -247,7 +260,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     child: Icon(
                       icon,
                       size: 18.0,
-                      color: isSelected ? Colors.green.shade700 : Colors.black54,
+                      color: isSelected ? _getDarkerShade(color) : Colors.black54,
                     ),
                   )
                   : Padding(
@@ -264,10 +277,12 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildModeSpecificTools() {
+    final ToolbarMode currentMode = serviceLocator<ProjectViewModel>().currentToolbarMode;
+
     return Row(
-      key: ValueKey<ToolbarMode>(_currentMode),
+      key: ValueKey<ToolbarMode>(currentMode),
       mainAxisSize: MainAxisSize.min,
-      children: _currentMode == ToolbarMode.acoustics ? _buildAcousticsTools() : _buildSystemTools(),
+      children: currentMode == ToolbarMode.acoustics ? _buildAcousticsTools() : _buildSystemTools(),
     );
   }
 
@@ -275,21 +290,20 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     return <Widget>[
-      if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
-        _buildToolItem(
-          assetIcon: Assets.pencilIcon,
-          "Pen",
-          onTap: widget.onPencilSelected,
-          isSelected: widget.isPencilSelected,
-        ),
+      // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
+      _buildToolItem(
+        icon: Icons.polyline,
+        "Draw Listening Area",
+        onTap: () => _onAcousticsToolSelected(_AcousticsToolType.draw),
+        isSelected: widget.isDrawSelected,
+        selectedColor: Colors.blue,
+      ),
       _buildToolItem(
         icon: Icons.speaker,
         "Add Speakers",
-        onTap: () {
-          widget.onAddSpeakerSelected();
-          widget.onProductSelected(); // Expand products panel
-        },
+        onTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
         isSelected: currentDeviceIndex == 0,
+        selectedColor: Colors.blue,
       ),
       _buildSplTool(),
       _buildToolItem(
@@ -309,6 +323,13 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
     return <Widget>[
+      _buildToolItem(
+        icon: Icons.speaker,
+        "Add Speakers",
+        onTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
+        isSelected: currentDeviceIndex == 0,
+        selectedColor: Colors.blue,
+      ),
       _buildSourcesToolWithMenu(
         isSelected: currentDeviceIndex == 1,
       ),
@@ -320,6 +341,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onProductSelected(); // Expand products panel
         },
         isSelected: currentDeviceIndex == 2,
+        selectedColor: Colors.green,
       ),
       _buildToolItem(
         icon: Icons.amp_stories,
@@ -329,6 +351,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onProductSelected(); // Expand products panel
         },
         isSelected: currentDeviceIndex == 3,
+        selectedColor: Colors.green,
       ),
       _buildToolItem(
         icon: Icons.memory,
@@ -338,6 +361,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onProductSelected(); // Expand products panel
         },
         isSelected: currentDeviceIndex == 4,
+        selectedColor: Colors.green,
       ),
       _buildToolItem(
         icon: Icons.tune,
@@ -347,6 +371,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onProductSelected(); // Expand products panel
         },
         isSelected: currentDeviceIndex == 5,
+        selectedColor: Colors.green,
       ),
       _buildRackToolWithMenu(
         isSelected: currentDeviceIndex == 6,
@@ -360,8 +385,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildSourcesToolWithMenu({required bool isSelected}) {
-    return PopupMenuButton<DeviceItemModel>(
-      onSelected: (DeviceItemModel selectedItem) {
+    return PopupMenuButton<SourceData>(
+      onSelected: (SourceData selectedItem) {
         // Set device type index first
         serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
 
@@ -369,9 +394,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         final ProductQueryModel product = ProductQueryModel(
           name: selectedItem.name,
           price: 0.0,
-          image: selectedItem.image,
+          image: selectedItem.assetPath,
           type: ProductType.sources,
-          sku: selectedItem.sku,
+          sku: selectedItem.id,
         );
         serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
       },
@@ -381,22 +406,22 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       ),
       color: Colors.white,
       itemBuilder: (BuildContext context) {
-        return <PopupMenuEntry<DeviceItemModel>>[
-          const PopupMenuItem<DeviceItemModel>(
+        return <PopupMenuEntry<SourceData>>[
+          const PopupMenuItem<SourceData>(
             enabled: false,
             child: Text(
               'MICROPHONES',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
             ),
           ),
-          ..._microphoneItems.map(
-            (DeviceItemModel item) => PopupMenuItem<DeviceItemModel>(
+          ...SourceData.microphoneItems.map(
+            (SourceData item) => PopupMenuItem<SourceData>(
               height: 30,
               value: item,
               child: Row(
                 children: <Widget>[
                   Image.asset(
-                    item.image,
+                    item.assetPath,
                     height: 14,
                     width: 14,
                   ),
@@ -413,21 +438,21 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             ),
           ),
           const PopupMenuDivider(),
-          const PopupMenuItem<DeviceItemModel>(
+          const PopupMenuItem<SourceData>(
             enabled: false,
             child: Text(
               'MEDIA SOURCES',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
             ),
           ),
-          ..._mediaSourceItems.map(
-            (DeviceItemModel item) => PopupMenuItem<DeviceItemModel>(
+          ...SourceData.mediaSourceItems.map(
+            (SourceData item) => PopupMenuItem<SourceData>(
               height: 30,
               value: item,
               child: Row(
                 children: <Widget>[
                   Image.asset(
-                    item.image,
+                    item.assetPath,
                     height: 14,
                     width: 14,
                   ),
@@ -462,7 +487,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             child: Icon(
               Icons.mic,
               size: 18.0,
-              color: isSelected ? Colors.green.shade700 : Colors.black54,
+              color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
             ),
           ),
         ),
@@ -540,7 +565,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             child: Icon(
               Icons.dns_outlined,
               size: 18.0,
-              color: isSelected ? Colors.green.shade700 : Colors.black54,
+              color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
             ),
           ),
         ),
@@ -549,33 +574,92 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildSplTool() {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        return _buildToolItem(
-          assetIcon: Assets.splIcon,
-          "Show SPL",
-          onTap: () {
-            widget.onSplSelected();
-            setState(() {});
-          },
-          isSelected: widget.isSplSelected,
-        );
-      },
+    return _buildToolItem(
+      icon: Icons.graphic_eq,
+      "Show SPL",
+      onTap: () => _onAcousticsToolSelected(_AcousticsToolType.spl),
+      isSelected: widget.isSplSelected,
+      selectedColor: Colors.blue,
     );
   }
 
-  void _switchMode(ToolbarMode newMode) {
-    if (widget.isSplSelected && newMode != ToolbarMode.acoustics) {
-      widget.onSplSelected();
-    }
-    if (_currentMode != newMode) {
-      // Reset all selections when switching modes
-      serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
-      serviceLocator<ProjectViewModel>().setSelectedProductToAdd(null);
+  void _onAcousticsToolSelected(_AcousticsToolType toolType) {
+    final int currentDeviceIndex = serviceLocator<ProjectViewModel>().currentDeviceTypeIndex;
 
-      setState(() {
-        _currentMode = newMode;
-      });
+    switch (toolType) {
+      case _AcousticsToolType.draw:
+        // Toggle draw - if already selected, deselect; otherwise select
+        if (widget.isDrawSelected) {
+          widget.onDrawingDisabled();
+        } else {
+          // Always deselect other tools first when enabling draw
+          if (widget.isSplSelected) {
+            widget.onSplDisabled();
+          }
+          if (currentDeviceIndex == 0) {
+            serviceLocator<ProjectViewModel>().resetDeviceTypeIndex();
+            serviceLocator<ProductQueryCubit>().onProductTypeChanged(null);
+            //close products panel
+            widget.onProductDeselected();
+          }
+          widget.onDrawSelected();
+        }
+
+        break;
+
+      case _AcousticsToolType.speakers:
+        // Always deselect other tools first
+        if (widget.isSplSelected) {
+          widget.onSplDisabled();
+        }
+        if (widget.isDrawSelected) {
+          widget.onDrawingDisabled();
+        }
+
+        // Toggle speakers - if already selected, deselect; otherwise select
+        if (currentDeviceIndex == 0) {
+          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+        } else {
+          widget.onAddSpeakerSelected();
+          widget.onProductSelected();
+        }
+        break;
+
+      case _AcousticsToolType.spl:
+        // Always deselect other tools first
+        if (currentDeviceIndex == 0) {
+          // Reset device selection to deselect speakers
+          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+        }
+        if (widget.isDrawSelected) {
+          widget.onDrawingDisabled();
+        }
+
+        // Toggle SPL - if already selected, deselect; otherwise select
+        if (widget.isSplSelected) {
+          widget.onSplDisabled();
+        } else {
+          widget.onSplSelected();
+        }
+        break;
+    }
+  }
+
+  void _switchMode(ToolbarMode newMode) {
+    final ToolbarMode currentMode = serviceLocator<ProjectViewModel>().currentToolbarMode;
+
+    if (currentMode != newMode) {
+      // Deselect any currently selected hardware component or listening area when switching modes
+      serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+      serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+
+      // Always force SPL off when switching to system mode
+      // This is more robust than checking isSplSelected which might be stale
+      if (newMode == ToolbarMode.system) {
+        widget.onSplDisabled();
+      }
+
+      serviceLocator<ProjectViewModel>().setToolbarMode(newMode);
     }
   }
 
