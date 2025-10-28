@@ -317,7 +317,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         widget.floorCanvasController.toggleDraw();
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode && widget.floorCanvasController.isDrawing.value) {
+                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode && widget.floorCanvasController.isDrawing.value) {
                         widget.floorCanvasController.toggleDraw();
                       }
 
@@ -470,7 +470,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             onPanSelected: () {},
                                             onMoveSelected: () {},
                                             onDrawSelected: () {
-                                              widget.floorCanvasController.toggleDraw();
+                                              if (!widget.floorCanvasController.isDrawing.value) {
+                                                serviceLocator<ProjectViewModel>().enterListeningAreaMode();
+                                              } else {
+                                                serviceLocator<ProjectViewModel>().exitSelectionModes();
+                                              }
                                             },
                                             onDrawingDisabled: () {
                                               widget.floorCanvasController.setDraw(false);
