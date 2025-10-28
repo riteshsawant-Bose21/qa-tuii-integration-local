@@ -175,7 +175,7 @@ class _RotatingIcon extends StatelessWidget {
       animation: animation,
       builder: (BuildContext context, Widget? child) => RotationTransition(
         turns: animation,
-        child: Icon(Icons.keyboard_arrow_down, size: 16, color: color),
+        child: Icon(Icons.arrow_drop_down_rounded, size: 22, color: color),
       ),
     );
   }

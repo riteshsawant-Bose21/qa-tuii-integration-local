@@ -475,10 +475,15 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              Icon(
-                Icons.close,
-                size: 16,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
+              InkWell(
+                onTap: () {
+                  Navigator.of(context).pop();
+                },
+                child: Icon(
+                  Icons.close,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                ),
               ),
             ],
           ),
@@ -586,96 +591,108 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
                               /// Scrollable list of listening areas
                               Flexible(
-                                child: SingleChildScrollView(
-                                  physics: const ClampingScrollPhysics(),
-                                  child: Column(
-                                    children:
-                                        serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
-                                          /// Get available areas for the current zone/sub-zone context
-                                          final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone(
-                                            // zoneId: "",
-                                          );
-                                          final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
-                                          final Zone? zoneData = projectViewModel.getZonesForListeningArea(areaId: area.id);
+                                child:
+                                    projectViewModel.getAvailableListeningAreasForZone().isNotEmpty
+                                        ? SingleChildScrollView(
+                                          physics: const ClampingScrollPhysics(),
+                                          child: Column(
+                                            children:
+                                                serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
+                                                  final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
+                                                  final Zone? zoneData = projectViewModel.getZonesForListeningArea(areaId: area.id);
 
-                                          /// Check if this area is in the available list
-                                          final bool isAvailable = availableListeningAreas.any((ListeningArea availableArea) => availableArea.id == area.id);
+                                                  /// Get available areas for the current zone/sub-zone context
+                                                  final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone();
 
-                                          return InkWell(
-                                            onTap:
-                                                isAvailable
-                                                    ? () {
-                                                      if (_selectedListeningAreaIds.contains(area.id)) {
-                                                        _selectedListeningAreaIds.remove(area.id);
-                                                      } else {
-                                                        _selectedListeningAreaIds.add(area.id);
-                                                      }
+                                                  /// Check if this area is in the available list
+                                                  final bool isAvailable = availableListeningAreas.any(
+                                                    (ListeningArea availableArea) => availableArea.id == area.id,
+                                                  );
 
-                                                      /// 2 state setters to update both popup and menu states
-                                                      setPopupState(() {});
-                                                      setMenuState(() {});
-                                                    }
-                                                    : null,
-                                            child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-
-                                              child: Row(
-                                                children: <Widget>[
-                                                  /// Checkbox for selection
-                                                  SizedBox(
-                                                    width: 14,
-                                                    height: 4,
-                                                    child: Checkbox(
-                                                      value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
-                                                      activeColor: Theme.of(context).colorScheme.greyDark,
-                                                      onChanged:
-                                                          isAvailable
-                                                              ? (bool? checked) {
-                                                                if (checked == true) {
-                                                                  _selectedListeningAreaIds.add(area.id);
-                                                                } else {
-                                                                  _selectedListeningAreaIds.remove(area.id);
-                                                                }
-                                                                setPopupState(() {});
-                                                                setMenuState(() {});
+                                                  return InkWell(
+                                                    onTap:
+                                                        isAvailable
+                                                            ? () {
+                                                              if (_selectedListeningAreaIds.contains(area.id)) {
+                                                                _selectedListeningAreaIds.remove(area.id);
+                                                              } else {
+                                                                _selectedListeningAreaIds.add(area.id);
                                                               }
-                                                              : null,
-                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                      visualDensity: VisualDensity.compact,
-                                                      shape: const RoundedRectangleBorder(
-                                                        borderRadius: BorderRadius.zero,
-                                                        side: BorderSide(width: 0.5),
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  const SizedBox(width: 12),
 
-                                                  /// Area and zone names
-                                                  Expanded(
-                                                    child: FusionAppText(
-                                                      text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
-                                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                        fontWeight: FontWeight.w500,
-                                                        fontSize: 10,
-                                                        color: isAvailable ? Theme.of(context).textTheme.bodySmall?.color : Colors.grey[400],
+                                                              /// 2 state setters to update both popup and menu states
+                                                              setPopupState(() {});
+                                                              setMenuState(() {});
+                                                            }
+                                                            : null,
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+
+                                                      child: Row(
+                                                        children: <Widget>[
+                                                          /// Checkbox for selection
+                                                          SizedBox(
+                                                            width: 14,
+                                                            height: 4,
+                                                            child: Checkbox(
+                                                              value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
+                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              onChanged:
+                                                                  isAvailable
+                                                                      ? (bool? checked) {
+                                                                        if (checked == true) {
+                                                                          _selectedListeningAreaIds.add(area.id);
+                                                                        } else {
+                                                                          _selectedListeningAreaIds.remove(area.id);
+                                                                        }
+                                                                        setPopupState(() {});
+                                                                        setMenuState(() {});
+                                                                      }
+                                                                      : null,
+                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              visualDensity: VisualDensity.compact,
+                                                              shape: const RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.zero,
+                                                                side: BorderSide(width: 0.5),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+
+                                                          /// Area and zone names
+                                                          Expanded(
+                                                            child: FusionAppText(
+                                                              text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
+                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                fontWeight: FontWeight.w500,
+                                                                fontSize: 10,
+                                                                color: isAvailable ? Theme.of(context).textTheme.bodySmall?.color : Colors.grey[400],
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          FusionAppText(
+                                                            text: zoneData?.name ?? "No zone",
+                                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                              fontSize: 9,
+                                                              color: isAvailable ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                                                              fontWeight: FontWeight.w600,
+                                                            ),
+                                                          ),
+                                                        ],
                                                       ),
                                                     ),
-                                                  ),
-                                                  FusionAppText(
-                                                    text: zoneData?.name ?? "No zone",
-                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                      fontSize: 9,
-                                                      color: isAvailable ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
-                                                      fontWeight: FontWeight.w600,
-                                                    ),
-                                                  ),
-                                                ],
-                                              ),
+                                                  );
+                                                }).toList(),
+                                          ),
+                                        )
+                                        : Padding(
+                                          padding: const EdgeInsets.all(12.0),
+                                          child: FusionAppText(
+                                            text: "No available locations. Please create a new location.",
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              fontSize: 10,
                                             ),
-                                          );
-                                        }).toList(),
-                                  ),
-                                ),
+                                          ),
+                                        ),
                               ),
 
                               /// Create New Location Section

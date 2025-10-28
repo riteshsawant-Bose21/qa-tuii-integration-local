@@ -181,11 +181,11 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
         child: Row(
           children: <Widget>[
             Icon(
-              isExpanded ? Icons.keyboard_arrow_down : Icons.keyboard_arrow_right,
-              size: 16,
+              isExpanded ? Icons.arrow_drop_down_rounded : Icons.arrow_right_rounded,
+              size: 22,
               color: Colors.black,
             ),
-            const SizedBox(width: 4),
+            const SizedBox(width: 2),
             FusionAppText(
               text: title,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(

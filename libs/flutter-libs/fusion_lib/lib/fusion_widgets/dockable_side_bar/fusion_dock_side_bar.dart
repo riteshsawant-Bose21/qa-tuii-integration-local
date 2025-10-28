@@ -33,13 +33,10 @@ class FusionDockSidebar extends StatelessWidget {
   Widget build(BuildContext context) {
     return DragTarget<DockItem>(
       onWillAccept: (DockItem? item) {
-        // Only accept items that can be docked to this side
         return item != null;
       },
       onAccept: (DockItem item) {
-        // Handle docking to this sidebar
         print("Item ${item.title} docked to $side sidebar");
-        // This will be handled by the main drag end logic
       },
       builder: (BuildContext context, List<DockItem?> candidateItems, List<dynamic> rejectedItems) {
         final bool hasIncomingData = candidateItems.isNotEmpty;
@@ -49,7 +46,6 @@ class FusionDockSidebar extends StatelessWidget {
           decoration: BoxDecoration(
             color: hasIncomingData ? const Color(0xFF80C7FF) : Theme.of(context).colorScheme.white,
             border: Border(
-              /// side == "left" show right border or left border
               right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1) : BorderSide.none,
               left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1) : BorderSide.none,
             ),
@@ -58,20 +54,25 @@ class FusionDockSidebar extends StatelessWidget {
             physics: const ClampingScrollPhysics(),
             children: items.map((item) {
               final config = getConfigForItem(item.id);
-              if (config != null && !config.isVisible) {
-                return SizedBox.shrink();
+              if (config == null || !config.isVisible) {
+                return const SizedBox.shrink();
               }
-              return config != null
-                  ? config.isCollapsibleSection
-                        ? FusionExpandableTileWidget(
-                            item: item,
-                            config: config,
-                            onUndock: onItemUndock,
-                            onExpansionChanged: onExpansionChanged,
-                            controller: config.controller,
-                          )
-                        : config.dockItemWidget()
-                  : const SizedBox.shrink();
+
+              // Only show items that are configured for this tab
+              final bool isConfiguredForThisTab = itemConfigs.any((c) => c.id == item.id);
+              if (!isConfiguredForThisTab) {
+                return const SizedBox.shrink();
+              }
+
+              return config.isCollapsibleSection
+                  ? FusionExpandableTileWidget(
+                      item: item,
+                      config: config,
+                      onUndock: onItemUndock,
+                      onExpansionChanged: onExpansionChanged,
+                      controller: config.controller,
+                    )
+                  : config.dockItemWidget();
             }).toList(),
           ),
         );
