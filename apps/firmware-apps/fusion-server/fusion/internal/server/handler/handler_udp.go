@@ -12,7 +12,7 @@ import (
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	var msg struct {
 		Action  api.NotifyOp    `json:"action"`
-		Payload json.RawMessage `json:"settings,omitempty"`
+		Payload json.RawMessage `json:"payload,omitempty"`
 	}
 
 	if err := json.Unmarshal(data, &msg); err != nil {
