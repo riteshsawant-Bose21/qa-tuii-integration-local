@@ -93,6 +93,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       height: 36,
       decoration: BoxDecoration(
         color: isHovered ? widget.bgColor.withAlpha(150) : widget.bgColor.withAlpha(190),
+        border: Border.all(
+          color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+        ),
       ),
       child: Row(
         children: <Widget>[
@@ -176,23 +179,27 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 final String deviceId = circuitData.id;
                 final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
 
-                return ReorderableDragStartListener(
+                return Container(
                   key: ValueKey<String>(deviceId),
-                  index: index,
                   child: CircuitDeviceWidget(
+                    index: index,
                     deviceId: deviceId,
                     circuitDeviceName: circuitData.name,
-                    assetImagePath: speakers.first.assetImagePath,
+                    assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                     location: location,
                     projectViewModel: _projectViewModel,
                     onDecrementHardwareInCircuit: () {
-                      final Speaker speaker = speakers.last;
-                      serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                      if (speakers.isNotEmpty) {
+                        final Speaker speaker = speakers.last;
+                        serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                      }
                     },
                     onIncrementHardwareInCircuit: () {
-                      final Speaker speaker = speakers.first.getClone();
-                      serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                      serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                      if (speakers.isNotEmpty) {
+                        final Speaker speaker = speakers.first.getClone();
+                        serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                        serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                      }
                     },
                     onRename: () {},
                     onDuplicate: () {},

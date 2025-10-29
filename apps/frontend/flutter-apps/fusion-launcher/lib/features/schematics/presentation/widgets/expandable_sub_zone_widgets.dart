@@ -54,6 +54,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
+            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
+
+            final bool isSelected = selectedDevice?.id == widget.subZoneId && selectedDevice?.type == SelectedItemType.subzone;
+
             return Column(
               children: <Widget>[
                 MouseRegion(
@@ -63,6 +67,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                     padding: const EdgeInsets.only(left: 30, right: 14),
                     height: 36,
                     decoration: BoxDecoration(
+                      border: Border.all(
+                        color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                      ),
                       color: _isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
                     ),
                     child: Row(
@@ -143,10 +150,10 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
           final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: device.id).whereType<Speaker>().toList();
           final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: device.id);
 
-          return ReorderableDragStartListener(
+          return Container(
             key: ValueKey<String>(deviceId),
-            index: index,
             child: CircuitDeviceWidget(
+              index: index,
               deviceId: deviceId,
               location: location,
               circuitDeviceName: device.name,

@@ -22,6 +22,8 @@ class CircuitDeviceWidget extends StatefulWidget {
   final VoidCallback onDecrementHardwareInCircuit;
   final VoidCallback onIncrementHardwareInCircuit;
 
+  final int index;
+
   const CircuitDeviceWidget({
     super.key,
     required this.location,
@@ -35,6 +37,7 @@ class CircuitDeviceWidget extends StatefulWidget {
     required this.onDecrementHardwareInCircuit,
     required this.onIncrementHardwareInCircuit,
     required this.assetImagePath,
+    required this.index,
   });
 
   @override
@@ -70,11 +73,15 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  /// Draggable icon
-                  Icon(
-                    Icons.drag_handle,
-                    size: 16,
-                    color: Colors.grey[600],
+                  // Only drag handle is reorderable
+                  ReorderableDragStartListener(
+                    key: ValueKey<String>(widget.deviceId),
+                    index: widget.index,
+                    child: Icon(
+                      Icons.drag_handle,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
                   ),
                   const SizedBox(width: 6),
 
