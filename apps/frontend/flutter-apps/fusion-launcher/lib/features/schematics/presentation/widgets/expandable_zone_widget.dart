@@ -179,35 +179,88 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 final String deviceId = circuitData.id;
                 final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
 
-                return Container(
+                return DragTarget<CircuitModel>(
                   key: ValueKey<String>(deviceId),
-                  child: CircuitDeviceWidget(
-                    index: index,
-                    deviceId: deviceId,
-                    circuitDeviceName: circuitData.name,
-                    assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                    location: location,
-                    projectViewModel: _projectViewModel,
-                    onDecrementHardwareInCircuit: () {
-                      if (speakers.isNotEmpty) {
-                        final Speaker speaker = speakers.last;
-                        serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
-                      }
-                    },
-                    onIncrementHardwareInCircuit: () {
-                      if (speakers.isNotEmpty) {
-                        final Speaker speaker = speakers.first.getClone();
-                        serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                  onWillAccept: (CircuitModel? incoming) {
+                    /// Only accept if the incoming circuit has the same name but different ID
+                    ///
+                    if (incoming == null) return false;
+                    // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
+                    final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                    final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                    return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU;
+                  },
+                  onAccept: (CircuitModel incoming) {
+                    /// Add speaker to target circuit
+                    final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
+
+                    if (incomingSpeakers.isNotEmpty) {
+                      for (final Speaker speaker in incomingSpeakers) {
+                        // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
                         serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
                       }
-                    },
-                    onRename: () {},
-                    onDuplicate: () {},
-                    onDelete: () {
-                      _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
-                    },
-                    circuitDeviceCount: speakers.length,
-                  ),
+                    }
+
+                    /// Remove the dragged circuit from the zone
+                    _projectViewModel.removeCircuitFromZone(circuitId: incoming.id, zoneId: widget.zoneId);
+                    setState(() {});
+                  },
+                  builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
+                    return Draggable<CircuitModel>(
+                      data: circuitData,
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: Opacity(
+                          opacity: 0.8,
+                          child: SizedBox(
+                            width: 220,
+                            child: CircuitDeviceWidget(
+                              index: index,
+                              deviceId: deviceId,
+                              circuitDeviceName: circuitData.name,
+                              assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                              location: location,
+                              projectViewModel: _projectViewModel,
+                              circuitDeviceCount: speakers.length,
+                              onDecrementHardwareInCircuit: () {},
+                              onIncrementHardwareInCircuit: () {},
+                              onRename: () {},
+                              onDuplicate: () {},
+                              onDelete: () {},
+                            ),
+                          ),
+                        ),
+                      ),
+                      childWhenDragging: const SizedBox.shrink(),
+                      child: CircuitDeviceWidget(
+                        index: index,
+                        deviceId: deviceId,
+                        circuitDeviceName: circuitData.name,
+                        assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                        location: location,
+                        projectViewModel: _projectViewModel,
+                        onDecrementHardwareInCircuit: () {
+                          if (speakers.isNotEmpty) {
+                            final Speaker speaker = speakers.last;
+                            serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                          }
+                        },
+                        onIncrementHardwareInCircuit: () {
+                          if (speakers.isNotEmpty) {
+                            final Speaker speaker = speakers.first.getClone();
+                            serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                            serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                          }
+                        },
+                        onRename: () {},
+                        onDuplicate: () {},
+                        onDelete: () {
+                          _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
+                        },
+                        circuitDeviceCount: speakers.length,
+                      ),
+                    );
+                  },
                 );
               },
             ),
