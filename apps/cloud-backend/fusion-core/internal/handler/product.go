@@ -10,16 +10,11 @@ import (
 
 // ProductHandler handles HTTP requests related to products.
 type ProductHandler struct {
-	product ProductSVC
-}
-
-type ProductSVC interface {
-	GetProductByID(ctx context.Context, id string) (*fusion.ProductResponse, error)
-	GetAllProducts(ctx context.Context) (*fusion.ProductResponse, error)
+	product fusion.Product
 }
 
 // NewProductHandler creates a new ProductHandler Service.
-func NewProductHandler(productSvc ProductSVC) *ProductHandler {
+func NewProductHandler(productSvc fusion.Product) *ProductHandler {
 	return &ProductHandler{product: productSvc}
 }
 

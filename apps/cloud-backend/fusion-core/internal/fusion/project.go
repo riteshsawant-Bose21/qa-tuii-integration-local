@@ -1,25 +1,17 @@
 package fusion
 
-type Budget struct {
-	Amount   float64 `json:"amount"`
-	Currency string  `json:"currency"`
-}
+import (
+	"context"
 
-type Project struct {
-	ID             string                 `json:"id"`
-	OrganizationID string                 `json:"organization_id"`
-	Name           string                 `json:"name"`
-	Description    string                 `json:"description"`
-	Venue          string                 `json:"venue"`
-	VenueType      string                 `json:"venue_type"`
-	Application    string                 `json:"application"`
-	Budget         Budget                 `json:"budget"`
-	MetaData       map[string]interface{} `json:"meta_data"`
-	ProjectFileURL string                 `json:"project_file_url"`
-}
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+)
 
-// SyncProjectRequest represents the request body for project synchronization.
-type SyncProjectRequest struct {
-	MetaData   map[string]interface{} `json:"meta_data" example:"{\"version\": \"1.0\", \"updated_by\": \"user123\"}" validate:"required"`
-	ZipFileURL string                 `json:"zip_file_url" example:"https://example.com/project.zip" validate:"required,url"`
+type Project interface {
+	CreateProject(ctx context.Context, project *types.Project) error
+	GetProjectByID(ctx context.Context, id string) (*types.Project, error)
+	GetAllProjects(ctx context.Context) ([]*types.Project, error)
+	UpdateProject(ctx context.Context, id string, project *types.Project) error
+	DeleteProject(ctx context.Context, id string) error
+
+	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
 }

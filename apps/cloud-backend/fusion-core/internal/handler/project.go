@@ -1,29 +1,19 @@
 package handler
 
 import (
-	"context"
 	"net/http"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/gin-gonic/gin"
 )
 
 // ProjectHandler handles HTTP requests for project management.
 type ProjectHandler struct {
-	project ProjectSVC
+	project fusion.Project
 }
 
-type ProjectSVC interface {
-	CreateProject(ctx context.Context, project *fusion.Project) error
-	GetProjectByID(ctx context.Context, id string) (*fusion.Project, error)
-	GetAllProjects(ctx context.Context) ([]*fusion.Project, error)
-	UpdateProject(ctx context.Context, id string, project *fusion.Project) error
-	DeleteProject(ctx context.Context, id string) error
-
-	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
-}
-
-func NewProjectHandler(projectSvc ProjectSVC) *ProjectHandler {
+func NewProjectHandler(projectSvc fusion.Project) *ProjectHandler {
 	return &ProjectHandler{
 		project: projectSvc,
 	}
@@ -35,13 +25,13 @@ func NewProjectHandler(projectSvc ProjectSVC) *ProjectHandler {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param project body fusion.Project true "Project details"
-// @Success 201 {object} fusion.Project "Successfully created project"
+// @Param project body types.Project true "Project details"
+// @Success 201 {object} types.Project "Successfully created project"
 // @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
-	var p fusion.Project
+	var p types.Project
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -60,7 +50,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Success 200 {object} fusion.Project "Successfully retrieved project"
+// @Success 200 {object} types.Project "Successfully retrieved project"
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [get]
@@ -86,7 +76,7 @@ func (h *ProjectHandler) GetProjectByID(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Success 200 {array} fusion.Project "Successfully retrieved all projects"
+// @Success 200 {array} types.Project "Successfully retrieved all projects"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
@@ -105,15 +95,15 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Param project body fusion.Project true "Updated project details"
-// @Success 200 {object} fusion.Project "Successfully updated project"
+// @Param project body types.Project true "Updated project details"
+// @Success 200 {object} types.Project "Successfully updated project"
 // @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var p fusion.Project
+	var p types.Project
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -172,7 +162,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 // @Router /projects/{id}/sync [post]
 func (h *ProjectHandler) SyncProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var req fusion.SyncProjectRequest
+	var req types.SyncProjectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return

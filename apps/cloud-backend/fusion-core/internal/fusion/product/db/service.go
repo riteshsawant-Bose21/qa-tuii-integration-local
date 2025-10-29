@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -28,14 +28,14 @@ func NewService(db *sql.DB) *Service {
 }
 
 // SelectByID retrieves a product by its ID from the database.
-func (s *Service) SelectByID(ctx context.Context, id string) (*fusion.ProductResponse, error) {
+func (s *Service) SelectByID(ctx context.Context, id string) (*types.ProductResponse, error) {
 	// Implement the logic to get a product by ID from the database.
 	// This is a placeholder implementation.
 	return nil, nil
 }
 
 // SelectAll retrieves all products from the database.
-func (s *Service) SelectAll(ctx context.Context) (*fusion.ProductResponse, error) {
+func (s *Service) SelectAll(ctx context.Context) (*types.ProductResponse, error) {
 
 	// if exec == nil {
 	// 	exec = s.db
@@ -57,7 +57,7 @@ func (s *Service) SelectAll(ctx context.Context) (*fusion.ProductResponse, error
 }
 
 // Insert inserts a new product into the database.
-func (s *Service) Insert(ctx context.Context, product *fusion.ProductResponse) error {
+func (s *Service) Insert(ctx context.Context, product *types.ProductResponse) error {
 	if product == nil {
 		return fmt.Errorf("product cannot be nil")
 	}
@@ -73,14 +73,14 @@ func (s *Service) Insert(ctx context.Context, product *fusion.ProductResponse) e
 }
 
 // Upsert inserts or updates a product in the database.
-func (s *Service) Upsert(ctx context.Context, product *fusion.ProductFetch) error {
+func (s *Service) Upsert(ctx context.Context, product *types.ProductFetch) error {
 	if product == nil {
 		return fmt.Errorf("product cannot be nil")
 	}
 
 	p := &model.Product{}
 
-	// Convert fusion.ProductFetch to model.Product
+	// Convert types.ProductFetch to model.Product
 	// p = &model.Product{
 	// 	ID:          product.ID,
 	// 	Name:        product.Name,
