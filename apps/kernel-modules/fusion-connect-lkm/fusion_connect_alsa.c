@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <sound/pcm.h>
@@ -29,10 +13,16 @@ static const struct snd_pcm_hw_constraint_list constraints_rates = {
     .list = supported_rates,
 };
 
-static const unsigned int supported_period_sizes[] = { 6, 12, 16, 48, 96, 192 };
+static const unsigned int supported_period_sizes[] = { 6, 12, 16, 32, 48, 96, 192, 256 };
 static const struct snd_pcm_hw_constraint_list constraints_period_sizes = {
     .count = ARRAY_SIZE(supported_period_sizes),
-    .list = supported_period_sizes,
+    .list  = supported_period_sizes
+};
+
+static const unsigned int supported_periods[] = { 2, 4, 8, 16, 32, 64, 128 };
+static const struct snd_pcm_hw_constraint_list constraints_periods = {
+    .count = ARRAY_SIZE(supported_periods),
+    .list  = supported_periods
 };
 
 static inline unsigned int hash_name(const char *name)
@@ -73,7 +63,6 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
     unsigned int channels = params_channels(params);
     unsigned int period_size = params_period_size(params);
     unsigned int buffer_bytes = params_buffer_bytes(params);
-    int err;
 
     if (fusion_cn_alsa_stream_disconnected(stream)) return -ENODEV;
 
@@ -85,33 +74,11 @@ static int fusion_cn_pcm_hw_params(struct snd_pcm_substream *substream, struct s
         return -EINVAL;
     }
 
-    err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_RATE, &constraints_rates);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Rate constraint failed for stream %s, err=%d\n",
-               stream->stream_name, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
-    }
-    err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_PERIOD_SIZE, &constraints_period_sizes);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Period size constraint failed for stream %s, err=%d\n",
-               stream->stream_name, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
-    }
-    err = snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
-    if (err < 0) {
-        printk(KERN_ERR "fusion_cn_alsa: hw_params: Periods constraint failed for stream %s, err=%d\n",
-               stream->stream_name, err);
-        spin_unlock_irq(&stream->lock);
-        return err;
-    }
-
     runtime->buffer_size = buffer_bytes / (stream->sample_width * stream->channels);
     runtime->period_size = period_size;
     runtime->periods = buffer_bytes / (period_size * stream->sample_width * stream->channels);
 
-    printk(KERN_INFO "fusion_cn_alsa: hw_params: buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
+    printk(KERN_DEBUG "fusion_cn_alsa: hw_params: buffer_size=%lu frames, period_size=%lu, periods=%u for stream %s\n",
            runtime->buffer_size, runtime->period_size, runtime->periods, stream->stream_name);
 
     stream->pcm_indirect.hw_buffer_size = buffer_bytes;
@@ -135,7 +102,7 @@ void fusion_cn_alsa_substream_release(struct kref *kref)
         snd_device_free(card, pcm);  /* non-GPL */
     }
 
-    printk(KERN_INFO "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
+    printk(KERN_DEBUG "fusion_cn_alsa: substream_release: release stream %s\n", s->stream_name);
 
     kfree(s);
 }
@@ -147,7 +114,7 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     struct snd_pcm_runtime *rt;
 
     if (fusion_cn_alsa_stream_disconnected(stream))
-        return 0;
+        return -ENODEV;
 
     spin_lock_irq(&stream->lock);
     ss = READ_ONCE(stream->substream);
@@ -161,10 +128,9 @@ int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion
     if (stream->buffer_pos >= rt->buffer_size)
         stream->buffer_pos -= rt->buffer_size;
 
-    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s, buffer_pos=%d\n", stream->stream_name, stream->buffer_pos);
+    if (chip->debug) printk(KERN_DEBUG "fusion_cn_alsa: pcm_interrupt: stream %s buffer_pos=%d interrupt_idx=%u\n", stream->stream_name, stream->buffer_pos, stream->interrupt_idx);
 
-    stream->interrupt_idx++;
-    if (stream->interrupt_idx >= stream->interrupts_per_period) {
+    if (++stream->interrupt_idx >= stream->interrupts_per_period) {
         stream->interrupt_idx = 0;
         snd_pcm_period_elapsed(stream->substream);
     }
@@ -198,47 +164,35 @@ static int fusion_cn_pcm_copy(struct snd_pcm_substream *substream,
 }
 
 static int fusion_cn_pcm_silence(struct snd_pcm_substream *substream,
-                                int channel, snd_pcm_uframes_t pos,
-                                snd_pcm_uframes_t count)
+                                 int channel, snd_pcm_uframes_t pos,
+                                 snd_pcm_uframes_t frames)
 {
-    struct fusion_cn_substream *stream = substream->runtime->private_data;
-    struct snd_pcm_runtime *runtime = substream->runtime;
-    size_t buffer_size_per_channel = runtime->buffer_size * stream->sample_width;
-    const unsigned char *silence = snd_pcm_format_silence_64(runtime->format);
-    unsigned char *dma_area = runtime->dma_area;
+    struct fusion_cn_substream *s = substream->runtime->private_data;
+    struct snd_pcm_runtime *rt = substream->runtime;
+    const unsigned int sample_bytes = s->sample_width;
+    const unsigned int frame_bytes  = sample_bytes * s->channels;
+    unsigned char *base = rt->dma_area + pos * frame_bytes;
+    const unsigned char *sil = snd_pcm_format_silence_64(rt->format);
 
-    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
-
+    if (fusion_cn_alsa_stream_disconnected(rt->private_data)) return -ENODEV;
     if (substream->stream != SNDRV_PCM_STREAM_PLAYBACK) return 0;
 
-    if (pos + count > runtime->buffer_size) {
-        count = runtime->buffer_size - pos;
-    }
-    if (count == 0) return 0;
-
-    spin_lock_irq(&stream->lock);
-
     if (channel == -1) {
-        for (int ch = 0; ch < stream->channels; ch++) {
-            unsigned char *channel_buf = dma_area + ch * buffer_size_per_channel + pos * stream->sample_width;
-            for (snd_pcm_uframes_t i = 0; i < count; i++) {
-                memcpy(channel_buf + i * stream->sample_width, silence, stream->sample_width);
-            }
-        }
-    } else {
-        unsigned char *channel_buf = dma_area + channel * buffer_size_per_channel + pos * stream->sample_width;
-        if (channel >= stream->channels) {
-            spin_unlock_irq(&stream->lock);
-            return -EINVAL;
-        }
-        for (snd_pcm_uframes_t i = 0; i < count; i++) {
-            memcpy(channel_buf + i * stream->sample_width, silence, stream->sample_width);
-        }
+        /* all channels: whole interleaved region is silent → one memset per sample */
+        for (snd_pcm_uframes_t i = 0; i < frames; i++)
+            memset(base + i * frame_bytes, *sil, frame_bytes); // works for 0-silence formats
+        return (int)frames;
     }
 
-    spin_unlock_irq(&stream->lock);
-    return (int)count;
+    if (channel >= s->channels) return -EINVAL;
+
+    /* one specific channel: stride is frame_bytes */
+    for (snd_pcm_uframes_t i = 0; i < frames; i++)
+        memcpy(base + i * frame_bytes + channel * sample_bytes, sil, sample_bytes);
+
+    return (int)frames;
 }
+
 
 static int fusion_cn_pcm_fill_silence(struct snd_pcm_substream *substream,
                                      int channel, unsigned long pos,
@@ -295,7 +249,7 @@ int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream)
     // remove ref taken in add_substream
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
-    pr_info("fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
+    printk(KERN_DEBUG "fusion_cn_alsa: remove_substream: Stream %s removed, device=%d%s\n",
             stream->stream_name, stream->stream_index,
             stream->pending_free ? " (pending free)" : "");
     return 0;
@@ -369,9 +323,9 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     hw.channels_max = stream->channels;
     hw.period_bytes_min = stream->rtp_frame_size * stream->channels * stream->sample_width;
     hw.period_bytes_max = (stream->rtp_frame_size * 4 * 4) * stream->channels * stream->sample_width;
-    hw.buffer_bytes_max = hw.period_bytes_max * 64 / 4;
+    hw.buffer_bytes_max = hw.period_bytes_max * 256 / 4;
     hw.periods_min = 2;
-    hw.periods_max = 64;
+    hw.periods_max = 128;
 
     runtime->hw = hw;
     runtime->private_data = stream;
@@ -392,7 +346,8 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
         return err;
     }
 
-    err = snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
+    snd_pcm_hw_constraint_integer(runtime, SNDRV_PCM_HW_PARAM_PERIODS);
+    err = snd_pcm_hw_constraint_list(runtime, 0, SNDRV_PCM_HW_PARAM_PERIODS, &constraints_periods);
     if (err < 0) {
         stream->substream = NULL;
         read_unlock_irqrestore(&chip->lock, flags);
@@ -401,7 +356,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
     }
 
     err = snd_pcm_hw_constraint_minmax(runtime, SNDRV_PCM_HW_PARAM_BUFFER_SIZE, 
-                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 64);
+                                       stream->rtp_frame_size * 2, stream->rtp_frame_size * 256);
     if (err < 0) {
         stream->substream = NULL;
         read_unlock_irqrestore(&chip->lock, flags);
@@ -425,7 +380,7 @@ static int fusion_cn_pcm_open(struct snd_pcm_substream *substream)
 
     atomic_inc(&stream->open_count);
 
-    printk(KERN_INFO "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_open: Opened stream %s\n", stream_name);
     return 0;
 }
 
@@ -457,7 +412,7 @@ static int fusion_cn_pcm_close(struct snd_pcm_substream *substream)
     atomic_set(&stream->disconnected, 0);
     kref_put(&stream->ref, fusion_cn_alsa_substream_release);
 
-    printk(KERN_INFO "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_close: Closed stream %s\n", stream->stream_name);
 
     return 0;
 }
@@ -482,6 +437,8 @@ static int fusion_cn_pcm_prepare(struct snd_pcm_substream *substream)
     memset(runtime->dma_area, 0, runtime->buffer_size * stream->channels * stream->sample_width);
     spin_unlock_irq(&stream->lock);
 
+    printk(KERN_DEBUG "fusion_cn_alsa: pcm_prepare: stream %s interrupts_per_period=%u buffer_size_bytes=%u\n", stream->stream_name, stream->interrupts_per_period, stream->pcm_indirect.hw_buffer_size);
+
     return 0;
 }
 
@@ -491,7 +448,7 @@ static snd_pcm_uframes_t fusion_cn_pcm_pointer(struct snd_pcm_substream *substre
     struct snd_pcm_runtime *runtime = substream->runtime;
     snd_pcm_uframes_t offset;
 
-    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return -ENODEV;
+    if (fusion_cn_alsa_stream_disconnected(runtime->private_data)) return 0;
 
     offset = stream->buffer_pos;
     if (offset >= runtime->buffer_size) offset %= runtime->buffer_size;
@@ -517,7 +474,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                    stream->stream_name, err);
             return err;
         }
-        printk(KERN_INFO "fusion_cn_alsa: pcm_trigger: Stream %s started\n", stream->stream_name);
+        printk(KERN_DEBUG "fusion_cn_alsa: pcm_trigger: Stream %s started\n", stream->stream_name);
         return 0;
     case SNDRV_PCM_TRIGGER_STOP:
     case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
@@ -533,7 +490,7 @@ static int fusion_cn_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
                 stream->stream_name, err);
             return err;
         }
-        printk(KERN_INFO "fusion_cn_alsa: pcm_trigger: Stream %s stopped\n", stream->stream_name);
+        printk(KERN_DEBUG "fusion_cn_alsa: pcm_trigger: Stream %s stopped\n", stream->stream_name);
         return 0;
     }
     default:
@@ -560,9 +517,33 @@ static struct snd_pcm_ops fusion_cn_pcm_ops = {
     .fill_silence = fusion_cn_pcm_fill_silence,
 };
 
-int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t stream_handle, const char *stream_name,
-                                    int direction, unsigned int channels, uint32_t rate, snd_pcm_format_t format, 
-                                    uint32_t frames_per_packet, struct fusion_cn_substream **alsa_substream)
+inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream)
+{
+    struct snd_pcm_substream *ss = stream->substream;
+    struct snd_pcm_runtime *rt = ss->runtime;
+    snd_pcm_uframes_t size, app, hw;
+
+    size = rt->buffer_size;
+
+    /* appl_ptr / hw_ptr are monotonic; reduce to ring domain */
+    app = READ_ONCE(rt->control->appl_ptr) % size;
+    hw  = READ_ONCE(rt->status->hw_ptr)   % size;
+
+    if (ss->stream == SNDRV_PCM_STREAM_PLAYBACK) {
+        /* queued-to-DAC = buffer_size - playback_avail
+           playback_avail = (size + hw - app) % size */
+        snd_pcm_uframes_t avail = (size + hw - app) % size;
+        return (u32)(size - avail);
+    } else {
+        /* capture_avail = (size + app - hw) % size
+           That's also “queued for consumer” in your capture-as-sink model */
+        return (u32)((size + app - hw) % size);
+    }
+}
+
+int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_handle, const char *stream_name,
+                                    int direction, unsigned int channels, u32 rate, snd_pcm_format_t format, 
+                                    u32 frames_per_packet, struct fusion_cn_substream **alsa_substream)
 {
     struct fusion_cn_chip *chip = alsa_chip;
     unsigned long flags;
@@ -570,7 +551,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     int err;
     int bucket;
     struct fusion_cn_substream *stream;
-    uint64_t packet_time_ns;
+    u64 packet_time_ns;
     int max_channels;
     bool is_96khz;
     bool is_32b;
@@ -638,7 +619,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
         goto stream_free;
     }
 
-    packet_time_ns = ((uint64_t)frames_per_packet * NSEC_PER_SEC) / rate;
+    packet_time_ns = ((u64)frames_per_packet * NSEC_PER_SEC) / rate;
     is_96khz = rate == 96000;
     is_32b = (format == SNDRV_PCM_FORMAT_FLOAT_BE);
     is_24b = (format == SNDRV_PCM_FORMAT_S24_3BE);
@@ -700,7 +681,7 @@ int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t str
     stream->pending_free = false;
     atomic_set(&stream->disconnected, 0);
 
-    printk(KERN_INFO "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
+    printk(KERN_DEBUG "fusion_cn_alsa: open_substream: Successfully created substream for stream %s, device=%d, format=%d, channels=%u, rate=%u, frames_per_packet=%u\n", 
                                                                                       stream_name, stream_index, format, 
                                                                                       channels, rate, frames_per_packet);
     
@@ -897,5 +878,5 @@ void fusion_cn_alsa_destroy(void)
         g_pdev = NULL;
     }
     platform_driver_unregister(&fusion_cn_driver);
-    printk(KERN_INFO "fusion_cn_alsa: Card exit\n");
+    printk(KERN_DEBUG "fusion_cn_alsa: Card exit\n");
 }

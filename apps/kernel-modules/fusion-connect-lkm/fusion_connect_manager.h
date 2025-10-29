@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
 #pragma once
 
 #include <linux/kernel.h>
@@ -28,7 +12,7 @@
 
 enum ptp_timing_mode {
     TIMING_HRTIMER,
-    TIMING_GPIO_INTERRUPT
+    TIMING_GPT
 };
 
 enum fusion_cn_ctrl_cmd {
@@ -37,7 +21,8 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
     FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
-    FUSION_CN_CTRL_CMD_REMOVE_STREAM
+    FUSION_CN_CTRL_CMD_REMOVE_STREAM,
+    FUSION_CN_CTRL_CMD_GET_METRICS
 };
 
 struct fusion_cn_state {
@@ -54,22 +39,23 @@ struct fusion_cn_alsa {
 struct fusion_cn_ptp {
     enum ptp_timing_mode ptp_timing_mode;
     struct hrtimer audio_timer;
-    uint64_t hrtimer_last_tick_ns;
-    uint64_t hrtimer_next_tick_ns;
-    uint8_t tick_count;
-    int gpio_irq;
-    int gpio_pin;
+    u64 hrtimer_last_tick_ns;
+    u64 hrtimer_next_tick_ns;
+    u8 tick_count;
 };
 
 struct fusion_cn_netlink {
     struct sock *nl_sock;
     int nl_family;
+
+    atomic_t ready;
 };
 
 struct stream_node {
     struct list_head node;
     struct fusion_cn_rtp_stream *rtp_stream;
     struct fusion_cn_substream *alsa_stream;
+    atomic_t metrics_pending;
 };
 
 struct active_streams {
