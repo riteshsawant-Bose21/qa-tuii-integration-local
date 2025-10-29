@@ -21,7 +21,7 @@ class HeroWidget extends StatelessWidget {
       children: <Widget>[
         Container(
           margin: const EdgeInsets.only(bottom: margin),
-          child: Image.asset('images/logo.png', width: 24),
+          child: Image.asset('assets/images/bose_pro_logo_new.png', height: 50),
         ),
         Expanded(
           child: Container(
@@ -31,7 +31,7 @@ class HeroWidget extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: <Widget>[
                 Text(
-                  'Flutter',
+                  'Fusion',
                   style: GoogleFonts.spaceGrotesk(
                     foreground: Paint()..shader = linearGradient,
                     fontSize: 80,
@@ -40,7 +40,7 @@ class HeroWidget extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Sample App',
+                  'Launcher',
                   style: GoogleFonts.spaceGrotesk(
                     fontSize: 80,
                     height: 0.8,

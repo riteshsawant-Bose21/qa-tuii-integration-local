@@ -30,8 +30,7 @@ class _AuthExperimentPageState extends State<AuthExperimentPage> {
   @override
   void initState() {
     super.initState();
-    auth0 =
-        widget.auth0 ?? Auth0(env['AUTH0_DOMAIN']!, env['AUTH0_CLIENT_ID']!);
+    auth0 = widget.auth0 ?? Auth0(env['AUTH0_DOMAIN']!, env['AUTH0_CLIENT_ID']!);
     auth0Web = Auth0Web(
       env['AUTH0_DOMAIN']!,
       env['AUTH0_CLIENT_ID']!,
@@ -56,7 +55,7 @@ class _AuthExperimentPageState extends State<AuthExperimentPage> {
           .webAuthentication(scheme: env['AUTH0_CUSTOM_SCHEME'])
           // Use a Universal Link callback URL on iOS 17.4+ / macOS 14.4+
           // useHTTPS is ignored on Android
-          .login(useHTTPS: true);
+          .login(useHTTPS: false, redirectUrl: 'com.bosepro.fusion://sujith-test.us.auth0.com/macos/com.bosepro.fusion/callback');
 
       setState(() {
         _user = credentials.user;
@@ -75,7 +74,7 @@ class _AuthExperimentPageState extends State<AuthExperimentPage> {
             .webAuthentication(scheme: env['AUTH0_CUSTOM_SCHEME'])
             // Use a Universal Link logout URL on iOS 17.4+ / macOS 14.4+
             // useHTTPS is ignored on Android
-            .logout(useHTTPS: true);
+            .logout(useHTTPS: false, returnTo: 'com.bosepro.fusion://sujith-test.us.auth0.com/macos/com.bosepro.fusion/callback');
         setState(() {
           _user = null;
         });
@@ -102,29 +101,17 @@ class _AuthExperimentPageState extends State<AuthExperimentPage> {
               Expanded(
                 child: Row(
                   children: <Widget>[
-                    _user != null
-                        ? Expanded(child: UserWidget(user: _user))
-                        : const Expanded(child: HeroWidget()),
+                    _user != null ? Expanded(child: UserWidget(user: _user)) : const Expanded(child: HeroWidget()),
                   ],
                 ),
               ),
               _user != null
                   ? ElevatedButton(
                     onPressed: logout,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all<Color>(
-                        Colors.black,
-                      ),
-                    ),
                     child: const Text('Logout'),
                   )
                   : ElevatedButton(
                     onPressed: login,
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStateProperty.all<Color>(
-                        Colors.black,
-                      ),
-                    ),
                     child: const Text('Login'),
                   ),
             ],
