@@ -5,15 +5,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/user_session_manager.dart';
-import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_app.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
 
+import 'features/auth_experiment/auth_experiment.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 
@@ -39,7 +37,9 @@ void _setupMacOSDeepLinkListener() {
   // Use MethodChannel to receive the URL from native code
   const MethodChannel channel = MethodChannel('custom_url_scheme_channel');
   channel.setMethodCallHandler((MethodCall call) async {
-    debugPrint('Received method call: ${call.method} with arguments: ${call.arguments}');
+    debugPrint(
+      'Received method call: ${call.method} with arguments: ${call.arguments}',
+    );
     if (call.method == 'onCustomUrlScheme') {
       final String url = call.arguments as String;
       // Handle the URL here
@@ -77,14 +77,16 @@ class MyApp extends StatelessWidget {
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
             themeMode: mode,
-            home: Scaffold(
-              body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
-            ),
+            home: const AuthExperimentPage(),
+            // Scaffold(
+            //   body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
+            // ),
             navigatorKey: globalNavigatorKey,
             navigatorObservers: <NavigatorObserver>[
               AppNavigatorObserver(),
             ],
-            onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+            onGenerateRoute:
+                (RouteSettings settings) => Routes.onGenerateRoute(settings),
           );
         },
       ),
