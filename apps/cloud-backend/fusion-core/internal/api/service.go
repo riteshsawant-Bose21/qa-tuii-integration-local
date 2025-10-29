@@ -8,8 +8,6 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,8 +15,8 @@ import (
 type API struct {
 	engine  *gin.Engine
 	server  *http.Server
-	product Product
-	project Project
+	product fusion.Product
+	project fusion.Project
 }
 
 type Config struct {
@@ -29,8 +27,8 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	productSvc *product.Service,
-	projectSvc *project.Service,
+	productSvc fusion.Product,
+	projectSvc fusion.Project,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -115,19 +113,4 @@ func corsMiddleware() gin.HandlerFunc {
 
 		c.Next()
 	}
-}
-
-type Product interface {
-	GetProductByID(ctx context.Context, id string) (*fusion.ProductResponse, error)
-	GetAllProducts(ctx context.Context) (*fusion.ProductResponse, error)
-}
-
-type Project interface {
-	CreateProject(ctx context.Context, project *fusion.Project) error
-	GetProjectByID(ctx context.Context, id string) (*fusion.Project, error)
-	GetAllProjects(ctx context.Context) ([]*fusion.Project, error)
-	UpdateProject(ctx context.Context, id string, project *fusion.Project) error
-	DeleteProject(ctx context.Context, id string) error
-
-	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
 }

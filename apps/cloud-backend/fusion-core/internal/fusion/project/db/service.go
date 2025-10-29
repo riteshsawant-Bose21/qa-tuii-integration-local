@@ -7,12 +7,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/google/uuid"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
@@ -30,7 +30,8 @@ func NewService(db *sql.DB) *Service {
 	}
 }
 
-func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
+// Insert inserts a new project into the database.
+func (s *Service) Insert(ctx context.Context, project *types.Project) error {
 	if project == nil {
 		return errors.New("project cannot be nil")
 	}
@@ -68,7 +69,8 @@ func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
 	return nil
 }
 
-func (s *Service) GetByID(ctx context.Context, id string) (*fusion.Project, error) {
+// SelectByID retrieves a project by its ID.
+func (s *Service) SelectByID(ctx context.Context, id string) (*types.Project, error) {
 	if id == "" {
 		return nil, errors.New("id cannot be empty")
 	}
@@ -86,7 +88,8 @@ func (s *Service) GetByID(ctx context.Context, id string) (*fusion.Project, erro
 	return project, nil
 }
 
-func (s *Service) GetAll(ctx context.Context) ([]*fusion.Project, error) {
+// SelectAll retrieves all projects from the database.
+func (s *Service) SelectAll(ctx context.Context) ([]*types.Project, error) {
 	// Retrieve all projects from the database.
 
 	var q []qm.QueryMod
@@ -97,7 +100,7 @@ func (s *Service) GetAll(ctx context.Context) ([]*fusion.Project, error) {
 		return nil, fmt.Errorf("can't get rows: %v", err)
 	}
 
-	projects := make([]*fusion.Project, 0, len(rows))
+	projects := make([]*types.Project, 0, len(rows))
 	for _, row := range rows {
 		project, err := newProject(row)
 		if err != nil {
@@ -109,7 +112,8 @@ func (s *Service) GetAll(ctx context.Context) ([]*fusion.Project, error) {
 	return projects, nil
 }
 
-func (s *Service) Update(ctx context.Context, id string, project *fusion.Project) error {
+// Update updates an existing project in the database.
+func (s *Service) Update(ctx context.Context, id string, project *types.Project) error {
 	if id == "" {
 		return errors.New("id cannot be empty")
 	}

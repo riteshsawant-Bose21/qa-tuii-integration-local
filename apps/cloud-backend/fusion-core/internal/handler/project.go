@@ -1,16 +1,19 @@
 package handler
 
 import (
+	"net/http"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	"github.com/gin-gonic/gin"
 )
 
 type ProjectHandler struct {
-	project project.Project
+	project fusion.Project
 }
 
-func NewProjectHandler(project project.Project) *ProjectHandler {
+func NewProjectHandler(projectSvc fusion.Project) *ProjectHandler {
 	return &ProjectHandler{
 		project: project,
 	}
@@ -22,13 +25,13 @@ func NewProjectHandler(project project.Project) *ProjectHandler {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param project body fusion.Project true "Project details"
-// @Success 201 {object} fusion.Project "Successfully created project"
+// @Param project body types.Project true "Project details"
+// @Success 201 {object} types.Project "Successfully created project"
 // @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
-	var p fusion.Project
+	var p types.Project
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -47,7 +50,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Success 200 {object} fusion.Project "Successfully retrieved project"
+// @Success 200 {object} types.Project "Successfully retrieved project"
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [get]
@@ -73,7 +76,7 @@ func (h *ProjectHandler) GetProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Success 200 {array} fusion.Project "Successfully retrieved all projects"
+// @Success 200 {array} types.Project "Successfully retrieved all projects"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetProjects(ctx *gin.Context) {
@@ -92,15 +95,15 @@ func (h *ProjectHandler) GetProjects(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Param project body fusion.Project true "Updated project details"
-// @Success 200 {object} fusion.Project "Successfully updated project"
+// @Param project body types.Project true "Updated project details"
+// @Success 200 {object} types.Project "Successfully updated project"
 // @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var p fusion.Project
+	var p types.Project
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -165,7 +168,7 @@ type SyncProjectRequest struct {
 // @Router /projects/{id}/sync [post]
 func (h *ProjectHandler) SyncProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var req SyncProjectRequest
+	var req types.SyncProjectRequest
 	if err := ctx.ShouldBindJSON(&req); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return

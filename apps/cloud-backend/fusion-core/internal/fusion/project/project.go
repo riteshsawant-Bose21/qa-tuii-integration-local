@@ -2,22 +2,32 @@ package project
 
 import (
 	"context"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"fmt"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
-func (s *Service) Insert(ctx context.Context, project *fusion.Project) error {
-	return s.dbService.Insert(ctx, project)
+// CreateProject adds a new project to the database.
+func (s *Service) CreateProject(ctx context.Context, project *types.Project) error {
+	err := s.dbService.Insert(ctx, project)
+	if err != nil {
+		return fmt.Errorf("failed to insert project: %v", err)
+	}
+	return nil
 }
 
-func (s *Service) GetByID(ctx context.Context, id string) (*fusion.Project, error) {
-	return s.dbService.GetByID(ctx, id)
+// GetProjectByID retrieves a project by its ID.
+func (s *Service) GetProjectByID(ctx context.Context, id string) (*types.Project, error) {
+	return s.dbService.SelectByID(ctx, id)
 }
 
-func (s *Service) GetAll(ctx context.Context) ([]*fusion.Project, error) {
-	return s.dbService.GetAll(ctx)
+// GetAllProjects retrieves all projects.
+func (s *Service) GetAllProjects(ctx context.Context) ([]*types.Project, error) {
+	return s.dbService.SelectAll(ctx)
 }
 
-func (s *Service) Update(ctx context.Context, id string, project *fusion.Project) error {
+// UpdateProject modifies an existing project.
+func (s *Service) UpdateProject(ctx context.Context, id string, project *types.Project) error {
 	return s.dbService.Update(ctx, id, project)
 }
 

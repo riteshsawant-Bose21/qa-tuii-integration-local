@@ -3,7 +3,7 @@ package product
 import (
 	"context"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
 // Service provides methods to interact with the product database.
@@ -14,10 +14,9 @@ type Service struct {
 
 // DatabaseService defines the interface for database operations related to products.
 type DatabaseService interface {
-	// Product
-	SelectByID(ctx context.Context, id string) (*fusion.ProductResponse, error)
-	SelectAll(ctx context.Context) (*fusion.ProductResponse, error)
-	Upsert(ctx context.Context, product *fusion.ProductFetch) error
+	SelectByID(ctx context.Context, id string) (*types.ProductResponse, error)
+	SelectAll(ctx context.Context) (*types.ProductResponse, error)
+	Upsert(ctx context.Context, product *types.ProductFetch) error
 }
 
 type IDService interface {

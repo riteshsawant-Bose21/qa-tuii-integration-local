@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
@@ -25,7 +25,7 @@ var (
 )
 
 // newProject returns a new Project node from the provided Project row
-func newProject(row *model.Project) (*fusion.Project, error) {
+func newProject(row *model.Project) (*types.Project, error) {
 	if row == nil {
 		return nil, errors.New("dbProject cannot be nil")
 	}
@@ -50,7 +50,7 @@ func newProject(row *model.Project) (*fusion.Project, error) {
 		projectFileURL = row.ProjectFileURL.String
 	}
 
-	var budget fusion.Budget
+	var budget types.Budget
 	if row.Budget.Valid {
 		if err := json.Unmarshal(row.Budget.JSON, &budget); err != nil {
 			return nil, errors.New("failed to unmarshal budget JSON: " + err.Error())
@@ -64,7 +64,7 @@ func newProject(row *model.Project) (*fusion.Project, error) {
 		}
 	}
 
-	return &fusion.Project{
+	return &types.Project{
 		ID:             row.ID,
 		OrganizationID: row.OrganizationID,
 		Name:           row.Name,
