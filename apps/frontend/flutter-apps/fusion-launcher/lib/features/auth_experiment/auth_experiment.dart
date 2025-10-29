@@ -8,8 +8,8 @@ import 'hero.dart';
 import 'user.dart';
 
 final Map<String, String> env = <String, String>{
-  'AUTH0_DOMAIN': 'sujith-test.us.auth0.com',
-  'AUTH0_CLIENT_ID': 'obYLFURabC69ar89V0HTQ36qKsDvwC0C',
+  'AUTH0_DOMAIN': 'id-dev.boseprofessional.com',
+  'AUTH0_CLIENT_ID': 'Il2hl1ZQHO4ZFIDtuSLgdaqAlK5mhjLb',
   'AUTH0_CUSTOM_SCHEME': "fusion",
 };
 
@@ -55,7 +55,7 @@ class _AuthExperimentPageState extends State<AuthExperimentPage> {
           .webAuthentication(scheme: env['AUTH0_CUSTOM_SCHEME'])
           // Use a Universal Link callback URL on iOS 17.4+ / macOS 14.4+
           // useHTTPS is ignored on Android
-          .login(useHTTPS: false, redirectUrl: 'com.bosepro.fusion://sujith-test.us.auth0.com/macos/com.bosepro.fusion/callback');
+          .login(useHTTPS: false, redirectUrl: 'com.bosepro.fusion://id-dev.boseprofessional.com/macos/com.bosepro.fusion/callback');
 
       setState(() {
         _user = credentials.user;
@@ -74,7 +74,7 @@ class _AuthExperimentPageState extends State<AuthExperimentPage> {
             .webAuthentication(scheme: env['AUTH0_CUSTOM_SCHEME'])
             // Use a Universal Link logout URL on iOS 17.4+ / macOS 14.4+
             // useHTTPS is ignored on Android
-            .logout(useHTTPS: false, returnTo: 'com.bosepro.fusion://sujith-test.us.auth0.com/macos/com.bosepro.fusion/callback');
+            .logout(useHTTPS: false, returnTo: 'com.bosepro.fusion://id-dev.boseprofessional.com/macos/com.bosepro.fusion/callback');
         setState(() {
           _user = null;
         });
