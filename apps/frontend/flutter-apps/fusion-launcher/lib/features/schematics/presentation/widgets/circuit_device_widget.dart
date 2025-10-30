@@ -253,31 +253,51 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    FusionAppText(
-                      text: "Manage Speakers",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    /// Header with close button
+                    Row(
+                      children: <Widget>[
+                        FusionAppText(
+                          text: widget.circuitDeviceName,
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+
+                        /// close icon
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.of(context).pop();
+                          },
+                          child: Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 6),
+
                     Divider(
                       height: 12,
                       color: Theme.of(context).colorScheme.grey,
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
 
-                    Align(
-                      alignment: Alignment.centerLeft,
-                      child: FusionAppText(
-                        text: "Circuit name : ${widget.circuitDeviceName}",
-                        maxLine: 1,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w400,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
+                    // Align(
+                    //   alignment: Alignment.centerLeft,
+                    //   child: FusionAppText(
+                    //     text: "Circuit name : ${widget.circuitDeviceName}",
+                    //     maxLine: 1,
+                    //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    //       fontSize: 12,
+                    //       fontWeight: FontWeight.w400,
+                    //     ),
+                    //   ),
+                    // ),
+                    // const SizedBox(height: 8),
 
                     /// List of locations with add/remove buttons and per-location speaker count
                     ...locationList.map(
@@ -288,97 +308,90 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
 
                         return Padding(
                           padding: const EdgeInsets.symmetric(vertical: 6),
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.white,
-                              border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                FusionImage.asset(
-                                  widget.speakers.first.assetImagePath,
-                                  width: 22,
-                                  height: 22,
-                                  fit: BoxFit.contain,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              FusionAppText(
+                                text: "Location name : ${location.name}",
+                                maxLine: 1,
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w400,
                                 ),
-                                const SizedBox(width: 6),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.start,
-                                    children: <Widget>[
-                                      FusionAppText(
+                              ),
+                              const SizedBox(height: 4),
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.white,
+                                  border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    FusionImage.asset(
+                                      widget.speakers.first.assetImagePath,
+                                      width: 22,
+                                      height: 22,
+                                      fit: BoxFit.contain,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                      child: FusionAppText(
                                         text: widget.speakers.first.hardwareName,
                                         maxLine: 1,
                                         style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 10),
                                       ),
-                                      const SizedBox(height: 6),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          border: Border.all(
-                                            color: Theme.of(context).colorScheme.grey,
-                                            width: 1,
-                                          ),
-                                          borderRadius: BorderRadius.circular(2),
-                                        ),
-                                        child: FusionAppText(
-                                          text: location.name,
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9, color: const Color(0xFFBD7D23)),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
+                                    ),
+                                    const SizedBox(width: 4),
 
-                                /// Add/Remove buttons with count
-                                Row(
-                                  children: <Widget>[
-                                    GestureDetector(
-                                      onTap: () {
-                                        // Remove speaker from this location
-                                        if (locationSpeakers.isNotEmpty) {
-                                          final Speaker speaker = locationSpeakers.last;
-                                          serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
-                                        }
-                                      },
-                                      child: const Icon(Icons.remove, size: 10),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    Container(
-                                      height: 20,
-                                      width: 20,
-                                      alignment: Alignment.center,
-                                      decoration: BoxDecoration(
-                                        border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                      child: FusionAppText(
-                                        text: locationSpeakers.length.toString(),
-                                        maxLine: 1,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 2),
-                                    GestureDetector(
-                                      onTap: () {
-                                        if (locationSpeakers.isNotEmpty) {
-                                          final Speaker speaker = locationSpeakers.first.getClone();
-                                          serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                                          serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: widget.deviceId);
-                                        }
-                                      },
-                                      child: const Icon(Icons.add, size: 10),
+                                    /// Add/Remove buttons with count
+                                    Row(
+                                      children: <Widget>[
+                                        GestureDetector(
+                                          onTap: () {
+                                            // Remove speaker from this location
+                                            if (locationSpeakers.isNotEmpty) {
+                                              final Speaker speaker = locationSpeakers.last;
+                                              serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                                            }
+                                          },
+                                          child: const Icon(Icons.remove, size: 10),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        Container(
+                                          height: 20,
+                                          width: 20,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                                            borderRadius: BorderRadius.circular(2),
+                                          ),
+                                          child: FusionAppText(
+                                            text: locationSpeakers.length.toString(),
+                                            maxLine: 1,
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 2),
+                                        GestureDetector(
+                                          onTap: () {
+                                            if (locationSpeakers.isNotEmpty) {
+                                              final Speaker speaker = locationSpeakers.first.getClone();
+                                              serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                                              serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: widget.deviceId);
+                                            }
+                                          },
+                                          child: const Icon(Icons.add, size: 10),
+                                        ),
+                                      ],
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         );
                       },

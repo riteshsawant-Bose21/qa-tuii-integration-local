@@ -97,6 +97,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                         AddSpeakersMenu(
                           zoneId: widget.zoneId ?? "",
                           subZoneId: widget.subZoneId,
+                          onSpeakerAdded: onSpeakerAdded,
                         ),
                         const SizedBox(width: 8),
                         _buildKebabMenu(context),
@@ -113,7 +114,12 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
     );
   }
 
-  /// SubZone content - properly contained within ReorderableListView
+  /// Called when a new speaker is added to the subzone
+  void onSpeakerAdded() {
+    _isSubZoneExpanded.value = true;
+  }
+
+  /// SubZone content - properl    _isSubZoneExpanded.value = true; // <-- Corrected to use the correct variableReorderableListView
   Widget _buildSubZoneContent() {
     if (widget.subZoneCircuit.isEmpty) {
       print("no devices in subzone ${widget.subZoneId}");
@@ -189,6 +195,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           child: CircuitDeviceWidget(
                             index: index,
                             deviceId: deviceId,
+
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
@@ -223,6 +230,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           width: 220,
                           child: CircuitDeviceWidget(
                             index: index,
+
                             deviceId: deviceId,
                             location: location,
                             speakers: speakers,

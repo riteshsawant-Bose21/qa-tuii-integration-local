@@ -20,11 +20,13 @@ import 'listening_area_dropdown_widget.dart';
 class AddSpeakersMenu extends StatefulWidget {
   final String zoneId;
   final String? subZoneId;
+  final VoidCallback? onSpeakerAdded;
 
   const AddSpeakersMenu({
     super.key,
     required this.zoneId,
     this.subZoneId,
+    this.onSpeakerAdded,
   });
 
   @override
@@ -263,6 +265,9 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                         context,
                                         message: "Speakers added to circuit successfully",
                                       );
+                                      if (widget.onSpeakerAdded != null) {
+                                        widget.onSpeakerAdded!();
+                                      }
                                     }
                                     speakerData = null;
                                     Navigator.pop(context);

@@ -128,6 +128,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           /// Add device button
           AddSpeakersMenu(
             zoneId: widget.zoneId,
+            onSpeakerAdded: onSpeakerAdded,
           ),
           const SizedBox(width: 8),
 
@@ -188,6 +189,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         ///
                         if (incoming == null) return false;
                         // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
+                        // _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
+
                         final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                         final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
                         return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU && incoming.id != circuitData.id;
@@ -200,8 +203,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           for (final Speaker speaker in incomingSpeakers) {
                             // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
                             serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                            _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
                           }
                         }
+                        //
 
                         /// Remove the dragged circuit from the zone
                         _projectViewModel.removeCircuitFromZone(circuitId: incoming.id, zoneId: widget.zoneId);
@@ -243,6 +248,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                 child: CircuitDeviceWidget(
                                   index: index,
                                   deviceId: deviceId,
+
                                   circuitDeviceName: circuitData.name,
                                   assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                                   location: location,
@@ -805,5 +811,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     Navigator.of(context).pop(); // Close kebab menu
     _zoneNameController.clear();
     _selectedListeningAreaIds.clear();
+  }
+
+  /// Called when a new speaker is added to the zone
+  void onSpeakerAdded() {
+    _isZoneExpanded.value = true;
   }
 }
