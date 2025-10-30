@@ -326,9 +326,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           tooltip: 'Zone actions',
                           onSelected: (String value) {
                             switch (value) {
-                              case 'add_circuit':
-                                _addCircuitToZone(zone.id);
-                                break;
                               case 'add_subzone':
                                 _addSubZoneToZone(zone.id);
                                 break;
@@ -1291,9 +1288,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                             tooltip: 'Subzone actions',
                             onSelected: (String value) {
                               switch (value) {
-                                case 'add_circuit':
-                                  _addCircuitToSubZone(subZone.id);
-                                  break;
                                 case 'delete':
                                   _showDeleteSubZoneConfirmation(subZone);
                                   break;
@@ -1562,21 +1556,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
   // Removed _buildAddCircuitIcon - now using three-dot menus
 
-  void _addCircuitToZone(String zoneId) {
-    final CircuitModel newCircuit = CircuitModel(
-      name: 'Circuit ${_getZoneCircuits(zoneId).length + 1}',
-    );
-    serviceLocator<ProjectViewModel>().addCircuit(circuit: newCircuit);
-    serviceLocator<ProjectViewModel>().addCircuitToZone(zoneId: zoneId, circuitId: newCircuit.id);
-  }
-
-  void _addCircuitToSubZone(String subZoneId) {
-    final CircuitModel newCircuit = CircuitModel(
-      name: 'Circuit ${serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZoneId).length + 1}',
-    );
-    serviceLocator<ProjectViewModel>().addCircuit(circuit: newCircuit);
-    serviceLocator<ProjectViewModel>().addCircuitToSubZone(subZoneId: subZoneId, circuitId: newCircuit.id);
-  }
 
   void _addSpeakerToCircuit(Speaker speaker, String circuitId) {
     serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitId);
@@ -2262,7 +2241,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             : _getZoneCircuits(zoneId);
 
     final CircuitModel newCircuit = CircuitModel(
-      name: 'Circuit ${existingCircuits.length + 1}',
+      name: '${speaker.hardwareName} ${existingCircuits.length + 1}',
+      speakerSKU: speaker.speakerSKU
     );
 
     // Add the circuit to the project

@@ -81,6 +81,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
         );
 
         /// Automatically select the newly created area
+        print('New Listening Area ID: ${newListeningArea.id} and Floor ID: $floorId');
         widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
         Navigator.of(context).pop();
       } catch (e) {

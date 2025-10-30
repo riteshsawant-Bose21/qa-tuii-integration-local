@@ -116,6 +116,12 @@ extension ListeningAreaService on ProjectService {
     return areas;
   }
 
+  void addMultipleAreasToAddZone(List<String> allAreasToAdd, String zoneId) {
+    for (final area in allAreasToAdd) {
+      addListeningAreaToZone(area, zoneId, allAreasToAdd: allAreasToAdd);
+    }
+  }
+
   /// Assign a listening area to a zone.
   /// If the listening area is already part of some other zone(s), they will be removed first.
   /// This updates:
@@ -123,7 +129,7 @@ extension ListeningAreaService on ProjectService {
   ///  - Zone.listeningAreasIds lists,
   ///  - Hardware.locationEntity.zoneId and hardwareLocation links (remove old zone links, add new).
   /// Add ListeningArea to Zone with full validation + circuit + cleanup support
-  void addListeningAreaToZone(String listeningAreaId, String zoneId) {
+  void addListeningAreaToZone(String listeningAreaId, String zoneId, {List<String>? allAreasToAdd}) {
     if (!listeningAreas.exists(listeningAreaId)) {
       throw Exception('ListeningArea $listeningAreaId not found');
     }
@@ -155,7 +161,86 @@ extension ListeningAreaService on ProjectService {
       }
     }
 
+    final hardwareInArea = relationships.getChildren(RelationshipType.hardwareLocation, listeningAreaId);
+
+    final hardwareInAreaCopy = List<String>.from(hardwareInArea);
+    for (final hwId in hardwareInAreaCopy) {
+      final circuitForHardware = relationships.getParent(RelationshipType.circuitHardware, hwId);
+      if (circuitForHardware != null) {
+        //check if all hardware in circuit is in same area as current
+        final listeningAreaInCircuit = [];
+        final hardwareInCurrentArea = [];
+        final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, circuitForHardware);
+        final hardwareInCircuitCopy = List<String>.from(hardwareInCircuit);
+        for (final hw in hardwareInCircuitCopy) {
+          final laId = relationships.getParent(RelationshipType.hardwareLocation, hw);
+          if (laId != null) {
+            listeningAreaInCircuit.add(laId);
+
+            //if hardware in same area add it to current area hardware
+            if (laId == listeningAreaId || (allAreasToAdd != null && allAreasToAdd.contains(laId))) {
+              hardwareInCurrentArea.add(hw);
+            }
+          }
+        }
+
+        // check if whole circuit is in same area
+        if (hardwareInCurrentArea.length == hardwareInCircuit.length) {
+          // Just add circuit to this zone
+          relationships.link(RelationshipType.zoneCircuits, zoneId, circuitForHardware);
+        } else {
+          if (hardwareInCurrentArea.isNotEmpty) {
+            //From new Circuit form the hardware
+            final speaker = hardware.get(hardwareInCurrentArea.first);
+            final newCircuit = CircuitModel(name: (speaker! as Speaker).speakerSKU, speakerSKU: (speaker as Speaker).speakerSKU);
+            addCircuit(newCircuit);
+            for (final hw in hardwareInCurrentArea) {
+              relationships.unlink(RelationshipType.circuitHardware, circuitForHardware, hw);
+              addHardwareToCircuit(hw, newCircuit.id);
+            }
+          }
+        }
+      }
+    }
+
     relationships.link(RelationshipType.zoneAreas, zoneId, listeningAreaId);
+  }
+
+  void removeMultipleListeningAreaFromZone(List<String> listeningAreaIds, String zoneId) {
+    // final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, zoneId);
+
+    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId);
+
+    // --- NEW LOGIC ---
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final cid in circuitIdsCopy) {
+      final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cid);
+
+      final allHardwareInCircuit = hardwareInCircuit.map((hwId) => hardware.get(hwId)).whereType<Speaker>().toList();
+
+      final hardwareInArea = allHardwareInCircuit.where((hw) => listeningAreaIds.contains(hw.locationEntity.listeningAreaId)).toList();
+
+      // check if all hardware in area are in the same circuit
+      if (hardwareInArea.length == hardwareInCircuit.length) {
+        // Just remove circuit from this zone
+        relationships.unlink(RelationshipType.zoneCircuits, zoneId, cid);
+      } else {
+        if (hardwareInArea.isNotEmpty) {
+          //From new Circuit form the hardware
+          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU, speakerSKU: hardwareInArea.first.speakerSKU);
+          addCircuit(newCircuit);
+          for (final hw in hardwareInArea) {
+            relationships.unlink(RelationshipType.circuitHardware, cid, hw.id);
+            addHardwareToCircuit(hw.id, newCircuit.id);
+          }
+        }
+      }
+    }
+
+    for (final listeningAreaId in listeningAreaIds) {
+      // Unlink listening area from zone
+      relationships.unlink(RelationshipType.zoneAreas, zoneId, listeningAreaId);
+    }
   }
 
   /// Remove ListeningArea from Zone, cleaning circuits + hardware references
@@ -169,44 +254,72 @@ extension ListeningAreaService on ProjectService {
     if (!zoneAreas.contains(listeningAreaId)) return;
 
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId);
-
-    List<String> circuitIdToRemove = [];
-
-    for (final cId in circuitIds) {
-      final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cId);
-
+    // --- NEW LOGIC ---
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final cid in circuitIdsCopy) {
+      final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cid);
       final hardwareInArea = hardwareInCircuit
           .map((hwId) => hardware.get(hwId))
-          .whereType<HardwareComponent>()
+          .whereType<Speaker>()
           .where((hw) => hw.locationEntity.listeningAreaId == listeningAreaId)
           .toList();
 
-      // Unlink hardware
-      for (final hw in hardwareInArea) {
-        relationships.unlink(RelationshipType.circuitHardware, cId, hw.id);
+      // check if all hardware in area are in the same circuit
+      if (hardwareInArea.length == hardwareInCircuit.length) {
+        // Just remove circuit from this zone
+        relationships.unlink(RelationshipType.zoneCircuits, zoneId, cid);
+      } else {
+        if (hardwareInArea.isNotEmpty) {
+          //From new Circuit form the hardware
+          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU, speakerSKU: hardwareInArea.first.speakerSKU);
+          addCircuit(newCircuit);
+          for (final hw in hardwareInArea) {
+            relationships.unlink(RelationshipType.circuitHardware, cid, hw.id);
+            addHardwareToCircuit(hw.id, newCircuit.id);
+          }
+        }
       }
+    }
 
-      // If the circuit now has no hardware or LAs, delete it
-      final remainingHW = relationships.getChildren(RelationshipType.circuitHardware, cId);
-      if (remainingHW.isEmpty) {
-        circuitIdToRemove.add(cId);
-      }
-    }
-    // Remove empty circuits
-    for (final cId in circuitIdToRemove) {
-      removeCircuit(cId);
-    }
+    // ---- OLD LOGIC ---
+    //
+    // List<String> circuitIdToRemove = [];
+    //
+    // for (final cId in circuitIds) {
+    //   final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cId);
+    //
+    //   final hardwareInArea = hardwareInCircuit
+    //       .map((hwId) => hardware.get(hwId))
+    //       .whereType<HardwareComponent>()
+    //       .where((hw) => hw.locationEntity.listeningAreaId == listeningAreaId)
+    //       .toList();
+    //
+    //   // Unlink hardware
+    //   for (final hw in hardwareInArea) {
+    //     relationships.unlink(RelationshipType.circuitHardware, cId, hw.id);
+    //   }
+    //
+    //   // If the circuit now has no hardware or LAs, delete it
+    //   final remainingHW = relationships.getChildren(RelationshipType.circuitHardware, cId);
+    //   if (remainingHW.isEmpty) {
+    //     circuitIdToRemove.add(cId);
+    //   }
+    // }
+    // // Remove empty circuits
+    // for (final cId in circuitIdToRemove) {
+    //   removeCircuit(cId);
+    // }
 
     // Unlink listening area from zone
     relationships.unlink(RelationshipType.zoneAreas, zoneId, listeningAreaId);
 
-    final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
-
-    // Also remove from any subzones under this zone
-    final subZoneIdsCopy = List<String>.from(subZoneIds);
-    for (final subZoneId in subZoneIdsCopy) {
-      removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
-    }
+    // final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);
+    //
+    // // Also remove from any subzones under this zone
+    // final subZoneIdsCopy = List<String>.from(subZoneIds);
+    // for (final subZoneId in subZoneIdsCopy) {
+    //   removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
+    // }
   }
 
   FloorModel? getFloorForListeningArea(String listeningAreaId) {
