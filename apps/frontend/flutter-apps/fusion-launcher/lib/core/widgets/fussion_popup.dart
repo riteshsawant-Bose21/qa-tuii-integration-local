@@ -48,8 +48,13 @@ class _FussionPopupState extends State<FussionPopup> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback(
       (Duration timeStamp) {
-        // ignore: use_build_context_synchronously
-        if (widget.show) Future<void>.delayed(const Duration(milliseconds: 500), () => _show(context));
+        if (widget.show) {
+          Future<void>.delayed(
+            const Duration(milliseconds: 500),
+            // ignore: use_build_context_synchronously
+            () => _show(context),
+          );
+        }
       },
     );
   }

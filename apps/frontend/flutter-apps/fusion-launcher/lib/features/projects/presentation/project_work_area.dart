@@ -41,7 +41,8 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea>
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -367,7 +368,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       racks:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                                (GenericHardwareComponent component) =>
+                                    component.type == GenericHardwareComponentType.rack,
                               )
                               .toList(),
                       amplifiers: <Amplifier>[],
@@ -375,7 +377,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       others:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                (HardwareComponent component) =>
+                                    component is GenericHardwareComponent &&
+                                    component.type == GenericHardwareComponentType.other,
                               )
                               .toList(),
                     ),
@@ -448,7 +452,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       racks:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                                (GenericHardwareComponent component) =>
+                                    component.type == GenericHardwareComponentType.rack,
                               )
                               .toList(),
                       amplifiers: <Amplifier>[],
@@ -456,7 +461,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       others:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                (HardwareComponent component) =>
+                                    component is GenericHardwareComponent &&
+                                    component.type == GenericHardwareComponentType.other,
                               )
                               .toList(),
                     ),
@@ -679,6 +686,19 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                       ),
 
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 5),
+                        child: IconButton(
+                          icon: Icon(
+                            Icons.help,
+                            size: 24,
+                            color: Theme.of(context).colorScheme.greyDark,
+                          ),
+                          tooltip: 'Save project',
+                          onPressed: () => GuideShowcaseWrapper.askGuideNeededDialog(context),
+                        ),
+                      ),
+
                       /// Share Icon Section
                       Container(
                         width: 56,
@@ -848,7 +868,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color:
+                                _projectNameError != null
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

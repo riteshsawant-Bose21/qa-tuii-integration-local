@@ -89,6 +89,9 @@ class GuideShowcaseWrapper extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
+          backgroundColor: Colors.white,
+          constraints: const BoxConstraints(maxWidth: 600),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
           title: Text(
             'Do you want guide to how to use Fussion Launcher ?',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
@@ -96,7 +99,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
             ),
           ),
           content: Text(
-            'ake a short tour to understand how Fussion Launcher works and make the most of it.',
+            'A quick walkthrough to help you use Fussion Launcher efficiently.',
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
