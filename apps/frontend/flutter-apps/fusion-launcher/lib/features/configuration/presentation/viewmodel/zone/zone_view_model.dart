@@ -37,12 +37,8 @@ extension ZoneViewModel on ProjectViewModel {
       final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
       final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
       final List<String> toAdd = listeningAreaIds.where((String id) => !currentListeningAreaIds.contains(id)).toList();
-      for (final String id in toRemove) {
-        projectManager.removeListeningAreaFromZone(id, zoneId);
-      }
-      for (final String id in toAdd) {
-        projectManager.addListeningAreaToZone(id, zoneId);
-      }
+      projectManager.removeMultipleListeningAreaFromZone(toRemove, zoneId);
+      projectManager.addMultipleAreasToAddZone(toAdd, zoneId);
       if (autoSave) {
         saveProject();
       }
