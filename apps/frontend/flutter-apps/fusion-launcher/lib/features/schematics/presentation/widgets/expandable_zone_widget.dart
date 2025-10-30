@@ -792,20 +792,20 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       name: _zoneNameController.text.trim(),
     );
 
-    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-    viewModel.recordSnapshot();
-    viewModel.addSubZone(subZone: newSubZone, autoSave: false);
-    viewModel.addSubZoneToZone(
+    // final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+    _projectViewModel.recordSnapshot();
+    _projectViewModel.addSubZone(subZone: newSubZone, autoSave: false);
+    _projectViewModel.addSubZoneToZone(
       subZoneId: newSubZone.id,
       parentZoneId: zoneId ?? "",
       autoSave: false,
     );
-    viewModel.updateListeningAreasInSubZone(
+    _projectViewModel.updateListeningAreasInSubZone(
       subZoneId: newSubZone.id,
       listeningAreaIds: _selectedListeningAreaIds,
       autoSave: false,
     );
-    viewModel.saveProject();
+    _projectViewModel.saveProject();
 
     Navigator.of(context).pop(); // Close subzone popup
     Navigator.of(context).pop(); // Close kebab menu
