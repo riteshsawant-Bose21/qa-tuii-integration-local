@@ -9,6 +9,8 @@ import 'package:fusion_launcher/features/projects/models/device_item_model.dart'
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/models/products_data.dart';
+import '../../../../guide/controller/guide_showcase_controller.dart';
+import '../../../../guide/pages/guide_showcase_wrapper.dart';
 
 enum _AcousticsToolType {
   draw,
@@ -103,7 +105,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               vertical: 2.0,
             ),
             child: BlocListener<ProjectViewModel, ProjectViewModelState>(
-              listenWhen: (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
+              listenWhen:
+                  (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
               listener: (BuildContext context, ProjectViewModelState state) {
                 if (state is ToolbarModeChanged && state.mode == ToolbarMode.system) {
                   // Force SPL off when mode changes to system
@@ -145,7 +148,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                               ),
                             );
                           },
-                          child: _buildModeSpecificTools(),
+                          child: GuideShowcaseWrapper(
+                            step: GuideShowCaseSteps.systemModeTabs,
+                            child: _buildModeSpecificTools(),
+                          ),
                         ),
                       ),
                     ],
@@ -172,21 +178,29 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          _buildModeTab(
-            label: "Acoustics",
-            isSelected: currentMode == ToolbarMode.acoustics,
-            color: Colors.blue,
-            onTap: () {
-              _switchMode(ToolbarMode.acoustics);
-            },
+          GuideShowcaseWrapper(
+            step: GuideShowCaseSteps.acousticMode,
+            child: _buildModeTab(
+              label: "Acoustics",
+              isSelected: currentMode == ToolbarMode.acoustics,
+              color: Colors.blue,
+              onTap: () {
+                _switchMode(ToolbarMode.acoustics);
+                context.read<GuideShowCaseController>().completeStep();
+              },
+            ),
           ),
-          _buildModeTab(
-            label: "System",
-            isSelected: currentMode == ToolbarMode.system,
-            color: Colors.green,
-            onTap: () {
-              _switchMode(ToolbarMode.system);
-            },
+          GuideShowcaseWrapper(
+            step: GuideShowCaseSteps.systemMode,
+            child: _buildModeTab(
+              label: "System",
+              isSelected: currentMode == ToolbarMode.system,
+              color: Colors.green,
+              onTap: () {
+                _switchMode(ToolbarMode.system);
+                context.read<GuideShowCaseController>().completeStep();
+              },
+            ),
           ),
         ],
       ),
@@ -234,7 +248,14 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     );
   }
 
-  Widget _buildToolItem(String tooltip, {String? assetIcon, IconData? icon, bool isSelected = false, required Function() onTap, Color? selectedColor}) {
+  Widget _buildToolItem(
+    String tooltip, {
+    String? assetIcon,
+    IconData? icon,
+    bool isSelected = false,
+    required Function() onTap,
+    Color? selectedColor,
+  }) {
     final Color color = selectedColor ?? Colors.green;
 
     return Tooltip(
@@ -291,19 +312,25 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
 
     return <Widget>[
       // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
-      _buildToolItem(
-        icon: Icons.polyline,
-        "Draw Listening Area",
-        onTap: () => _onAcousticsToolSelected(_AcousticsToolType.draw),
-        isSelected: widget.isDrawSelected,
-        selectedColor: Colors.blue,
+      GuideShowcaseWrapper(
+        step: GuideShowCaseSteps.drawListeningArea,
+        child: _buildToolItem(
+          icon: Icons.polyline,
+          "Draw Listening Area",
+          onTap: () => _onAcousticsToolSelected(_AcousticsToolType.draw),
+          isSelected: widget.isDrawSelected,
+          selectedColor: Colors.blue,
+        ),
       ),
-      _buildToolItem(
-        icon: Icons.speaker,
-        "Add Speakers",
-        onTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
-        isSelected: currentDeviceIndex == 0,
-        selectedColor: Colors.blue,
+      GuideShowcaseWrapper(
+        step: GuideShowCaseSteps.addSpeakers,
+        child: _buildToolItem(
+          icon: Icons.speaker,
+          "Add Speakers",
+          onTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
+          isSelected: currentDeviceIndex == 0,
+          selectedColor: Colors.blue,
+        ),
       ),
       _buildSplTool(),
       _buildToolItem(

@@ -16,6 +16,8 @@ import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../guide/controller/guide_showcase_controller.dart';
+import '../../../guide/pages/guide_showcase_wrapper.dart';
 import 'toolbar/building_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
@@ -183,17 +185,28 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       cursorPosition = null;
                                     });
                                   },
-                                  child: FloorCanvas(
-                                    gridSize: 100,
-                                    controller: widget.floorCanvasController,
-                                    hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: floor.id),
-                                    listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floorId: floor.id),
-                                    floor: floor,
-                                    floorPlanEntity: floor.floorPlan,
-                                    selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
-                                    selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
-                                    onUpdateHardwareComponent: (HardwareComponent updatedHw) {
-                                      final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+                                  child: GuideShowcaseWrapper(
+                                    step: GuideShowCaseSteps.showListeningAreaSelectionArea,
+                                    onHighlightedSpotTap: () {
+                                      context.read<GuideShowCaseController>().completeStep();
+                                    },
+                                    child: FloorCanvas(
+                                      gridSize: 100,
+                                      controller: widget.floorCanvasController,
+                                      hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(
+                                        floorId: floor.id,
+                                      ),
+                                      listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                        floorId: floor.id,
+                                      ),
+                                      floor: floor,
+                                      floorPlanEntity: floor.floorPlan,
+                                      selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
+                                      selectedListeningAreaId:
+                                          serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
+                                      onUpdateHardwareComponent: (HardwareComponent updatedHw) {
+                                        final HardwareComponent oldHw =
+                                            serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
 
                                       //check for pos && listening area id since only those two can be updated from canvas
                                       if (oldHw.pos != updatedHw.pos ||
@@ -287,6 +300,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
                                   ),
                                 ),
+                                ),
 
                                 if (useCustomCursor && cursorPosition != null)
                                   Positioned(
@@ -363,7 +377,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             fontSize: 14,
                                             color:
                                                 ThemeData.estimateBrightnessForColor(
-                                                          FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                          FusionUiUtils.hexToColor(
+                                                            widget
+                                                                .floorCanvasController
+                                                                .currentlySelectingZone!
+                                                                .zoneColor,
+                                                          ),
                                                         ) ==
                                                         Brightness.light
                                                     ? Colors.grey.shade800
@@ -383,7 +402,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               border: Border.all(
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUiUtils.hexToColor(
+                                                                widget
+                                                                    .floorCanvasController
+                                                                    .currentlySelectingZone!
+                                                                    .zoneColor,
+                                                              ),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -398,7 +422,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               size: 16,
                                               color:
                                                   ThemeData.estimateBrightnessForColor(
-                                                            FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                            FusionUiUtils.hexToColor(
+                                                              widget
+                                                                  .floorCanvasController
+                                                                  .currentlySelectingZone!
+                                                                  .zoneColor,
+                                                            ),
                                                           ) ==
                                                           Brightness.light
                                                       ? Colors.grey.shade800
@@ -407,37 +436,51 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           ),
                                         ),
                                         const SizedBox(width: 12),
-                                        InkWell(
-                                          onTap: () {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                            widget.floorCanvasController.completeListeningAreaSelection();
-                                          },
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
+                                        GuideShowcaseWrapper(
+                                          step: GuideShowCaseSteps.confirmSelectListeningArea,
+                                          child: InkWell(
+                                            onTap: () {
+                                              serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                              widget.floorCanvasController.completeListeningAreaSelection();
+                                              context.read<GuideShowCaseController>().completeStep();
+                                            },
+                                            borderRadius: BorderRadius.circular(12),
+                                            child: Container(
+                                              padding: const EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                border: Border.all(
+                                                  color:
+                                                      ThemeData.estimateBrightnessForColor(
+                                                                FusionUiUtils.hexToColor(
+                                                                  widget
+                                                                      .floorCanvasController
+                                                                      .currentlySelectingZone!
+                                                                      .zoneColor,
+                                                                ),
+                                                              ) ==
+                                                              Brightness.light
+                                                          ? Colors.grey.shade800
+                                                          : Colors.white,
+                                                  width: 1,
+                                                ),
+                                                borderRadius: BorderRadius.circular(10),
+                                              ),
+                                              child: Icon(
+                                                Icons.check,
+                                                size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
+                                                              FusionUiUtils.hexToColor(
+                                                                widget
+                                                                    .floorCanvasController
+                                                                    .currentlySelectingZone!
+                                                                    .zoneColor,
+                                                              ),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
                                                         : Colors.white,
-                                                width: 1,
                                               ),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: Icon(
-                                              Icons.check,
-                                              size: 16,
-                                              color:
-                                                  ThemeData.estimateBrightnessForColor(
-                                                            FusionUiUtils.hexToColor(widget.floorCanvasController.currentlySelectingZone!.zoneColor),
-                                                          ) ==
-                                                          Brightness.light
-                                                      ? Colors.grey.shade800
-                                                      : Colors.white,
                                             ),
                                           ),
                                         ),
@@ -461,7 +504,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             onSplSelected: () {
                                               widget.floorCanvasController.toggleSpl();
                                               widget.onCalculateSpl();
-                                              widget.onSplStateChanged(widget.floorCanvasController.isShowingSpl.value);
+                                              widget.onSplStateChanged(
+                                                widget.floorCanvasController.isShowingSpl.value,
+                                              );
                                             },
                                             onSplDisabled: () {
                                               widget.floorCanvasController.setSpl(false);
@@ -485,25 +530,39 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               widget.floorCanvasController.fitToView();
                                             },
                                             onAddSpeakerSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(0); // DeviceType.speakers
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                0,
+                                              ); // DeviceType.speakers
                                             },
                                             onAddSourceSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // DeviceType.sources
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                1,
+                                              ); // DeviceType.sources
                                             },
                                             onAddEndpointSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(2); // DeviceType.endpoints
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                2,
+                                              ); // DeviceType.endpoints
                                             },
                                             onAddAmplifierSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(3); // DeviceType.amplifiers
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                3,
+                                              ); // DeviceType.amplifiers
                                             },
                                             onAddDspSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(4); // DeviceType.dsp
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                4,
+                                              ); // DeviceType.dsp
                                             },
                                             onAddControllerSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(5); // DeviceType.controllers
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                5,
+                                              ); // DeviceType.controllers
                                             },
                                             onAddRackSelected: () {
-                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // DeviceType.rack
+                                              serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(
+                                                6,
+                                              ); // DeviceType.rack
                                             },
                                             onProductSelected: widget.onProductSelected,
                                             onProductDeselected: widget.onProductDeselected,
@@ -600,14 +659,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             const SizedBox(height: 28),
 
             /// Upload Button
-            FusionOutlinedButton(
-              height: 32,
-              width: 160,
-              label: "Upload Floor-plan",
-              textStyle: Theme.of(context).textTheme.titleSmall,
-              onTap: () {
-                _showFloorPlanPicker();
-              },
+            GuideShowcaseWrapper(
+              step: GuideShowCaseSteps.uploadFloorPlan,
+              child: FusionOutlinedButton(
+                height: 32,
+                width: 160,
+                label: "Upload Floor-plan",
+                textStyle: Theme.of(context).textTheme.titleSmall,
+                onTap: () {
+                  _showFloorPlanPicker();
+                },
+              ),
             ),
           ],
         ),
@@ -716,7 +778,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(assetPath: assetImagePath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(
+      assetPath: assetImagePath,
+    );
     if (responseCallback.success && responseCallback.data != null) {
       final String savedImagePath = responseCallback.data!;
       _calibrateFloorPlan(savedImagePath);
@@ -742,13 +806,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       if (result != null && result.files.single.path != null) {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
-        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
+        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(
+          imagePath: sourcePath,
+        );
         if (responseCallback.success && responseCallback.data != null) {
           final String savedImagePath = responseCallback.data!;
           _calibrateFloorPlan(savedImagePath);
         }
 
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
         debugPrint('Floor plan imported successfully: $fileName');
       }
     } catch (e) {
@@ -812,7 +880,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       if (calibrationData != null) {
         debugPrint('Calibration completed: $calibrationData');
-        debugPrint('Scale: ${calibrationData.pixelsPerUnit.toStringAsFixed(2)} pixels per ${calibrationData.unit.symbol}');
 
         const double canvasPixelsPerMeter = 100.0;
 
@@ -850,8 +917,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         final double canvasHeightInPixels = heightInMeters * canvasPixelsPerMeter;
         final Size floorPlanSize = Size(canvasWidthInPixels, canvasHeightInPixels);
 
-        debugPrint('Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m');
-        debugPrint('Canvas dimensions: ${canvasWidthInPixels.toStringAsFixed(1)}px x ${canvasHeightInPixels.toStringAsFixed(1)}px');
+        debugPrint(
+          'Real-world dimensions: ${widthInMeters.toStringAsFixed(2)}m x ${heightInMeters.toStringAsFixed(2)}m',
+        );
+        debugPrint(
+          'Canvas dimensions: ${canvasWidthInPixels.toStringAsFixed(1)}px x ${canvasHeightInPixels.toStringAsFixed(1)}px',
+        );
 
         // If we have a cropped image, save it and use it instead of the original
         String imagePathToUse = savedImagePath;
@@ -872,6 +943,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         );
 
         widget.floorCanvasController.loadFloorPlanImage();
+        // ignore: use_build_context_synchronously
+        context.read<GuideShowCaseController>().completeStep();
       } else {
         debugPrint('Calibration cancelled by user');
       }
@@ -916,7 +989,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     debugPrint('Cropped image temporarily saved to: $tempPath');
 
     // Now use the project's image management system to properly store it
-    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: tempPath);
+    final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(
+      imagePath: tempPath,
+    );
 
     // Clean up the temporary file
     try {

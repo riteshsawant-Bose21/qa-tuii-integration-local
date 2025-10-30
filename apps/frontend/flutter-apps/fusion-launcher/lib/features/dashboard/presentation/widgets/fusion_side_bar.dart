@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -8,6 +9,7 @@ import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
 import '../../../../core/utils/fusion_utils.dart';
+import '../../../guide/controller/guide_showcase_controller.dart';
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
@@ -588,7 +590,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
 
                 FusionUiUtils.showLoader(context);
                 final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(newProject);
+                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(
+                  newProject,
+                );
                 if (context.mounted) {
                   FusionUiUtils.hideLoader(context);
                 }
@@ -601,6 +605,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 // }
 
                 if (context.mounted) {
+                  context.read<GuideShowCaseController>().completeStep();
                   Navigator.of(context).pop();
                   // Navigator.pushNamed(context, Routes.projectPage);
                 }

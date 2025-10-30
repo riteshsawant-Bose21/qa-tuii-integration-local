@@ -6,6 +6,8 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../guide/controller/guide_showcase_controller.dart';
+import '../../../guide/pages/guide_showcase_wrapper.dart';
 import '../../../projects/widget/product_search_widget.dart';
 import '../viewModel/product_query_view_model_cubit.dart';
 import '../viewModel/product_query_view_model_state.dart';
@@ -93,13 +95,16 @@ class _ProductQueryViewState extends State<ProductQueryView> {
                     itemCount: state.filteredProducts.length,
                     itemBuilder: (BuildContext context, int index) {
                       final ProductQueryModel product = state.filteredProducts[index];
-                      return InkWell(
-                        onTap: () {
-                          serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-                        },
-                        child: ProductCard(
-                          product: product,
-                          searchQuery: state.searchQuery,
+
+                      return GuideShowcaseWrapper(
+                        show: index == 0, // show guide only for first child in a list.
+                        step: GuideShowCaseSteps.addSpeakers,
+                        child: InkWell(
+                          onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+                          child: ProductCard(
+                            product: product,
+                            searchQuery: state.searchQuery,
+                          ),
                         ),
                       );
                     },
