@@ -15,6 +15,7 @@ import '../circuit_controller.dart';
 
 extension InitializationHandlerMixin on CircuitController {
   void loadFromPM() {
+    
     final List<Zone> zones = projectManager.zones;
     for (int i = 0; i < zones.length; i++) {
       final Zone zone = zones[i];

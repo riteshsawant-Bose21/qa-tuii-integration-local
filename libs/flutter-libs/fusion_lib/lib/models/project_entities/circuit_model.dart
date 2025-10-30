@@ -9,6 +9,7 @@ class CircuitModel {
   final String? tapSetting;
   final String? impedance;
   final Offset? wiringPos;
+  final String? speakerSKU;
 
   CircuitModel({
     String? id,
@@ -17,6 +18,7 @@ class CircuitModel {
     this.impedance,
     this.tapSetting,
     this.wiringPos,
+    this.speakerSKU,
   }) : id = id ?? "CIRCUIT${FusionUtils.shortStringUUID()}",
        inputPort =
            inputPort ??
@@ -39,6 +41,7 @@ class CircuitModel {
     String? tapSetting,
     String? impedance,
     Offset? wiringPos,
+    String? speakerSKU,
   }) {
     return CircuitModel(
       id: id ?? this.id,
@@ -47,6 +50,7 @@ class CircuitModel {
       tapSetting: tapSetting ?? this.tapSetting,
       impedance: impedance ?? this.impedance,
       wiringPos: wiringPos ?? this.wiringPos,
+      speakerSKU: speakerSKU ?? this.speakerSKU,
     );
   }
 
@@ -59,6 +63,7 @@ class CircuitModel {
           : null,
       impedance: json['impedance'],
       tapSetting: json['tapSetting'],
+      speakerSKU: json['speakerSKU'],
       wiringPos: json['wiringPos'] != null
           ? Offset(
               (json['wiringPos']['dx'] as num).toDouble(),
@@ -75,6 +80,7 @@ class CircuitModel {
       'inputPort': inputPort.toJson(),
       'impedance': impedance,
       'tapSetting': tapSetting,
+      'speakerSKU':speakerSKU,
       'wiringPos': wiringPos != null
           ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy}
           : null,

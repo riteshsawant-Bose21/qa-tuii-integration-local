@@ -33,4 +33,6 @@ class WiringStateCache {
   List<Wire>? wireOfPort(CircuitPort port) {
     return _portWireCache[port];
   }
+
+  
 }

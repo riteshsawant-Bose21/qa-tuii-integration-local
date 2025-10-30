@@ -144,10 +144,10 @@ extension HardwareViewModel on ProjectViewModel {
         recordSnapshot();
       }
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(
-            hardwareId,
-            listeningAreaId: listeningAreaId,
-            floorId: floorId,
-          );
+        hardwareId,
+        listeningAreaId: listeningAreaId,
+        floorId: floorId,
+      );
       if (autoSave) {
         saveProject();
       }
@@ -292,7 +292,27 @@ extension HardwareViewModel on ProjectViewModel {
           listeningAreaId: listeningAreaId,
         ),
       );
-      addHardware(hardware: newHardware, autoSave: autoSave);
+      final CircuitModel circuitModel = CircuitModel(name: newHardware.name);
+      addCircuit(circuit: circuitModel, autoSave: false);
+      addHardware(hardware: newHardware, autoSave: false);
+      addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);
+
+      if (listeningAreaId != null) {
+        final Zone? zone = getZonesForListeningArea(areaId: listeningAreaId);
+        if (zone == null) {
+          addCircuitToZone(zoneId: zone!.id, circuitId: circuitModel.id);
+        }
+      }
+
+      // final SubZone? subZone = getZonesForListeningArea(hardwareId: newHardware.id);
+      // if(subZone == null){
+      //   final Zone? zone = getZoneForHardware(hardwareId: newHardware.id);
+      //   if(zone != null){
+      //     addCircuitToZone(zoneId: zone.id, circuitId: circuitModel.id);
+      //   }
+      // }else{
+      //   addCircuitToSubZone(subZoneId: subZone.id, circuitId: circuitModel.id);
+      // }
 
       // Clear selected product after adding
       clearSelectedProduct();
@@ -339,8 +359,7 @@ extension HardwareViewModel on ProjectViewModel {
       case ProductType.sources:
         final SourceType type = SourceData.getSourceType(product.sku);
         final PortType portType = switch (type) {
-          SourceType.analogInput ||
-          SourceType.aes67input => PortType.analogOutput,
+          SourceType.analogInput || SourceType.aes67input => PortType.analogOutput,
           SourceType.bluetooth => PortType.ble,
           SourceType.usb => PortType.usb,
         };

@@ -4,17 +4,47 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension CircuitViewmodel on ProjectViewModel {
-  void addNewCircuitWithHardware({required HardwareComponent hardware, bool autoSave = true}) {
+  void addNewCircuitWithHardware({
+    required HardwareComponent hardware,
+    bool autoSave = true,
+  }) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
+      final SubZone? subzone = getSubZoneForHardware(hardwareId: hardware.id);
+      final Zone? zone = getZoneForHardware(hardwareId: hardware.id);
+      int count = 0;
+      if (subzone != null) {
+        count = getCircuitsInSubZone(subZoneId: subzone.id).length;
+      }
+      if (zone != null) {
+        count = getCircuitsInZone(zone.id).length;
+      }
       final CircuitModel newCircuit = CircuitModel(
         id: FusionUtils.shortStringUUID(),
-        name: "New Circuit",
+        name: "${hardware.hardwareName} ${count == 0 ? "" : count + 1}",
+        speakerSKU: (hardware as Speaker).speakerSKU,
       );
       projectManager.addCircuit(newCircuit);
       projectManager.addHardwareToCircuit(hardware.id, newCircuit.id);
+
+      if (subzone != null) {
+        addCircuitToSubZone(
+          subZoneId: subzone.id,
+          circuitId: newCircuit.id,
+          autoSave: false,
+        );
+      }
+
+      if (zone != null) {
+        addCircuitToZone(
+          zoneId: zone.id,
+          circuitId: newCircuit.id,
+          autoSave: false,
+        );
+      }
+
       if (autoSave) {
         saveProject();
       }
@@ -220,5 +250,33 @@ extension CircuitViewmodel on ProjectViewModel {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder circuit in zone: $e");
       throwError("Failed to reorder circuit in zone: $e");
     }
+  }
+
+  List<CircuitModel> getCompatibleCircuits({
+    required String hardwareId,
+    String? sku,
+  }) {
+    String? speakerSKU = sku;
+    if (speakerSKU == null) {
+      final HardwareComponent? hardware = getHardware(hardwareId: hardwareId);
+      if (hardware is Speaker) {
+        speakerSKU = hardware.speakerSKU;
+      }
+    }
+    final SubZone? subZone = getSubZoneForHardware(hardwareId: hardwareId);
+    if (subZone != null) {
+      return getCircuitsInSubZone(
+        subZoneId: subZone.id,
+      ).where((CircuitModel e) => e.speakerSKU == speakerSKU).toList();
+
+      ///
+    }
+    final Zone? zone = getZoneForHardware(hardwareId: hardwareId);
+    if (zone != null) {
+      return getCircuitsInZone(
+        zone.id,
+      ).where((CircuitModel e) => e.speakerSKU == speakerSKU).toList();
+    }
+    return <CircuitModel>[];
   }
 }
