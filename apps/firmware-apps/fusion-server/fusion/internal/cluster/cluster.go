@@ -5,6 +5,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/network"
+	"fusion/internal/utils"
 	"net"
 	"net/http"
 	"os"
@@ -13,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -654,19 +653,10 @@ func (c *Cluster) notifyLocalVIPChange(gained bool) {
 		"event":     event,
 		"timestamp": time.Now().Unix(),
 	}
-	data, _ := json.Marshal(msg)
 
 	addr := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: api.VIPNotifierPort}
-
-	conn, err := net.ListenPacket("udp4", "")
-	if err != nil {
-		logger.Error("UDP listen failed: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	if _, err := conn.WriteTo(data, addr); err != nil {
-		logger.Error("UDP write failed: %v", err)
+	if err := utils.SendUDPMessage(addr, msg); err != nil {
+		logger.Error("SendUDPMessage failed: %v", err)
 		return
 	}
 
