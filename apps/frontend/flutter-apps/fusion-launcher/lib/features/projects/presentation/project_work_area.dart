@@ -469,7 +469,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               // ),
               DockItemConfig(
                 id: "10",
-                title: "PRODUCT List",
+                title: "PRODUCT LIST",
                 side: "left",
                 initiallyExpanded: true,
                 dockItemWidget: () => const WiringDeviceListView(),

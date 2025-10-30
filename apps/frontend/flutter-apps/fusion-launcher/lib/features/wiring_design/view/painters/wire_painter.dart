@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/algorithm/wire_router.dart';
 import 'package:fusion_launcher/features/wiring_design/model/canvas_element.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_launcher/features/wiring_design/util/color_util.dart';
 
 import '../../model/wire.dart';
 import 'base_painter.dart';
@@ -30,7 +30,9 @@ class WirePainter extends BasePainter {
     final Paint paint =
         Paint()
           ..color =
-              isSelected(wire) ? Colors.greenAccent : colorScheme.wireColor
+              isSelected(wire)
+                  ? colorScheme.selectedWireColor
+                  : colorScheme.analogWireColor
           ..style = PaintingStyle.stroke
           ..strokeWidth = strokeWidth
           ..strokeCap = strokeCap
