@@ -16,18 +16,15 @@ extension ProjectManagerMethods on CircuitController {
   void selectElementFromPM(String? id) {
     if (state is ElementSelectionState &&
         (state as ElementSelectionState).element.id == id) {
-      print("Already selected existing item");
       return;
     }
     if (state is ElementMovingState &&
         (state as ElementMovingState).element.id == id) {
-      print("Already selected existing item");
       return;
     }
     final CanvasElement? element = componentDB.getComponent(id ?? "");
-    print("[Selecting] Component : ${element?.id}");
     if (element != null) {
-      final IdleWiringState updateCanvasState = state.updateCanvasState(
+      final WiringState updateCanvasState = state.updateCanvasState(
         isWithinViewport(element.position)
             ? state.canvasState
             : state.canvasState.recenter(

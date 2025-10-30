@@ -30,6 +30,7 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
     cache.cacheForState(state);
     stack.push(state.toMap());
   }
+  
   @override
   WiringState state = IdleWiringState(
     components: <CircuitComponent>[],
