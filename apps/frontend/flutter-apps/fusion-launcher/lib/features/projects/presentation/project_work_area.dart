@@ -259,13 +259,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final ExpansibleController splController = ExpansibleController();
   final ExpansibleController zoneAreaController = ExpansibleController();
 
-  List<DockItemConfig> _createBuildingDockItems() {
+  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
+    print("Creating building dock items for toolbar mode: $toolbarMode");
+
     return <DockItemConfig>[
       DockItemConfig(
         id: "1",
-        title: "BUILDING PLAN",
+        title: "FLOORS",
         side: "left",
-        alowUndock: true,
+        allowUndock: true,
         isCollapsibleSection: false,
         dockItemWidget: () => const BuildingPlan(),
       ),
@@ -286,7 +288,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         id: "6",
         title: "COST CALCULATOR",
         side: "right",
-        alowUndock: true,
+        allowUndock: true,
         dockItemWidget:
             () => CostCalculatorScreen(
               speakers: serviceLocator<ProjectViewModel>().speakers,
@@ -310,15 +312,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       ),
       DockItemConfig(
         id: "7",
-        title: "ZONES / LISTENING AREAS",
+        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
         side: "left",
         controller: zoneAreaController,
+        allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget:
-            () =>
-                serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics
-                    ? const ListeningAreasPanel()
-                    : const ZoneAndListeningAreaPanel(),
+        dockItemWidget: () => toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
       ),
       DockItemConfig(
         id: "8",
@@ -380,7 +379,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 );
               },
             ),
-            dockItemList: _createBuildingDockItems(),
+            dockItemList: _createBuildingDockItems(
+              serviceLocator<ProjectViewModel>().currentToolbarMode,
+            ),
           );
         },
       ),
@@ -399,14 +400,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 title: "PROPERTIES",
                 side: "right",
                 initiallyExpanded: true,
-                alowUndock: false,
+                allowUndock: false,
                 dockItemWidget: () => const SchematicProperties(),
               ),
               DockItemConfig(
                 id: "6",
                 title: "COST CALCULATOR",
                 side: "right",
-                alowUndock: true,
+                allowUndock: true,
                 dockItemWidget:
                     () => CostCalculatorScreen(
                       speakers: serviceLocator<ProjectViewModel>().speakers,
