@@ -70,6 +70,8 @@ abstract class WiringState {
       canvasState: canvasState,
     );
   }
+
+  WiringState copyWith({required CanvasState canvasState});
 }
 
 class IdleWiringState extends WiringState {
@@ -78,6 +80,15 @@ class IdleWiringState extends WiringState {
     required super.wires,
     required super.canvasState,
   });
+
+  @override
+  WiringState copyWith({required CanvasState canvasState}) {
+    return IdleWiringState(
+      canvasState: canvasState,
+      wires: wires,
+      components: components,
+    );
+  }
 }
 
 class ElementSelectionState extends WiringState {
@@ -88,6 +99,16 @@ class ElementSelectionState extends WiringState {
     required super.wires,
     required super.canvasState,
   });
+
+  @override
+  WiringState copyWith({required CanvasState canvasState}) {
+    return ElementSelectionState(
+      element: element,
+      canvasState: canvasState,
+      wires: wires,
+      components: components,
+    );
+  }
 }
 
 class ElementMovingState extends WiringState {
@@ -100,6 +121,16 @@ class ElementMovingState extends WiringState {
     required this.element,
     required this.position,
   });
+  @override
+  WiringState copyWith({required CanvasState canvasState}) {
+    return ElementMovingState(
+      position: position,
+      element: element,
+      canvasState: canvasState,
+      wires: wires,
+      components: components,
+    );
+  }
 }
 
 class ConnectionProgressWiringState extends WiringState {
@@ -114,6 +145,17 @@ class ConnectionProgressWiringState extends WiringState {
     required this.destination,
     required this.path,
   });
+  @override
+  WiringState copyWith({required CanvasState canvasState}) {
+    return ConnectionProgressWiringState(
+      port: port,
+      destination: destination,
+      path: path,
+      canvasState: canvasState,
+      wires: wires,
+      components: components,
+    );
+  }
 }
 
 extension WiringStateMutation on WiringState {
@@ -134,12 +176,8 @@ extension WiringStateMutation on WiringState {
     );
   }
 
-  IdleWiringState updateCanvasState(CanvasState newCanvasState) {
-    return IdleWiringState(
-      components: components,
-      wires: wires,
-      canvasState: newCanvasState,
-    );
+  WiringState updateCanvasState(CanvasState newCanvasState) {
+    return copyWith(canvasState: newCanvasState);
   }
 
   ElementSelectionState select(CanvasElement element) {

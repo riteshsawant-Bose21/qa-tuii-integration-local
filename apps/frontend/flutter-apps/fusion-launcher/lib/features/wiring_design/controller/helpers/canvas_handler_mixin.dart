@@ -4,8 +4,8 @@ import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_s
 mixin CanvasHandlerMixin on ChangeNotifier {
   CanvasState get canvasState;
 
-  double get minScale => 0.5;
-  double get maxScale => 5.0;
+  double get minScale => 0.25;
+  double get maxScale => 2.0;
 
   Size? canvasSize;
 

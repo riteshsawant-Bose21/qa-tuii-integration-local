@@ -58,4 +58,42 @@ mixin _CanvasElementsHandlerMixin on CanvasHandlerMixin {
 
     saveState();
   }
+
+  void fitToViewPort() {
+    if (state.components.isEmpty) return;
+    final Size viewportSize = canvasSize ?? const Size(700, 700);
+    // Compute bounding box of all components
+    double minX = double.infinity;
+    double minY = double.infinity;
+    double maxX = double.negativeInfinity;
+    double maxY = double.negativeInfinity;
+
+    for (final CircuitComponent component in state.components) {
+      final ui.Rect rect =
+          Obstacle(component.position & component.size).expanded;
+
+      minX = rect.left < minX ? rect.left : minX;
+      minY = rect.top < minY ? rect.top : minY;
+      maxX = rect.right > maxX ? rect.right : maxX;
+      maxY = rect.bottom > maxY ? rect.bottom : maxY;
+    }
+
+    final ui.Rect boundingRect = Rect.fromLTRB(minX, minY, maxX, maxY);
+
+    // Calculate scale to fit entire bounding box into viewport
+    final double scaleX = viewportSize.width / boundingRect.width;
+    final double scaleY = viewportSize.height / boundingRect.height;
+    final double newScale =
+        (scaleX < scaleY ? scaleX : scaleY) * 0.9; // add margin
+
+    // Center the bounding rect inside viewport
+    final Offset contentCenter = boundingRect.center;
+    final Offset viewportCenter = Offset(
+      viewportSize.width / 2,
+      viewportSize.height / 2,
+    );
+
+    final Offset newOffset = viewportCenter - (contentCenter * newScale);
+    setCanvasState(IdleCanvasState(offset: newOffset, scale: newScale));
+  }
 }
