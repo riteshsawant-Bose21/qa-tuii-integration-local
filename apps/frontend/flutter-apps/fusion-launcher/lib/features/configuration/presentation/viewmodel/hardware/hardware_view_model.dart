@@ -292,7 +292,7 @@ extension HardwareViewModel on ProjectViewModel {
           listeningAreaId: listeningAreaId,
         ),
       );
-      final CircuitModel circuitModel = CircuitModel(name: newHardware.name);
+      final CircuitModel circuitModel = CircuitModel(name: newHardware.name, speakerSKU: (newHardware as Speaker).speakerSKU);
       addCircuit(circuit: circuitModel, autoSave: false);
       addHardware(hardware: newHardware, autoSave: false);
       addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);

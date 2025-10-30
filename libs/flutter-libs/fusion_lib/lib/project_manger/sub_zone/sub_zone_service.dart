@@ -18,14 +18,14 @@ extension SubZoneService on ProjectService {
       throw Exception('SubZone with id $subZoneId does not exist');
     }
 
-    //remove all the circuits in the subzone
-    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
-
-    // Create a copy to avoid concurrent modification during iteration
-    final circuitIdsCopy = List<String>.from(circuitIds);
-    for (final cId in circuitIdsCopy) {
-      removeCircuit(cId);
-    }
+    // //remove all the circuits in the subzone
+    // final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
+    //
+    // // Create a copy to avoid concurrent modification during iteration
+    // final circuitIdsCopy = List<String>.from(circuitIds);
+    // for (final cId in circuitIdsCopy) {
+    //   removeCircuit(cId);
+    // }
 
     // Remove all relationships
     relationships.removeAllRelationships(subZoneId);
@@ -143,15 +143,16 @@ extension SubZoneService on ProjectService {
     }
 
     final hardwareInArea = relationships.getChildren(RelationshipType.hardwareLocation, listeningAreaId);
-
-    for (final hwId in hardwareInArea) {
+    final hardwareInAreaCopy = List<String>.from(hardwareInArea);
+    for (final hwId in hardwareInAreaCopy) {
       final circuitForHardware = relationships.getParent(RelationshipType.circuitHardware, hwId);
       if (circuitForHardware != null) {
         //check if all hardware in circuit is in same area as current
         final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, circuitForHardware);
         final listeningAreaInCircuit = [];
         final hardwareInCurrentArea = [];
-        for (final hw in hardwareInCircuit) {
+        final hardwareInCircuitCopy = List<String>.from(hardwareInCircuit);
+        for (final hw in hardwareInCircuitCopy) {
           final laId = relationships.getParent(RelationshipType.hardwareLocation, hw);
           if (laId != null) {
             listeningAreaInCircuit.add(laId);
@@ -171,7 +172,7 @@ extension SubZoneService on ProjectService {
           if (hardwareInCurrentArea.isNotEmpty) {
             //From new Circuit form the hardware
             final speaker = hardware.get(hardwareInCurrentArea.first);
-            final newCircuit = CircuitModel(name: (speaker! as Speaker).speakerSKU);
+            final newCircuit = CircuitModel(name: (speaker! as Speaker).speakerSKU, speakerSKU: (speaker as Speaker).speakerSKU);
             addCircuit(newCircuit);
             for (final hw in hardwareInCurrentArea) {
               relationships.unlink(RelationshipType.circuitHardware, circuitForHardware, hw);
@@ -191,7 +192,8 @@ extension SubZoneService on ProjectService {
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
 
     // --- NEW LOGIC ---
-    for (final cid in circuitIds) {
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final cid in circuitIdsCopy) {
       final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cid);
 
       final allHardwareInCircuit = hardwareInCircuit.map((hwId) => hardware.get(hwId)).whereType<Speaker>().toList();
@@ -205,7 +207,7 @@ extension SubZoneService on ProjectService {
       } else {
         if (hardwareInArea.isNotEmpty) {
           //From new Circuit form the hardware
-          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU);
+          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU, speakerSKU: hardwareInArea.first.speakerSKU);
           addCircuit(newCircuit);
           for (final hw in hardwareInArea) {
             relationships.unlink(RelationshipType.circuitHardware, cid, hw.id);
@@ -243,7 +245,8 @@ extension SubZoneService on ProjectService {
     final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, subZoneId);
 
     // --- NEW LOGIC ---
-    for (final cid in circuitIds) {
+    final circuitIdsCopy = List<String>.from(circuitIds);
+    for (final cid in circuitIdsCopy) {
       final hardwareInCircuit = relationships.getChildren(RelationshipType.circuitHardware, cid);
       final hardwareInArea = hardwareInCircuit
           .map((hwId) => hardware.get(hwId))
@@ -258,7 +261,7 @@ extension SubZoneService on ProjectService {
       } else {
         if (hardwareInArea.isNotEmpty) {
           //From new Circuit form the hardware
-          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU);
+          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU, speakerSKU: hardwareInArea.first.speakerSKU);
           addCircuit(newCircuit);
           for (final hw in hardwareInArea) {
             relationships.unlink(RelationshipType.circuitHardware, cid, hw.id);

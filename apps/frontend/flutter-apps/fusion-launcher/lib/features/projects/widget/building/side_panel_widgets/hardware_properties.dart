@@ -17,12 +17,10 @@ class HardwareComponentProperties extends StatefulWidget {
   });
 
   @override
-  State<HardwareComponentProperties> createState() =>
-      _HardwareComponentPropertiesState();
+  State<HardwareComponentProperties> createState() => _HardwareComponentPropertiesState();
 }
 
-class _HardwareComponentPropertiesState
-    extends State<HardwareComponentProperties> {
+class _HardwareComponentPropertiesState extends State<HardwareComponentProperties> {
   final TextEditingController gainController = TextEditingController();
 
   final TextEditingController rollController = TextEditingController();
@@ -65,30 +63,15 @@ class _HardwareComponentPropertiesState
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, Object? state) {
         final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-        gainController.text =
-            widget.selectedHardware is Speaker
-                ? (widget.selectedHardware as Speaker).gain.toString()
-                : '0.0';
-        pitchController.text =
-            widget.selectedHardware is Speaker
-                ? (widget.selectedHardware as Speaker).pitch.toString()
-                : '0.0';
-        yawController.text =
-            widget.selectedHardware is Speaker
-                ? (widget.selectedHardware as Speaker).yaw.toString()
-                : '0.0';
-        rollController.text =
-            widget.selectedHardware is Speaker
-                ? (widget.selectedHardware as Speaker).roll.toString()
-                : '0.0';
+        gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
+        pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
+        yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
+        rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
 
         // Divide by 100 for display
-        xController.text = (widget.selectedHardware.pos.dx / 100)
-            .toStringAsFixed(2);
-        yController.text = (widget.selectedHardware.pos.dy / 100)
-            .toStringAsFixed(2);
-        zController.text = (widget.selectedHardware.zAxis / 100)
-            .toStringAsFixed(2);
+        xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
+        yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
+        zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -168,8 +151,7 @@ class _HardwareComponentPropertiesState
                   // Validate that the name is not empty or just whitespace
                   final String trimmedName = v.trim();
                   if (trimmedName.isNotEmpty) {
-                    final HardwareComponent updated = widget.selectedHardware
-                        .copyWith(name: trimmedName);
+                    final HardwareComponent updated = widget.selectedHardware.copyWith(name: trimmedName);
                     viewModel.updateHardware(hardware: updated);
                   } else {
                     // Show a snackbar to inform user
@@ -221,23 +203,19 @@ class _HardwareComponentPropertiesState
                                   );
                                   if (xValue != null) {
                                     // Multiply by 100 when submitting
-                                    final HardwareComponent updated = widget
-                                        .selectedHardware
-                                        .copyWith(
-                                          pos: Offset(
-                                            xValue * 100,
-                                            widget.selectedHardware.pos.dy,
-                                          ),
-                                        );
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(
+                                      pos: Offset(
+                                        xValue * 100,
+                                        widget.selectedHardware.pos.dy,
+                                      ),
+                                    );
                                     viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
                                       widget.onSpeakerParametersChanged?.call();
                                     }
                                   } else {
                                     // Reset to previous value if invalid
-                                    xController.text =
-                                        (widget.selectedHardware.pos.dx / 100)
-                                            .toStringAsFixed(2);
+                                    xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -279,23 +257,19 @@ class _HardwareComponentPropertiesState
                                   );
                                   if (yValue != null) {
                                     // Multiply by 100 when submitting
-                                    final HardwareComponent updated = widget
-                                        .selectedHardware
-                                        .copyWith(
-                                          pos: Offset(
-                                            widget.selectedHardware.pos.dx,
-                                            yValue * 100,
-                                          ),
-                                        );
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(
+                                      pos: Offset(
+                                        widget.selectedHardware.pos.dx,
+                                        yValue * 100,
+                                      ),
+                                    );
                                     viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
                                       widget.onSpeakerParametersChanged?.call();
                                     }
                                   } else {
                                     // Reset to previous value if invalid
-                                    yController.text =
-                                        (widget.selectedHardware.pos.dy / 100)
-                                            .toStringAsFixed(2);
+                                    yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -337,18 +311,14 @@ class _HardwareComponentPropertiesState
                                   );
                                   if (zValue != null) {
                                     // Multiply by 100 when submitting
-                                    final HardwareComponent updated = widget
-                                        .selectedHardware
-                                        .copyWith(zAxis: zValue * 100);
+                                    final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
                                     viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
                                       widget.onSpeakerParametersChanged?.call();
                                     }
                                   } else {
                                     // Reset to previous value if invalid
-                                    zController.text =
-                                        (widget.selectedHardware.zAxis / 100)
-                                            .toStringAsFixed(2);
+                                    zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -398,18 +368,12 @@ class _HardwareComponentPropertiesState
                         onFieldSubmitted: (String v) {
                           final double? roll = double.tryParse(v.trim());
                           if (roll != null) {
-                            final Speaker updated = (widget.selectedHardware
-                                    as Speaker)
-                                .copyWith(roll: roll);
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(roll: roll);
                             viewModel.updateHardware(hardware: updated);
                             widget.onSpeakerParametersChanged?.call();
                           } else {
                             // Reset to previous value if invalid
-                            rollController.text =
-                                widget.selectedHardware is Speaker
-                                    ? (widget.selectedHardware as Speaker).roll
-                                        .toString()
-                                    : '0.0';
+                            rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
                             // Show validation error
                             // Trigger SPL update for speaker orientation changes
                             ScaffoldMessenger.of(context).showSnackBar(
@@ -454,18 +418,12 @@ class _HardwareComponentPropertiesState
                         onFieldSubmitted: (String v) {
                           final double? pitch = double.tryParse(v.trim());
                           if (pitch != null) {
-                            final Speaker updated = (widget.selectedHardware
-                                    as Speaker)
-                                .copyWith(pitch: pitch);
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(pitch: pitch);
                             viewModel.updateHardware(hardware: updated);
                             widget.onSpeakerParametersChanged?.call();
                           } else {
                             // Reset to previous value if invalid
-                            pitchController.text =
-                                widget.selectedHardware is Speaker
-                                    ? (widget.selectedHardware as Speaker).pitch
-                                        .toString()
-                                    : '0.0';
+                            pitchController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).pitch.toString() : '0.0';
                             // Show validation error
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -509,18 +467,12 @@ class _HardwareComponentPropertiesState
                         onFieldSubmitted: (String v) {
                           final double? yaw = double.tryParse(v.trim());
                           if (yaw != null) {
-                            final Speaker updated = (widget.selectedHardware
-                                    as Speaker)
-                                .copyWith(yaw: yaw);
+                            final Speaker updated = (widget.selectedHardware as Speaker).copyWith(yaw: yaw);
                             viewModel.updateHardware(hardware: updated);
                             widget.onSpeakerParametersChanged?.call();
                           } else {
                             // Reset to previous value if invalid
-                            yawController.text =
-                                widget.selectedHardware is Speaker
-                                    ? (widget.selectedHardware as Speaker).yaw
-                                        .toString()
-                                    : '0.0';
+                            yawController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).yaw.toString() : '0.0';
                             // Show validation error
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
@@ -567,19 +519,12 @@ class _HardwareComponentPropertiesState
                               onFieldSubmitted: (String v) {
                                 final double? gain = double.tryParse(v.trim());
                                 if (gain != null) {
-                                  final Speaker updated =
-                                      (widget.selectedHardware as Speaker)
-                                          .copyWith(gain: gain);
+                                  final Speaker updated = (widget.selectedHardware as Speaker).copyWith(gain: gain);
                                   viewModel.updateHardware(hardware: updated);
                                   widget.onSpeakerParametersChanged?.call();
                                 } else {
                                   // Reset to previous value if invalid
-                                  gainController.text =
-                                      widget.selectedHardware is Speaker
-                                          ? (widget.selectedHardware as Speaker)
-                                              .gain
-                                              .toString()
-                                          : '0.0';
+                                  gainController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).gain.toString() : '0.0';
                                   // Show validation error
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
@@ -601,9 +546,11 @@ class _HardwareComponentPropertiesState
 
                 const SizedBox(height: 12),
 
-                _CircuitSelection(
-                  speaker: (widget.selectedHardware as Speaker),
-                ),
+                if (serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: widget.selectedHardware.id) != null ||
+                    serviceLocator<ProjectViewModel>().getSubZoneForHardware(hardwareId: widget.selectedHardware.id) != null)
+                  _CircuitSelection(
+                    speaker: (widget.selectedHardware as Speaker),
+                  ),
               ],
 
               // Properties section
@@ -614,9 +561,7 @@ class _HardwareComponentPropertiesState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: <Widget>[
-                      if (widget
-                          .selectedHardware
-                          .lockListeningArea) ...<Widget>[
+                      if (widget.selectedHardware.lockListeningArea) ...<Widget>[
                         Expanded(
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -628,10 +573,7 @@ class _HardwareComponentPropertiesState
                                   context,
                                 ).textTheme.bodySmall?.copyWith(
                                   fontSize: 11,
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .fusionTextViewColor
-                                      .withOpacity(0.5),
+                                  color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
                                 ),
                               ),
                               // Right: Value + Arrow
@@ -640,17 +582,13 @@ class _HardwareComponentPropertiesState
                                 child: Container(
                                   alignment: Alignment.centerLeft,
                                   child: Row(
-                                    mainAxisAlignment:
-                                        MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: <Widget>[
                                       FusionAppText(
                                         text:
                                             viewModel
                                                 .getListeningAreaForHardware(
-                                                  hardwareId:
-                                                      widget
-                                                          .selectedHardware
-                                                          .id,
+                                                  hardwareId: widget.selectedHardware.id,
                                                 )
                                                 ?.name ??
                                             "N/A",
@@ -686,25 +624,17 @@ class _HardwareComponentPropertiesState
                                     ? <String>[]
                                     : viewModel.listeningAreas
                                         .map(
-                                          (ListeningArea listeningArea) =>
-                                              listeningArea.name,
+                                          (ListeningArea listeningArea) => listeningArea.name,
                                         )
                                         .toList(),
                             onOptionSelected: (int selectedIndex) {
                               if (!widget.selectedHardware.lockListeningArea) {
-                                final ListeningArea? selectedArea =
-                                    viewModel.listeningAreas.isNotEmpty
-                                        ? viewModel
-                                            .listeningAreas[selectedIndex]
-                                        : null;
+                                final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
                                 if (selectedArea != null) {
                                   print("Selected Area: ${selectedArea.name}");
-                                  final LocationModel updated = widget
-                                      .selectedHardware
-                                      .locationEntity
-                                      .copyWith(
-                                        listeningAreaId: selectedArea.id,
-                                      );
+                                  final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
+                                    listeningAreaId: selectedArea.id,
+                                  );
                                   viewModel.updateHardwareLocation(
                                     hardwareId: widget.selectedHardware.id,
                                     newLocation: updated,
@@ -722,8 +652,7 @@ class _HardwareComponentPropertiesState
                           onTap: () {
                             viewModel.updateHardware(
                               hardware: widget.selectedHardware.copyWith(
-                                lockListeningArea:
-                                    !widget.selectedHardware.lockListeningArea,
+                                lockListeningArea: !widget.selectedHardware.lockListeningArea,
                               ),
                             );
                           },
@@ -738,22 +667,14 @@ class _HardwareComponentPropertiesState
                                       : Colors.transparent,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
-                                color:
-                                    widget.selectedHardware.lockListeningArea
-                                        ? Theme.of(context).colorScheme.primary
-                                        : Colors.grey.withOpacity(0.3),
+                                color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
                                 width: 1,
                               ),
                             ),
                             child: Icon(
-                              widget.selectedHardware.lockListeningArea
-                                  ? Icons.lock
-                                  : Icons.lock_open,
+                              widget.selectedHardware.lockListeningArea ? Icons.lock : Icons.lock_open,
                               size: 16,
-                              color:
-                                  widget.selectedHardware.lockListeningArea
-                                      ? Theme.of(context).colorScheme.primary
-                                      : Colors.grey,
+                              color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey,
                             ),
                           ),
                         ),
@@ -912,7 +833,9 @@ class _CircuitSelection extends StatelessWidget {
     super.key,
     required this.speaker,
   });
+
   final Speaker speaker;
+
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -921,11 +844,10 @@ class _CircuitSelection extends StatelessWidget {
         final CircuitModel? currentCicuit = viewModel.getCircuitForHardware(
           hardwareId: speaker.id,
         );
-        final List<CircuitModel> compatibleCircuits = viewModel
-            .getCompatibleCircuits(
-              hardwareId: speaker.id,
-              sku: speaker.speakerSKU,
-            );
+        final List<CircuitModel> compatibleCircuits = viewModel.getCompatibleCircuits(
+          hardwareId: speaker.id,
+          sku: speaker.speakerSKU,
+        );
         return Row(
           children: <Widget>[
             FusionAppText(
