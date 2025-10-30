@@ -4,12 +4,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
 import '../../../../core/utils/fusion_utils.dart';
-import '../../../guide/controller/guide_showcase_controller.dart';
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
@@ -343,7 +342,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.park_outlined,
                                   selectedVenueType == 'Outdoor',
                                   () {
-                                    selectedVenueTypeNotifier.value = selectedVenueType == 'Outdoor' ? null : 'Outdoor';
+                                    selectedVenueTypeNotifier.value =
+                                        selectedVenueType == 'Outdoor' ? null : 'Outdoor';
                                     venueTypeErrorNotifier.value = null;
                                   },
                                 ),
@@ -416,7 +416,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.restaurant_outlined,
                                   selectedApplication == 'Restaurant',
                                   () {
-                                    selectedApplicationNotifier.value = selectedApplication == 'Restaurant' ? null : 'Restaurant';
+                                    selectedApplicationNotifier.value =
+                                        selectedApplication == 'Restaurant' ? null : 'Restaurant';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -444,7 +445,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.shopping_bag_outlined,
                                   selectedApplication == 'Shopping Mall',
                                   () {
-                                    selectedApplicationNotifier.value = selectedApplication == 'Shopping Mall' ? null : 'Shopping Mall';
+                                    selectedApplicationNotifier.value =
+                                        selectedApplication == 'Shopping Mall' ? null : 'Shopping Mall';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -456,7 +458,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.store_outlined,
                                   selectedApplication == 'Super Market',
                                   () {
-                                    selectedApplicationNotifier.value = selectedApplication == 'Super Market' ? null : 'Super Market';
+                                    selectedApplicationNotifier.value =
+                                        selectedApplication == 'Super Market' ? null : 'Super Market';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -472,7 +475,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.stadium_outlined,
                                   selectedApplication == 'Stadium',
                                   () {
-                                    selectedApplicationNotifier.value = selectedApplication == 'Stadium' ? null : 'Stadium';
+                                    selectedApplicationNotifier.value =
+                                        selectedApplication == 'Stadium' ? null : 'Stadium';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -484,7 +488,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.add_business_rounded,
                                   selectedApplication == 'Other',
                                   () {
-                                    selectedApplicationNotifier.value = selectedApplication == 'Other' ? null : 'Other';
+                                    selectedApplicationNotifier.value =
+                                        selectedApplication == 'Other' ? null : 'Other';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),

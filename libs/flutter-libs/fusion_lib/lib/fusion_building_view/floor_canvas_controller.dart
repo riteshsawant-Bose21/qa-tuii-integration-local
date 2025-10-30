@@ -12,6 +12,7 @@ class FloorCanvasController {
   VoidCallback? _deselectAll;
   Future<void> Function()? _loadPlan;
   Function()? _updateFloorView;
+  Function(ListeningArea)? _onTapListeningArea;
   Function(HardwareComponent)? _setSelectedHardwareComponent;
   Function(HardwareComponent)? _setHardwareComponentListeningAreaId;
   VoidCallback? _toggleSpl;
@@ -36,6 +37,7 @@ class FloorCanvasController {
     required VoidCallback deselectAll,
     required Future<void> Function() loadFloorPlanImage,
     required VoidCallback toggleSpl,
+    required Function(ListeningArea) onTapListeningArea,
     required Function(HardwareComponent) setSelectedHardwareComponent,
     required Function(HardwareComponent)? setHardwareComponentListeningAreaId,
     required Function()? updateView,
@@ -45,6 +47,7 @@ class FloorCanvasController {
     _loadPlan = loadFloorPlanImage;
     _toggleSpl = toggleSpl;
     _deselectAll = deselectAll;
+    _onTapListeningArea = onTapListeningArea;
     _setSelectedHardwareComponent = setSelectedHardwareComponent;
     _setHardwareComponentListeningAreaId = setHardwareComponentListeningAreaId;
     _updateFloorView = updateView;
@@ -115,7 +118,10 @@ class FloorCanvasController {
   }
 
   /// Start listening area selection and return a Future that completes when selection is done
-  Future<List<ListeningArea>?> requestListeningAreaSelection(List<ListeningArea> existingListeningAreas, Zone selectingZone) {
+  Future<List<ListeningArea>?> requestListeningAreaSelection(
+    List<ListeningArea> existingListeningAreas,
+    Zone selectingZone,
+  ) {
     // If there's already one pending, cancel it first
     if (_listeningAreaSelectionCompleter != null && !_listeningAreaSelectionCompleter!.isCompleted) {
       _listeningAreaSelectionCompleter!.complete(null);
@@ -143,6 +149,7 @@ class FloorCanvasController {
       _selectedListeningAreas.removeAt(index);
     } else {
       _selectedListeningAreas.add(area);
+      _onTapListeningArea?.call(area);
     }
   }
 

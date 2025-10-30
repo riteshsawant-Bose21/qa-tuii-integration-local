@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/strings/fusion_strings.dart';
 
@@ -166,7 +167,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     return Offset(r.left + n.dx * r.width, r.top + n.dy * r.height);
   }
 
-  Offset _normalizedToImagePx(Offset n) => Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
+  Offset _normalizedToImagePx(Offset n) =>
+      Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
 
   // ---------- measure interactions ----------
   void _onMeasureTapDown(TapDownDetails d) {
@@ -187,6 +189,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _endPointDisplay = d.localPosition;
         _isDrawing = false;
       });
+      context.read<GuideShowCaseController>().completeStep();
     }
   }
 
@@ -397,7 +400,10 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     );
 
     // If crop rect is the full image, return the original
-    if (clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= image.width && clampedRect.bottom >= image.height) {
+    if (clampedRect.left <= 0 &&
+        clampedRect.top <= 0 &&
+        clampedRect.right >= image.width &&
+        clampedRect.bottom >= image.height) {
       return image;
     }
 
@@ -451,6 +457,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       croppedImage: croppedImage,
     );
     widget.onCalibrationComplete(data);
+    // ignore: use_build_context_synchronously
+    context.read<GuideShowCaseController>().completeStep();
   }
 
   // ---------- build ----------
@@ -643,7 +651,9 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               color: Theme.of(context).colorScheme.surfaceContainerLow,
             ),
             child: MouseRegion(
-              cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
+              cursor: _mode == _ToolMode.measure
+                  ? SystemMouseCursors.precise
+                  : SystemMouseCursors.resizeUpLeftDownRight,
               onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -657,27 +667,30 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   }
                 },
                 child: Center(
-                  child: CustomPaint(
-                    painter: FloorPlanCalibrationPainter(
-                      image: widget.floorPlanImage,
-                      startPoint: _startPointDisplay,
-                      endPoint: _endPointDisplay,
-                      distanceText: _distanceController.text.trim(),
-                      unit: _selectedUnit,
-                      cropRectNormalized: _cropRectN,
-                      showCropHandles: _mode == _ToolMode.crop,
-                      onImageRectChanged: (ui.Rect r) {
-                        _imageRect = r;
-                        // keep display points in sync if image rect changes
-                        if (_startPointNormalized != null) {
-                          _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
-                        }
-                        if (_endPointNormalized != null) {
-                          _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
-                        }
-                      },
+                  child: GuideShowcaseWrapper(
+                    step: GuideShowCaseSteps.showFloorPickCalibration,
+                    child: CustomPaint(
+                      painter: FloorPlanCalibrationPainter(
+                        image: widget.floorPlanImage,
+                        startPoint: _startPointDisplay,
+                        endPoint: _endPointDisplay,
+                        distanceText: _distanceController.text.trim(),
+                        unit: _selectedUnit,
+                        cropRectNormalized: _cropRectN,
+                        showCropHandles: _mode == _ToolMode.crop,
+                        onImageRectChanged: (ui.Rect r) {
+                          _imageRect = r;
+                          // keep display points in sync if image rect changes
+                          if (_startPointNormalized != null) {
+                            _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
+                          }
+                          if (_endPointNormalized != null) {
+                            _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
+                          }
+                        },
+                      ),
+                      child: const SizedBox.expand(),
                     ),
-                    child: const SizedBox.expand(),
                   ),
                 ),
               ),
@@ -714,15 +727,27 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 },
               ),
               const SizedBox(width: 8),
-              FusionButton(
-                label: FusionStrings.confirmButton,
-                width: 120,
-                height: 36,
-                onTap: () {
-                  if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+              GuideShowcaseWrapper(
+                step: GuideShowCaseSteps.confirmFloorCalibrated,
+                onHighlightedSpotTap: () {
+                  if (_startPointNormalized != null &&
+                      _endPointNormalized != null &&
+                      _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
+                child: FusionButton(
+                  label: FusionStrings.confirmButton,
+                  width: 120,
+                  height: 36,
+                  onTap: () {
+                    if (_startPointNormalized != null &&
+                        _endPointNormalized != null &&
+                        _distanceController.text.trim().isNotEmpty) {
+                      _completeCalibration();
+                    }
+                  },
+                ),
               ),
             ],
           ),

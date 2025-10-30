@@ -1,4 +1,3 @@
-import 'dart:developer';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -17,8 +16,6 @@ import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
 import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../guide/controller/guide_showcase_controller.dart';
-import '../../../guide/pages/guide_showcase_wrapper.dart';
 import 'toolbar/building_toolbar.dart';
 
 class BuildingCanvas extends StatefulWidget {
@@ -287,7 +284,6 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         }
                                       },
                                       onTapListeningArea: (ListeningArea value) {
-                                        log("SELECTEDDDDDDDDD");
                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
                                         context.read<GuideShowCaseController>().completeStep();
                                       },
@@ -468,11 +464,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         const SizedBox(width: 12),
                                         GuideShowcaseWrapper(
                                           step: GuideShowCaseSteps.confirmSelectListeningArea,
+                                          onHighlightedSpotTap: () {
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            widget.floorCanvasController.completeListeningAreaSelection();
+                                            context.read<GuideShowCaseController>().completeStep();
+                                          },
                                           child: InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
                                               widget.floorCanvasController.completeListeningAreaSelection();
-                                              context.read<GuideShowCaseController>().completeStep();
                                             },
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
@@ -691,6 +691,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             /// Upload Button
             GuideShowcaseWrapper(
               step: GuideShowCaseSteps.uploadFloorPlan,
+              onHighlightedSpotTap: _showFloorPlanPicker,
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,
@@ -808,6 +809,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
+    context.read<GuideShowCaseController>().completeStep();
+
     final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(
       assetPath: assetImagePath,
     );

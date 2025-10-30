@@ -9,8 +9,6 @@ import 'package:fusion_launcher/features/projects/models/device_item_model.dart'
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/models/products_data.dart';
-import '../../../../guide/controller/guide_showcase_controller.dart';
-import '../../../../guide/pages/guide_showcase_wrapper.dart';
 
 enum _AcousticsToolType {
   draw,
@@ -180,25 +178,31 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         children: <Widget>[
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.acousticMode,
+            onHighlightedSpotTap: () {
+              _switchMode(ToolbarMode.acoustics);
+              context.read<GuideShowCaseController>().completeStep();
+            },
             child: _buildModeTab(
               label: "Acoustics",
               isSelected: currentMode == ToolbarMode.acoustics,
               color: Colors.blue,
               onTap: () {
                 _switchMode(ToolbarMode.acoustics);
-                context.read<GuideShowCaseController>().completeStep();
               },
             ),
           ),
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.systemMode,
+            onHighlightedSpotTap: () {
+              _switchMode(ToolbarMode.system);
+              context.read<GuideShowCaseController>().completeStep();
+            },
             child: _buildModeTab(
               label: "System",
               isSelected: currentMode == ToolbarMode.system,
               color: Colors.green,
               onTap: () {
                 _switchMode(ToolbarMode.system);
-                context.read<GuideShowCaseController>().completeStep();
               },
             ),
           ),
@@ -314,6 +318,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
       GuideShowcaseWrapper(
         step: GuideShowCaseSteps.drawListeningArea,
+        onHighlightedSpotTap: () => _onAcousticsToolSelected(_AcousticsToolType.draw),
         child: _buildToolItem(
           icon: Icons.polyline,
           "Draw Listening Area",
@@ -324,6 +329,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       ),
       GuideShowcaseWrapper(
         step: GuideShowCaseSteps.addSpeakers,
+        onHighlightedSpotTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
         child: _buildToolItem(
           icon: Icons.speaker,
           "Add Speakers",

@@ -1,10 +1,13 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum GuideShowCaseSteps {
   uploadFloorPlan,
+  showFloorPickCalibration,
+  confirmFloorCalibrated,
   acousticMode,
   drawListeningArea,
   addSpeakers,
@@ -22,7 +25,7 @@ enum GuideShowCaseSteps {
 //    onNextTap: Navigator.of(context).pop,
 
 class GuideShowCaseController extends ChangeNotifier {
-  static const String _storageKey = 'is_guide_showcase_step_completed 11sss111aaas1111';
+  static const String _storageKey = 'is_guide_showcase_step_completed';
 
   final Set<GuideShowCaseSteps> _completedSteps = <GuideShowCaseSteps>{};
   GuideShowCaseSteps? _currentStep;
@@ -131,6 +134,10 @@ extension GuideShowCaseStepsExtension on GuideShowCaseSteps {
   String get description {
     switch (this) {
       case GuideShowCaseSteps.uploadFloorPlan:
+        return 'Upload your floor plan image';
+      case GuideShowCaseSteps.showFloorPickCalibration:
+        return 'Upload your floor plan image';
+      case GuideShowCaseSteps.confirmFloorCalibrated:
         return 'Upload your floor plan image';
       case GuideShowCaseSteps.acousticMode:
         return 'Configure acoustic settings';

@@ -23,7 +23,6 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../guide/pages/guide_showcase_wrapper.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -97,14 +96,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
     // Initialize tab widgets to preserve state
     _tabWidgets = _createTabWidgets();
-
-    WidgetsBinding.instance.addPostFrameCallback((Duration timeStamp) {
-      Future<void>.delayed(
-        const Duration(seconds: 1),
-        // ignore: use_build_context_synchronously
-        () => GuideShowcaseWrapper.askGuideNeededDialog(context),
-      );
-    });
   }
 
   Future<void> _initMace() async {

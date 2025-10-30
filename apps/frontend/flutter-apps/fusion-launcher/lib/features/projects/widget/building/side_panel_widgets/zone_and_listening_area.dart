@@ -7,8 +7,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants/assets_constants.dart';
 import '../../../../../core/widgets/color_selector_popup.dart';
-import '../../../../guide/controller/guide_showcase_controller.dart';
-import '../../../../guide/pages/guide_showcase_wrapper.dart';
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
   const ZoneAndListeningAreaPanel({super.key});
@@ -123,6 +121,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         children: <Widget>[
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.addZone,
+            onHighlightedSpotTap: _addNewZone,
             child: OutlinedButton(
               onPressed: () {
                 _addNewZone();
@@ -1425,10 +1424,13 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.selectListeningArea,
+            onHighlightedSpotTap: () {
+              serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
+              context.read<GuideShowCaseController>().completeStep();
+            },
             child: GestureDetector(
               onTap: () {
                 serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
-                context.read<GuideShowCaseController>().completeStep();
               },
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -1555,7 +1557,6 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   /// Helper methods for circuit management
 
   // Removed _buildAddCircuitIcon - now using three-dot menus
-
 
   void _addSpeakerToCircuit(Speaker speaker, String circuitId) {
     serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitId);
@@ -2242,7 +2243,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
     final CircuitModel newCircuit = CircuitModel(
       name: '${speaker.hardwareName} ${existingCircuits.length + 1}',
-      speakerSKU: speaker.speakerSKU
+      speakerSKU: speaker.speakerSKU,
     );
 
     // Add the circuit to the project
