@@ -1,13 +1,14 @@
 package network
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"strconv"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 // Device represents a discovered network device

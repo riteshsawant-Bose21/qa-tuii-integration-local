@@ -2,12 +2,13 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"strings"
 	"testing"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/persistence"

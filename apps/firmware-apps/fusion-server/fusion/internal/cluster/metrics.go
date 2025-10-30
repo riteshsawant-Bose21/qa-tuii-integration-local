@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/network"
@@ -151,7 +152,7 @@ func (mc *MetricsCollector) collect() {
 		ws := mc.wsConnCount
 
 		// Populate JSON-backed metrics struct
-		state := mc.stateManager.GetFullState().State
+		state := mc.stateManager.GetFullStateDeepCopy().State
 		stateSummary := make(map[string]string, len(state))
 		valueTypes := make(map[string]int)
 		for k, v := range state {

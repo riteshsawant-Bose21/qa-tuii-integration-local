@@ -3,7 +3,6 @@ package cluster
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -17,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	json "github.com/goccy/go-json"
 )
 
 const (
