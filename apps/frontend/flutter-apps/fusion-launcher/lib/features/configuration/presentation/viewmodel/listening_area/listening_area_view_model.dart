@@ -76,6 +76,15 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  // SubZone? getSubZoneForListeningArea({required String areaId}){
+  //   try{
+  //     return projectManager.getSubZoneForListeningArea(areaId);
+  //   }catch (e) {
+  //     FusionLogger.log(tag: LogTag.project, message: "Failed to get subzone for listening area: $e");
+  //     return null;
+  //   }
+  // }
+
   FloorModel? getFloorForListeningArea({required String areaId}) {
     try {
       return projectManager.getFloorForListeningArea(areaId);

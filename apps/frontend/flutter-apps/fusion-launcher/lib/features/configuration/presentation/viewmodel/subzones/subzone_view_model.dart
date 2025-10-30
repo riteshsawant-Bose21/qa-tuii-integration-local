@@ -214,6 +214,24 @@ extension SubzoneViewModel on ProjectViewModel {
     }
   }
 
+  void addMultipleListeningAreasToSubZone({required List<String> listeningAreaIds, required String subZoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.addMultipleAreasToAddSubZone(listeningAreaIds, subZoneId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add multiple listening areas to subzone: $e");
+
+      throwError("Failed to add multiple listening areas to subzone: $e");
+    }
+  }
+
   void removeListeningAreaFromSubZone({required String areaId, required String subZoneId, bool autoSave = true}) {
     try {
       if (autoSave) {
@@ -227,6 +245,24 @@ extension SubzoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area from subzone: $e");
       throwError("Failed to remove listening area from subzone: $e");
+    }
+  }
+
+  void removeMultipleListeningAreasFromSubZone({required List<String> listeningAreaIds, required String subZoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.removeMultipleListeningAreaFromSubZone(listeningAreaIds, subZoneId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove multiple listening areas from subzone: $e");
+
+      throwError("Failed to remove multiple listening areas from subzone: $e");
     }
   }
 
