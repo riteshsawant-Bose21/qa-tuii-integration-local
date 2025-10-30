@@ -198,11 +198,23 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                 }
                                 return ListeningAreaDropdownWidget(
                                   listeningAreas: listeningAreas,
-                                  hideAddLocationButton: true,
                                   selectedListeningAreaIds: _selectedListeningAreaIds,
                                   onSelectionChanged: (List<String> selectedIds, String floorId) {
+                                    /// Add listening area to zone/subzone if not already added
+                                    if (widget.subZoneId != null) {
+                                      serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
+                                        areaId: selectedIds.first,
+                                        subZoneId: widget.subZoneId!,
+                                      );
+                                    } else {
+                                      serviceLocator<ProjectViewModel>().addListeningAreaToZone(
+                                        listeningAreaId: selectedIds.first,
+                                        zoneId: widget.zoneId,
+                                      );
+                                    }
+
                                     _selectedListeningAreaIds = selectedIds;
-                                    setMenuState(() {}); // Update popup menu UI
+                                    setMenuState(() {});
                                   },
                                 );
                               },

@@ -158,112 +158,141 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       children: <Widget>[
         /// Zone devices list
         if (widget.zoneCircuits.isNotEmpty) ...<Widget>[
-          Container(
-            color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
-            padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
-            child: ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              itemCount: widget.zoneCircuits.length,
-              onReorder: (int oldIndex, int newIndex) {
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
-                _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
-                _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
-              },
-              itemBuilder: (BuildContext context, int index) {
-                final CircuitModel circuitData = widget.zoneCircuits[index];
-                final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                final String deviceId = circuitData.id;
-                final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
-
-                return DragTarget<CircuitModel>(
-                  key: ValueKey<String>(deviceId),
-                  onWillAccept: (CircuitModel? incoming) {
-                    /// Only accept if the incoming circuit has the same name but different ID
-                    ///
-                    if (incoming == null) return false;
-                    // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
-                    final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
-                    final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                    return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU;
-                  },
-                  onAccept: (CircuitModel incoming) {
-                    /// Add speaker to target circuit
-                    final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
-
-                    if (incomingSpeakers.isNotEmpty) {
-                      for (final Speaker speaker in incomingSpeakers) {
-                        // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                        serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
-                      }
+          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return Container(
+                color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+                padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
+                child: ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  itemCount: widget.zoneCircuits.length,
+                  onReorder: (int oldIndex, int newIndex) {
+                    if (oldIndex < newIndex) {
+                      newIndex -= 1;
                     }
-
-                    /// Remove the dragged circuit from the zone
-                    _projectViewModel.removeCircuitFromZone(circuitId: incoming.id, zoneId: widget.zoneId);
-                    setState(() {});
+                    _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
+                    _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
                   },
-                  builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
-                    return Draggable<CircuitModel>(
-                      data: circuitData,
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: Opacity(
-                          opacity: 0.8,
-                          child: SizedBox(
-                            width: 220,
-                            child: CircuitDeviceWidget(
-                              index: index,
-                              deviceId: deviceId,
-                              circuitDeviceName: circuitData.name,
-                              assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                              location: location,
-                              projectViewModel: _projectViewModel,
-                              circuitDeviceCount: speakers.length,
-                              onDecrementHardwareInCircuit: () {},
-                              onIncrementHardwareInCircuit: () {},
-                              onRename: () {},
-                              onDuplicate: () {},
-                              onDelete: () {},
-                            ),
-                          ),
-                        ),
-                      ),
-                      childWhenDragging: const SizedBox.shrink(),
-                      child: CircuitDeviceWidget(
-                        index: index,
-                        deviceId: deviceId,
-                        circuitDeviceName: circuitData.name,
-                        assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
-                        location: location,
-                        projectViewModel: _projectViewModel,
-                        onDecrementHardwareInCircuit: () {
-                          if (speakers.isNotEmpty) {
-                            final Speaker speaker = speakers.last;
-                            serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
-                          }
-                        },
-                        onIncrementHardwareInCircuit: () {
-                          if (speakers.isNotEmpty) {
-                            final Speaker speaker = speakers.first.getClone();
-                            serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                  itemBuilder: (BuildContext context, int index) {
+                    final CircuitModel circuitData = widget.zoneCircuits[index];
+                    final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                    final String deviceId = circuitData.id;
+                    final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
+
+                    return DragTarget<CircuitModel>(
+                      key: ValueKey<String>(deviceId),
+                      onWillAccept: (CircuitModel? incoming) {
+                        /// Only accept if the incoming circuit has the same name but different ID
+                        ///
+                        if (incoming == null) return false;
+                        // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                        final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                        return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU && incoming.id != circuitData.id;
+                      },
+                      onAccept: (CircuitModel incoming) {
+                        /// Add speaker to target circuit
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
+
+                        if (incomingSpeakers.isNotEmpty) {
+                          for (final Speaker speaker in incomingSpeakers) {
+                            // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
                             serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
                           }
-                        },
-                        onRename: () {},
-                        onDuplicate: () {},
-                        onDelete: () {
-                          _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
-                        },
-                        circuitDeviceCount: speakers.length,
-                      ),
+                        }
+
+                        /// Remove the dragged circuit from the zone
+                        _projectViewModel.removeCircuitFromZone(circuitId: incoming.id, zoneId: widget.zoneId);
+                        setState(() {});
+                      },
+                      builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
+                        return Draggable<CircuitModel>(
+                          data: circuitData,
+                          feedback: Material(
+                            color: Colors.transparent,
+                            child: Opacity(
+                              opacity: 0.8,
+                              child: SizedBox(
+                                width: 220,
+                                child: CircuitDeviceWidget(
+                                  index: index,
+                                  deviceId: deviceId,
+                                  circuitDeviceName: circuitData.name,
+                                  assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  location: location,
+                                  speakers: speakers,
+                                  projectViewModel: _projectViewModel,
+                                  circuitDeviceCount: speakers.length,
+                                  onDecrementHardwareInCircuit: () {},
+                                  onIncrementHardwareInCircuit: () {},
+                                  onRename: () {},
+                                  onDuplicate: () {},
+                                  onDelete: () {},
+                                ),
+                              ),
+                            ),
+                          ),
+                          childWhenDragging: Material(
+                            color: Colors.transparent,
+                            child: Opacity(
+                              opacity: 0.8,
+                              child: SizedBox(
+                                width: 220,
+                                child: CircuitDeviceWidget(
+                                  index: index,
+                                  deviceId: deviceId,
+                                  circuitDeviceName: circuitData.name,
+                                  assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  location: location,
+                                  speakers: speakers,
+                                  projectViewModel: _projectViewModel,
+                                  circuitDeviceCount: speakers.length,
+                                  onDecrementHardwareInCircuit: () {},
+                                  onIncrementHardwareInCircuit: () {},
+                                  onRename: () {},
+                                  onDuplicate: () {},
+                                  onDelete: () {},
+                                ),
+                              ),
+                            ),
+                          ),
+                          child: CircuitDeviceWidget(
+                            index: index,
+                            deviceId: deviceId,
+                            circuitDeviceName: circuitData.name,
+                            assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                            location: location,
+                            speakers: speakers,
+                            projectViewModel: _projectViewModel,
+                            onDecrementHardwareInCircuit: () {
+                              if (speakers.isNotEmpty) {
+                                final Speaker speaker = speakers.last;
+                                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                              }
+                            },
+                            onIncrementHardwareInCircuit: () {
+                              if (speakers.isNotEmpty) {
+                                final Speaker speaker = speakers.first.getClone();
+                                serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                                serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                              }
+                            },
+                            onRename: () {},
+                            onDuplicate: () {},
+                            onDelete: () {
+                              _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
+                            },
+                            circuitDeviceCount: speakers.length,
+                          ),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: 8),
         ],
