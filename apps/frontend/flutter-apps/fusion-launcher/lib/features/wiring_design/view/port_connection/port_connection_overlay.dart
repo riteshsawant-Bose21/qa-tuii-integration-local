@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/wiring_design/model/model.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../controller/circuit_controller.dart';
+import '../widgets/port_widget.dart';
 
 class PortConnectionOverlay extends StatefulWidget {
   const PortConnectionOverlay({
@@ -73,17 +74,45 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
           ),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(
-              "Connect Port ${widget.port.data.label ?? ""} to ",
-              style: context.textTheme.labelLarge?.copyWith(
-                color: context.colorScheme.portOverlayTitle,
+            child: AnimatedDefaultTextStyle(
+              style:
+                  context.textTheme.labelLarge?.copyWith(
+                    color: context.colorScheme.portOverlayTitle,
+                  ) ??
+                  const TextStyle(),
+              duration: const Duration(milliseconds: 100),
+              child: Row(
+                children: <Widget>[
+                  const Text("Connect port "),
+                  PortWidget(
+                    port: widget.port,
+                  ),
+                  const Text(" to"),
+                ],
               ),
             ),
+
+            //  Text.rich(
+            //   TextSpan(
+            //     text:,
+            //     children: <InlineSpan>[
+            //       WidgetSpan(
+            //         child: PortWidget(
+            //           port: widget.port,
+            //         ),
+            //       ),
+            //       const TextSpan(text: " to"),
+            //     ],
+            //   ),
+            // style: context.textTheme.labelLarge?.copyWith(
+            //   color: context.colorScheme.portOverlayTitle,
+            // ),
+            // ),
           ),
         ),
 
         const SizedBox(
-          height: 20,
+          height: 10,
         ),
         for (final CircuitComponent component
             in possibleConnections.keys) ...<Widget>[
@@ -99,47 +128,61 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
                       child: Text(
                         component.data.label,
                         style: context.textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.bold,
+                          fontWeight: FontWeight.w900,
                         ),
                       ),
                     ),
                   ],
                 ),
             content: Column(
+              spacing: 2,
               children: <Widget>[
                 for (final CircuitPort port
                     in possibleConnections[component]!) ...<Widget>[
-                  InkWell(
-                    onTap: () {
-                      widget.controller.addWire(
-                        widget.port,
-                        port,
-                      );
-                    },
-                    child: Row(
-                      spacing: 5,
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: <Widget>[
-                        Container(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: context.colorScheme.inactivePortBG,
-                              width: 2,
-                            ),
-                            shape: BoxShape.circle,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    child: InkWell(
+                      onTap: () {
+                        widget.controller.addWire(
+                          widget.port,
+                          port,
+                        );
+                      },
+                      child: Row(
+                        spacing: 5,
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: <Widget>[
+                          const SizedBox(
+                            width: 8,
                           ),
-                          padding: const EdgeInsets.all(10),
-                          child: Text(
-                            "${port.data.label}",
-                            style: context.textTheme.bodySmall,
+                          PortWidget(
+                            port: port,
                           ),
-                        ),
 
-                        Text(
-                          port.data.description ?? port.data.type.description,
-                          style: context.textTheme.bodySmall,
-                        ),
-                      ],
+                          // Container(
+                          //   decoration: BoxDecoration(
+                          //     border: Border.all(
+                          //       color: context.colorScheme.inactivePortBG,
+                          //       width: 2,
+                          //     ),
+                          //     shape: BoxShape.circle,
+                          //   ),
+                          //   padding: const EdgeInsets.all(6),
+                          //   child: Text(
+                          //     "${port.data.label}",
+                          //     style: context.textTheme.bodySmall?.copyWith(
+                          //       fontSize: 8,
+                          //     ),
+                          //   ),
+                          // ),
+                          Text(
+                            port.data.description ?? port.data.type.description,
+                            style: context.textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ],

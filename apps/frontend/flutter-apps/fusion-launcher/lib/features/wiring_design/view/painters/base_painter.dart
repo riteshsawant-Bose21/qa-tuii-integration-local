@@ -45,6 +45,7 @@ abstract class BasePainter {
     required Canvas canvas,
     required String path,
     required Rect rect,
+    Paint? paint,
   }) {
     final ui.Image? image = getImage(path);
     if (image != null) {
@@ -55,7 +56,7 @@ abstract class BasePainter {
         image.height.toDouble(),
       );
 
-      canvas.drawImageRect(image, src, rect, Paint());
+      canvas.drawImageRect(image, src, rect, paint ?? Paint());
       return true;
     }
     return false;
