@@ -72,6 +72,7 @@ class _HomePageState extends State<HomePage> {
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: () => _logoutDialog(context),
               ),
+              const SizedBox(width: 10),
             ],
           ),
           body: SafeArea(
