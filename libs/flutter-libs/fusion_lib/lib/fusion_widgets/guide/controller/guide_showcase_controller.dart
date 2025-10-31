@@ -1,8 +1,33 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+class GuideShowCaseControllerTexts {
+  static const String storageKey = 'is_guide_showcase_step_completed';
+
+  static const String errorLoadingGuideStatusPrefix = 'Error loading guide status:';
+  static const String errorSavingGuideStatusPrefix = 'Error saving guide status:';
+
+  static const String uploadFloorPlan = 'Upload a floor plan image';
+  static const String configureAcousticSettings = 'Configure acoustic settings';
+  static const String drawListeningArea = 'Draw listening areas on the canvas';
+  static const String addAcousticZones = 'Add acoustic zones';
+  static const String addSpeakers = 'Add speakers to the layout';
+  static const String chooseSystemMode = 'Choose your system mode'; // legacy
+  static const String configureSystemComponents = 'Configure system components in tabs';
+  static const String selectListeningArea = 'Select a listening area';
+
+  static const String myProjects = 'Create a new project';
+  static const String showFloorPickCalibration = 'Pick a reference distance for calibration';
+  static const String confirmFloorCalibrated = 'Confirm floor plan calibration';
+  static const String acousticMode = 'Switch to Acoustics mode';
+  static const String systemMode = 'Switch to System mode';
+  static const String systemModeTabs = 'Review and configure system components';
+  static const String addZone = 'In Acoustics mode, define listening areas, place speakers, and visualize sound coverage.';
+  static const String showListeningAreaSelectionArea = 'Choose listening areas for this zone';
+  static const String confirmSelectListeningArea = 'Confirm selected listening areas';
+}
 
 enum GuideShowCaseSteps {
   myProjects,
@@ -26,8 +51,6 @@ enum GuideShowCaseSteps {
 //    onNextTap: Navigator.of(context).pop,
 
 class GuideShowCaseController extends ChangeNotifier {
-  static const String _storageKey = 'is_guide_showcase_step_completed';
-
   final Set<GuideShowCaseSteps> _completedSteps = <GuideShowCaseSteps>{};
   GuideShowCaseSteps? _currentStep;
   bool _isInitialized = false;
@@ -47,7 +70,7 @@ class GuideShowCaseController extends ChangeNotifier {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
     // Clear any previous saved state
-    await prefs.remove(_storageKey);
+    await prefs.remove(GuideShowCaseControllerTexts.storageKey);
 
     // Reset all internal states
     _completedSteps.clear();
@@ -77,9 +100,9 @@ class GuideShowCaseController extends ChangeNotifier {
   Future<void> _loadGuideStatus() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      _isGuideCompleted = prefs.getBool(_storageKey) ?? false;
+      _isGuideCompleted = prefs.getBool(GuideShowCaseControllerTexts.storageKey) ?? false;
     } catch (e) {
-      log('Error loading guide status: $e');
+      log('${GuideShowCaseControllerTexts.errorLoadingGuideStatusPrefix} $e');
     }
   }
 
@@ -87,9 +110,9 @@ class GuideShowCaseController extends ChangeNotifier {
   Future<void> _saveGuideStatus() async {
     try {
       final SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_storageKey, true);
+      await prefs.setBool(GuideShowCaseControllerTexts.storageKey, true);
     } catch (e) {
-      log('Error saving guide status: $e');
+      log('${GuideShowCaseControllerTexts.errorSavingGuideStatusPrefix} $e');
     }
   }
 
@@ -147,31 +170,31 @@ extension GuideShowCaseStepsExtension on GuideShowCaseSteps {
   String get description {
     switch (this) {
       case GuideShowCaseSteps.myProjects:
-        return 'Upload your floor plan image';
+        return GuideShowCaseControllerTexts.myProjects;
       case GuideShowCaseSteps.uploadFloorPlan:
-        return 'Upload your floor plan image';
+        return GuideShowCaseControllerTexts.uploadFloorPlan;
       case GuideShowCaseSteps.showFloorPickCalibration:
-        return 'Upload your floor plan image';
+        return GuideShowCaseControllerTexts.showFloorPickCalibration;
       case GuideShowCaseSteps.confirmFloorCalibrated:
-        return 'Upload your floor plan image';
+        return GuideShowCaseControllerTexts.confirmFloorCalibrated;
       case GuideShowCaseSteps.acousticMode:
-        return 'Configure acoustic settings';
+        return GuideShowCaseControllerTexts.acousticMode;
       case GuideShowCaseSteps.drawListeningArea:
-        return 'Draw the listening area on your floor plan';
-      case GuideShowCaseSteps.addZone:
-        return 'Add acoustic zones';
+        return GuideShowCaseControllerTexts.drawListeningArea;
       case GuideShowCaseSteps.addSpeakers:
-        return 'Add speakers to your setup';
+        return GuideShowCaseControllerTexts.addSpeakers;
       case GuideShowCaseSteps.systemMode:
-        return 'Choose your system mode';
+        return GuideShowCaseControllerTexts.systemMode;
       case GuideShowCaseSteps.systemModeTabs:
-        return 'Configure system components';
+        return GuideShowCaseControllerTexts.systemModeTabs;
+      case GuideShowCaseSteps.addZone:
+        return GuideShowCaseControllerTexts.addZone;
       case GuideShowCaseSteps.selectListeningArea:
-        return 'Select your listening area';
+        return GuideShowCaseControllerTexts.selectListeningArea;
       case GuideShowCaseSteps.showListeningAreaSelectionArea:
-        return 'Select your listening area';
+        return GuideShowCaseControllerTexts.showListeningAreaSelectionArea;
       case GuideShowCaseSteps.confirmSelectListeningArea:
-        return 'Select your listening area';
+        return GuideShowCaseControllerTexts.confirmSelectListeningArea;
     }
   }
 }
