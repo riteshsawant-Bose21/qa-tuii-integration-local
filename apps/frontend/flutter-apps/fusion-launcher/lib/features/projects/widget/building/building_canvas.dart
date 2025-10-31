@@ -6,15 +6,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
-import '../../../../core/widgets/clean_widgets.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
 
@@ -617,70 +616,209 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _showFloorPlanPicker() async {
     final List<String> plans = <String>[
-      "assets/images/floor_plans/floor_plan_1.png",
-      "assets/images/floor_plans/floor_plan_2.png",
-      "assets/images/floor_plans/floor_plan_gym.png",
-      "assets/images/floor_plans/demo_plan_gym.jpg",
+      "assets/images/floor_plans/cafe.png",
+      "assets/images/floor_plans/restaurant.png",
+      // "assets/images/floor_plans/floor_plan_gym.png",
+      "assets/images/floor_plans/gym.jpg",
     ];
 
     await showDialog(
       context: context,
       builder:
-          (BuildContext ctx) => CleanDialog(
-            title: 'Select Floor Plan',
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => _importFloorPlan(),
-                child: Text(
-                  'Import',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(
-                  'Cancel',
-                  style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-                ),
-              ),
-            ],
-            child: SizedBox(
-              width: 400,
-              height: 300,
-              child: ListView.builder(
-                itemCount: plans.length,
-                itemBuilder: (_, int i) {
-                  final String planPath = plans[i];
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: ListTile(
-                      contentPadding: const EdgeInsets.all(12),
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: _buildFloorPlanImage(planPath),
-                      ),
-                      title: Text(
-                        planPath.split('/').last,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w500,
+          (BuildContext ctx) => Dialog(
+            backgroundColor: Theme.of(context).colorScheme.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            child: Container(
+              width: 720,
+              height: 600,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      FusionAppText(
+                        text: 'Upload Floor Plan',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.fusionTextViewColor,
                         ),
                       ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(4),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: Icon(
+                          Icons.close,
+                          color: Theme.of(context).colorScheme.greyDark,
+                          size: 20,
+                        ),
+                        splashRadius: 16,
                       ),
-                      onTap: () => _selectAssetFloorPlan(planPath),
-                    ),
-                  );
-                },
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Import Section (Primary)
+                  Expanded(
+                    flex: 3,
+                    child: _buildImportSection(ctx),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Divider
+                  Row(
+                    children: <Widget>[
+                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: FusionAppText(
+                          text: 'or choose from samples',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.greyDark,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children:
+                        plans
+                            .map(
+                              (String planPath) => Expanded(
+                                child: _buildSamplePlanCard(planPath),
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ],
               ),
             ),
           ),
+    );
+  }
+
+  Widget _buildImportSection(BuildContext ctx) {
+    return DragTarget<String>(
+      onWillAcceptWithDetails: (DragTargetDetails<String> details) => true,
+      onAcceptWithDetails: (DragTargetDetails<String> details) {
+        _importFloorPlan();
+      },
+      builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
+        final bool isDragActive = candidateData.isNotEmpty;
+
+        return GestureDetector(
+          onTap: () => _importFloorPlan(),
+          child: Container(
+            width: double.infinity,
+            decoration: BoxDecoration(
+              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.greyLight,
+              border: Border.all(
+                width: isDragActive ? 2 : 1,
+                color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.dividerColor,
+                style: BorderStyle.solid,
+              ),
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: <Widget>[
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color:
+                        isDragActive
+                            ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.15)
+                            : Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    isDragActive ? Icons.file_download : Icons.cloud_upload_outlined,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FusionAppText(
+                  text: isDragActive ? 'Drop your file here!' : 'Click here to upload',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.fusionTextViewColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                FusionAppText(
+                  text: 'Upload .JPEG and .PNG files',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.greyDark,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                FusionOutlinedButton(
+                  height: 36,
+                  width: 140,
+                  label: 'Browse Files',
+                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                  foregroundColor: Theme.of(context).colorScheme.fusionTextViewColor,
+                  activeBorderColor: Theme.of(context).colorScheme.primaryColor,
+                  backgroundColor: Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05),
+                  onTap: () => _importFloorPlan(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSamplePlanCard(String planPath) {
+    final String title = planPath.split('/').last.split('.').first.replaceAll('_', ' ').toUpperCase();
+
+    return Container(
+      height: 120,
+      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.dividerColor,
+        ),
+      ),
+      child: GestureDetector(
+        onTap: () => _selectAssetFloorPlan(planPath),
+        child: Column(
+          children: <Widget>[
+            Expanded(
+              child: _buildFloorPlanImage(planPath),
+            ),
+            const SizedBox(
+              height: 8,
+            ),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Colors.black,
+                fontSize: 10,
+                fontWeight: FontWeight.w600,
+              ),
+              textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(
+              height: 8,
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -688,20 +826,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     if (imagePath.startsWith('assets/')) {
       return Image.asset(
         imagePath,
-        width: 60,
-        height: 60,
         fit: BoxFit.cover,
       );
     } else {
       return Image.file(
         File(imagePath),
-        width: 60,
-        height: 60,
         fit: BoxFit.cover,
         errorBuilder: (BuildContext context, Object error, StackTrace? stackTrace) {
           return Container(
-            width: 60,
-            height: 60,
             color: Colors.grey.shade300,
             child: Icon(
               Icons.image_not_supported,
@@ -725,30 +857,38 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _importFloorPlan() async {
     try {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) => const Center(child: CircularProgressIndicator()),
-      );
-
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowMultiple: false,
         allowedExtensions: <String>['png', 'jpg', 'jpeg'],
       );
 
-      if (mounted) Navigator.of(context).pop();
-
       if (result != null && result.files.single.path != null) {
         final String sourcePath = result.files.single.path!;
         final String fileName = result.files.single.name;
+
+        // Close the dialog first
+        if (mounted) Navigator.of(context).pop();
+
+        // Show loading indicator
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder:
+              (BuildContext context) => const Center(
+                child: CircularProgressIndicator(),
+              ),
+        );
+
         final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
+
+        if (mounted) Navigator.of(context).pop();
+
         if (responseCallback.success && responseCallback.data != null) {
           final String savedImagePath = responseCallback.data!;
           _calibrateFloorPlan(savedImagePath);
         }
 
-        if (mounted) Navigator.of(context).pop();
         debugPrint('Floor plan imported successfully: $fileName');
       }
     } catch (e) {
