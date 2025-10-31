@@ -467,7 +467,6 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildSubzoneContent(BuildContext context, String zoneId) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setDialogState) {
-        /// Single function to handle all state updates
         void updateAllStates() {
           setDialogState(() {});
           setState(() {});
@@ -497,6 +496,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       // Clear the state
                       _zoneNameController.clear();
                       _selectedListeningAreaIds.clear();
+                      newlyCreatedAreas.clear(); // <-- Clear on close
                       setState(() => showSubzonePopup = false);
                     },
                     child: Icon(
@@ -562,6 +562,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         // Clear the state
                         _zoneNameController.clear();
                         _selectedListeningAreaIds.clear();
+                        newlyCreatedAreas.clear(); // <-- Clear on cancel
                         setState(() => showSubzonePopup = false);
                       },
                     ),
@@ -781,16 +782,18 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         'floorId': floorId,
                         'floorName': floorName,
                       });
-                      selectedListeningAreaIds = <String>[newListeningArea.id];
-                      _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
-                      isCreateAreaExpanded = false;
+                      // Select all newly created locations
+                      final List<String> allNewIds = newlyCreatedAreas.map((Map<String, dynamic> e) => (e['area'] as ListeningArea).id).toList();
+                      _selectedListeningAreaIds = allNewIds;
                       setPopupState(() {});
                       areaNameController.clear();
+                      isCreateAreaExpanded = false;
 
                       FusionToast.success(
                         context,
                         message: "Listening area '$locationName' created successfully on floor '$floorName'",
                       );
+                      onStateUpdate(); // Force parent rebuild so location count updates
                     } catch (e) {
                       FusionToast.error(
                         context,
@@ -883,6 +886,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Save new subzone
   void _saveSubZone(BuildContext context, String? zoneId) {
+    print("Started ______________________________");
     final SubZone newSubZone = SubZone(
       name: _zoneNameController.text.trim(),
     );
@@ -908,6 +912,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       listeningAreaIds: _selectedListeningAreaIds,
       autoSave: false,
     );
+    print("Ended ______________________________");
+
     _projectViewModel.saveProject();
 
     Navigator.of(context).pop(); // Close subzone popup
