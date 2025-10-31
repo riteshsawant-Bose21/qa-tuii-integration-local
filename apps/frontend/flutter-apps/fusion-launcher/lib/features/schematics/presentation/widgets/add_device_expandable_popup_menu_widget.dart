@@ -113,6 +113,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
           _selectedPopupDevice = null;
           _selectedListeningAreaIds.clear();
           _expandedSection = null;
+          _zoneNameController.clear(); // <-- Clear zone name
+          _selectedColorHex = ""; // <-- Clear selected color
         });
       },
       tooltip: getSectionToolTip(),

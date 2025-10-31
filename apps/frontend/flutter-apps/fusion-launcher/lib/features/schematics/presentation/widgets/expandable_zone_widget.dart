@@ -126,10 +126,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           ),
 
           /// Add device button
-          AddSpeakersMenu(
-            zoneId: widget.zoneId,
-            onSpeakerAdded: onSpeakerAdded,
-          ),
+          if (widget.subZones.isEmpty)
+            AddSpeakersMenu(
+              zoneId: widget.zoneId,
+              onSpeakerAdded: onSpeakerAdded,
+            ),
           const SizedBox(width: 8),
 
           /// Kebab menu for zone actions
