@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 enum GuideShowCaseSteps {
+  myProjects,
   uploadFloorPlan,
   showFloorPickCalibration,
   confirmFloorCalibrated,
@@ -42,10 +43,22 @@ class GuideShowCaseController extends ChangeNotifier {
   bool get isGuideCompleted => _isGuideCompleted;
   Set<GuideShowCaseSteps> get completedSteps => Set<GuideShowCaseSteps>.unmodifiable(_completedSteps);
 
-  void guideNeeded() async {
+  Future<void> guideNeeded() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
+
+    // Clear any previous saved state
     await prefs.remove(_storageKey);
-    _initialize();
+
+    // Reset all internal states
+    _completedSteps.clear();
+    _isGuideCompleted = false;
+    _currentStep = null;
+
+    // Recalculate the first step
+    _updateCurrentStep();
+
+    // Notify UI about reset
+    notifyListeners();
   }
 
   /// Initialize controller and check if guide is already completed
@@ -133,6 +146,8 @@ class GuideShowCaseController extends ChangeNotifier {
 extension GuideShowCaseStepsExtension on GuideShowCaseSteps {
   String get description {
     switch (this) {
+      case GuideShowCaseSteps.myProjects:
+        return 'Upload your floor plan image';
       case GuideShowCaseSteps.uploadFloorPlan:
         return 'Upload your floor plan image';
       case GuideShowCaseSteps.showFloorPickCalibration:

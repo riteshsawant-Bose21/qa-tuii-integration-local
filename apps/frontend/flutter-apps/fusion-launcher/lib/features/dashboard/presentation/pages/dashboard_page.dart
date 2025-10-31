@@ -64,6 +64,11 @@ class _HomePageState extends State<HomePage> {
             backgroundColor: Colors.black87,
             actions: <Widget>[
               IconButton(
+                icon: const Icon(Icons.help, color: Colors.white),
+                tooltip: 'Guide Help',
+                onPressed: () => GuideShowcaseWrapper.askGuideNeededDialog(context),
+              ),
+              IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: () => _logoutDialog(context),
               ),

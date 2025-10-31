@@ -653,19 +653,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         ),
                       ),
 
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 5),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.help,
-                            size: 24,
-                            color: Theme.of(context).colorScheme.greyDark,
-                          ),
-                          tooltip: 'Save project',
-                          onPressed: () => GuideShowcaseWrapper.askGuideNeededDialog(context),
-                        ),
-                      ),
-
                       /// Share Icon Section
                       Container(
                         width: 56,

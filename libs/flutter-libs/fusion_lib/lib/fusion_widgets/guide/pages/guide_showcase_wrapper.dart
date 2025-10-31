@@ -84,10 +84,6 @@ class GuideShowcaseWrapper extends StatelessWidget {
   }
 
   static void askGuideNeededDialog(BuildContext context) {
-    final bool isGuideCompleted = context.read<GuideShowCaseController>().isGuideCompleted;
-
-    if (!isGuideCompleted) return;
-
     showDialog<bool>(
       context: context,
       builder: (BuildContext context) {
@@ -111,7 +107,10 @@ class GuideShowcaseWrapper extends StatelessWidget {
               width: 80,
               label: "No",
               textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
-              onTap: () => Navigator.of(context).pop(),
+              onTap: () {
+                context.read<GuideShowCaseController>().skipGuide();
+                Navigator.of(context).pop();
+              },
             ),
             const SizedBox(width: 8),
             FusionButton(
