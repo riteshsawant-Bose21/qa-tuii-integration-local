@@ -11,7 +11,6 @@ import 'package:fusion_launcher/core/services/user_session_manager.dart';
 import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/fusion_theme_app.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
 
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -72,7 +71,7 @@ class MyApp extends StatelessWidget {
         ),
       ],
       child: ChangeNotifierProvider<GuideShowCaseController>(
-        create: (BuildContext context) => GuideShowCaseController(),
+        create: (BuildContext context) => GuideShowCaseController(globalNavigatorKey.currentContext!),
         child: FusionThemeBuilder(
           builder: (BuildContext context, ThemeMode mode) {
             return MaterialApp(

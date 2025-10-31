@@ -74,6 +74,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     '24U',
   ];
 
+  final GlobalKey<PopupMenuButtonState<SourceData>> sourcesPopupMenuButtonStateGlobalKey =
+      GlobalKey<PopupMenuButtonState<SourceData>>();
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -146,10 +149,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                               ),
                             );
                           },
-                          child: GuideShowcaseWrapper(
-                            step: GuideShowCaseSteps.systemModeTabs,
-                            child: _buildModeSpecificTools(),
-                          ),
+                          child: _buildModeSpecificTools(),
                         ),
                       ),
                     ],
@@ -178,7 +178,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         children: <Widget>[
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.acousticMode,
-            onHighlightedSpotTap: () {
+            onHighlightedSpotTap: (TapDownDetails details) {
               _switchMode(ToolbarMode.acoustics);
               context.read<GuideShowCaseController>().completeStep();
             },
@@ -193,7 +193,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           ),
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.systemMode,
-            onHighlightedSpotTap: () {
+            onHighlightedSpotTap: (TapDownDetails details) {
               _switchMode(ToolbarMode.system);
               context.read<GuideShowCaseController>().completeStep();
             },
@@ -318,7 +318,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       // if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode)
       GuideShowcaseWrapper(
         step: GuideShowCaseSteps.drawListeningArea,
-        onHighlightedSpotTap: () => _onAcousticsToolSelected(_AcousticsToolType.draw),
+        onHighlightedSpotTap: (TapDownDetails details) => _onAcousticsToolSelected(_AcousticsToolType.draw),
         child: _buildToolItem(
           icon: Icons.polyline,
           "Draw Listening Area",
@@ -329,7 +329,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       ),
       GuideShowcaseWrapper(
         step: GuideShowCaseSteps.addSpeakers,
-        onHighlightedSpotTap: () => _onAcousticsToolSelected(_AcousticsToolType.speakers),
+        onHighlightedSpotTap: (TapDownDetails details) => _onAcousticsToolSelected(_AcousticsToolType.speakers),
         child: _buildToolItem(
           icon: Icons.speaker,
           "Add Speakers",
@@ -411,109 +411,116 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildSourcesToolWithMenu({required bool isSelected}) {
-    return PopupMenuButton<SourceData>(
-      onSelected: (SourceData selectedItem) {
-        // Set device type index first
-        serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+    return GuideShowcaseWrapper(
+      step: GuideShowCaseSteps.systemModeTabs,
+      onHighlightedSpotTap: (TapDownDetails value) {
+        sourcesPopupMenuButtonStateGlobalKey.currentState?.showButtonMenu();
+      },
+      child: PopupMenuButton<SourceData>(
+        key: sourcesPopupMenuButtonStateGlobalKey,
+        onSelected: (SourceData selectedItem) {
+          // Set device type index first
+          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
 
-        // Create product and set for addition
-        final ProductQueryModel product = ProductQueryModel(
-          name: selectedItem.name,
-          price: 0.0,
-          image: selectedItem.assetPath,
-          type: ProductType.sources,
-          sku: selectedItem.id,
-        );
-        serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-      },
-      constraints: const BoxConstraints(
-        maxHeight: 500,
-        maxWidth: 320,
-      ),
-      color: Colors.white,
-      itemBuilder: (BuildContext context) {
-        return <PopupMenuEntry<SourceData>>[
-          const PopupMenuItem<SourceData>(
-            enabled: false,
-            child: Text(
-              'MICROPHONES',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
-            ),
-          ),
-          ...SourceData.microphoneItems.map(
-            (SourceData item) => PopupMenuItem<SourceData>(
-              height: 30,
-              value: item,
-              child: Row(
-                children: <Widget>[
-                  Image.asset(
-                    item.assetPath,
-                    height: 14,
-                    width: 14,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const PopupMenuDivider(),
-          const PopupMenuItem<SourceData>(
-            enabled: false,
-            child: Text(
-              'MEDIA SOURCES',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
-            ),
-          ),
-          ...SourceData.mediaSourceItems.map(
-            (SourceData item) => PopupMenuItem<SourceData>(
-              height: 30,
-              value: item,
-              child: Row(
-                children: <Widget>[
-                  Image.asset(
-                    item.assetPath,
-                    height: 14,
-                    width: 14,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      item.name,
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ];
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 1.0),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6.0),
-          border: Border.all(
-            color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
-            width: 1,
-          ),
+          // Create product and set for addition
+          final ProductQueryModel product = ProductQueryModel(
+            name: selectedItem.name,
+            price: 0.0,
+            image: selectedItem.assetPath,
+            type: ProductType.sources,
+            sku: selectedItem.id,
+          );
+          serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+        },
+        constraints: const BoxConstraints(
+          maxHeight: 500,
+          maxWidth: 320,
         ),
-        child: Tooltip(
-          message: "Add Sources",
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Icon(
-              Icons.mic,
-              size: 18.0,
-              color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+        color: Colors.white,
+        itemBuilder: (BuildContext context) {
+          return <PopupMenuEntry<SourceData>>[
+            const PopupMenuItem<SourceData>(
+              enabled: false,
+              child: Text(
+                'MICROPHONES',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+              ),
+            ),
+            ...SourceData.microphoneItems.map(
+              (SourceData item) => PopupMenuItem<SourceData>(
+                height: 30,
+                value: item,
+                child: Row(
+                  children: <Widget>[
+                    Image.asset(
+                      item.assetPath,
+                      height: 14,
+                      width: 14,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const PopupMenuDivider(),
+            const PopupMenuItem<SourceData>(
+              enabled: false,
+              child: Text(
+                'MEDIA SOURCES',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+              ),
+            ),
+            ...SourceData.mediaSourceItems.map(
+              (SourceData item) => PopupMenuItem<SourceData>(
+                height: 30,
+                value: item,
+                child: Row(
+                  children: <Widget>[
+                    Image.asset(
+                      item.assetPath,
+                      height: 14,
+                      width: 14,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        item.name,
+                        style: const TextStyle(fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ];
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 1.0),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(6.0),
+            border: Border.all(
+              color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+              width: 1,
+            ),
+          ),
+          child: Tooltip(
+            message: "Add Sources",
+            child: Padding(
+              padding: const EdgeInsets.all(10.0),
+              child: Icon(
+                Icons.mic,
+                size: 18.0,
+                color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+              ),
             ),
           ),
         ),

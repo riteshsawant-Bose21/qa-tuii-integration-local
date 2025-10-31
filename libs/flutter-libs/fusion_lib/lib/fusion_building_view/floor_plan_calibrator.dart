@@ -461,6 +461,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     context.read<GuideShowCaseController>().completeStep();
   }
 
+  final GlobalKey _customPaintKey = GlobalKey();
+
   // ---------- build ----------
   @override
   Widget build(BuildContext context) {
@@ -647,6 +649,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         Expanded(
           child: Container(
             clipBehavior: Clip.hardEdge,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerLow,
             ),
@@ -666,31 +669,48 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                     setState(() => _isDrawing = false);
                   }
                 },
-                child: Center(
-                  child: GuideShowcaseWrapper(
-                    step: GuideShowCaseSteps.showFloorPickCalibration,
-                    child: CustomPaint(
-                      painter: FloorPlanCalibrationPainter(
-                        image: widget.floorPlanImage,
-                        startPoint: _startPointDisplay,
-                        endPoint: _endPointDisplay,
-                        distanceText: _distanceController.text.trim(),
-                        unit: _selectedUnit,
-                        cropRectNormalized: _cropRectN,
-                        showCropHandles: _mode == _ToolMode.crop,
-                        onImageRectChanged: (ui.Rect r) {
-                          _imageRect = r;
-                          // keep display points in sync if image rect changes
-                          if (_startPointNormalized != null) {
-                            _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
-                          }
-                          if (_endPointNormalized != null) {
-                            _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
-                          }
-                        },
-                      ),
-                      child: const SizedBox.expand(),
+                child: GuideShowcaseWrapper(
+                  step: GuideShowCaseSteps.showFloorPickCalibration,
+                  onHighlightedSpotTap: (TapDownDetails details) {
+                    if (_mode == _ToolMode.measure) {
+                      // Get the exact RenderBox of the CustomPaint
+                      final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                      if (renderBox != null) {
+                        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+
+                        // Create new TapDownDetails with local position
+                        final TapDownDetails localDetails = TapDownDetails(
+                          globalPosition: details.globalPosition,
+                          localPosition: localPosition,
+                          kind: details.kind,
+                        );
+
+                        _onMeasureTapDown(localDetails);
+                      }
+                    }
+                  },
+                  child: CustomPaint(
+                    key: _customPaintKey, // Add the key here
+                    painter: FloorPlanCalibrationPainter(
+                      image: widget.floorPlanImage,
+                      startPoint: _startPointDisplay,
+                      endPoint: _endPointDisplay,
+                      distanceText: _distanceController.text.trim(),
+                      unit: _selectedUnit,
+                      cropRectNormalized: _cropRectN,
+                      showCropHandles: _mode == _ToolMode.crop,
+                      onImageRectChanged: (ui.Rect r) {
+                        _imageRect = r;
+                        // keep display points in sync if image rect changes
+                        if (_startPointNormalized != null) {
+                          _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
+                        }
+                        if (_endPointNormalized != null) {
+                          _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
+                        }
+                      },
                     ),
+                    child: const SizedBox.expand(),
                   ),
                 ),
               ),
@@ -729,7 +749,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               const SizedBox(width: 8),
               GuideShowcaseWrapper(
                 step: GuideShowCaseSteps.confirmFloorCalibrated,
-                onHighlightedSpotTap: () {
+                onHighlightedSpotTap: (TapDownDetails details) {
                   if (_startPointNormalized != null &&
                       _endPointNormalized != null &&
                       _distanceController.text.trim().isNotEmpty) {

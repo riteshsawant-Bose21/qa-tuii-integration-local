@@ -463,7 +463,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         const SizedBox(width: 12),
                                         GuideShowcaseWrapper(
                                           step: GuideShowCaseSteps.confirmSelectListeningArea,
-                                          onHighlightedSpotTap: () {
+                                          onHighlightedSpotTap: (TapDownDetails details) {
                                             serviceLocator<ProjectViewModel>().clearSelectedZone();
                                             widget.floorCanvasController.completeListeningAreaSelection();
                                             context.read<GuideShowCaseController>().completeStep();
@@ -690,7 +690,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             /// Upload Button
             GuideShowcaseWrapper(
               step: GuideShowCaseSteps.uploadFloorPlan,
-              onHighlightedSpotTap: _showFloorPlanPicker,
+              onHighlightedSpotTap: (TapDownDetails details) => _showFloorPlanPicker(),
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,

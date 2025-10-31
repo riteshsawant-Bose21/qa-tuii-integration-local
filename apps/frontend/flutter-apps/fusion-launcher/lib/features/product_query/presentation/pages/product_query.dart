@@ -97,7 +97,7 @@ class _ProductQueryViewState extends State<ProductQueryView> {
                       return GuideShowcaseWrapper(
                         show: index == 0, // show guide only for first child in a list.
                         step: GuideShowCaseSteps.addSpeakers,
-                        onHighlightedSpotTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+                        onHighlightedSpotTap: (TapDownDetails details) => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
                         child: InkWell(
                           onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
                           child: ProductCard(

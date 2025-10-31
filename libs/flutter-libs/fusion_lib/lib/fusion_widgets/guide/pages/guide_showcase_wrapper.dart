@@ -11,7 +11,7 @@ import '../controller/guide_showcase_controller.dart';
 class GuideShowcaseWrapper extends StatelessWidget {
   final GuideShowCaseSteps step;
   final Widget child;
-  final VoidCallback? onHighlightedSpotTap;
+  final ValueChanged<TapDownDetails>? onHighlightedSpotTap;
   final bool show;
 
   const GuideShowcaseWrapper({
@@ -32,9 +32,11 @@ class GuideShowcaseWrapper extends StatelessWidget {
 
     return FussionPopup(
       show: true,
-      barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.4),
       spotlightBorderRadius: 12.0,
+      onBarrierDismissed: () {
+        context.read<GuideShowCaseController>().skipGuide();
+      },
       content: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.3,
@@ -75,9 +77,9 @@ class GuideShowcaseWrapper extends StatelessWidget {
           ],
         ),
       ),
-      onSpotTap: () {
+      onSpotTap: (TapDownDetails details) {
         Navigator.pop(context);
-        onHighlightedSpotTap?.call();
+        onHighlightedSpotTap?.call(details);
       },
       child: child,
     );
@@ -132,6 +134,47 @@ class GuideShowcaseWrapper extends StatelessWidget {
       },
     );
   }
+
+  static void showGuideCompletedDialog(BuildContext context) {
+    showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.white,
+          constraints: const BoxConstraints(maxWidth: 600),
+          shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
+
+          title: Row(
+            children: [
+              Icon(
+                Icons.check_circle,
+                color: Colors.green,
+                size: 32,
+              ),
+              const SizedBox(width: 8),
+              const Text('Guide Completed!'),
+            ],
+          ),
+          content: const Text(
+            "You've successfully completed the Fussion Launcher walkthrough.",
+          ),
+          actions: <Widget>[
+            FusionButton(
+              height: 32,
+              width: 80,
+              label: "Close",
+              activeBackgroundColor: Theme.of(context).colorScheme.primary,
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 12,
+                color: Colors.white,
+              ),
+              onTap: () => Navigator.pop(context),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 enum _ArrowDirection { top, bottom }
@@ -145,11 +188,10 @@ class FussionPopup extends StatefulWidget {
   final Color? barrierColor;
   final bool barrierDismissible;
   final bool showArrow;
-  final double? contentRadius;
-  final BoxDecoration? contentDecoration;
   final bool show;
   final double spotlightBorderRadius;
-  final VoidCallback onSpotTap;
+  final ValueChanged<TapDownDetails> onSpotTap;
+  final VoidCallback? onBarrierDismissed;
 
   const FussionPopup({
     super.key,
@@ -161,11 +203,10 @@ class FussionPopup extends StatefulWidget {
     this.showArrow = true,
     this.barrierColor,
     this.barrierDismissible = true,
-    this.contentRadius,
-    this.contentDecoration,
     this.show = false,
     this.spotlightBorderRadius = 8.0,
     required this.onSpotTap,
+    this.onBarrierDismissed,
   });
 
   @override
@@ -202,11 +243,10 @@ class _FussionPopupState extends State<FussionPopup> {
         showArrow: widget.showArrow,
         barriersColor: widget.barrierColor,
         barrierDismissible: widget.barrierDismissible,
-        contentRadius: widget.contentRadius,
-        contentDecoration: widget.contentDecoration,
         spotlightBorderRadius: widget.spotlightBorderRadius,
         child: widget.content,
         onSpotTap: widget.onSpotTap,
+        onBarrierDismissed: widget.onBarrierDismissed,
       ),
     );
   }
@@ -226,8 +266,6 @@ class _PopupContent extends StatelessWidget {
   final Color? backgroundColor;
   final Color? arrowColor;
   final bool showArrow;
-  final double? contentRadius;
-  final BoxDecoration? contentDecoration;
 
   const _PopupContent({
     required this.child,
@@ -238,8 +276,6 @@ class _PopupContent extends StatelessWidget {
     this.arrowDirection = _ArrowDirection.top,
     this.backgroundColor,
     this.arrowColor,
-    this.contentRadius,
-    this.contentDecoration,
   });
 
   @override
@@ -256,18 +292,16 @@ class _PopupContent extends StatelessWidget {
             bottom: isTopArrow ? 0 : null,
           ),
           constraints: const BoxConstraints(minWidth: 50),
-          decoration:
-              contentDecoration ??
-              BoxDecoration(
-                color: backgroundColor ?? Colors.white,
-                borderRadius: BorderRadius.circular(contentRadius ?? 10),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 10,
-                  ),
-                ],
+          decoration: BoxDecoration(
+            color: backgroundColor ?? Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            boxShadow: <BoxShadow>[
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 10,
               ),
+            ],
+          ),
           child: child,
         ),
         Positioned(
@@ -333,12 +367,10 @@ class _TrianglePainter extends CustomPainter {
 class _SpotlightBarrierPainter extends CustomPainter {
   final Rect spotlightRect;
   final Color barrierColor;
-  final double borderRadius;
 
   const _SpotlightBarrierPainter({
     required this.spotlightRect,
     required this.barrierColor,
-    required this.borderRadius,
   });
 
   @override
@@ -352,8 +384,8 @@ class _SpotlightBarrierPainter extends CustomPainter {
     final Path innerPath = Path()
       ..addRRect(
         RRect.fromRectAndRadius(
-          spotlightRect, // <-- Adds padding around spotlight
-          const Radius.circular(0), // Optional: slightly rounder edge
+          spotlightRect,
+          Radius.zero,
         ),
       );
 
@@ -368,16 +400,15 @@ class _SpotlightBarrierPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(_SpotlightBarrierPainter oldDelegate) {
-    return oldDelegate.spotlightRect != spotlightRect ||
-        oldDelegate.barrierColor != barrierColor ||
-        oldDelegate.borderRadius != borderRadius;
+    return oldDelegate.spotlightRect != spotlightRect || oldDelegate.barrierColor != barrierColor;
   }
 }
 
 class _PopupRoute extends PopupRoute<void> {
   final Rect targetRect;
   final Widget child;
-  final VoidCallback onSpotTap;
+  final ValueChanged<TapDownDetails> onSpotTap;
+  final VoidCallback? onBarrierDismissed;
 
   static const double _margin = 10;
   static final Rect _viewportRect = Rect.fromLTWH(
@@ -398,9 +429,6 @@ class _PopupRoute extends PopupRoute<void> {
   @override
   final bool barrierDismissible;
 
-  final double? contentRadius;
-  final BoxDecoration? contentDecoration;
-
   _ArrowDirection _arrowDirection = _ArrowDirection.top;
   double _arrowHorizontal = 0;
   double _scaleAlignDx = 0.5;
@@ -418,10 +446,9 @@ class _PopupRoute extends PopupRoute<void> {
     required this.showArrow,
     this.barriersColor,
     this.barrierDismissible = true,
-    this.contentRadius,
-    this.contentDecoration,
     required this.spotlightBorderRadius,
     required this.onSpotTap,
+    this.onBarrierDismissed,
   });
 
   @override
@@ -513,17 +540,27 @@ class _PopupRoute extends PopupRoute<void> {
     Animation<double> secondaryAnimation,
     Widget child,
   ) {
-    child = _PopupContent(
-      childKey: _childKey,
-      arrowKey: _arrowKey,
-      arrowHorizontal: _arrowHorizontal,
-      arrowDirection: _arrowDirection,
-      backgroundColor: backgroundColor,
-      arrowColor: arrowColor,
-      showArrow: showArrow,
-      contentRadius: contentRadius,
-      contentDecoration: contentDecoration,
-      child: child,
+    child = GestureDetector(
+      onTapDown: (TapDownDetails details) {
+        final Offset tapPos = details.globalPosition;
+
+        if (targetRect.contains(tapPos)) {
+          onSpotTap(details);
+        } else if (barrierDismissible) {
+          onBarrierDismissed?.call();
+          Navigator.of(context).maybePop();
+        }
+      },
+      child: _PopupContent(
+        childKey: _childKey,
+        arrowKey: _arrowKey,
+        arrowHorizontal: _arrowHorizontal,
+        arrowDirection: _arrowDirection,
+        backgroundColor: backgroundColor,
+        arrowColor: arrowColor,
+        showArrow: showArrow,
+        child: child,
+      ),
     );
 
     Widget content = child;
@@ -540,28 +577,24 @@ class _PopupRoute extends PopupRoute<void> {
 
     return Stack(
       children: <Widget>[
-        // Custom spotlight barrier
         // Custom spotlight barrier with tap detection
         Positioned.fill(
           child: GestureDetector(
             behavior: HitTestBehavior.translucent,
             onTapDown: (TapDownDetails details) {
               final Offset tapPos = details.globalPosition;
-              final Rect spotArea = targetRect.inflate(8.0); // add small padding for clarity
 
-              if (spotArea.contains(tapPos)) {
-                // User tapped inside spotlight
-                onSpotTap();
+              if (targetRect.contains(tapPos)) {
+                onSpotTap(details);
               } else if (barrierDismissible) {
-                // Optional: dismiss when tapping outside the spotlight
+                onBarrierDismissed?.call();
                 Navigator.of(context).maybePop();
               }
             },
             child: CustomPaint(
               painter: _SpotlightBarrierPainter(
-                spotlightRect: targetRect.inflate(8.0),
+                spotlightRect: targetRect,
                 barrierColor: barriersColor ?? Colors.black.withValues(alpha: 0.7),
-                borderRadius: spotlightBorderRadius,
               ),
             ),
           ),

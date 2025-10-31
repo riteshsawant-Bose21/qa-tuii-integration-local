@@ -33,7 +33,10 @@ class GuideShowCaseController extends ChangeNotifier {
   bool _isInitialized = false;
   bool _isGuideCompleted = false;
 
-  GuideShowCaseController() {
+  late final BuildContext _context;
+
+  GuideShowCaseController(BuildContext context) {
+    _context = context;
     _initialize();
   }
 
@@ -124,6 +127,9 @@ class GuideShowCaseController extends ChangeNotifier {
     if (step == GuideShowCaseSteps.values.last) {
       _isGuideCompleted = true;
       await _saveGuideStatus();
+
+      // ignore: use_build_context_synchronously
+      GuideShowcaseWrapper.showGuideCompletedDialog(_context);
     }
 
     _updateCurrentStep();

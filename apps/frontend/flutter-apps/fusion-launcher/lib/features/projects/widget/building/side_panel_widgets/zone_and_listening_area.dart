@@ -121,7 +121,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         children: <Widget>[
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.addZone,
-            onHighlightedSpotTap: _addNewZone,
+            onHighlightedSpotTap:(TapDownDetails details) => _addNewZone(),
             child: OutlinedButton(
               onPressed: () {
                 _addNewZone();
@@ -1424,7 +1424,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.selectListeningArea,
-            onHighlightedSpotTap: () {
+            onHighlightedSpotTap: (TapDownDetails details) {
               serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
               context.read<GuideShowCaseController>().completeStep();
             },

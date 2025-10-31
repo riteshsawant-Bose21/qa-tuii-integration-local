@@ -92,7 +92,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
             ),
             GuideShowcaseWrapper(
               step: GuideShowCaseSteps.myProjects,
-              onHighlightedSpotTap: () => _showNewProjectDialog(context),
+              onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
               child: _HoverNavItem(
                 icon: Icons.folder_sharp,
                 title: 'My Projects',
