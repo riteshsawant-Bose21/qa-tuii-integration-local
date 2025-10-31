@@ -1,5 +1,5 @@
 import 'package:bloc/bloc.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 export 'circuit/circuit_viewmodel.dart';
@@ -82,6 +82,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedHardwareId;
   String? currentSelectedListeningAreaId;
   String? currentSelectedZoneId;
+  String? currentSelectedSubZoneId;
 
   /// Listening area selection mode flag
   bool isInListeningAreaMode = false;
@@ -247,6 +248,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = false;
     currentSelectedListeningAreaId = null;
     currentSelectedZoneId = null;
+    currentSelectedSubZoneId = null;
     updateProject();
   }
 
@@ -255,16 +257,50 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = true;
     currentSelectedZoneId = zone.id;
     currentSelectedListeningAreaId = null;
+    currentSelectedSubZoneId = null;
     resetDeviceTypeIndex();
     emit(ZoneSelectionMode(zone));
+  }
+
+  void enterSubZoneSelectionMode(SubZone subZone) {
+    isInListeningAreaMode = false;
+    isInZoneSelectionMode = true;
+    currentSelectedSubZoneId = subZone.id;
+    currentSelectedZoneId = null;
+    currentSelectedListeningAreaId = null;
+    resetDeviceTypeIndex();
+    emit(SubZoneSelectionMode(subZone));
   }
 
   void enterListeningAreaMode() {
     isInZoneSelectionMode = false;
     isInListeningAreaMode = true;
     currentSelectedZoneId = null;
+    currentSelectedSubZoneId = null;
     resetDeviceTypeIndex();
     emit(ListeningAreaSelectionMode());
+  }
+
+  Color getCurrentSelectionZoneColor() {
+    if (currentSelectedZoneId != null) {
+      final Zone zone = projectManager.getZoneById(currentSelectedZoneId!);
+      return zone.color;
+    } else if (currentSelectedSubZoneId != null) {
+      final Zone zone = projectManager.getZoneForSubZone(subZoneId: currentSelectedSubZoneId!);
+      return zone.color;
+    }
+    return Colors.grey;
+  }
+
+  String getCurrentSelectionZoneName() {
+    if (currentSelectedZoneId != null) {
+      final Zone zone = projectManager.getZoneById(currentSelectedZoneId!);
+      return zone.name;
+    } else if (currentSelectedSubZoneId != null) {
+      final Zone zone = projectManager.getZoneForSubZone(subZoneId: currentSelectedSubZoneId!);
+      return zone.name;
+    }
+    return "Unknown Zone";
   }
 
   void changeDeviceTypeIndex(int index) {
@@ -272,6 +308,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = false;
     isInListeningAreaMode = false;
     currentSelectedZoneId = null;
+    currentSelectedSubZoneId = null;
     print("Device type index changed to $index");
     emit(DeviceTypeIndexChanged(index));
   }
