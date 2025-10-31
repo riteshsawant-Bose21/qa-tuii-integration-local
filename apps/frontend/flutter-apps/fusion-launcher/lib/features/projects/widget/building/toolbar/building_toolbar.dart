@@ -74,8 +74,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     '24U',
   ];
 
-  final GlobalKey<PopupMenuButtonState<SourceData>> sourcesPopupMenuButtonStateGlobalKey =
-      GlobalKey<PopupMenuButtonState<SourceData>>();
+  final GlobalKey<PopupMenuButtonState<SourceData>> sourcesPopupMenuButtonStateGlobalKey = GlobalKey<PopupMenuButtonState<SourceData>>();
 
   @override
   Widget build(BuildContext context) {
@@ -106,8 +105,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
               vertical: 2.0,
             ),
             child: BlocListener<ProjectViewModel, ProjectViewModelState>(
-              listenWhen:
-                  (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
+              listenWhen: (ProjectViewModelState previous, ProjectViewModelState current) => current is ToolbarModeChanged,
               listener: (BuildContext context, ProjectViewModelState state) {
                 if (state is ToolbarModeChanged && state.mode == ToolbarMode.system) {
                   // Force SPL off when mode changes to system
@@ -328,7 +326,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         ),
       ),
       GuideShowcaseWrapper(
-        step: GuideShowCaseSteps.addSpeakers,
+        step: GuideShowCaseSteps.selectSpeakersTool,
         onHighlightedSpotTap: (TapDownDetails details) => _onAcousticsToolSelected(_AcousticsToolType.speakers),
         child: _buildToolItem(
           icon: Icons.speaker,
@@ -338,7 +336,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           selectedColor: Colors.blue,
         ),
       ),
-      _buildSplTool(),
+      // _buildSplTool(),
       _buildToolItem(
         icon: Icons.fit_screen_rounded,
         "Fit to viewport",
@@ -656,6 +654,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onAddSpeakerSelected();
           widget.onProductSelected();
         }
+
+        context.read<GuideShowCaseController>().completeStep();
         break;
 
       case _AcousticsToolType.spl:

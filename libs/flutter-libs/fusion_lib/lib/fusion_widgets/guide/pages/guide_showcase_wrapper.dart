@@ -168,7 +168,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
             ],
           ),
           content: const Text(
-            "You've successfully completed the Fussion Launcher walkthrough.",
+            "You've successfully completed the Fusion Launcher walkthrough.",
           ),
           actions: <Widget>[
             FusionButton(

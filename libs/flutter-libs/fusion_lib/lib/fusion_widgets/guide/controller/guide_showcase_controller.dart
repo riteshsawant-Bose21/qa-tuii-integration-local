@@ -15,9 +15,10 @@ class GuideShowCaseControllerTexts {
   static const String configureAcousticSettings =
       'Acoustics mode lets you design your audio layout by defining listening areas and speaker placement. Switch to this mode to configure your acoustic settings';
   static const String drawListeningArea =
-      'Listening areas define where people will be positioned to hear audio. Draw listening areas on the canvas by clicking and dragging';
+      'Listening areas define where people will be positioned to hear audio. Draw listening areas on the canvas using this drawing tool';
   static const String addAcousticZones = 'Acoustic zones group listening areas with similar audio requirements. Add acoustic zones to organize your layout';
-  static const String addSpeakers = 'Speakers provide audio coverage to your listening areas. Tap here to add speakers to the layout';
+  static const String selectSpeakersTool = 'Speakers provide audio coverage to your listening areas. Tap here to add speakers to the layout';
+  static const String addSpeakers = 'Pick a speaker model and place it on the floor plan';
   static const String selectListeningArea =
       'Each listening area can be configured individually for optimal audio experience. Select a listening area to configure it';
 
@@ -27,7 +28,7 @@ class GuideShowCaseControllerTexts {
   static const String confirmFloorCalibrated = 'Confirm your floor plan calibration to proceed';
   static const String acousticMode = 'Acoustics mode focuses on audio design and speaker placement';
   static const String systemMode = 'Switch to System mode to configure other hardware components like sources, endpoints, and more';
-  static const String systemModeTabs = 'System mode you can review and configure system components like Sources, Endpoints and more';
+  static const String systemModeTabs = 'Tap here to add a source';
   static const String addZone = 'A zone is where the same audio is played. Tap here to add a new zone';
   static const String showListeningAreaSelectionArea = 'Zones need listening areas to define where audio will be heard. Choose listening areas for this zone';
   static const String confirmSelectListeningArea = 'Confirm your selected listening areas';
@@ -40,6 +41,7 @@ enum GuideShowCaseSteps {
   confirmFloorCalibrated,
   acousticMode,
   drawListeningArea,
+  selectSpeakersTool,
   addSpeakers,
   systemMode,
   systemModeTabs,
@@ -191,6 +193,8 @@ extension GuideShowCaseStepsExtension on GuideShowCaseSteps {
         return GuideShowCaseControllerTexts.acousticMode;
       case GuideShowCaseSteps.drawListeningArea:
         return GuideShowCaseControllerTexts.drawListeningArea;
+      case GuideShowCaseSteps.selectSpeakersTool:
+        return GuideShowCaseControllerTexts.selectSpeakersTool;
       case GuideShowCaseSteps.addSpeakers:
         return GuideShowCaseControllerTexts.addSpeakers;
       case GuideShowCaseSteps.systemMode:
