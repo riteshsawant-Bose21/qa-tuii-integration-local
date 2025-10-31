@@ -126,10 +126,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           ),
 
           /// Add device button
-          AddSpeakersMenu(
-            zoneId: widget.zoneId,
-            onSpeakerAdded: onSpeakerAdded,
-          ),
+          if (widget.subZones.isEmpty)
+            AddSpeakersMenu(
+              zoneId: widget.zoneId,
+              onSpeakerAdded: onSpeakerAdded,
+            ),
           const SizedBox(width: 8),
 
           /// Kebab menu for zone actions
@@ -209,7 +210,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         //
 
                         /// Remove the dragged circuit from the zone
-                        _projectViewModel.removeCircuitFromZone(circuitId: incoming.id, zoneId: widget.zoneId);
+                        _projectViewModel.removeCircuit(circuitId: incoming.id);
                         setState(() {});
                       },
                       builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
@@ -288,7 +289,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                             onRename: () {},
                             onDuplicate: () {},
                             onDelete: () {
-                              _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
+                              _projectViewModel.removeCircuit(circuitId: circuitData.id);
                             },
                             circuitDeviceCount: speakers.length,
                           ),
