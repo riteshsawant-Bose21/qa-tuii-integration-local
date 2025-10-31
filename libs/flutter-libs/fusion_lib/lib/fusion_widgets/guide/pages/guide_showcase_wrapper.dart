@@ -8,6 +8,16 @@ import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 
 import '../controller/guide_showcase_controller.dart';
 
+class GuideShowcaseTexts {
+  static const String stepPattern = 'Step {index} of {total}';
+  static const String skip = 'Skip';
+  static const String askGuideTitle = 'Would you like a guide on using Fusion Launcher?';
+  static const String askGuideContent = 'A brief walkthrough to help you use Fusion Launcher efficiently.';
+  static const String no = 'No';
+  static const String yes = 'Yes';
+  static const String barrierLabel = 'Popup';
+}
+
 class GuideShowcaseWrapper extends StatelessWidget {
   final GuideShowCaseSteps step;
   final Widget child;
@@ -52,7 +62,9 @@ class GuideShowcaseWrapper extends StatelessWidget {
               children: <Widget>[
                 Expanded(
                   child: FusionAppText(
-                    text: 'Step ${GuideShowCaseSteps.values.indexOf(step) + 1} of ${GuideShowCaseSteps.values.length}',
+                    text: GuideShowcaseTexts.stepPattern
+                        .replaceFirst('{index}', '${GuideShowCaseSteps.values.indexOf(step) + 1}')
+                        .replaceFirst('{total}', '${GuideShowCaseSteps.values.length}'),
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.grey,
                     ),
@@ -65,7 +77,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
                   },
                   behavior: HitTestBehavior.translucent,
                   child: FusionAppText(
-                    text: 'skip',
+                    text: GuideShowcaseTexts.skip,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Colors.grey,
                     ),
@@ -94,20 +106,20 @@ class GuideShowcaseWrapper extends StatelessWidget {
           constraints: const BoxConstraints(maxWidth: 600),
           shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
           title: Text(
-            'Do you want guide to how to use Fussion Launcher ?',
+            GuideShowcaseTexts.askGuideTitle,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w600,
             ),
           ),
           content: Text(
-            'A quick walkthrough to help you use Fussion Launcher efficiently.',
+            GuideShowcaseTexts.askGuideContent,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
             FusionOutlinedButton(
               height: 32,
               width: 80,
-              label: "No",
+              label: GuideShowcaseTexts.no,
               textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
               onTap: () {
                 context.read<GuideShowCaseController>().skipGuide();
@@ -118,7 +130,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
             FusionButton(
               height: 32,
               width: 80,
-              label: "Yes",
+              label: GuideShowcaseTexts.yes,
               activeBackgroundColor: Theme.of(context).colorScheme.primary,
               textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                 fontSize: 12,
@@ -455,7 +467,7 @@ class _PopupRoute extends PopupRoute<void> {
   Color? get barrierColor => Colors.transparent;
 
   @override
-  String? get barrierLabel => 'Popup';
+  String? get barrierLabel => GuideShowcaseTexts.barrierLabel;
 
   @override
   TickerFuture didPush() {

@@ -95,7 +95,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
               child: _HoverNavItem(
                 icon: Icons.folder_sharp,
-                title: 'My Projects',
+                title: 'Add New Project',
                 isBold: true,
                 trailing: Icons.add_sharp,
                 onTap: () => _showNewProjectDialog(context),
@@ -347,8 +347,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.park_outlined,
                                   selectedVenueType == 'Outdoor',
                                   () {
-                                    selectedVenueTypeNotifier.value =
-                                        selectedVenueType == 'Outdoor' ? null : 'Outdoor';
+                                    selectedVenueTypeNotifier.value = selectedVenueType == 'Outdoor' ? null : 'Outdoor';
                                     venueTypeErrorNotifier.value = null;
                                   },
                                 ),
@@ -421,8 +420,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.restaurant_outlined,
                                   selectedApplication == 'Restaurant',
                                   () {
-                                    selectedApplicationNotifier.value =
-                                        selectedApplication == 'Restaurant' ? null : 'Restaurant';
+                                    selectedApplicationNotifier.value = selectedApplication == 'Restaurant' ? null : 'Restaurant';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -450,8 +448,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.shopping_bag_outlined,
                                   selectedApplication == 'Shopping Mall',
                                   () {
-                                    selectedApplicationNotifier.value =
-                                        selectedApplication == 'Shopping Mall' ? null : 'Shopping Mall';
+                                    selectedApplicationNotifier.value = selectedApplication == 'Shopping Mall' ? null : 'Shopping Mall';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -463,8 +460,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.store_outlined,
                                   selectedApplication == 'Super Market',
                                   () {
-                                    selectedApplicationNotifier.value =
-                                        selectedApplication == 'Super Market' ? null : 'Super Market';
+                                    selectedApplicationNotifier.value = selectedApplication == 'Super Market' ? null : 'Super Market';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -480,8 +476,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.stadium_outlined,
                                   selectedApplication == 'Stadium',
                                   () {
-                                    selectedApplicationNotifier.value =
-                                        selectedApplication == 'Stadium' ? null : 'Stadium';
+                                    selectedApplicationNotifier.value = selectedApplication == 'Stadium' ? null : 'Stadium';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
@@ -493,8 +488,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                   Icons.add_business_rounded,
                                   selectedApplication == 'Other',
                                   () {
-                                    selectedApplicationNotifier.value =
-                                        selectedApplication == 'Other' ? null : 'Other';
+                                    selectedApplicationNotifier.value = selectedApplication == 'Other' ? null : 'Other';
                                     applicationErrorNotifier.value = null;
                                   },
                                 ),
