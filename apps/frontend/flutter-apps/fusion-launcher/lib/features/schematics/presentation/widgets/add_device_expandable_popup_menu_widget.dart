@@ -714,7 +714,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                     setDropdownState: setPopupState,
                                     selectedFloor: selectedFloor,
                                     selectedFloorId: selectedFloorId,
-                                    onCreateNewArea: ({required String floorId}) {
+                                    onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
                                       if (areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
                                         // todo: Replace with actual area creation logic (e.g., user-defined vertices)
                                         final ListeningArea newListeningArea = ListeningArea(

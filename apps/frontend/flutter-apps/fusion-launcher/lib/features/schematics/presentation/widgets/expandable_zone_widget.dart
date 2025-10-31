@@ -6,6 +6,7 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../../core/service_locator.dart';
 import 'add_speakers_menu.dart';
 import 'circuit_device_widget.dart';
+import 'create_new_location_widget.dart';
 import 'expandable_sub_zone_widgets.dart';
 
 class ExpandableZoneWidget extends StatefulWidget {
@@ -36,10 +37,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   late ValueNotifier<bool> _isZoneExpanded;
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   final TextEditingController _zoneNameController = TextEditingController();
-  final List<String> _selectedListeningAreaIds = <String>[];
+  List<String> _selectedListeningAreaIds = <String>[];
   bool showSubzonePopup = false;
   bool isKebabMenuOpen = false;
   bool isHovered = false;
+
+  List<Map<String, dynamic>> newlyCreatedAreas = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -636,12 +639,44 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Location list within the dropdown
   Widget _buildLocationList(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
-    final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId);
+    bool isCreateAreaExpanded = false;
+    final String selectedFloor = '';
+    final String selectedFloorId = '';
+    final TextEditingController areaNameController = TextEditingController();
+
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setPopupState) {
+        /// Always recompute availableAreas and allAreas inside the builder so they update with state
+        final List<ListeningArea> availableAreas = <ListeningArea>[
+          ..._projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId),
+          ...newlyCreatedAreas.map((Map<String, dynamic> e) => e['area'] as ListeningArea),
+        ];
+        List<String> selectedListeningAreaIds = List<String>.from(_selectedListeningAreaIds);
+
+        /// Combine assigned areas and available areas to show all
+        final List<ListeningArea> allAreas = <ListeningArea>[
+          ...serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId),
+          ...availableAreas.where(
+            (ListeningArea a) => !serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).any((ListeningArea b) => b.id == a.id),
+          ),
+        ];
+
         void updateStates() {
           setPopupState(() {});
           onStateUpdate();
+        }
+
+        /// Helper to get floor name for area
+        String getFloorNameForArea(ListeningArea area) {
+          final Map<String, dynamic> newArea = newlyCreatedAreas.firstWhere(
+            (Map<String, dynamic> e) => (e['area'] as ListeningArea).id == area.id,
+            orElse: () => <String, dynamic>{},
+          );
+          if (newArea.isNotEmpty) {
+            return newArea['floorName'] as String? ?? '';
+          }
+          final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+          return floorData?.name ?? '';
         }
 
         return SizedBox(
@@ -678,7 +713,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               ),
 
               /// Scrollable list
-              serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).isEmpty
+              allAreas.isEmpty
                   ? Container(
                     padding: const EdgeInsets.all(16),
                     child: FusionAppText(
@@ -693,24 +728,83 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     child: SingleChildScrollView(
                       child: Column(
                         children:
-                            serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).map((ListeningArea area) {
-                              final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+                            allAreas.map((ListeningArea area) {
+                              final String floorName = getFloorNameForArea(area);
                               final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
                               final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
                               return _buildLocationItem(
                                 context: context,
                                 area: area,
                                 zoneId: zoneId,
-                                onStateUpdate: updateStates,
+                                onStateUpdate: () {
+                                  if (selectedListeningAreaIds.contains(area.id)) {
+                                    selectedListeningAreaIds.remove(area.id);
+                                  } else {
+                                    selectedListeningAreaIds.add(area.id);
+                                  }
+                                  _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
+                                  updateStates();
+                                },
                                 availableAreas: availableAreas,
                                 zoneData: zoneData,
                                 isAvailable: isAvailable,
-                                floorData: floorData,
+                                floorData: null, // not used, see below
+                                floorName: floorName, // pass floorName here
                               );
                             }).toList(),
                       ),
                     ),
                   ),
+
+              /// Create New Location Section
+              CreateNewLocationWidget(
+                areaNameController: areaNameController,
+                isCreateAreaExpanded: isCreateAreaExpanded,
+                setDropdownState: setPopupState,
+                selectedFloor: selectedFloor,
+                selectedFloorId: selectedFloorId,
+                onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
+                  if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
+                    final ListeningArea newListeningArea = ListeningArea(
+                      name: locationName.trim(),
+                      vertices: <Offset>[
+                        const Offset(0, 0),
+                        const Offset(100, 0),
+                        const Offset(100, 100),
+                        const Offset(0, 100),
+                      ],
+                    );
+
+                    try {
+                      newlyCreatedAreas.add(<String, dynamic>{
+                        'area': newListeningArea,
+                        'floorId': floorId,
+                        'floorName': floorName,
+                      });
+                      selectedListeningAreaIds = <String>[newListeningArea.id];
+                      _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
+                      isCreateAreaExpanded = false;
+                      setPopupState(() {});
+                      areaNameController.clear();
+
+                      FusionToast.success(
+                        context,
+                        message: "Listening area '$locationName' created successfully on floor '$floorName'",
+                      );
+                    } catch (e) {
+                      FusionToast.error(
+                        context,
+                        message: "Failed to create listening area: $e",
+                      );
+                    }
+                  } else {
+                    FusionToast.error(
+                      context,
+                      message: "Please enter location name and select a floor",
+                    );
+                  }
+                },
+              ),
             ],
           ),
         );
@@ -728,6 +822,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     FloorModel? floorData,
     Zone? zoneData,
     required bool isAvailable,
+    String? floorName, // add this parameter
   }) {
     void toggleSelection() {
       if (_selectedListeningAreaIds.contains(area.id)) {
@@ -764,7 +859,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             /// Location name and zone
             Expanded(
               child: FusionAppText(
-                text: area.name.isNotEmpty ? "${floorData?.name}/${area.name}" : 'Unnamed Area',
+                text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                   fontSize: 10,
@@ -789,18 +884,25 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   /// Save new subzone
   void _saveSubZone(BuildContext context, String? zoneId) {
     final SubZone newSubZone = SubZone(
-      id: 'subzone_${DateTime.now().millisecondsSinceEpoch}',
       name: _zoneNameController.text.trim(),
     );
 
-    // final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
     _projectViewModel.recordSnapshot();
+    newlyCreatedAreas.forEach((Map<String, dynamic> entry) {
+      final ListeningArea area = entry['area'] as ListeningArea;
+      final String floorId = entry['floorId'] as String;
+      // _projectViewModel.addFloor(floor: floor);
+
+      _projectViewModel.addListeningArea(area: area, floorId: floorId);
+    });
+    // _projectViewModel.addListeningArea(area: , floorId: floorId);
     _projectViewModel.addSubZone(subZone: newSubZone, autoSave: false);
     _projectViewModel.addSubZoneToZone(
       subZoneId: newSubZone.id,
       parentZoneId: zoneId ?? "",
       autoSave: false,
     );
+
     _projectViewModel.updateListeningAreasInSubZone(
       subZoneId: newSubZone.id,
       listeningAreaIds: _selectedListeningAreaIds,
@@ -812,6 +914,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     Navigator.of(context).pop(); // Close kebab menu
     _zoneNameController.clear();
     _selectedListeningAreaIds.clear();
+    newlyCreatedAreas.clear();
   }
 
   /// Called when a new speaker is added to the zone

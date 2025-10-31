@@ -11,7 +11,7 @@ class CreateNewLocationWidget extends StatefulWidget {
   final String selectedFloor;
   final String selectedFloorId;
   final void Function(void Function()) setDropdownState;
-  final Function({required String floorId}) onCreateNewArea;
+  final Function({required String floorId, required String floorName, required String locationName}) onCreateNewArea;
 
   const CreateNewLocationWidget({
     super.key,
@@ -174,7 +174,11 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                       label: "Add",
                       isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
                       onTap: () {
-                        widget.onCreateNewArea(floorId: _selectedFloorId);
+                        widget.onCreateNewArea(
+                          floorId: _selectedFloorId,
+                          floorName: _selectedFloor ?? '',
+                          locationName: widget.areaNameController.text.trim(),
+                        );
                         widget.setDropdownState(() {
                           _isExpanded = !_isExpanded;
                         });
