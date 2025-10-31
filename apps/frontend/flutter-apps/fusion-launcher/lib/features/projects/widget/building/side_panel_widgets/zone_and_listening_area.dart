@@ -121,7 +121,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         children: <Widget>[
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.addZone,
-            onHighlightedSpotTap:(TapDownDetails details) => _addNewZone(),
+            onHighlightedSpotTap: (TapDownDetails details) => _addNewZone(),
             child: OutlinedButton(
               onPressed: () {
                 _addNewZone();
@@ -214,12 +214,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     }
 
     // Filter out listening areas that are in subzones
-    final List<ListeningArea> listeningAreas =
-        allListeningAreas.where((ListeningArea area) => !listeningAreasInSubZones.contains(area.id)).toList();
+    final List<ListeningArea> listeningAreas = allListeningAreas.where((ListeningArea area) => !listeningAreasInSubZones.contains(area.id)).toList();
 
-    final bool isSelected =
-        serviceLocator<ProjectViewModel>().isInZoneSelectionMode &&
-        serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
+    final bool isSelected = serviceLocator<ProjectViewModel>().isInZoneSelectionMode && serviceLocator<ProjectViewModel>().currentSelectedZoneId == zone.id;
     final bool isCollapsed = !_expandedZones.contains(zone.id);
 
     return DragTarget<ListeningArea>(
@@ -254,8 +251,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
                     if (listeningAreas.isNotEmpty)
                       ...listeningAreas.map((ListeningArea area) => _buildListeningAreaItem(area, zone))
-                    else if (serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id).isEmpty &&
-                        _getZoneCircuits(zone.id).isEmpty)
+                    else if (serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id).isEmpty && _getZoneCircuits(zone.id).isEmpty)
                       _buildNoListeningAreasMessage(zone),
                     // _buildZoneCircuitsSection(zone),
                     const SizedBox(height: 4),
@@ -639,10 +635,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           firstChild: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (speakers.isNotEmpty)
-                ...speakers.map((Speaker speaker) => _buildSpeakerItem(speaker))
-              else
-                _buildNoSpeakersMessage(),
+              if (speakers.isNotEmpty) ...speakers.map((Speaker speaker) => _buildSpeakerItem(speaker)) else _buildNoSpeakersMessage(),
             ],
           ),
           secondChild: const SizedBox.shrink(),
@@ -772,10 +765,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           firstChild: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (speakers.isNotEmpty)
-                ...speakers.map((Speaker speaker) => _buildSubZoneSpeakerItem(speaker))
-              else
-                _buildNoSpeakersInSubZoneMessage(),
+              if (speakers.isNotEmpty) ...speakers.map((Speaker speaker) => _buildSubZoneSpeakerItem(speaker)) else _buildNoSpeakersInSubZoneMessage(),
             ],
           ),
           secondChild: const SizedBox.shrink(),
@@ -1588,12 +1578,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
     if (speakerSubZoneId != null) {
       final SubZone? speakerSubZone = serviceLocator<ProjectViewModel>().getSubZone(subZoneId: speakerSubZoneId);
-      errorMessage =
-          'Speaker is in subzone "${speakerSubZone?.name ?? 'Unknown'}" and can only be added to circuits in the same subzone';
+      errorMessage = 'Speaker is in subzone "${speakerSubZone?.name ?? 'Unknown'}" and can only be added to circuits in the same subzone';
     } else if (speakerZoneId != null) {
       final Zone? speakerZone = serviceLocator<ProjectViewModel>().getZone(zoneId: speakerZoneId);
-      errorMessage =
-          'Speaker is in zone "${speakerZone?.name ?? 'Unknown'}" and can only be added to circuits in the same zone (not in subzones)';
+      errorMessage = 'Speaker is in zone "${speakerZone?.name ?? 'Unknown'}" and can only be added to circuits in the same zone (not in subzones)';
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1632,8 +1620,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           final String? speakerZoneId = _getZoneIdForSpeaker(candidateSpeaker);
           final String? speakerSubZoneId = _getSubZoneIdForSpeaker(candidateSpeaker);
 
-          canAccept =
-              !_isSpeakerInAnyCircuit(candidateSpeaker) && speakerZoneId == zone.id && speakerSubZoneId == null;
+          canAccept = !_isSpeakerInAnyCircuit(candidateSpeaker) && speakerZoneId == zone.id && speakerSubZoneId == null;
         }
 
         final String circuitSectionId = 'zone_${zone.id}';
@@ -1695,10 +1682,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 firstChild: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: <Widget>[
-                    if (circuits.isNotEmpty)
-                      ...circuits.map((CircuitModel circuit) => _buildSimpleCircuitItem(circuit))
-                    else
-                      _buildNoZoneCircuitsMessage(),
+                    if (circuits.isNotEmpty) ...circuits.map((CircuitModel circuit) => _buildSimpleCircuitItem(circuit)) else _buildNoZoneCircuitsMessage(),
                   ],
                 ),
                 secondChild: const SizedBox.shrink(),
@@ -1887,10 +1871,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         return Container(
           margin: EdgeInsets.only(left: leftPadding, top: 2),
           decoration: BoxDecoration(
-            color:
-                hasIncomingData
-                    ? (canAccept ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3))
-                    : Colors.transparent,
+            color: hasIncomingData ? (canAccept ? Colors.green.withValues(alpha: 0.3) : Colors.red.withValues(alpha: 0.3)) : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
           child: InkWell(
@@ -2229,9 +2210,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   void _createNewCircuitWithSpeaker(Speaker speaker, String zoneId, String? subZoneId) {
     // Create a new circuit
     final List<CircuitModel> existingCircuits =
-        subZoneId != null
-            ? serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZoneId)
-            : _getZoneCircuits(zoneId);
+        subZoneId != null ? serviceLocator<ProjectViewModel>().getCircuitsInSubZone(subZoneId: subZoneId) : _getZoneCircuits(zoneId);
 
     final CircuitModel newCircuit = CircuitModel(
       name: '${speaker.hardwareName} ${existingCircuits.length + 1}',

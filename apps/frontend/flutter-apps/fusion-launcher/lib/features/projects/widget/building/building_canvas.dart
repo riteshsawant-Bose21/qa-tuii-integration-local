@@ -217,16 +217,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       floor: floor,
                                       floorPlanEntity: floor.floorPlan,
                                       selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
-                                      selectedListeningAreaId:
-                                          serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
+                                      selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
                                       onUpdateHardwareComponent: (HardwareComponent updatedHw) {
-                                        final HardwareComponent oldHw =
-                                            serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+                                        final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
 
                                         //check for pos && listening area id since only those two can be updated from canvas
                                         if (oldHw.pos != updatedHw.pos ||
-                                            oldHw.locationEntity.listeningAreaId !=
-                                                updatedHw.locationEntity.listeningAreaId ||
+                                            oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
                                             oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
                                           serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
                                         } else {
@@ -329,11 +326,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         );
                                         context.read<GuideShowCaseController>().completeStep();
                                       },
-                            listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
-                            subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
-                                      isAcousticsMode:
-                                          serviceLocator<ProjectViewModel>().currentToolbarMode ==
-                                          ToolbarMode.acoustics,
+                                      listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
+                                      subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
+                                      listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
+                                      isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
                                     ),
                                   ),
                                 ),
@@ -373,13 +369,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         widget.floorCanvasController.toggleDraw();
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
-                          widget.floorCanvasController.isDrawing.value) {
+                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode && widget.floorCanvasController.isDrawing.value) {
                         widget.floorCanvasController.toggleDraw();
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode &&
-                          widget.floorCanvasController.isListeningAreaSelectionActive.value) {
+                      if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && widget.floorCanvasController.isListeningAreaSelectionActive.value) {
                         widget.floorCanvasController.cancelListeningAreaSelection();
                       }
                     },
@@ -387,10 +381,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
                       final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
                       return Visibility(
-                        visible:
-                            currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != ""
-                                ? true
-                                : false,
+                        visible: currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != "" ? true : false,
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Padding(
@@ -471,7 +462,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         GuideShowcaseWrapper(
                                           step: GuideShowCaseSteps.confirmSelectListeningArea,
                                           onHighlightedSpotTap: (TapDownDetails details) {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
                                             widget.floorCanvasController.completeListeningAreaSelection();
                                             context.read<GuideShowCaseController>().completeStep();
                                           },
@@ -487,7 +479,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                        serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                                serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -501,7 +493,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                      serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                              serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
