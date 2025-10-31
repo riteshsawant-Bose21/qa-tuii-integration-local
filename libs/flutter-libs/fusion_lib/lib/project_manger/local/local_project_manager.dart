@@ -84,6 +84,8 @@ class LocalProjectManager {
       final Directory fusionDir = await fusionProjectDirectory;
       final Directory projectDir = Directory('${fusionDir.path}/$projectId');
 
+      print('Creating new project directory at: ${projectDir.path}');
+
       /// Check if folder already exists
       if (await projectDir.exists()) {
         return ResponseCallback.failure("Project folder '$projectId' already exists.");
@@ -103,11 +105,17 @@ class LocalProjectManager {
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
         "floors": [
-          {"id": FusionUtils.shortStringUUID(), 'name': "Floor 1", 'floorPlan': FloorPlanModel.defaultFloorPlan, 'listeningAreas': []},
+          {
+            "id": "FLOOR${FusionUtils.shortStringUUID()}",
+            'name': "Floor 1",
+            'floorPlan': FloorPlanModel.defaultFloorPlan,
+          },
         ],
         "listeningAreas": [],
         "zones": [],
         "sourceSet": [],
+        "circuits": [],
+        "wiringConnection": [],
         "hardwareComponents": [],
         "fusionDevices": [],
         "suggestedFusionDevices": [],

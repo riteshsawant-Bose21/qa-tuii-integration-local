@@ -1,35 +1,23 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'processing_block_model.dart';
+import '../../fusion_utils/fusion_utilities.dart';
 
 class Zone {
   final String id;
   final String name;
-  final List<ProcessingBlockModel> processingBlocks;
   final int selectedMixIndex;
-  final List<String> listeningAreasIds;
-  final List<String> sourceSetIds;
   final String zoneColor;
+  final Offset? wiringPos;
 
   Zone({
     String? id,
     required this.name,
-    List<String>? listeningAreaIds,
-    List<ProcessingBlockModel>? processingBlocks,
-    List<String>? nonLocalSpeakerIds,
-    List<String>? sourceSetIds,
     String? zoneColor,
     this.selectedMixIndex = 0,
-  }) : id = id ?? getShortId(),
-       listeningAreasIds = listeningAreaIds ?? <String>[],
-       processingBlocks = processingBlocks ?? <ProcessingBlockModel>[],
-       zoneColor = zoneColor ?? getRandomColor(),
-       sourceSetIds = sourceSetIds ?? <String>[];
-
-  static String getShortId() {
-    return 'zone${DateTime.now().millisecondsSinceEpoch}${Random().nextInt(1000)}';
-  }
+    this.wiringPos,
+  }) : id = id ?? "ZONE${FusionUtils.shortStringUUID()}",
+       zoneColor = zoneColor ?? getRandomColor();
 
   Color get color {
     return Color(int.parse(zoneColor.substring(1, 7), radix: 16) + 0xFF000000);
@@ -48,6 +36,19 @@ class Zone {
     '#CDDC39', // Lime
     '#3F51B5', // Indigo
     '#009688', // Teal
+    '#FF5722', // Deep Orange
+    '#8BC34A', // Light Green
+    '#FFC107', // Amber
+    '#673AB7', // Deep Purple
+    '#03A9F4', // Light Blue
+    '#FFCDD2', // Light Pink
+    '#C5E1A5', // Pale Green
+    '#FFE082', // Pale Yellow
+    '#B39DDB', // Lavender
+    '#80DEEA', // Light Cyan
+    '#FFAB91', // Peach
+    '#AED581', // Mint Green
+    '#F48FB1', // Rose Pink
   ];
 
   static getRandomColor() {
@@ -58,40 +59,32 @@ class Zone {
   Zone copyWith({
     String? id,
     String? name,
-    List<String>? listeningAreaIds,
-    List<ProcessingBlockModel>? processingBlocks,
     int? selectedMixIndex,
-    List<String>? sourceSetIds,
     String? zoneColor,
+    Offset? wiringPos,
   }) {
     return Zone(
       id: id ?? this.id,
       name: name ?? this.name,
-      listeningAreaIds: listeningAreaIds ?? listeningAreasIds,
-      processingBlocks: processingBlocks ?? this.processingBlocks,
       selectedMixIndex: selectedMixIndex ?? this.selectedMixIndex,
-      sourceSetIds: sourceSetIds ?? this.sourceSetIds,
       zoneColor: zoneColor ?? this.zoneColor,
+      wiringPos: wiringPos ?? this.wiringPos,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
-    'listeningAreasId': listeningAreasIds,
-    'processingBlocks': processingBlocks.map((ProcessingBlockModel pb) => pb.toJson()).toList(),
     'selectedMixIndex': selectedMixIndex,
-    'sourceSetIds': sourceSetIds,
     'zoneColor': zoneColor,
+    'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
   };
 
   factory Zone.fromJson(Map<String, dynamic> json) => Zone(
     id: json['id'] as String,
     name: json['name'] as String,
-    listeningAreaIds: List<String>.from(json['listeningAreasId'] as List<dynamic>),
-    processingBlocks: (json['processingBlocks'] as List<dynamic>).map((dynamic e) => ProcessingBlockModel.fromJson(e as Map<String, dynamic>)).toList(),
     selectedMixIndex: json['selectedMixIndex'] as int? ?? 0,
-    sourceSetIds: List<String>.from(json['sourceSetIds'] as List<dynamic>),
     zoneColor: json['zoneColor'] as String? ?? getRandomColor(),
+    wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
   );
 }

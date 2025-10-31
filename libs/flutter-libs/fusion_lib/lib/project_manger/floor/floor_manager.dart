@@ -59,4 +59,11 @@ extension FloorManager on ProjectManager {
     }
     return projectService!.getFloorById(floorId);
   }
+
+  FloorModel? getFloorForHardware({required String hardwareId}) {
+    if (projectService == null) {
+      throw Exception("No project is currently loaded.");
+    }
+    return projectService!.getFloorForHardware(hardwareId: hardwareId);
+  }
 }
