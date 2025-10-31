@@ -2,7 +2,6 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -11,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	json "github.com/goccy/go-json"
 )
 
 const audioPlayerName = "fusion-announce"

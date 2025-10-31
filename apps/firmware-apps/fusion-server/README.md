@@ -276,7 +276,7 @@ The socket can only be accessed within the internal network.
 ### Get all values
 From with server instance:
 ```bash
-echo '{"action":"get"}' | nc -u -w 1 localhost 7947
+echo '{"action":"get"}' | nc -u -w 1 {vip} 7947
 ```
 
 Outside of instance:
@@ -286,33 +286,42 @@ multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v l
 
 ### Set a value
 ```bash
-echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost 7947
+echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 {vip} 7947
 ```
-Outside of instance:
+
+Inside of instance:
 ```bash
-multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"test\":\"hello\"}' | nc -u -w 1 localhost 7947"
+multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"payload\":{\"test\":\"hello\"}}' | nc -u -w 1 localhost 7947"
 ```
 
 ### Set a nested value
 ```bash
 echo '{
-  "action": "set",
-  "audio": {
-    "settings": {
-      "volume": 0.6
+  "action":"set",
+  "payload":{
+    "settings":{
+      "audio":{
+        "volume":0.6
+      }
     }
   }
 }' | nc -u -w1 127.0.0.1 7947
+
+
+
+
 ```
 
 ### Set a value outside of instance
 ```bash
 multipass exec fusion1 -- bash -c 'cat <<EOF | nc -u -w1 127.0.0.1 7947
 {
-  "action": "set",
-  "audio": {
-    "settings": {
-      "volume": 0.6
+  "action":"set",
+  "payload":{
+    "settings":{
+      "audio":{
+        "volume":0.6
+      }
     }
   }
 }

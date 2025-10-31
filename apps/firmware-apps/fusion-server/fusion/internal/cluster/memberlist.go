@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -16,6 +15,8 @@ import (
 	"slices"
 	"syscall"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -53,7 +54,7 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 	config.TCPTimeout = tcpTimeout
 	config.DisableTcpPings = false
 	config.ProbeInterval = probeInterval
-	config.ProbeTimeout = probeTimeout * time.Second
+	config.ProbeTimeout = probeTimeout
 	config.SuspicionMult = suspicionMult
 	config.PushPullInterval = pushPullInterval
 
@@ -74,12 +75,14 @@ func (c *Cluster) JoinMemberlist() error {
 		return fmt.Errorf("getJoinAddresses: %w", err)
 	}
 
+	logger := logging.GetLogger()
+
 	if len(joinAddrs) == 0 {
 		// This is the first node in the cluster
+		logger.Debug("[MEMBERLIST] First member of cluster: %s", c.bindAddr)
 		return nil
 	}
 
-	logger := logging.GetLogger()
 	var lastErr error
 
 	for attempt := range retryTimes {
@@ -87,7 +90,7 @@ func (c *Cluster) JoinMemberlist() error {
 		_, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
 			members := c.Memberlist.Members()
-			logger.Info("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
+			logger.Debug("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
 
 			c.updateDeviceInfo()
 
@@ -133,12 +136,13 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 	}
 	defer resp.Body.Close()
 
+	logger := logging.GetLogger()
+
 	if resp.StatusCode != http.StatusOK {
 		// Assume the admin API isn't ready yet.
+		logger.Warn("GetLiveNodeAddresses: Admin API unavailable")
 		return []string{}, nil
 	}
-
-	logger := logging.GetLogger()
 
 	var members []*memberlist.Node
 	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {

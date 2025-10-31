@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -64,12 +65,11 @@ type Cluster struct {
 	config           *api.AppConfig
 	Memberlist       *memberlist.Memberlist
 	vip              string
+	vipHolder        string
 	vipLock          sync.RWMutex
 	configPath       string
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
-	statusConnection *net.UDPConn
-	statusQuit       chan struct{}
 }
 
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
@@ -84,41 +84,27 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
 		networkLatencies: NewNetworkLatencyStore(maxLatencyCount, latencyPruneTime),
-		statusQuit:       make(chan struct{}),
 	}
 
+	logger := logging.GetLogger()
+
 	if !cluster.config.Local {
-		logger := logging.GetLogger()
 
-		if vip, err := cluster.getVIPFromConfig(); err != nil {
-			logger.Fatal("getVIPFromConfig: %v", err)
-		} else {
-			if cluster.isLocalVIP(vip) {
-
-				cluster.vipLock.Lock()
-				cluster.vip = vip
-				cluster.vipLock.Unlock()
-
-				// Start the TaskManager
-				if err := cluster.delegate.taskManager.Start(); err != nil {
-					logger.Fatal("TaskManager.Start: %v", err)
-				}
-				logger.Info("TaskManager running on %s", cluster.nodeName)
-
-				if err := cluster.startStatusNotifier(); err != nil {
-					logger.Fatal("startStatusNotifier: %v", err)
-				}
-				logger.Info("StatusNotifier running on %s", cluster.nodeName)
-			}
-		}
-
-		if err := cluster.startVRRPListener(); err != nil {
+		if err := cluster.startVRRPListener(appConfig.NetIface); err != nil {
 			logger.Fatal("startVRRPListener: %v", err)
 		}
 
-		if err := cluster.JoinMemberlist(); err != nil {
-			logger.Error("initial JoinMemberlist: %v", err)
+		vip, err := cluster.getVIPFromConfig()
+		if err != nil {
+			logger.Fatal("getVIPFromConfig: %v", err)
 		}
+
+		canonical := canonicalVIP(vip)
+		cluster.vip = canonical
+	}
+
+	if err := cluster.JoinMemberlist(); err != nil {
+		logger.Error("initial JoinMemberlist: %v", err)
 	}
 
 	cluster.updateDeviceInfo()
@@ -130,7 +116,6 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 }
 
 func (c *Cluster) Stop() {
-	c.stopStatusNotifier()
 }
 
 // GetInfo returns detailed information about the cluster
@@ -156,7 +141,9 @@ func (c *Cluster) GetInfo() ClusterInfo {
 
 func (c *Cluster) SetMemberlist(memberlist *memberlist.Memberlist) {
 	c.Memberlist = memberlist
-	c.JoinMemberlist()
+	if err := c.JoinMemberlist(); err != nil {
+		logging.GetLogger().Error("Unable to join after setting memberlist: %v", err)
+	}
 	c.Metrics.SetMemberlist(memberlist)
 }
 
@@ -170,69 +157,122 @@ func (c *Cluster) getClusterIPs() []string {
 	return ips
 }
 
-func (c *Cluster) listenerUpdated(vip string) {
+// canonicalVIP canonicalizes an IP address.
+// "192.168.64.100/24" becomes "192.168.64.100"
+func canonicalVIP(s string) string {
+	if s == "" {
+		return ""
+	}
+	// handle CIDR form
+	if ip, _, err := net.ParseCIDR(s); err == nil && ip != nil {
+		if v4 := ip.To4(); v4 != nil {
+			return v4.String()
+		}
+		// drop IPv6
+		return ""
+	}
+	// handle plain IP form
+	if ip := net.ParseIP(s); ip != nil {
+		if v4 := ip.To4(); v4 != nil {
+			return v4.String()
+		}
+	}
+	return ""
+}
+
+// listenerUpdated is called when VRRP state changes
+func (c *Cluster) listenerUpdated(vip, srcIP string) {
 
 	logger := logging.GetLogger()
 
-	// Serialize the rewrite/reload sequence
+	newVIP := canonicalVIP(vip)
+
 	c.vipLock.Lock()
-	if vip == "" || vip == c.vip {
-		c.vipLock.Unlock()
+	defer c.vipLock.Unlock()
+
+	oldVIP := c.vip
+	oldHolder := c.vipHolder
+
+	// VIP has been removed entirely
+	if newVIP == "" {
+		if oldVIP == "" {
+			// no change
+			return
+		}
+
+		logger.Info("VIP %s removed (old holder %s)", oldVIP, oldHolder)
+
+		// Update state
+		c.vip = ""
+		c.vipHolder = ""
+
+		// Notify locally and stop any VIP tasks
+		c.notifyLocalVIPChange(false)
 		return
 	}
-	old := c.vip
-	c.vip = vip
 
-	if old != "" && old != vip && !c.isLocalVIP(vip) {
-		logger.Debug("Lost VIP %s → %s", old, vip)
-		c.delegate.taskManager.Stop()
-		c.stopStatusNotifier()
-	}
-
-	if err := c.updateVIP(vip); err != nil {
-		logger.Error("updateVIP(%q): %v", vip, err)
-		c.vipLock.Unlock()
+	// No change
+	if newVIP == oldVIP && srcIP == oldHolder {
+		logger.Warn("listenerUpdated called but VIP state is unchanged.")
 		return
 	}
 
-	if err := c.reloadVIP(); err != nil {
-		logger.Error("reloadVIP: %v", err)
-		c.vipLock.Unlock()
-		return
+	// Determine ownership
+	oldLocal := c.isLocalVIP(oldHolder)
+	newLocal := c.isLocalVIP(srcIP)
+
+	logger.Debug("VIP update: oldVIP=%s newVIP=%s oldHolder=%s newHolder=%s oldLocal=%v newLocal=%v",
+		oldVIP, newVIP, oldHolder, srcIP, oldLocal, newLocal)
+
+	// VIP address changed
+	if newVIP != oldVIP {
+
+		if err := c.updateVIP(newVIP); err != nil {
+			logger.Error("updateVIP(%q): %v", newVIP, err)
+			return
+		}
+
+		if err := c.reloadVIP(); err != nil {
+			logger.Error("reloadVIP: %v", err)
+			return
+		}
 	}
-	c.vipLock.Unlock()
 
-	logger.Debug("New VIP detected: %q → %q", old, vip)
+	// Update current state
+	c.vip = newVIP
+	c.vipHolder = srcIP
 
-	if c.isLocalVIP(vip) {
+	// Handle ownership transition
+	switch {
+	case oldLocal && !newLocal:
+		logger.Info("VIP %s moved (was %s, now %s)", newVIP, oldHolder, srcIP)
+		c.notifyLocalVIPChange(false)
+
+	case !oldLocal && newLocal:
+		logger.Debug("VIP %s gained locally (holder %s)", newVIP, srcIP)
+
+		// Ensure we’re in the memberlist
 		if member, err := c.isMember(); err != nil {
 			logger.Error("isMember: %v", err)
 		} else if !member {
 			if err := c.JoinMemberlist(); err != nil {
 				logger.Error("JoinMemberlist: %v", err)
 			} else {
-				logger.Debug("Joined memberlist with VIP %s", vip)
+				logger.Info("Joined memberlist with VIP %s", newVIP)
 			}
 		}
 
-		if err := c.delegate.taskManager.Start(); err != nil {
-			logger.Error("TaskManager start: %v", err)
-		} else {
-			logger.Debug("TaskManager running on %s", c.nodeName)
-		}
-
-		if err := c.startStatusNotifier(); err != nil {
-			logger.Error("startStatusNotifier: %v", err)
-		} else {
-			logger.Debug("StatusNotifier running on %s", c.nodeName)
-		}
+		c.notifyLocalVIPChange(true)
 	}
 }
 
-func (c *Cluster) startVRRPListener() error {
+func (c *Cluster) startVRRPListener(iface string) error {
 	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
+
+	go c.watchLocalVIP(iface)
+
 	return nil
 }
 
@@ -240,7 +280,6 @@ func (c *Cluster) startVRRPListener() error {
 func (c *Cluster) isLocalVIP(vip string) bool {
 	expectedIP := net.ParseIP(vip)
 	if expectedIP == nil {
-		// Try to parse as CIDR and extract the IP
 		ip, _, err := net.ParseCIDR(vip)
 		if err != nil {
 			return false
@@ -254,13 +293,17 @@ func (c *Cluster) isLocalVIP(vip string) bool {
 	}
 
 	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.Equal(expectedIP) {
+		if ipnet, ok := addr.(*net.IPNet); ok {
+			ip4 := ipnet.IP.To4()
+			if ip4 == nil || ip4.IsLoopback() {
+				// Skip IPv6 and loopback
+				continue
+			}
+			if ip4.Equal(expectedIP) {
 				return true
 			}
 		}
 	}
-
 	return false
 }
 
@@ -290,20 +333,26 @@ func (c *Cluster) getLocalForVIP(vip string) (net.Addr, net.Addr, bool) {
 	var internalAddr net.Addr
 
 	for _, addr := range addrs {
-		if ipnet, ok := addr.(*net.IPNet); ok {
-			if ipnet.IP.IsLoopback() {
-				continue
-			}
+		ipnet, ok := addr.(*net.IPNet)
+		if !ok {
+			continue
+		}
 
-			if ip4 := ipnet.IP.To4(); ip4 != nil {
-				if ip4.Equal(expectedIP) {
-					vipAddr = &net.IPAddr{IP: ip4}
-					continue
-				}
-				if internalAddr == nil {
-					internalAddr = &net.IPAddr{IP: ip4}
-				}
-			}
+		ip4 := ipnet.IP.To4()
+		if ip4 == nil || ip4.IsLoopback() {
+			// Skip IPv6 and loopback
+			continue
+		}
+
+		// Match exact VIP
+		if expectedIP.To4() != nil && ip4.Equal(expectedIP) {
+			vipAddr = &net.IPAddr{IP: ip4}
+			continue
+		}
+
+		// Save the first non-loopback IPv4 as internal address
+		if internalAddr == nil {
+			internalAddr = &net.IPAddr{IP: ip4}
 		}
 	}
 
@@ -595,126 +644,38 @@ func getLocalURL(addr, endpoint string) string {
 	return fmt.Sprintf("%s%s%s", api.Protocol, addr, endpoint)
 }
 
-func (c *Cluster) startStatusNotifier() error {
-	vip := c.vip
-	_, vipAddr, ok := c.getLocalForVIP(vip)
-	if !ok {
-		return fmt.Errorf("VIP %s not found on any local interface", vip)
-	}
+func (c *Cluster) notifyLocalVIPChange(gained bool) {
+	logger := logging.GetLogger()
+	event := ternary(gained, "gained", "lost")
 
-	// Find interface for the VIP
-	iface, err := interfaceForIP(vipAddr.String())
+	msg := map[string]any{
+		"vip":       c.vip,
+		"host":      c.bindAddr,
+		"event":     event,
+		"timestamp": time.Now().Unix(),
+	}
+	data, _ := json.Marshal(msg)
+
+	addr := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: api.VIPNotifierPort}
+
+	conn, err := net.ListenPacket("udp4", "")
 	if err != nil {
-		return fmt.Errorf("failed to find interface for VIP: %v", err)
+		logger.Error("UDP listen failed: %v", err)
+		return
+	}
+	defer conn.Close()
+
+	if _, err := conn.WriteTo(data, addr); err != nil {
+		logger.Error("UDP write failed: %v", err)
+		return
 	}
 
-	// Get broadcast address
-	broadcast, err := broadcastForInterface(iface.Name)
-	if err != nil {
-		return fmt.Errorf("failed to get broadcast address for %s: %v", iface.Name, err)
-	}
-
-	// Connect to the broadcast address (Go allows this without special socket options)
-	remote, err := net.ResolveUDPAddr("udp4", fmt.Sprintf("%s:%s", broadcast, api.NotifierPort))
-	if err != nil {
-		return fmt.Errorf("resolve UDP: %v", err)
-	}
-
-	conn, err := net.DialUDP("udp4", nil, remote)
-	if err != nil {
-		return fmt.Errorf("dial UDP: %v", err)
-	}
-	c.statusConnection = conn
-
-	go func() {
-		ticker := time.NewTicker(statusUpdateInterval)
-		defer ticker.Stop()
-
-		for {
-			select {
-			case <-ticker.C:
-				host, _, _ := c.getLocalForVIP(vip)
-				cluster := c.getClusterIPs()
-
-				msg := ClusterStatus{
-					VIP:       vip,
-					Host:      host.String(),
-					Cluster:   cluster,
-					Timestamp: time.Now().Unix(),
-				}
-
-				data, _ := json.Marshal(msg)
-				if _, err := c.statusConnection.Write(data); err != nil {
-					logging.GetLogger().Error("cluster status send failed: %v", err)
-				}
-
-			case <-c.statusQuit:
-				return
-			}
-		}
-	}()
-
-	return nil
+	logger.Debug("Local VIP changed %s: %s. Notified localhost:%d", event, c.vip, api.VIPNotifierPort)
 }
 
-func (c *Cluster) stopStatusNotifier() {
-	close(c.statusQuit)
-	if c.statusConnection != nil {
-		c.statusConnection.Close()
+func ternary(cond bool, a, b string) string {
+	if cond {
+		return a
 	}
-}
-
-// broadcastForInterface finds the broadcast address for a given interface (e.g. "en0" or "eth0").
-func broadcastForInterface(ifaceName string) (string, error) {
-	iface, err := net.InterfaceByName(ifaceName)
-	if err != nil {
-		return "", fmt.Errorf("interface %s not found: %v", ifaceName, err)
-	}
-
-	addrs, err := iface.Addrs()
-	if err != nil {
-		return "", fmt.Errorf("failed to get addresses for %s: %v", ifaceName, err)
-	}
-
-	for _, addr := range addrs {
-		ipnet, ok := addr.(*net.IPNet)
-		if !ok || ipnet.IP.To4() == nil {
-			continue
-		}
-		ip := ipnet.IP.To4()
-		broadcast := make(net.IP, 4)
-		for i := 0; i < 4; i++ {
-			broadcast[i] = ip[i] | ^ipnet.Mask[i]
-		}
-		return broadcast.String(), nil
-	}
-
-	return "", fmt.Errorf("no IPv4 address found on %s", ifaceName)
-}
-
-// interfaceForIP returns the interface that has the given IP assigned.
-func interfaceForIP(ip string) (*net.Interface, error) {
-	target := net.ParseIP(ip)
-	if target == nil {
-		return nil, fmt.Errorf("invalid IP: %s", ip)
-	}
-
-	ifaces, err := net.Interfaces()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, iface := range ifaces {
-		addrs, _ := iface.Addrs()
-		for _, addr := range addrs {
-			ipnet, ok := addr.(*net.IPNet)
-			if !ok {
-				continue
-			}
-			if ipnet.IP.Equal(target) {
-				return &iface, nil
-			}
-		}
-	}
-	return nil, fmt.Errorf("no interface found for IP %s", ip)
+	return b
 }
