@@ -17,6 +17,7 @@ class FloorCanvas extends StatefulWidget {
   // external state
   final List<HardwareComponent> hardwareComponents;
   final List<Zone> zones;
+  final List<SubZone> subZones;
   final List<ListeningArea> listeningAreas;
   final FloorPlanModel floorPlanEntity;
   final FloorModel floor;
@@ -47,6 +48,8 @@ class FloorCanvas extends StatefulWidget {
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
   final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
   final Map<String, String> listeningAreaToZoneMap;
+  final Map<String, String> subZoneToZoneMap;
+  final Map<String, String> listeningAreaToSubZoneMap;
 
   // Mode state
   final bool isAcousticsMode;
@@ -72,12 +75,15 @@ class FloorCanvas extends StatefulWidget {
     required this.onSelectedFloorPlanIdChanged,
     required this.onTapListeningArea,
     required this.zones,
+    required this.subZones,
     required this.splMin,
     required this.splMax,
     required this.moveHardware,
     required this.addNewHardwareComponent,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
+    required this.listeningAreaToSubZoneMap,
+    required this.subZoneToZoneMap,
     required this.isAcousticsMode,
     this.selectedHardwareId,
     this.selectedListeningAreaId,
@@ -252,6 +258,7 @@ class FloorCanvasState extends State<FloorCanvas> {
                     panOffset: _panOffset,
                     listeningAreas: widget.listeningAreas,
                     zones: widget.zones,
+                    subZones: widget.subZones,
                     current: _current,
                     previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
                     highlightedIndex: _highlightIndex,
@@ -264,6 +271,7 @@ class FloorCanvasState extends State<FloorCanvas> {
                     hardwareImages: _hardwareImages,
                     listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
                     currentlySelectingZone: widget.controller.currentlySelectingZone,
+                    currentlySelectingSubZone: widget.controller.currentlySelectingSubZone,
                     selectedListeningAreaIds: [
                       ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
                       if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
@@ -273,6 +281,8 @@ class FloorCanvasState extends State<FloorCanvas> {
                     splPanelData: widget.splPanelData,
                     //prepare a map of listening area id to zone
                     listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
+                    listeningAreaToSubZoneMap: widget.listeningAreaToSubZoneMap,
+                    subZoneToZoneMap: widget.subZoneToZoneMap,
                     isAcousticsMode: widget.isAcousticsMode,
                   ),
                 ),

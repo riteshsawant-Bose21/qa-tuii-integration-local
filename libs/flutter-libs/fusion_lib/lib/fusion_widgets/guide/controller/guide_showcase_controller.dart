@@ -11,24 +11,26 @@ class GuideShowCaseControllerTexts {
   static const String errorLoadingGuideStatusPrefix = 'Error loading guide status:';
   static const String errorSavingGuideStatusPrefix = 'Error saving guide status:';
 
-  static const String uploadFloorPlan = 'Upload a floor plan image';
-  static const String configureAcousticSettings = 'Configure acoustic settings';
-  static const String drawListeningArea = 'Draw listening areas on the canvas';
-  static const String addAcousticZones = 'Add acoustic zones';
-  static const String addSpeakers = 'Add speakers to the layout';
-  static const String chooseSystemMode = 'Choose your system mode'; // legacy
-  static const String configureSystemComponents = 'Configure system components in tabs';
-  static const String selectListeningArea = 'Select a listening area';
+  static const String uploadFloorPlan = 'A floor plan provides the spatial layout for your audio system. Tap here to upload a floor plan image';
+  static const String configureAcousticSettings =
+      'Acoustics mode lets you design your audio layout by defining listening areas and speaker placement. Switch to this mode to configure your acoustic settings';
+  static const String drawListeningArea =
+      'Listening areas define where people will be positioned to hear audio. Draw listening areas on the canvas by clicking and dragging';
+  static const String addAcousticZones = 'Acoustic zones group listening areas with similar audio requirements. Add acoustic zones to organize your layout';
+  static const String addSpeakers = 'Speakers provide audio coverage to your listening areas. Tap here to add speakers to the layout';
+  static const String selectListeningArea =
+      'Each listening area can be configured individually for optimal audio experience. Select a listening area to configure it';
 
-  static const String myProjects = 'Create a new project';
-  static const String showFloorPickCalibration = 'Pick a reference distance for calibration';
-  static const String confirmFloorCalibrated = 'Confirm floor plan calibration';
-  static const String acousticMode = 'Switch to Acoustics mode';
-  static const String systemMode = 'Switch to System mode';
-  static const String systemModeTabs = 'Review and configure system components';
-  static const String addZone = 'In Acoustics mode, define listening areas, place speakers, and visualize sound coverage.';
-  static const String showListeningAreaSelectionArea = 'Choose listening areas for this zone';
-  static const String confirmSelectListeningArea = 'Confirm selected listening areas';
+  static const String myProjects = 'Tap here to create a new project';
+  static const String showFloorPickCalibration =
+      'Calibration ensures accurate measurements and distances in your floor plan. Draw two reference points to calibrate your floor plan';
+  static const String confirmFloorCalibrated = 'Confirm your floor plan calibration to proceed';
+  static const String acousticMode = 'Acoustics mode focuses on audio design and speaker placement';
+  static const String systemMode = 'Switch to System mode to configure other hardware components like sources, endpoints, and more';
+  static const String systemModeTabs = 'System mode you can review and configure system components like Sources, Endpoints and more';
+  static const String addZone = 'A zone is where the same audio is played. Tap here to add a new zone';
+  static const String showListeningAreaSelectionArea = 'Zones need listening areas to define where audio will be heard. Choose listening areas for this zone';
+  static const String confirmSelectListeningArea = 'Confirm your selected listening areas';
 }
 
 enum GuideShowCaseSteps {

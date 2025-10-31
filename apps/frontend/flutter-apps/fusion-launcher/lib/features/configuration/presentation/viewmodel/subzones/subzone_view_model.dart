@@ -308,4 +308,17 @@ extension SubzoneViewModel on ProjectViewModel {
     }
     return null;
   }
+
+  Map<String, String> getSubZoneToZoneMap() {
+    // find the parent zone for each subzone
+    final Map<String, String> subZoneToZoneMap = <String, String>{};
+    final List<SubZone> allSubZones = getAllSubZones();
+    for (final SubZone subZone in allSubZones) {
+      final Zone? parentZone = getZoneForSubZone(subZoneId: subZone.id);
+      if (parentZone != null) {
+        subZoneToZoneMap[subZone.id] = parentZone.id;
+      }
+    }
+    return subZoneToZoneMap;
+  }
 }

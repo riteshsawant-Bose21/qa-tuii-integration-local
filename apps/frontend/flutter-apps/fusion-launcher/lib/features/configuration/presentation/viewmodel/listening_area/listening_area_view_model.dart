@@ -156,6 +156,24 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  Map<String, String> getListeningAreaToSubZoneMap() {
+    try {
+      final List<ListeningArea> allListening = getAllListeningAreas();
+      final Map<String, String> laToSubZoneMap = <String, String>{};
+
+      for (final ListeningArea la in allListening) {
+        final SubZone? subZone = getSubZoneForListeningArea(areaId: la.id);
+        if (subZone != null) {
+          laToSubZoneMap[la.id] = subZone.id;
+        }
+      }
+      return laToSubZoneMap;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area to subzone map: $e");
+      return <String, String>{};
+    }
+  }
+
   String getFullPathForListeningArea({required String areaId}) {
     final FloorModel? floor = getFloorForListeningArea(areaId: areaId);
     final ListeningArea listeningArea = getListeningArea(areaId: areaId);

@@ -1,10 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-
-import '../models/project_entities/hardware_component_model.dart';
-import '../models/project_entities/listening_area_model.dart';
-import '../models/project_entities/zone_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class FloorCanvasController {
   VoidCallback? _toggleDraw;
@@ -21,6 +18,7 @@ class FloorCanvasController {
   Completer<List<ListeningArea>?>? _listeningAreaSelectionCompleter;
   final List<ListeningArea> _selectedListeningAreas = <ListeningArea>[];
   Zone? currentlySelectingZone;
+  SubZone? currentlySelectingSubZone;
 
   final ValueNotifier<bool> isDrawing = ValueNotifier<bool>(false);
   final ValueNotifier<bool> isShowingSpl = ValueNotifier<bool>(false);
@@ -133,6 +131,26 @@ class FloorCanvasController {
     _selectedListeningAreas.addAll(existingListeningAreas);
     isListeningAreaSelectionActive.value = true;
     currentlySelectingZone = selectingZone;
+    currentlySelectingSubZone = null;
+
+    updateFloorView();
+
+    return _listeningAreaSelectionCompleter!.future;
+  }
+
+  Future<List<ListeningArea>?> requestListeningAreaSelectionForSubZone(List<ListeningArea> existingListeningAreas, SubZone selectingSubZone) {
+    // If there's already one pending, cancel it first
+    if (_listeningAreaSelectionCompleter != null && !_listeningAreaSelectionCompleter!.isCompleted) {
+      _listeningAreaSelectionCompleter!.complete(null);
+      isListeningAreaSelectionActive.value = false;
+    }
+
+    _listeningAreaSelectionCompleter = Completer<List<ListeningArea>?>();
+    _selectedListeningAreas.clear();
+    _selectedListeningAreas.addAll(existingListeningAreas);
+    isListeningAreaSelectionActive.value = true;
+    currentlySelectingZone = null;
+    currentlySelectingSubZone = selectingSubZone;
 
     updateFloorView();
 
@@ -163,6 +181,7 @@ class FloorCanvasController {
 
     isListeningAreaSelectionActive.value = false;
     currentlySelectingZone = null;
+    currentlySelectingSubZone = null;
     _selectedListeningAreas.clear();
     deselectAll();
   }
@@ -176,6 +195,7 @@ class FloorCanvasController {
 
     isListeningAreaSelectionActive.value = false;
     currentlySelectingZone = null;
+    currentlySelectingSubZone = null;
     _selectedListeningAreas.clear();
     deselectAll();
   }

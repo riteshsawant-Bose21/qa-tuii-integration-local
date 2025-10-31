@@ -364,13 +364,14 @@ extension ListeningAreaService on ProjectService {
 
     if (zones.exists(zoneId)) {
       return zones.get(zoneId);
-    } else if (subZones.exists(zoneId)) {
-      //get parent zone of subzone
-      final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, zoneId);
-      if (parentZoneId != null) {
-        return zones.get(parentZoneId);
-      }
     }
+    // else if (subZones.exists(zoneId)) {
+    //   //get parent zone of subzone
+    //   final parentZoneId = relationships.getParent(RelationshipType.zoneSubZones, zoneId);
+    //   if (parentZoneId != null) {
+    //     return zones.get(parentZoneId);
+    //   }
+    // }
 
     return null;
   }

@@ -1,17 +1,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/api_data/speakers/speaker_catalog.dart';
-import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
-import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
-import '../api_data/speakers/speaker_types.dart';
 import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
-import '../models/project_entities/floor_plan_model.dart';
-import '../models/project_entities/hardware_component_model.dart';
-import '../models/project_entities/listening_area_model.dart';
-import '../models/project_entities/speaker_model.dart';
 
 class FloorCanvasPainter extends CustomPainter {
   final double gridSize, zoomScale;
@@ -34,11 +27,15 @@ class FloorCanvasPainter extends CustomPainter {
   final bool listeningAreaSelectionActive;
   final List<String> selectedListeningAreaIds;
   final List<Zone> zones;
+  final List<SubZone> subZones;
   Zone? currentlySelectingZone;
+  SubZone? currentlySelectingSubZone;
   final SplPanelData splPanelData;
 
   //key value pair for listening area and its zone
   final Map<String, String> listeningAreaToZoneMap;
+  final Map<String, String> subZoneToZoneMap;
+  final Map<String, String> listeningAreaToSubZoneMap;
 
   // Mode state
   final bool isAcousticsMode;
@@ -49,6 +46,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.panOffset,
     required this.listeningAreas,
     required this.zones,
+    required this.subZones,
     required this.current,
     required this.showSpl,
     required this.floorPlanImageSelected,
@@ -59,6 +57,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.listeningAreaSelectionActive,
     required this.selectedListeningAreaIds,
     required this.currentlySelectingZone,
+    required this.currentlySelectingSubZone,
     required this.splMax,
     required this.splMin,
     required this.isAcousticsMode,
@@ -67,6 +66,8 @@ class FloorCanvasPainter extends CustomPainter {
     this.selectedHardwareComponentId,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
+    required this.listeningAreaToSubZoneMap,
+    required this.subZoneToZoneMap,
   });
 
   @override
@@ -243,7 +244,6 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   /// Draw all listening areas on the canvas
-
   void _drawListeningAreas(Canvas canvas) {
     for (int i = 0; i < listeningAreas.length; i++) {
       final List<ui.Offset> poly = listeningAreas[i].vertices;
@@ -251,14 +251,34 @@ class FloorCanvasPainter extends CustomPainter {
 
       bool selected = false;
 
+      // Determine if listening area belongs to a subzone or zone
+      SubZone? parentSubZone;
       Zone? parentZone;
-      try {
+
+      final String? subZoneId = listeningAreaToSubZoneMap[listeningAreas[i].id];
+      if (subZoneId != null) {
+        // Listening area belongs to a subzone
+        try {
+          parentSubZone = subZones.firstWhere((SubZone sz) => sz.id == subZoneId);
+          // Get the parent zone for color
+          final String? zoneId = subZoneToZoneMap[subZoneId];
+          if (zoneId != null) {
+            parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          }
+        } catch (e) {
+          parentSubZone = null;
+          parentZone = null;
+        }
+      } else {
+        // Listening area belongs directly to a zone
         final String? zoneId = listeningAreaToZoneMap[listeningAreas[i].id];
         if (zoneId != null) {
-          parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          try {
+            parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          } catch (e) {
+            parentZone = null;
+          }
         }
-      } catch (e) {
-        parentZone = null;
       }
 
       Color zoneColor = parentZone != null ? ColorUtils.hexToColor(parentZone.zoneColor) : defaultListeningAreaColor;
@@ -310,7 +330,17 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final anchor = _leftMostVertex(poly, zoomScale);
-      final label = listeningAreas[i].name ?? listeningAreas[i].name ?? 'Area ${i + 1}';
+      String label = listeningAreas[i].name ?? 'Area ${i + 1}';
+
+      // Add zone/subzone information to the label
+      if (parentSubZone != null) {
+        // Listening area belongs to a subzone
+        label = '$label (${parentSubZone.name})';
+      } else if (parentZone != null) {
+        // Listening area belongs directly to a zone
+        label = '$label (${parentZone.name})';
+      }
+
       _drawBadgeAtLeftMostVertexAuto(
         canvas: canvas,
         path: path,
@@ -629,6 +659,8 @@ class FloorCanvasPainter extends CustomPainter {
         old.zoomScale != zoomScale ||
         old.panOffset != panOffset ||
         old.listeningAreas != listeningAreas ||
+        old.zones != zones ||
+        old.subZones != subZones ||
         old.current != current ||
         old.previewPoint != previewPoint ||
         old.highlightedIndex != highlightedIndex ||
@@ -638,6 +670,9 @@ class FloorCanvasPainter extends CustomPainter {
         old.hardwareComponents != hardwareComponents ||
         old.hardwareImages != hardwareImages ||
         old.selectedHardwareComponentId != selectedHardwareComponentId ||
+        old.listeningAreaToZoneMap != listeningAreaToZoneMap ||
+        old.listeningAreaToSubZoneMap != listeningAreaToSubZoneMap ||
+        old.subZoneToZoneMap != subZoneToZoneMap ||
         old.isAcousticsMode != isAcousticsMode;
   }
 }

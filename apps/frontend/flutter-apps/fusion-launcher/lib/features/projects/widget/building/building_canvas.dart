@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
@@ -61,12 +60,30 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     );
 
     if (selectedAreas != null) {
+      print("Selected areas for zone ${zone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}");
       serviceLocator<ProjectViewModel>().updateListeningAreasInZone(
         zoneId: zone.id,
         listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
       );
     } else {
       serviceLocator<ProjectViewModel>().clearSelectedZone();
+    }
+  }
+
+  void subzoneSelectionMode(SubZone subZone) async {
+    final List<ListeningArea>? selectedAreas = await widget.floorCanvasController.requestListeningAreaSelectionForSubZone(
+      serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZone.id),
+      subZone,
+    );
+
+    if (selectedAreas != null) {
+      print("Selected areas for subzone ${subZone.name}: ${selectedAreas.map((ListeningArea e) => e.name).toList()}");
+      serviceLocator<ProjectViewModel>().updateListeningAreasInSubZone(
+        subZoneId: subZone.id,
+        listeningAreaIds: selectedAreas.map((ListeningArea e) => e.id).toList(),
+      );
+    } else {
+      serviceLocator<ProjectViewModel>().clearSelectedSubZone();
     }
   }
 
@@ -200,16 +217,13 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       floor: floor,
                                       floorPlanEntity: floor.floorPlan,
                                       selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
-                                      selectedListeningAreaId:
-                                          serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
+                                      selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
                                       onUpdateHardwareComponent: (HardwareComponent updatedHw) {
-                                        final HardwareComponent oldHw =
-                                            serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+                                        final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
 
                                         //check for pos && listening area id since only those two can be updated from canvas
                                         if (oldHw.pos != updatedHw.pos ||
-                                            oldHw.locationEntity.listeningAreaId !=
-                                                updatedHw.locationEntity.listeningAreaId ||
+                                            oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
                                             oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
                                           serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
                                         } else {
@@ -219,6 +233,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         }
                                       },
                                       zones: serviceLocator<ProjectViewModel>().zones,
+                                      subZones: serviceLocator<ProjectViewModel>().subZones,
                                       splPanelData: widget.splPanelData,
                                       onCanvasZoomChanged: (double z) {
                                         serviceLocator<ProjectViewModel>().updateFloor(
@@ -311,11 +326,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         );
                                         context.read<GuideShowCaseController>().completeStep();
                                       },
-                                      listeningAreaToZoneMap:
-                                          serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
-                                      isAcousticsMode:
-                                          serviceLocator<ProjectViewModel>().currentToolbarMode ==
-                                          ToolbarMode.acoustics,
+                                      listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
+                                      subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
+                                      listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
+                                      isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
                                     ),
                                   ),
                                 ),
@@ -345,17 +359,21 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         zoneSelectionMode(zone);
                       }
 
+                      if (state is SubZoneSelectionMode) {
+                        //Create new subzone
+                        final SubZone subZone = state.subZone;
+                        subzoneSelectionMode(subZone);
+                      }
+
                       if (state is ListeningAreaSelectionMode) {
                         widget.floorCanvasController.toggleDraw();
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
-                          widget.floorCanvasController.isDrawing.value) {
+                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode && widget.floorCanvasController.isDrawing.value) {
                         widget.floorCanvasController.toggleDraw();
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode &&
-                          widget.floorCanvasController.isListeningAreaSelectionActive.value) {
+                      if (!serviceLocator<ProjectViewModel>().isInZoneSelectionMode && widget.floorCanvasController.isListeningAreaSelectionActive.value) {
                         widget.floorCanvasController.cancelListeningAreaSelection();
                       }
                     },
@@ -363,10 +381,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
                       final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
                       return Visibility(
-                        visible:
-                            currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != ""
-                                ? true
-                                : false,
+                        visible: currentFloor.floorPlan.imagePath.isNotEmpty || currentFloor.floorPlan.imagePath != "" ? true : false,
                         child: Align(
                           alignment: Alignment.bottomCenter,
                           child: Padding(
@@ -381,9 +396,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       vertical: 8,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: FusionUiUtils.hexToColor(
-                                        widget.floorCanvasController.currentlySelectingZone!.zoneColor,
-                                      ).withValues(alpha: 1),
+                                      color: serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                       borderRadius: BorderRadius.circular(24),
                                       boxShadow: <BoxShadow>[
                                         BoxShadow(
@@ -397,17 +410,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: <Widget>[
                                         Text(
-                                          'Select listening areas for ${widget.floorCanvasController.currentlySelectingZone!.name}',
+                                          'Select listening areas for ${serviceLocator<ProjectViewModel>().getCurrentSelectionZoneName()}',
                                           style: TextStyle(
                                             fontSize: 14,
                                             color:
                                                 ThemeData.estimateBrightnessForColor(
-                                                          FusionUiUtils.hexToColor(
-                                                            widget
-                                                                .floorCanvasController
-                                                                .currentlySelectingZone!
-                                                                .zoneColor,
-                                                          ),
+                                                          serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                         ) ==
                                                         Brightness.light
                                                     ? Colors.grey.shade800
@@ -427,12 +435,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               border: Border.all(
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUiUtils.hexToColor(
-                                                                widget
-                                                                    .floorCanvasController
-                                                                    .currentlySelectingZone!
-                                                                    .zoneColor,
-                                                              ),
+                                                              serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
@@ -447,12 +450,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                               size: 16,
                                               color:
                                                   ThemeData.estimateBrightnessForColor(
-                                                            FusionUiUtils.hexToColor(
-                                                              widget
-                                                                  .floorCanvasController
-                                                                  .currentlySelectingZone!
-                                                                  .zoneColor,
-                                                            ),
+                                                            serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                           ) ==
                                                           Brightness.light
                                                       ? Colors.grey.shade800
@@ -465,6 +463,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           step: GuideShowCaseSteps.confirmSelectListeningArea,
                                           onHighlightedSpotTap: (TapDownDetails details) {
                                             serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
                                             widget.floorCanvasController.completeListeningAreaSelection();
                                             context.read<GuideShowCaseController>().completeStep();
                                           },
@@ -480,12 +479,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 border: Border.all(
                                                   color:
                                                       ThemeData.estimateBrightnessForColor(
-                                                                FusionUiUtils.hexToColor(
-                                                                  widget
-                                                                      .floorCanvasController
-                                                                      .currentlySelectingZone!
-                                                                      .zoneColor,
-                                                                ),
+                                                                serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                               ) ==
                                                               Brightness.light
                                                           ? Colors.grey.shade800
@@ -499,12 +493,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
-                                                              FusionUiUtils.hexToColor(
-                                                                widget
-                                                                    .floorCanvasController
-                                                                    .currentlySelectingZone!
-                                                                    .zoneColor,
-                                                              ),
+                                                              serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
                                                             ) ==
                                                             Brightness.light
                                                         ? Colors.grey.shade800
