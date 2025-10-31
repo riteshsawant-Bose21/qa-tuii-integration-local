@@ -203,11 +203,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         if (incomingSpeakers.isNotEmpty) {
                           for (final Speaker speaker in incomingSpeakers) {
                             // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                            // serviceLocator<ProjectViewModel>().removeHardwareFromCircuit(hwId: speaker.id, circuitId: incoming.id);
                             serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
-                            _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
                           }
+                          _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
                         }
-                        //
 
                         /// Remove the dragged circuit from the zone
                         _projectViewModel.removeCircuit(circuitId: incoming.id);
