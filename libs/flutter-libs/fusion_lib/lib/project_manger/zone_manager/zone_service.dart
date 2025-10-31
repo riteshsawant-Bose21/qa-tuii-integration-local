@@ -23,11 +23,11 @@ extension ZoneService on ProjectService {
     }
 
     //remove all the circuits in zone
-    final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId).toList();
-    final circuitIdsCopy = List<String>.from(circuitIds);
-    for (final circuitId in circuitIdsCopy) {
-      removeCircuit(circuitId);
-    }
+    // final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId).toList();
+    // final circuitIdsCopy = List<String>.from(circuitIds);
+    // for (final circuitId in circuitIdsCopy) {
+    //   removeCircuit(circuitId);
+    // }
 
     // Remove relationships that refer to this zone (both parent->children and child->parents)
     relationships.removeAllRelationships(zoneId);

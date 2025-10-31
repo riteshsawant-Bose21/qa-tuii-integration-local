@@ -37,12 +37,8 @@ extension ZoneViewModel on ProjectViewModel {
       final List<String> currentListeningAreaIds = currentListeningAreas.map((ListeningArea e) => e.id).toList();
       final List<String> toRemove = currentListeningAreaIds.where((String id) => !listeningAreaIds.contains(id)).toList();
       final List<String> toAdd = listeningAreaIds.where((String id) => !currentListeningAreaIds.contains(id)).toList();
-      for (final String id in toRemove) {
-        projectManager.removeListeningAreaFromZone(id, zoneId);
-      }
-      for (final String id in toAdd) {
-        projectManager.addListeningAreaToZone(id, zoneId);
-      }
+      projectManager.removeMultipleListeningAreaFromZone(toRemove, zoneId);
+      projectManager.addMultipleAreasToAddZone(toAdd, zoneId);
       if (autoSave) {
         saveProject();
       }
@@ -217,6 +213,7 @@ extension ZoneViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addListeningAreaToZone(listeningAreaId, zoneId);
+
       if (autoSave) {
         saveProject();
       }
@@ -224,6 +221,25 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add listening area to zone: $e");
       throwError("Failed to add listening area to zone: $e");
+    }
+  }
+
+  void addMultipleListeningAreasToZone({required List<String> listeningAreaIds, required String zoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      projectManager.addMultipleAreasToAddZone(listeningAreaIds, zoneId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add multiple listening areas to zone: $e");
+
+      throwError("Failed to add multiple listening areas to zone: $e");
     }
   }
 
@@ -241,6 +257,25 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area from zone: $e");
       throwError("Failed to remove listening area from zone: $e");
+    }
+  }
+
+  void removeMultipleListeningAreasFromZone({required List<String> listeningAreaIds, required String zoneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      projectManager.removeMultipleListeningAreaFromZone(listeningAreaIds, zoneId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove multiple listening areas from zone: $e");
+
+      throwError("Failed to remove multiple listening areas from zone: $e");
     }
   }
 

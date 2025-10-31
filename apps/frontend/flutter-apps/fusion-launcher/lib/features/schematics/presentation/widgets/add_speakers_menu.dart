@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -19,11 +20,13 @@ import 'listening_area_dropdown_widget.dart';
 class AddSpeakersMenu extends StatefulWidget {
   final String zoneId;
   final String? subZoneId;
+  final VoidCallback? onSpeakerAdded;
 
   const AddSpeakersMenu({
     super.key,
     required this.zoneId,
     this.subZoneId,
+    this.onSpeakerAdded,
   });
 
   @override
@@ -42,11 +45,11 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
   void initState() {
     super.initState();
 
-    if (widget.subZoneId != null) {
-      listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: widget.subZoneId!);
-    } else {
-      listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: widget.zoneId);
-    }
+    // if (widget.subZoneId != null) {
+    //   listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: widget.subZoneId!);
+    // } else {
+    //   listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: widget.zoneId);
+    // }
   }
 
   @override
@@ -55,10 +58,8 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
       tooltip: "Add Speakers",
       onCanceled: () {
         /// Clear selections when menu is closed without adding
-        // setState(() {
         speakerData = null;
         _selectedListeningAreaIds.clear();
-        // });
       },
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(
@@ -75,10 +76,8 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
           PopupMenuItem<dynamic>(
             enabled: false,
             padding: EdgeInsets.zero,
-
             child: Container(
               width: 300,
-
               constraints: const BoxConstraints(
                 maxHeight: 520,
                 maxWidth: 300,
@@ -192,13 +191,34 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                           const SizedBox(height: 6),
                           SizedBox(
                             width: double.infinity,
-                            child: ListeningAreaDropdownWidget(
-                              listeningAreas: listeningAreas,
-                              hideAddLocationButton: true,
-                              selectedListeningAreaIds: _selectedListeningAreaIds,
-                              onSelectionChanged: (List<String> selectedIds, String floorId) {
-                                _selectedListeningAreaIds = selectedIds;
-                                setMenuState(() {}); // Update popup menu UI
+                            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                              builder: (BuildContext context, ProjectViewModelState state) {
+                                if (widget.subZoneId != null) {
+                                  listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: widget.subZoneId!);
+                                } else {
+                                  listeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: widget.zoneId);
+                                }
+                                return ListeningAreaDropdownWidget(
+                                  listeningAreas: listeningAreas,
+                                  selectedListeningAreaIds: _selectedListeningAreaIds,
+                                  onSelectionChanged: (List<String> selectedIds, String floorId) {
+                                    /// Add listening area to zone/subzone if not already added
+                                    if (widget.subZoneId != null) {
+                                      serviceLocator<ProjectViewModel>().addListeningAreaToSubZone(
+                                        areaId: selectedIds.first,
+                                        subZoneId: widget.subZoneId!,
+                                      );
+                                    } else {
+                                      serviceLocator<ProjectViewModel>().addListeningAreaToZone(
+                                        listeningAreaId: selectedIds.first,
+                                        zoneId: widget.zoneId,
+                                      );
+                                    }
+
+                                    _selectedListeningAreaIds = selectedIds;
+                                    setMenuState(() {});
+                                  },
+                                );
                               },
                             ),
                           ),
@@ -245,6 +265,9 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                         context,
                                         message: "Speakers added to circuit successfully",
                                       );
+                                      if (widget.onSpeakerAdded != null) {
+                                        widget.onSpeakerAdded!();
+                                      }
                                     }
                                     speakerData = null;
                                     Navigator.pop(context);
