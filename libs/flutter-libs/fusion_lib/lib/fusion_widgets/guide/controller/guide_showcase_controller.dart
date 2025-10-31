@@ -3,6 +3,8 @@ import 'dart:developer';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../fusion_lib.dart';
+
 class GuideShowCaseControllerTexts {
   static const String storageKey = 'is_guide_showcase_step_completed';
 
