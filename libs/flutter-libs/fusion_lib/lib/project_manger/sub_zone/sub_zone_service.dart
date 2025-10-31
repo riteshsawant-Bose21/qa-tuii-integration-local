@@ -101,8 +101,11 @@ extension SubZoneService on ProjectService {
 
   void addMultipleAreasToAddSubZone(List<String> allAreasToAdd, String subZoneId) {
     for (final area in allAreasToAdd) {
-      addListeningAreaToZone(area, subZoneId, allAreasToAdd: allAreasToAdd);
+      addListeningAreaToSubZone(area, subZoneId, allAreasToAdd: allAreasToAdd);
     }
+
+    //Create new subzone if parent zone has remaining listening areas
+    addRemainingAreasInParentZoneToNewSubZone(subZoneId: subZoneId);
   }
 
   //add Listening area to sub zone
@@ -166,6 +169,11 @@ extension SubZoneService on ProjectService {
 
         // check if whole circuit is in same area
         if (hardwareInCurrentArea.length == hardwareInCircuit.length) {
+          final currentParent = relationships.getParent(RelationshipType.zoneCircuits, circuitForHardware);
+          if (currentParent != null) {
+            relationships.unlink(RelationshipType.zoneCircuits, currentParent, circuitForHardware);
+          }
+
           // Just add circuit to this zone
           relationships.link(RelationshipType.zoneCircuits, subZoneId, circuitForHardware);
         } else {
@@ -184,6 +192,33 @@ extension SubZoneService on ProjectService {
     }
 
     relationships.link(RelationshipType.zoneAreas, subZoneId, listeningAreaId);
+
+    //Rob's requirement of creating subzones from remaining area in zone
+    if (allAreasToAdd == null) {
+      //make sure we are not adding multiple area (case handled is add multipleListeningAreaToSubZone method)
+      addRemainingAreasInParentZoneToNewSubZone(subZoneId: subZoneId);
+    }
+  }
+
+  ///This method will take subzoneId as argument
+  /// it will check if zones parent has any listening areas if true
+  /// then it will add those areas to new subzone
+  void addRemainingAreasInParentZoneToNewSubZone({required String subZoneId}) {
+    //get parent zone
+    final parentZone = relationships.getParent(RelationshipType.zoneSubZones, subZoneId);
+    if (parentZone != null) {
+      //get remating area in parent Zone
+      final zoneAreas = relationships.getChildren(RelationshipType.zoneAreas, parentZone);
+
+      if (zoneAreas.isNotEmpty) {
+        final subzones = relationships.getChildren(RelationshipType.zoneSubZones, parentZone);
+
+        final SubZone subZone = SubZone(name: "SubZone ${subzones.length + 1}");
+        addSubZone(subZone);
+        addSubZoneToZone(subZone.id, parentZone);
+        addMultipleAreasToAddSubZone(zoneAreas.toList(), subZone.id);
+      }
+    }
   }
 
   void removeMultipleListeningAreaFromSubZone(List<String> listeningAreaIds, String subZoneId) {

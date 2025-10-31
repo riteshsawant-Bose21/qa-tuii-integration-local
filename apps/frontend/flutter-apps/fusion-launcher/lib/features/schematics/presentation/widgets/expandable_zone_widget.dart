@@ -206,14 +206,14 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         if (incomingSpeakers.isNotEmpty) {
                           for (final Speaker speaker in incomingSpeakers) {
                             // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                            // serviceLocator<ProjectViewModel>().removeHardwareFromCircuit(hwId: speaker.id, circuitId: incoming.id);
                             serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
-                            _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
                           }
+                          _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
                         }
-                        //
 
                         /// Remove the dragged circuit from the zone
-                        _projectViewModel.removeCircuitFromZone(circuitId: incoming.id, zoneId: widget.zoneId);
+                        _projectViewModel.removeCircuit(circuitId: incoming.id);
                         setState(() {});
                       },
                       builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
@@ -292,7 +292,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                             onRename: () {},
                             onDuplicate: () {},
                             onDelete: () {
-                              _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
+                              _projectViewModel.removeCircuit(circuitId: circuitData.id);
                             },
                             circuitDeviceCount: speakers.length,
                           ),
