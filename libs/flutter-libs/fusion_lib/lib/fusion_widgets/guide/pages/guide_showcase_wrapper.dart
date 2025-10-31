@@ -10,7 +10,7 @@ import '../controller/guide_showcase_controller.dart';
 
 class GuideShowcaseTexts {
   static const String stepPattern = 'Step {index} of {total}';
-  static const String skip = 'Skip';
+  static const String skip = 'End tour';
   static const String askGuideTitle = 'Would you like a guide on using Fusion Launcher?';
   static const String askGuideContent = 'A brief walkthrough to help you use Fusion Launcher efficiently.';
   static const String no = 'No';
