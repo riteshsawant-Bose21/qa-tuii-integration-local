@@ -400,6 +400,7 @@ jobs:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           FILE="conf/fusion-mini_properties.inc"
+          MONOREPO_COMMIT_HASH=$(git rev-parse --short HEAD)
 
           # Create file if it doesn't exist
           if [ ! -f "$FILE" ]; then
@@ -411,6 +412,11 @@ jobs:
               sed -i "s|^FUSION_MONOREPO_BRANCH=.*|FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"|" "$FILE"
             else
               echo "FUSION_MONOREPO_BRANCH=\"${BRANCH_NAME}\"" >> "$FILE"
+            fi
+            if grep -q "^FUSION_MONOREPO_COMMIT_HASH=" "$FILE"; then
+              sed -i "s|^FUSION_MONOREPO_COMMIT_HASH=.*|FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"|" "$FILE"
+            else
+              echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
             fi
           fi
 
