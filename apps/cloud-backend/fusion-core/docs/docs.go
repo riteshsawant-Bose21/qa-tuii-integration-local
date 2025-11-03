@@ -32,7 +32,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with all products",
                         "schema": {
-                            "$ref": "#/definitions/fusion.ProductResponse"
+                            "$ref": "#/definitions/types.ProductResponse"
                         }
                     },
                     "500": {
@@ -73,7 +73,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product details",
                         "schema": {
-                            "$ref": "#/definitions/fusion.ProductResponse"
+                            "$ref": "#/definitions/types.ProductResponse"
                         }
                     },
                     "400": {
@@ -119,13 +119,52 @@ const docTemplate = `{
                     "projects"
                 ],
                 "summary": "Get all projects",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter projects by archived status",
+                        "name": "is_archived",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to sort projects by (e.g., created_at, updated_at)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order (ascending or descending)",
+                        "name": "sort_order",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successfully retrieved all projects",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.GetAllProjectsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid query parameters",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized do perform this action",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
                         }
                     },
@@ -155,11 +194,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Project details",
-                        "name": "project",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.ProjectCreateRequest"
                         }
                     }
                 ],
@@ -167,11 +206,20 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created project",
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.ProjectCreateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized to perform this action",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -192,54 +240,6 @@ const docTemplate = `{
             }
         },
         "/projects/{id}": {
-            "get": {
-                "description": "Get a specific project by its unique identifier",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Get project by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved project",
-                        "schema": {
-                            "$ref": "#/definitions/fusion.Project"
-                        }
-                    },
-                    "404": {
-                        "description": "Project not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
             "delete": {
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
@@ -264,6 +264,15 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "Successfully deleted project"
+                    },
+                    "401": {
+                        "description": "Unauthorized to perform this action",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
                     },
                     "404": {
                         "description": "Project not found",
@@ -307,23 +316,23 @@ const docTemplate = `{
                     },
                     {
                         "description": "Updated project details",
-                        "name": "project",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.ProjectUpdateRequest"
                         }
                     }
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully updated project",
+                        "description": "Successfully created project",
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.ProjectUpdateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -331,70 +340,8 @@ const docTemplate = `{
                             }
                         }
                     },
-                    "404": {
-                        "description": "Project not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/projects/{id}/sync": {
-            "post": {
-                "description": "Synchronize project data with external source using metadata and ZIP file URL",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Sync project",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Sync request containing metadata and ZIP file URL",
-                        "name": "syncRequest",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/handler.SyncProjectRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully initiated project sync",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                    "401": {
+                        "description": "Unauthorized to perform this action",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -425,7 +372,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "fusion.Amplifier": {
+        "types.Amplifier": {
             "type": "object",
             "properties": {
                 "category": {
@@ -435,11 +382,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "meta_info": {
-                    "$ref": "#/definitions/fusion.Amplifier_meta_response"
+                    "$ref": "#/definitions/types.Amplifier_meta_response"
                 }
             }
         },
-        "fusion.Amplifier_meta_response": {
+        "types.Amplifier_meta_response": {
             "type": "object",
             "properties": {
                 "channels": {
@@ -455,14 +402,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "power_output": {
-                    "$ref": "#/definitions/fusion.powerOutput"
+                    "$ref": "#/definitions/types.powerOutput"
                 },
                 "total_capacity": {
                     "type": "number"
                 }
             }
         },
-        "fusion.Budget": {
+        "types.Budget": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -473,7 +420,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.DSP_meta": {
+        "types.DSP_meta": {
             "type": "object",
             "properties": {
                 "acoustic_echo_cancellation": {
@@ -647,7 +594,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.DigitalSignalProcessor": {
+        "types.DigitalSignalProcessor": {
             "type": "object",
             "properties": {
                 "category": {
@@ -657,70 +604,231 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "meta_info": {
-                    "$ref": "#/definitions/fusion.DSP_meta"
+                    "$ref": "#/definitions/types.DSP_meta"
                 }
             }
         },
-        "fusion.ProductResponse": {
+        "types.EnvironmentType": {
+            "type": "string",
+            "enum": [
+                "indoor",
+                "outdoor",
+                "hybrid"
+            ],
+            "x-enum-varnames": [
+                "EnvironmentTypeIndoor",
+                "EnvironmentTypeOutdoor",
+                "EnvironmentTypeHybrid"
+            ]
+        },
+        "types.GetAllProjectsResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Project"
+                    }
+                },
+                "page": {
+                    "type": "integer"
+                },
+                "total_count": {
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.ProductResponse": {
             "type": "object",
             "properties": {
                 "amplifier": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/fusion.Amplifier"
+                        "$ref": "#/definitions/types.Amplifier"
                     }
                 },
                 "digital_signal_processors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/fusion.DigitalSignalProcessor"
+                        "$ref": "#/definitions/types.DigitalSignalProcessor"
                     }
                 },
                 "speaker": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/fusion.Speaker"
+                        "$ref": "#/definitions/types.Speaker"
                     }
                 }
             }
         },
-        "fusion.Project": {
+        "types.Project": {
             "type": "object",
             "properties": {
+                "account_id": {
+                    "type": "string"
+                },
                 "application": {
                     "type": "string"
                 },
                 "budget": {
-                    "$ref": "#/definitions/fusion.Budget"
+                    "$ref": "#/definitions/types.Budget"
+                },
+                "created_at": {
+                    "type": "string"
                 },
                 "description": {
                     "type": "string"
                 },
+                "environment_type": {
+                    "$ref": "#/definitions/types.EnvironmentType"
+                },
                 "id": {
                     "type": "string"
                 },
-                "meta_data": {
-                    "type": "object",
-                    "additionalProperties": true
+                "is_archived": {
+                    "type": "boolean"
                 },
-                "name": {
+                "is_starred": {
+                    "type": "boolean"
+                },
+                "locked_by_user": {
                     "type": "string"
                 },
-                "organization_id": {
+                "name": {
                     "type": "string"
                 },
                 "project_file_url": {
                     "type": "string"
                 },
-                "venue": {
+                "project_phase": {
+                    "$ref": "#/definitions/types.ProjectPhase"
+                },
+                "thumbnail_url": {
                     "type": "string"
                 },
-                "venue_type": {
+                "updated_at": {
+                    "type": "string"
+                },
+                "venue": {
                     "type": "string"
                 }
             }
         },
-        "fusion.Speaker": {
+        "types.ProjectCreateRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "application": {
+                    "type": "string"
+                },
+                "budget": {
+                    "$ref": "#/definitions/types.Budget"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "environment_type": {
+                    "$ref": "#/definitions/types.EnvironmentType"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_project_file_created": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project_phase": {
+                    "$ref": "#/definitions/types.ProjectPhase"
+                },
+                "venue": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.ProjectCreateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "project_upload_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.ProjectPhase": {
+            "type": "string",
+            "enum": [
+                "Proposal",
+                "Development",
+                "Commissioned"
+            ],
+            "x-enum-varnames": [
+                "ProjectPhaseProposal",
+                "ProjectPhaseDevelopment",
+                "ProjectPhaseCommissioned"
+            ]
+        },
+        "types.ProjectUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "application": {
+                    "type": "string"
+                },
+                "budget": {
+                    "$ref": "#/definitions/types.Budget"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "environment_type": {
+                    "$ref": "#/definitions/types.EnvironmentType"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "is_archived": {
+                    "type": "boolean"
+                },
+                "is_project_file_dirty": {
+                    "type": "boolean"
+                },
+                "is_starred": {
+                    "type": "boolean"
+                },
+                "lock_project": {
+                    "type": "boolean"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "project_phase": {
+                    "$ref": "#/definitions/types.ProjectPhase"
+                },
+                "venue": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.ProjectUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "project_upload_url": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.Speaker": {
             "type": "object",
             "properties": {
                 "category": {
@@ -730,11 +838,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "meta_info": {
-                    "$ref": "#/definitions/fusion.Speaker_meta_response"
+                    "$ref": "#/definitions/types.Speaker_meta_response"
                 }
             }
         },
-        "fusion.Speaker_meta_response": {
+        "types.Speaker_meta_response": {
             "type": "object",
             "properties": {
                 "available_taps": {
@@ -776,7 +884,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nominal_impedance": {
-                    "$ref": "#/definitions/fusion.nominal_impedence"
+                    "$ref": "#/definitions/types.nominal_impedence"
                 },
                 "power_handling": {
                     "type": "object",
@@ -816,7 +924,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.nominal_impedence": {
+        "types.nominal_impedence": {
             "type": "object",
             "properties": {
                 "unit": {
@@ -827,7 +935,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.powerOutput": {
+        "types.powerOutput": {
             "type": "object",
             "properties": {
                 "asymmetrical": {
@@ -1030,9 +1138,6 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "handler.SyncProjectRequest": {
-            "type": "object"
         }
     }
 }`

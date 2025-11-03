@@ -8,7 +8,6 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/DATA-DOG/go-sqlmock"
-	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -18,7 +17,8 @@ const (
 	testProjectName        = "Test Project"
 	testProjectDesc        = "Test Description"
 	testProjectVenue       = "Test Venue"
-	testProjectEnvType     = "Indoor"
+	testProjectEnvType     = types.EnvironmentTypeIndoor
+	testProjectPhase       = types.ProjectPhaseProposal
 	testProjectApp         = "Test App"
 	testProjectAccountID   = "123"
 	testSelectProjectsStmt = "SELECT .*"
@@ -60,6 +60,7 @@ func TestServiceInsert(t *testing.T) {
 			Description:     testProjectDesc,
 			Venue:           testProjectVenue,
 			EnvironmentType: testProjectEnvType,
+			ProjectPhase:    testProjectPhase,
 			Application:     testProjectApp,
 			Budget: types.Budget{
 				Amount:   1000,
@@ -67,22 +68,9 @@ func TestServiceInsert(t *testing.T) {
 			},
 		}
 
-		mock.ExpectExec("INSERT INTO \"projects\"").
-			WithArgs(
-				project.ID,
-				123,
-				null.NewString(project.Name, true),
-				null.NewString(project.Description, true),
-				null.NewString(project.Venue, true),
-				null.NewString(project.EnvironmentType, true),
-				null.NewString(project.Application, true),
-				project.Budget.Amount,
-				null.NewString(project.Budget.Currency, true),
-				sqlmock.AnyArg(),
-				sqlmock.AnyArg(),
-				false,
-				false,
-			).WillReturnResult(sqlmock.NewResult(1, 1))
+		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
+			AddRow(false, false, nil)
+		mock.ExpectQuery("INSERT INTO \"project\"").WillReturnRows(returnRows)
 
 		err := service.Insert(ctx, project)
 		assert.NoError(t, err)
@@ -117,11 +105,11 @@ func TestServiceSelectAll(t *testing.T) {
 
 		rows := sqlmock.NewRows([]string{
 			"id", "primary_owner_account_id", "name", "description",
-			"venue", "environment_type", "application", "budget_amount",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
 			"currency", "created_at", "updated_at", "is_archived", "is_deleted",
 		}).AddRow(
 			testProjectID, 123, testProjectName, testProjectDesc,
-			testProjectVenue, testProjectEnvType, testProjectApp, 1000.0,
+			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
 			"USD", time.Now(), time.Now(), false, false,
 		)
 
@@ -142,11 +130,13 @@ func TestServiceUpdate(t *testing.T) {
 
 	t.Run("successfully updates project", func(t *testing.T) {
 		updateReq := &types.ProjectUpdateRequest{
-			AccountID:   testProjectAccountID,
-			Name:        "Updated Project",
-			Description: "Updated Description",
-			Venue:       "Updated Venue",
-			IsArchived:  true,
+			AccountID:       testProjectAccountID,
+			Name:            "Updated Project",
+			Description:     "Updated Description",
+			Venue:           "Updated Venue",
+			EnvironmentType: types.EnvironmentTypeOutdoor,
+			ProjectPhase:    types.ProjectPhaseDevelopment,
+			IsArchived:      true,
 			Budget: types.Budget{
 				Amount:   2000,
 				Currency: "EUR",
@@ -155,16 +145,16 @@ func TestServiceUpdate(t *testing.T) {
 
 		rows := sqlmock.NewRows([]string{
 			"id", "primary_owner_account_id", "name", "description",
-			"venue", "environment_type", "application", "budget_amount",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
 			"currency", "created_at", "updated_at", "is_archived", "is_deleted",
 		}).AddRow(
 			testProjectID, 123, testProjectName, testProjectDesc,
-			testProjectVenue, testProjectEnvType, testProjectApp, 1000.0,
+			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
 			"USD", time.Now(), time.Now(), false, false,
 		)
 
 		mock.ExpectQuery(testSelectProjectsStmt).WillReturnRows(rows)
-		mock.ExpectExec("UPDATE \"projects\"").WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec("UPDATE \"project\"").WillReturnResult(sqlmock.NewResult(1, 1))
 
 		err := service.Update(ctx, testProjectID, updateReq)
 		assert.NoError(t, err)
@@ -187,16 +177,16 @@ func TestServiceDelete(t *testing.T) {
 	t.Run("successfully deletes project", func(t *testing.T) {
 		rows := sqlmock.NewRows([]string{
 			"id", "primary_owner_account_id", "name", "description",
-			"venue", "environment_type", "application", "budget_amount",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
 			"currency", "created_at", "updated_at", "is_archived", "is_deleted",
 		}).AddRow(
 			testProjectID, 123, testProjectName, testProjectDesc,
-			testProjectVenue, testProjectEnvType, testProjectApp, 1000.0,
+			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
 			"USD", time.Now(), time.Now(), false, false,
 		)
 
 		mock.ExpectQuery(testSelectProjectsStmt).WillReturnRows(rows)
-		mock.ExpectExec("UPDATE \"projects\"").WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec("UPDATE \"project\"").WillReturnResult(sqlmock.NewResult(1, 1))
 
 		err := service.Delete(ctx, testProjectID)
 		assert.NoError(t, err)

@@ -25,12 +25,12 @@ func (m *MockProjectService) CreateProject(ctx context.Context, project *types.P
 	return args.Error(0)
 }
 
-func (m *MockProjectService) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
+func (m *MockProjectService) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) (*types.GetAllProjectsResponse, error) {
 	args := m.Called(ctx, queryParams)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*types.Project), args.Error(1)
+	return args.Get(0).(*types.GetAllProjectsResponse), args.Error(1)
 }
 
 func (m *MockProjectService) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
@@ -115,7 +115,7 @@ func TestGetAllProjects(t *testing.T) {
 	r, mockSvc := setupTest()
 
 	t.Run("successfully retrieves projects", func(t *testing.T) {
-		projects := []*types.Project{
+		projects := []types.Project{
 			{
 				ID:          "1",
 				Name:        "Test Project 1",
@@ -133,7 +133,14 @@ func TestGetAllProjects(t *testing.T) {
 			SortOrder: "desc",
 		}
 
-		mockSvc.On("GetAllProjects", mock.Anything, params).Return(projects, nil)
+		expectedResponse := &types.GetAllProjectsResponse{
+			Data:       projects,
+			TotalCount: len(projects),
+			Page:       1,
+			TotalPages: 1,
+		}
+
+		mockSvc.On("GetAllProjects", mock.Anything, params).Return(expectedResponse, nil)
 
 		req := httptest.NewRequest(http.MethodGet, "/projects", nil)
 		w := httptest.NewRecorder()

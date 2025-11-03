@@ -33,9 +33,13 @@ func newProject(row *model.Project) (*types.Project, error) {
 	if row.Venue.Valid {
 		venue = row.Venue.String
 	}
-	venueType := ""
+	environmentType := types.EnvironmentType("")
 	if row.EnvironmentType.Valid {
-		venueType = row.EnvironmentType.String
+		environmentType = types.EnvironmentType(row.EnvironmentType.String)
+	}
+	projectPhase := types.ProjectPhase("")
+	if row.ProjectPhase.Valid {
+		projectPhase = types.ProjectPhase(row.ProjectPhase.String)
 	}
 	application := ""
 	if row.Application.Valid {
@@ -53,7 +57,8 @@ func newProject(row *model.Project) (*types.Project, error) {
 		Name:            row.Name.String,
 		Description:     description,
 		Venue:           venue,
-		EnvironmentType: venueType,
+		EnvironmentType: environmentType,
+		ProjectPhase:    projectPhase,
 		Application:     application,
 		Budget:          budget,
 	}, nil

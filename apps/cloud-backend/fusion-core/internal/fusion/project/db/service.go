@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/aarondl/null/v8"
@@ -15,6 +16,11 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/validation"
+)
+
+const (
+	validationFailedMsg = "validation failed: %w"
 )
 
 // Executor can perform SQL queries.
@@ -51,8 +57,9 @@ func NewService(db DBContextExecutor) *Service {
 
 // Insert inserts a new project into the database.
 func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest) error {
-	if project == nil {
-		return errors.New("project cannot be nil")
+	// Validate input data
+	if err := validation.ValidateProjectCreateRequest(project); err != nil {
+		return fmt.Errorf(validationFailedMsg, err)
 	}
 
 	if project.ID == "" {
@@ -71,7 +78,8 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 		Name:                  null.NewString(project.Name, project.Name != ""),
 		Description:           null.NewString(project.Description, project.Description != ""),
 		Venue:                 null.NewString(project.Venue, project.Venue != ""),
-		EnvironmentType:       null.NewString(project.EnvironmentType, project.EnvironmentType != ""),
+		EnvironmentType:       null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != ""),
+		ProjectPhase:          null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != ""),
 		Application:           null.NewString(project.Application, project.Application != ""),
 		BudgetAmount:          project.Budget.Amount,
 		Currency:              null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
@@ -88,17 +96,29 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 // SelectAll retrieves all projects from the database.
 func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
-	// Retrieve all archived/unarchived projects from the database.
-	// Get the rows by running the query.
+	// Validate query parameters
+	if err := validation.ValidateGetAllProjectsParams(queryParams); err != nil {
+		return nil, fmt.Errorf(validationFailedMsg, err)
+	}
+
+	// Set default sort order and field if not provided
 	order := "ASC"
-	if queryParams.SortOrder == "desc" || queryParams.SortOrder == "DESC" {
-		order = "DESC"
+	if queryParams.SortOrder != "" {
+		if strings.ToUpper(queryParams.SortOrder) == "DESC" {
+			order = "DESC"
+		}
+	}
+
+	// Set default sort field if not provided
+	sortBy := "created_at"
+	if queryParams.SortBy != "" {
+		sortBy = queryParams.SortBy
 	}
 
 	rows, err := model.Projects(
 		qm.Where("is_archived = ?", queryParams.IsArchived),
 		qm.And("is_deleted = ?", false),
-		qm.OrderBy(fmt.Sprintf("%s %s", queryParams.SortBy, order)),
+		qm.OrderBy(fmt.Sprintf("%s %s", sortBy, order)),
 	).All(ctx, s.db)
 
 	if err != nil {
@@ -122,8 +142,10 @@ func (s *Service) Update(ctx context.Context, id string, project *types.ProjectU
 	if id == "" {
 		return errors.New("id cannot be empty")
 	}
-	if project == nil {
-		return errors.New("project cannot be nil")
+
+	// Validate input data
+	if err := validation.ValidateProjectUpdateRequest(project); err != nil {
+		return fmt.Errorf(validationFailedMsg, err)
 	}
 
 	row, err := model.Projects(model.ProjectWhere.ID.EQ(id)).One(ctx, s.db)
@@ -152,7 +174,11 @@ func (s *Service) Update(ctx context.Context, id string, project *types.ProjectU
 	}
 
 	if project.EnvironmentType != "" {
-		row.EnvironmentType = null.NewString(project.EnvironmentType, project.EnvironmentType != "")
+		row.EnvironmentType = null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != "")
+	}
+
+	if project.ProjectPhase != "" {
+		row.ProjectPhase = null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != "")
 	}
 
 	if project.Application != "" {
@@ -191,8 +217,8 @@ func (s *Service) Update(ctx context.Context, id string, project *types.ProjectU
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
-	if id == "" {
-		return errors.New("id cannot be empty")
+	if strings.TrimSpace(id) == "" {
+		return errors.New("project id cannot be empty")
 	}
 	row, err := model.Projects(model.ProjectWhere.ID.EQ(id)).One(ctx, s.db)
 	if err != nil {

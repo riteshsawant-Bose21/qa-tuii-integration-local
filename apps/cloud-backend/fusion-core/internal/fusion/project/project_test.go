@@ -172,14 +172,18 @@ func TestGetAllProjects(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			projects, err := service.GetAllProjects(context.Background(), tt.params)
+			response, err := service.GetAllProjects(context.Background(), tt.params)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
-				assert.Nil(t, projects)
+				assert.Nil(t, response)
 			} else {
 				assert.NoError(t, err)
-				assert.Equal(t, len(tt.mockProjects), len(projects))
-				for i, p := range projects {
+				assert.NotNil(t, response)
+				assert.Equal(t, len(tt.mockProjects), len(response.Data))
+				assert.Equal(t, len(tt.mockProjects), response.TotalCount)
+				assert.Equal(t, 1, response.Page)
+				assert.Equal(t, 1, response.TotalPages)
+				for i, p := range response.Data {
 					assert.Equal(t, tt.mockPresignURL, p.ProjectFileURL)
 					assert.Equal(t, tt.mockProjects[i].ID, p.ID)
 				}

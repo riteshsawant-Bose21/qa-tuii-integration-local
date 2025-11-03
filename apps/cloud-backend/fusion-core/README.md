@@ -80,6 +80,9 @@ fusion-core/
 │   └── swagger.yaml
 ├── internal/
 │   ├── api/                     # API routing and middleware
+|   |   ├── types/
+|   |   |      ├── product.go    #  Product domain models
+|   |   |      └── project.go    #  Project domain models
 │   │   ├── routes.go
 │   │   └── service.go
 │   ├── fusion/                  # Business logic and models
@@ -129,13 +132,13 @@ Before you begin, ensure you have the following installed:
 * **PostgreSQL 12+**
   ```bash
   # macOS with Homebrew
-  brew install postgresql@14
+  brew install postgresql@18
   
   # Ubuntu/Debian
-  sudo apt-get install postgresql-14
+  sudo apt-get install postgresql-18
   
   # Or use Docker
-  docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:14
+  docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:18
   ```
 
 * **Git**
@@ -181,7 +184,7 @@ Before you begin, ensure you have the following installed:
      -e POSTGRES_DB=fusion_cloud \
      -p 5432:5432 \
      -v fusion_pgdata:/var/lib/postgresql/data \
-     postgres:14
+     postgres:18
    
    # Verify container is running
    docker ps | grep fusion-postgres
@@ -190,7 +193,7 @@ Before you begin, ensure you have the following installed:
    **Option B: Local PostgreSQL Installation**
    ```bash
    # Start PostgreSQL service
-   brew services start postgresql@14  # macOS
+   brew services start postgresql@18  # macOS
    # or
    sudo systemctl start postgresql    # Linux
    
@@ -442,7 +445,3 @@ We welcome contributions to the Fusion Cloud Backend API! Please follow these gu
 - Include test coverage for new features
 - Ensure all tests pass
 - Update README if necessary
-
-
-
-

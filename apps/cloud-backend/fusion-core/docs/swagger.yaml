@@ -1,15 +1,15 @@
 basePath: /api/v1
 definitions:
-  fusion.Amplifier:
+  types.Amplifier:
     properties:
       category:
         type: string
       id:
         type: integer
       meta_info:
-        $ref: '#/definitions/fusion.Amplifier_meta_response'
+        $ref: '#/definitions/types.Amplifier_meta_response'
     type: object
-  fusion.Amplifier_meta_response:
+  types.Amplifier_meta_response:
     properties:
       channels:
         type: integer
@@ -20,18 +20,18 @@ definitions:
       name:
         type: string
       power_output:
-        $ref: '#/definitions/fusion.powerOutput'
+        $ref: '#/definitions/types.powerOutput'
       total_capacity:
         type: number
     type: object
-  fusion.Budget:
+  types.Budget:
     properties:
       amount:
         type: number
       currency:
         type: string
     type: object
-  fusion.DSP_meta:
+  types.DSP_meta:
     properties:
       acoustic_echo_cancellation:
         properties:
@@ -143,64 +143,172 @@ definitions:
           type: string
         type: array
     type: object
-  fusion.DigitalSignalProcessor:
+  types.DigitalSignalProcessor:
     properties:
       category:
         type: string
       id:
         type: integer
       meta_info:
-        $ref: '#/definitions/fusion.DSP_meta'
+        $ref: '#/definitions/types.DSP_meta'
     type: object
-  fusion.ProductResponse:
+  types.EnvironmentType:
+    enum:
+    - indoor
+    - outdoor
+    - hybrid
+    type: string
+    x-enum-varnames:
+    - EnvironmentTypeIndoor
+    - EnvironmentTypeOutdoor
+    - EnvironmentTypeHybrid
+  types.GetAllProjectsResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/types.Project'
+        type: array
+      page:
+        type: integer
+      total_count:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  types.ProductResponse:
     properties:
       amplifier:
         items:
-          $ref: '#/definitions/fusion.Amplifier'
+          $ref: '#/definitions/types.Amplifier'
         type: array
       digital_signal_processors:
         items:
-          $ref: '#/definitions/fusion.DigitalSignalProcessor'
+          $ref: '#/definitions/types.DigitalSignalProcessor'
         type: array
       speaker:
         items:
-          $ref: '#/definitions/fusion.Speaker'
+          $ref: '#/definitions/types.Speaker'
         type: array
     type: object
-  fusion.Project:
+  types.Project:
     properties:
+      account_id:
+        type: string
       application:
         type: string
       budget:
-        $ref: '#/definitions/fusion.Budget'
+        $ref: '#/definitions/types.Budget'
+      created_at:
+        type: string
       description:
         type: string
+      environment_type:
+        $ref: '#/definitions/types.EnvironmentType'
       id:
         type: string
-      meta_data:
-        additionalProperties: true
-        type: object
-      name:
+      is_archived:
+        type: boolean
+      is_starred:
+        type: boolean
+      locked_by_user:
         type: string
-      organization_id:
+      name:
         type: string
       project_file_url:
         type: string
+      project_phase:
+        $ref: '#/definitions/types.ProjectPhase'
+      thumbnail_url:
+        type: string
+      updated_at:
+        type: string
       venue:
         type: string
-      venue_type:
+    type: object
+  types.ProjectCreateRequest:
+    properties:
+      account_id:
+        type: string
+      application:
+        type: string
+      budget:
+        $ref: '#/definitions/types.Budget'
+      description:
+        type: string
+      environment_type:
+        $ref: '#/definitions/types.EnvironmentType'
+      id:
+        type: string
+      is_project_file_created:
+        type: boolean
+      name:
+        type: string
+      project_phase:
+        $ref: '#/definitions/types.ProjectPhase'
+      venue:
         type: string
     type: object
-  fusion.Speaker:
+  types.ProjectCreateResponse:
+    properties:
+      id:
+        type: string
+      project_upload_url:
+        type: string
+    type: object
+  types.ProjectPhase:
+    enum:
+    - Proposal
+    - Development
+    - Commissioned
+    type: string
+    x-enum-varnames:
+    - ProjectPhaseProposal
+    - ProjectPhaseDevelopment
+    - ProjectPhaseCommissioned
+  types.ProjectUpdateRequest:
+    properties:
+      account_id:
+        type: string
+      application:
+        type: string
+      budget:
+        $ref: '#/definitions/types.Budget'
+      description:
+        type: string
+      environment_type:
+        $ref: '#/definitions/types.EnvironmentType'
+      id:
+        type: string
+      is_archived:
+        type: boolean
+      is_project_file_dirty:
+        type: boolean
+      is_starred:
+        type: boolean
+      lock_project:
+        type: boolean
+      name:
+        type: string
+      project_phase:
+        $ref: '#/definitions/types.ProjectPhase'
+      venue:
+        type: string
+    type: object
+  types.ProjectUpdateResponse:
+    properties:
+      project_upload_url:
+        type: string
+    type: object
+  types.Speaker:
     properties:
       category:
         type: string
       id:
         type: integer
       meta_info:
-        $ref: '#/definitions/fusion.Speaker_meta_response'
+        $ref: '#/definitions/types.Speaker_meta_response'
     type: object
-  fusion.Speaker_meta_response:
+  types.Speaker_meta_response:
     properties:
       available_taps:
         properties:
@@ -228,7 +336,7 @@ definitions:
       mount_type:
         type: string
       nominal_impedance:
-        $ref: '#/definitions/fusion.nominal_impedence'
+        $ref: '#/definitions/types.nominal_impedence'
       power_handling:
         properties:
           long_term_continuous:
@@ -253,14 +361,14 @@ definitions:
             type: string
         type: object
     type: object
-  fusion.nominal_impedence:
+  types.nominal_impedence:
     properties:
       unit:
         type: string
       value:
         type: string
     type: object
-  fusion.powerOutput:
+  types.powerOutput:
     properties:
       asymmetrical:
         properties:
@@ -389,8 +497,6 @@ definitions:
             type: object
         type: object
     type: object
-  handler.SyncProjectRequest:
-    type: object
 host: localhost:8020
 info:
   contact: {}
@@ -410,7 +516,7 @@ paths:
         "200":
           description: Successful response with all products
           schema:
-            $ref: '#/definitions/fusion.ProductResponse'
+            $ref: '#/definitions/types.ProductResponse'
         "500":
           description: Internal server error
           schema:
@@ -437,7 +543,7 @@ paths:
         "200":
           description: Successful response with product details
           schema:
-            $ref: '#/definitions/fusion.ProductResponse'
+            $ref: '#/definitions/types.ProductResponse'
         "400":
           description: Bad request - Product ID is required
           schema:
@@ -464,15 +570,41 @@ paths:
       consumes:
       - application/json
       description: Get all projects in the system
+      parameters:
+      - description: Filter projects by archived status
+        in: query
+        name: is_archived
+        type: boolean
+      - description: Field to sort projects by (e.g., created_at, updated_at)
+        in: query
+        name: sort_by
+        type: string
+      - description: Sort order (ascending or descending)
+        enum:
+        - asc
+        - desc
+        in: query
+        name: sort_order
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: Successfully retrieved all projects
           schema:
-            items:
-              $ref: '#/definitions/fusion.Project'
-            type: array
+            $ref: '#/definitions/types.GetAllProjectsResponse'
+        "400":
+          description: Bad request - Invalid query parameters
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized do perform this action
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal server error
           schema:
@@ -489,19 +621,25 @@ paths:
       parameters:
       - description: Project details
         in: body
-        name: project
+        name: body
         required: true
         schema:
-          $ref: '#/definitions/fusion.Project'
+          $ref: '#/definitions/types.ProjectCreateRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Successfully created project
           schema:
-            $ref: '#/definitions/fusion.Project'
+            $ref: '#/definitions/types.ProjectCreateResponse'
         "400":
-          description: Bad request - Invalid JSON payload
+          description: Bad request - Invalid payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized to perform this action
           schema:
             additionalProperties:
               type: string
@@ -531,6 +669,12 @@ paths:
       responses:
         "204":
           description: Successfully deleted project
+        "401":
+          description: Unauthorized to perform this action
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "404":
           description: Project not found
           schema:
@@ -546,38 +690,6 @@ paths:
       summary: Delete project
       tags:
       - projects
-    get:
-      consumes:
-      - application/json
-      description: Get a specific project by its unique identifier
-      parameters:
-      - description: Project ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully retrieved project
-          schema:
-            $ref: '#/definitions/fusion.Project'
-        "404":
-          description: Project not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get project by ID
-      tags:
-      - projects
     patch:
       consumes:
       - application/json
@@ -590,19 +702,25 @@ paths:
         type: string
       - description: Updated project details
         in: body
-        name: project
+        name: body
         required: true
         schema:
-          $ref: '#/definitions/fusion.Project'
+          $ref: '#/definitions/types.ProjectUpdateRequest'
       produces:
       - application/json
       responses:
         "200":
-          description: Successfully updated project
+          description: Successfully created project
           schema:
-            $ref: '#/definitions/fusion.Project'
+            $ref: '#/definitions/types.ProjectUpdateResponse'
         "400":
-          description: Bad request - Invalid JSON payload
+          description: Bad request - Invalid payload
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized to perform this action
           schema:
             additionalProperties:
               type: string
@@ -620,54 +738,6 @@ paths:
               type: string
             type: object
       summary: Update project
-      tags:
-      - projects
-  /projects/{id}/sync:
-    post:
-      consumes:
-      - application/json
-      description: Synchronize project data with external source using metadata and
-        ZIP file URL
-      parameters:
-      - description: Project ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Sync request containing metadata and ZIP file URL
-        in: body
-        name: syncRequest
-        required: true
-        schema:
-          $ref: '#/definitions/handler.SyncProjectRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Successfully initiated project sync
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "400":
-          description: Bad request - Invalid JSON payload
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "404":
-          description: Project not found
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal server error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Sync project
       tags:
       - projects
 schemes:

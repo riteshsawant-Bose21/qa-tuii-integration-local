@@ -25,9 +25,10 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param project body types.Project true "Project details"
-// @Success 201 {object} types.Project "Successfully created project"
-// @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
+// @Param body body types.ProjectCreateRequest true "Project details"
+// @Success 201 {object} types.ProjectCreateResponse "Successfully created project"
+// @Failure 400 {object} map[string]string "Bad request - Invalid payload"
+// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
@@ -50,7 +51,12 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Success 200 {array} types.Project "Successfully retrieved all projects"
+// @Param is_archived query bool false "Filter projects by archived status"
+// @Param sort_by query string false "Field to sort projects by (e.g., created_at, updated_at)"
+// @Param sort_order query string false "Sort order (ascending or descending)" Enums(asc, desc)
+// @Success 200 {object} types.GetAllProjectsResponse "Successfully retrieved all projects"
+// @Failure 400 {object} map[string]string "Bad request - Invalid query parameters"
+// @Failure 401 {object} map[string]string "Unauthorized do perform this action"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
@@ -75,13 +81,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 		return
 	}
 
-	projects, err := h.project.GetAllProjects(ctx, &params)
+	response, err := h.project.GetAllProjects(ctx, &params)
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, projects)
+	ctx.JSON(http.StatusOK, response)
 }
 
 // UpdateProject updates an existing project.
@@ -91,9 +97,10 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Param project body types.Project true "Updated project details"
-// @Success 200 {object} types.Project "Successfully updated project"
-// @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
+// @Param body body types.ProjectUpdateRequest true "Updated project details"
+// @Success 200 {object} types.ProjectUpdateResponse "Successfully created project"
+// @Failure 400 {object} map[string]string "Bad request - Invalid payload"
+// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [patch]
@@ -125,6 +132,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Produce json
 // @Param id path string true "Project ID"
 // @Success 204 "Successfully deleted project"
+// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
 // @Failure 404 {object} map[string]string "Project not found"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects/{id} [delete]
