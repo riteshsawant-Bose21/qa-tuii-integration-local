@@ -28,6 +28,7 @@ import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
@@ -40,7 +41,8 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea>
+    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -258,6 +260,95 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final ExpansibleController splController = ExpansibleController();
   final ExpansibleController zoneAreaController = ExpansibleController();
 
+  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
+    return <DockItemConfig>[
+      DockItemConfig(
+        id: "1",
+        title: "FLOORS",
+        side: "left",
+        allowUndock: true,
+        isCollapsibleSection: false,
+        dockItemWidget: () => const BuildingPlan(),
+      ),
+      DockItemConfig(
+        id: "5",
+        title: "PROPERTIES",
+        side: "right",
+        initiallyExpanded: false,
+        dockItemWidget:
+            () => PropertiesPanel(
+              onSpeakerUpdated: () {
+                print("Speaker properties updated, update SPL...");
+                calculateSPL();
+              },
+            ),
+      ),
+      DockItemConfig(
+        id: "6",
+        title: "COST CALCULATOR",
+        side: "right",
+        allowUndock: true,
+        dockItemWidget:
+            () => CostCalculatorScreen(
+              speakers: serviceLocator<ProjectViewModel>().speakers,
+              sources: serviceLocator<ProjectViewModel>().sources,
+              controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+              racks:
+                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                      .where(
+                        (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                      )
+                      .toList(),
+              amplifiers: <Amplifier>[],
+              fusionDevices: <FusionDsp>[],
+              others:
+                  serviceLocator<ProjectViewModel>().genericHardwareComponents
+                      .where(
+                        (HardwareComponent component) =>
+                            component is GenericHardwareComponent &&
+                            component.type == GenericHardwareComponentType.other,
+                      )
+                      .toList(),
+            ),
+      ),
+      DockItemConfig(
+        id: "7",
+        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+        side: "left",
+        controller: zoneAreaController,
+        allowUndock: false,
+        initiallyExpanded: true,
+        dockItemWidget:
+            () =>
+                toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+      ),
+      DockItemConfig(
+        id: "8",
+        title: "PRODUCT QUERY",
+        side: "right",
+        dockItemWidget: () => const ProductQueryView(),
+        controller: productsController,
+      ),
+      DockItemConfig(
+        id: "9",
+        title: "SPL MAPPING",
+        side: "right",
+        controller: splController,
+        dockItemWidget:
+            () => SplPanel(
+              controller: _splRangeController,
+              initialData: _lastPanelData!,
+              onChanged: (SplPanelData value) {
+                FusionLogger.log(tag: LogTag.panel, message: value.toString());
+                _splRangeController.onMappingDataChanged(value);
+                _updateSPLFromPanelData();
+                setState(() {});
+              },
+            ),
+      ),
+    ];
+  }
+
   List<Widget> _createTabWidgets() {
     return <Widget>[
       /// Building tab
@@ -291,120 +382,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 );
               },
             ),
-            dockItemList: <DockItemConfig>[
-              DockItemConfig(
-                id: "1",
-                title: "BUILDING PLAN",
-                side: "left",
-                alowUndock: true,
-                isCollapsibleSection: false,
-                dockItemWidget: () => const BuildingPlan(),
-              ),
-
-              // DockItemConfig(
-              //   id: "2",
-              //   title: "COVERAGE",
-              //   side: "left",
-              //   alowUndock: false,
-              //   initiallyExpanded: true,
-              //   isCollapsibleSection: true,
-              //   dockItemWidget:
-              //       () => CoveragePanel(
-              //         onModeSelection: (bool value) {
-              //           if (value) {
-              //             zoneAreaController.expand();
-              //           }
-              //         },
-              //       ),
-              // ),
-
-              // DockItemConfig(
-              //   id: "4",
-              //   title: "DEVICES",
-              //   side: "left",
-              //   alowUndock: false,
-              //   initiallyExpanded: true,
-              //   isCollapsibleSection: true,
-              //   dockItemWidget:
-              //       () => DevicesPanel(
-              //         onProductSelected: () {
-              //           productsController.expand();
-              //         },
-              //       ),
-              // ),
-              DockItemConfig(
-                id: "5",
-                title: "PROPERTIES",
-                side: "right",
-                alowUndock: false,
-                dockItemWidget:
-                    () => PropertiesPanel(
-                      onSpeakerUpdated: () {
-                        print("Speaker properties updated, update SPL...");
-                        calculateSPL();
-                      },
-                    ),
-              ),
-              DockItemConfig(
-                id: "6",
-                title: "COST CALCULATOR",
-                side: "right",
-                alowUndock: true,
-                dockItemWidget:
-                    () => CostCalculatorScreen(
-                      speakers: serviceLocator<ProjectViewModel>().speakers,
-                      sources: serviceLocator<ProjectViewModel>().sources,
-                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                      racks:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                              )
-                              .toList(),
-                      amplifiers: <Amplifier>[],
-                      fusionDevices: <FusionDsp>[],
-                      others:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                              )
-                              .toList(),
-                    ),
-              ),
-              DockItemConfig(
-                id: "7",
-                title: "ZONES",
-                side: "left",
-                controller: zoneAreaController,
-                initiallyExpanded: true,
-                // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
-                dockItemWidget: () => const ZoneAndListeningAreaPanel(),
-              ),
-              DockItemConfig(
-                id: "8",
-                title: "PRODUCT QUERY",
-                side: "right",
-                dockItemWidget: () => const ProductQueryView(),
-                controller: productsController,
-              ),
-              DockItemConfig(
-                id: "9",
-                title: "SPL MAPPING",
-                side: "right",
-                controller: splController,
-                dockItemWidget:
-                    () => SplPanel(
-                      controller: _splRangeController,
-                      initialData: _lastPanelData!,
-                      onChanged: (SplPanelData value) {
-                        FusionLogger.log(tag: LogTag.panel, message: value.toString());
-                        _splRangeController.onMappingDataChanged(value);
-                        _updateSPLFromPanelData();
-                        setState(() {});
-                      },
-                    ),
-              ),
-            ],
+            dockItemList: _createBuildingDockItems(
+              serviceLocator<ProjectViewModel>().currentToolbarMode,
+            ),
           );
         },
       ),
@@ -423,14 +403,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 title: "PROPERTIES",
                 side: "right",
                 initiallyExpanded: true,
-                alowUndock: false,
+                allowUndock: false,
                 dockItemWidget: () => const SchematicProperties(),
               ),
               DockItemConfig(
                 id: "6",
                 title: "COST CALCULATOR",
                 side: "right",
-                alowUndock: true,
+                allowUndock: true,
                 dockItemWidget:
                     () => CostCalculatorScreen(
                       speakers: serviceLocator<ProjectViewModel>().speakers,
@@ -439,7 +419,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       racks:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                                (GenericHardwareComponent component) =>
+                                    component.type == GenericHardwareComponentType.rack,
                               )
                               .toList(),
                       amplifiers: <Amplifier>[],
@@ -447,7 +428,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       others:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                                (HardwareComponent component) =>
+                                    component is GenericHardwareComponent &&
+                                    component.type == GenericHardwareComponentType.other,
                               )
                               .toList(),
                     ),
@@ -460,7 +443,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               // ),
               DockItemConfig(
                 id: "10",
-                title: "PRODUCT List",
+                title: "PRODUCT LIST",
                 side: "left",
                 initiallyExpanded: true,
                 dockItemWidget: () => const WiringDeviceListView(),
@@ -839,7 +822,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color:
+                                _projectNameError != null
+                                    ? Colors.red
+                                    : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),

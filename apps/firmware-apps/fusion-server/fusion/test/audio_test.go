@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/persistence"
 	"fusion/internal/routes"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (

@@ -75,9 +75,9 @@ class _DeviceListSection extends StatelessWidget {
               children: <Widget>[
                 AnimatedRotation(
                   duration: const Duration(milliseconds: 250),
-                  turns: isExpanded ? 0.5 : 0,
+                  turns: isExpanded ? 0.5 : 0.25,
                   child: const Icon(
-                    Icons.keyboard_arrow_down,
+                    Icons.arrow_drop_up,
                     size: 16,
                     color: Colors.black,
                   ),
@@ -117,7 +117,7 @@ class _DeviceListSection extends StatelessWidget {
                       (connections?.portId == port.id)
                           ? connections?.targetPortId
                           : connections?.portId;
-                  if (connections != null)
+                  if (connections != null) {
                     portData.add(
                       _PortData(
                         data: port,
@@ -129,6 +129,7 @@ class _DeviceListSection extends StatelessWidget {
                         ),
                       ),
                     );
+                  }
                 }
                 return _DeviceCard(
                   id: device.id,

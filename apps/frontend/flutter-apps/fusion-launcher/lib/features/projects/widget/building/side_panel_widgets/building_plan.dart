@@ -203,7 +203,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
-                FusionAppText(text: "BUILDING PLAN", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                FusionAppText(text: "FLOORS", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                 GestureDetector(
                   onTap: _showAddFloorDropdown,
                   child: Icon(

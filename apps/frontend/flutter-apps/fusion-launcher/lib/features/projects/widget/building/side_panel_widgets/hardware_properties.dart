@@ -46,12 +46,16 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle? textStyleGrey = Theme.of(context).textTheme.bodySmall?.copyWith(
+    final TextStyle? textStyleGrey = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(
       fontSize: 10,
       color: Colors.grey,
       fontWeight: FontWeight.w500,
     );
-    final TextStyle? textStyleBlack = Theme.of(context).textTheme.bodySmall?.copyWith(
+    final TextStyle? textStyleBlack = Theme.of(
+      context,
+    ).textTheme.bodySmall?.copyWith(
       fontSize: 9,
       color: Colors.black87,
       fontWeight: FontWeight.w400,
@@ -91,7 +95,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       children: <Widget>[
                         Text(
                           widget.selectedHardware.name,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                             fontSize: 14,
                           ),
@@ -100,10 +106,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         const SizedBox(height: 4),
                         Text(
                           '\$${widget.selectedHardware.price.toStringAsFixed(2)}',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          style: Theme.of(
+                            context,
+                          ).textTheme.bodyMedium?.copyWith(
                             fontWeight: FontWeight.w500,
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.fusionTextViewColor.withOpacity(0.7),
                           ),
                         ),
                       ],
@@ -116,7 +126,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       color: Theme.of(context).colorScheme.error,
                     ),
                     onPressed: () {
-                      viewModel.removeHardware(hardwareId: widget.selectedHardware.id);
+                      viewModel.removeHardware(
+                        hardwareId: widget.selectedHardware.id,
+                      );
                     },
                   ),
                 ],
@@ -186,11 +198,16 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? xValue = double.tryParse(v.trim());
+                                  final double? xValue = double.tryParse(
+                                    v.trim(),
+                                  );
                                   if (xValue != null) {
                                     // Multiply by 100 when submitting
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(
-                                      pos: Offset(xValue * 100, widget.selectedHardware.pos.dy),
+                                      pos: Offset(
+                                        xValue * 100,
+                                        widget.selectedHardware.pos.dy,
+                                      ),
                                     );
                                     viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
@@ -202,7 +219,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('X position must be a valid decimal number'),
+                                        content: Text(
+                                          'X position must be a valid decimal number',
+                                        ),
                                         duration: Duration(seconds: 2),
                                       ),
                                     );
@@ -233,11 +252,16 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? yValue = double.tryParse(v.trim());
+                                  final double? yValue = double.tryParse(
+                                    v.trim(),
+                                  );
                                   if (yValue != null) {
                                     // Multiply by 100 when submitting
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(
-                                      pos: Offset(widget.selectedHardware.pos.dx, yValue * 100),
+                                      pos: Offset(
+                                        widget.selectedHardware.pos.dx,
+                                        yValue * 100,
+                                      ),
                                     );
                                     viewModel.updateHardware(hardware: updated);
                                     if (widget.selectedHardware is Speaker) {
@@ -249,7 +273,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Y position must be a valid decimal number'),
+                                        content: Text(
+                                          'Y position must be a valid decimal number',
+                                        ),
                                         duration: Duration(seconds: 2),
                                       ),
                                     );
@@ -280,7 +306,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 style: textStyleBlack,
                                 keyboardType: TextInputType.number,
                                 onFieldSubmitted: (String v) {
-                                  final double? zValue = double.tryParse(v.trim());
+                                  final double? zValue = double.tryParse(
+                                    v.trim(),
+                                  );
                                   if (zValue != null) {
                                     // Multiply by 100 when submitting
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(zAxis: zValue * 100);
@@ -294,7 +322,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
-                                        content: Text('Z position must be a valid decimal number'),
+                                        content: Text(
+                                          'Z position must be a valid decimal number',
+                                        ),
                                         duration: Duration(seconds: 2),
                                       ),
                                     );
@@ -318,7 +348,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   children: <Widget>[
                     SizedBox(
                       width: 80,
-                      child: Text("Roll", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      child: Text(
+                        "Roll",
+                        style: textStyleGrey?.copyWith(fontSize: 11),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     IntrinsicWidth(
@@ -345,7 +378,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             // Trigger SPL update for speaker orientation changes
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Roll must be a valid decimal number'),
+                                content: Text(
+                                  'Roll must be a valid decimal number',
+                                ),
                                 duration: Duration(seconds: 2),
                               ),
                             );
@@ -363,7 +398,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   children: <Widget>[
                     SizedBox(
                       width: 80,
-                      child: Text("Pitch", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      child: Text(
+                        "Pitch",
+                        style: textStyleGrey?.copyWith(fontSize: 11),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     IntrinsicWidth(
@@ -389,7 +427,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             // Show validation error
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Pitch must be a valid decimal number'),
+                                content: Text(
+                                  'Pitch must be a valid decimal number',
+                                ),
                                 duration: Duration(seconds: 2),
                               ),
                             );
@@ -407,7 +447,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   children: <Widget>[
                     SizedBox(
                       width: 80,
-                      child: Text("Yaw", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      child: Text(
+                        "Yaw",
+                        style: textStyleGrey?.copyWith(fontSize: 11),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     IntrinsicWidth(
@@ -433,7 +476,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                             // Show validation error
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                content: Text('Yaw must be a valid decimal number'),
+                                content: Text(
+                                  'Yaw must be a valid decimal number',
+                                ),
                                 duration: Duration(seconds: 2),
                               ),
                             );
@@ -451,7 +496,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   children: <Widget>[
                     SizedBox(
                       width: 80,
-                      child: Text("Gain", style: textStyleGrey?.copyWith(fontSize: 11)),
+                      child: Text(
+                        "Gain",
+                        style: textStyleGrey?.copyWith(fontSize: 11),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
@@ -480,7 +528,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   // Show validation error
                                   ScaffoldMessenger.of(context).showSnackBar(
                                     const SnackBar(
-                                      content: Text('Gain must be a valid decimal number'),
+                                      content: Text(
+                                        'Gain must be a valid decimal number',
+                                      ),
                                       duration: Duration(seconds: 2),
                                     ),
                                   );
@@ -493,6 +543,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     ),
                   ],
                 ),
+
+                const SizedBox(height: 12),
+
+                if (serviceLocator<ProjectViewModel>().getZoneForHardware(hardwareId: widget.selectedHardware.id) != null ||
+                    serviceLocator<ProjectViewModel>().getSubZoneForHardware(hardwareId: widget.selectedHardware.id) != null)
+                  _CircuitSelection(
+                    speaker: (widget.selectedHardware as Speaker),
+                  ),
               ],
 
               // Properties section
@@ -511,7 +569,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                               // Left: Label
                               FusionAppText(
                                 text: "Area",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.bodySmall?.copyWith(
                                   fontSize: 11,
                                   color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
                                 ),
@@ -525,9 +585,17 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: <Widget>[
                                       FusionAppText(
-                                        text: viewModel.getListeningAreaForHardware(hardwareId: widget.selectedHardware.id)?.name ?? "N/A",
+                                        text:
+                                            viewModel
+                                                .getListeningAreaForHardware(
+                                                  hardwareId: widget.selectedHardware.id,
+                                                )
+                                                ?.name ??
+                                            "N/A",
                                         textAlign: TextAlign.left,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.bodySmall?.copyWith(
                                           fontSize: 11,
                                         ),
                                       ),
@@ -544,11 +612,21 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           child: _buildHardwarePropertyRow(
                             context: context,
                             label: "Area ",
-                            value: viewModel.getListeningAreaForHardware(hardwareId: widget.selectedHardware.id)?.name ?? "N/A",
+                            value:
+                                viewModel
+                                    .getListeningAreaForHardware(
+                                      hardwareId: widget.selectedHardware.id,
+                                    )
+                                    ?.name ??
+                                "N/A",
                             options:
                                 widget.selectedHardware.lockListeningArea
                                     ? <String>[]
-                                    : viewModel.listeningAreas.map((ListeningArea listeningArea) => listeningArea.name).toList(),
+                                    : viewModel.listeningAreas
+                                        .map(
+                                          (ListeningArea listeningArea) => listeningArea.name,
+                                        )
+                                        .toList(),
                             onOptionSelected: (int selectedIndex) {
                               if (!widget.selectedHardware.lockListeningArea) {
                                 final ListeningArea? selectedArea = viewModel.listeningAreas.isNotEmpty ? viewModel.listeningAreas[selectedIndex] : null;
@@ -557,7 +635,10 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                   final LocationModel updated = widget.selectedHardware.locationEntity.copyWith(
                                     listeningAreaId: selectedArea.id,
                                   );
-                                  viewModel.updateHardwareLocation(hardwareId: widget.selectedHardware.id, newLocation: updated);
+                                  viewModel.updateHardwareLocation(
+                                    hardwareId: widget.selectedHardware.id,
+                                    newLocation: updated,
+                                  );
                                 }
                               }
                             },
@@ -578,7 +659,12 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                              color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+                              color:
+                                  widget.selectedHardware.lockListeningArea
+                                      ? Theme.of(
+                                        context,
+                                      ).colorScheme.primary.withOpacity(0.1)
+                                      : Colors.transparent,
                               borderRadius: BorderRadius.circular(4),
                               border: Border.all(
                                 color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
@@ -674,7 +760,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                color: Theme.of(
+                  context,
+                ).colorScheme.fusionTextViewColor.withOpacity(0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -721,7 +809,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              color: Theme.of(
+                context,
+              ).colorScheme.fusionTextViewColor.withOpacity(0.5),
             ),
           ),
           // Right: Value
@@ -734,6 +824,140 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CircuitSelection extends StatelessWidget {
+  const _CircuitSelection({
+    super.key,
+    required this.speaker,
+  });
+
+  final Speaker speaker;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState asyncSnapshot) {
+        final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+        final CircuitModel? currentCicuit = viewModel.getCircuitForHardware(
+          hardwareId: speaker.id,
+        );
+        final List<CircuitModel> compatibleCircuits = viewModel.getCompatibleCircuits(
+          hardwareId: speaker.id,
+          sku: speaker.speakerSKU,
+        );
+        return Row(
+          children: <Widget>[
+            FusionAppText(
+              text: "Circuit",
+              style: context.textTheme.bodySmall?.copyWith(
+                fontSize: 11,
+                color: context.colorScheme.fusionTextViewColor.withValues(
+                  alpha: 0.5,
+                ),
+              ),
+            ),
+            Expanded(
+              child: PopupMenuButton<CircuitModel?>(
+                tooltip: "Change Circuit",
+                color: Colors.white,
+                itemBuilder:
+                    (BuildContext context) => <PopupMenuEntry<CircuitModel?>>[
+                      for (final CircuitModel circuit in compatibleCircuits)
+                        // if (circuit.id != currentCicuit?.id)
+                        PopupMenuItem<CircuitModel>(
+                          value: circuit,
+                          height: 30,
+                          onTap: () {
+                            if (currentCicuit?.id == circuit.id) return;
+                            if (currentCicuit != null) {
+                              viewModel.removeHardwareFromCircuit(
+                                hwId: speaker.id,
+                                circuitId: currentCicuit.id,
+                              );
+                            }
+                            viewModel.addHardwareToCircuit(
+                              hwId: speaker.id,
+                              circuitId: circuit.id,
+                            );
+                          },
+                          child: Text(
+                            circuit.name,
+                            style: context.textTheme.bodySmall?.copyWith(
+                              fontSize: 11,
+                            ),
+                          ),
+                        ),
+                      if (compatibleCircuits.isNotEmpty)
+                        const PopupMenuDivider(
+                          height: 12,
+                        ),
+
+                      PopupMenuItem<CircuitModel?>(
+                        value: null,
+                        height: 30,
+                        onTap: () {
+                          if (currentCicuit != null) {
+                            viewModel.removeHardwareFromCircuit(
+                              hwId: speaker.id,
+                              circuitId: currentCicuit.id,
+                            );
+                          }
+                          viewModel.addNewCircuitWithHardware(
+                            hardware: speaker,
+                          );
+                        },
+                        child: Row(
+                          spacing: 12,
+                          children: <Widget>[
+                            const Icon(
+                              Icons.add,
+                              color: Colors.black54,
+                              size: 12,
+                            ),
+                            Text(
+                              "Create New",
+                              style: context.textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: <Widget>[
+                    if (currentCicuit == null)
+                      FusionAppText(
+                        text: "Select Circuit",
+                        style: context.textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                        ),
+                        textAlign: TextAlign.end,
+                      )
+                    else
+                      FusionAppText(
+                        text: currentCicuit.name,
+                        style: context.textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                        ),
+                        textAlign: TextAlign.end,
+                      ),
+                    const Icon(
+                      Icons.keyboard_arrow_down_rounded,
+                      size: 16,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/strings/fusion_strings.dart';
 
@@ -166,7 +167,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     return Offset(r.left + n.dx * r.width, r.top + n.dy * r.height);
   }
 
-  Offset _normalizedToImagePx(Offset n) => Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
+  Offset _normalizedToImagePx(Offset n) =>
+      Offset(n.dx * widget.floorPlanImage.width, n.dy * widget.floorPlanImage.height);
 
   // ---------- measure interactions ----------
   void _onMeasureTapDown(TapDownDetails d) {
@@ -187,6 +189,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _endPointDisplay = d.localPosition;
         _isDrawing = false;
       });
+      context.read<GuideShowCaseController>().completeStep();
     }
   }
 
@@ -397,7 +400,10 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
     );
 
     // If crop rect is the full image, return the original
-    if (clampedRect.left <= 0 && clampedRect.top <= 0 && clampedRect.right >= image.width && clampedRect.bottom >= image.height) {
+    if (clampedRect.left <= 0 &&
+        clampedRect.top <= 0 &&
+        clampedRect.right >= image.width &&
+        clampedRect.bottom >= image.height) {
       return image;
     }
 
@@ -451,7 +457,11 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       croppedImage: croppedImage,
     );
     widget.onCalibrationComplete(data);
+    // ignore: use_build_context_synchronously
+    context.read<GuideShowCaseController>().completeStep();
   }
+
+  final GlobalKey _customPaintKey = GlobalKey();
 
   // ---------- build ----------
   @override
@@ -639,11 +649,14 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         Expanded(
           child: Container(
             clipBehavior: Clip.hardEdge,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerLow,
             ),
             child: MouseRegion(
-              cursor: _mode == _ToolMode.measure ? SystemMouseCursors.precise : SystemMouseCursors.resizeUpLeftDownRight,
+              cursor: _mode == _ToolMode.measure
+                  ? SystemMouseCursors.precise
+                  : SystemMouseCursors.resizeUpLeftDownRight,
               onHover: _mode == _ToolMode.measure ? _onMeasureHover : null,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -656,8 +669,28 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                     setState(() => _isDrawing = false);
                   }
                 },
-                child: Center(
+                child: GuideShowcaseWrapper(
+                  step: GuideShowCaseSteps.showFloorPickCalibration,
+                  onHighlightedSpotTap: (TapDownDetails details) {
+                    if (_mode == _ToolMode.measure) {
+                      // Get the exact RenderBox of the CustomPaint
+                      final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                      if (renderBox != null) {
+                        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+
+                        // Create new TapDownDetails with local position
+                        final TapDownDetails localDetails = TapDownDetails(
+                          globalPosition: details.globalPosition,
+                          localPosition: localPosition,
+                          kind: details.kind,
+                        );
+
+                        _onMeasureTapDown(localDetails);
+                      }
+                    }
+                  },
                   child: CustomPaint(
+                    key: _customPaintKey, // Add the key here
                     painter: FloorPlanCalibrationPainter(
                       image: widget.floorPlanImage,
                       startPoint: _startPointDisplay,
@@ -714,15 +747,27 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 },
               ),
               const SizedBox(width: 8),
-              FusionButton(
-                label: FusionStrings.confirmButton,
-                width: 120,
-                height: 36,
-                onTap: () {
-                  if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+              GuideShowcaseWrapper(
+                step: GuideShowCaseSteps.confirmFloorCalibrated,
+                onHighlightedSpotTap: (TapDownDetails details) {
+                  if (_startPointNormalized != null &&
+                      _endPointNormalized != null &&
+                      _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
+                child: FusionButton(
+                  label: FusionStrings.confirmButton,
+                  width: 120,
+                  height: 36,
+                  onTap: () {
+                    if (_startPointNormalized != null &&
+                        _endPointNormalized != null &&
+                        _distanceController.text.trim().isNotEmpty) {
+                      _completeCalibration();
+                    }
+                  },
+                ),
               ),
             ],
           ),

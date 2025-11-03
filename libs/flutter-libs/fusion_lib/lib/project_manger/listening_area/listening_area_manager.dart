@@ -41,12 +41,26 @@ extension ListeningAreaManager on ProjectManager {
     return projectService!.addListeningAreaToZone(listeningAreaId, zoneId);
   }
 
+  void addMultipleAreasToAddZone(List<String> allAreasToAdd, String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.addMultipleAreasToAddZone(allAreasToAdd, zoneId);
+  }
+
   /// Remove Listening Area from Zone
   void removeListeningAreaFromZone(String listeningAreaId, String zoneId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     return projectService!.removeListeningAreaFromZone(listeningAreaId, zoneId);
+  }
+
+  void removeMultipleListeningAreaFromZone(List<String> listeningAreaIds, String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.removeMultipleListeningAreaFromZone(listeningAreaIds, zoneId);
   }
 
   FloorModel getFloorForListeningArea(String listeningAreaId) {
@@ -63,6 +77,15 @@ extension ListeningAreaManager on ProjectManager {
     Zone? zone = projectService!.getZoneForListeningArea(listeningAreaId);
 
     return zone;
+  }
+
+  SubZone? getSubZoneForListeningArea(String listeningAreaId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    SubZone? subZone = projectService!.getSubZoneForListeningArea(listeningAreaId);
+
+    return subZone;
   }
 
   //Get All Listening Area

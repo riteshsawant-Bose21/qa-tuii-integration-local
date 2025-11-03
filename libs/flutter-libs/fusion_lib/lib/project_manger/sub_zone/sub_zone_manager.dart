@@ -91,11 +91,25 @@ extension SubZoneManager on ProjectManager {
     return projectService!.addListeningAreaToSubZone(listeningAreaId, subZoneId);
   }
 
+  void removeMultipleListeningAreaFromSubZone(List<String> listeningAreaIds, String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.removeMultipleListeningAreaFromSubZone(listeningAreaIds, subZoneId);
+  }
+
   void removeListeningAreaFromSubZone(String listeningAreaId, String subZoneId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     return projectService!.removeListeningAreaFromSubZone(listeningAreaId, subZoneId);
+  }
+
+  void addMultipleAreasToAddSubZone(List<String> allAreasToAdd, String subZoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.addMultipleAreasToAddSubZone(allAreasToAdd, subZoneId);
   }
 
   void reOrderSubZones(String parentId, int oldIndex, int newIndex) {

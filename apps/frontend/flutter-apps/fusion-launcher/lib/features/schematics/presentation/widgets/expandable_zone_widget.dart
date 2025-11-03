@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
 import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'add_speakers_menu.dart';
 import 'circuit_device_widget.dart';
+import 'create_new_location_widget.dart';
 import 'expandable_sub_zone_widgets.dart';
 
 class ExpandableZoneWidget extends StatefulWidget {
@@ -36,10 +38,12 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   late ValueNotifier<bool> _isZoneExpanded;
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   final TextEditingController _zoneNameController = TextEditingController();
-  final List<String> _selectedListeningAreaIds = <String>[];
+  List<String> _selectedListeningAreaIds = <String>[];
   bool showSubzonePopup = false;
   bool isKebabMenuOpen = false;
   bool isHovered = false;
+
+  List<Map<String, dynamic>> newlyCreatedAreas = <Map<String, dynamic>>[];
 
   @override
   void initState() {
@@ -93,6 +97,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       height: 36,
       decoration: BoxDecoration(
         color: isHovered ? widget.bgColor.withAlpha(150) : widget.bgColor.withAlpha(190),
+        border: Border.all(
+          color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+        ),
       ),
       child: Row(
         children: <Widget>[
@@ -123,9 +130,11 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           ),
 
           /// Add device button
-          AddSpeakersMenu(
-            zoneId: widget.zoneId,
-          ),
+          if (widget.subZones.isEmpty)
+            AddSpeakersMenu(
+              zoneId: widget.zoneId,
+              onSpeakerAdded: onSpeakerAdded,
+            ),
           const SizedBox(width: 8),
 
           /// Kebab menu for zone actions
@@ -155,55 +164,146 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       children: <Widget>[
         /// Zone devices list
         if (widget.zoneCircuits.isNotEmpty) ...<Widget>[
-          Container(
-            color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
-            padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
-            child: ReorderableListView.builder(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              buildDefaultDragHandles: false,
-              itemCount: widget.zoneCircuits.length,
-              onReorder: (int oldIndex, int newIndex) {
-                if (oldIndex < newIndex) {
-                  newIndex -= 1;
-                }
-                _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
-                _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
-              },
-              itemBuilder: (BuildContext context, int index) {
-                final CircuitModel circuitData = widget.zoneCircuits[index];
-                final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                final String deviceId = circuitData.id;
-                final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
+          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return Container(
+                color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+                padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
+                child: ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  itemCount: widget.zoneCircuits.length,
+                  onReorder: (int oldIndex, int newIndex) {
+                    if (oldIndex < newIndex) {
+                      newIndex -= 1;
+                    }
+                    _projectViewModel.reOrderCircuitInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
+                    _projectViewModel.setSelectedDevice(widget.zoneCircuits[oldIndex].id, SelectedItemType.circuit);
+                  },
+                  itemBuilder: (BuildContext context, int index) {
+                    final CircuitModel circuitData = widget.zoneCircuits[index];
+                    final List<Speaker> speakers = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                    final String deviceId = circuitData.id;
+                    final List<ListeningArea> location = _projectViewModel.getListeningAreasForCircuit(circuitId: circuitData.id);
 
-                return ReorderableDragStartListener(
-                  key: ValueKey<String>(deviceId),
-                  index: index,
-                  child: CircuitDeviceWidget(
-                    deviceId: deviceId,
-                    circuitDeviceName: circuitData.name,
-                    assetImagePath: speakers.first.assetImagePath,
-                    location: location,
-                    projectViewModel: _projectViewModel,
-                    onDecrementHardwareInCircuit: () {
-                      final Speaker speaker = speakers.last;
-                      serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
-                    },
-                    onIncrementHardwareInCircuit: () {
-                      final Speaker speaker = speakers.first.getClone();
-                      serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                      serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
-                    },
-                    onRename: () {},
-                    onDuplicate: () {},
-                    onDelete: () {
-                      _projectViewModel.removeCircuitFromZone(circuitId: circuitData.id, zoneId: widget.zoneId);
-                    },
-                    circuitDeviceCount: speakers.length,
-                  ),
-                );
-              },
-            ),
+                    return DragTarget<CircuitModel>(
+                      key: ValueKey<String>(deviceId),
+                      onWillAccept: (CircuitModel? incoming) {
+                        /// Only accept if the incoming circuit has the same name but different ID
+                        ///
+                        if (incoming == null) return false;
+                        // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
+                        // _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
+
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                        final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                        return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU && incoming.id != circuitData.id;
+                      },
+                      onAccept: (CircuitModel incoming) {
+                        /// Add speaker to target circuit
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
+
+                        if (incomingSpeakers.isNotEmpty) {
+                          for (final Speaker speaker in incomingSpeakers) {
+                            // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                            // serviceLocator<ProjectViewModel>().removeHardwareFromCircuit(hwId: speaker.id, circuitId: incoming.id);
+                            serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                          }
+                          _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
+                        }
+
+                        /// Remove the dragged circuit from the zone
+                        _projectViewModel.removeCircuit(circuitId: incoming.id);
+                        setState(() {});
+                      },
+                      builder: (BuildContext context, List<CircuitModel?> candidateData, List<dynamic> rejectedData) {
+                        return Draggable<CircuitModel>(
+                          data: circuitData,
+                          feedback: Material(
+                            color: Colors.transparent,
+                            child: Opacity(
+                              opacity: 0.8,
+                              child: SizedBox(
+                                width: 220,
+                                child: CircuitDeviceWidget(
+                                  index: index,
+                                  deviceId: deviceId,
+                                  circuitDeviceName: circuitData.name,
+                                  assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  location: location,
+                                  speakers: speakers,
+                                  projectViewModel: _projectViewModel,
+                                  circuitDeviceCount: speakers.length,
+                                  onDecrementHardwareInCircuit: () {},
+                                  onIncrementHardwareInCircuit: () {},
+                                  onRename: () {},
+                                  onDuplicate: () {},
+                                  onDelete: () {},
+                                ),
+                              ),
+                            ),
+                          ),
+                          childWhenDragging: Material(
+                            color: Colors.transparent,
+                            child: Opacity(
+                              opacity: 0.8,
+                              child: SizedBox(
+                                width: 220,
+                                child: CircuitDeviceWidget(
+                                  index: index,
+                                  deviceId: deviceId,
+
+                                  circuitDeviceName: circuitData.name,
+                                  assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                                  location: location,
+                                  speakers: speakers,
+                                  projectViewModel: _projectViewModel,
+                                  circuitDeviceCount: speakers.length,
+                                  onDecrementHardwareInCircuit: () {},
+                                  onIncrementHardwareInCircuit: () {},
+                                  onRename: () {},
+                                  onDuplicate: () {},
+                                  onDelete: () {},
+                                ),
+                              ),
+                            ),
+                          ),
+                          child: CircuitDeviceWidget(
+                            index: index,
+                            deviceId: deviceId,
+                            circuitDeviceName: circuitData.name,
+                            assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
+                            location: location,
+                            speakers: speakers,
+                            projectViewModel: _projectViewModel,
+                            onDecrementHardwareInCircuit: () {
+                              if (speakers.isNotEmpty) {
+                                final Speaker speaker = speakers.last;
+                                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: speaker.id);
+                              }
+                            },
+                            onIncrementHardwareInCircuit: () {
+                              if (speakers.isNotEmpty) {
+                                final Speaker speaker = speakers.first.getClone();
+                                serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
+                                serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
+                              }
+                            },
+                            onRename: () {},
+                            onDuplicate: () {},
+                            onDelete: () {
+                              _projectViewModel.removeCircuit(circuitId: circuitData.id);
+                            },
+                            circuitDeviceCount: speakers.length,
+                          ),
+                        );
+                      },
+                    );
+                  },
+                ),
+              );
+            },
           ),
           const SizedBox(height: 8),
         ],
@@ -368,7 +468,6 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildSubzoneContent(BuildContext context, String zoneId) {
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setDialogState) {
-        /// Single function to handle all state updates
         void updateAllStates() {
           setDialogState(() {});
           setState(() {});
@@ -398,6 +497,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       // Clear the state
                       _zoneNameController.clear();
                       _selectedListeningAreaIds.clear();
+                      newlyCreatedAreas.clear(); // <-- Clear on close
                       setState(() => showSubzonePopup = false);
                     },
                     child: Icon(
@@ -463,6 +563,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         // Clear the state
                         _zoneNameController.clear();
                         _selectedListeningAreaIds.clear();
+                        newlyCreatedAreas.clear(); // <-- Clear on cancel
                         setState(() => showSubzonePopup = false);
                       },
                     ),
@@ -540,12 +641,44 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Location list within the dropdown
   Widget _buildLocationList(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
-    final List<ListeningArea> availableAreas = _projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId);
+    bool isCreateAreaExpanded = false;
+    final String selectedFloor = '';
+    final String selectedFloorId = '';
+    final TextEditingController areaNameController = TextEditingController();
+
     return StatefulBuilder(
       builder: (BuildContext context, StateSetter setPopupState) {
+        /// Always recompute availableAreas and allAreas inside the builder so they update with state
+        final List<ListeningArea> availableAreas = <ListeningArea>[
+          ..._projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId),
+          ...newlyCreatedAreas.map((Map<String, dynamic> e) => e['area'] as ListeningArea),
+        ];
+        final List<String> selectedListeningAreaIds = List<String>.from(_selectedListeningAreaIds);
+
+        /// Combine assigned areas and available areas to show all
+        final List<ListeningArea> allAreas = <ListeningArea>[
+          ...serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId),
+          ...availableAreas.where(
+            (ListeningArea a) => !serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).any((ListeningArea b) => b.id == a.id),
+          ),
+        ];
+
         void updateStates() {
           setPopupState(() {});
           onStateUpdate();
+        }
+
+        /// Helper to get floor name for area
+        String getFloorNameForArea(ListeningArea area) {
+          final Map<String, dynamic> newArea = newlyCreatedAreas.firstWhere(
+            (Map<String, dynamic> e) => (e['area'] as ListeningArea).id == area.id,
+            orElse: () => <String, dynamic>{},
+          );
+          if (newArea.isNotEmpty) {
+            return newArea['floorName'] as String? ?? '';
+          }
+          final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+          return floorData?.name ?? '';
         }
 
         return SizedBox(
@@ -582,7 +715,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               ),
 
               /// Scrollable list
-              serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).isEmpty
+              allAreas.isEmpty
                   ? Container(
                     padding: const EdgeInsets.all(16),
                     child: FusionAppText(
@@ -597,24 +730,85 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     child: SingleChildScrollView(
                       child: Column(
                         children:
-                            serviceLocator<ProjectViewModel>().getListeningAreasForZone(zoneId: zoneId).map((ListeningArea area) {
-                              final FloorModel? floorData = _projectViewModel.getFloorForListeningArea(areaId: area.id);
+                            allAreas.map((ListeningArea area) {
+                              final String floorName = getFloorNameForArea(area);
                               final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
                               final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
                               return _buildLocationItem(
                                 context: context,
                                 area: area,
                                 zoneId: zoneId,
-                                onStateUpdate: updateStates,
+                                onStateUpdate: () {
+                                  if (selectedListeningAreaIds.contains(area.id)) {
+                                    selectedListeningAreaIds.remove(area.id);
+                                  } else {
+                                    selectedListeningAreaIds.add(area.id);
+                                  }
+                                  _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
+                                  updateStates();
+                                },
                                 availableAreas: availableAreas,
                                 zoneData: zoneData,
                                 isAvailable: isAvailable,
-                                floorData: floorData,
+                                floorData: null, // not used, see below
+                                floorName: floorName, // pass floorName here
                               );
                             }).toList(),
                       ),
                     ),
                   ),
+
+              /// Create New Location Section
+              CreateNewLocationWidget(
+                areaNameController: areaNameController,
+                isCreateAreaExpanded: isCreateAreaExpanded,
+                setDropdownState: setPopupState,
+                selectedFloor: selectedFloor,
+                selectedFloorId: selectedFloorId,
+                onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
+                  if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
+                    final ListeningArea newListeningArea = ListeningArea(
+                      name: locationName.trim(),
+                      vertices: <Offset>[
+                        const Offset(0, 0),
+                        const Offset(100, 0),
+                        const Offset(100, 100),
+                        const Offset(0, 100),
+                      ],
+                    );
+
+                    try {
+                      newlyCreatedAreas.add(<String, dynamic>{
+                        'area': newListeningArea,
+                        'floorId': floorId,
+                        'floorName': floorName,
+                      });
+                      // Select all newly created locations
+                      final List<String> allNewIds = newlyCreatedAreas.map((Map<String, dynamic> e) => (e['area'] as ListeningArea).id).toList();
+                      _selectedListeningAreaIds = allNewIds;
+                      setPopupState(() {});
+                      areaNameController.clear();
+                      isCreateAreaExpanded = false;
+
+                      FusionToast.success(
+                        context,
+                        message: "Listening area '$locationName' created successfully on floor '$floorName'",
+                      );
+                      onStateUpdate(); // Force parent rebuild so location count updates
+                    } catch (e) {
+                      FusionToast.error(
+                        context,
+                        message: "Failed to create listening area: $e",
+                      );
+                    }
+                  } else {
+                    FusionToast.error(
+                      context,
+                      message: "Please enter location name and select a floor",
+                    );
+                  }
+                },
+              ),
             ],
           ),
         );
@@ -632,6 +826,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     FloorModel? floorData,
     Zone? zoneData,
     required bool isAvailable,
+    String? floorName, // add this parameter
   }) {
     void toggleSelection() {
       if (_selectedListeningAreaIds.contains(area.id)) {
@@ -668,7 +863,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             /// Location name and zone
             Expanded(
               child: FusionAppText(
-                text: area.name.isNotEmpty ? "${floorData?.name}/${area.name}" : 'Unnamed Area',
+                text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontWeight: FontWeight.w500,
                   fontSize: 10,
@@ -692,29 +887,45 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Save new subzone
   void _saveSubZone(BuildContext context, String? zoneId) {
+    print("Started ______________________________");
     final SubZone newSubZone = SubZone(
-      id: 'subzone_${DateTime.now().millisecondsSinceEpoch}',
       name: _zoneNameController.text.trim(),
     );
 
-    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
-    viewModel.recordSnapshot();
-    viewModel.addSubZone(subZone: newSubZone, autoSave: false);
-    viewModel.addSubZoneToZone(
+    _projectViewModel.recordSnapshot();
+    newlyCreatedAreas.forEach((Map<String, dynamic> entry) {
+      final ListeningArea area = entry['area'] as ListeningArea;
+      final String floorId = entry['floorId'] as String;
+      // _projectViewModel.addFloor(floor: floor);
+
+      _projectViewModel.addListeningArea(area: area, floorId: floorId);
+    });
+    // _projectViewModel.addListeningArea(area: , floorId: floorId);
+    _projectViewModel.addSubZone(subZone: newSubZone, autoSave: false);
+    _projectViewModel.addSubZoneToZone(
       subZoneId: newSubZone.id,
       parentZoneId: zoneId ?? "",
       autoSave: false,
     );
-    viewModel.updateListeningAreasInSubZone(
+
+    _projectViewModel.updateListeningAreasInSubZone(
       subZoneId: newSubZone.id,
       listeningAreaIds: _selectedListeningAreaIds,
       autoSave: false,
     );
-    viewModel.saveProject();
+    print("Ended ______________________________");
+
+    _projectViewModel.saveProject();
 
     Navigator.of(context).pop(); // Close subzone popup
     Navigator.of(context).pop(); // Close kebab menu
     _zoneNameController.clear();
     _selectedListeningAreaIds.clear();
+    newlyCreatedAreas.clear();
+  }
+
+  /// Called when a new speaker is added to the zone
+  void onSpeakerAdded() {
+    _isZoneExpanded.value = true;
   }
 }
