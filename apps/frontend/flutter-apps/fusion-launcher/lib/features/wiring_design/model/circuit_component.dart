@@ -65,11 +65,11 @@ class CircuitComponent extends CanvasElement {
     final CircuitComponent circuitComponent = CircuitComponent(
       id: data.id,
       position:
-          (parent?.position ?? Offset.zero) +
-          Offset(
-            10,
-            parent?.size.height ?? 0,
-          ), //Offset(100, 100.0 * index),
+      // (parent?.position ?? Offset.zero) +
+      Offset(
+        10,
+        parent?.size.height ?? 0,
+      ), //Offset(100, 100.0 * index),
       // ports: ports,
       data: data,
     );

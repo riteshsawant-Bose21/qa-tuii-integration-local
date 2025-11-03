@@ -317,7 +317,7 @@ class SubZoneComponentData extends ComponentData {
   @override
   double get portRadius => 0;
   @override
-  String get type => 'zone';
+  String get type => 'subzone';
 }
 
 class CircuitComponentData extends ComponentData {
@@ -363,7 +363,7 @@ class CircuitComponentData extends ComponentData {
   @override
   double get portRadius => 0;
   @override
-  String get type => 'zone';
+  String get type => 'circuit';
 }
 
 class SpeakerComponentData extends ComponentData {
