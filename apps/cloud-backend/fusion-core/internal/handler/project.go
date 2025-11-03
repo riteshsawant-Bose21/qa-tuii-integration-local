@@ -13,7 +13,14 @@ type ProjectHandler struct {
 	project fusion.Project
 }
 
-func NewProjectHandler(projectSvc fusion.Project) *ProjectHandler {
+type ProjectSVC interface {
+	CreateProject(ctx context.Context, project *fusion.ProjectCreateRequest) error
+	GetAllProjects(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error)
+	UpdateProject(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error
+	DeleteProject(ctx context.Context, id string) error
+}
+
+func NewProjectHandler(projectSvc ProjectSVC) *ProjectHandler {
 	return &ProjectHandler{
 		project: project,
 	}
@@ -31,7 +38,7 @@ func NewProjectHandler(projectSvc fusion.Project) *ProjectHandler {
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
-	var p types.Project
+	var p fusion.ProjectCreateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -40,34 +47,8 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(201, p)
-}
 
-// GetProject retrieves a project by ID.
-// @Summary Get project by ID
-// @Description Get a specific project by its unique identifier
-// @Tags projects
-// @Accept json
-// @Produce json
-// @Param id path string true "Project ID"
-// @Success 200 {object} types.Project "Successfully retrieved project"
-// @Failure 404 {object} map[string]string "Project not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /projects/{id} [get]
-func (h *ProjectHandler) GetProject(ctx *gin.Context) {
-	id := ctx.Param("id")
-	project, err := h.project.GetByID(ctx, id)
-	if err != nil {
-		// Check if it's a "not found" error
-		if err.Error() == "project not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(404, gin.H{"error": "Project not found"})
-			return
-		}
-		// All other errors are internal server errors
-		ctx.JSON(500, gin.H{"error": "Internal server error"})
-		return
-	}
-	ctx.JSON(200, project)
+	ctx.JSON(http.StatusCreated, p)
 }
 
 // GetProjects retrieves all projects.
@@ -79,13 +60,35 @@ func (h *ProjectHandler) GetProject(ctx *gin.Context) {
 // @Success 200 {array} types.Project "Successfully retrieved all projects"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [get]
-func (h *ProjectHandler) GetProjects(ctx *gin.Context) {
-	projects, err := h.project.GetAll(ctx)
+func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
+
+	params := fusion.GetAllProjectsParams{}
+	if err := ctx.ShouldBindQuery(&params); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if params.SortBy == "" {
+		params.SortBy = "updated_at"
+	} else if params.SortBy != "created_at" && params.SortBy != "updated_at" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort_by parameter"})
+		return
+	}
+
+	if params.SortOrder == "" {
+		params.SortOrder = "desc"
+	} else if params.SortOrder != "asc" && params.SortOrder != "desc" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort_order parameter"})
+		return
+	}
+
+	projects, err := h.project.GetAllProjects(ctx, &params)
 	if err != nil {
 		ctx.JSON(500, gin.H{"error": err.Error()})
 		return
 	}
-	ctx.JSON(200, projects)
+
+	ctx.JSON(http.StatusOK, projects)
 }
 
 // UpdateProject updates an existing project.
@@ -103,7 +106,7 @@ func (h *ProjectHandler) GetProjects(ctx *gin.Context) {
 // @Router /projects/{id} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var p types.Project
+	var p fusion.ProjectUpdateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -151,31 +154,4 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 type SyncProjectRequest struct {
 	MetaData   map[string]interface{} `json:"meta_data" example:"{\"version\": \"1.0\", \"updated_by\": \"user123\"}" validate:"required"`
 	ZipFileURL string                 `json:"zip_file_url" example:"https://example.com/project.zip" validate:"required,url"`
-}
-
-// SyncProject triggers synchronization for a project by ID.
-// @Summary Sync project
-// @Description Synchronize project data with external source using metadata and ZIP file URL
-// @Tags projects
-// @Accept json
-// @Produce json
-// @Param id path string true "Project ID"
-// @Param syncRequest body SyncProjectRequest true "Sync request containing metadata and ZIP file URL"
-// @Success 200 {object} map[string]string "Successfully initiated project sync"
-// @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
-// @Failure 404 {object} map[string]string "Project not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /projects/{id}/sync [post]
-func (h *ProjectHandler) SyncProject(ctx *gin.Context) {
-	id := ctx.Param("id")
-	var req types.SyncProjectRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
-		ctx.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
-	if err := h.project.SyncProject(ctx, id, req.MetaData, req.ZipFileURL); err != nil {
-		ctx.JSON(500, gin.H{"error": err.Error()})
-		return
-	}
-	ctx.JSON(200, gin.H{"message": "Project sync initiated"})
 }

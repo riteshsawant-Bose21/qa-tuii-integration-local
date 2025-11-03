@@ -4,9 +4,27 @@
 package models
 
 var TableNames = struct {
-	Products string
-	Projects string
+	AccessLevel       string
+	Account           string
+	AccountTypeRole   string
+	AccountsType      string
+	Feature           string
+	FeaturePermission string
+	Products          string
+	Project           string
+	ProjectUser       string
+	Roles             string
+	User              string
 }{
-	Products: "products",
-	Projects: "projects",
+	AccessLevel:       "access_level",
+	Account:           "account",
+	AccountTypeRole:   "account_type_role",
+	AccountsType:      "accounts_type",
+	Feature:           "feature",
+	FeaturePermission: "feature_permission",
+	Products:          "products",
+	Project:           "project",
+	ProjectUser:       "project_user",
+	Roles:             "roles",
+	User:              "user",
 }

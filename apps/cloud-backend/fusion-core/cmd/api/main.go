@@ -25,6 +25,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
@@ -89,12 +90,25 @@ func main() {
 		logger.Fatal("Failed to initialize ID service")
 	}
 	logger.Info("Initialized ID Service.")
+
 	//Initialize Product DB Service
 	productDBSvc := productdb.NewService(pgs)
 	if productDBSvc == nil {
 		logger.Fatal("Failed to initialize product database service")
 	}
 	logger.Info("Initialized Product DB Service.")
+
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), "", "", "us-east2")
+
+	if err != nil {
+		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
+	}
+	logger.Info("Initialized S3")
+
+	if err != nil {
+		logger.Fatal("Failed to initialize Presign S3 client", zap.Error(err))
+	}
+	logger.Info("Initialized Presign S3 Client.")
 
 	// Initialize Project DB Service
 	projectDBSvc := projectdb.NewService(pgs)
@@ -109,8 +123,10 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
+	presignHandler := s3Handler.Bucket("uc.st")
+
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc)
+	projectSVC := project.NewService(projectDBSvc, presignHandler)
 	if projectSVC == nil {
 		logger.Fatal("Failed to initialize project service")
 	}

@@ -19,11 +19,8 @@ func (a *API) registerRoutes() {
 	projects := v1.Group("/projects")
 	{
 		projects.POST("", projectHandler.CreateProject)
-		projects.GET("/:id", projectHandler.GetProject)
-		projects.GET("", projectHandler.GetProjects) // Optional: List all projects
+		projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
 		projects.PATCH("/:id", projectHandler.UpdateProject)
 		projects.DELETE("/:id", projectHandler.DeleteProject)
-
-		projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
 	}
 }

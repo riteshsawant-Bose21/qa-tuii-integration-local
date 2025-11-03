@@ -50,3 +50,18 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	strmangle.PutBuffer(buf)
 	return str
 }
+
+// Enum values for AccountsTypeEnum
+const (
+	AccountsTypeEnumAdmin    string = "admin"
+	AccountsTypeEnumReseller string = "reseller"
+	AccountsTypeEnumRetail   string = "retail"
+)
+
+func AllAccountsTypeEnum() []string {
+	return []string{
+		AccountsTypeEnumAdmin,
+		AccountsTypeEnumReseller,
+		AccountsTypeEnumRetail,
+	}
+}

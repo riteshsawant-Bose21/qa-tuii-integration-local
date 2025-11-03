@@ -3,9 +3,10 @@ package db
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
+	"time"
 
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -16,11 +17,29 @@ import (
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
-type Service struct {
-	db *sql.DB
+// Executor can perform SQL queries.
+type DBExecutor interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
 }
 
-func NewService(db *sql.DB) *Service {
+// ContextExecutor can perform SQL queries with context
+type DBContextExecutor interface {
+	DBExecutor
+
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+}
+
+// Service is a service for managing projects in the database.
+type Service struct {
+	db DBContextExecutor
+}
+
+// NewService creates a new database service.
+func NewService(db DBContextExecutor) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
@@ -31,7 +50,7 @@ func NewService(db *sql.DB) *Service {
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.Project) error {
+func (s *Service) Insert(ctx context.Context, project *fusion.ProjectCreateRequest) error {
 	if project == nil {
 		return errors.New("project cannot be nil")
 	}
@@ -40,26 +59,24 @@ func (s *Service) Insert(ctx context.Context, project *types.Project) error {
 		project.ID = uuid.New().String()
 	}
 
-	budgetJSON, err := json.Marshal(project.Budget)
+	// TODO: need to determine if accountId should be string or int
+	accountID, err := strconv.Atoi(project.AccountID)
 	if err != nil {
-		return fmt.Errorf("failed to marshal budget: %v", err)
-	}
-	metaDataJSON, err := json.Marshal(project.MetaData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta_data: %v", err)
+		return fmt.Errorf("failed to convert account ID to int: %v", err)
 	}
 
 	row := &model.Project{
-		ID:             project.ID,
-		OrganizationID: project.OrganizationID,
-		Name:           project.Name,
-		Description:    null.NewString(project.Description, project.Description != ""),
-		Venue:          null.NewString(project.Venue, project.Venue != ""),
-		VenueType:      null.NewString(project.VenueType, project.VenueType != ""),
-		Application:    null.NewString(project.Application, project.Application != ""),
-		Budget:         null.JSONFrom(budgetJSON),
-		MetaData:       null.JSONFrom(metaDataJSON),
-		ProjectFileURL: null.NewString(project.ProjectFileURL, project.ProjectFileURL != ""),
+		ID:                    project.ID,
+		PrimaryOwnerAccountID: accountID,
+		Name:                  null.NewString(project.Name, project.Name != ""),
+		Description:           null.NewString(project.Description, project.Description != ""),
+		Venue:                 null.NewString(project.Venue, project.Venue != ""),
+		EnvironmentType:       null.NewString(project.EnvironmentType, project.EnvironmentType != ""),
+		Application:           null.NewString(project.Application, project.Application != ""),
+		BudgetAmount:          project.Budget.Amount,
+		Currency:              null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
 	}
 
 	err = row.Insert(ctx, s.db, boil.Infer())
@@ -69,33 +86,21 @@ func (s *Service) Insert(ctx context.Context, project *types.Project) error {
 	return nil
 }
 
-// SelectByID retrieves a project by its ID.
-func (s *Service) SelectByID(ctx context.Context, id string) (*types.Project, error) {
-	if id == "" {
-		return nil, errors.New("id cannot be empty")
-	}
-	row, err := model.Projects(model.ProjectWhere.ID.EQ(id)).One(ctx, s.db)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, fmt.Errorf("project not found: %v", id)
-		}
-		return nil, fmt.Errorf("failed to get project by id: %v", err)
-	}
-	project, err := newProject(row)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert project: %v", err)
-	}
-	return project, nil
-}
-
 // SelectAll retrieves all projects from the database.
-func (s *Service) SelectAll(ctx context.Context) ([]*types.Project, error) {
-	// Retrieve all projects from the database.
-
-	var q []qm.QueryMod
-
+func (s *Service) SelectAll(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error) {
+	// Retrieve all archived/unarchived projects from the database.
 	// Get the rows by running the query.
-	rows, err := model.Projects(q...).All(ctx, s.db)
+	order := "ASC"
+	if queryParams.SortOrder == "desc" || queryParams.SortOrder == "DESC" {
+		order = "DESC"
+	}
+
+	rows, err := model.Projects(
+		qm.Where("is_archived = ?", queryParams.IsArchived),
+		qm.And("is_deleted = ?", false),
+		qm.OrderBy(fmt.Sprintf("%s %s", queryParams.SortBy, order)),
+	).All(ctx, s.db)
+
 	if err != nil {
 		return nil, fmt.Errorf("can't get rows: %v", err)
 	}
@@ -113,7 +118,7 @@ func (s *Service) SelectAll(ctx context.Context) ([]*types.Project, error) {
 }
 
 // Update updates an existing project in the database.
-func (s *Service) Update(ctx context.Context, id string, project *types.Project) error {
+func (s *Service) Update(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error {
 	if id == "" {
 		return errors.New("id cannot be empty")
 	}
@@ -129,24 +134,54 @@ func (s *Service) Update(ctx context.Context, id string, project *types.Project)
 		return fmt.Errorf("failed to get project by id: %v", err)
 	}
 
-	budgetJSON, err := json.Marshal(project.Budget)
+	row.PrimaryOwnerAccountID, err = strconv.Atoi(project.AccountID)
 	if err != nil {
-		return fmt.Errorf("failed to marshal budget: %v", err)
-	}
-	metaDataJSON, err := json.Marshal(project.MetaData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta_data: %v", err)
+		return fmt.Errorf("failed to convert account ID to int: %v", err)
 	}
 
-	row.OrganizationID = project.OrganizationID
-	row.Name = project.Name
-	row.Description = null.NewString(project.Description, project.Description != "")
-	row.Venue = null.NewString(project.Venue, project.Venue != "")
-	row.VenueType = null.NewString(project.VenueType, project.VenueType != "")
-	row.Application = null.NewString(project.Application, project.Application != "")
-	row.Budget = null.JSONFrom(budgetJSON)
-	row.MetaData = null.JSONFrom(metaDataJSON)
-	row.ProjectFileURL = null.NewString(project.ProjectFileURL, project.ProjectFileURL != "")
+	if project.Name != "" {
+		row.Name = null.NewString(project.Name, project.Name != "")
+	}
+
+	if project.Description != "" {
+		row.Description = null.NewString(project.Description, project.Description != "")
+	}
+
+	if project.Venue != "" {
+		row.Venue = null.NewString(project.Venue, project.Venue != "")
+	}
+
+	if project.EnvironmentType != "" {
+		row.EnvironmentType = null.NewString(project.EnvironmentType, project.EnvironmentType != "")
+	}
+
+	if project.Application != "" {
+		row.Application = null.NewString(project.Application, project.Application != "")
+	}
+
+	if project.Budget.Currency != "" {
+		row.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
+	}
+
+	if project.Budget.Amount != 0 {
+		row.BudgetAmount = project.Budget.Amount
+	}
+
+	if project.IsArchived {
+		row.IsArchived = project.IsArchived
+	}
+
+	// TODO: Need to implement once user logic is finalized
+	// if project.IsStarred {
+	//
+	// }
+
+	// TODO: Need to implement once user logic and locking is finalized
+	// if project.LockProject {
+	//
+	// }
+
+	row.UpdatedAt = time.Now()
 
 	_, err = row.Update(ctx, s.db, boil.Infer())
 	if err != nil {
@@ -166,35 +201,12 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 		}
 		return fmt.Errorf("failed to get project by id: %v", err)
 	}
-	_, err = row.Delete(ctx, s.db)
-	if err != nil {
-		return fmt.Errorf("failed to delete project: %v", err)
-	}
-	return nil
-}
 
-func (s *Service) SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error {
-	if projectID == "" {
-		return errors.New("projectID cannot be empty")
-	}
-	row, err := model.Projects(model.ProjectWhere.ID.EQ(projectID)).One(ctx, s.db)
-	if err != nil {
-		return fmt.Errorf("failed to get project: %v", err)
-	}
-
-	// Placeholder: Upload zipFileURL to AWS S3 and get the file URL
-	// TODO: Implement actual S3 upload logic here
-	// For now, use the provided zipFileURL as the S3 URL
-
-	row.ProjectFileURL = null.NewString(zipFileURL, zipFileURL != "")
-	metaDataJSON, err := json.Marshal(metaData)
-	if err != nil {
-		return fmt.Errorf("failed to marshal meta_data: %v", err)
-	}
-	row.MetaData = null.JSONFrom(metaDataJSON)
+	row.IsDeleted = true
+	row.UpdatedAt = time.Now()
 	_, err = row.Update(ctx, s.db, boil.Infer())
 	if err != nil {
-		return fmt.Errorf("failed to update ProjectFileURL: %v", err)
+		return fmt.Errorf("failed to delete project: %v", err)
 	}
 	return nil
 }
