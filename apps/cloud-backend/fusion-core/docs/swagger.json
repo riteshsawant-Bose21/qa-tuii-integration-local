@@ -151,7 +151,19 @@
                     "400": {
                         "description": "Bad request - Invalid query parameters",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized do perform this action",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
@@ -193,7 +205,16 @@
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid payload or user not found",
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized to perform this action",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -207,7 +228,7 @@
                 }
             }
         },
-        "/projects/{projectId}": {
+        "/projects/{id}": {
             "delete": {
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
@@ -233,8 +254,17 @@
                     "204": {
                         "description": "Successfully deleted project"
                     },
-                    "400": {
-                        "description": "Bad request - Missing user ID",
+                    "401": {
+                        "description": "Unauthorized to perform this action",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -291,7 +321,7 @@
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully updated project",
+                        "description": "Successfully created project",
                         "schema": {
                             "$ref": "#/definitions/types.ProjectUpdateResponse"
                         }
@@ -308,58 +338,8 @@
                             "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
-                    "404": {
-                        "description": "Project or user not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
-                        }
-                    }
-                }
-            }
-        },
-        "/projects/{projectId}/archive": {
-            "post": {
-                "description": "Archive or unarchive a project based on request body",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Update project archive status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Archive/unarchive request",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.ProjectArchiveRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Project archive status updated successfully"
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid payload",
+                    "401": {
+                        "description": "Unauthorized to perform this action",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -649,28 +629,12 @@
                 }
             }
         },
-        "types.BadRequestError": {
+        "types.Budget": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
                     "example": "Bad Request"
-                }
-            }
-        },
-        "types.Budget": {
-            "type": "object",
-            "required": [
-                "currency"
-            ],
-            "properties": {
-                "amount": {
-                    "type": "integer",
-                    "example": 50000
-                },
-                "currency": {
-                    "type": "string",
-                    "example": "USD"
                 }
             }
         },
@@ -875,15 +839,6 @@
                 "EnvironmentTypeHybrid"
             ]
         },
-        "types.ForbiddenError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Forbidden"
-                }
-            }
-        },
         "types.GetAllProjectsResponse": {
             "type": "object",
             "properties": {
@@ -894,34 +849,13 @@
                     }
                 },
                 "page": {
-                    "type": "integer",
-                    "example": 1
+                    "type": "integer"
                 },
                 "total_count": {
-                    "type": "integer",
-                    "example": 25
+                    "type": "integer"
                 },
                 "total_pages": {
-                    "type": "integer",
-                    "example": 3
-                }
-            }
-        },
-        "types.InternalServerError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Internal Server Error"
-                }
-            }
-        },
-        "types.NotFoundError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Not Found"
+                    "type": "integer"
                 }
             }
         },
@@ -951,6 +885,9 @@
         "types.Project": {
             "type": "object",
             "properties": {
+                "account_id": {
+                    "type": "string"
+                },
                 "application": {
                     "type": "string",
                     "example": "Audio System Design"
@@ -959,8 +896,7 @@
                     "$ref": "#/definitions/types.Budget"
                 },
                 "created_at": {
-                    "type": "string",
-                    "example": "2023-10-15T14:30:00Z"
+                    "type": "string"
                 },
                 "description": {
                     "type": "string",
@@ -974,25 +910,24 @@
                     ],
                     "example": "indoor"
                 },
+                "environment_type": {
+                    "$ref": "#/definitions/types.EnvironmentType"
+                },
                 "id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "is_archived": {
-                    "type": "boolean",
-                    "example": false
+                    "type": "boolean"
                 },
                 "is_starred": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "boolean"
                 },
                 "locked_by_user": {
-                    "type": "string",
-                    "example": "user456"
+                    "type": "string"
                 },
                 "name": {
-                    "type": "string",
-                    "example": "Conference Room Audio Setup"
+                    "type": "string"
                 },
                 "project_file_url": {
                     "type": "string",
@@ -1014,88 +949,52 @@
                     "type": "string",
                     "example": "2023-10-20T16:45:00Z"
                 },
+                "project_phase": {
+                    "$ref": "#/definitions/types.ProjectPhase"
+                },
+                "thumbnail_url": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
                 "venue": {
-                    "type": "string",
-                    "example": "Building A - Conference Room 101"
-                }
-            }
-        },
-        "types.ProjectArchiveRequest": {
-            "type": "object",
-            "properties": {
-                "archive": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "string"
                 }
             }
         },
         "types.ProjectCreateRequest": {
             "type": "object",
-            "required": [
-                "application",
-                "budget",
-                "environment_type",
-                "name",
-                "user_id"
-            ],
             "properties": {
+                "account_id": {
+                    "type": "string"
+                },
                 "application": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1,
-                    "example": "Audio System Design"
+                    "type": "string"
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string",
-                    "maxLength": 1000,
-                    "example": "Professional audio system for corporate conference room"
+                    "type": "string"
                 },
                 "environment_type": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/types.EnvironmentType"
-                        }
-                    ],
-                    "example": "indoor"
+                    "$ref": "#/definitions/types.EnvironmentType"
                 },
                 "id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                    "type": "string"
                 },
                 "is_project_file_created": {
-                    "type": "boolean",
-                    "example": false
-                },
-                "is_project_thumbnail_created": {
-                    "type": "boolean",
-                    "example": false
+                    "type": "boolean"
                 },
                 "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1,
-                    "example": "Conference Room Audio Setup"
+                    "type": "string"
                 },
                 "project_phase": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/types.ProjectPhase"
-                        }
-                    ],
-                    "example": "Proposal"
-                },
-                "user_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "example": "user123"
+                    "$ref": "#/definitions/types.ProjectPhase"
                 },
                 "venue": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "example": "Building A - Conference Room 101"
+                    "type": "string"
                 }
             }
         },
@@ -1103,25 +1002,10 @@
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                    "type": "string"
                 },
                 "project_upload_url": {
-                    "type": "string",
-                    "example": "https://storage.example.com/upload/projects/123e4567"
-                },
-                "thumbnail_upload_url": {
-                    "type": "string",
-                    "example": "https://storage.example.com/upload/projects/123e4567"
-                }
-            }
-        },
-        "types.ProjectLockRequest": {
-            "type": "object",
-            "properties": {
-                "is_locked": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "string"
                 }
             }
         },
@@ -1138,75 +1022,47 @@
                 "ProjectPhaseCommissioned"
             ]
         },
-        "types.ProjectStarRequest": {
-            "type": "object",
-            "properties": {
-                "is_starred": {
-                    "type": "boolean",
-                    "example": true
-                }
-            }
-        },
         "types.ProjectUpdateRequest": {
             "type": "object",
             "properties": {
                 "account_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "example": "account456"
+                    "type": "string"
                 },
                 "application": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1,
-                    "example": "Audio System Design"
+                    "type": "string"
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string",
-                    "maxLength": 1000,
-                    "example": "Updated professional audio system for corporate conference room"
+                    "type": "string"
                 },
                 "environment_type": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/types.EnvironmentType"
-                        }
-                    ],
-                    "example": "indoor"
+                    "$ref": "#/definitions/types.EnvironmentType"
                 },
                 "id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                    "type": "string"
+                },
+                "is_archived": {
+                    "type": "boolean"
                 },
                 "is_project_file_dirty": {
-                    "type": "boolean",
-                    "example": true
+                    "type": "boolean"
                 },
-                "is_project_thumbnail_dirty": {
-                    "type": "boolean",
-                    "example": true
+                "is_starred": {
+                    "type": "boolean"
+                },
+                "lock_project": {
+                    "type": "boolean"
                 },
                 "name": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "minLength": 1,
-                    "example": "Updated Conference Room Audio Setup"
+                    "type": "string"
                 },
                 "project_phase": {
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/types.ProjectPhase"
-                        }
-                    ],
-                    "example": "Development"
+                    "$ref": "#/definitions/types.ProjectPhase"
                 },
                 "venue": {
-                    "type": "string",
-                    "maxLength": 255,
-                    "example": "Building B - Conference Room 205"
+                    "type": "string"
                 }
             }
         },
@@ -1214,12 +1070,7 @@
             "type": "object",
             "properties": {
                 "project_upload_url": {
-                    "type": "string",
-                    "example": "https://storage.example.com/upload/projects/123e4567"
-                },
-                "thumbnail_upload_url": {
-                    "type": "string",
-                    "example": "https://storage.example.com/upload/projects/123e4567"
+                    "type": "string"
                 }
             }
         },

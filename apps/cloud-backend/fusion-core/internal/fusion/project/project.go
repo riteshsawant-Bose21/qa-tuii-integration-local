@@ -25,7 +25,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 }
 
 // GetAllProjects retrieves all projects.
-func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
+func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) (*types.GetAllProjectsResponse, error) {
 	projects, err := s.dbService.SelectAll(ctx, queryParams)
 
 	if err != nil {
@@ -44,7 +44,21 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 		project.ProjectFileURL = presignURL
 	}
 
-	return projects, nil
+	// Convert []*types.Project to []types.Project for the response
+	projectList := make([]types.Project, len(projects))
+	for i, project := range projects {
+		projectList[i] = *project
+	}
+
+	// Create response with pagination info (for now using basic values)
+	response := &types.GetAllProjectsResponse{
+		Data:       projectList,
+		TotalCount: len(projectList),
+		Page:       1,
+		TotalPages: 1,
+	}
+
+	return response, nil
 }
 
 // UpdateProject modifies an existing project.

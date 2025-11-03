@@ -81,76 +81,27 @@ fusion-core/
 │   ├── swagger.json
 │   └── swagger.yaml
 ├── internal/
-│   ├── api/                    # API routing and middleware
-│   │   ├── types/
-│   │   │   ├── product.go      # Product domain models
-│   │   │   └── project.go      # Project domain models
-│   │   ├── config.go           # API configuration
-│   │   ├── routes.go           # Route definitions
-│   │   └── service.go          # API service layer
-│   ├── config/                 # Configuration management
-│   │   ├── config.go           # Main configuration
-│   │   ├── postgres.go         # PostgreSQL configuration
-│   │   └── s3.go               # S3 configuration
-│   ├── environment/            # Environment handling
-│   │   ├── environment.go      # Environment utilities
-│   │   └── load_lookuper.go    # Configuration lookup
-│   ├── fusion/                 # Business logic and models
-│   │   ├── id/
-│   │   │   └── service.go      # ID generation service
-│   │   ├── model/              # Database models
-│   │   │   ├── custom_models.go # Custom model definitions
-│   │   │   ├── db.go           # Database connection
-│   │   │   ├── sqlboiler.toml  # SQLBoiler configuration
-│   │   │   └── models/         # Generated SQLBoiler models
-│   │   │       ├── *.go        # Auto-generated model files
-│   │   │       └── *_test.go   # Auto-generated test files
-│   │   ├── product/            # Product service layer
-│   │   │   ├── db/
-│   │   │   │   ├── model_product.go # Product database models
-│   │   │   │   └── service.go  # Product database service
-│   │   │   ├── product.go      # Product business logic
-│   │   │   └── service.go      # Product service interface
-│   │   ├── project/            # Project service layer
-│   │   │   ├── db/
-│   │   │   │   ├── model_project.go     # Project database models
-│   │   │   │   ├── model_project_test.go # Project model tests
-│   │   │   │   ├── service.go           # Project database service
-│   │   │   │   └── service_test.go      # Project service tests
-│   │   │   ├── project.go      # Project business logic
-│   │   │   ├── project_test.go # Project business logic tests
-│   │   │   └── service.go      # Project service interface
-│   │   ├── product.go          # Product domain models
-│   │   └── project.go          # Project domain models
-│   ├── handler/                # HTTP request handlers
-│   │   ├── product.go          # Product API handlers
-│   │   ├── project.go          # Project API handlers
-│   │   └── project_test.go     # Project handler tests
-│   ├── log/                    # Logging configuration
-│   │   └── log.go              # Logger setup and utilities
-│   ├── storage/                # Database and storage layers
-│   │   ├── cloudfs/            # Cloud filesystem (S3)
-│   │   │   ├── cloudfs.go      # Cloud filesystem interface
-│   │   │   ├── s3.go           # S3 implementation
-│   │   │   └── s3_test.go      # S3 implementation tests
-│   │   └── sql/                # SQL database connections
-│   │       ├── postgres.go     # PostgreSQL implementation
-│   │       └── sql.go          # SQL interface
-│   ├── tests/                  # Integration tests
-│   │   └── project_integration_test.go # Project integration tests
-│   └── validation/             # Input validation
-│       ├── validator.go        # Validation logic
-│       └── validator_test.go   # Validation tests
-├── migration/                  # Database migrations
-│   ├── fusion_cloud.sql        # Main database schema
-│   ├── products.sql            # Product table schema
-│   └── test_data.sql           # Test data insertions
-├── scripts/
-│   └── lint.sh                 # Linting script
-├── moon.yml                    # Moon build configuration
-├── README.md                   # Project documentation
-├── go.mod                      # Go module dependencies
-└── go.sum                      # Go module checksums
+│   ├── api/                     # API routing and middleware
+|   |   ├── types/
+|   |   |      ├── product.go    #  Product domain models
+|   |   |      └── project.go    #  Project domain models
+│   │   ├── routes.go
+│   │   └── service.go
+│   ├── fusion/                  # Business logic and models
+│   │   ├── product.go           # Product domain models
+│   │   ├── project.go           # Project domain models
+│   │   ├── model/               # Database models
+│   │   ├── product/             # Product service layer
+│   │   └── project/             # Project service layer
+│   ├── handler/                 # HTTP request handlers
+│   │   ├── product.go
+│   │   └── project.go
+│   ├── log/                     # Logging configuration
+│   └── storage/                 # Database and storage layers
+│       ├── cloudfs/             # Cloud filesystem (S3)
+│       └── sql/                 # SQL database connections
+├── migration/                   # Database migrations
+└── go.mod                      # Go module dependencies
 ```
 
 ### Service Architecture

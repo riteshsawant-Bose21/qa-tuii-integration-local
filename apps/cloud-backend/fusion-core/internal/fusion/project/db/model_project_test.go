@@ -3,6 +3,7 @@ package db
 import (
 	"testing"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -15,11 +16,11 @@ func TestNewProject(t *testing.T) {
 			PrimaryOwnerAccountID: 123,
 			Name:                  null.NewString("Test Project", true),
 			Description:           null.NewString("Test Description", true),
-			Venue:                null.NewString("Test Venue", true),
+			Venue:                 null.NewString("Test Venue", true),
 			EnvironmentType:       null.NewString("Indoor", true),
 			Application:           null.NewString("Test App", true),
-			BudgetAmount:         1000.0,
-			Currency:             null.NewString("USD", true),
+			BudgetAmount:          1000.0,
+			Currency:              null.NewString("USD", true),
 		}
 
 		project, err := newProject(row)
@@ -30,7 +31,7 @@ func TestNewProject(t *testing.T) {
 		assert.Equal(t, row.Name.String, project.Name)
 		assert.Equal(t, row.Description.String, project.Description)
 		assert.Equal(t, row.Venue.String, project.Venue)
-		assert.Equal(t, row.EnvironmentType.String, project.EnvironmentType)
+		assert.Equal(t, types.EnvironmentType(row.EnvironmentType.String), project.EnvironmentType)
 		assert.Equal(t, row.Application.String, project.Application)
 		assert.Equal(t, row.BudgetAmount, project.Budget.Amount)
 		assert.Equal(t, row.Currency.String, project.Budget.Currency)
@@ -42,11 +43,11 @@ func TestNewProject(t *testing.T) {
 			PrimaryOwnerAccountID: 123,
 			Name:                  null.NewString("Test Project", true),
 			Description:           null.NewString("", false),
-			Venue:                null.NewString("", false),
+			Venue:                 null.NewString("", false),
 			EnvironmentType:       null.NewString("", false),
 			Application:           null.NewString("", false),
-			BudgetAmount:         1000.0,
-			Currency:             null.NewString("", false),
+			BudgetAmount:          1000.0,
+			Currency:              null.NewString("", false),
 		}
 
 		project, err := newProject(row)
@@ -54,7 +55,7 @@ func TestNewProject(t *testing.T) {
 		assert.NotNil(t, project)
 		assert.Equal(t, "", project.Description)
 		assert.Equal(t, "", project.Venue)
-		assert.Equal(t, "", project.EnvironmentType)
+		assert.Equal(t, types.EnvironmentType(""), project.EnvironmentType)
 		assert.Equal(t, "", project.Application)
 		assert.Equal(t, "", project.Budget.Currency)
 	})

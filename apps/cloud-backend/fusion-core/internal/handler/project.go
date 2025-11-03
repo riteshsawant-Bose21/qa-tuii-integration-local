@@ -31,8 +31,9 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Produce json
 // @Param body body types.ProjectCreateRequest true "Project details"
 // @Success 201 {object} types.ProjectCreateResponse "Successfully created project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload or user not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} map[string]string "Bad request - Invalid payload"
+// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	var p types.ProjectCreateRequest
@@ -58,8 +59,9 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Param sort_by query string false "Field to sort projects by (e.g., created_at, updated_at)"
 // @Param sort_order query string false "Sort order (ascending or descending)" Enums(asc, desc)
 // @Success 200 {object} types.GetAllProjectsResponse "Successfully retrieved all projects"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid query parameters"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Failure 400 {object} map[string]string "Bad request - Invalid query parameters"
+// @Failure 401 {object} map[string]string "Unauthorized do perform this action"
+// @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
@@ -83,13 +85,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 		return
 	}
 
-	projects, err := h.project.GetAllProjects(ctx, &params)
+	response, err := h.project.GetAllProjects(ctx, &params)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, projects)
+	ctx.JSON(http.StatusOK, response)
 }
 
 // UpdateProject updates an existing project.
@@ -98,14 +100,14 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param projectId path string true "Project ID"
+// @Param id path string true "Project ID"
 // @Param body body types.ProjectUpdateRequest true "Updated project details"
-// @Success 200 {object} types.ProjectUpdateResponse "Successfully updated project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or user not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId} [patch]
+// @Success 200 {object} types.ProjectUpdateResponse "Successfully created project"
+// @Failure 400 {object} map[string]string "Bad request - Invalid payload"
+// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
+// @Failure 404 {object} map[string]string "Project not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /projects/{id} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	id := ctx.Param("id")
 	var p types.ProjectUpdateRequest
@@ -173,11 +175,10 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Produce json
 // @Param projectId path string true "Project ID"
 // @Success 204 "Successfully deleted project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or user not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId} [delete]
+// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
+// @Failure 404 {object} map[string]string "Project not found"
+// @Failure 500 {object} map[string]string "Internal server error"
+// @Router /projects/{id} [delete]
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userID := ctx.Query("user_id")

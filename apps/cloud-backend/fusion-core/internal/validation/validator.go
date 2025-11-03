@@ -3,10 +3,10 @@ package validation
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
-	"github.com/google/uuid"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
@@ -22,7 +22,7 @@ func init() {
 	validate.RegisterValidation("currency", validateCurrency)
 	validate.RegisterValidation("sort_order", validateSortOrder)
 	validate.RegisterValidation("project_sort_field", validateProjectSortField)
-	validate.RegisterValidation("uuid", ValidateUUID)
+	validate.RegisterValidation("uuid", validateUUID)
 }
 
 // ValidateProjectCreateRequest validates a project create request
@@ -31,17 +31,20 @@ func ValidateProjectCreateRequest(req *types.ProjectCreateRequest) error {
 		return errors.New("request cannot be nil")
 	}
 
-	// Set default project phase if empty
-	if req.ProjectPhase == "" {
-		req.ProjectPhase = types.ProjectPhaseProposal
-	}
-
 	// Add struct tags validation
 	if err := validate.Struct(req); err != nil {
 		return formatValidationError(err)
 	}
 
-	// Additional budget validation (check for negative amount)
+	// Additional business logic validation
+	if strings.TrimSpace(req.Name) == "" {
+		return errors.New("project name is required and cannot be empty")
+	}
+
+	if strings.TrimSpace(req.AccountID) == "" {
+		return errors.New("account ID is required and cannot be empty")
+	}
+
 	if req.Budget.Amount < 0 {
 		return errors.New("budget amount must be non-negative")
 	}
@@ -55,13 +58,26 @@ func ValidateProjectUpdateRequest(req *types.ProjectUpdateRequest) error {
 		return errors.New("request cannot be nil")
 	}
 
-	// Add struct tags validation
-	if err := validate.Struct(req); err != nil {
-		return formatValidationError(err)
+	// For update requests, most fields are optional, so we only validate non-zero values
+	if req.EnvironmentType != "" {
+		if !isValidEnvironmentType(string(req.EnvironmentType)) {
+			return errors.New("invalid environment_type: must be 'indoor', 'outdoor', or 'hybrid'")
+		}
 	}
 
-	// Additional budget validation (check for negative amount) - only if budget is provided
-	if req.Budget.Currency != "" && req.Budget.Amount < 0 {
+	if req.ProjectPhase != "" {
+		if !isValidProjectPhase(string(req.ProjectPhase)) {
+			return errors.New("invalid project_phase: must be 'Proposal', 'Development', or 'Commissioned'")
+		}
+	}
+
+	if req.Budget.Currency != "" {
+		if !isValidCurrency(req.Budget.Currency) {
+			return errors.New("invalid currency: must be a valid 3-letter ISO 4217 currency code")
+		}
+	}
+
+	if req.Budget.Amount < 0 {
 		return errors.New("budget amount must be non-negative")
 	}
 
@@ -81,7 +97,7 @@ func ValidateGetAllProjectsParams(params *types.GetAllProjectsParams) error {
 
 	// Validate sort_by field
 	if params.SortBy != "" && !isValidProjectSortField(params.SortBy) {
-		return errors.New("invalid sort_by field: must be one of 'created_at', 'updated_at'")
+		return errors.New("invalid sort_by field: must be one of 'created_at', 'updated_at', 'name', 'project_phase'")
 	}
 
 	// Validate sort_order
@@ -89,36 +105,6 @@ func ValidateGetAllProjectsParams(params *types.GetAllProjectsParams) error {
 		return errors.New("invalid sort_order: must be 'asc' or 'desc'")
 	}
 
-	return nil
-}
-
-// ValidateProjectArchiveRequest validates a project archive/unarchive request
-func ValidateProjectArchiveRequest(req *types.ProjectArchiveRequest) error {
-	if req == nil {
-		return errors.New("request cannot be nil")
-	}
-
-	// No additional validation needed for boolean field
-	return nil
-}
-
-// ValidateProjectLockRequest validates a project lock/unlock request
-func ValidateProjectLockRequest(req *types.ProjectLockRequest) error {
-	if req == nil {
-		return errors.New("request cannot be nil")
-	}
-
-	// No additional validation needed for boolean field
-	return nil
-}
-
-// ValidateProjectStarRequest validates a project star/unstar request
-func ValidateProjectStarRequest(req *types.ProjectStarRequest) error {
-	if req == nil {
-		return errors.New("request cannot be nil")
-	}
-
-	// No additional validation needed for boolean field
 	return nil
 }
 
@@ -169,6 +155,18 @@ func isValidCurrency(currency string) bool {
 		}
 	}
 
+	// Common currency codes validation (you can extend this list)
+	commonCurrencies := []string{
+		"USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "SEK", "NZD",
+		"MXN", "SGD", "HKD", "NOK", "TRY", "ZAR", "BRL", "INR", "RUB", "KRW",
+	}
+
+	for _, valid := range commonCurrencies {
+		if currency == valid {
+			return true
+		}
+	}
+
 	// If not in common list, still allow it if it matches the format
 	return true
 }
@@ -192,7 +190,7 @@ func validateProjectSortField(fl validator.FieldLevel) bool {
 }
 
 func isValidProjectSortField(field string) bool {
-	validFields := []string{"created_at", "updated_at"}
+	validFields := []string{"created_at", "updated_at", "name", "project_phase", "environment_type", "application"}
 	for _, valid := range validFields {
 		if field == valid {
 			return true
@@ -201,16 +199,9 @@ func isValidProjectSortField(field string) bool {
 	return false
 }
 
-// ValidateUUID checks if a string is a valid UUID format.
-func ValidateUUID(fl validator.FieldLevel) bool {
-	_, err := uuid.Parse(fl.Field().String())
-	return err == nil
-}
-
-// IsValidUUID checks if a string is a valid UUID format.
-func IsValidUUID(id string) bool {
-	_, err := uuid.Parse(id)
-	return err == nil
+func validateUUID(fl validator.FieldLevel) bool {
+	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
+	return uuidRegex.MatchString(fl.Field().String())
 }
 
 // formatValidationError formats validator errors into user-friendly messages
