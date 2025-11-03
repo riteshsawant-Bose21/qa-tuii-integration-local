@@ -46,7 +46,7 @@ extension ProjectPropertiesService on ProjectService {
     return colors;
   }
 
-  List<FusionDevice> getAllFusionDevices() {
+  List<FusionDsp> getAllFusionDevices() {
     return this.fusionDevices.getAll();
   }
 }

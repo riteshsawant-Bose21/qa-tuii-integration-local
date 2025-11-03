@@ -93,13 +93,17 @@ class _ProductQueryViewState extends State<ProductQueryView> {
                     itemCount: state.filteredProducts.length,
                     itemBuilder: (BuildContext context, int index) {
                       final ProductQueryModel product = state.filteredProducts[index];
-                      return InkWell(
-                        onTap: () {
-                          serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-                        },
-                        child: ProductCard(
-                          product: product,
-                          searchQuery: state.searchQuery,
+
+                      return GuideShowcaseWrapper(
+                        show: index == 0, // show guide only for first child in a list.
+                        step: GuideShowCaseSteps.addSpeakers,
+                        onHighlightedSpotTap: (TapDownDetails details) => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+                        child: InkWell(
+                          onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+                          child: ProductCard(
+                            product: product,
+                            searchQuery: state.searchQuery,
+                          ),
                         ),
                       );
                     },

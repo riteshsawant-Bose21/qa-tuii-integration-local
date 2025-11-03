@@ -1,6 +1,8 @@
 import 'dart:convert';
 
+import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:mutex/mutex.dart';
 
 extension UndoRedoService on ProjectService {
   /// -------------------
@@ -13,7 +15,10 @@ extension UndoRedoService on ProjectService {
     _isBatching = value;
   }
 
+  Mutex get _mutex => Mutex();
+
   Map<String, dynamic>? get _batchSnapshotBefore => null;
+
   set _batchSnapshotBefore(Map<String, dynamic>? value) {
     _batchSnapshotBefore = value;
   }
@@ -27,6 +32,7 @@ extension UndoRedoService on ProjectService {
   }
 
   void _pushUndoSnapshot(Map<String, dynamic> snapshot) {
+    debugPrint("_+_+_+_+_+_+_+_+_+_+_+_+ ADDING UNDO SNAPSHOT_+_+_+_+_+_+_+_+_+_+_+_+_");
     undoStack.add(snapshot);
     if (undoStack.length > maxHistory) {
       undoStack.removeAt(0);
@@ -35,13 +41,16 @@ extension UndoRedoService on ProjectService {
     redoStack.clear();
   }
 
-  void recordChange() {
-    // call this before a mutating operation (records "before" state)
-    if (_isBatching) {
-      // if batching already started, we already captured before snapshot on beginBatch
-      return;
-    }
-    _pushUndoSnapshot(_captureSnapshot());
+  void recordChange() async {
+    return _mutex.protect(() async {
+      // call this before a mutating operation (records "before" state)
+      if (_isBatching) {
+        // if batching already started, we already captured before snapshot on beginBatch
+        return;
+      }
+      _pushUndoSnapshot(_captureSnapshot());
+      debugPrint("Undo stack size: ${undoStack.length}");
+    });
   }
 
   /// Begin grouping multiple operations into a single undo step.
@@ -65,6 +74,7 @@ extension UndoRedoService on ProjectService {
 
   /// Undo: restore last snapshot (the project state *before* the last recorded change).
   bool canUndo() => undoStack.isNotEmpty;
+
   bool canRedo() => redoStack.isNotEmpty;
 
   Map<String, dynamic>? undo() {
@@ -75,6 +85,7 @@ extension UndoRedoService on ProjectService {
 
     // Pop the previous state from undo and restore it
     final snapshot = undoStack.removeLast();
+    debugPrint("Undo performed. Undo stack size: ${undoStack.length}, Redo stack size: ${redoStack.length}");
     return snapshot;
   }
 
@@ -86,6 +97,7 @@ extension UndoRedoService on ProjectService {
 
     // pop redo
     final snapshot = redoStack.removeLast();
+    debugPrint("Redo performed. Undo stack size: ${undoStack.length}, Redo stack size: ${redoStack.length}");
     return snapshot;
   }
 }

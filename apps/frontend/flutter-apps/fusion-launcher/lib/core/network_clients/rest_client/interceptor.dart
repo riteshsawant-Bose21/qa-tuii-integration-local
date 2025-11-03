@@ -37,7 +37,7 @@ class AppInterceptors extends Interceptor {
 
     // Show error dialog for non-success responses
     // if(!err.requestOptions.path.isBackendServerEndpoint() || err.requestOptions.path.isTokenRequired()) {
-    FusionUtils.showErrorDialog(err, fromError: true);
+    FusionUiUtils.showErrorDialog(err, fromError: true);
     // }
 
     // Handle other errors as before
@@ -103,7 +103,7 @@ class AppInterceptors extends Interceptor {
           error: response.statusMessage,
           message: response.toString(),
         );
-        FusionUtils.showErrorDialog(dioError, fromError: true);
+        FusionUiUtils.showErrorDialog(dioError, fromError: true);
 
         handler.next(response);
       }
@@ -116,7 +116,7 @@ class AppInterceptors extends Interceptor {
         error: response.statusMessage,
         message: response.toString(),
       );
-      FusionUtils.showErrorDialog(dioError, fromError: true);
+      FusionUiUtils.showErrorDialog(dioError, fromError: true);
 
       handler.next(response);
     } finally {
@@ -296,7 +296,7 @@ class AppInterceptors extends Interceptor {
           message: 'API returned error status',
         );
 
-        FusionUtils.showErrorDialog(dioError);
+        FusionUiUtils.showErrorDialog(dioError);
       }
     }
   }

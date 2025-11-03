@@ -260,11 +260,11 @@ class _ProfileTabContentState extends State<ProfileTabContent> with SingleTicker
                 if (isAdmin) {
                   userProfileManager.value = newProfile;
                 } else {
-                  FusionUtils.showLoader(context);
+                  FusionUiUtils.showLoader(context);
                   final ResponseCallback<void> response = await userProfileManager.saveUserProfile(newProfile);
 
                   if (context.mounted) {
-                    FusionUtils.hideLoader(context);
+                    FusionUiUtils.hideLoader(context);
                   } // Always hide loader before UI feedback
 
                   if (response.success) {
@@ -279,7 +279,7 @@ class _ProfileTabContentState extends State<ProfileTabContent> with SingleTicker
                 }
               } catch (e) {
                 if (context.mounted) {
-                  FusionUtils.hideLoader(context);
+                  FusionUiUtils.hideLoader(context);
                 }
                 _showSnackBar('Something went wrong. Please try again.', Colors.red);
                 debugPrint("Exception during profile save: $e");

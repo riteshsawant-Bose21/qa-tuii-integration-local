@@ -13,6 +13,8 @@ import (
 
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	ps, err := p.persistState(snapshotKey)
 	if err != nil {

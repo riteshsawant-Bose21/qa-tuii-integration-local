@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/models/fusion_device/fusion_device.dart';
-import 'package:fusion_lib/models/response_callback.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/constants.dart';
 import '../../../../../core/service_locator.dart';
 
 class AssignDeviceButton extends StatefulWidget {
-  final FusionDevice fusionDeviceToMap;
+  final FusionDsp fusionDeviceToMap;
   final String title;
   final String? vipAddress;
   final Function() onSetupVip;
-  final List<FusionDevice> allFusionDevicesInProject;
+  final List<FusionDsp> allFusionDevicesInProject;
   final Function() onUnassignDevice;
 
   const AssignDeviceButton({
@@ -31,20 +29,20 @@ class AssignDeviceButton extends StatefulWidget {
 }
 
 class _AssignDeviceButtonState extends State<AssignDeviceButton> {
-  Future<List<FusionDevice>> _fetchDevices() async {
+  Future<List<FusionDsp>> _fetchDevices() async {
     final ResponseCallback<dynamic> responseCallback = await serviceLocator<FusionNetworkClient>().get(
       api: FusionApiEndpoint.fusionDevice,
     );
 
     if (responseCallback.success && responseCallback.data != null) {
-      return (responseCallback.data as List<dynamic>).map((dynamic e) => FusionDevice.fromJson(e as Map<String, dynamic>)).toList();
+      return (responseCallback.data as List<dynamic>).map((dynamic e) => FusionDsp.fromJson(e as Map<String, dynamic>)).toList();
     } else {
       throw Exception(responseCallback.message);
     }
   }
 
-  void _onMenuItemSelected(FusionDevice selectedDevice) async {
-    FusionUtils.showLoader(context);
+  void _onMenuItemSelected(FusionDsp selectedDevice) async {
+    FusionUiUtils.showLoader(context);
 
     print("Selected device: ${selectedDevice.toString()}");
 
@@ -69,7 +67,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
       data: data,
     );
 
-    if (mounted) FusionUtils.hideLoader(context);
+    if (mounted) FusionUiUtils.hideLoader(context);
 
     if (responseCallback.success) {
       //Todo: Update this as per new logic of project manager
@@ -84,7 +82,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
       //     isClaimed: selectedDevice.isClaimed,
       //   ),
       // );
-      serviceLocator<ProjectViewModel>().saveProjectToLocal();
+      serviceLocator<ProjectViewModel>().saveProject();
       // if (mounted) Navigator.pop(context);
     } else {
       debugPrint("Failed to assign device: ${responseCallback.message}");
@@ -106,15 +104,15 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
     final ColorScheme colors = Theme.of(context).colorScheme;
     final ThemeData theme = Theme.of(context);
 
-    return PopupMenuButton<FusionDevice>(
+    return PopupMenuButton<FusionDsp>(
       tooltip: 'Show devices',
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       offset: const Offset(0, 40),
       color: AppColors.cardSoft,
       itemBuilder: (BuildContext context) {
         if (widget.vipAddress == null || widget.vipAddress!.isEmpty) {
-          return <PopupMenuEntry<FusionDevice>>[
-            PopupMenuItem<FusionDevice>(
+          return <PopupMenuEntry<FusionDsp>>[
+            PopupMenuItem<FusionDsp>(
               enabled: false,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 20),
@@ -176,16 +174,16 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
             ),
           ];
         } else {
-          return <PopupMenuEntry<FusionDevice>>[
-            PopupMenuItem<FusionDevice>(
+          return <PopupMenuEntry<FusionDsp>>[
+            PopupMenuItem<FusionDsp>(
               enabled: false,
               child: SizedBox(
                 width: 300,
-                child: FutureBuilder<List<FusionDevice>>(
+                child: FutureBuilder<List<FusionDsp>>(
                   future: _fetchDevices(),
                   builder: (
                     BuildContext context,
-                    AsyncSnapshot<List<FusionDevice>> snapshot,
+                    AsyncSnapshot<List<FusionDsp>> snapshot,
                   ) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Row(
@@ -216,25 +214,25 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                         ],
                       );
                     } else {
-                      final List<MapEntry<int, FusionDevice>> availableDevices =
+                      final List<MapEntry<int, FusionDsp>> availableDevices =
                           snapshot.data!.asMap().entries.where((
-                            MapEntry<int, FusionDevice> entry,
+                            MapEntry<int, FusionDsp> entry,
                           ) {
-                            final FusionDevice device = entry.value;
+                            final FusionDsp device = entry.value;
                             return device.id != widget.fusionDeviceToMap.id &&
                                 !widget.allFusionDevicesInProject.any(
-                                  (FusionDevice existingDevice) => existingDevice.id == device.id && existingDevice.status == FusionDeviceSetupStatus.completed,
+                                  (FusionDsp existingDevice) => existingDevice.id == device.id && existingDevice.status == FusionDeviceSetupStatus.completed,
                                 );
                           }).toList();
 
-                      final List<MapEntry<int, FusionDevice>> otherAssignedDevices =
+                      final List<MapEntry<int, FusionDsp>> otherAssignedDevices =
                           snapshot.data!.asMap().entries.where((
-                            MapEntry<int, FusionDevice> entry,
+                            MapEntry<int, FusionDsp> entry,
                           ) {
-                            final FusionDevice device = entry.value;
+                            final FusionDsp device = entry.value;
                             return device.id != widget.fusionDeviceToMap.id &&
                                 widget.allFusionDevicesInProject.any(
-                                  (FusionDevice existingDevice) => existingDevice.id == device.id && existingDevice.status == FusionDeviceSetupStatus.completed,
+                                  (FusionDsp existingDevice) => existingDevice.id == device.id && existingDevice.status == FusionDeviceSetupStatus.completed,
                                 );
                           }).toList();
 
@@ -281,11 +279,11 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                                   .asMap()
                                   .entries
                                   .where(
-                                    (MapEntry<int, FusionDevice> entry) => entry.value.id == widget.fusionDeviceToMap.id,
+                                    (MapEntry<int, FusionDsp> entry) => entry.value.id == widget.fusionDeviceToMap.id,
                                   )
-                                  .map((MapEntry<int, FusionDevice> entry) {
+                                  .map((MapEntry<int, FusionDsp> entry) {
                                     final int index = entry.key;
-                                    final FusionDevice device = entry.value.copyWith(
+                                    final FusionDsp device = entry.value.copyWith(
                                       status: FusionDeviceSetupStatus.completed,
                                     );
                                     return buildFusionDeviceCard(
@@ -353,10 +351,10 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                             ] else ...<Widget>[
                               //filter devices, show devices expect widget.fusionDeviceToMap and widget.allFusionDevicesInProject which has status completed
                               ...availableDevices.map((
-                                MapEntry<int, FusionDevice> entry,
+                                MapEntry<int, FusionDsp> entry,
                               ) {
                                 final int index = entry.key;
-                                final FusionDevice device = entry.value;
+                                final FusionDsp device = entry.value;
                                 return buildFusionDeviceCard(
                                   index,
                                   context,
@@ -400,10 +398,10 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
 
                               //filter devices, show devices expect widget.fusionDeviceToMap and widget.allFusionDevicesInProject which has status completed
                               ...otherAssignedDevices.map((
-                                MapEntry<int, FusionDevice> entry,
+                                MapEntry<int, FusionDsp> entry,
                               ) {
                                 final int index = entry.key;
-                                final FusionDevice device = entry.value;
+                                final FusionDsp device = entry.value;
                                 return buildFusionDeviceCard(
                                   index,
                                   context,
@@ -470,7 +468,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
   AnimatedContainer buildFusionDeviceCard(
     int index,
     BuildContext context,
-    FusionDevice device,
+    FusionDsp device,
     ColorScheme colors,
     Function() onTap, {
     bool showUnAssign = false,

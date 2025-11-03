@@ -402,7 +402,14 @@ func ExtractName(r *http.Request) (string, error) {
 // It supports arbitrary nesting of map[string]any, []any, and primitive values.
 func DeepCopy(src any) any {
 	switch v := src.(type) {
+	case nil:
+		return nil
+
+	// Fast paths for JSON-y shapes
 	case map[string]any:
+		if v == nil {
+			return map[string]any(nil)
+		}
 		cp := make(map[string]any, len(v))
 		for key, val := range v {
 			cp[key] = DeepCopy(val)
@@ -410,22 +417,42 @@ func DeepCopy(src any) any {
 		return cp
 
 	case []any:
+		if v == nil {
+			return []any(nil)
+		}
 		cp := make([]any, len(v))
 		for i, val := range v {
 			cp[i] = DeepCopy(val)
 		}
 		return cp
 
-	case []float64:
-		cp := make([]float64, len(v))
-		copy(cp, v)
-		return cp
-	case []int:
-		cp := make([]int, len(v))
+	// Useful common typed slices
+	case []byte:
+		if v == nil {
+			return []byte(nil)
+		}
+		cp := make([]byte, len(v))
 		copy(cp, v)
 		return cp
 	case []string:
+		if v == nil {
+			return []string(nil)
+		}
 		cp := make([]string, len(v))
+		copy(cp, v)
+		return cp
+	case []int:
+		if v == nil {
+			return []int(nil)
+		}
+		cp := make([]int, len(v))
+		copy(cp, v)
+		return cp
+	case []float64:
+		if v == nil {
+			return []float64(nil)
+		}
+		cp := make([]float64, len(v))
 		copy(cp, v)
 		return cp
 
