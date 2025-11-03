@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/gin-gonic/gin"
 )
 
@@ -15,8 +15,8 @@ import (
 type API struct {
 	engine  *gin.Engine
 	server  *http.Server
-	product handler.ProductSVC
-	project handler.ProjectSVC
+	product fusion.Product
+	project fusion.Project
 }
 
 type Config struct {
@@ -28,8 +28,8 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	productSvc handler.ProductSVC,
-	projectSvc handler.ProjectSVC,
+	product fusion.Product,
+	project fusion.Project,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {

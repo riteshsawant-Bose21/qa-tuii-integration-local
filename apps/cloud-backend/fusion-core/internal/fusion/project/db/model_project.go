@@ -43,12 +43,12 @@ func newProject(row *customModel.GetProjectModel) (*types.Project, error) {
 		application = row.Application.String
 	}
 
-	budget := fusion.Budget{
+	budget := types.Budget{
 		Currency: row.Currency.String,
 		Amount:   row.BudgetAmount,
 	}
 
-	return &fusion.Project{
+	return &types.Project{
 		ID:              row.ID,
 		AccountID:       strconv.Itoa(row.PrimaryOwnerAccountID),
 		Name:            row.Name.String,

@@ -9,7 +9,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -20,20 +20,20 @@ type MockProjectService struct {
 	mock.Mock
 }
 
-func (m *MockProjectService) CreateProject(ctx context.Context, project *fusion.ProjectCreateRequest) error {
+func (m *MockProjectService) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) error {
 	args := m.Called(ctx, project)
 	return args.Error(0)
 }
 
-func (m *MockProjectService) GetAllProjects(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error) {
+func (m *MockProjectService) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
 	args := m.Called(ctx, queryParams)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*fusion.Project), args.Error(1)
+	return args.Get(0).([]*types.Project), args.Error(1)
 }
 
-func (m *MockProjectService) UpdateProject(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error {
+func (m *MockProjectService) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
 	args := m.Called(ctx, id, project)
 	return args.Error(0)
 }
@@ -61,7 +61,7 @@ func TestCreateProject(t *testing.T) {
 	r, mockSvc := setupTest()
 
 	t.Run("successfully creates project", func(t *testing.T) {
-		project := &fusion.ProjectCreateRequest{
+		project := &types.ProjectCreateRequest{
 			Name:        "Test Project",
 			Description: "Test Description",
 			AccountID:   "123",
@@ -91,7 +91,7 @@ func TestCreateProject(t *testing.T) {
 	})
 
 	t.Run("returns error when service fails", func(t *testing.T) {
-		project := &fusion.ProjectCreateRequest{
+		project := &types.ProjectCreateRequest{
 			Name:        "Test Project",
 			Description: "Test Description",
 			AccountID:   "123",
@@ -115,7 +115,7 @@ func TestGetAllProjects(t *testing.T) {
 	r, mockSvc := setupTest()
 
 	t.Run("successfully retrieves projects", func(t *testing.T) {
-		projects := []*fusion.Project{
+		projects := []*types.Project{
 			{
 				ID:          "1",
 				Name:        "Test Project 1",
@@ -128,7 +128,7 @@ func TestGetAllProjects(t *testing.T) {
 			},
 		}
 
-		params := &fusion.GetAllProjectsParams{
+		params := &types.GetAllProjectsParams{
 			SortBy:    "updated_at",
 			SortOrder: "desc",
 		}
@@ -142,7 +142,7 @@ func TestGetAllProjects(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, w.Code)
 
-		var response []*fusion.Project
+		var response []*types.Project
 		json.Unmarshal(w.Body.Bytes(), &response)
 		assert.Len(t, response, 2)
 		mockSvc.AssertExpectations(t)
@@ -158,7 +158,7 @@ func TestGetAllProjects(t *testing.T) {
 	})
 
 	t.Run("returns error when service fails", func(t *testing.T) {
-		params := &fusion.GetAllProjectsParams{
+		params := &types.GetAllProjectsParams{
 			SortBy:    "updated_at",
 			SortOrder: "desc",
 		}
@@ -180,7 +180,7 @@ func TestUpdateProject(t *testing.T) {
 
 	t.Run("successfully updates project", func(t *testing.T) {
 		projectID := "123"
-		updateReq := &fusion.ProjectUpdateRequest{
+		updateReq := &types.ProjectUpdateRequest{
 			Name:        "Updated Project",
 			Description: "Updated Description",
 		}
@@ -210,7 +210,7 @@ func TestUpdateProject(t *testing.T) {
 
 	t.Run("returns not found when project doesn't exist", func(t *testing.T) {
 		projectID := "non-existent"
-		updateReq := &fusion.ProjectUpdateRequest{
+		updateReq := &types.ProjectUpdateRequest{
 			Name: "Updated Project",
 		}
 

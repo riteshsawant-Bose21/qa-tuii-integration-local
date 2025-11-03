@@ -90,7 +90,7 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *fusion.ProjectCreateRequest) error {
+func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest) error {
 	if project == nil {
 		return errors.New("project cannot be nil")
 	}
@@ -127,7 +127,7 @@ func (s *Service) Insert(ctx context.Context, project *fusion.ProjectCreateReque
 }
 
 // SelectAll retrieves all projects from the database.
-func (s *Service) SelectAll(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error) {
+func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
 	// Retrieve all archived/unarchived projects from the database.
 	// Get the rows by running the query.
 	order := "ASC"
@@ -207,7 +207,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *fusion.GetAllProje
 }
 
 // Update updates an existing project in the database.
-func (s *Service) Update(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error {
+func (s *Service) Update(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
 	if id == "" {
 		return errors.New("id cannot be empty")
 	}
