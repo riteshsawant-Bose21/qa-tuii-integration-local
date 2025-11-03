@@ -22,15 +22,15 @@ import 'wiring_state_cache.dart';
 
 part 'helpers/canvas_elements_handler_mixin.dart';
 
-class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
+class CircuitController extends ChangeNotifier
+    with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
   final ProjectViewModel projectManager;
   CircuitController(this.projectManager) {
     loadFromPM();
     _loadAllHardwareImages();
-    cache.cacheForState(state);
-    stack.push(state.toMap());
+
   }
-  
+
   @override
   WiringState state = IdleWiringState(
     components: <CircuitComponent>[],
@@ -124,8 +124,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
 
   void addExistingWire(Wire wire) {
     componentDB.addWire(wire);
-    setState(state.addWire(wire));
-    saveState();
+    setState(state.addExistingWire(wire));
+    // saveState();
     cache.cacheForState(state);
   }
 
@@ -151,7 +151,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
       connectedWires.addAll(
         cache.wiresOfComponent(component.parent!),
       );
-      for (final CircuitComponent child in component.parent?.children ?? <CircuitComponent>[]) {
+      for (final CircuitComponent child
+          in component.parent?.children ?? <CircuitComponent>[]) {
         if (component != child) {
           connectedWires.addAll(cache.wiresOfComponent(child));
         }
@@ -244,11 +245,13 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
     if (diffMap.containsKey("modified")) {
       final Map<String, dynamic> modified = diffMap["modified"];
       for (final String id in modified.keys) {
-        final CircuitComponent? component = componentDB.getComponent(id) as CircuitComponent?;
+        final CircuitComponent? component =
+            componentDB.getComponent(id) as CircuitComponent?;
         if (component != null) {
           switch (component.data) {
             case DeviceSchematicComponentData():
-              final HardwareComponent hardware = (component.data as DeviceSchematicComponentData).data;
+              final HardwareComponent hardware =
+                  (component.data as DeviceSchematicComponentData).data;
               projectManager.updateHardware(
                 hardware: hardware.copyWith(
                   wiringPos: component.position,
@@ -256,7 +259,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
               );
               break;
             case SourceComponentData():
-              final Source source = (component.data as SourceComponentData).source;
+              final Source source =
+                  (component.data as SourceComponentData).source;
               projectManager.updateHardware(
                 hardware: source.copyWith(
                   wiringPos: component.position,
@@ -264,7 +268,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
               );
               break;
             case SpeakerComponentData():
-              final Speaker speaker = (component.data as SpeakerComponentData).speaker;
+              final Speaker speaker =
+                  (component.data as SpeakerComponentData).speaker;
               projectManager.updateHardware(
                 hardware: speaker.copyWith(
                   wiringPos: component.position,

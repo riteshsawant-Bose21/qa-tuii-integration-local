@@ -25,6 +25,10 @@ class CircuitComponent extends CanvasElement {
     }
   }
 
+  void setPosition(Offset offset) {
+    _position = offset;
+  }
+
   @override
   Size get size {
     if (children.isEmpty) return data.size;
@@ -301,6 +305,9 @@ class CircuitComponent extends CanvasElement {
   }
 
   void setParent(CircuitComponent parent) {
+    if (this.parent != null) {
+      this.parent?.children.remove(this);
+    }
     this.parent = parent;
     parent.children.add(this);
   }
