@@ -61,7 +61,6 @@ func TestToOneSet(t *testing.T) {
 // or deadlocks can occur.
 func TestToOneRemove(t *testing.T) {
 	t.Run("ProjectToUserUsingLockedByUserProjects", testProjectToOneRemoveOpUserUsingLockedByUser)
-	t.Run("ProjectToAccountUsingPrimaryOwnerAccountProjects", testProjectToOneRemoveOpAccountUsingPrimaryOwnerAccount)
 }
 
 // TestOneToOneSet tests cannot be run in parallel
@@ -91,13 +90,11 @@ func TestToManyAdd(t *testing.T) {
 // TestToManySet tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManySet(t *testing.T) {
-	t.Run("AccountToPrimaryOwnerAccountProjects", testAccountToManySetOpPrimaryOwnerAccountProjects)
 	t.Run("UserToLockedByUserProjects", testUserToManySetOpLockedByUserProjects)
 }
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManyRemove(t *testing.T) {
-	t.Run("AccountToPrimaryOwnerAccountProjects", testAccountToManyRemoveOpPrimaryOwnerAccountProjects)
 	t.Run("UserToLockedByUserProjects", testUserToManyRemoveOpLockedByUserProjects)
 }

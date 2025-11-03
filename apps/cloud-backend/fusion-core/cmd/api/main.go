@@ -98,6 +98,24 @@ func main() {
 	}
 	logger.Info("Initialized Product DB Service.")
 
+	s3Handler, err := cloudfs.NewS3Client(context.Background(), "", "", "us-east2")
+
+	if err != nil {
+		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
+	}
+	logger.Info("Initialized S3")
+
+	if err != nil {
+		logger.Fatal("Failed to initialize Presign S3 client", zap.Error(err))
+	}
+	logger.Info("Initialized Presign S3 Client.")
+
+	// Initialize Project DB Service
+	projectDBSvc := projectdb.NewService(pgs)
+	if projectDBSvc == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
+
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc, idSVC)
 	if productSVC == nil {
@@ -105,21 +123,10 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
-	s3Handler, err := cloudfs.NewS3Client(ctx)
-
-	if err != nil {
-		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
-	}
-	logger.Info("Initialized S3 client")
-
-	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs, logger)
-	if projectDBSvc == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
+	presignHandler := s3Handler.Bucket("uc.st")
 
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.S3.ProjectBucket))
+	projectSVC := project.NewService(projectDBSvc, presignHandler)
 	if projectSVC == nil {
 		logger.Fatal("Failed to initialize project service")
 	}

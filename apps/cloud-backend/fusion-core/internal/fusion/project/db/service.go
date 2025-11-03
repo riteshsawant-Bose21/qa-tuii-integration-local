@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"strings"
+	"strconv"
 	"time"
 
 	"github.com/aarondl/null/v8"
@@ -21,17 +21,16 @@ import (
 	ericDecimal "github.com/ericlagergren/decimal"
 )
 
-// ProjectDBExecutor can perform SQL queries.
-type ProjectDBExecutor interface {
+// Executor can perform SQL queries.
+type DBExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
 // ContextExecutor can perform SQL queries with context
-type ProjectDBContextExecutor interface {
-	ProjectDBExecutor
+type DBContextExecutor interface {
+	DBExecutor
 
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
@@ -40,12 +39,11 @@ type ProjectDBContextExecutor interface {
 
 // Service is a service for managing projects in the database.
 type Service struct {
-	db     ProjectDBContextExecutor
-	logger *log.Logger
+	db DBContextExecutor
 }
 
 // NewService creates a new database service.
-func NewService(db ProjectDBContextExecutor, logger *log.Logger) *Service {
+func NewService(db DBContextExecutor) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
@@ -92,101 +90,57 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error) {
-	// Begin transaction
-	tx, err := s.db.BeginTx(ctx, nil)
+func (s *Service) Insert(ctx context.Context, project *fusion.ProjectCreateRequest) error {
+	if project == nil {
+		return errors.New("project cannot be nil")
+	}
+
+	if project.ID == "" {
+		project.ID = uuid.New().String()
+	}
+
+	// TODO: need to determine if accountId should be string or int
+	accountID, err := strconv.Atoi(project.AccountID)
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToBeginTransaction,
-			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToBeginTransaction)
+		return fmt.Errorf("failed to convert account ID to int: %v", err)
 	}
 
-	// Create project record
-	now := time.Now()
-	projectRecord := &model.Project{
-		ID:                 project.ID,
-		PrimaryOwnerAccountID: null.NewInt(1, true), // TODO: Placeholder, replace with actual account ID if available
-		Name:               null.NewString(project.Name, project.Name != ""),
-		Description:        null.NewString(project.Description, project.Description != ""),
-		Venue:              null.NewString(project.Venue, project.Venue != ""),
-		EnvironmentType:    null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != ""),
-		ProjectPhase:       null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != ""),
-		Application:        null.NewString(project.Application, project.Application != ""),
-		BudgetAmount:       boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0)),
-		Currency:           null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
-		CreatedAt:          now,
-		UpdatedAt:          now,
+	row := &model.Project{
+		ID:                    project.ID,
+		PrimaryOwnerAccountID: accountID,
+		Name:                  null.NewString(project.Name, project.Name != ""),
+		Description:           null.NewString(project.Description, project.Description != ""),
+		Venue:                 null.NewString(project.Venue, project.Venue != ""),
+		EnvironmentType:       null.NewString(project.EnvironmentType, project.EnvironmentType != ""),
+		Application:           null.NewString(project.Application, project.Application != ""),
+		BudgetAmount:          project.Budget.Amount,
+		Currency:              null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
+		CreatedAt:             time.Now(),
+		UpdatedAt:             time.Now(),
 	}
 
-	// Insert project
-	if err := projectRecord.Insert(ctx, tx, boil.Infer()); err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			s.logger.Error("Failed to rollback transaction",
-				zap.Error(rollbackErr),
-				zap.String("project_id", project.ID))
-		}
-		s.logger.Error(types.ErrMsgFailedToInsertProject,
-			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToInsertProject)
+	err = row.Insert(ctx, s.db, boil.Infer())
+	if err != nil {
+		return fmt.Errorf("failed to insert project: %v", err)
 	}
-
-	// Create project user association
-	projectUser := &model.ProjectUser{
-		ProjectID: project.ID,
-		UserID:    project.UserID,
-		CreatedAt: now,
-		UpdatedAt: now,
-	}
-
-	// Insert project user association
-	if err := projectUser.Insert(ctx, tx, boil.Infer()); err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			s.logger.Error("Failed to rollback transaction",
-				zap.Error(rollbackErr),
-				zap.String("project_id", project.ID))
-		}
-		s.logger.Error(types.ErrMsgFailedToInsertProjectUser,
-			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToInsertProjectUser)
-	}
-
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		s.logger.Error(types.ErrMsgFailedToCommitTransaction,
-			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToCommitTransaction)
-	}
-
-	return project.ID, nil
+	return nil
 }
 
 // SelectAll retrieves all projects from the database.
-func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]types.Project, error) {
+func (s *Service) SelectAll(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error) {
+	// Retrieve all archived/unarchived projects from the database.
+	// Get the rows by running the query.
+	order := "ASC"
+	if queryParams.SortOrder == "desc" || queryParams.SortOrder == "DESC" {
+		order = "DESC"
+	}
 
-	order := strings.ToUpper(queryParams.SortOrder)
+	rows, err := model.Projects(
+		qm.Where("is_archived = ?", queryParams.IsArchived),
+		qm.And("is_deleted = ?", false),
+		qm.OrderBy(fmt.Sprintf("%s %s", queryParams.SortBy, order)),
+	).All(ctx, s.db)
 
-	// Use raw SQL query to get project data, is_starred, and locked user email in one query
-	// Explicitly listing all columns to match our scanning order
-	query := fmt.Sprintf(`
-		SELECT p.id, p.name, p.description, p.venue, 
-		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
-		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
-		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
-		FROM project p
-		INNER JOIN project_user pu ON p.id = pu.project_id
-		LEFT JOIN "user" u ON p.locked_by_user_id = u.id
-		WHERE pu.user_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
-		ORDER BY p.%s %s
-	`, queryParams.SortBy, order)
-	rows, err := s.db.QueryContext(ctx, query, queryParams.UserID, queryParams.IsArchived, false)
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToGetProjects,
 			zap.Error(err),
@@ -253,22 +207,70 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 }
 
 // Update updates an existing project in the database.
-func (s *Service) Update(ctx context.Context, projectRow *model.Project, project *types.ProjectUpdateRequest) error {
-
-	if projectRow.IsArchived {
-		return errors.New(types.ErrMsgProjectArchived)
+func (s *Service) Update(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error {
+	if id == "" {
+		return errors.New("id cannot be empty")
+	}
+	if project == nil {
+		return errors.New("project cannot be nil")
 	}
 
 	if project.AccountID != "" {
 		projectRow.PrimaryOwnerAccountID = null.NewInt(1, true) // TODO: Replace with actual account ID if available
 	}
 
+	row.PrimaryOwnerAccountID, err = strconv.Atoi(project.AccountID)
+	if err != nil {
+		return fmt.Errorf("failed to convert account ID to int: %v", err)
+	}
+
 	if project.Name != "" {
-		projectRow.Name = null.NewString(project.Name, project.Name != "")
+		row.Name = null.NewString(project.Name, project.Name != "")
 	}
 
 	if project.Description != "" {
-		projectRow.Description = null.NewString(project.Description, project.Description != "")
+		row.Description = null.NewString(project.Description, project.Description != "")
+	}
+
+	if project.Venue != "" {
+		row.Venue = null.NewString(project.Venue, project.Venue != "")
+	}
+
+	if project.EnvironmentType != "" {
+		row.EnvironmentType = null.NewString(project.EnvironmentType, project.EnvironmentType != "")
+	}
+
+	if project.Application != "" {
+		row.Application = null.NewString(project.Application, project.Application != "")
+	}
+
+	if project.Budget.Currency != "" {
+		row.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
+	}
+
+	if project.Budget.Amount != 0 {
+		row.BudgetAmount = project.Budget.Amount
+	}
+
+	if project.IsArchived {
+		row.IsArchived = project.IsArchived
+	}
+
+	// TODO: Need to implement once user logic is finalized
+	// if project.IsStarred {
+	//
+	// }
+
+	// TODO: Need to implement once user logic and locking is finalized
+	// if project.LockProject {
+	//
+	// }
+
+	row.UpdatedAt = time.Now()
+
+	_, err = row.Update(ctx, s.db, boil.Infer())
+	if err != nil {
+		return fmt.Errorf("failed to update project: %v", err)
 	}
 
 	if project.Venue != "" {
@@ -432,18 +434,10 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, e
 			zap.String("email", email))
 		return "", errors.New(types.ErrMsgFailedToGetUserByEmail)
 	}
-	return user.ID, nil
-}
 
-// StarProject stars a project for a user.
-// Note: Assumes business layer has validated user assignment to project
-func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
-	// Get the project user record
-	projectUser, err := model.ProjectUsers(
-		model.ProjectUserWhere.ProjectID.EQ(projectID),
-		model.ProjectUserWhere.UserID.EQ(userID),
-	).One(ctx, s.db)
-
+	row.IsDeleted = true
+	row.UpdatedAt = time.Now()
+	_, err = row.Update(ctx, s.db, boil.Infer())
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToGetProjectUser,
 			zap.Error(err),
@@ -471,213 +465,4 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 	}
 
 	return nil
-}
-
-// UnstarProject unstars a project for a user.
-// Note: Assumes business layer has validated user assignment to project
-func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
-	// Get the project user record
-	projectUser, err := model.ProjectUsers(
-		model.ProjectUserWhere.ProjectID.EQ(projectID),
-		model.ProjectUserWhere.UserID.EQ(userID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToGetProjectUser,
-			zap.Error(err),
-			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
-		return errors.New(types.ErrMsgFailedToGetProjectUser)
-	}
-
-	// Check if not starred
-	if !projectUser.IsStarred {
-		return nil
-	}
-
-	// Unstar the project
-	projectUser.IsStarred = false
-	projectUser.UpdatedAt = time.Now()
-
-	// Update the record
-	if _, err := projectUser.Update(ctx, s.db, boil.Infer()); err != nil {
-		s.logger.Error(types.ErrMsgFailedToUnstarProject,
-			zap.Error(err),
-			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
-		return errors.New(types.ErrMsgFailedToUnstarProject)
-	}
-
-	return nil
-}
-
-// ArchiveProject archives a project.
-func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
-	// Get the project record
-	project, err := model.Projects(
-		model.ProjectWhere.ID.EQ(projectID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(types.ErrMsgProjectNotFound)
-		}
-		return errors.New(types.ErrMsgFailedToGetProject)
-	}
-
-	// Check if already archived
-	if project.IsArchived {
-		return nil
-	}
-
-	// Archive the project
-	project.IsArchived = true
-	project.UpdatedAt = time.Now()
-
-	// Update the record
-	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
-		return errors.New(types.ErrMsgFailedToArchiveProject)
-	}
-
-	return nil
-}
-
-// UnarchiveProject unarchives a project.
-func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
-	// Get the project record
-	project, err := model.Projects(
-		model.ProjectWhere.ID.EQ(projectID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(types.ErrMsgProjectNotFound)
-		}
-		return errors.New(types.ErrMsgFailedToGetProject)
-	}
-
-	// Check if not archived
-	if !project.IsArchived {
-		return nil
-	}
-
-	// Unarchive the project
-	project.IsArchived = false
-	project.UpdatedAt = time.Now()
-
-	// Update the record
-	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
-		return errors.New(types.ErrMsgFailedToUnarchiveProject)
-	}
-
-	return nil
-}
-
-// LockProject locks a project for a specific user.
-func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
-	// Get the project record
-	project, err := model.Projects(
-		model.ProjectWhere.ID.EQ(projectID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(types.ErrMsgProjectNotFound)
-		}
-		return errors.New(types.ErrMsgFailedToGetProject)
-	}
-
-	// Check if project is already locked
-	if project.LockedByUserID.Valid {
-		if project.LockedByUserID.String == userID {
-			return nil // Already locked by the same user
-		}
-		return errors.New(types.ErrMsgProjectNotLockedByUser)
-	}
-
-	// Lock the project
-	project.LockedByUserID = null.NewString(userID, true)
-	project.UpdatedAt = time.Now()
-
-	// Update the record
-	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
-		return errors.New(types.ErrMsgFailedToLockProject)
-	}
-
-	return nil
-}
-
-// UnlockProject unlocks a project for a specific user.
-func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
-	// Get the project record
-	project, err := model.Projects(
-		model.ProjectWhere.ID.EQ(projectID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return errors.New(types.ErrMsgProjectNotFound)
-		}
-		return errors.New(types.ErrMsgFailedToGetProject)
-	}
-
-	// Check if project is locked
-	if !project.LockedByUserID.Valid {
-		return nil
-	}
-
-	// Check if project is locked by the requesting user
-	if project.LockedByUserID.String != userID {
-		return errors.New(types.ErrMsgProjectNotLockedByUser)
-	}
-
-	// Unlock the project
-	project.LockedByUserID = null.String{}
-	project.UpdatedAt = time.Now()
-
-	// Update the record
-	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
-		return errors.New(types.ErrMsgFailedToUnlockProject)
-	}
-
-	return nil
-}
-
-// GetProjectLockUserID returns whether the project is locked and the user ID who locked it.
-func (s *Service) GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error) {
-	// Get the project record
-	project, err := model.Projects(
-		model.ProjectWhere.ID.EQ(projectID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return false, "", errors.New(types.ErrMsgProjectNotFound)
-		}
-		return false, "", errors.New(types.ErrMsgFailedToGetProject)
-	}
-
-	// Check if project is locked
-	if !project.LockedByUserID.Valid {
-		return false, "", nil
-	}
-
-	return true, project.LockedByUserID.String, nil
-}
-
-// GetUserEmailByID returns the email address for a given user ID.
-func (s *Service) GetUserEmailByID(ctx context.Context, userID string) (string, error) {
-	// Get the user who locked the project
-	user, err := model.Users(
-		model.UserWhere.ID.EQ(userID),
-	).One(ctx, s.db)
-
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return "", errors.New(types.ErrMsgUserNotFound)
-		}
-		return "", errors.New(types.ErrMsgFailedToGetLockedUserInfo)
-	}
-
-	return user.Email, nil
 }

@@ -717,7 +717,7 @@ func testProjectToOneAccountUsingPrimaryOwnerAccount(t *testing.T) {
 	var foreign Account
 
 	seed := randomize.NewSeed()
-	if err := randomize.Struct(seed, &local, projectDBTypes, true, projectColumnsWithDefault...); err != nil {
+	if err := randomize.Struct(seed, &local, projectDBTypes, false, projectColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Project struct: %s", err)
 	}
 	if err := randomize.Struct(seed, &foreign, accountDBTypes, false, accountColumnsWithDefault...); err != nil {
@@ -728,7 +728,7 @@ func testProjectToOneAccountUsingPrimaryOwnerAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	queries.Assign(&local.PrimaryOwnerAccountID, foreign.ID)
+	local.PrimaryOwnerAccountID = foreign.ID
 	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
@@ -738,7 +738,7 @@ func testProjectToOneAccountUsingPrimaryOwnerAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !queries.Equal(check.ID, foreign.ID) {
+	if check.ID != foreign.ID {
 		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
 	}
 
@@ -919,7 +919,7 @@ func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
 		if x.R.PrimaryOwnerAccountProjects[0] != &a {
 			t.Error("failed to append to foreign relationship struct")
 		}
-		if !queries.Equal(a.PrimaryOwnerAccountID, x.ID) {
+		if a.PrimaryOwnerAccountID != x.ID {
 			t.Error("foreign key was wrong value", a.PrimaryOwnerAccountID)
 		}
 
@@ -930,60 +930,9 @@ func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
 			t.Fatal("failed to reload", err)
 		}
 
-		if !queries.Equal(a.PrimaryOwnerAccountID, x.ID) {
+		if a.PrimaryOwnerAccountID != x.ID {
 			t.Error("foreign key was wrong value", a.PrimaryOwnerAccountID, x.ID)
 		}
-	}
-}
-
-func testProjectToOneRemoveOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
-	var err error
-
-	ctx := context.Background()
-	tx := MustTx(boil.BeginTx(ctx, nil))
-	defer func() { _ = tx.Rollback() }()
-
-	var a Project
-	var b Account
-
-	seed := randomize.NewSeed()
-	if err = randomize.Struct(seed, &a, projectDBTypes, false, strmangle.SetComplement(projectPrimaryKeyColumns, projectColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-	if err = randomize.Struct(seed, &b, accountDBTypes, false, strmangle.SetComplement(accountPrimaryKeyColumns, accountColumnsWithoutDefault)...); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.SetPrimaryOwnerAccount(ctx, tx, true, &b); err != nil {
-		t.Fatal(err)
-	}
-
-	if err = a.RemovePrimaryOwnerAccount(ctx, tx, &b); err != nil {
-		t.Error("failed to remove relationship")
-	}
-
-	count, err := a.PrimaryOwnerAccount().Count(ctx, tx)
-	if err != nil {
-		t.Error(err)
-	}
-	if count != 0 {
-		t.Error("want no relationships remaining")
-	}
-
-	if a.R.PrimaryOwnerAccount != nil {
-		t.Error("R struct entry should be nil")
-	}
-
-	if !queries.IsValuerNil(a.PrimaryOwnerAccountID) {
-		t.Error("foreign key value should be nil")
-	}
-
-	if len(b.R.PrimaryOwnerAccountProjects) != 0 {
-		t.Error("failed to remove a from b's relationships")
 	}
 }
 
@@ -1061,7 +1010,7 @@ func testProjectsSelect(t *testing.T) {
 }
 
 var (
-	projectDBTypes = map[string]string{`ID`: `uuid`, `Application`: `text`, `BudgetAmount`: `numeric`, `Currency`: `character varying`, `Description`: `text`, `Name`: `text`, `ProjectPhase`: `character varying`, `Venue`: `text`, `EnvironmentType`: `character varying`, `IsArchived`: `boolean`, `IsDeleted`: `boolean`, `LockedByUserID`: `uuid`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`, `PrimaryOwnerAccountID`: `integer`}
+	projectDBTypes = map[string]string{`ID`: `uuid`, `Application`: `text`, `BudgetAmount`: `numeric`, `Currency`: `character varying`, `Description`: `text`, `Name`: `text`, `ProjectPhase`: `character varying`, `Venue`: `text`, `EnvironmentType`: `character varying`, `IsArchived`: `boolean`, `IsDeleted`: `boolean`, `LockedByUserID`: `uuid`, `PrimaryOwnerAccountID`: `integer`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
 	_              = bytes.MinRead
 )
 

@@ -25,6 +25,7 @@ type presignClient interface {
 type S3 struct {
 	client        s3Client
 	presignClient presignClient
+	config        *s3Config
 }
 
 func NewS3Client(ctx context.Context) (*S3, error) {
@@ -39,6 +40,7 @@ func NewS3Client(ctx context.Context) (*S3, error) {
 	return &S3{
 		client:        client,
 		presignClient: s3.NewPresignClient(client),
+		config:        awsconfig,
 	}, nil
 }
 
@@ -46,6 +48,7 @@ func NewS3Client(ctx context.Context) (*S3, error) {
 type S3BucketHandle struct {
 	bucketName    string
 	client        s3Client
+	config        *s3Config
 	presignClient presignClient
 }
 
@@ -54,6 +57,7 @@ func (s *S3) Bucket(name string) BucketHandle {
 	return &S3BucketHandle{
 		bucketName:    name,
 		client:        s.client,
+		config:        s.config,
 		presignClient: s.presignClient,
 	}
 }
@@ -78,7 +82,7 @@ func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl t
 		Key:    aws.String(objectKey),
 	}, func(po *s3.PresignOptions) { po.Expires = ttl })
 	if err != nil {
-		return "", fmt.Errorf("failed to presign get object request: %w", err)
+		return "", err
 	}
 	return req.URL, nil
 }
@@ -90,7 +94,7 @@ func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl t
 		Key:    aws.String(objectKey),
 	}, func(po *s3.PresignOptions) { po.Expires = ttl })
 	if err != nil {
-		return "", fmt.Errorf("failed to presign put object request: %w", err)
+		return "", err
 	}
 	return req.URL, nil
 }

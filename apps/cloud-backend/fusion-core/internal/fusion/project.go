@@ -1,28 +1,66 @@
 package fusion
 
-import (
-	"context"
+import "time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-)
+type Budget struct {
+	Amount   float64 `json:"amount"`
+	Currency string  `json:"currency"`
+}
 
-type Project interface {
-	CreateProject(ctx context.Context, project *types.ProjectCreateRequest) (*types.ProjectCreateResponse, error)
-	GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) (*types.GetAllProjectsResponse, error)
-	UpdateProject(ctx context.Context, projectID, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error)
-	DeleteProject(ctx context.Context, projectID string, userID string) error
-	AssignUserToProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error)
-	RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error)
-	AssignUserToProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error)
-	RemoveUserFromProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error)
-	StarProject(ctx context.Context, projectID, userID string) error
-	UnstarProject(ctx context.Context, projectID, userID string) error
-	ArchiveProject(ctx context.Context, projectID string, userID string) error
-	UnarchiveProject(ctx context.Context, projectID string, userID string) error
-	LockProject(ctx context.Context, projectID, userID string) error
-	UnlockProject(ctx context.Context, projectID, userID string) error
-	GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error)
-	GetUserEmailByID(ctx context.Context, userID string) (string, error)
-	ProjectExists(ctx context.Context, projectID string) (bool, error)
-	IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error)
+// Request body for creating or updating a project.
+type ProjectCreateRequest struct {
+	ID                   string `json:"id"`
+	Application          string `json:"application"`
+	AccountID            string `json:"account_id"`
+	Name                 string `json:"name"`
+	Description          string `json:"description"`
+	Venue                string `json:"venue"`
+	EnvironmentType      string `json:"environment_type"`
+	ProjectPhase         string `json:"project_phase"`
+	Budget               Budget `json:"budget"`
+	IsProjectFileCreated bool   `json:"is_project_file_created"`
+}
+
+// Request body for creating or updating a project.
+type ProjectUpdateRequest struct {
+	ID                 string `json:"id"`
+	Application        string `json:"application"`
+	AccountID          string `json:"account_id"`
+	Name               string `json:"name"`
+	Description        string `json:"description"`
+	Venue              string `json:"venue"`
+	EnvironmentType    string `json:"environment_type"`
+	ProjectPhase       string `json:"project_phase"`
+	Budget             Budget `json:"budget"`
+	IsProjectFileDirty bool   `json:"is_project_file_dirty"`
+	IsArchived         bool   `json:"is_archived"`
+	IsStarred          bool   `json:"is_starred"`
+	LockProject        bool   `json:"lock_project"`
+}
+
+// Project object for Get.
+type Project struct {
+	ID              string    `json:"id"`
+	Application     string    `json:"application"`
+	AccountID       string    `json:"account_id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	Venue           string    `json:"venue"`
+	EnvironmentType string    `json:"environment_type"`
+	ProjectPhase    string    `json:"project_phase"`
+	IsArchived      bool      `json:"is_archived"`
+	IsStarred       bool      `json:"is_starred"`
+	LockedByUser    string    `json:"locked_by_user"`
+	Budget          Budget    `json:"budget"`
+	ProjectFileURL  string    `json:"project_file_url"`
+	ThumbnailURL    string    `json:"thumbnail_url"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// Parameters for retrieving all projects.
+type GetAllProjectsParams struct {
+	IsArchived bool   `form:"is_archived"`
+	SortBy     string `form:"sort_by"`
+	SortOrder  string `form:"sort_order"`
 }

@@ -35,3 +35,4 @@ type ObjectReader interface {
 type ObjectHandle interface {
 	NewReader(ctx context.Context) (io.ReadCloser, error)
 }
+

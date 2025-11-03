@@ -104,7 +104,7 @@ func TestNewReaderError(t *testing.T) {
 	}
 	r, err := obj.NewReader(context.Background())
 	assert.Nil(t, r)
-	assert.EqualError(t, err, "failed to get object: get error")
+	assert.EqualError(t, err, "get error")
 }
 
 func TestObject(t *testing.T) {
@@ -121,6 +121,7 @@ func TestBucket(t *testing.T) {
 	s3Client := &S3{
 		client:        &mockS3Client{},
 		presignClient: &mockPresignClient{},
+		config:        &s3Config{},
 	}
 	bucket := s3Client.Bucket("bucket")
 	assert.NotNil(t, bucket)
