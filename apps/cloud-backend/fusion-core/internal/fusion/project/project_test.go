@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -20,20 +20,20 @@ type mockDBService struct {
 	mock.Mock
 }
 
-func (m *mockDBService) Insert(ctx context.Context, project *fusion.ProjectCreateRequest) error {
+func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest) error {
 	args := m.Called(ctx, project)
 	return args.Error(0)
 }
 
-func (m *mockDBService) SelectAll(ctx context.Context, params *fusion.GetAllProjectsParams) ([]*fusion.Project, error) {
+func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProjectsParams) ([]*types.Project, error) {
 	args := m.Called(ctx, params)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*fusion.Project), args.Error(1)
+	return args.Get(0).([]*types.Project), args.Error(1)
 }
 
-func (m *mockDBService) Update(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error {
+func (m *mockDBService) Update(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
 	args := m.Called(ctx, id, project)
 	return args.Error(0)
 }
@@ -59,13 +59,13 @@ func (m *mockPresigner) PresignPut(ctx context.Context, key string, ttl time.Dur
 func TestCreateProject(t *testing.T) {
 	tests := []struct {
 		name        string
-		project     *fusion.ProjectCreateRequest
+		project     *types.ProjectCreateRequest
 		mockErr     error
 		expectedErr error
 	}{
 		{
 			name: "successful creation",
-			project: &fusion.ProjectCreateRequest{
+			project: &types.ProjectCreateRequest{
 				Name: "Test Project",
 			},
 			mockErr:     nil,
@@ -73,7 +73,7 @@ func TestCreateProject(t *testing.T) {
 		},
 		{
 			name: "database error",
-			project: &fusion.ProjectCreateRequest{
+			project: &types.ProjectCreateRequest{
 				Name: "Test Project",
 			},
 			mockErr:     errDatabaseMsg,
@@ -102,7 +102,7 @@ func TestCreateProject(t *testing.T) {
 }
 
 func TestGetAllProjects(t *testing.T) {
-	mockProjects := []*fusion.Project{
+	mockProjects := []*types.Project{
 		{
 			ID:        "1",
 			AccountID: "acc1",
@@ -117,8 +117,8 @@ func TestGetAllProjects(t *testing.T) {
 
 	tests := []struct {
 		name           string
-		params         *fusion.GetAllProjectsParams
-		mockProjects   []*fusion.Project
+		params         *types.GetAllProjectsParams
+		mockProjects   []*types.Project
 		mockDBErr      error
 		mockPresignURL string
 		mockPresignErr error
@@ -126,7 +126,7 @@ func TestGetAllProjects(t *testing.T) {
 	}{
 		{
 			name:           "successful retrieval",
-			params:         &fusion.GetAllProjectsParams{},
+			params:         &types.GetAllProjectsParams{},
 			mockProjects:   mockProjects,
 			mockDBErr:      nil,
 			mockPresignURL: "https://presigned-url",
@@ -135,7 +135,7 @@ func TestGetAllProjects(t *testing.T) {
 		},
 		{
 			name:           "database error",
-			params:         &fusion.GetAllProjectsParams{},
+			params:         &types.GetAllProjectsParams{},
 			mockProjects:   nil,
 			mockDBErr:      errDatabaseMsg,
 			mockPresignURL: "",
@@ -144,7 +144,7 @@ func TestGetAllProjects(t *testing.T) {
 		},
 		{
 			name:           "presign error",
-			params:         &fusion.GetAllProjectsParams{},
+			params:         &types.GetAllProjectsParams{},
 			mockProjects:   mockProjects,
 			mockDBErr:      nil,
 			mockPresignURL: "",
@@ -195,14 +195,14 @@ func TestUpdateProject(t *testing.T) {
 	tests := []struct {
 		name        string
 		id          string
-		project     *fusion.ProjectUpdateRequest
+		project     *types.ProjectUpdateRequest
 		mockErr     error
 		expectedErr error
 	}{
 		{
 			name: "successful update",
 			id:   "1",
-			project: &fusion.ProjectUpdateRequest{
+			project: &types.ProjectUpdateRequest{
 				Name: "Updated Project",
 			},
 			mockErr:     nil,
@@ -211,7 +211,7 @@ func TestUpdateProject(t *testing.T) {
 		{
 			name: "database error",
 			id:   "1",
-			project: &fusion.ProjectUpdateRequest{
+			project: &types.ProjectUpdateRequest{
 				Name: "Updated Project",
 			},
 			mockErr:     errDatabaseMsg,

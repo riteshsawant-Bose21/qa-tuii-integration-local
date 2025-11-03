@@ -13,14 +13,7 @@ type ProjectHandler struct {
 	project fusion.Project
 }
 
-type ProjectSVC interface {
-	CreateProject(ctx context.Context, project *fusion.ProjectCreateRequest) error
-	GetAllProjects(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error)
-	UpdateProject(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error
-	DeleteProject(ctx context.Context, id string) error
-}
-
-func NewProjectHandler(projectSvc ProjectSVC) *ProjectHandler {
+func NewProjectHandler(project fusion.Project) *ProjectHandler {
 	return &ProjectHandler{
 		project: project,
 	}
@@ -38,7 +31,7 @@ func NewProjectHandler(projectSvc ProjectSVC) *ProjectHandler {
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
-	var p fusion.ProjectCreateRequest
+	var p types.ProjectCreateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return
@@ -62,7 +55,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
-	params := fusion.GetAllProjectsParams{}
+	params := types.GetAllProjectsParams{}
 	if err := ctx.ShouldBindQuery(&params); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -106,7 +99,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Router /projects/{id} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	id := ctx.Param("id")
-	var p fusion.ProjectUpdateRequest
+	var p types.ProjectUpdateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(400, gin.H{"error": err.Error()})
 		return

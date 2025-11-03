@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
@@ -53,7 +53,7 @@ func TestServiceInsert(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully inserts project", func(t *testing.T) {
-		project := &fusion.ProjectCreateRequest{
+		project := &types.ProjectCreateRequest{
 			ID:              testProjectID,
 			AccountID:       testProjectAccountID,
 			Name:            testProjectName,
@@ -61,7 +61,7 @@ func TestServiceInsert(t *testing.T) {
 			Venue:           testProjectVenue,
 			EnvironmentType: testProjectEnvType,
 			Application:     testProjectApp,
-			Budget: fusion.Budget{
+			Budget: types.Budget{
 				Amount:   1000,
 				Currency: "USD",
 			},
@@ -94,7 +94,7 @@ func TestServiceInsert(t *testing.T) {
 	})
 
 	t.Run("returns error when account ID is invalid", func(t *testing.T) {
-		project := &fusion.ProjectCreateRequest{
+		project := &types.ProjectCreateRequest{
 			AccountID: "invalid",
 		}
 		err := service.Insert(ctx, project)
@@ -109,7 +109,7 @@ func TestServiceSelectAll(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully retrieves all projects", func(t *testing.T) {
-		queryParams := &fusion.GetAllProjectsParams{
+		queryParams := &types.GetAllProjectsParams{
 			IsArchived: false,
 			SortBy:     "created_at",
 			SortOrder:  "asc",
@@ -141,13 +141,13 @@ func TestServiceUpdate(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully updates project", func(t *testing.T) {
-		updateReq := &fusion.ProjectUpdateRequest{
+		updateReq := &types.ProjectUpdateRequest{
 			AccountID:   testProjectAccountID,
 			Name:        "Updated Project",
 			Description: "Updated Description",
 			Venue:       "Updated Venue",
 			IsArchived:  true,
-			Budget: fusion.Budget{
+			Budget: types.Budget{
 				Amount:   2000,
 				Currency: "EUR",
 			},
@@ -173,7 +173,7 @@ func TestServiceUpdate(t *testing.T) {
 	t.Run("returns error when project not found", func(t *testing.T) {
 		mock.ExpectQuery(testSelectProjectsStmt).WillReturnError(sql.ErrNoRows)
 
-		err := service.Update(ctx, "non-existent", &fusion.ProjectUpdateRequest{})
+		err := service.Update(ctx, "non-existent", &types.ProjectUpdateRequest{})
 		assert.Error(t, err)
 	})
 }

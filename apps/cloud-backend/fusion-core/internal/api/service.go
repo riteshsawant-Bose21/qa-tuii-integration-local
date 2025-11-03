@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/gin-gonic/gin"
 )
 
@@ -28,8 +28,8 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	productSvc handler.ProductSVC,
-	projectSvc handler.ProjectSVC,
+	product fusion.Product,
+	project fusion.Project,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -44,18 +44,18 @@ func New(cfg *Config,
 	// engine.Use(ginLogger(logger)) // Custom logging middleware
 	engine.Use(corsMiddleware()) // CORS if needed
 
-	if productSvc == nil {
+	if product == nil {
 		return nil, errors.New("missing product service")
 	}
 
-	if projectSvc == nil {
+	if project == nil {
 		return nil, errors.New("missing project service")
 	}
 
 	api := &API{
 		engine:  engine,
-		product: productSvc,
-		project: projectSvc,
+		product: product,
+		project: project,
 	}
 
 	api.registerRoutes()

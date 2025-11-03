@@ -1,25 +1,66 @@
 package types
 
+import "time"
+
 type Budget struct {
 	Amount   float64 `json:"amount"`
 	Currency string  `json:"currency"`
 }
 
-type Project struct {
-	ID             string                 `json:"id"`
-	OrganizationID string                 `json:"organization_id"`
-	Name           string                 `json:"name"`
-	Description    string                 `json:"description"`
-	Venue          string                 `json:"venue"`
-	VenueType      string                 `json:"venue_type"`
-	Application    string                 `json:"application"`
-	Budget         Budget                 `json:"budget"`
-	MetaData       map[string]interface{} `json:"meta_data"`
-	ProjectFileURL string                 `json:"project_file_url"`
+// Request body for creating or updating a project.
+type ProjectCreateRequest struct {
+	ID                   string `json:"id"`
+	Application          string `json:"application"`
+	AccountID            string `json:"account_id"`
+	Name                 string `json:"name"`
+	Description          string `json:"description"`
+	Venue                string `json:"venue"`
+	EnvironmentType      string `json:"environment_type"`
+	ProjectPhase         string `json:"project_phase"`
+	Budget               Budget `json:"budget"`
+	IsProjectFileCreated bool   `json:"is_project_file_created"`
 }
 
-// SyncProjectRequest represents the request body for project synchronization.
-type SyncProjectRequest struct {
-	MetaData   map[string]interface{} `json:"meta_data" example:"{\"version\": \"1.0\", \"updated_by\": \"user123\"}" validate:"required"`
-	ZipFileURL string                 `json:"zip_file_url" example:"https://example.com/project.zip" validate:"required,url"`
+// Request body for creating or updating a project.
+type ProjectUpdateRequest struct {
+	ID                 string `json:"id"`
+	Application        string `json:"application"`
+	AccountID          string `json:"account_id"`
+	Name               string `json:"name"`
+	Description        string `json:"description"`
+	Venue              string `json:"venue"`
+	EnvironmentType    string `json:"environment_type"`
+	ProjectPhase       string `json:"project_phase"`
+	Budget             Budget `json:"budget"`
+	IsProjectFileDirty bool   `json:"is_project_file_dirty"`
+	IsArchived         bool   `json:"is_archived"`
+	IsStarred          bool   `json:"is_starred"`
+	LockProject        bool   `json:"lock_project"`
+}
+
+// Project object for Get.
+type Project struct {
+	ID              string    `json:"id"`
+	Application     string    `json:"application"`
+	AccountID       string    `json:"account_id"`
+	Name            string    `json:"name"`
+	Description     string    `json:"description"`
+	Venue           string    `json:"venue"`
+	EnvironmentType string    `json:"environment_type"`
+	ProjectPhase    string    `json:"project_phase"`
+	IsArchived      bool      `json:"is_archived"`
+	IsStarred       bool      `json:"is_starred"`
+	LockedByUser    string    `json:"locked_by_user"`
+	Budget          Budget    `json:"budget"`
+	ProjectFileURL  string    `json:"project_file_url"`
+	ThumbnailURL    string    `json:"thumbnail_url"`
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+}
+
+// Parameters for retrieving all projects.
+type GetAllProjectsParams struct {
+	IsArchived bool   `form:"is_archived"`
+	SortBy     string `form:"sort_by"`
+	SortOrder  string `form:"sort_order"`
 }

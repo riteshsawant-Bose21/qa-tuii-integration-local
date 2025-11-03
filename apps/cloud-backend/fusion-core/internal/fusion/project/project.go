@@ -9,7 +9,7 @@ import (
 )
 
 // CreateProject adds a new project to the database.
-func (s *Service) CreateProject(ctx context.Context, project *fusion.ProjectCreateRequest) error {
+func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) error {
 	err := s.dbService.Insert(ctx, project)
 	if err != nil {
 		return fmt.Errorf("failed to insert project: %v", err)
@@ -18,7 +18,7 @@ func (s *Service) CreateProject(ctx context.Context, project *fusion.ProjectCrea
 }
 
 // GetAllProjects retrieves all projects.
-func (s *Service) GetAllProjects(ctx context.Context, queryParams *fusion.GetAllProjectsParams) ([]*fusion.Project, error) {
+func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
 	projects, err := s.dbService.SelectAll(ctx, queryParams)
 
 	if err != nil {
@@ -41,7 +41,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *fusion.GetAll
 }
 
 // UpdateProject modifies an existing project.
-func (s *Service) UpdateProject(ctx context.Context, id string, project *fusion.ProjectUpdateRequest) error {
+func (s *Service) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
 	return s.dbService.Update(ctx, id, project)
 }
 
