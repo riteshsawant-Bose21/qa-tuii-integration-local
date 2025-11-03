@@ -366,6 +366,7 @@ jobs:
     runs-on: ubuntu-agent
     outputs:
       ran: ${{ steps.set-output.outputs.ran }}
+      MONOREPO_COMMIT_HASH: ${{ steps.hash-step.outputs.git-hash }}
     timeout-minutes: 30
     steps:
       - name: Make changes in target repo
@@ -374,6 +375,11 @@ jobs:
       - name: Set output
         id: set-output
         run: echo "ran=true" >> $GITHUB_OUTPUT
+      - name: Generate Git hash
+        id: hash-step
+        run: |
+          HASH=$(git rev-parse --short HEAD)
+          echo "git-hash=$HASH" >> $GITHUB_OUTPUT
 
   yocto-image-build:
     needs:
@@ -400,7 +406,7 @@ jobs:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
           FILE="conf/fusion-mini_properties.inc"
-          MONOREPO_COMMIT_HASH=$(git rev-parse --short HEAD)
+          MONOREPO_COMMIT_HASH=${{ needs.generate-hash.outputs.MONOREPO_COMMIT_HASH }}
 
           # Create file if it doesn't exist
           if [ ! -f "$FILE" ]; then
