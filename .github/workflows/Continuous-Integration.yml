@@ -378,10 +378,10 @@ jobs:
   yocto-image-build:
     needs:
       - integration-tests
-    if: |
-      always() && (
-        needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
-      )
+    # if: |
+    #   always() && (
+    #     needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
+    #   )
     concurrency:
       group: yocto-image-build
     runs-on: ubuntu-agent
