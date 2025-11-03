@@ -1,0 +1,21 @@
+run:
+  timeout: 5m
+  tests: true
+  exclude-dirs: ["vendor"]
+
+linters:
+  enable:
+    - govet
+    - staticcheck
+    - gofmt
+    - goimports
+    - unused
+    - errcheck
+    - ineffassign
+    - gosimple
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck
+      text: "Error return value of .+ is not checked"
