@@ -233,7 +233,7 @@ class _FussionPopupState extends State<FussionPopup> {
       (Duration timeStamp) {
         if (widget.show) {
           Future<void>.delayed(
-            const Duration(milliseconds: 500),
+            const Duration(milliseconds: 300),
             // ignore: use_build_context_synchronously
             () => _show(context),
           );
