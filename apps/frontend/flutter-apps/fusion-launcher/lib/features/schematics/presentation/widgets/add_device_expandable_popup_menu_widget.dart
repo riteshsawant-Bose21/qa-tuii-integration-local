@@ -113,6 +113,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
           _selectedPopupDevice = null;
           _selectedListeningAreaIds.clear();
           _expandedSection = null;
+          _zoneNameController.clear(); // <-- Clear zone name
+          _selectedColorHex = ""; // <-- Clear selected color
         });
       },
       tooltip: getSectionToolTip(),
@@ -712,7 +714,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                     setDropdownState: setPopupState,
                                     selectedFloor: selectedFloor,
                                     selectedFloorId: selectedFloorId,
-                                    onCreateNewArea: ({required String floorId}) {
+                                    onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
                                       if (areaNameController.text.trim().isNotEmpty && floorId.isNotEmpty) {
                                         // todo: Replace with actual area creation logic (e.g., user-defined vertices)
                                         final ListeningArea newListeningArea = ListeningArea(

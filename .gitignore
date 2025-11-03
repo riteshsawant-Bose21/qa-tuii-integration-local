@@ -11,3 +11,10 @@ dist
 
 # inteli j .idea
 .idea
+
+# vscode
+.vs*
+
+# environment files
+.env
+.env.local

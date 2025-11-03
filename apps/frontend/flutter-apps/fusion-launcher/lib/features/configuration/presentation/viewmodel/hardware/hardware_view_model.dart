@@ -292,15 +292,23 @@ extension HardwareViewModel on ProjectViewModel {
           listeningAreaId: listeningAreaId,
         ),
       );
-      final CircuitModel circuitModel = CircuitModel(name: newHardware.name, speakerSKU: (newHardware as Speaker).speakerSKU);
-      addCircuit(circuit: circuitModel, autoSave: false);
       addHardware(hardware: newHardware, autoSave: false);
-      addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);
 
-      if (listeningAreaId != null) {
-        final Zone? zone = getZonesForListeningArea(areaId: listeningAreaId);
-        if (zone == null) {
-          addCircuitToZone(zoneId: zone!.id, circuitId: circuitModel.id);
+      if (newHardware is Speaker) {
+        final CircuitModel circuitModel = CircuitModel(name: newHardware.name, speakerSKU: (newHardware).speakerSKU);
+        addCircuit(circuit: circuitModel, autoSave: false);
+        addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);
+
+        if (listeningAreaId != null) {
+          final SubZone? subZone = getSubZoneForListeningArea(areaId: listeningAreaId);
+          if (subZone != null) {
+            addCircuitToSubZone(subZoneId: subZone.id, circuitId: circuitModel.id);
+          }
+
+          final Zone? zone = getZonesForListeningArea(areaId: listeningAreaId);
+          if (zone != null) {
+            addCircuitToZone(zoneId: zone.id, circuitId: circuitModel.id);
+          }
         }
       }
 

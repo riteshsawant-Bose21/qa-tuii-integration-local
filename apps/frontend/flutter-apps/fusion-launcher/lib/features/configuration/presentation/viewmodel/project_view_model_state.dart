@@ -43,6 +43,11 @@ final class ZoneSelectionMode extends ProjectViewModelState {
   ZoneSelectionMode(this.zone);
 }
 
+final class SubZoneSelectionMode extends ProjectViewModelState {
+  final SubZone subZone;
+  SubZoneSelectionMode(this.subZone);
+}
+
 final class ListeningAreaSelectionMode extends ProjectViewModelState {
   ListeningAreaSelectionMode();
 }

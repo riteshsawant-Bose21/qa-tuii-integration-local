@@ -59,6 +59,13 @@ extension CircuitService on ProjectService {
       throw Exception('Circuit $circuitId does not exist');
     }
 
+    //check if hardware is in different circuit
+    final currentCircuitId = relationships.getParent(RelationshipType.circuitHardware, hwId);
+    if (currentCircuitId != null && currentCircuitId != circuitId) {
+      //remove hardware from current circuit
+      removeHardwareFromCircuit(hwId, currentCircuitId);
+    }
+
     relationships.link(RelationshipType.circuitHardware, circuitId, hwId);
   }
 

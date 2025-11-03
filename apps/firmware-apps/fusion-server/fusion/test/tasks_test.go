@@ -2,13 +2,14 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/routes"
 	"fusion/internal/tasks"
 	"net/http"
 	"strings"
 	"testing"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

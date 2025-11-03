@@ -1,9 +1,10 @@
 package persistence
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )

@@ -1,12 +1,13 @@
 package cxd
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/logging"
 	"os"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 // Manager coordinates UDP and TCP communication with devices

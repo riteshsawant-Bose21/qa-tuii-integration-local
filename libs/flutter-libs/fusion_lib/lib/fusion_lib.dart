@@ -13,3 +13,5 @@ export 'fusion_widgets/others/fusion_keyboard_wrapper.dart';
 export 'models/fusion_models.dart';
 export 'project_manger/fusion_project_manager.dart';
 export 'service/fusion_services.dart';
+export 'fusion_widgets/guide/pages/guide_showcase_wrapper.dart';
+export 'fusion_widgets/guide/controller/guide_showcase_controller.dart';

@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
@@ -11,6 +10,8 @@ import (
 	"math"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (
@@ -219,7 +220,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	logger := logging.GetLogger()
 	logger.Debug("LocalState requested (join=%v)", join)
 
-	state := d.stateManager.GetFullState()
+	state := d.stateManager.GetFullStateDeepCopy()
 	snapshot := struct {
 		Version api.Version                `json:"version"`
 		NodeID  string                     `json:"node_id"`
