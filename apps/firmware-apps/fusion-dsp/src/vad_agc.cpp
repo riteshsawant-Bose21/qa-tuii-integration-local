@@ -65,6 +65,7 @@ namespace {
             
 
             bool denoise_frame;
+            //bool use_weights_file;
             float vad_threshold;
             int frame_size_rnnoise;
             float alpha;
@@ -76,6 +77,7 @@ namespace {
             // bool initialized;
             // int count;
             DenoiseState *st;
+            RNNModel *model;
 
             
             int out_buffer_index;
@@ -146,7 +148,19 @@ namespace {
         // count = 0;
 
         out_buffer.assign(480, 0.0f);
-        st = rnnoise_create(NULL);
+        //use_weights_file = true;
+        
+        #ifdef USE_WEIGHTS_FILE
+            model = rnnoise_model_from_filename("src/weights_blob.bin");
+            if (!model)
+                SPDLOG_ERROR("Error: could not load weights_blob.bin");
+                
+            st = rnnoise_create(model);
+            //std::cout << "Yes"<< std::endl;
+        #else
+            st = rnnoise_create(NULL);
+            //std::cout << "No" << std::endl;
+        #endif
         
         // right now only works when frame_size = FRAME_SIZE = 480,
         // print error if frame_size is different
