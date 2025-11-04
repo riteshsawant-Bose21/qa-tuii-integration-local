@@ -27,7 +27,7 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
-		3DAF0D142EAC323300E0059E /* libMACE.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3DAF0D132EAC322700E0059E /* libMACE.a */; };
+		3D9322942EB9881500B5FC85 /* libMACE.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 3D9322932EB9881500B5FC85 /* libMACE.a */; };
 		5A32BAED1198C743B344D048 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */; };
 		A59A3F6218E913BEBB4A4C30 /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 605E46AD842B310D26D4980B /* Pods_RunnerTests.framework */; };
 /* End PBXBuildFile section */
@@ -46,13 +46,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 33CC111A2044C6BA0003C045;
 			remoteInfo = FLX;
-		};
-		3DAF0D122EAC322700E0059E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 3DAF0D092EAC321700E0059E /* MACE.xcodeproj */;
-			proxyType = 2;
-			remoteGlobalIDString = 0E21E0DCA9EF77BAEC05E547;
-			remoteInfo = "MACE - Static Library";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -88,7 +81,7 @@
 		33E51913231747F40026EE4D /* DebugProfile.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = DebugProfile.entitlements; sourceTree = "<group>"; };
 		33E51914231749380026EE4D /* Release.entitlements */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.entitlements; path = Release.entitlements; sourceTree = "<group>"; };
 		33E5194F232828860026EE4D /* AppInfo.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = AppInfo.xcconfig; sourceTree = "<group>"; };
-		3DAF0D092EAC321700E0059E /* MACE.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = MACE.xcodeproj; path = /Users/gragan/inprogress/bose/DoctorStrange/MACE/Builds/MacOSX/MACE.xcodeproj; sourceTree = "<absolute>"; };
+		3D9322932EB9881500B5FC85 /* libMACE.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libMACE.a; path = "../../../../../libs/flutter-libs/mace_lib/lib/macos/arm64/libMACE.a"; sourceTree = "<group>"; };
 		605E46AD842B310D26D4980B /* Pods_RunnerTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_RunnerTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		614470774E375572ACFD762A /* Pods-RunnerTests.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.profile.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.profile.xcconfig"; sourceTree = "<group>"; };
 		7AFA3C8E1D35360C0083082E /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
@@ -96,7 +89,6 @@
 		BF091CB27D2C76F9B1D0043C /* Pods-Runner.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.debug.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.debug.xcconfig"; sourceTree = "<group>"; };
 		D1C0955165201363E6CF84D9 /* Pods-Runner.profile.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-Runner.profile.xcconfig"; path = "Target Support Files/Pods-Runner/Pods-Runner.profile.xcconfig"; sourceTree = "<group>"; };
 		D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_Runner.framework; sourceTree = BUILT_PRODUCTS_DIR; };
-		DC6F364A2E9915A800810BDB /* libMaceAPI.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; path = libMaceAPI.dylib; sourceTree = "<group>"; };
 		F0BE72888DCF496AA8940655 /* Pods-RunnerTests.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-RunnerTests.release.xcconfig"; path = "Target Support Files/Pods-RunnerTests/Pods-RunnerTests.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -128,8 +120,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				3DAF0D142EAC323300E0059E /* libMACE.a in Frameworks */,
 				5A32BAED1198C743B344D048 /* Pods_Runner.framework in Frameworks */,
+				3D9322942EB9881500B5FC85 /* libMACE.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -166,7 +158,6 @@
 				33CC10EE2044A3C60003C045 /* Products */,
 				D73912EC22F37F3D000D13A0 /* Frameworks */,
 				4C9AEABA018BAD8EA7A89317 /* Pods */,
-				DC6F364A2E9915A800810BDB /* libMaceAPI.dylib */,
 			);
 			sourceTree = "<group>";
 		};
@@ -214,14 +205,6 @@
 			path = Runner;
 			sourceTree = "<group>";
 		};
-		3DAF0D0F2EAC322700E0059E /* Products */ = {
-			isa = PBXGroup;
-			children = (
-				3DAF0D132EAC322700E0059E /* libMACE.a */,
-			);
-			name = Products;
-			sourceTree = "<group>";
-		};
 		4C9AEABA018BAD8EA7A89317 /* Pods */ = {
 			isa = PBXGroup;
 			children = (
@@ -238,7 +221,7 @@
 		D73912EC22F37F3D000D13A0 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
-				3DAF0D092EAC321700E0059E /* MACE.xcodeproj */,
+				3D9322932EB9881500B5FC85 /* libMACE.a */,
 				D43E3FE05B467C89DC6A68C7 /* Pods_Runner.framework */,
 				605E46AD842B310D26D4980B /* Pods_RunnerTests.framework */,
 			);
@@ -331,12 +314,6 @@
 			mainGroup = 33CC10E42044A3C60003C045;
 			productRefGroup = 33CC10EE2044A3C60003C045 /* Products */;
 			projectDirPath = "";
-			projectReferences = (
-				{
-					ProductGroup = 3DAF0D0F2EAC322700E0059E /* Products */;
-					ProjectRef = 3DAF0D092EAC321700E0059E /* MACE.xcodeproj */;
-				},
-			);
 			projectRoot = "";
 			targets = (
 				33CC10EC2044A3C60003C045 /* Runner */,
@@ -345,16 +322,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXReferenceProxy section */
-		3DAF0D132EAC322700E0059E /* libMACE.a */ = {
-			isa = PBXReferenceProxy;
-			fileType = archive.ar;
-			path = libMACE.a;
-			remoteRef = 3DAF0D122EAC322700E0059E /* PBXContainerItemProxy */;
-			sourceTree = BUILT_PRODUCTS_DIR;
-		};
-/* End PBXReferenceProxy section */
 
 /* Begin PBXResourcesBuildPhase section */
 		331C80D3294CF70F00263BE5 /* Resources */ = {
@@ -444,9 +411,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Runner/Pods-Runner-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
