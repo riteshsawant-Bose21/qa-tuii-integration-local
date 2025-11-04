@@ -83,11 +83,13 @@ class GuideShowCaseController extends Cubit<GuideShowCaseState> {
     return state.currentStep == step && !state.completedSteps.contains(step);
   }
 
-  Future<void> completeStep() async {
+  bool isStepCompleted(GuideShowCaseSteps step) => state.completedSteps.contains(step);
+
+  Future<void> completeStep(GuideShowCaseSteps step) async {
     if (state.isGuideCompleted) return;
 
-    final step = state.currentStep;
-    if (step == null || state.completedSteps.contains(step)) return;
+    // Ignore if null or already completed
+    if (state.completedSteps.contains(step)) return;
 
     final updated = Set<GuideShowCaseSteps>.from(state.completedSteps)..add(step);
 
@@ -107,8 +109,9 @@ class GuideShowCaseController extends Cubit<GuideShowCaseState> {
       return;
     }
 
-    // Move to next step
+    // Move to next step automatically (optional)
     final nextStep = _findNextStep(updated);
+
     emit(
       state.copyWith(
         completedSteps: updated,

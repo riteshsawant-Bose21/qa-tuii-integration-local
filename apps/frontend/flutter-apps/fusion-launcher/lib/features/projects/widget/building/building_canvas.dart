@@ -279,7 +279,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         }
                                         widget.onCalculateSpl();
                                         serviceLocator<ProjectViewModel>().saveProject();
-                                        context.read<GuideShowCaseController>().completeStep();
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.drawListeningArea);
                                       },
                                       onUpdateListeningArea: (ListeningArea area) {
                                         serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
@@ -299,7 +299,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       },
                                       onTapListeningArea: (ListeningArea value) {
                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
-                                        context.read<GuideShowCaseController>().completeStep();
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showListeningAreaSelectionArea);
                                       },
                                       onSelectedListeningAreaIdChanged: (String? value) {
                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
@@ -324,7 +324,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           position: speakerPosition,
                                           listeningAreaId: listeningAreaId,
                                         );
-                                        context.read<GuideShowCaseController>().completeStep();
+
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
+
+                                        if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
+                                        }
                                       },
                                       listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                                       subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
@@ -465,7 +470,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             serviceLocator<ProjectViewModel>().clearSelectedZone();
                                             serviceLocator<ProjectViewModel>().clearSelectedSubZone();
                                             widget.floorCanvasController.completeListeningAreaSelection();
-                                            context.read<GuideShowCaseController>().completeStep();
+                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
                                           },
                                           child: InkWell(
                                             onTap: () {
@@ -930,7 +935,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    context.read<GuideShowCaseController>().completeStep();
+    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
 
     final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(
       assetPath: assetImagePath,
@@ -970,6 +975,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
         if (mounted) Navigator.of(context).pop();
 
+        // ignore: use_build_context_synchronously
+        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
+
         if (responseCallback.success && responseCallback.data != null) {
           final String savedImagePath = responseCallback.data!;
           _calibrateFloorPlan(savedImagePath);
@@ -1006,10 +1014,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       showDialog(
         context: context,
         barrierDismissible: false,
-        builder:
-            (BuildContext context) => const Center(
-              child: CircularProgressIndicator(),
-            ),
+        builder: (_) => const Center(child: CircularProgressIndicator()),
       );
 
       await Future<void>.delayed(const Duration(milliseconds: 100));
@@ -1022,18 +1027,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         context: context,
         barrierDismissible: true,
         builder:
-            (BuildContext context) => Dialog(
+            (_) => Dialog(
               child: FloorPlanCalibrationDialog(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
-                  if (mounted) {
-                    Navigator.of(context).pop(data);
-                  }
+                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+                  Navigator.of(context).pop(data);
                 },
                 onCancel: () {
-                  if (mounted) {
-                    Navigator.of(context).pop();
-                  }
+                  Navigator.of(context).pop();
                 },
               ),
             ),
@@ -1105,7 +1107,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
         widget.floorCanvasController.loadFloorPlanImage();
         // ignore: use_build_context_synchronously
-        context.read<GuideShowCaseController>().completeStep();
+        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
       } else {
         debugPrint('Calibration cancelled by user');
       }

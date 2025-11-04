@@ -6,6 +6,7 @@ import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 
+import '../../../di/service_locator.dart';
 import '../controller/guide_showcase_controller.dart';
 
 class GuideShowcaseTexts {
@@ -45,9 +46,6 @@ class GuideShowcaseWrapper extends StatelessWidget {
       barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.4),
       spotlightBorderRadius: 12.0,
-      onBarrierDismissed: () {
-        context.read<GuideShowCaseController>().endGuide();
-      },
       content: ConstrainedBox(
         constraints: BoxConstraints(
           maxWidth: MediaQuery.sizeOf(context).width * 0.3,
@@ -73,7 +71,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
                 ),
                 GestureDetector(
                   onTap: () {
-                    context.read<GuideShowCaseController>().endGuide();
+                    fusionLibLocator<GuideShowCaseController>().endGuide();
                     Navigator.pop(context);
                   },
                   behavior: HitTestBehavior.translucent,
@@ -123,7 +121,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
               label: GuideShowcaseTexts.no,
               textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
               onTap: () {
-                context.read<GuideShowCaseController>().endGuide();
+                fusionLibLocator<GuideShowCaseController>().endGuide();
                 Navigator.of(context).pop();
               },
             ),
@@ -139,7 +137,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
               ),
               onTap: () {
                 Navigator.pop(context);
-                context.read<GuideShowCaseController>().guideNeeded();
+                fusionLibLocator<GuideShowCaseController>().guideNeeded();
               },
             ),
           ],

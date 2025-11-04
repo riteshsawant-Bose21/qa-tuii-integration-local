@@ -69,7 +69,7 @@ class MyApp extends StatelessWidget {
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
         BlocProvider<GuideShowCaseController>(
-          create: (BuildContext context) => GuideShowCaseController(globalNavigatorKey.currentContext!),
+          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
       ],
       child: FusionThemeBuilder(
