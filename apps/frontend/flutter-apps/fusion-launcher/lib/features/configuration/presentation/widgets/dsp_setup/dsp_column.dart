@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
 import '../common/vip_configuration.dart';
 import '../dro-visualizer/dro_visualizer.dart';
 import 'dsp_card.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class DspColumn extends StatefulWidget {
-  final List<FusionDevice> fusionDevices;
+  final List<FusionDsp> fusionDevices;
   final String? vipAddress;
   final String? droAddress;
   final Function() onRequestFusionDeviceList;

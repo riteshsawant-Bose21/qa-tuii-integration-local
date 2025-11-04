@@ -5,62 +5,72 @@ package cluster
 
 import (
 	"fusion/internal/logging"
+	"net"
 
 	"github.com/vishvananda/netlink"
 )
 
 const updateChannels = 16
 
-func (c *Cluster) watchLocalVIP() {
+func (c *Cluster) watchLocalVIP(iface string) {
 	logger := logging.GetLogger()
-
 	expectedVIP, err := c.getVIPFromConfig()
 	if err != nil {
 		logger.Error("Failed to get VIP from config: %v", err)
 		return
 	}
+	expectedVIP = canonicalVIP(expectedVIP)
 
-	addrs, err := netlink.AddrList(nil, netlink.FAMILY_ALL)
-	if err == nil {
-		for _, a := range addrs {
-			if a.IP.String() == expectedVIP {
-				logger.Info("VIP present at startup: %s", expectedVIP)
-				c.listenerUpdated(expectedVIP, c.bindAddr)
-				c.notifyLocalVIPChange(true)
-				break
-			}
+	// Watch only the correct interface
+	link, err := netlink.LinkByName(iface)
+	if err != nil {
+		logger.Error("VIP watcher: interface enp0s1 not found: %v", err)
+		return
+	}
+
+	// Initial scan
+	addrs, _ := netlink.AddrList(link, netlink.FAMILY_V4)
+	for _, a := range addrs {
+		if canonicalVIP(a.IP.String()) == expectedVIP {
+			logger.Info("VIP present at startup: %s", expectedVIP)
+			c.listenerUpdated(expectedVIP, c.bindAddr)
+			c.notifyLocalVIPChange(true)
+			break
 		}
-	} else {
-		logger.Error("AddrList in startup scan failed: %v", err)
 	}
 
 	updates := make(chan netlink.AddrUpdate, updateChannels)
 	done := make(chan struct{})
 
-	if err := netlink.AddrSubscribeWithOptions(updates, done, netlink.AddrSubscribeOptions{
-		ErrorCallback: func(e error) {
-			logger.Error("netlink subscription callback error: %v", e)
-		},
-	}); err != nil {
-		logger.Error("AddrSubscribeWithOptions failed: %v", err)
+	if err := netlink.AddrSubscribeWithOptions(
+		updates, done,
+		netlink.AddrSubscribeOptions{ErrorCallback: func(e error) {
+			logger.Error("netlink error: %v", e)
+		}},
+	); err != nil {
+		logger.Error("AddrSubscribe failed: %v", err)
 		return
 	}
 
+	_, vipNet, _ := net.ParseCIDR("192.168.64.0/24")
+
 	for update := range updates {
 		ip := update.LinkAddress.IP
-		if ip == nil || ip.To4() == nil {
+		if ip == nil || ip.To4() == nil || !vipNet.Contains(ip) {
 			continue
 		}
-		theIP := ip.String()
+		theIP := canonicalVIP(ip.String())
+
+		if theIP != expectedVIP {
+			continue
+		}
 
 		if update.NewAddr {
-			logger.Debug("Local VIP appeared: %s", theIP)
+			logger.Info("Local VIP appeared: %s", theIP)
 			c.listenerUpdated(theIP, c.bindAddr)
 		} else {
-			logger.Debug("Local VIP removed: %s", theIP)
-			if c.isLocalVIP(theIP) {
-				c.listenerUpdated("", c.bindAddr)
-			}
+			logger.Info("Local VIP removed: %s", theIP)
+			c.listenerUpdated("", c.bindAddr)
 		}
 	}
 

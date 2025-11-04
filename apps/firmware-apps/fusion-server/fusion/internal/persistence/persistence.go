@@ -3,7 +3,6 @@ package persistence
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -12,6 +11,8 @@ import (
 	"os"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )
@@ -240,15 +241,13 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 // persistState saves the current state under the given snapshot key.
 // Note that it does not update lastSave; the caller should update lastSave as needed.
 func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
-	state := p.stateManager.GetFullState()
-
-	deepCopy := deepCopyState(state.State)
+	state := p.stateManager.GetFullStateDeepCopy()
 
 	ps := &PersistentState{
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
 		Checksum:  state.Checksum,
-		State:     deepCopy,
+		State:     state.State,
 	}
 
 	data, err := json.Marshal(ps)
@@ -479,24 +478,6 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 	}
 
 	return nil
-}
-
-// deepCopyState makes a deep copy of the state map
-func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
-	if src == nil {
-		return nil
-	}
-	dst := make(map[string]*api.StateEntry, len(src))
-	for k, v := range src {
-		if v == nil {
-			dst[k] = nil
-			continue
-		}
-		// Create a copy of the struct, not the pointer
-		copyVal := *v
-		dst[k] = &copyVal
-	}
-	return dst
 }
 
 // saveWorker saves state with debounce on a channel

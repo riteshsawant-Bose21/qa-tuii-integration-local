@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/hashicorp/memberlist"
 )
 
@@ -25,7 +26,7 @@ const (
 
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
-	GetFullState() VersionedState
+	GetFullStateDeepCopy() VersionedState
 }
 
 // VersionedState represents a version of instance state
@@ -350,23 +351,44 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 }
 
 // GetFullState returns the internal state
+
+// This returns a copy of the struct VersionedState by value,
+// but in Go copying a struct that contains a map does NOT copy the map’s contents.
+// It copies only the map header (a small descriptor) which still points to the
+// SAME underlying map backing array/hash table. So after GetFullState() returns,
+// the caller holds a struct whose State field is an alias of the original shared map.
+
 func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
 	defer sm.RUnlock()
 	return sm.state
 }
 
+// GetFullState returns the internal state after deep copy.
+func (sm *StateManager) GetFullStateDeepCopy() VersionedState {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	return VersionedState{
+		Checksum: sm.state.Checksum,
+		State:    deepCopyState(sm.state.State),
+	}
+}
+
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 
-	result := make(map[string]any)
+	state := sm.GetFullStateDeepCopy().State
 
-	state := sm.GetFullState().State
-	for key, entry := range state {
-		result[key] = utils.DeepCopy(entry.Data)
+	result := make(map[string]any, len(state))
+	for k, e := range state {
+		if e != nil {
+			result[k] = e.Data // already deep-copied inside GetFullStateDeepCopy
+		}
 	}
 	return result
+
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
@@ -655,4 +677,23 @@ func mergeMaps(existing, update map[string]any) map[string]any {
 
 func buildInternalURL(address, port, endpoint string) string {
 	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
+}
+
+// deepCopyState makes a deep copy of the state map
+func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]*api.StateEntry, len(src))
+	for k, v := range src {
+		if v == nil {
+			dst[k] = nil
+			continue
+		}
+		// Create a copy of the struct, not the pointer
+		c := *v                         // copy the struct
+		c.Data = utils.DeepCopy(v.Data) // deep-copy the payload
+		dst[k] = &c
+	}
+	return dst
 }

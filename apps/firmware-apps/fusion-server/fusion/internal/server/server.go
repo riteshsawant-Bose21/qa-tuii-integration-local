@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -169,12 +170,8 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the full current configuration state.
 	configData := s.handler.StateManager.GetStateMap()
 
-	// Create a deep copy of configData to preserve the original configuration.
-	originalConfig, err := deepCopy(configData)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error copying original configuration: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// get another copy of a deep copy of configData to preserve the original configuration.
+	originalConfig := s.handler.StateManager.GetStateMap()
 
 	var updatedData any
 	if key != "" {
@@ -843,19 +840,6 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 	return params[0], nil
 }
 
-// deepCopy creates a deep copy of data using JSON marshalling.
-// It is suitable for data types that can be represented as JSON (e.g., maps and slices).
-func deepCopy(data any) (any, error) {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	var copy any
-	if err := json.Unmarshal(bytes, &copy); err != nil {
-		return nil, err
-	}
-	return copy, nil
-}
 
 // calculateDiff recursively compares two data structures (maps or slices) and returns the differences.
 // If the data is not equal, it returns the updated data.

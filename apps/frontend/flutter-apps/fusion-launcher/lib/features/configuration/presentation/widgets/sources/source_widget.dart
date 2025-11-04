@@ -68,7 +68,7 @@ class _SourceWidgetState extends State<SourceWidget> {
                   Offset? center;
 
                   if (location.listeningAreaId != null) {
-                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
 
                     //find the center of area.vertices
                     center = Offset(
@@ -115,73 +115,72 @@ class _SourceWidgetState extends State<SourceWidget> {
               height: 5,
             ),
 
-            if (widget.source.fusionDeviceId != null || widget.source.portNumbers.isNotEmpty)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).primaryColor,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.grey.shade200),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: <Widget>[
-                    // Device Icon
-                    const Icon(
-                      Icons.memory,
-                      size: 14,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 8),
-
-                    // Device Name
-                    if (widget.source.fusionDeviceId != null) ...<Widget>[
-                      Flexible(
-                        child: Text(
-                          serviceLocator<ProjectViewModel>().fusionDevices.firstWhere((FusionDevice val) => val.id == widget.source.fusionDeviceId).name,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-
-                      // Separator
-                      if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                          width: 1,
-                          height: 12,
-                          color: Colors.white,
-                        ),
-                      ],
-                    ],
-
-                    // Port Information
-                    if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
-                      const Icon(
-                        Icons.electrical_services,
-                        size: 14,
-                        color: Colors.white,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Port ${widget.source.portNumbers.join(', ')}',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.white,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-
+            // if (widget.source.fusionDeviceId != null || widget.source.portNumbers.isNotEmpty)
+            //   Container(
+            //     margin: const EdgeInsets.symmetric(horizontal: 8),
+            //     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            //     decoration: BoxDecoration(
+            //       color: Theme.of(context).primaryColor,
+            //       borderRadius: BorderRadius.circular(8),
+            //       border: Border.all(color: Colors.grey.shade200),
+            //     ),
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.start,
+            //       crossAxisAlignment: CrossAxisAlignment.center,
+            //       children: <Widget>[
+            //         // Device Icon
+            //         const Icon(
+            //           Icons.memory,
+            //           size: 14,
+            //           color: Colors.white,
+            //         ),
+            //         const SizedBox(width: 8),
+            //
+            //         // Device Name
+            //         if (widget.source.fusionDeviceId != null) ...<Widget>[
+            //           Flexible(
+            //             child: Text(
+            //               serviceLocator<ProjectViewModel>().fusionDevices.firstWhere((FusionDsp val) => val.id == widget.source.fusionDeviceId).name,
+            //               style: const TextStyle(
+            //                 fontSize: 13,
+            //                 fontWeight: FontWeight.w600,
+            //                 color: Colors.white,
+            //               ),
+            //               overflow: TextOverflow.ellipsis,
+            //             ),
+            //           ),
+            //
+            //           // Separator
+            //           if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
+            //             Container(
+            //               margin: const EdgeInsets.symmetric(horizontal: 8),
+            //               width: 1,
+            //               height: 12,
+            //               color: Colors.white,
+            //             ),
+            //           ],
+            //         ],
+            //
+            //         // Port Information
+            //         if (widget.source.portNumbers.isNotEmpty) ...<Widget>[
+            //           const Icon(
+            //             Icons.electrical_services,
+            //             size: 14,
+            //             color: Colors.white,
+            //           ),
+            //           const SizedBox(width: 4),
+            //           Text(
+            //             'Port ${widget.source.portNumbers.join(', ')}',
+            //             style: const TextStyle(
+            //               fontSize: 12,
+            //               color: Colors.white,
+            //               fontWeight: FontWeight.w500,
+            //             ),
+            //           ),
+            //         ],
+            //       ],
+            //     ),
+            //   ),
             if (widget.source.type == SourceType.aes67input) ...<Widget>[
               const SizedBox(height: 12),
               IPAddressField(
@@ -230,26 +229,15 @@ class _SourceWidgetState extends State<SourceWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.input,
               isControlMode: widget.isControlMode,
-              selectedBlocks: widget.source.blocks ?? <ProcessingBlockModel>[],
-              onBlocksUpdated:
-                  (List<ProcessingBlockModel> chain) => widget.onSourceChanged(
-                    widget.source.copyWith(
-                      blocks: chain,
-                    ),
-                  ),
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.source.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.removeAt(index);
-                widget.onSourceChanged(widget.source.copyWith(blocks: updatedBlocks));
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.source.id) ?? <ProcessingBlockModel>[],
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.source.id, oldIndex: oldIndex, newIndex: newIndex);
+              },
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.source.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.add(block);
-                widget.onSourceChanged(widget.source.copyWith(blocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.source.id);
               },
             ),
           ],
@@ -312,11 +300,11 @@ class _SourceWidgetState extends State<SourceWidget> {
 
   String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
-      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

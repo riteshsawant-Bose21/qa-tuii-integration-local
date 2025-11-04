@@ -257,7 +257,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             price: component.price,
             sku: component.id,
           );
-          serviceLocator<ProjectViewModel>().addHardware(source);
+          serviceLocator<ProjectViewModel>().addHardware(hardware: source);
         }
       },
       builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
@@ -293,7 +293,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                       sku: selectedBlock.id,
                       price: selectedBlock.price,
                     );
-                    serviceLocator<ProjectViewModel>().addHardware(source);
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: source);
                   },
                   color: Colors.white,
                   itemBuilder: (BuildContext context) {
@@ -348,7 +348,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                             : HardwareListCard(
                               hardwareComponents: sources,
                               onDelete: (HardwareComponent component) {
-                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                               },
                             ),
                   ),
@@ -363,23 +363,23 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
 
   Widget _buildProcessorsSection() {
     //get processors from projectManager.hardware components
-    final List<FusionDevice> processors = serviceLocator<ProjectViewModel>().fusionDevices;
-
-    final List<GenericHardwareComponent> processorComponents =
-        processors
-            .map(
-              (FusionDevice device) => GenericHardwareComponent(
-                id: device.id,
-                locationEntity: LocationModel(id: device.location),
-                name: device.name,
-                sku: device.id,
-                type: GenericHardwareComponentType.other,
-                assetImagePath: "assets/images/processor_img.webp",
-                price: 1000,
-                pos: const Offset(0, 0),
-              ),
-            )
-            .toList();
+    // final List<FusionDevice> processors = serviceLocator<ProjectViewModel>().fusionDevices;
+    //
+    // final List<GenericHardwareComponent> processorComponents =
+    //     processors
+    //         .map(
+    //           (FusionDevice device) => GenericHardwareComponent(
+    //             id: device.id,
+    //             locationEntity: LocationModel(id: device.location),
+    //             name: device.name,
+    //             sku: device.id,
+    //             type: GenericHardwareComponentType.other,
+    //             assetImagePath: "assets/images/processor_img.webp",
+    //             price: 1000,
+    //             pos: const Offset(0, 0),
+    //           ),
+    //         )
+    //         .toList();
 
     return Container(
       decoration: ShapeDecoration(
@@ -402,24 +402,24 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                 width: double.infinity,
                 constraints: const BoxConstraints(minHeight: 100),
 
-                child:
-                    processorComponents.isEmpty
-                        ? const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: Text(
-                              'No Processors available.',
-                              style: TextStyle(fontSize: 10, color: Colors.grey),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        )
-                        : HardwareListCard(
-                          componentWidth: 150,
-                          componentHeight: 25,
-                          hardwareComponents: processorComponents,
-                          showAddedBySystem: true,
-                        ),
+                // child:
+                //     processorComponents.isEmpty
+                //         ? const Center(
+                //           child: Padding(
+                //             padding: EdgeInsets.all(8.0),
+                //             child: Text(
+                //               'No Processors available.',
+                //               style: TextStyle(fontSize: 10, color: Colors.grey),
+                //               textAlign: TextAlign.center,
+                //             ),
+                //           ),
+                //         )
+                //         : HardwareListCard(
+                //           componentWidth: 150,
+                //           componentHeight: 25,
+                //           hardwareComponents: processorComponents,
+                //           showAddedBySystem: true,
+                //         ),
               ),
             ),
           ),
@@ -433,22 +433,22 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
     final List<Amplifier> amplifiers = <Amplifier>[];
     // final List<Amplifier> amplifiers = projectManager.value.amplifiers;
 
-    final List<GenericHardwareComponent> amplifierComponents =
-        amplifiers
-            .map(
-              (Amplifier amplifier) => GenericHardwareComponent(
-                id: amplifier.id,
-                locationEntity: LocationModel(id: amplifier.id),
-                name: amplifier.name,
-                sku: amplifier.id,
-                type: GenericHardwareComponentType.controller,
-                assetImagePath: "assets/images/amplifier_img.webp",
-                price: 800,
-                pos: const Offset(0, 0),
-                hardwareName: amplifier.name,
-              ),
-            )
-            .toList();
+    // final List<GenericHardwareComponent> amplifierComponents =
+    //     amplifiers
+    //         .map(
+    //           (Amplifier amplifier) => GenericHardwareComponent(
+    //             id: amplifier.id,
+    //             locationEntity: LocationModel(id: amplifier.id),
+    //             name: amplifier.name,
+    //             sku: amplifier.id,
+    //             type: GenericHardwareComponentType.controller,
+    //             assetImagePath: "assets/images/amplifier_img.webp",
+    //             price: 800,
+    //             pos: const Offset(0, 0),
+    //             hardwareName: amplifier.name,
+    //           ),
+    //         )
+    //         .toList();
     return Container(
       decoration: ShapeDecoration(
         color: Colors.white,
@@ -465,24 +465,24 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             child: Container(
               width: double.infinity,
               constraints: const BoxConstraints(minHeight: 100),
-              child:
-                  amplifierComponents.isEmpty
-                      ? const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(8.0),
-                          child: Text(
-                            'No amplifiers available.',
-                            style: TextStyle(fontSize: 10, color: Colors.grey),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      )
-                      : HardwareListCard(
-                        componentWidth: 150,
-                        componentHeight: 25,
-                        hardwareComponents: amplifierComponents,
-                        showAddedBySystem: true,
-                      ),
+              // child:
+              //     amplifierComponents.isEmpty
+              //         ? const Center(
+              //           child: Padding(
+              //             padding: EdgeInsets.all(8.0),
+              //             child: Text(
+              //               'No amplifiers available.',
+              //               style: TextStyle(fontSize: 10, color: Colors.grey),
+              //               textAlign: TextAlign.center,
+              //             ),
+              //           ),
+              //         )
+              //         : HardwareListCard(
+              //           componentWidth: 150,
+              //           componentHeight: 25,
+              //           hardwareComponents: amplifierComponents,
+              //           showAddedBySystem: true,
+              //         ),
             ),
           ),
         ],
@@ -510,7 +510,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             locationEntity: LocationModel(),
             price: component.price,
           );
-          serviceLocator<ProjectViewModel>().addHardware(genericHardwareComponent);
+          serviceLocator<ProjectViewModel>().addHardware(hardware: genericHardwareComponent);
         }
       },
       builder: (BuildContext context, List<DeviceComponent?> candidateItems, List<dynamic> rejectedItems) {
@@ -546,7 +546,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                       sku: rackData.name,
                       price: rackData.price,
                     );
-                    serviceLocator<ProjectViewModel>().addHardware(rack);
+                    serviceLocator<ProjectViewModel>().addHardware(hardware: rack);
                   },
                   color: Colors.white,
                   itemBuilder: (BuildContext context) {
@@ -601,7 +601,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                               componentWidth: 80,
                               hardwareComponents: racks,
                               onDelete: (HardwareComponent component) {
-                                serviceLocator<ProjectViewModel>().removeHardware(component.id);
+                                serviceLocator<ProjectViewModel>().removeHardware(hardwareId: component.id);
                               },
                             ),
                   ),
@@ -634,7 +634,7 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
             'Zone(s)',
             onAddTap: () {
               serviceLocator<ProjectViewModel>().addZone(
-                Zone(
+                zone: Zone(
                   id: "zone${DateTime.now().millisecondsSinceEpoch.toString()}",
                   name: 'Zone ${serviceLocator<ProjectViewModel>().zones.length + 1}',
                 ),
@@ -665,15 +665,15 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                       margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                       child: ZoneSchematicCard(
                         zone: zone,
-                        hardwareComponents:
-                            speakersAndControllers.where((HardwareComponent component) {
-                              if (component is Speaker) {
-                                return component.locationEntity.zoneId == zone.id;
-                              } else if (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller) {
-                                return component.locationEntity.zoneId == zone.id;
-                              }
-                              return false;
-                            }).toList(),
+                        hardwareComponents: <HardwareComponent>[],
+                        // speakersAndControllers.where((HardwareComponent component) {
+                        //   if (component is Speaker) {
+                        //     return component.locationEntity.zoneId == zone.id;
+                        //   } else if (component is GenericHardwareComponent && component.type == GenericHardwareComponentType.controller) {
+                        //     return component.locationEntity.zoneId == zone.id;
+                        //   }
+                        //   return false;
+                        // }).toList(),
                         onSpeakerAdded: (SpeakerData speakerData) {
                           final Speaker cs = Speaker(
                             name: speakerData.name,
@@ -688,24 +688,24 @@ class OlsSchematicsPageState extends State<OlsSchematicsPage> {
                             rotation: 0.0,
                             assetImagePath: speakerData.assetPath,
                             type: speakerData.type,
-                            locationEntity: LocationModel(zoneId: zone.id),
+                            locationEntity: LocationModel(),
                             price: speakerData.price,
                           );
-                          serviceLocator<ProjectViewModel>().addHardware(cs);
+                          serviceLocator<ProjectViewModel>().addHardware(hardware: cs);
                         },
                         onControllerAdded: (ControllerData controllerData) {
-                          final GenericHardwareComponent controller = GenericHardwareComponent(
-                            name: controllerData.name,
-                            pos: Offset.zero,
-                            type: GenericHardwareComponentType.controller,
-                            assetImagePath: controllerData.assetPath,
-                            locationEntity: LocationModel(zoneId: zone.id),
-                            price: controllerData.price,
-                            hardwareName: controllerData.name,
-                            sku: controllerData.sku,
-                          );
-
-                          serviceLocator<ProjectViewModel>().addHardware(controller);
+                          // final GenericHardwareComponent controller = GenericHardwareComponent(
+                          //   name: controllerData.name,
+                          //   pos: Offset.zero,
+                          //   type: GenericHardwareComponentType.controller,
+                          //   assetImagePath: controllerData.assetPath,
+                          //   locationEntity: LocationModel(zoneId: zone.id),
+                          //   price: controllerData.price,
+                          //   hardwareName: controllerData.name,
+                          //   sku: controllerData.sku,
+                          // );
+                          //
+                          // serviceLocator<ProjectViewModel>().addHardware(controller);
                         },
                       ),
                     ),

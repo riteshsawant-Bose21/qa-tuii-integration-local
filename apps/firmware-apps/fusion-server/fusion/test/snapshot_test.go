@@ -3,7 +3,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -12,6 +11,8 @@ import (
 	"slices"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (

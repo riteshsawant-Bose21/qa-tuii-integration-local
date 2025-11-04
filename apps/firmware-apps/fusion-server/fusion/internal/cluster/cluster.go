@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -14,6 +13,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -89,7 +90,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 
 	if !cluster.config.Local {
 
-		if err := cluster.startVRRPListener(); err != nil {
+		if err := cluster.startVRRPListener(appConfig.NetIface); err != nil {
 			logger.Fatal("startVRRPListener: %v", err)
 		}
 
@@ -265,12 +266,12 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 	}
 }
 
-func (c *Cluster) startVRRPListener() error {
+func (c *Cluster) startVRRPListener(iface string) error {
 	if err := network.StartVRRPListener(c.listenerUpdated); err != nil {
 		return fmt.Errorf("unable to start keepalived listener: %v", err)
 	}
 
-	go c.watchLocalVIP()
+	go c.watchLocalVIP(iface)
 
 	return nil
 }

@@ -1,10 +1,11 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"net/http"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"
 )

@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"fusion/internal/api"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 // clusterNode represents a node in the test cluster
@@ -805,7 +806,6 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 
 // TestConcurrentPatchRequests tests multiple concurrent PATCH requests
 func TestConcurrentPatchRequests(t *testing.T) {
-	serverAddr := "http://localhost:8080" // or however your test harness provides this
 
 	// Initial config with nested maps and arrays
 	initialConfig := map[string]any{
@@ -1232,7 +1232,7 @@ func TestUDPSet(t *testing.T) {
 // TestUDPSetAndGet sets a value and then verifies it with a get command on the default instance.
 func TestUDPSetAndGet(t *testing.T) {
 	// Set the value on instance1.
-	setCommand := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	setCommand := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 localhost %s`, instancePort)
 	setOut, err := runMultipassCommand(t, setCommand)
 	if err != nil {
 		t.Fatalf("Multipass set command failed: %v, output: %s", err, setOut)
@@ -1254,7 +1254,7 @@ func TestUDPSetAndGet(t *testing.T) {
 // TestUDPPropagation sets a value on instance1 and verifies that it propagates to instance2.
 func TestUDPPropagation(t *testing.T) {
 	// Build commands once
-	setCmd := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	setCmd := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 localhost %s`, instancePort)
 	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
 
 	// Set on the "master" node
