@@ -41,8 +41,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -84,6 +83,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+    serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
       if (index >= 0 && index < _tabController.length) {
@@ -304,9 +304,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
               others:
                   serviceLocator<ProjectViewModel>().genericHardwareComponents
                       .where(
-                        (HardwareComponent component) =>
-                            component is GenericHardwareComponent &&
-                            component.type == GenericHardwareComponentType.other,
+                        (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                       )
                       .toList(),
             ),
@@ -318,9 +316,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget:
-            () =>
-                toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget: () => toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
       ),
       DockItemConfig(
         id: "8",
@@ -419,8 +415,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       racks:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (GenericHardwareComponent component) =>
-                                    component.type == GenericHardwareComponentType.rack,
+                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                               )
                               .toList(),
                       amplifiers: <Amplifier>[],
@@ -428,9 +423,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       others:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (HardwareComponent component) =>
-                                    component is GenericHardwareComponent &&
-                                    component.type == GenericHardwareComponentType.other,
+                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                               )
                               .toList(),
                     ),
@@ -822,10 +815,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
