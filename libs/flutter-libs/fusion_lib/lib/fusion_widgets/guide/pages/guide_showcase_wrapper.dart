@@ -42,9 +42,9 @@ class GuideShowcaseWrapper extends StatelessWidget {
 
     return FussionPopup(
       show: true,
+      barrierDismissible: false,
       barrierColor: Colors.black.withValues(alpha: 0.4),
       spotlightBorderRadius: 12.0,
-      barrierDismissible: false,
       onBarrierDismissed: () {
         context.read<GuideShowCaseController>().skipGuide();
       },
@@ -227,43 +227,30 @@ class FussionPopup extends StatefulWidget {
 }
 
 class _FussionPopupState extends State<FussionPopup> {
-  bool _isShown = false;
-  Rect? _lastRect;
-
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.show) _waitForStableLayout(context);
-    });
+    WidgetsBinding.instance.addPostFrameCallback(
+      (Duration timeStamp) {
+        if (widget.show) {
+          Future<void>.delayed(
+            const Duration(milliseconds: 400),
+            // ignore: use_build_context_synchronously
+            () => _show(context),
+          );
+        }
+      },
+    );
   }
 
-  void _waitForStableLayout(BuildContext context) {
+  void _show(BuildContext context) {
     final BuildContext anchor = widget.anchorKey?.currentContext ?? context;
     final RenderBox? renderBox = anchor.findRenderObject() as RenderBox?;
-
-    if (renderBox == null || !renderBox.hasSize || renderBox.size.isEmpty) {
-      WidgetsBinding.instance.addPostFrameCallback((_) => _waitForStableLayout(context));
-      return;
-    }
-
+    if (renderBox == null) return;
     final Offset offset = renderBox.localToGlobal(renderBox.paintBounds.topLeft);
-    final Rect currentRect = offset & renderBox.paintBounds.size;
-
-    // layout hasn't stabilized yet
-    if (_lastRect != null && _lastRect == currentRect && !_isShown) {
-      _isShown = true;
-      _showPopup(context, currentRect);
-    } else {
-      _lastRect = currentRect;
-      WidgetsBinding.instance.addPostFrameCallback((_) => _waitForStableLayout(context));
-    }
-  }
-
-  void _showPopup(BuildContext context, Rect rect) {
     Navigator.of(context).push(
       _PopupRoute(
-        targetRect: rect,
+        targetRect: offset & renderBox.paintBounds.size,
         backgroundColor: widget.backgroundColor,
         arrowColor: widget.arrowColor,
         showArrow: widget.showArrow,
@@ -278,7 +265,9 @@ class _FussionPopupState extends State<FussionPopup> {
   }
 
   @override
-  Widget build(BuildContext context) => widget.child;
+  Widget build(BuildContext context) {
+    return widget.child;
+  }
 }
 
 class _PopupContent extends StatelessWidget {
