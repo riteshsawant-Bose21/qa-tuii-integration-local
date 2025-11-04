@@ -41,8 +41,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -170,8 +169,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       return;
     }
 
-    final int currentFloorIndex =
-        serviceLocator<ProjectViewModel>().currentFloorIndex;
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
@@ -200,8 +198,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       currentPanelData.bandwidth,
     );
     final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
-    final double frequency =
-        currentPanelData.frequency.frequencyValue.toDouble();
+    final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
     await updateSpl(
       maceBandwidth,
       frequency,
@@ -219,8 +216,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     if (_engine == null) return;
     if (!_floorCanvasController.isShowingSpl.value) return;
 
-    final int currentFloorIndex =
-        serviceLocator<ProjectViewModel>().currentFloorIndex;
+    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
@@ -230,8 +226,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
-    final Iterable<SPLCalculation> currentCalcs =
-        SPLCalculationManager.currentCalculations();
+    final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
       if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
@@ -240,9 +235,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         _engine!,
         sc.fphHandle,
         bw,
-        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave)
-            ? frequency
-            : 2000,
+        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
         weighting,
         relative,
         _lastPanelData?.getResolutionSpacing() ?? 20.0,
@@ -332,9 +325,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
               others:
                   serviceLocator<ProjectViewModel>().genericHardwareComponents
                       .where(
-                        (HardwareComponent component) =>
-                            component is GenericHardwareComponent &&
-                            component.type == GenericHardwareComponentType.other,
+                        (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                       )
                       .toList(),
             ),
@@ -346,9 +337,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget:
-            () =>
-                toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget: () => toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
       ),
       DockItemConfig(
         id: "8",
@@ -447,8 +436,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       racks:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (GenericHardwareComponent component) =>
-                                    component.type == GenericHardwareComponentType.rack,
+                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                               )
                               .toList(),
                       amplifiers: <Amplifier>[],
@@ -456,9 +444,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       others:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (HardwareComponent component) =>
-                                    component is GenericHardwareComponent &&
-                                    component.type == GenericHardwareComponentType.other,
+                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                               )
                               .toList(),
                     ),
@@ -783,10 +769,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
   /// Show Edit Project Name Dropdown
   void _showEditProjectNameDropdown() {
-    final RenderBox button =
-        _projectNameKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay =
-        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RenderBox button = _projectNameKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
 
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
@@ -842,8 +826,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       maxLength: 24,
                       autofocus: true,
                       style: TextStyle(
-                        color:
-                            Theme.of(context).colorScheme.fusionTextViewColor,
+                        color: Theme.of(context).colorScheme.fusionTextViewColor,
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
@@ -868,10 +851,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
                         contentPadding: const EdgeInsets.symmetric(
@@ -936,8 +916,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
                           label: "Edit Name",
                           onTap: () {
-                            final String trimmedName =
-                                _projectNameController.text.trim();
+                            final String trimmedName = _projectNameController.text.trim();
                             if (trimmedName.isNotEmpty) {
                               serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
                               Navigator.of(context).pop();
@@ -964,8 +943,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     serviceLocator<ProjectViewModel>().saveProject();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap =
-        serviceLocator<ProjectViewModel>().getProjectJson();
+    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(

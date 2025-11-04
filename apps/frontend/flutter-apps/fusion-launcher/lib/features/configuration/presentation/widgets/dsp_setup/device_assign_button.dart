@@ -61,12 +61,11 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
       data['name'] = widget.fusionDeviceToMap.name;
     }
 
-    final ResponseCallback<dynamic> responseCallback =
-        await serviceLocator<FusionNetworkClient>().patch(
-          api: FusionApiEndpoint.fusionDevice,
-          additionalPath: selectedDevice.id,
-          data: data,
-        );
+    final ResponseCallback<dynamic> responseCallback = await serviceLocator<FusionNetworkClient>().patch(
+      api: FusionApiEndpoint.fusionDevice,
+      additionalPath: selectedDevice.id,
+      data: data,
+    );
 
     if (mounted) FusionUiUtils.hideLoader(context);
 
@@ -199,9 +198,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                           Text('Loading...'),
                         ],
                       );
-                    } else if (snapshot.hasError ||
-                        !snapshot.hasData ||
-                        snapshot.data!.isEmpty) {
+                    } else if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
                       return Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
@@ -251,8 +248,7 @@ class _AssignDeviceButtonState extends State<AssignDeviceButton> {
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            if (widget.fusionDeviceToMap.status ==
-                                FusionDeviceSetupStatus.completed) ...<Widget>[
+                            if (widget.fusionDeviceToMap.status == FusionDeviceSetupStatus.completed) ...<Widget>[
                               Row(
                                 children: <Widget>[
                                   Container(

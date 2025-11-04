@@ -336,7 +336,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           selectedColor: Colors.blue,
         ),
       ),
-      // _buildSplTool(),
+      _buildSplTool(),
       _buildToolItem(
         icon: Icons.fit_screen_rounded,
         "Fit to viewport",

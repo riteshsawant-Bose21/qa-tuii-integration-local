@@ -187,8 +187,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
     if (_searchQuery.isEmpty) return allItems;
 
     return allItems.where((BOMItem item) {
-      return item.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          item.model.toLowerCase().contains(_searchQuery.toLowerCase());
+      return item.name.toLowerCase().contains(_searchQuery.toLowerCase()) || item.model.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
@@ -207,8 +206,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
         serviceLocator<ProjectViewModel>().hardwareComponents
             .whereType<GenericHardwareComponent>()
             .where(
-              (GenericHardwareComponent component) =>
-                  component.type == GenericHardwareComponentType.rack,
+              (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
             )
             .toList();
     amplifiers = <Amplifier>[];
@@ -216,9 +214,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
     others =
         serviceLocator<ProjectViewModel>().hardwareComponents
             .where(
-              (HardwareComponent component) =>
-                  component is GenericHardwareComponent &&
-                  component.type == GenericHardwareComponentType.other,
+              (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
             )
             .toList();
   }
@@ -416,10 +412,9 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                             child:
                                                 item.imageUrl != null
                                                     ? ClipRRect(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                            4,
-                                                          ),
+                                                      borderRadius: BorderRadius.circular(
+                                                        4,
+                                                      ),
                                                       child: Image.asset(
                                                         item.imageUrl!,
                                                       ),
