@@ -547,6 +547,14 @@ const struct base_device bd_fusion_c0 = {
                             .export = true,
                             .ioexp_id = 1
                         }
+                    },
+                    .num_cmds = 1,
+                    .cmds = (struct endpoint_cmd[]) {
+                        {
+                            .name = "cmd_regop",
+                            .type = EP_CMD_TYPE_REGOP,
+                            .export = true
+                        }
                     }
                 },
                 {
@@ -576,6 +584,14 @@ const struct base_device bd_fusion_c0 = {
                             .type = EP_GPIO_TYPE_VIRT,
                             .export = true,
                             .ioexp_id = 1
+                        }
+                    },
+                    .num_cmds = 1,
+                    .cmds = (struct endpoint_cmd[]) {
+                        {
+                            .name = "cmd_regop",
+                            .type = EP_CMD_TYPE_REGOP,
+                            .export = true
                         }
                     }
                 }
@@ -775,7 +791,7 @@ const struct base_device bd_fusion_c0 = {
                     .cmds = (struct endpoint_cmd[]) {
                         {
                             .name = "cmd_regop",
-                            .type = EP_CMD_TYPE_ADC_REGOP,
+                            .type = EP_CMD_TYPE_REGOP,
                             .export = true
                         }
                     }

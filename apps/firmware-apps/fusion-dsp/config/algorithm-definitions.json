@@ -1,5 +1,5 @@
 {
-    "version": "0.1.8",
+    "version": "0.1.9",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -1077,6 +1077,65 @@
                 {
                     "name": "out_meter",
                     "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "hdr_combiner",
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": 2
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": 1
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "branch_gain",
+                    "value_type": "float",
+                    "default_value": 33.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 40.0
+                },
+                {
+                    "name": "hold_time",
+                    "value_type": "integer",
+                    "default_value": 2400,
+                    "minimum_value": 0,
+                    "maximum_value": 9600
+                },
+                {
+                    "name": "out_gain",
+                    "dimensions": [1],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "out_mute",
+                    "dimensions": [1],
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": [1],
                     "value_type": "float",
                     "default_value": -60.0,
                     "minimum_value": -60.0,

@@ -339,6 +339,7 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
     struct endpoint *ep = dev_get_drvdata(dev);
     struct i2c_client *client = ep->i2c_client;
     unsigned int reg_addr, value;
+    int parsed;
     u8 wr_buf[3];
     u8 rd_opcode_buf[2];
     u8 rd_data_buf[1];
@@ -358,7 +359,8 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         return -ENODEV;
 
     // Parse input: "<reg_addr> <value>" for write, "<reg_addr>" for read
-    if (sscanf(buf, "%x %x", &reg_addr, &value) == 2) {
+    parsed = sscanf(buf, "%i %i", &reg_addr, &value);
+    if (parsed == 2) {
         // Write operation
         wr_buf[0] = ADS7128_OPCODE_WRITE_REG; // Opcode 0x08
         wr_buf[1] = reg_addr;
@@ -366,7 +368,7 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         ret = i2c_transfer(client->adapter, &wr_msg, 1);
         if (ret < 0)
             return ret;
-    } else if (sscanf(buf, "%x", &reg_addr) == 1) {
+    } else if (parsed == 1) {
         // Read operation
         rd_opcode_buf[0] = ADS7128_OPCODE_READ_REG; // Opcode 0x10
         rd_opcode_buf[1] = reg_addr;
@@ -376,6 +378,64 @@ static ssize_t ads7128_cmd_regop(struct device *dev, struct device_attribute *at
         printk(KERN_INFO "0x%02x\n", rd_data_buf[0]);
     } else {
         return -EINVAL; // Invalid format
+    }
+
+    return count;
+}
+
+static ssize_t generic_cmd_regop(struct device *dev, struct device_attribute *attr, const char *buf, size_t count)
+{
+    struct endpoint *ep = dev_get_drvdata(dev);
+    struct i2c_client *client = ep ? ep->i2c_client : NULL;
+    unsigned int reg_addr, value;
+    int parsed, ret;
+
+    if (!client)
+        return -ENODEV;
+
+    parsed = sscanf(buf, "%i %i", &reg_addr, &value);
+
+    if (parsed == 2) {
+        /* WRITE: [reg][val] */
+        u8 wr_buf[2];
+        struct i2c_msg wr_msg;
+
+        wr_buf[0] = (u8)reg_addr;
+        wr_buf[1] = (u8)value;
+
+        wr_msg.addr  = client->addr;
+        wr_msg.flags = 0;
+        wr_msg.buf   = wr_buf;
+        wr_msg.len   = 2;
+
+        ret = i2c_transfer(client->adapter, &wr_msg, 1);
+        if (ret != 1)
+            return (ret < 0) ? ret : -EIO;
+
+    } else if (parsed == 1) {
+        /* READ: write reg pointer, then read 1 byte */
+        u8 rd_reg_buf  = (u8)reg_addr;
+        u8 rd_data_buf = 0;
+        struct i2c_msg rd_msgs[2];
+
+        rd_msgs[0].addr  = client->addr;
+        rd_msgs[0].flags = 0;
+        rd_msgs[0].buf   = &rd_reg_buf;
+        rd_msgs[0].len   = 1;
+
+        rd_msgs[1].addr  = client->addr;
+        rd_msgs[1].flags = I2C_M_RD;
+        rd_msgs[1].buf   = &rd_data_buf;
+        rd_msgs[1].len   = 1;
+
+        ret = i2c_transfer(client->adapter, rd_msgs, 2);
+        if (ret != 2)
+            return (ret < 0) ? ret : -EIO;
+
+        printk(KERN_INFO "%s[0x%02x]=0x%02x\n", ep->name, (u8)reg_addr, rd_data_buf);
+
+    } else {
+        return -EINVAL; /* expects "reg" or "reg value" */
     }
 
     return count;
@@ -463,9 +523,20 @@ static int fusion_io_create_sysfs_cmd(struct device *parent_dev, struct endpoint
     switch(ep_cmd->parent_endpoint->type) {
         case EP_TYPE_ADC_ADS7128:
 			switch(ep_cmd->type) {
-				case EP_CMD_TYPE_ADC_REGOP:
+				case EP_CMD_TYPE_REGOP:
     				ep_cmd->dev_attr.attr.mode = 0220;
 					ep_cmd->dev_attr.store = ads7128_cmd_regop;
+					break;
+				default:
+					return -EINVAL;
+			}
+            break;
+        case EP_TYPE_SRC_AK4137:
+        case EP_TYPE_HDMI_EP9512T:
+			switch(ep_cmd->type) {
+				case EP_CMD_TYPE_REGOP:
+    				ep_cmd->dev_attr.attr.mode = 0220;
+					ep_cmd->dev_attr.store = generic_cmd_regop;
 					break;
 				default:
 					return -EINVAL;
