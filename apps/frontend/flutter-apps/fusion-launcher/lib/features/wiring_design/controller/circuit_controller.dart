@@ -145,24 +145,32 @@ class CircuitController extends ChangeNotifier
   }
 
   void _updateWirePath(CircuitComponent component) {
-    final List<Wire> connectedWires = cache.wiresOfComponent(component);
-    if (component.parent != null) {
-      connectedWires.addAll(
-        cache.wiresOfComponent(component.parent!),
-      );
-      for (final CircuitComponent child
-          in component.parent?.children ?? <CircuitComponent>[]) {
-        if (component != child) {
-          connectedWires.addAll(cache.wiresOfComponent(child));
-        }
-      }
-    }
+    // final List<Wire> connectedWires = cache.wiresOfComponent(component);
+    // if (component.parent != null) {
+    //   connectedWires.addAll(
+    //     cache.wiresOfComponent(component.parent!),
+    //   );
+    //   for (final CircuitComponent child
+    //       in component.parent?.children ?? <CircuitComponent>[]) {
+    //     if (component != child) {
+    //       connectedWires.addAll(cache.wiresOfComponent(child));
+    //     }
+    //   }
+    // }
 
-    for (final CircuitComponent child in component.children) {
+    // for (final CircuitComponent child in component.children) {
+    //   connectedWires.addAll(cache.wiresOfComponent(child));
+    //   for (final CircuitComponent child2 in child.children) {
+    //     connectedWires.addAll(cache.wiresOfComponent(child2));
+    //   }
+    // }
+    final List<Wire> connectedWires = <Wire>[];
+    final List<CircuitComponent> allComps = allConnectedComponents(
+      component,
+      <CircuitComponent>[component],
+    );
+    for (final CircuitComponent child in allComps) {
       connectedWires.addAll(cache.wiresOfComponent(child));
-      for (final CircuitComponent child2 in child.children) {
-        connectedWires.addAll(cache.wiresOfComponent(child2));
-      }
     }
 
     for (final Wire wire in connectedWires) {
@@ -173,6 +181,24 @@ class CircuitController extends ChangeNotifier
         ),
       );
     }
+  }
+
+  List<CircuitComponent> allConnectedComponents(
+    CircuitComponent component,
+    List<CircuitComponent> comps,
+  ) {
+    for (final CircuitComponent child in component.children) {
+      if (!comps.contains(child)) {
+        comps.add(child);
+        comps.addAll(allConnectedComponents(child, comps));
+      }
+    }
+
+    if (component.parent != null && !comps.contains(component.parent)) {
+      comps.add(component.parent!);
+      comps.addAll(allConnectedComponents(component.parent!, comps));
+    }
+    return comps.toSet().toList();
   }
 
   @override

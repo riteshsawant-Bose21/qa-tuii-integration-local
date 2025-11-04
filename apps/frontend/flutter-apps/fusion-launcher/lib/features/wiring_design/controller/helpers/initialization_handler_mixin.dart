@@ -37,8 +37,6 @@ extension InitializationHandlerMixin on CircuitController {
       final ZoneComponentData componentData = ComponentDataFactory.fromZone(
         zone,
       );
-      final CircuitComponent? existingCirComponent = componentDB
-          .getCircuitComponent(zone.id);
       final CircuitComponent component =
       // existingCirComponent ??
       CircuitComponent.from(
@@ -59,8 +57,6 @@ extension InitializationHandlerMixin on CircuitController {
               subZone,
             );
 
-        final CircuitComponent? existingSubZoneComponent = componentDB
-            .getCircuitComponent(subZone.id);
         final CircuitComponent subZoneComponent =
         // existingSubZoneComponent ??
         CircuitComponent.from(

@@ -18,6 +18,14 @@ class _WiringPageState extends State<WiringPage> {
   late CircuitController controller = CircuitController(
     serviceLocator<ProjectViewModel>(),
   );
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      controller.fitToViewPort();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {

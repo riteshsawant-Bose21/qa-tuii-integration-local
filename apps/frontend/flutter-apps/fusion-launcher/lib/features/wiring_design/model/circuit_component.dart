@@ -313,6 +313,9 @@ class CircuitComponent extends CanvasElement {
   }
 
   CanvasElement? isHit(Offset position) {
+    if (data is ZoneComponentData && children.isEmpty) {
+      return null;
+    }
     for (final CircuitPort port in ports) {
       final Rect portRect = Rect.fromCircle(
         center: port.position,
