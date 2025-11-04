@@ -1,3 +1,5 @@
+// ignore_for_file: always_specify_types
+
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
 import 'package:fusion_lib/api_data/speakers/speakers.dart';
@@ -1270,8 +1272,8 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
         
         // Check: 1) Available channels, 2) Per-channel capacity, 3) Total amplifier capacity
         final List<Map<String, dynamic>> assignedCircuits = amp['circuitsAssigned'] as List<Map<String, dynamic>>;
-        double currentTotalPower = assignedCircuits.fold(0.0, (double sum, Map<String, dynamic> c) => sum + (c['power'] as double));
-        double newTotalPower = currentTotalPower + (circuit['power'] as double);
+        final double currentTotalPower = assignedCircuits.fold(0.0, (double sum, Map<String, dynamic> c) => sum + (c['power'] as double));
+        final double newTotalPower = currentTotalPower + (circuit['power'] as double);
         
         if (usedChannels < totalChannels && 
             (circuit['power'] as double) <= ampModel.asymmetrical.watts &&
@@ -1901,7 +1903,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
                 ],
               )),
               const SizedBox(height: 8),
-              Text('Strategy: Fill existing amplifiers first, then add new ones for cost optimization'),
+              const Text('Strategy: Fill existing amplifiers first, then add new ones for cost optimization'),
               const SizedBox(height: 8),
               const Text('Circuit Movement Optimization Applied:', style: TextStyle(fontWeight: FontWeight.bold)),
               const Text('• Moved circuits from higher-power amplifiers to amplifiers with available power sharing'),
@@ -1992,8 +1994,8 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
             final List<Map<String, dynamic>> sourceCircuits = sourceAmp['circuitsAssigned'] as List<Map<String, dynamic>>;
             
             // Calculate current total power on source amplifier
-            double currentSourcePower = sourceCircuits.fold(0.0, (double sum, Map<String, dynamic> circuit) => sum + (circuit['power'] as double));
-            double newTotalPower = currentSourcePower + circuitPower;
+            final double currentSourcePower = sourceCircuits.fold(0.0, (double sum, Map<String, dynamic> circuit) => sum + (circuit['power'] as double));
+            final double newTotalPower = currentSourcePower + circuitPower;
             
             if (circuitPower <= sourceNetPowerSharing && 
                 circuitPower <= sourceAmpModel.asymmetrical.watts &&
@@ -2659,7 +2661,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     // Calculate surplus and deficit for each channel using CORRECTED formulas
     final List<Map<String, dynamic>> channelAnalysis = <Map<String, dynamic>>[];
     double totalSymmSurplus = 0.0;
-    double totalAsymmDeficit = 0.0;
+    final double totalAsymmDeficit = 0.0;
     
     for (int i = 0; i < 4; i++) {
       final double channelPower = i < circuitData.length ? circuitData[i]['power'] as double : 0.0;
@@ -2733,7 +2735,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('📊 $ampName Analysis:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('📊 $ampName Analysis:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text('Per-channel limit: ${perChannelLimit.toInt()}W'),
           Text('Total capacity: ${totalCapacity.toInt()}W'),
           Text('Asymmetrical shareable: ${asymmetricalShareable.toInt()}W'),
@@ -2966,7 +2968,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text('📊 $ampName Power Distribution:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('📊 $ampName Power Distribution:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text('Per-channel limit: ${perChannelLimit.toInt()}W'),
           Text('Asymmetrical shareable: ${asymmetricalShareable.toInt()}W'),
           
@@ -3134,7 +3136,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-          Text('📏 $ampName Headroom Analysis:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          Text('📏 $ampName Headroom Analysis:', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
           Text('Total Capacity: ${totalCapacity.toInt()}W'),
           Text('Total Delivered: ${totalDelivered.toStringAsFixed(1)}W'),
           Text('Total Amp Headroom: ${totalAmpHeadroom.toStringAsFixed(1)}dB'),
@@ -3351,89 +3353,6 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     );
   }
 
-  // Widget _buildComparisonSummaryCard(AmpMatchingResult symmetrical, AmpMatchingResult asymmetrical) {
-  //   final bool asymmetricalBetter = asymmetrical.amplifierCount <= symmetrical.amplifierCount &&
-  //                                  asymmetrical.powerEfficiency >= symmetrical.powerEfficiency;
-    
-  //   return Card(
-  //     elevation: 3,
-  //     child: Container(
-  //       padding: const EdgeInsets.all(16),
-  //       decoration: BoxDecoration(
-  //         color: Colors.grey[50],
-  //         border: Border.all(color: Colors.grey[300]!),
-  //         borderRadius: BorderRadius.circular(8),
-  //       ),
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: <Widget>[
-  //           const Row(
-  //             children: <Widget>[
-  //               Icon(Icons.assessment, color: Colors.amber),
-  //               SizedBox(width: 8),
-  //               Text('📊 Strategy Comparison Summary', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-  //             ],
-  //           ),
-  //           const SizedBox(height: 12),
-            
-  //           Row(
-  //             children: <Widget>[
-  //               Expanded(
-  //                 child: _buildComparisonMetric(
-  //                   'Amplifiers Required',
-  //                   symmetrical.amplifierCount.toString(),
-  //                   asymmetrical.amplifierCount.toString(),
-  //                   asymmetrical.amplifierCount <= symmetrical.amplifierCount,
-  //                 ),
-  //               ),
-  //               const SizedBox(width: 12),
-  //               Expanded(
-  //                 child: _buildComparisonMetric(
-  //                   'Power Efficiency',
-  //                   '${(symmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
-  //                   '${(asymmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
-  //                   asymmetrical.powerEfficiency >= symmetrical.powerEfficiency,
-  //                 ),
-  //               ),
-  //             ],
-  //           ),
-            
-  //           const SizedBox(height: 12),
-            
-  //           Container(
-  //             padding: const EdgeInsets.all(12),
-  //             decoration: BoxDecoration(
-  //               color: asymmetricalBetter ? Colors.green[100] : Colors.blue[100],
-  //               border: Border.all(color: asymmetricalBetter ? Colors.green[300]! : Colors.blue[300]!),
-  //               borderRadius: BorderRadius.circular(6),
-  //             ),
-  //             child: Row(
-  //               children: <Widget>[
-  //                 Icon(
-  //                   asymmetricalBetter ? Icons.thumb_up : Icons.info,
-  //                   color: asymmetricalBetter ? Colors.green : Colors.blue,
-  //                 ),
-  //                 const SizedBox(width: 8),
-  //                 Expanded(
-  //                   child: Text(
-  //                     asymmetricalBetter 
-  //                       ? '🏆 Recommendation: Asymmetrical mode provides better efficiency and fewer amplifiers'
-  //                       : '📋 Both strategies are viable - choose based on your installation preferences',
-  //                     style: TextStyle(
-  //                       fontWeight: FontWeight.w500,
-  //                       color: asymmetricalBetter ? Colors.green[800] : Colors.blue[800],
-  //                     ),
-  //                   ),
-  //                 ),
-  //               ],
-  //             ),
-  //           ),
-  //         ],
-  //       ),
-  //     ),
-  //   );
-  //   }
-
   /// Build final validation step for asymmetrical mode using mixed amplifier allocation
   Widget _buildAsymmetricalFinalValidationStep() {
     // Calculate circuit powers and sort by power (highest first)
@@ -3470,15 +3389,15 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
     final List<Map<String, dynamic>> optimizedAllocation = _applyCircuitMovementOptimization(amplifierAllocation, circuitData);
     
     // Calculate overall system metrics
-    int totalAmplifiers = optimizedAllocation.length;
-    int totalChannelsUsed = optimizedAllocation.fold(0, (int sum, Map<String, dynamic> amp) => sum + (amp['usedChannels'] as int));
-    int totalChannelsAvailable = optimizedAllocation.fold(0, (int sum, Map<String, dynamic> amp) => sum + (amp['totalChannels'] as int));
-    double channelEfficiency = totalChannelsAvailable > 0 ? totalChannelsUsed / totalChannelsAvailable : 0.0;
+    final int totalAmplifiers = optimizedAllocation.length;
+    final int totalChannelsUsed = optimizedAllocation.fold(0, (int sum, Map<String, dynamic> amp) => sum + (amp['usedChannels'] as int));
+    final int totalChannelsAvailable = optimizedAllocation.fold(0, (int sum, Map<String, dynamic> amp) => sum + (amp['totalChannels'] as int));
+    final double channelEfficiency = totalChannelsAvailable > 0 ? totalChannelsUsed / totalChannelsAvailable : 0.0;
     
     // Calculate power efficiency (total delivered vs total capacity)
-    double totalSystemCapacity = optimizedAllocation.fold(0.0, (double sum, Map<String, dynamic> amp) => 
+    final double totalSystemCapacity = optimizedAllocation.fold(0.0, (double sum, Map<String, dynamic> amp) => 
       sum + ((amp['tierModel'] as AmplifierModel).asymmetrical.totalCapacity.toDouble()));
-    double powerEfficiency = totalSystemCapacity > 0 ? totalSystemPower / totalSystemCapacity : 0.0;
+    final double powerEfficiency = totalSystemCapacity > 0 ? totalSystemPower / totalSystemCapacity : 0.0;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

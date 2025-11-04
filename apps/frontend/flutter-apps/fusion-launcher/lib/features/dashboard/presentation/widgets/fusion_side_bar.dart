@@ -77,7 +77,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               onTap: () => widget.onTabChanged?.call('Community'),
             ),
             // show only in debug mode
-            if (kDebugMode)
+            // if (kDebugMode)
               _HoverNavItem(
                 icon: Icons.library_books_sharp,
                 title: 'Test Library',
