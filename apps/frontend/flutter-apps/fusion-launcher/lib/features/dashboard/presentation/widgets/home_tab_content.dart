@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
+import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/service_locator.dart';
@@ -285,7 +285,21 @@ class _HomeTabContentState extends State<HomeTabContent> {
   Widget _buildRecentProjects() {
     return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
       listener: (BuildContext context, ProjectViewModelState state) {
-        // TODO: implement listener
+        if (state is ProjectLoaded && context.mounted) {
+          if (state.currentProject != null) {
+            FusionUiUtils.hideLoader(context);
+            Navigator.pushNamed(
+              context,
+              Routes.projectPage,
+            ).then((_) async {
+              await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+            });
+          }
+        }
+        if (state is OpenProjectError && context.mounted) {
+          FusionUiUtils.hideLoader(context);
+          FusionToast.show(context, message: state.message);
+        }
       },
       builder: (BuildContext context, ProjectViewModelState state) {
         if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
@@ -311,15 +325,8 @@ class _HomeTabContentState extends State<HomeTabContent> {
             (int i) {
               return GestureDetector(
                 onTap: () async {
-                  FusionUtils.showLoader(context);
+                  FusionUiUtils.showLoader(context);
                   serviceLocator<ProjectViewModel>().openProject(serviceLocator<ProjectViewModel>().allProjects[i].id);
-                  if (context.mounted) {
-                    FusionUtils.hideLoader(context);
-                    Navigator.pushNamed(
-                      context,
-                      Routes.projectPage,
-                    );
-                  }
                 },
                 child: _buildProjectCard(
                   title: serviceLocator<ProjectViewModel>().allProjects[i].projectName,

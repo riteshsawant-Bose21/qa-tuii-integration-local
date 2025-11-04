@@ -212,8 +212,12 @@ class ProcessingBlockModel {
   final String algorithmId;
   List<PropertySetting> properties;
 
-  ProcessingBlockModel({required this.name, required this.id, required this.algorithmId, List<PropertySetting>? properties})
-    : properties = properties ?? <PropertySetting>[];
+  ProcessingBlockModel({
+    required this.name,
+    required this.id,
+    required this.algorithmId,
+    List<PropertySetting>? properties,
+  }) : properties = properties ?? <PropertySetting>[];
 
   IconData get icon {
     return _iconNameMap[algorithmId] ?? Icons.memory;

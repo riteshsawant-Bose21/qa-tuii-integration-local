@@ -69,6 +69,7 @@ type Cluster struct {
 	configPath       string
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
+	vipMu            sync.Mutex
 }
 
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {

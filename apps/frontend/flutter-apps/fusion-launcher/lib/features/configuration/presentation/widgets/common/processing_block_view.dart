@@ -11,8 +11,8 @@ enum ProcessingType { input, zone, mix, output }
 class ProcessingBlockView extends StatefulWidget {
   final List<ProcessingBlockModel> selectedBlocks;
   final Function(ProcessingBlockModel) onBlockSelected;
-  final Function(int index) onBlockRemoved;
-  final Function(List<ProcessingBlockModel>) onBlocksUpdated;
+  final Function(String blocId) onBlockRemoved;
+  final Function(int oldIndex, int newIndex) onBlocksUpdated;
   final ProcessingType processingType;
   final bool isControlMode;
 
@@ -33,19 +33,15 @@ class ProcessingBlockView extends StatefulWidget {
 class _ProcessingBlockViewState extends State<ProcessingBlockView> {
   final ScrollController _horizontalScrollController = ScrollController();
 
-  void _removeBlock(int index) {
-    widget.onBlockRemoved(index);
+  void _removeBlock(String blockId) {
+    widget.onBlockRemoved(blockId);
   }
 
   void _reorderBlocks(int oldIndex, int newIndex) {
     if (newIndex > oldIndex) {
       newIndex -= 1;
     }
-    final ProcessingBlockModel block = widget.selectedBlocks.removeAt(
-      oldIndex,
-    );
-    widget.selectedBlocks.insert(newIndex, block);
-    widget.onBlocksUpdated(widget.selectedBlocks);
+    widget.onBlocksUpdated(oldIndex, newIndex);
   }
 
   List<ProcessingBlockModel> get _availableBlocks {
@@ -353,7 +349,10 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
                                                 const SizedBox(width: 6),
                                                 if (!widget.isControlMode)
                                                   GestureDetector(
-                                                    onTap: () => _removeBlock(index),
+                                                    onTap:
+                                                        () => _removeBlock(
+                                                          block.id,
+                                                        ),
                                                     child: Container(
                                                       padding: const EdgeInsets.all(2),
                                                       child: Icon(

@@ -17,7 +17,7 @@ public:
 
     const std::string &get_filename() const
     {
-        return get_string("filename");
+        return get_string("path");
     }
 
     int get_priority() const
@@ -29,7 +29,19 @@ public:
 
     bool has_zone_names() const
     {
-        return has_member("zones");
+        if (!has_member("zones"))
+        {
+            return false;
+        }
+
+        std::string value;
+
+        if (try_member_value("zones", value))
+        {
+            return value != "all";
+        }
+
+        return true;
     }
 
     void get_zone_names(std::set<std::string> &zone_names) const
