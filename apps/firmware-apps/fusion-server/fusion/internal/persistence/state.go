@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/hashicorp/memberlist"
 )
 
@@ -25,7 +26,7 @@ const (
 
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
-	GetFullState() VersionedState
+	GetFullStateDeepCopy() VersionedState
 }
 
 // VersionedState represents a version of instance state
@@ -65,27 +66,27 @@ func NewStateManager(config *api.AppConfig) *StateManager {
 // NewConfigUpdate returns a configured ConfigUpdate
 func (sm *StateManager) NewConfigUpdate(data map[string]any) (*api.ConfigUpdate, error) {
 
+	sm.Lock()
+	defer sm.Unlock()
+
+	return sm.newConfigUpdateUnsafe(data)
+}
+
+// newConfigUpdateUnsafe assumes sm.Lock() is already held.
+func (sm *StateManager) newConfigUpdateUnsafe(data map[string]any) (*api.ConfigUpdate, error) {
 	hash, err := utils.CalculateChecksum(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate hash: %w", err)
 	}
-
-	sm.Lock()
-	sm.version.Counter = sm.version.Counter + 1
-	sm.Unlock()
-
-	return &api.ConfigUpdate{
-		Hash:    hash,
-		Data:    data,
-		Version: sm.version,
-		Clear:   false,
-	}, nil
+	sm.version.Counter++
+	v := sm.version
+	return &api.ConfigUpdate{Hash: hash, Data: data, Version: v, Clear: false}, nil
 }
 
 // Start starts periodic state verification
 func (sm *StateManager) Start(memberlist *memberlist.Memberlist) {
 
-	sm.memberlist = memberlist
+	sm.SetMemberlist(memberlist)
 
 	go func() {
 		for {
@@ -98,10 +99,14 @@ func (sm *StateManager) Start(memberlist *memberlist.Memberlist) {
 
 // GetNode returns the node name
 func (sm *StateManager) GetNode() string {
+	sm.RLock()
+	defer sm.RUnlock()
 	return sm.version.NodeID
 }
 
 func (sm *StateManager) SetMemberlist(memberlist *memberlist.Memberlist) {
+	sm.Lock()
+	defer sm.Unlock()
 	sm.memberlist = memberlist
 }
 
@@ -210,6 +215,8 @@ func (sm *StateManager) Set(key string, value any) error {
 	}
 
 	sm.Lock()
+	defer sm.Unlock()
+
 	sm.version.Counter++
 	update := api.ConfigUpdate{
 		Hash:    hash,
@@ -220,44 +227,67 @@ func (sm *StateManager) Set(key string, value any) error {
 
 	dirty, err := sm.applyWhileLocked(update)
 	if err != nil {
-		sm.Unlock()
 		return err
 	}
-	sm.Unlock()
 
 	if dirty {
-		sm.updateChecksum()
+		sm.updateChecksumUnsafe()
 	}
 
 	return nil
+}
+
+// ApplyPatch applies an upated patch to the internal state.
+func (sm *StateManager) ApplyPatch(update map[string]any) (map[string]any, error) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	existing := sm.getFullStateUnsafe()
+	if err := utils.ApplyPatch(existing, update); err != nil {
+		return nil, fmt.Errorf("failed to apply patch: %w", err)
+	}
+
+	configUpdate, err := sm.newConfigUpdateUnsafe(existing)
+	if err != nil {
+		return nil, err
+	}
+
+	dirty, err := sm.applyWhileLocked(*configUpdate)
+	if err != nil {
+		return nil, err
+	}
+
+	if dirty {
+		sm.updateChecksumUnsafe()
+	}
+
+	return existing, nil
 }
 
 // ApplyUpdate applies a configuration update to the internal state.
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 	sm.Lock()
+	defer sm.Unlock()
+
 	dirty, err := sm.applyWhileLocked(update)
 	if err != nil {
-		sm.Unlock()
 		return err
 	}
-	sm.Unlock()
 
 	if dirty {
-		sm.updateChecksum()
+		sm.updateChecksumUnsafe()
 	}
 
 	return nil
 }
 
-// updateChecksum updates the checksum. Do not lock here.
-func (sm *StateManager) updateChecksum() {
-	payload := sm.GetStateMap()
+// updateChecksumUnsafe updates the checksum. Do not lock here.
+func (sm *StateManager) updateChecksumUnsafe() {
+	payload := sm.getFullStateUnsafe()
 	if sum, err := utils.CalculateChecksum(payload); err != nil {
 		logging.GetLogger().Error("failed to calculate checksum: %v", err)
 	} else {
-		sm.Lock()
 		sm.state.Checksum = sum
-		sm.Unlock()
 	}
 }
 
@@ -321,29 +351,52 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 }
 
 // GetFullState returns the internal state
+
+// This returns a copy of the struct VersionedState by value,
+// but in Go copying a struct that contains a map does NOT copy the map’s contents.
+// It copies only the map header (a small descriptor) which still points to the
+// SAME underlying map backing array/hash table. So after GetFullState() returns,
+// the caller holds a struct whose State field is an alias of the original shared map.
+
 func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
 	defer sm.RUnlock()
 	return sm.state
 }
 
+// GetFullState returns the internal state after deep copy.
+func (sm *StateManager) GetFullStateDeepCopy() VersionedState {
+	sm.RLock()
+	defer sm.RUnlock()
+
+	return VersionedState{
+		Checksum: sm.state.Checksum,
+		State:    deepCopyState(sm.state.State),
+	}
+}
+
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 
-	result := make(map[string]any)
+	state := sm.GetFullStateDeepCopy().State
 
-	state := sm.GetFullState().State
-	for key, entry := range state {
-		result[key] = entry.Data
+	result := make(map[string]any, len(state))
+	for k, e := range state {
+		if e != nil {
+			result[k] = e.Data // already deep-copied inside GetFullStateDeepCopy
+		}
 	}
 	return result
+
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
 
 	sm.Lock()
+	defer sm.Unlock()
+
 	for key, remoteEntry := range remoteState {
 		localEntry, exists := sm.state.State[key]
 
@@ -357,9 +410,7 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 			}
 		}
 	}
-	sm.Unlock()
-
-	sm.updateChecksum()
+	sm.updateChecksumUnsafe()
 }
 
 // SetState replaces the entire state map and advances the version.
@@ -369,19 +420,28 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.version.Counter++
 	sm.Unlock()
 
-	sm.updateChecksum()
+	sm.updateChecksumUnsafe()
 }
 
 // validateState fetches and compares state from other cluster members
 // to check consistency. Logs any inconsistencies found.
 func (sm *StateManager) validateState() {
 	logger := logging.GetLogger()
-	localState := sm.GetFullState()
-	consistent := true
-	members := sm.memberlist.Members()
-	localName := sm.memberlist.LocalNode().Name
 
-	for _, member := range members {
+	sm.RLock()
+	ml := sm.memberlist
+	checksum := sm.state.Checksum
+	sm.RUnlock()
+
+	if ml == nil {
+		logger.Warn("memberlist is not yet set")
+		return
+	}
+
+	consistent := true
+	localName := ml.LocalNode().Name
+
+	for _, member := range ml.Members() {
 		if member.State != memberlist.StateAlive || member.Name == localName {
 			continue
 		}
@@ -411,10 +471,10 @@ func (sm *StateManager) validateState() {
 			continue
 		}
 
-		if localState.Checksum != remoteState.Checksum {
+		if checksum != remoteState.Checksum {
 			logger.Warn("[STATE] Inconsistent state detected with node %s", member.Name)
 			if sm.verbose {
-				logger.Debug("[STATE] Local checksum:  %s", localState.Checksum)
+				logger.Debug("[STATE] Local checksum:  %s", checksum)
 				logger.Debug("[STATE] Remote checksum: %s", remoteState.Checksum)
 			}
 
@@ -436,7 +496,14 @@ func (sm *StateManager) getMemberData() []api.MemberMetadata {
 
 	logger := logging.GetLogger()
 
-	members := sm.memberlist.Members()
+	sm.RLock()
+	ml := sm.memberlist
+	sm.RUnlock()
+	if ml == nil {
+		return nil
+	}
+
+	members := ml.Members()
 
 	var memberMetadata []api.MemberMetadata
 
@@ -569,6 +636,15 @@ func (sm *StateManager) importData(endpoint string, data []byte) {
 	}
 }
 
+// getFullStateUnsafe caller must hold sm.Lock or sm.RLock
+func (sm *StateManager) getFullStateUnsafe() map[string]any {
+	out := make(map[string]any, len(sm.state.State))
+	for k, v := range sm.state.State {
+		out[k] = utils.DeepCopy(v.Data)
+	}
+	return out
+}
+
 // hashIsConsistent checks if hash is consistent across all members
 func hashIsConsistent(metadata []api.MemberMetadata) bool {
 	if len(metadata) > 0 {
@@ -601,4 +677,23 @@ func mergeMaps(existing, update map[string]any) map[string]any {
 
 func buildInternalURL(address, port, endpoint string) string {
 	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
+}
+
+// deepCopyState makes a deep copy of the state map
+func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]*api.StateEntry, len(src))
+	for k, v := range src {
+		if v == nil {
+			dst[k] = nil
+			continue
+		}
+		// Create a copy of the struct, not the pointer
+		c := *v                         // copy the struct
+		c.Data = utils.DeepCopy(v.Data) // deep-copy the payload
+		dst[k] = &c
+	}
+	return dst
 }

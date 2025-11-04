@@ -29,6 +29,6 @@ runs:
       run: |
         moon run fusion-edge-gateway:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-edge-gateway ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_REF_NAME}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-edge-gateway ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION
         echo "Fusion Edge Gateway build uploaded to Nexus successfully!"
-        echo "fusion-dsp: ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_REF_NAME}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION"
+        echo "fusion-edge-gateway: ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION"

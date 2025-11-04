@@ -3,7 +3,6 @@ package cluster
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -17,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	json "github.com/goccy/go-json"
 )
 
 const (
@@ -190,7 +191,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	vips, err := c.getVIPFromConfig()
+	vip, err := c.getVIPFromConfig()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -198,21 +199,18 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 
-	for _, vip := range vips {
-		if isVip := c.isLocalVIP(vip); isVip {
+	if isVip := c.isLocalVIP(vip); isVip {
 
-			local, vip, ok := c.getLocalForVIP(vip)
-			if !ok {
-				w.WriteHeader(http.StatusNotFound)
-				return
-			}
-
-			json.NewEncoder(w).Encode(map[string]string{
-				"local": local.String(),
-				"vip":   vip.String(),
-			})
+		local, vip, ok := c.getLocalForVIP(vip)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+
+		json.NewEncoder(w).Encode(map[string]string{
+			"local": local.String(),
+			"vip":   vip.String(),
+		})
 	}
 
 	w.WriteHeader(http.StatusNotFound)
@@ -312,7 +310,7 @@ func (c *Cluster) ReloadVIPLocal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// updateVIP updates keepalived.conf with the new VIP but DOES NOT restart keepalived.
+// updateVIP updates keepalived configuration with the new VIP but DOES NOT restart keepalived.
 func (c *Cluster) updateVIP(vip string) error {
 
 	if err := validateVIP(vip); err != nil {
@@ -334,15 +332,6 @@ func (c *Cluster) reloadVIP() error {
 	if err := c.restartKeepalived(); err != nil {
 		return err
 	}
-
-	logger := logging.GetLogger()
-
-	// After reload, attempt to join the gossip ring so cluster size grows
-	if err := c.JoinMemberlist(); err != nil {
-		logger.Error("JoinMemberlist after reloadVIP: %v", err)
-	}
-
-	logger.Debug("Reloaded VIP")
 
 	return nil
 }
@@ -377,7 +366,21 @@ func (c *Cluster) getLocalDeviceInfo() persistence.DeviceInfo {
 	if err != nil {
 		return persistence.DeviceInfo{}
 	}
+	info.IsPrimaryNode = c.isLocalNodePrimary()
+
 	return *info
+}
+
+func (c *Cluster) isLocalNodePrimary() bool {
+
+	vip, err := c.getVIPFromConfig()
+	if err != nil {
+		logging.GetLogger().Error("Failed to get VIP from config: %v", err)
+		return false
+	}
+
+	_, _, isLocal := c.getLocalForVIP(vip)
+	return isLocal
 }
 
 func (c *Cluster) applyPatch(patch *persistence.DevicePatch, info *persistence.DeviceInfo) {
@@ -440,86 +443,52 @@ func validateNoDuplication(
 	return nil
 }
 
+// setVIPInConfig update the VIP value in keepalived.conf
 func (c *Cluster) setVIPInConfig(newVIP string) error {
+	logger := logging.GetLogger()
 
 	if c.config.Local {
 		return setVIPInLocalConfig(newVIP)
 	}
 
-	f, err := os.Open(c.configPath)
+	newVIP = canonicalVIP(newVIP)
+	logger.Debug("Updating virtual_ipaddress in %s → %s", c.configPath, newVIP)
+
+	// Ensure only one goroutine updates keepalived.conf at a time
+	c.vipMu.Lock()
+	defer c.vipMu.Unlock()
+
+	data, err := os.ReadFile(c.configPath)
 	if err != nil {
 		return fmt.Errorf("unable to read config file: %w", err)
 	}
-	defer f.Close()
 
-	scanner := bufio.NewScanner(f)
+	lines := strings.Split(string(data), "\n")
 	var outLines []string
+	parser := vipParser{}
 
-	inVIPBlock := false
-	var indent string
-	foundBlock := false
-
-	for scanner.Scan() {
-		line := scanner.Text()
-
-		if !inVIPBlock {
-			// Look for the 'virtual_ipaddress {' line (ignoring leading whitespace)
-			trim := strings.TrimSpace(line)
-			if trim == "virtual_ipaddress {" {
-				foundBlock = true
-				inVIPBlock = true
-
-				// Capture whatever indentation was before "virtual_ipaddress"
-				idx := strings.Index(line, "virtual_ipaddress")
-				if idx >= 0 {
-					indent = line[:idx]
-				}
-
-				// Emit the opening line with the same indent
-				outLines = append(outLines, indent+"virtual_ipaddress {")
-
-				// Emit the new VIP on the next line, indented two spaces further
-				outLines = append(outLines, indent+"  "+newVIP)
-				continue
-			}
-
-			// Copy all other lines unchanged
-			outLines = append(outLines, line)
-		} else {
-			// We are inside the old VIP block: skip until we see the closing "}"
-			trim := strings.TrimSpace(line)
-			if trim == "}" {
-				// Emit the closing brace at the same indent as the opening
-				outLines = append(outLines, indent+"}")
-				inVIPBlock = false
-			}
-			// Otherwise, just skip the line
-		}
+	for _, line := range lines {
+		out, _ := parser.processLine(line, newVIP)
+		outLines = append(outLines, out...)
 	}
 
-	if err := scanner.Err(); err != nil {
-		return fmt.Errorf("error scanning config file: %w", err)
-	}
-
-	if !foundBlock {
+	if !parser.found {
 		return fmt.Errorf("no virtual_ipaddress block found")
 	}
-
-	// Write the modified content back to disk
-	outFile, err := os.Create(c.configPath)
-	if err != nil {
-		return fmt.Errorf("unable to open config for writing: %w", err)
-	}
-	defer outFile.Close()
-
-	writer := bufio.NewWriter(outFile)
-	for _, l := range outLines {
-		_, _ = writer.WriteString(l + "\n")
-	}
-	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("error writing updated config: %w", err)
+	if parser.inBlock {
+		return fmt.Errorf("unterminated virtual_ipaddress block")
 	}
 
+	content := strings.Join(outLines, "\n") + "\n"
+	if len(strings.TrimSpace(content)) == 0 {
+		return fmt.Errorf("refusing to write empty config")
+	}
+
+	if err := atomicReplaceConfig(c.configPath, content, ".bak"); err != nil {
+		return fmt.Errorf("failed to update config file: %w", err)
+	}
+
+	logger.Debug("VIP updated successfully: %s", newVIP)
 	return nil
 }
 
@@ -581,4 +550,80 @@ func (c *Cluster) getVIPInLocalConfig(w http.ResponseWriter) {
 		"local": vip,
 		"vip":   vip,
 	})
+}
+
+func atomicReplaceConfig(oldPath, newContent, backupSuffix string) error {
+	dir := filepath.Dir(oldPath)
+	base := filepath.Base(oldPath)
+
+	tmp, err := os.CreateTemp(dir, base+".tmp")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmp.Name()
+	defer func() {
+		tmp.Close()
+		os.Remove(tmpPath)
+	}()
+
+	// Preserve mode from existing file
+	if info, err := os.Stat(oldPath); err == nil {
+		if chmodErr := os.Chmod(tmpPath, info.Mode()); chmodErr != nil {
+			logging.GetLogger().Debug("chmod failed on temp config: %v", chmodErr)
+		}
+	}
+
+	if _, err := tmp.WriteString(newContent); err != nil {
+		return fmt.Errorf("write temp config: %w", err)
+	}
+	if err := tmp.Sync(); err != nil {
+		return fmt.Errorf("sync temp config: %w", err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("close temp config: %w", err)
+	}
+
+	backupPath := oldPath + backupSuffix
+	if err := os.Rename(oldPath, backupPath); err != nil {
+		return fmt.Errorf("backup original config: %w", err)
+	}
+
+	if err := os.Rename(tmpPath, oldPath); err != nil {
+		os.Rename(backupPath, oldPath)
+		return fmt.Errorf("replace config file: %w", err)
+	}
+
+	return nil
+}
+
+type vipParser struct {
+	inBlock bool
+	found   bool
+	indent  string
+}
+
+func (p *vipParser) processLine(line, newVIP string) ([]string, bool) {
+	trim := strings.TrimSpace(line)
+
+	if !p.inBlock {
+		if trim == "virtual_ipaddress {" {
+			p.found, p.inBlock = true, true
+			if idx := strings.Index(line, "virtual_ipaddress"); idx >= 0 {
+				p.indent = line[:idx]
+			}
+			return []string{
+				p.indent + "virtual_ipaddress {",
+				p.indent + "  " + newVIP,
+			}, false
+		}
+		return []string{line}, false
+	}
+
+	if trim == "}" {
+		p.inBlock = false
+		return []string{p.indent + "}"}, false
+	}
+
+	// Skip old VIP lines inside the block
+	return nil, false
 }

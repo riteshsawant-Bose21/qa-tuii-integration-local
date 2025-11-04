@@ -1,6 +1,6 @@
 project:
   name: 'Fusion Telemetry Core'
-  description: 'Fusion Telemetry Core application workflow'
+  description: 'Fusion Telemetry Core moon build tasks'
 
 tasks:
 

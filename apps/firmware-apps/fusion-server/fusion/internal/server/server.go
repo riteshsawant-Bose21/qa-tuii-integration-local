@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -59,9 +60,9 @@ func NewFusionServer(node string, handler *handler.Handler, hub *pubsub.Hub) *Fu
 	return server
 }
 
-// BroadcastUpdate sends a notification message to all connected WebSocket clients.
+// BroadcastMessage sends a notification message to all connected WebSocket clients.
 // It acquires a read lock on the clients list to ensure thread-safe access.
-func (s *FusionServer) BroadcastUpdate(message *api.NotifyMessage) error {
+func (s *FusionServer) BroadcastMessage(message *api.NotifyMessage) error {
 	s.wsLock.RLock()
 	defer s.wsLock.RUnlock()
 
@@ -169,12 +170,8 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the full current configuration state.
 	configData := s.handler.StateManager.GetStateMap()
 
-	// Create a deep copy of configData to preserve the original configuration.
-	originalConfig, err := deepCopy(configData)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error copying original configuration: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// get another copy of a deep copy of configData to preserve the original configuration.
+	originalConfig := s.handler.StateManager.GetStateMap()
 
 	var updatedData any
 	if key != "" {
@@ -606,6 +603,28 @@ func (s *FusionServer) ListMessages(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
+	s.handler.HandleAudioList(w, r)
+}
+
+func (s *FusionServer) ListMessageTags(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	s.handler.HandleAudioTagList(w, r)
+}
+
+func (s *FusionServer) GetMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	s.handler.HandleAudioGet(w, r)
+}
+
+func (s *FusionServer) StreamMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+	s.handler.HandleAudioStream(w, r)
 }
 
 func (s *FusionServer) UploadMessage(w http.ResponseWriter, r *http.Request) {
@@ -620,6 +639,18 @@ func (s *FusionServer) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	s.handler.HandleAudioRemove(w, r)
+}
+
+func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+}
+
+func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequirePost(w, r) {
+		return
+	}
 }
 
 func (s *FusionServer) ListZones(w http.ResponseWriter, r *http.Request) {
@@ -642,18 +673,6 @@ func (s *FusionServer) GetSystemDiagnostics(w http.ResponseWriter, r *http.Reque
 
 func (s *FusionServer) GetSystemStatus(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
-		return
-	}
-}
-
-func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-}
-
-func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
 		return
 	}
 }
@@ -731,19 +750,6 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 	return params[0], nil
 }
 
-// deepCopy creates a deep copy of data using JSON marshalling.
-// It is suitable for data types that can be represented as JSON (e.g., maps and slices).
-func deepCopy(data any) (any, error) {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	var copy any
-	if err := json.Unmarshal(bytes, &copy); err != nil {
-		return nil, err
-	}
-	return copy, nil
-}
 
 // calculateDiff recursively compares two data structures (maps or slices) and returns the differences.
 // If the data is not equal, it returns the updated data.

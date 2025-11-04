@@ -117,6 +117,7 @@ func (app *App) Close() {
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
 	}
+	app.Cluster.Stop()
 	app.UDPServer.Stop()
 	app.Persistence.Close()
 	app.Logger.Close()
@@ -138,9 +139,9 @@ func (app *App) registerPublicPOST(route string, handler http.HandlerFunc) {
 	routes.RegisterPublicPOST(app.publicRouter, route, handler)
 }
 
-// func (app *App) registerPublicPUT(route string, handler http.HandlerFunc) {
-// 	routes.RegisterPublicPUT(app.publicRouter, route, handler)
-// }
+func (app *App) registerPublicPUT(route string, handler http.HandlerFunc) {
+	routes.RegisterPublicPUT(app.publicRouter, route, handler)
+}
 
 func (app *App) registerPrivateGET(route string, handler http.HandlerFunc) {
 	routes.RegisterPrivateGET(app.privateRouter, route, handler)
@@ -185,20 +186,21 @@ func (app *App) setupPublicRoutes() {
 	// Metrics
 	app.registerPublicGET(routes.MetricsEndpoint, app.Cluster.Metrics.GetMetrics)
 
-	/*
-		// PAVA
-		app.registerPublicPUT(routes.PAVAAudioEndpoint, app.Server.UploadMessage)
-		app.registerPublicDELETE(routes.PAVAAudioDeleteEndpoint, app.Server.DeleteMessage)
-		app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListMessages)
-		app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
-		app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
-		app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
-		app.registerPublicGET(routes.PAVADiagnosticsEndpoint, app.Server.GetSystemDiagnostics)
-		app.registerPublicGET(routes.PAVAStatusEndpoint, app.Server.GetSystemStatus)
-		app.registerPublicPUT(routes.PAVAAlarmsEndpoint, app.Server.CancelAlarms)
-		app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListScheduledMessages)
-		app.registerPublicPOST(routes.PAVAMessagesEndpoint, app.Server.ScheduleMessage)
-	*/
+	// PAVA
+	app.registerPublicPOST(routes.PAVAMessagesEndpoint, app.Server.UploadMessage)
+	app.registerPublicGET(routes.PAVAMessagesTagsEndpoint, app.Server.ListMessageTags)
+	app.registerPublicGET(routes.PAVAMessagesIDEndpoint, app.Server.GetMessage)
+	app.registerPublicDELETE(routes.PAVAMessagesIDEndpoint, app.Server.DeleteMessage)
+	app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListMessages)
+	app.registerPublicGET(routes.PAVAMessageStreamEndpoint, app.Server.StreamMessage)
+	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.Server.ListScheduledMessages)
+	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
+	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
+	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
+	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
+	// app.registerPublicGET(routes.PAVADiagnosticsEndpoint, app.Server.GetSystemDiagnostics)
+	// app.registerPublicGET(routes.PAVAStatusEndpoint, app.Server.GetSystemStatus)
+	// app.registerPublicPUT(routes.PAVAAlarmsEndpoint, app.Server.CancelAlarms)
 
 	// Root
 	app.registerPublicGET(routes.RootEndpoint, app.Server.HandleRoot)
@@ -235,8 +237,8 @@ func (app *App) setupPublicRoutes() {
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
-	app.registerPublicPOST(routes.VersionRollbackEndpoint, app.Server.RollbackVersion)
-	app.registerPublicPOST(routes.VersionUpdateEndpoint, app.Server.UpdateVersion)
+	app.registerPublicPOST(routes.VersionEndpoint, app.Server.RollbackVersion)
+	app.registerPublicPUT(routes.VersionEndpoint, app.Server.UpdateVersion)
 
 	// WebSocket
 	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
@@ -426,9 +428,7 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 // initTaskManager initializes the timer manager.
 func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
 	taskManager := tasks.NewTaskManager(config, persistence)
-	if err := taskManager.Start(); err != nil {
-		logging.GetLogger().Fatal("Failed to start TaskManager: %v", err)
-	}
+	taskManager.Start()
 	return taskManager
 }
 
@@ -492,7 +492,6 @@ func initLogging(config *api.AppConfig) *logging.Logger {
 		MaxFileSize: 100,
 		MaxFiles:    5,
 		LogLevel:    logLevel,
-		//LokiEndpoint: "http://192.168.64.1:3100",
 	})
 	return logging.GetLogger()
 }

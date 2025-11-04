@@ -56,7 +56,6 @@ class _ProductQueryViewState extends State<ProductQueryView> {
             children: <Widget>[
               ProductSearchWidget(
                 searchController: state.searchController,
-                selectedProductType: state.selectedProductType,
                 selectedSortOption: state.selectedSortOption,
                 selectedProductTypes: state.selectedProductTypes,
                 selectedMountTypes: state.selectedMountTypes,
@@ -94,13 +93,17 @@ class _ProductQueryViewState extends State<ProductQueryView> {
                     itemCount: state.filteredProducts.length,
                     itemBuilder: (BuildContext context, int index) {
                       final ProductQueryModel product = state.filteredProducts[index];
-                      return InkWell(
-                        onTap: () {
-                          serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-                        },
-                        child: ProductCard(
-                          product: product,
-                          searchQuery: state.searchQuery,
+
+                      return GuideShowcaseWrapper(
+                        show: index == 0, // show guide only for first child in a list.
+                        step: GuideShowCaseSteps.addSpeakers,
+                        onHighlightedSpotTap: (TapDownDetails details) => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+                        child: InkWell(
+                          onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
+                          child: ProductCard(
+                            product: product,
+                            searchQuery: state.searchQuery,
+                          ),
                         ),
                       );
                     },
@@ -392,8 +395,8 @@ class ProductAPI {
           outdoorRated: speakerData["outdoor_rated"],
           maxSpl: speakerData["max_spl"] != null ? (speakerData["max_spl"] as num).toDouble() : null,
           nominalOhms: speakerData["nominal_ohms"] != null ? (speakerData["nominal_ohms"] as num).toDouble() : null,
-          sku: 'MSA12XOHS',
-          specifications: '${speakerData['max_spl'] ?? 0} dB SPL • ${speakerData['mounting_type'] ?? 'Unknown'}',
+          sku: speakerData['model'] ?? '',
+          specifications: '',
         );
       }).toList();
     } catch (e) {

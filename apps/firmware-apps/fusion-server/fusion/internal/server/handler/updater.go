@@ -3,7 +3,6 @@ package handler
 import (
 	"bytes"
 	"crypto/sha256"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -18,6 +17,8 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (
@@ -99,7 +100,7 @@ func (u *Updater) PerformUpdate(newBinaryPath string) error {
 	return syscall.Exec(currentBinaryPath, os.Args, os.Environ())
 }
 
-func (u *Updater) PerformRemoteUpdate(message api.VersionMessage) error {
+func (u *Updater) PerformRemoteUpdate(message api.VersionUpdate) error {
 
 	logger := logging.GetLogger()
 

@@ -7,7 +7,6 @@ class ProductQueryState {
   final TextEditingController searchController;
   final List<ProductQueryModel> filteredProducts;
   final String searchQuery;
-  final ProductType? selectedProductType;
   final SortOption? selectedSortOption;
 
   final Set<ProductType> selectedProductTypes;
@@ -21,7 +20,6 @@ class ProductQueryState {
     required this.searchController,
     required this.filteredProducts,
     required this.searchQuery,
-    required this.selectedProductType,
     required this.selectedSortOption,
     required this.selectedProductTypes,
     required this.selectedMountTypes,
@@ -37,7 +35,6 @@ class ProductQueryState {
       searchController: TextEditingController(),
       filteredProducts: ProductAPI.getAllProducts(),
       searchQuery: '',
-      selectedProductType: null,
       selectedSortOption: null,
       selectedProductTypes: <ProductType>{}, // Empty set to show all products initially
       selectedMountTypes: <String>{},
@@ -66,7 +63,6 @@ class ProductQueryState {
       searchController: searchController ?? this.searchController,
       filteredProducts: filteredProducts ?? this.filteredProducts,
       searchQuery: searchQuery ?? this.searchQuery,
-      selectedProductType: selectedProductType ?? this.selectedProductType,
       selectedSortOption: selectedSortOption ?? this.selectedSortOption,
       selectedProductTypes: selectedProductTypes ?? this.selectedProductTypes,
       selectedMountTypes: selectedMountTypes ?? this.selectedMountTypes,

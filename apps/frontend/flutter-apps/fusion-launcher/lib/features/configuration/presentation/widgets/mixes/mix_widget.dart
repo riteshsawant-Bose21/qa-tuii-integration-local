@@ -1,14 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
+import '../../viewmodel/project_view_model.dart';
 import '../common/processing_block_view.dart';
 import 'multi_device_selection_dialog.dart';
 
 class MixWidget extends StatefulWidget {
   final SourceSet mix;
   final List<Source> availableSources;
+  final List<Source> selectedSources;
   final void Function(SourceSet) onMixUpdated;
+  final void Function(String sourceId) onSourceRemoved;
+  final void Function(String sourceSetId, List<String> sourceIds) onSourcesSetUpdated;
   final void Function() duplicateMix;
   final Function() onDelete;
   final bool isControlMode;
@@ -17,10 +22,13 @@ class MixWidget extends StatefulWidget {
     super.key,
     required this.mix,
     required this.availableSources,
+    required this.selectedSources,
     required this.onMixUpdated,
     required this.onDelete,
     required this.duplicateMix,
     required this.isControlMode,
+    required this.onSourceRemoved,
+    required this.onSourcesSetUpdated,
   });
 
   @override
@@ -35,7 +43,7 @@ class MixWidgetState extends State<MixWidget> {
           (_) => MultiDevicePickerDialog(
             title: 'Pick Input Devices',
             devices: widget.availableSources,
-            initiallySelected: mix.sourceIds.map((String id) => widget.availableSources.firstWhere((Source s) => s.id == id)).toList(),
+            initiallySelected: widget.selectedSources,
           ),
     );
     if (picked != null) {
@@ -51,8 +59,7 @@ class MixWidgetState extends State<MixWidget> {
         }
       }
 
-      final SourceSet updatedMix = mix.copyWith(sourceIds: selectedIds);
-      widget.onMixUpdated(updatedMix);
+      widget.onSourcesSetUpdated(widget.mix.id, selectedIds);
     }
   }
 
@@ -140,7 +147,7 @@ class MixWidgetState extends State<MixWidget> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${widget.mix.sourceIds.length}',
+                                '${widget.selectedSources.length}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -164,7 +171,7 @@ class MixWidgetState extends State<MixWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (widget.mix.sourceIds.isEmpty)
+                    if (widget.selectedSources.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -200,7 +207,7 @@ class MixWidgetState extends State<MixWidget> {
                         child: ListView.separated(
                           shrinkWrap: true,
                           physics: const NeverScrollableScrollPhysics(),
-                          itemCount: widget.mix.sourceIds.length,
+                          itemCount: widget.selectedSources.length,
                           separatorBuilder: (BuildContext context, int index) {
                             return Divider(
                               height: 1,
@@ -208,10 +215,7 @@ class MixWidgetState extends State<MixWidget> {
                             );
                           },
                           itemBuilder: (BuildContext context, int index) {
-                            final String id = widget.mix.sourceIds[index];
-                            final Source source = widget.availableSources.firstWhere(
-                              (Source s) => s.id == id,
-                            );
+                            final Source source = widget.selectedSources[index];
                             final double currentValue =
                                 widget.mix.sourceMixLevels.containsKey(source.id) ? double.parse(widget.mix.sourceMixLevels[source.id].toString()) : 0.0;
 
@@ -256,10 +260,7 @@ class MixWidgetState extends State<MixWidget> {
                                       if (!widget.isControlMode)
                                         GestureDetector(
                                           onTap: () {
-                                            final SourceSet updatedMix = widget.mix.copyWith(
-                                              sourceIds: List<String>.from(widget.mix.sourceIds)..removeAt(index),
-                                            );
-                                            widget.onMixUpdated(updatedMix);
+                                            widget.onSourceRemoved(source.id);
                                           },
                                           child: Container(
                                             padding: const EdgeInsets.all(4),
@@ -368,25 +369,16 @@ class MixWidgetState extends State<MixWidget> {
             //Processing blocks
             ProcessingBlockView(
               processingType: ProcessingType.mix,
-              selectedBlocks: widget.mix.processingBlocks,
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.mix.id),
               isControlMode: widget.isControlMode,
-              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
-                final SourceSet updatedMix = widget.mix.copyWith(processingBlocks: chain);
-                widget.onMixUpdated(updatedMix);
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.mix.id, oldIndex: oldIndex, newIndex: newIndex);
               },
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.mix.processingBlocks,
-                );
-                updatedBlocks.removeAt(index);
-                widget.onMixUpdated(widget.mix.copyWith(processingBlocks: updatedBlocks));
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.mix.processingBlocks,
-                );
-                updatedBlocks.add(block);
-                widget.onMixUpdated(widget.mix.copyWith(processingBlocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.mix.id);
               },
             ),
           ],

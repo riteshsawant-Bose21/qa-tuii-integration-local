@@ -48,7 +48,7 @@ runs:
         moon run flutter-apps:build-web
         cd build/web
         zip -r fusion_launcher_web_build.zip .
-        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T fusion_launcher_web_build.zip ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip
+        VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
+        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T fusion_launcher_web_build.zip ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip
         echo "Web Build uploaded to Nexus successfully!"
-        echo "flutter-web: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_REF_NAME}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip"
+        echo "flutter-web: ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-web/Fusion-Launcher-$VERSION.zip"

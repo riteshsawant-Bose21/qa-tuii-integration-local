@@ -1,15 +1,16 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+
+	json "github.com/goccy/go-json"
 )
 
-// broadcastUpdate processes an incoming NotifyMessage by applying configuration or snapshot updates,
+// broadcastMessage processes an incoming NotifyMessage by applying configuration or snapshot updates,
 // performing version changes, and then broadcasting the message to other nodes and local clients if needed.
-func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
+func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 
 	switch message.Operation {
 
@@ -40,7 +41,7 @@ func (h *Handler) broadcastUpdate(message *api.NotifyMessage) error {
 
 	case api.NotifyOpVersionUpdate:
 		// Perform a version update triggered remotely.
-		if err := h.updater.PerformRemoteUpdate(*message.VersionMessage); err != nil {
+		if err := h.updater.PerformRemoteUpdate(*message.VersionUpdate); err != nil {
 			return fmt.Errorf("performRemoteUpdate error: %v", err)
 		}
 

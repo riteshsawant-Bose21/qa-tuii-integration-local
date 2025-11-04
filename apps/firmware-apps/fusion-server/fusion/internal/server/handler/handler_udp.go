@@ -1,15 +1,18 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
+
+	json "github.com/goccy/go-json"
+
+	"fusion/internal/api"
 )
 
-// UDP Server methods
+// HandleUDPMessage handles and decodes UDP messages
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	var msg struct {
-		Action string          `json:"action"`
-		Raw    json.RawMessage `json:",omitempty"`
+		Action  api.NotifyOp    `json:"action"`
+		Payload json.RawMessage `json:"payload,omitempty"`
 	}
 
 	if err := json.Unmarshal(data, &msg); err != nil {
@@ -17,17 +20,17 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	}
 
 	switch msg.Action {
-	case "get":
-		data := h.StateManager.GetStateMap()
+	case api.NotifyOpValueGet:
+		state := h.StateManager.GetStateMap()
 		return map[string]any{
 			"status": "success",
-			"data":   data,
+			"data":   state,
 		}, nil
 
-	case "set":
+	case api.NotifyOpValueSet:
 		var update map[string]any
-		if err := json.Unmarshal(data, &update); err != nil {
-			return nil, fmt.Errorf("invalid JSON: %w", err)
+		if err := json.Unmarshal(msg.Payload, &update); err != nil {
+			return nil, fmt.Errorf("invalid payload: %w", err)
 		}
 		delete(update, "action")
 		if err := h.handleConfigUpdate(update, false); err != nil {

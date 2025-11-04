@@ -11,6 +11,7 @@
 #include <samplerate.h>
 #include <spdlog/spdlog.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <string>
@@ -189,6 +190,7 @@ private:
     int min_depth;
     double min_ratio;
     double max_ratio;
+    static const int_fast32_t MIN_DEPTH = 128;
 
     ALGORITHM_DECLARE(AlsaIn);
 };
@@ -215,6 +217,7 @@ private:
     int min_depth;
     double min_ratio;
     double max_ratio;
+    static const int_fast32_t MIN_DEPTH = 128;
 
     ALGORITHM_DECLARE(AlsaOut);
 };
@@ -246,18 +249,26 @@ AlsaDevice::~AlsaDevice()
 void AlsaDevice::open_device()
 {
     pthread_mutex_lock(&open_mutex);
-    SPDLOG_DEBUG("Getting device number for: {}", device_name);
-    int device_number = get_device_number(device_name);
 
-    if (device_number < 0)
+    std::string full_device_name = device_name;
+
+    // If the device name starts with "hw:", it's a full device name that we
+    // can open immediately.  If it doesn't, it's the name of a fusion connect
+    // stream, and we need to look up its device number first.
+    if (device_name.compare(0, 3, "hw:") != 0)
     {
-        SPDLOG_DEBUG("ALSA device {} not found", device_name);
-        pthread_mutex_unlock(&open_mutex);
-        return;
-    }
+        SPDLOG_DEBUG("Getting device number for: {}", device_name);
+        int device_number = get_device_number(device_name);
 
-    std::string full_device_name = "hw:FusionConnect,"
-        + std::to_string(device_number);
+        if (device_number < 0)
+        {
+            SPDLOG_DEBUG("ALSA device {} not found", device_name);
+            pthread_mutex_unlock(&open_mutex);
+            return;
+        }
+
+        full_device_name = "hw:FusionConnect," + std::to_string(device_number);
+    }
 
     SPDLOG_DEBUG("Opening: {}", full_device_name);
     int error = snd_pcm_open(&alsa, full_device_name.c_str(),
@@ -456,7 +467,7 @@ void AlsaDevice::write(const float *buffer, int samples)
             close_device();
         }
 
-        SPDLOG_ERROR("Failed to write to ALSA device: {}", snd_strerror(res));
+        SPDLOG_DEBUG("Failed to write to ALSA device: {}", snd_strerror(res));
     }
     else if (res != samples)
     {
@@ -1026,9 +1037,24 @@ AlsaIn::AlsaIn(const bosepro::BlockConfiguration &configuration)
 
     read_samples = get_frame_size() + 1;
 
-    min_depth = 12 * period_size;
-    max_depth = 36 * period_size;
-    target_depth = 24 * period_size;
+    min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
+    if (min_depth % period_size != 0)
+    {
+        min_depth += period_size - (min_depth % period_size);
+    }
+
+    max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
+    if (max_depth % period_size != 0)
+    {
+        max_depth += period_size - (max_depth % period_size);
+    }
+
+    target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
+    if (target_depth % period_size != 0)
+    {
+        target_depth += period_size - (target_depth % period_size);
+    }
+
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
@@ -1121,9 +1147,24 @@ AlsaOut::AlsaOut(const bosepro::BlockConfiguration &configuration)
 
     max_write_samples = get_frame_size() + 1;
 
-    min_depth = 12 * period_size;
-    max_depth = 36 * period_size;
-    target_depth = 24 * period_size;
+    min_depth = std::max(2 * get_frame_size(), MIN_DEPTH);
+    if (min_depth % period_size != 0)
+    {
+        min_depth += period_size - (min_depth % period_size);
+    }
+
+    max_depth = std::max(6 * get_frame_size(), 3 * MIN_DEPTH);
+    if (max_depth % period_size != 0)
+    {
+        max_depth += period_size - (max_depth % period_size);
+    }
+
+    target_depth = std::max(4 * get_frame_size(), 2 * MIN_DEPTH);
+    if (target_depth % period_size != 0)
+    {
+        target_depth += period_size - (target_depth % period_size);
+    }
+
 
     // The JND for pitch is about 0.6% (or about 10 cents).  We can limit the
     // ratio to be smaller than this to avoid pitch artifacts, while still
@@ -1156,7 +1197,7 @@ void AlsaOut::process()
     // Perhaps we want to do packet loss concealment here
     if (depth > max_depth)
     {
-        SPDLOG_WARN("Buffer depth too high: {} {}", depth, max_depth);
+        SPDLOG_DEBUG("Buffer depth too high: {} {}", depth, max_depth);
 
         depth = device->adjust_buffer_depth(depth - target_depth);
 

@@ -1,4 +1,5 @@
 #include "wav_read.h"
+#include "message_player.h"
 
 #include <bosepro/observer.h>
 
@@ -20,6 +21,169 @@
 #include <atomic>
 #include <iostream>
 
+void handle_update(const std::string &update_setting);
+
+class UDPListener {
+public:
+    UDPListener()
+    {
+        sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+        if (sockfd < 0)
+        {
+            SPDLOG_ERROR("Error opening socket");
+            return;
+        }
+
+        sockaddr_in address;
+        std::memset(&address, 0, sizeof(address));
+        address.sin_family = AF_INET;
+        address.sin_addr.s_addr = INADDR_ANY;
+        address.sin_port = htons(7949);
+        if (bind(sockfd, (struct sockaddr *)&address, sizeof(address)) < 0)
+        {
+            SPDLOG_ERROR("Error binding socket");
+            close(sockfd);
+            sockfd = -1;
+            return;
+        }
+
+        int flags = fcntl(sockfd, F_GETFL, 0);
+        if (flags == -1)
+        {
+            throw std::runtime_error(std::string("fcntl(F_GETFL) failed: ") +
+                    strerror(errno));
+        }
+        if (fcntl(sockfd, F_SETFL, flags | O_NONBLOCK) == -1)
+        {
+            throw std::runtime_error(std::string("fcntl(F_SETFL) failed: ") +
+                    strerror(errno));
+        }
+
+        listener_thread = std::thread(&UDPListener::run, this);
+    }
+
+
+    ~UDPListener()
+    {
+        stop();
+        if (sockfd >= 0)
+        {
+            close(sockfd);
+        }
+    }
+
+
+    void stop()
+    {
+        running = false;
+        if (listener_thread.joinable()) {
+            listener_thread.join();
+        }
+    }
+
+
+private:
+    static std::string escape_quotes(const std::string& input)
+    {
+        std::string output;
+        output.reserve(input.size());
+        for (char c : input)
+        {
+            if (c == '"')
+            {
+                output += "\\\"";
+            }
+            else if (std::isprint(c))
+            {
+                output += c;
+            }
+        }
+        return output;
+    }
+
+    void run()
+    {
+        pollfd pfd;
+        pfd.fd = sockfd;
+        pfd.events = POLLIN;
+        constexpr size_t BUFFER_SIZE = 65535;
+        char buffer[BUFFER_SIZE];
+        sockaddr_in sender_addr;
+        socklen_t sender_len = sizeof(sender_addr);
+
+        while (running)
+        {
+            const int poll_result = poll(&pfd, 1, 1000);
+
+            if (poll_result < 0)
+            {
+                if (errno == EINTR)
+                {
+                    continue;
+                }
+                SPDLOG_ERROR("Poll error: {}", strerror(errno));
+                break;
+            }
+            else if (poll_result == 0)
+            {
+                continue;
+            }
+
+            if (pfd.revents & POLLIN)
+            {
+                sender_len = sizeof(sender_addr);
+                const ssize_t received =
+                    recvfrom(sockfd, buffer, BUFFER_SIZE - 1, 0,
+                             reinterpret_cast<sockaddr *>(&sender_addr),
+                             &sender_len);
+
+                if (received < 0)
+                {
+                    if (errno == EWOULDBLOCK || errno == EAGAIN)
+                    {
+                        continue;
+                    }
+                    SPDLOG_ERROR("Error receiving data: {}", strerror(errno));
+                    continue;
+                }
+
+                buffer[received] = '\0';
+
+                Json::Value response;
+                Json::CharReaderBuilder reader_builder;
+                std::istringstream iss(buffer);
+                std::string errs;
+
+
+                if (Json::parseFromStream(reader_builder, iss, &response, &errs))
+                {
+                    {
+                        Json::FastWriter fast_writer;
+                        std::string response_str = fast_writer.write(response);
+
+                        for (auto &mp : MessagePlayer::get_player_names())
+                        {
+                            std::string command = "{ \"target\": \"" + mp +
+                                "\", \"name\": \"play_message\", \"value\": \""
+                                + escape_quotes(response_str) + "\" }";
+                            handle_update(command);
+                        }
+                    }
+                }
+                else
+                {
+                    SPDLOG_DEBUG("Failed to parse JSON: {}", errs);
+                }
+            }
+        }
+    }
+
+    int sockfd;
+    std::atomic<bool> running{true};
+    std::thread listener_thread;
+};
+
 
 std::atomic<bool> g_running{true};
 
@@ -35,6 +199,9 @@ bosepro::Session *psession;
 
 void handle_update(const std::string &update_setting)
 {
+    static std::mutex mtx;
+    std::lock_guard<std::mutex> lock(mtx);
+
     std::stringstream ss;
     ss << update_setting;
     SPDLOG_DEBUG("Server update: {}", update_setting);
@@ -183,6 +350,7 @@ int main(int argc, char *argv[])
     {
         UDPValueMonitor *client = nullptr;
         psession = &session;
+        UDPListener udp_listener;
 
         if (vm.count("time"))
         {
@@ -193,6 +361,8 @@ int main(int argc, char *argv[])
 
         // Path for the static configuration
         target_paths.push_back("devices[*]");
+        // Path for dynamic parameter setttings with matrix indices
+        target_paths.push_back("settings.audio.*.*[*][*]");
         // Path for dynamic parameter setttings with vector indices
         target_paths.push_back("settings.audio.*.*[*]");
         // Path for dynamic parameter setttings
@@ -242,6 +412,7 @@ int main(int argc, char *argv[])
         }
 
         telemetry_monitor.stop();
+        udp_listener.stop();
         session.stop();
     }
     else

@@ -3,7 +3,13 @@
 
 # (workspace)
 apps/frontend/flutter-apps @PrithvirajShetty-BoseProfessional @MaheshGouda-BoseProfessional
-apps/frontend/react-apps @SujithDevadas-BoseProfessional
-apps/cloud-backend/fusion-cloud @SujithDevadas-BoseProfessional @rahil-BoseProfessional
+apps/frontend/react-apps @SujithDevadas-BoseProfessional @tejaksha-BoseProfessional
+apps/cloud-backend @SujithDevadas-BoseProfessional @rahil-BoseProfessional @tejaksha-BoseProfessional
+apps/firmware-apps/fusion-dsp @michael-pocino-boseprofessional @Yi-Ting-Tsai-BoseProfessional
+apps/firmware-apps/fusion-server @BoseGene @VibhanshuJain-BoseProfessional
+apps/firmware-apps/fusion-edge-gateway @vairamani-muthusamy-boseprofessional
+apps/firmware-apps/fusion-telemetry-core @Sudhanand-Dayalan-BoseProfessional @Nathan-Mark-BoseProfessional
+apps/firmware-apps/fusion-system-monitor @Sudhanand-Dayalan-BoseProfessional @Nathan-Mark-BoseProfessional
+apps/kernel-modules @Nathan-Mark-BoseProfessional
 /.github/ @Amol-Kirtane-Boseprofessional
 /.moon/ @Amol-Kirtane-Boseprofessional

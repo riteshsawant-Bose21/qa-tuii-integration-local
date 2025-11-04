@@ -11,7 +11,7 @@ import '../router/navigation_observer.dart';
 
 bool isLoaderVisible = false;
 
-class FusionUtils {
+class FusionUiUtils {
   static void showLoader(BuildContext context) {
     if (routeObserver.getRouteNames().last != "FusionLoader") {
       showDialog(
@@ -90,7 +90,7 @@ class FusionUtils {
       }
     }
 
-    FusionUtils.hideLoader(context);
+    FusionUiUtils.hideLoader(context);
 
     final String method = err.requestOptions.method;
     final Map<String, dynamic> headers = err.requestOptions.headers;

@@ -3,10 +3,12 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"fusion/internal/logging"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -392,8 +394,90 @@ func ExtractId(r *http.Request) (string, error) {
 	return ExtractValue(r, "id")
 }
 
-// ExtractName pulls the “name” var from mux and returns aan error if it’s missing.
+// ExtractName pulls the “name” var from mux and returns an error if it’s missing.
 func ExtractName(r *http.Request) (string, error) {
 	return ExtractValue(r, "name")
 
+}
+
+// DeepCopy recursively copies maps, slices, and arrays.
+// It supports arbitrary nesting of map[string]any, []any, and primitive values.
+func DeepCopy(src any) any {
+	switch v := src.(type) {
+	case nil:
+		return nil
+
+	// Fast paths for JSON-y shapes
+	case map[string]any:
+		if v == nil {
+			return map[string]any(nil)
+		}
+		cp := make(map[string]any, len(v))
+		for key, val := range v {
+			cp[key] = DeepCopy(val)
+		}
+		return cp
+
+	case []any:
+		if v == nil {
+			return []any(nil)
+		}
+		cp := make([]any, len(v))
+		for i, val := range v {
+			cp[i] = DeepCopy(val)
+		}
+		return cp
+
+	// Useful common typed slices
+	case []byte:
+		if v == nil {
+			return []byte(nil)
+		}
+		cp := make([]byte, len(v))
+		copy(cp, v)
+		return cp
+	case []string:
+		if v == nil {
+			return []string(nil)
+		}
+		cp := make([]string, len(v))
+		copy(cp, v)
+		return cp
+	case []int:
+		if v == nil {
+			return []int(nil)
+		}
+		cp := make([]int, len(v))
+		copy(cp, v)
+		return cp
+	case []float64:
+		if v == nil {
+			return []float64(nil)
+		}
+		cp := make([]float64, len(v))
+		copy(cp, v)
+		return cp
+
+	default:
+		return v
+	}
+}
+
+// SendUDPMessage marshals the payload as JSON and sends it to the given address.
+func SendUDPMessage(addr *net.UDPAddr, payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal UDP payload: %w", err)
+	}
+
+	conn, err := net.ListenPacket("udp4", "")
+	if err != nil {
+		return fmt.Errorf("failed to open UDP socket: %w", err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.WriteTo(data, addr); err != nil {
+		return fmt.Errorf("failed to send UDP packet: %w", err)
+	}
+	return nil
 }

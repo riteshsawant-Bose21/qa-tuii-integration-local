@@ -6,7 +6,7 @@ import (
 )
 
 type Broadcaster interface {
-	BroadcastUpdate(msg *api.NotifyMessage) error
+	BroadcastMessage(msg *api.NotifyMessage) error
 }
 
 type LocalBroadcaster func(*api.NotifyMessage)
@@ -26,7 +26,7 @@ func (h *Hub) Register(b Broadcaster) {
 func (h *Hub) Broadcast(msg *api.NotifyMessage) {
 
 	for _, bc := range h.broadcasters {
-		if err := bc.BroadcastUpdate(msg); err != nil {
+		if err := bc.BroadcastMessage(msg); err != nil {
 			logging.GetLogger().Error("local broadcast failed: %v", err)
 		}
 	}

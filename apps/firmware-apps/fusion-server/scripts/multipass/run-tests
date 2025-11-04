@@ -4,6 +4,7 @@ function show_help() {
     echo "Usage: ./run_tests.sh [--all|--controllers|--fusion] [--vip IP:PORT]"
     echo "Options:"
     echo "  --all         Run all tests (default)"
+    echo "  --audio       Run only audio tests"
     echo "  --bluetooth   Run only bluetooth tests"
     echo "  --cluster     Run only cluster tests"
     echo "  --controllers Run only controller tests"
@@ -15,9 +16,10 @@ function show_help() {
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
+    echo "  --udp         Run only UDP tests"     
     echo "  --updater     Run only updater tests"     
-    echo "  --websocket   Run only websocket tests"     
     echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
+    echo "  --websocket   Run only websocket tests"     
     exit 1
 }
 
@@ -28,6 +30,10 @@ while [[ $# -gt 0 ]]; do
     case $1 in
         --all)
             test_type="all"
+            shift
+            ;;
+        --audio)
+            test_type="audio"
             shift
             ;;
         --bluetooth)
@@ -75,6 +81,10 @@ while [[ $# -gt 0 ]]; do
             test_type="tasks"
             shift
             ;;
+        --udp)
+            test_type="udp"
+            shift
+            ;;
         --updater)
             test_type="updater"
             shift
@@ -100,6 +110,9 @@ cd fusion/test || exit 1
 case "$test_type" in
     "all")
         go test -v --race ./... -args --auto --vip "$vip"
+        ;;
+    "audio")
+        go test -v --race ./audio_test.go
         ;;
     "bluetooth")
         go test -v --race ./bluetooth_test.go
@@ -133,6 +146,9 @@ case "$test_type" in
         ;;
     "tasks")
         go test -v --race ./tasks_test.go
+        ;;
+    "udp")
+        go test -v --race ./udp_test.go
         ;;
     "updater")
         go test -v --race ./updater_test.go

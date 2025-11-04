@@ -26,8 +26,11 @@ class FusionDockableArea extends StatefulWidget {
 }
 
 class _FusionDockableAreaState extends State<FusionDockableArea> {
-  /// Static map to store dock items globally across all tabs
+  /// Static map to store dock items globally across ALL tabs and instances
   static final Map<String, DockItem> _globalDockItems = {};
+
+  /// Static callback to notify all instances when global state changes
+  static final List<VoidCallback> _stateUpdateCallbacks = [];
 
   /// Track the highest z-index for bringing items to front
   static int _highestZIndex = 0;
@@ -40,34 +43,62 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
   void initState() {
     super.initState();
 
-    /// Initialize items from the provided configs, but preserve existing state
+    /// Register this instance for global state updates
+    _stateUpdateCallbacks.add(_updateState);
+
+    /// Initialize items from the provided configs, but preserve existing state globally
     for (var config in widget.dockItemList) {
       if (!_globalDockItems.containsKey(config.id)) {
-        print("Initializing DockItem: ${config.id}=== ${config.title}");
+        print("Initializing GLOBAL DockItem: ${config.id} === ${config.title}");
         _globalDockItems[config.id] = DockItem(id: config.id, title: config.title, side: config.side);
-        // Initialize z-index if not set
         _globalDockItems[config.id]!.zIndex ??= 0;
+      } else {
+        print("Reusing existing GLOBAL DockItem: ${config.id} === ${config.title}");
       }
     }
   }
 
-  /// Get items that belong to this tab
+  @override
+  void dispose() {
+    /// Unregister this instance from global state updates
+    _stateUpdateCallbacks.remove(_updateState);
+    super.dispose();
+  }
+
+  /// Update state callback for global state changes
+  void _updateState() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  /// Notify all instances about global state changes
+  static void _notifyGlobalStateChange() {
+    for (final callback in _stateUpdateCallbacks) {
+      callback();
+    }
+  }
+
+  /// Get items that belong to this tab - now checks global state
   List<DockItem> getItemsForTab() {
-    /// Return only items that are configured for this tab
-    return widget.dockItemList.map((config) => _globalDockItems[config.id]!).where((item) => item != null).toList();
+    /// Return items that are configured for this tab, using global state
+    return widget.dockItemList.map((config) => _globalDockItems[config.id]).where((item) => item != null).cast<DockItem>().toList();
   }
 
   /// Get config for a specific item
   DockItemConfig? getConfigForItem(String itemId) {
-    return widget.dockItemList.firstWhere((config) => config.id == itemId, orElse: () => widget.dockItemList.first);
+    try {
+      return widget.dockItemList.firstWhere((config) => config.id == itemId);
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Bring item to front by giving it the highest z-index
   void _bringItemToFront(DockItem item) {
-    setState(() {
-      _highestZIndex++;
-      item.zIndex = _highestZIndex;
-    });
+    _highestZIndex++;
+    item.zIndex = _highestZIndex;
+    _notifyGlobalStateChange();
   }
 
   /// Handle item tap to bring to front
@@ -82,39 +113,39 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
   /// Handle drag end to determine docking or floating
   void _handleFloatingItemDragEnd(DockItem item, DraggableDetails details, double screenWidth) {
-    setState(() {
-      final dx = details.offset.dx;
-      final dy = details.offset.dy;
+    final dx = details.offset.dx;
+    final dy = details.offset.dy;
 
-      /// Calculate more generous docking zones
-      final double leftDockZone = widget.showLeft ? 240 : 0;
-      final double rightDockZone = widget.showRight ? screenWidth - 484 : screenWidth;
+    /// Calculate more generous docking zones
+    final double leftDockZone = widget.showLeft ? 240 : 0;
+    final double rightDockZone = widget.showRight ? screenWidth - 484 : screenWidth;
 
-      if (widget.showLeft && dx < leftDockZone) {
-        /// Dock to left side
-        print("Docking ${item.title} to left side");
-        item.docked = true;
-        item.expanded = false;
-        item.side = "left";
-        _leftDockOrder++;
-        item.dockedOrder = _leftDockOrder;
-      } else if (widget.showRight && dx > rightDockZone) {
-        /// Dock to right side
-        print("Docking ${item.title} to right side");
-        item.docked = true;
-        item.expanded = false;
-        item.side = "right";
-        _rightDockOrder++;
-        item.dockedOrder = _rightDockOrder;
-      } else {
-        /// Keep floating
-        print("Keeping ${item.title} floating at: ${details.offset}");
-        item.position = details.offset;
-        item.docked = false;
-        item.expanded = true;
-        _bringItemToFront(item);
-      }
-    });
+    if (widget.showLeft && dx < leftDockZone) {
+      /// Dock to left side
+      print("Docking ${item.title} to left side");
+      item.docked = true;
+      item.expanded = false;
+      item.side = "left";
+      _leftDockOrder++;
+      item.dockedOrder = _leftDockOrder;
+    } else if (widget.showRight && dx > rightDockZone) {
+      /// Dock to right side
+      print("Docking ${item.title} to right side");
+      item.docked = true;
+      item.expanded = false;
+      item.side = "right";
+      _rightDockOrder++;
+      item.dockedOrder = _rightDockOrder;
+    } else {
+      /// Keep floating
+      print("Keeping ${item.title} floating at: ${details.offset}");
+      item.position = details.offset;
+      item.docked = false;
+      item.expanded = true;
+      _bringItemToFront(item);
+    }
+
+    _notifyGlobalStateChange();
   }
 
   /// Handle undocking from sidebar
@@ -126,44 +157,42 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
     // If it didn't dock to a sidebar, make it floating
     if (!item.docked) {
-      setState(() {
-        item.position = details.offset;
-        item.expanded = true;
-      });
+      item.position = details.offset;
+      item.expanded = true;
 
       /// Bring to front when undocked
       _bringItemToFront(item);
     }
+
+    _notifyGlobalStateChange();
   }
 
   /// Undock and reset position if widget side is right then duck to right side or else right side
   void onCloseButtonPressed(DockItem item) {
-    setState(() {
-      if (item.side == "right" && widget.showRight) {
-        item.docked = true;
-        item.expanded = true;
-        item.side = "right";
-      } else if (item.side == "left" && widget.showLeft) {
-        item.docked = true;
-        item.expanded = true;
-        item.side = "left";
-      }
-    });
+    if (item.side == "right" && widget.showRight) {
+      item.docked = true;
+      item.expanded = true;
+      item.side = "right";
+    } else if (item.side == "left" && widget.showLeft) {
+      item.docked = true;
+      item.expanded = true;
+      item.side = "left";
+    }
+
+    _notifyGlobalStateChange();
   }
 
   /// Handle expansion state change
   void _handleExpansionChanged(DockItem item, bool expanded) {
-    setState(() {
-      item.expanded = expanded;
-    });
+    item.expanded = expanded;
+    _notifyGlobalStateChange();
   }
 
   /// Handle resizing of floating panel
   void _handleItemResize(DockItem item, double deltaX, double deltaY) {
-    setState(() {
-      item.width = (item.width + deltaX).clamp(240, 600);
-      item.height = (item.height + deltaY).clamp(120, 700);
-    });
+    item.width = (item.width + deltaX).clamp(240, 600);
+    item.height = (item.height + deltaY).clamp(120, 700);
+    _notifyGlobalStateChange();
   }
 
   @override
@@ -171,10 +200,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
     final screenWidth = MediaQuery.of(context).size.width;
     final items = getItemsForTab();
 
-    /// Get floating items and sort them by z-index for proper stacking order
-    final floatingItems =
-        items.where((i) => !i.docked).where((item) => (item.side == "left" && widget.showLeft) || (item.side == "right" && widget.showRight)).toList()
-          ..sort((a, b) => (a.zIndex ?? 0).compareTo(b.zIndex ?? 0));
+    /// Get only floating items that are configured for this tab
+    final floatingItems = items.where((item) => !item.docked).toList()..sort((a, b) => (a.zIndex ?? 0).compareTo(b.zIndex ?? 0));
 
     return Stack(
       children: [
@@ -184,7 +211,6 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             if (widget.showLeft)
               FusionHorizontalResizableWidget(
                 minWidth: 240,
-                // maxWidth 60% of screen width
                 maxWidth: screenWidth * 0.3,
                 dragLeft: false,
                 dragRight: true,
@@ -198,7 +224,17 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
               ),
 
             /// Main Area
-            Expanded(child: widget.mainArea),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (BuildContext context, BoxConstraints constraints) {
+                  return SizedBox(
+                    width: constraints.maxWidth,
+                    height: constraints.maxHeight,
+                    child: widget.mainArea,
+                  );
+                },
+              ),
+            ),
 
             /// Right Sidebar
             if (widget.showRight)
@@ -218,7 +254,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
           ],
         ),
 
-        /// Floating panels - render in z-index order (lowest to highest)
+        /// Floating panels - render only floating items configured for this tab
         for (var item in floatingItems)
           Positioned(
             left: item.position.dx,
@@ -227,7 +263,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
               onTap: () => _handleItemTap(item),
               child: FusionFloatingPanel(
                 item: item,
-                config: getConfigForItem(item.id),
+                config: getConfigForItem(item.id)!,
                 onDragStart: () => _handleItemDragStart(item),
                 onDragEnd: (details) => _handleFloatingItemDragEnd(item, details, screenWidth),
                 onClose: () => onCloseButtonPressed(item),

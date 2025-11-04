@@ -3,7 +3,6 @@ package main
 import (
 	"bytes"
 	"encoding/csv"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"fusion/internal/api"
@@ -15,8 +14,11 @@ import (
 	"reflect"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 // clusterNode represents a node in the test cluster
@@ -802,6 +804,87 @@ func TestPatchRemoveArrayElement(t *testing.T) {
 	}
 }
 
+// TestConcurrentPatchRequests tests multiple concurrent PATCH requests
+func TestConcurrentPatchRequests(t *testing.T) {
+
+	// Initial config with nested maps and arrays
+	initialConfig := map[string]any{
+		"settings": map[string]any{
+			"audio": map[string]any{
+				"eq": map[string]any{
+					"bands": []float64{100.0, 200.0, 300.0},
+				},
+			},
+		},
+	}
+
+	jsonData, _ := json.Marshal(initialConfig)
+	resp, err := http.Post(fmt.Sprintf("%s/value", serverAddr), api.JsonMIMEType, bytes.NewBuffer(jsonData))
+	if err != nil {
+		t.Fatalf("failed to set initial configuration: %v", err)
+	}
+	resp.Body.Close()
+
+	// Prepare concurrent updates
+	client := &http.Client{}
+	const numWorkers = 10
+	const numRequests = 50
+	errCh := make(chan error, numWorkers*numRequests)
+	var wg sync.WaitGroup
+
+	for w := range numWorkers {
+		wg.Add(1)
+		go func(worker int) {
+			defer wg.Done()
+			for i := 0; i < numRequests; i++ {
+				updateData := map[string]any{
+					"value": float64(100 + worker + i),
+				}
+				jsonUpdate, _ := json.Marshal(updateData)
+
+				req, _ := http.NewRequest("PATCH",
+					fmt.Sprintf("%s/value?key=settings.audio.eq.bands[%d]", serverAddr, i%3),
+					bytes.NewBuffer(jsonUpdate))
+				req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+				resp, err := client.Do(req)
+				if err != nil {
+					errCh <- fmt.Errorf("worker %d request %d failed: %w", worker, i, err)
+					return
+				}
+				io.Copy(io.Discard, resp.Body)
+				resp.Body.Close()
+			}
+		}(w)
+	}
+
+	wg.Wait()
+	close(errCh)
+
+	for err := range errCh {
+		t.Errorf("patch error: %v", err)
+	}
+
+	// Fetch final array to ensure server still responds and data is consistent
+	getResp, err := http.Get(fmt.Sprintf("%s/value?key=settings.audio.eq.bands", serverAddr))
+	if err != nil {
+		t.Fatalf("failed to get final array: %v", err)
+	}
+	defer getResp.Body.Close()
+
+	var finalResp struct {
+		Exists bool      `json:"exists"`
+		Value  []float64 `json:"value"`
+	}
+	if err := json.NewDecoder(getResp.Body).Decode(&finalResp); err != nil {
+		t.Fatalf("failed to decode final array: %v", err)
+	}
+
+	if !finalResp.Exists {
+		t.Error("final array missing after concurrent patches")
+	}
+}
+
 // TestPostValueOnNonVIPNode sets a value via POST on a non-VIP node
 // and then verifies it through the VIP endpoint.
 func TestPostValueOnNonVIPNode(t *testing.T) {
@@ -1149,7 +1232,7 @@ func TestUDPSet(t *testing.T) {
 // TestUDPSetAndGet sets a value and then verifies it with a get command on the default instance.
 func TestUDPSetAndGet(t *testing.T) {
 	// Set the value on instance1.
-	setCommand := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	setCommand := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 localhost %s`, instancePort)
 	setOut, err := runMultipassCommand(t, setCommand)
 	if err != nil {
 		t.Fatalf("Multipass set command failed: %v, output: %s", err, setOut)
@@ -1171,7 +1254,7 @@ func TestUDPSetAndGet(t *testing.T) {
 // TestUDPPropagation sets a value on instance1 and verifies that it propagates to instance2.
 func TestUDPPropagation(t *testing.T) {
 	// Build commands once
-	setCmd := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	setCmd := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 localhost %s`, instancePort)
 	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
 
 	// Set on the "master" node

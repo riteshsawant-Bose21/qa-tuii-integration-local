@@ -1,13 +1,15 @@
 package tasks
 
 import (
-	"encoding/json"
+	"context"
 	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -29,6 +31,9 @@ type ExecutionRecord struct {
 	TaskID      string    `json:"task_id"`
 	Timestamp   time.Time `json:"timestamp"`
 }
+
+// TaskFunc is a task function that take a context
+type TaskFunc func(context.Context) error
 
 // TaskManager manages tasks and provides execution history with rotation.
 type TaskManager struct {
@@ -58,12 +63,10 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 
 	tm.actionFactories = map[api.TaskType]func(*api.Task) func(){
 		api.TaskTypeSnapshot: func(t *api.Task) func() {
-			snapID := t.Params[api.SnapshotIDKey]
-			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(snapID))
+			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(t))
 		},
-		api.TaskTypeAudioPlayback: func(t *api.Task) func() {
-			path := t.Params["file_path"]
-			return tm.wrapTask(t, tm.taskPlayAudioFunc(path))
+		api.TaskTypeMessage: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskTriggerMessageFunc(t))
 		},
 	}
 	return tm
@@ -94,7 +97,7 @@ func (tm *TaskManager) AddTask(t *api.Task) error {
 }
 
 // UpdateTask updates an existing timer task.
-func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc func()) error {
+func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -193,37 +196,38 @@ func (tm *TaskManager) GetExecutionHistory() []ExecutionRecord {
 }
 
 // Start starts the TaskManager's scheduler.
-func (tm *TaskManager) Start() error {
+func (tm *TaskManager) Start() {
+
+	logger := logging.GetLogger()
+
+	if tm.running {
+		logger.Warn("TaskManager already running")
+		return
+	}
 
 	if err := tm.loadTasks(); err != nil {
-		return err
+		logger.Fatal("%v", err)
 	}
 
 	if err := tm.loadHistory(); err != nil {
-		return err
+		logger.Fatal("%v", err)
+	}
+
+	if err := tm.registerEnabledTasks(); err != nil {
+		logger.Fatal("%v", err)
 	}
 
 	tm.cron.Start()
 
 	tm.running = true
 
-	return nil
+	logger.Info("TaskManager running")
 }
 
 // Stop stops the TaskManager's scheduler.
 func (tm *TaskManager) Stop() {
 
 	tm.cron.Stop()
-
-	logger := logging.GetLogger()
-
-	for id := range tm.tasks {
-		err := tm.RemoveTask(id)
-		if err != nil {
-			logger.Warn("Failed to remove task '%s': %v", id, err)
-		}
-	}
-
 	tm.running = false
 }
 
@@ -338,21 +342,24 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if task.Type == api.TaskTypeSnapshot {
+	if task.CronEntryID != 0 {
+		tm.cron.Remove(task.CronEntryID)
+	}
 
-		snapshotID, ok := task.Params[api.SnapshotIDKey]
-		if !ok || snapshotID == "" {
-			http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
-			return
-		}
+	f, err := tm.makeTaskFunc(task)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-		if err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(snapshotID)); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+	entryID, err := tm.cron.AddFunc(task.CronExpr, tm.wrapTask(task, f))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 
 	task.Enabled = true
+	task.CronEntryID = entryID
 
 	tm.saveTasks()
 
@@ -388,17 +395,23 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 }
 
 // wrapTask wraps a task function to track execution history and handle panics.
-func (tm *TaskManager) wrapTask(task *api.Task, taskFunc func()) func() {
+func (tm *TaskManager) wrapTask(task *api.Task, fn TaskFunc) func() {
+
 	logger := logging.GetLogger()
 
 	return func() {
 		defer func() {
 			if r := recover(); r != nil {
 				tm.RecordExecution(task, "failed")
-				logger.Error("Task '%s' failed with panic: %v\n%s", task.ID, r, debug.Stack())
+				logger.Error("Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
 			}
 		}()
-		taskFunc()
+		ctx := context.Background()
+		if err := fn(ctx); err != nil {
+			tm.RecordExecution(task, "failed")
+			logger.Error("Task '%s' error: %v", task.ID, err)
+			return
+		}
 		tm.RecordExecution(task, "success")
 	}
 }
@@ -455,6 +468,26 @@ func (tm *TaskManager) loadHistory() error {
 	return json.Unmarshal(data, &tm.executionHistory)
 }
 
+// registerEnabledTasks registers enabled tasks
+func (tm *TaskManager) registerEnabledTasks() error {
+	for _, t := range tm.tasks {
+		if !t.Enabled {
+			continue
+		}
+		f, err := tm.makeTaskFunc(t)
+		if err != nil {
+			return fmt.Errorf("task %s: %w", t.ID, err)
+		}
+		entryID, err := tm.cron.AddFunc(t.CronExpr, tm.wrapTask(t, f))
+		if err != nil {
+			return fmt.Errorf("task %s: %w", t.ID, err)
+		}
+		t.CronEntryID = entryID
+	}
+
+	return nil
+}
+
 // fetchTask loads a task by ID from the boltdb and returns it (or an error).
 func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 
@@ -465,23 +498,30 @@ func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 	return task, nil
 }
 
-func (tm *TaskManager) makeTaskFunc(task *api.Task) (func(), error) {
+func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	switch task.Type {
-	case api.TaskTypeSnapshot:
-		snapshotID, ok := task.Params[api.SnapshotIDKey]
-		if !ok {
-			return nil, fmt.Errorf("missing 'snapshot' param for snapshot task")
-		}
-		return tm.taskActivateSnapshotFunc(snapshotID), nil
 
-	case api.TaskTypeAudioPlayback:
-		streamID, ok := task.Params["stream"]
-		if !ok {
-			return nil, fmt.Errorf("missing 'stream' param for audio task")
+	case api.TaskTypeMessage:
+		id := task.Params[api.MessageIDKey]
+		if id == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
 		}
-		return tm.taskPlayAudioFunc(streamID), nil
+
+		path := task.Params[api.MessagePathKey]
+		if path == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		}
+
+		return tm.taskTriggerMessageFunc(task), nil
+
+	case api.TaskTypeSnapshot:
+		id := task.Params[api.SnapshotIDKey]
+		if id == "" {
+			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
+		}
+		return tm.taskActivateSnapshotFunc(task), nil
 
 	default:
-		return nil, fmt.Errorf("unsupported task type: %s", task.Type)
+		return nil, fmt.Errorf("unsupported task type %q", task.Type)
 	}
 }

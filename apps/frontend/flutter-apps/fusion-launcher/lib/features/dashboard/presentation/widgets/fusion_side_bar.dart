@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
@@ -89,13 +90,18 @@ class _FusionSidebarState extends State<FusionSidebar> {
               thickness: 1,
               color: Theme.of(context).colorScheme.borderColorL,
             ),
-            _HoverNavItem(
-              icon: Icons.folder_sharp,
-              title: 'My Projects',
-              isBold: true,
-              trailing: Icons.add_sharp,
-              onTap: () => _showNewProjectDialog(context),
+            GuideShowcaseWrapper(
+              step: GuideShowCaseSteps.myProjects,
+              onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
+              child: _HoverNavItem(
+                icon: Icons.folder_sharp,
+                title: 'Add New Project',
+                isBold: true,
+                trailing: Icons.add_sharp,
+                onTap: () => _showNewProjectDialog(context),
+              ),
             ),
+            const SizedBox(width: 5),
             // _buildProjectList(),
           ],
         ),
@@ -586,11 +592,13 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   return;
                 }
 
-                FusionUtils.showLoader(context);
+                FusionUiUtils.showLoader(context);
                 final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(newProject);
+                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(
+                  newProject,
+                );
                 if (context.mounted) {
-                  FusionUtils.hideLoader(context);
+                  FusionUiUtils.hideLoader(context);
                 }
 
                 serviceLocator<ProjectViewModel>().openProject(projectData!.id);
@@ -601,8 +609,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 // }
 
                 if (context.mounted) {
+                  context.read<GuideShowCaseController>().completeStep();
                   Navigator.of(context).pop();
-                  Navigator.pushNamed(context, Routes.projectPage);
+                  // Navigator.pushNamed(context, Routes.projectPage);
                 }
               },
               style: ElevatedButton.styleFrom(

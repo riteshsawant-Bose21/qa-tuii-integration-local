@@ -154,7 +154,11 @@ Make targets:
 
 NOTE: Local builds don't support haproxy, keepalived or memberlist. You can ignore log output about issues related to this.
 Local builds are good for developing the various server components without dealing with instance management.
- 
+
+**Build and Deploy Fusion-server binary to a device**
+```bash
+./scripts/remote_scripts/deploy-fusion-server-to-device.sh root@192.168.1.3
+```
 ### API Endpoints
 
 **Configuration Management**
@@ -272,7 +276,7 @@ The socket can only be accessed within the internal network.
 ### Get all values
 From with server instance:
 ```bash
-echo '{"action":"get"}' | nc -u -w 1 localhost 7947
+echo '{"action":"get"}' | nc -u -w 1 {vip} 7947
 ```
 
 Outside of instance:
@@ -282,33 +286,42 @@ multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v l
 
 ### Set a value
 ```bash
-echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost 7947
+echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 {vip} 7947
 ```
-Outside of instance:
+
+Inside of instance:
 ```bash
-multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"test\":\"hello\"}' | nc -u -w 1 localhost 7947"
+multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"payload\":{\"test\":\"hello\"}}' | nc -u -w 1 localhost 7947"
 ```
 
 ### Set a nested value
 ```bash
 echo '{
-  "action": "set",
-  "audio": {
-    "settings": {
-      "volume": 0.6
+  "action":"set",
+  "payload":{
+    "settings":{
+      "audio":{
+        "volume":0.6
+      }
     }
   }
 }' | nc -u -w1 127.0.0.1 7947
+
+
+
+
 ```
 
 ### Set a value outside of instance
 ```bash
 multipass exec fusion1 -- bash -c 'cat <<EOF | nc -u -w1 127.0.0.1 7947
 {
-  "action": "set",
-  "audio": {
-    "settings": {
-      "volume": 0.6
+  "action":"set",
+  "payload":{
+    "settings":{
+      "audio":{
+        "volume":0.6
+      }
     }
   }
 }
@@ -320,8 +333,8 @@ EOF'
 A new fusion-server binary can be pushed and propogated across all running instances.
   
 There are endpoints for updating the binary and rolling back a binary.
-  - `PUT /updateVersion` - Post a new binary to replace the running fusion-server instance.
-  - `POST /rollbackVersion` - Rollback a binary a certain number of previous updates.
+  - `PUT /version` - Post a new binary to replace the running fusion-server instance.
+  - `POST /version` - Rollback a binary a certain number of previous updates.
 
 
 The curl command can also be used to call the endpoints from the command line.
@@ -339,7 +352,7 @@ The checksum of the new binary can be calculated as part of the curl command.
 curl -X POST \
   -F "binary=@build/fusion-server_linux_arm64" \
   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64  | cut -d ' ' -f 1)" \
-  http://192.168.64.100:8080/updateVersion
+  http://192.168.64.100:8080/version
 ```
 
 ## Basic Commands
@@ -474,7 +487,7 @@ multipass exec fusion1 -- systemctl status fusion-server
     ```bash
     multipass exec fusion1 -- chronyc tracking
     ```
-    
+
 6. **Load Balancer Issues**
    - Check HAProxy configuration
    - Verify backend metrics
@@ -493,6 +506,11 @@ multipass exec fusion1 -- systemctl status fusion-server
    
    Multipass has not yet released a version that resolves this issue on M4 Macs. In the meantime, you can install the package from this [workaround](https://github.com/canonical/multipass/issues/3842#issuecomment-2552189605).
 
+8. **list failed: cannot connect to the multipass socket**
+```bash
+sudo launchctl load -w /Library/LaunchDaemons/com.canonical.multipassd.plist
+sudo launchctl kickstart -k system/com.canonical.multipassd
+```
 
 ## Testing
 

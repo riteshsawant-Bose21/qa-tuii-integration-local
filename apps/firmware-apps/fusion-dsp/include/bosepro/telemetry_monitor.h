@@ -479,7 +479,10 @@ private:
             std::string serialized_tm = meter_msg.serialize_message();
             if (meters_remaining) 
             {
-                serialized_tm.pop_back();
+                if (serialized_tm.back() == '\n')
+                {
+                    serialized_tm.pop_back();
+                }
                 serialized_tm.append(",\n");
             }
 

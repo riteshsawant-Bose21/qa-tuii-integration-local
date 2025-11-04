@@ -193,7 +193,11 @@ class FusionAppTheme {
           foregroundColor: lightColorScheme.white,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           elevation: 0,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -203,7 +207,11 @@ class FusionAppTheme {
           foregroundColor: lightColorScheme.primaryColor,
           side: BorderSide(color: lightColorScheme.primaryColor),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -211,14 +219,24 @@ class FusionAppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: lightColorScheme.primaryColor,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
       /// Tab bar styling with custom font and colors
       tabBarTheme: TabBarThemeData(
-        labelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w400),
+        labelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
         labelColor: lightColorScheme.primaryColor,
         unselectedLabelColor: lightColorScheme.greyDark,
       ),
@@ -227,7 +245,12 @@ class FusionAppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: lightColorScheme.primaryColor,
         foregroundColor: lightColorScheme.white,
-        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.montserrat().fontFamily, color: lightColorScheme.white),
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          color: lightColorScheme.white,
+        ),
       ),
 
       /// Input field styling with soft grey background and custom borders
@@ -291,7 +314,11 @@ class FusionAppTheme {
           foregroundColor: darkColorScheme.black,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
           elevation: 0,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -301,7 +328,11 @@ class FusionAppTheme {
           foregroundColor: darkColorScheme.primaryColor,
           side: BorderSide(color: darkColorScheme.primaryColor),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
@@ -309,14 +340,24 @@ class FusionAppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: darkColorScheme.primaryColor,
-          textStyle: TextStyle(fontSize: 11, fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w500),
+          textStyle: TextStyle(
+            fontSize: 11,
+            fontFamily: GoogleFonts.montserrat().fontFamily,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
 
       /// Tab bar styling with custom font and dark theme colors
       tabBarTheme: TabBarThemeData(
-        labelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: TextStyle(fontFamily: GoogleFonts.montserrat().fontFamily, fontWeight: FontWeight.w400),
+        labelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w600,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          fontWeight: FontWeight.w400,
+        ),
         labelColor: darkColorScheme.primaryColor,
         unselectedLabelColor: darkColorScheme.greyDark,
       ),
@@ -325,17 +366,33 @@ class FusionAppTheme {
       appBarTheme: AppBarTheme(
         backgroundColor: darkColorScheme.launcherBgColor1,
         foregroundColor: darkColorScheme.white,
-        titleTextStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.w600, fontFamily: GoogleFonts.montserrat().fontFamily, color: darkColorScheme.white),
+        titleTextStyle: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.w600,
+          fontFamily: GoogleFonts.montserrat().fontFamily,
+          color: darkColorScheme.white,
+        ),
       ),
 
       /// Input field styling with dark backgrounds and borders for dark theme
       inputDecorationTheme: InputDecorationTheme(
-        labelStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w400, color: darkColorScheme.textFieldLabelColor),
-        hintStyle: TextStyle(fontSize: 13, fontWeight: FontWeight.w300, color: darkColorScheme.textFieldLabelColor),
+        labelStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w400,
+          color: darkColorScheme.textFieldLabelColor,
+        ),
+        hintStyle: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w300,
+          color: darkColorScheme.textFieldLabelColor,
+        ),
 
         filled: true,
         fillColor: darkColorScheme.white,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 12,
+          vertical: 10,
+        ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
           borderSide: BorderSide(color: darkColorScheme.textFieldBorderColor),
@@ -392,6 +449,8 @@ extension ColorExtends on ColorScheme {
   static const Color _borderColorL = Color(0x24091E42);
   static const Color _dividerColorL = Color(0x1A000000);
   static const Color _dividerColorD = Color(0x1AFFFFFF);
+  static const Color _softGrayD = Color(0x1AF9F9F9);
+  static const Color _softGrayL = Color(0x1AF9F9F9);
 
   static const Gradient _gradientTextColorLight = LinearGradient(
     colors: [Color(0xFF146C94), Color(0xFF19A7CE)],
@@ -415,6 +474,7 @@ extension ColorExtends on ColorScheme {
   Color get textFieldLabelColor => isDarkMode ? _greyDarkD : _greyDarkL;
   Gradient get gradientTextColor => isDarkMode ? _gradientTextColorDark : _gradientTextColorLight;
   Color get dividerColor => isDarkMode ? _dividerColorD : _dividerColorL;
+  Color get softGray => isDarkMode ? _softGrayD : _softGrayL;
 
   // todo : remove if not needed
   /// onboard screen colors
@@ -431,4 +491,289 @@ extension ColorExtends on ColorScheme {
   /// app text field colors
   Color get greyDark => isDarkMode ? _greyDarkD : _greyDarkL;
   Color get softGrey => isDarkMode ? _softGreyD : _softGreyL;
+
+  ///
+  /// Wiring view color scheme
+  ///
+  Color get canvasBG => Color(0xFFFFFFFF);
+  Color get componentBG => Color(0xFFFBFBFB);
+  Color get componentBorder => Color(0xFFC4C4C4);
+  Color get componentHeadingBG => Color(0xFF181717);
+  Color get wireColor => Color(0xFFC89450);
+  Color get componentFG => Colors.black;
+
+  ///
+  /// Component Port
+  ///
+  Color get activePortBG => Colors.black;
+  Color get activePortFG => Colors.white;
+  Color get inactivePortBG => Color(0xFFAEAEAE);
+  Color get inactivePortFG => Colors.black;
+
+  ///
+  ///
+  ///
+  Color get portOverlayTitle => Color(0xFF929292);
+}
+
+extension ColorContextExtension on BuildContext {
+  ColorScheme get colorScheme => Theme.of(this).colorScheme;
+  TextTheme get textTheme => Theme.of(this).textTheme;
+}
+
+/// Extension on [InputDecoration] that provides factory methods for common Fusion App input styles.
+///
+/// This extension allows you to create pre-styled input decorations that match the Fusion App theme
+/// while maintaining the ability to customize any property through named parameters.
+///
+/// Example usage:
+/// ```dart
+/// TextField(
+///   decoration: inputDecorationFusionDefault(
+///     hintText: 'Enter your name',
+///     colorScheme: Theme.of(context).colorScheme,
+///     prefixIcon: Icons.person,
+///   ),
+/// )
+/// ```
+extension type FusionInputDecoration(InputDecoration _) {
+  /// Creates a default Fusion App input decoration with customizable properties.
+  static InputDecoration fusionDefault({
+    required ColorScheme colorScheme,
+    String? labelText,
+    String? hintText,
+    IconData? prefixIcon,
+    IconData? suffixIcon,
+    String? errorText,
+    bool filled = true,
+    Color? fillColor,
+    double borderRadius = 8,
+    EdgeInsets? contentPadding,
+    bool isEnabled = true,
+    bool isDense = false,
+    FloatingLabelBehavior? floatingLabelBehavior,
+    String? prefixText,
+    String? suffixText,
+    String? helperText,
+    String? counterText,
+  }) {
+    final finalFillColor = fillColor ?? colorScheme.white;
+    final isError = errorText != null && errorText.isNotEmpty;
+    final borderColor = isError ? const Color(0xFFD32F2F) : colorScheme.textFieldBorderColor;
+
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      helperText: helperText,
+      counterText: counterText,
+      prefixText: prefixText,
+      suffixText: suffixText,
+      errorText: errorText,
+      filled: filled,
+      fillColor: finalFillColor,
+      isDense: isDense,
+      enabled: isEnabled,
+      floatingLabelBehavior: floatingLabelBehavior,
+      contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: colorScheme.textFieldLabelColor,
+      ),
+      hintStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w300,
+        color: colorScheme.textFieldLabelColor,
+      ),
+      helperStyle: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: colorScheme.greyDark,
+      ),
+      errorStyle: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w400,
+        color: Color(0xFFD32F2F),
+      ),
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.greyDark) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.greyDark) : null,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(color: borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(color: colorScheme.primaryColor, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: const BorderSide(color: Color(0xFFD32F2F), width: 1),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: const BorderSide(color: Color(0xFFD32F2F), width: 2),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(borderRadius),
+        borderSide: BorderSide(color: colorScheme.softGrey),
+      ),
+    );
+  }
+
+  /// Creates a compact Fusion App input decoration with reduced padding and smaller text.
+  static InputDecoration fusionCompact({
+    required ColorScheme colorScheme,
+    String? labelText,
+    String? hintText,
+    IconData? prefixIcon,
+    IconData? suffixIcon,
+    String? errorText,
+  }) {
+    return FusionInputDecoration.fusionDefault(
+      colorScheme: colorScheme,
+      labelText: labelText,
+      hintText: hintText,
+      prefixIcon: prefixIcon,
+      suffixIcon: suffixIcon,
+      errorText: errorText,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      borderRadius: 6,
+    );
+  }
+
+  /// Creates a filled Fusion App input decoration without borders.
+  static InputDecoration fusionFilled({
+    required ColorScheme colorScheme,
+    String? labelText,
+    String? hintText,
+    IconData? prefixIcon,
+    IconData? suffixIcon,
+    String? errorText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      errorText: errorText,
+      filled: true,
+      fillColor: colorScheme.softGrey,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.greyDark) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.greyDark) : null,
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: colorScheme.textFieldLabelColor,
+      ),
+      hintStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w300,
+        color: colorScheme.textFieldLabelColor,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide.none,
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: BorderSide(color: colorScheme.primaryColor, width: 2),
+      ),
+    );
+  }
+
+  /// Creates a minimal Fusion App input decoration with underline style.
+  static InputDecoration fusionUnderline({
+    required ColorScheme colorScheme,
+    String? labelText,
+    String? hintText,
+    IconData? prefixIcon,
+    IconData? suffixIcon,
+    String? errorText,
+  }) {
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      errorText: errorText,
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.greyDark) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.greyDark) : null,
+      labelStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w400,
+        color: colorScheme.textFieldLabelColor,
+      ),
+      hintStyle: TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w300,
+        color: colorScheme.textFieldLabelColor,
+      ),
+      enabledBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: colorScheme.textFieldBorderColor),
+      ),
+      focusedBorder: UnderlineInputBorder(
+        borderSide: BorderSide(color: colorScheme.primaryColor, width: 2),
+      ),
+    );
+  }
+
+  /// Creates a dense Fusion App input decoration with minimal padding.
+  ///
+  /// Useful for inline forms or inputs with character counters.
+  /// Features borderRadius of 4 and isDense set to true.
+  static InputDecoration fusionDense({
+    required ColorScheme colorScheme,
+    String? labelText,
+    String? hintText,
+    IconData? prefixIcon,
+    IconData? suffixIcon,
+    String? errorText,
+    bool showCounter = false,
+  }) {
+    final isError = errorText != null && errorText.isNotEmpty;
+    final focusedBorderColor = isError ? Colors.red : colorScheme.fusionTextViewColor;
+
+    return InputDecoration(
+      labelText: labelText,
+      hintText: hintText,
+      errorText: errorText,
+      counterText: showCounter ? null : "",
+      filled: true,
+      fillColor: colorScheme.white,
+      isDense: true,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: colorScheme.greyDark) : null,
+      suffixIcon: suffixIcon != null ? Icon(suffixIcon, color: colorScheme.greyDark) : null,
+      hintStyle: TextStyle(
+        color: colorScheme.greyDark,
+        fontSize: 12,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: BorderSide(color: colorScheme.dividerColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: BorderSide(color: colorScheme.dividerColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: BorderSide(color: focusedBorderColor),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Colors.red),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(4),
+        borderSide: const BorderSide(color: Colors.red, width: 2),
+      ),
+    );
+  }
 }

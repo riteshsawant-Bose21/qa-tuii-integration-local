@@ -3,7 +3,6 @@ package handler
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -15,14 +14,21 @@ import (
 	"strconv"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/hashicorp/memberlist"
+)
+
+const (
+	maxFormSize    = 32 << 20  // 32MB
+	maxUploadBytes = 100 << 20 // 100MB
 )
 
 // HandleVersionUpdate processes a multipart form upload containing a binary update,
 // verifies the checksum, stores the binary temporarily, and initiates a version update across the cluster.
 func (h *Handler) HandleVersionUpdate(w http.ResponseWriter, r *http.Request) {
 	logger := logging.GetLogger()
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
+	if err := r.ParseMultipartForm(maxFormSize); err != nil {
 		logger.Error("Error parsing multipart form: %v", err)
 		http.Error(w, "Error parsing form data", http.StatusBadRequest)
 		return
@@ -145,7 +151,7 @@ func (h *Handler) initiateVersionUpdate(newBinaryPath string) error {
 		return fmt.Errorf("failed to marshal update: %w", err)
 	}
 
-	message := api.VersionMessage{
+	message := api.VersionUpdate{
 		Type:    VersionUpdate,
 		Payload: data,
 	}
@@ -187,7 +193,7 @@ func (h *Handler) initiateBinaryRollback(currentBinaryPath string, index int) er
 		return fmt.Errorf("failed to marshal rollback: %w", err)
 	}
 
-	message := api.VersionMessage{
+	message := api.VersionUpdate{
 		Type:    VersionRollback,
 		Payload: data,
 	}
@@ -199,89 +205,6 @@ func (h *Handler) initiateBinaryRollback(currentBinaryPath string, index int) er
 
 	h.broadcastToNodes(messageData)
 	return nil
-}
-
-// HandleAudioUpload handles the upload of an audio file
-func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
-	logger := logging.GetLogger()
-	if err := r.ParseMultipartForm(32 << 20); err != nil {
-		logger.Error("Error parsing multipart form: %v", err)
-		http.Error(w, "Error parsing form data", http.StatusBadRequest)
-		return
-	}
-
-	audioFile, header, err := r.FormFile("binary")
-	if err != nil {
-		logger.Error("Error reading binary: %v", err)
-		http.Error(w, "Error reading binary", http.StatusBadRequest)
-		return
-	}
-	defer audioFile.Close()
-
-	destDir := api.AudioFilesLocation
-	destPath := filepath.Join(destDir, header.Filename)
-	if err := os.MkdirAll(destDir, 0755); err != nil {
-		logger.Error("Error creating destination directory: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	dstFile, err := os.Create(destPath)
-	if err != nil {
-		logger.Error("Error creating destination file: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-	defer dstFile.Close()
-
-	if _, err := io.Copy(dstFile, audioFile); err != nil {
-		logger.Error("Error copying file to destination: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	existingData := h.StateManager.GetStateMap()
-	addAudioFilesToConfig(destDir, existingData)
-	if err := h.handleConfigUpdate(existingData, false); err != nil {
-		logger.Error("Failed to handle audio config update: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// HandleAudioRemove handles deletion of a previously‐uploaded audio file.
-func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
-	logger := logging.GetLogger()
-
-	name, err := utils.ExtractName(r)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-
-	destPath := filepath.Join(api.AudioFilesLocation, name)
-
-	if err := os.Remove(destPath); err != nil {
-		logger.Error("Error removing file %q: %v", destPath, err)
-		if os.IsNotExist(err) {
-			http.Error(w, "File not found", http.StatusNotFound)
-		} else {
-			http.Error(w, "Server error", http.StatusInternalServerError)
-		}
-		return
-	}
-
-	existingData := h.StateManager.GetStateMap()
-	addAudioFilesToConfig(api.AudioFilesLocation, existingData)
-	if err := h.handleConfigUpdate(existingData, false); err != nil {
-		logger.Error("Failed to handle audio config update: %v", err)
-		http.Error(w, "Server error", http.StatusInternalServerError)
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
 }
 
 // getBinaryMetadata calculates the SHA-256 hash and size of the specified binary file.
@@ -334,7 +257,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 			return fmt.Errorf("failed to marshal chunk: %w", err)
 		}
 
-		message := api.VersionMessage{
+		message := api.VersionUpdate{
 			Type:    UpdateChunk,
 			Payload: chunkData,
 		}
@@ -358,7 +281,7 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 		return fmt.Errorf("failed to marshal final chunk: %w", err)
 	}
 
-	message := api.VersionMessage{
+	message := api.VersionUpdate{
 		Type:    UpdateChunk,
 		Payload: chunkData,
 	}
@@ -371,24 +294,4 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 	}
 
 	return nil
-}
-
-// addAudioFilesToConfig scans the provided directory for audio files and updates
-// the existing configuration data map with their names and location.
-func addAudioFilesToConfig(audioDir string, existingData map[string]any) {
-	entries, err := os.ReadDir(audioDir)
-	if err != nil {
-		logging.GetLogger().Error("Error reading directory %s: %v", audioDir, err)
-		return
-	}
-	var fileNames []string
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			fileNames = append(fileNames, entry.Name())
-		}
-	}
-	existingData["audio_files"] = map[string]any{
-		"location": audioDir,
-		"files":    fileNames,
-	}
 }

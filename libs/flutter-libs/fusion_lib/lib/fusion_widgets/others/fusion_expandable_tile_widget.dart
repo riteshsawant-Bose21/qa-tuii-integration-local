@@ -1,5 +1,3 @@
-import 'package:flutter/foundation.dart';
-import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -110,6 +108,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           border: Border(bottom: BorderSide(color: theme.colorScheme.dividerColor, width: 1)),
         ),
         child: ExpansionTile(
+          key: ValueKey<String>(widget.config.title),
           minTileHeight: 24,
           controller: widget.controller,
           dense: true,
@@ -133,13 +132,13 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
               opacity: 0.3,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                child: FusionAppText(text: widget.item.title, style: Theme.of(context).textTheme.labelSmall),
+                child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.labelSmall),
               ),
             ),
 
             /// Only allow undocking if config allows it
-            onDragEnd: (details) => widget.config.alowUndock ? widget.onUndock(widget.item, details) : null,
-            child: FusionAppText(text: widget.item.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+            onDragEnd: (details) => widget.config.allowUndock ? widget.onUndock(widget.item, details) : null,
+            child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
           ),
 
           initiallyExpanded: widget.config.initiallyExpanded,
@@ -174,7 +173,7 @@ class _RotatingIcon extends StatelessWidget {
       animation: animation,
       builder: (BuildContext context, Widget? child) => RotationTransition(
         turns: animation,
-        child: Icon(Icons.keyboard_arrow_down, size: 16, color: color),
+        child: Icon(Icons.arrow_drop_down_rounded, size: 22, color: color),
       ),
     );
   }
