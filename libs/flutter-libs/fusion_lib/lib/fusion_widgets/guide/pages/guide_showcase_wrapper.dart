@@ -46,7 +46,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
       barrierColor: Colors.black.withValues(alpha: 0.4),
       spotlightBorderRadius: 12.0,
       onBarrierDismissed: () {
-        context.read<GuideShowCaseController>().skipGuide();
+        context.read<GuideShowCaseController>().endGuide();
       },
       content: ConstrainedBox(
         constraints: BoxConstraints(
@@ -73,7 +73,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
                 ),
                 GestureDetector(
                   onTap: () {
-                    context.read<GuideShowCaseController>().skipGuide();
+                    context.read<GuideShowCaseController>().endGuide();
                     Navigator.pop(context);
                   },
                   behavior: HitTestBehavior.translucent,
@@ -123,7 +123,7 @@ class GuideShowcaseWrapper extends StatelessWidget {
               label: GuideShowcaseTexts.no,
               textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 12),
               onTap: () {
-                context.read<GuideShowCaseController>().skipGuide();
+                context.read<GuideShowCaseController>().endGuide();
                 Navigator.of(context).pop();
               },
             ),

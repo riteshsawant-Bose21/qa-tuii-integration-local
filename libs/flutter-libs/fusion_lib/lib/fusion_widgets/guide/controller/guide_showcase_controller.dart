@@ -1,6 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../fusion_lib.dart';
@@ -51,129 +52,165 @@ enum GuideShowCaseSteps {
   confirmSelectListeningArea,
 }
 
-//  context.read<GuideShowCaseController>().completeStep();
-//  GuideShowcaseWrapper(
-//    step: GuideShowCaseSteps.acousticMode,
-//    onNextTap: Navigator.of(context).pop,
+class GuideShowCaseController extends Cubit<GuideShowCaseState> {
+  final BuildContext context;
 
-class GuideShowCaseController extends ChangeNotifier {
-  final Set<GuideShowCaseSteps> _completedSteps = <GuideShowCaseSteps>{};
-  GuideShowCaseSteps? _currentStep;
-  bool _isInitialized = false;
-  bool _isGuideCompleted = false;
-
-  late final BuildContext _context;
-
-  GuideShowCaseController(BuildContext context) {
-    _context = context;
+  GuideShowCaseController(this.context) : super(GuideShowCaseState.initial()) {
     _initialize();
   }
 
-  // Getters
-  GuideShowCaseSteps? get currentStep => _currentStep;
-  bool get isInitialized => _isInitialized;
-  bool get isGuideCompleted => _isGuideCompleted;
-  Set<GuideShowCaseSteps> get completedSteps => Set<GuideShowCaseSteps>.unmodifiable(_completedSteps);
-
   Future<void> guideNeeded() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final prefs = await SharedPreferences.getInstance();
 
-    // Clear any previous saved state
+    // Clear saved state
     await prefs.remove(GuideShowCaseControllerTexts.storageKey);
 
-    // Reset all internal states
-    _completedSteps.clear();
-    _isGuideCompleted = false;
-    _currentStep = null;
+    emit(
+      state.copyWith(
+        completedSteps: {},
+        isGuideCompleted: false,
+        currentStep: null,
+      ),
+    );
 
-    // Recalculate the first step
-    _updateCurrentStep();
-
-    // Notify UI about reset
-    notifyListeners();
+    final nextStep = _findNextStep({});
+    emit(state.copyWith(currentStep: nextStep));
+    // Notify UI (Cubit emit handles reactivity)
   }
 
-  /// Initialize controller and check if guide is already completed
+  bool shouldShowStep(GuideShowCaseSteps step) {
+    if (state.isGuideCompleted) return false;
+    return state.currentStep == step && !state.completedSteps.contains(step);
+  }
+
+  Future<void> completeStep() async {
+    if (state.isGuideCompleted) return;
+
+    final step = state.currentStep;
+    if (step == null || state.completedSteps.contains(step)) return;
+
+    final updated = Set<GuideShowCaseSteps>.from(state.completedSteps)..add(step);
+
+    // If last step reached → mark completed
+    if (step == GuideShowCaseSteps.values.last) {
+      await _saveGuideStatus();
+      // ignore: use_build_context_synchronously
+      GuideShowcaseWrapper.showGuideCompletedDialog(context);
+
+      emit(
+        state.copyWith(
+          completedSteps: updated,
+          isGuideCompleted: true,
+          currentStep: null,
+        ),
+      );
+      return;
+    }
+
+    // Move to next step
+    final nextStep = _findNextStep(updated);
+    emit(
+      state.copyWith(
+        completedSteps: updated,
+        currentStep: nextStep,
+      ),
+    );
+  }
+
+  /// Skip the entire guide
+  Future<void> endGuide() async {
+    final allSteps = Set<GuideShowCaseSteps>.from(GuideShowCaseSteps.values);
+    await _saveGuideStatus();
+    emit(
+      state.copyWith(
+        completedSteps: allSteps,
+        isGuideCompleted: true,
+        currentStep: null,
+      ),
+    );
+  }
+
   Future<void> _initialize() async {
     await _loadGuideStatus();
-    if (!_isGuideCompleted) {
-      _updateCurrentStep();
+
+    if (state.isGuideCompleted) {
+      emit(
+        state.copyWith(
+          currentStep: null,
+          isInitialized: true,
+        ),
+      );
     } else {
-      _currentStep = null;
+      final nextStep = _findNextStep(state.completedSteps);
+      emit(
+        state.copyWith(
+          currentStep: nextStep,
+          isInitialized: true,
+        ),
+      );
     }
-    _isInitialized = true;
-    notifyListeners();
   }
 
-  /// Load guide completed flag from local storage
   Future<void> _loadGuideStatus() async {
     try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
-      _isGuideCompleted = prefs.getBool(GuideShowCaseControllerTexts.storageKey) ?? false;
+      final prefs = await SharedPreferences.getInstance();
+      final isCompleted = prefs.getBool(GuideShowCaseControllerTexts.storageKey) ?? false;
+      emit(state.copyWith(isGuideCompleted: isCompleted));
     } catch (e) {
       log('${GuideShowCaseControllerTexts.errorLoadingGuideStatusPrefix} $e');
     }
   }
 
-  /// Save guide completed flag to local storage
   Future<void> _saveGuideStatus() async {
     try {
-      final SharedPreferences prefs = await SharedPreferences.getInstance();
+      final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(GuideShowCaseControllerTexts.storageKey, true);
     } catch (e) {
       log('${GuideShowCaseControllerTexts.errorSavingGuideStatusPrefix} $e');
     }
   }
 
-  /// Update the current step to the next incomplete one
-  void _updateCurrentStep() {
-    _currentStep = null;
-    for (final GuideShowCaseSteps step in GuideShowCaseSteps.values) {
-      if (!_completedSteps.contains(step)) {
-        _currentStep = step;
-        break;
-      }
+  GuideShowCaseSteps? _findNextStep(Set<GuideShowCaseSteps> completed) {
+    for (final step in GuideShowCaseSteps.values) {
+      if (!completed.contains(step)) return step;
     }
+    return null;
   }
+}
 
-  /// Whether a step should be shown
-  bool shouldShowStep(GuideShowCaseSteps step) {
-    if (_isGuideCompleted) return false;
-    return _currentStep == step && !_completedSteps.contains(step);
-  }
+/// --- STATE CLASS ---
+class GuideShowCaseState {
+  final GuideShowCaseSteps? currentStep;
+  final bool isInitialized;
+  final bool isGuideCompleted;
+  final Set<GuideShowCaseSteps> completedSteps;
 
-  /// Mark current step as completed (in-memory only)
-  /// If last step, mark whole guide as completed in storage
-  Future<void> completeStep() async {
-    if (_isGuideCompleted) return;
+  const GuideShowCaseState({
+    required this.currentStep,
+    required this.isInitialized,
+    required this.isGuideCompleted,
+    required this.completedSteps,
+  });
 
-    final GuideShowCaseSteps? step = _currentStep;
-    if (step == null || _completedSteps.contains(step)) return;
+  factory GuideShowCaseState.initial() => const GuideShowCaseState(
+    currentStep: null,
+    isInitialized: false,
+    isGuideCompleted: false,
+    completedSteps: {},
+  );
 
-    _completedSteps.add(step);
-
-    // If the last step is reached, mark guide as fully completed
-    if (step == GuideShowCaseSteps.values.last) {
-      _isGuideCompleted = true;
-      await _saveGuideStatus();
-
-      // ignore: use_build_context_synchronously
-      GuideShowcaseWrapper.showGuideCompletedDialog(_context);
-    }
-
-    _updateCurrentStep();
-    notifyListeners();
-  }
-
-  /// Skip the entire guide — mark it as completed immediately
-  Future<void> skipGuide() async {
-    _completedSteps
-      ..clear()
-      ..addAll(GuideShowCaseSteps.values);
-    _isGuideCompleted = true;
-    await _saveGuideStatus();
-    _updateCurrentStep();
-    notifyListeners();
+  GuideShowCaseState copyWith({
+    GuideShowCaseSteps? currentStep,
+    bool? isInitialized,
+    bool? isGuideCompleted,
+    Set<GuideShowCaseSteps>? completedSteps,
+  }) {
+    return GuideShowCaseState(
+      currentStep: currentStep ?? this.currentStep,
+      isInitialized: isInitialized ?? this.isInitialized,
+      isGuideCompleted: isGuideCompleted ?? this.isGuideCompleted,
+      completedSteps: completedSteps ?? this.completedSteps,
+    );
   }
 }
 
