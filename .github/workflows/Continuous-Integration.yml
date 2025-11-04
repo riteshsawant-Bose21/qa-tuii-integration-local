@@ -482,6 +482,7 @@ jobs:
             echo "FUSION_DSP_VERSION=\"${{ needs.fusion-dsp-build.outputs.fusion_dsp_version }}\"" >> "$VERSION_INFO_FILE"
           fi
           git add conf/fusion-mini_properties.inc
+          git add recipes-bsp/fusion-init/fusion-init/fusion-mini/version_info.txt
           git commit -m "CI: Build trigger from Fusion Monorepo branch: ${{ github.ref_name }}" || echo "No changes to commit"
 
       - name: Push commit to target repo
