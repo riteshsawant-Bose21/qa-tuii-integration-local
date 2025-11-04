@@ -52,10 +52,9 @@ extension InitializationHandlerMixin on CircuitController {
         parentZoneId: zone.id,
       );
       for (final SubZone subZone in subZones) {
-        final SubZoneComponentData subZoneData =
-            ComponentDataFactory.fromSubZone(
-              subZone,
-            );
+        final SubZoneComponentData subZoneData = ComponentDataFactory.fromSubZone(
+          subZone,
+        );
 
         final CircuitComponent subZoneComponent =
         // existingSubZoneComponent ??
@@ -89,8 +88,7 @@ extension InitializationHandlerMixin on CircuitController {
       }
     }
 
-    final List<HardwareComponent> components =
-        projectManager.hardwareComponents;
+    final List<HardwareComponent> components = projectManager.hardwareComponents;
 
     for (int i = 0; i < components.length; i++) {
       final HardwareComponent component = components[i];
@@ -125,8 +123,7 @@ extension InitializationHandlerMixin on CircuitController {
       ),
       notifyToPM: false,
     );
-    final List<WiringConnectionModel> connections =
-        projectManager.getAllWiringConnections();
+    final List<WiringConnectionModel> connections = projectManager.getAllWiringConnections();
     log("Connections to be initialized: ${connections.length}");
     for (final WiringConnectionModel connection in connections) {
       log("Connection initializing: ${connection.toJson()}");
@@ -157,6 +154,7 @@ extension InitializationHandlerMixin on CircuitController {
     );
     cache.cacheForState(state);
     stack.push(state.toMap());
+    loadAllHardwareImages();
   }
 
   void addCircuit(
@@ -164,8 +162,7 @@ extension InitializationHandlerMixin on CircuitController {
     CircuitComponent subZoneComponent,
     ValueChanged<CircuitComponent> addComponent,
   ) {
-    final List<HardwareComponent> hardwareForCircuit = projectManager
-        .getHardwareForCircuit(circuitId: circuit.id);
+    final List<HardwareComponent> hardwareForCircuit = projectManager.getHardwareForCircuit(circuitId: circuit.id);
     if (hardwareForCircuit.isEmpty) return;
     final CircuitComponentData cirCom = ComponentDataFactory.fromCircuit(
       circuit,
@@ -204,13 +201,11 @@ extension InitializationHandlerMixin on CircuitController {
     for (final CircuitComponent component in components) {
       if (component.data is SourceComponentData) {
         component.setPosition(
-          (component.data as SourceComponentData).source.wiringPos ??
-              Offset(sourceX, sourceY),
+          (component.data as SourceComponentData).source.wiringPos ?? Offset(sourceX, sourceY),
         );
         sourceY += component.size.height + 100;
       } else if (component.data is DeviceSchematicComponentData) {
-        final HardwareComponent hardware =
-            (component.data as DeviceSchematicComponentData).data;
+        final HardwareComponent hardware = (component.data as DeviceSchematicComponentData).data;
         if (hardware is Amplifier) {
           component.setPosition(
             hardware.wiringPos ?? Offset(amplifierX, amplifierY),
@@ -237,14 +232,12 @@ extension InitializationHandlerMixin on CircuitController {
         }
       } else if (component.data is SpeakerComponentData) {
         component.setPosition(
-          (component.data as SpeakerComponentData).speaker.wiringPos ??
-              Offset(speakerX, speakerY),
+          (component.data as SpeakerComponentData).speaker.wiringPos ?? Offset(speakerX, speakerY),
         );
         speakerY += component.size.height + 100;
       } else if (component.data is ZoneComponentData) {
         component.setPosition(
-          (component.data as ZoneComponentData).zone.wiringPos ??
-              Offset(speakerX, speakerY),
+          (component.data as ZoneComponentData).zone.wiringPos ?? Offset(speakerX, speakerY),
         );
         speakerY += component.size.height + 100;
       }

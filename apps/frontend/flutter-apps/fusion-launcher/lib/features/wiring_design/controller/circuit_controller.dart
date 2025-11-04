@@ -27,7 +27,6 @@ class CircuitController extends ChangeNotifier
   final ProjectViewModel projectManager;
   CircuitController(this.projectManager) {
     loadFromPM();
-    _loadAllHardwareImages();
   }
 
   @override
@@ -38,7 +37,7 @@ class CircuitController extends ChangeNotifier
   );
 
   Map<String, ui.Image> imagesCache = <String, ui.Image>{};
-  void _loadAllHardwareImages() {
+  void loadAllHardwareImages() {
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
     for (final CircuitComponent comp in state.components) {
       final String? path = comp.data.image;
