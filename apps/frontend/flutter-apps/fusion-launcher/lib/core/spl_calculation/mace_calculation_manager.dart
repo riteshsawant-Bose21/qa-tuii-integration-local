@@ -4,7 +4,6 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
-
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'ffi_constants.dart';
@@ -48,9 +47,9 @@ class SPLCalculationManager {
       if (sp is! Speaker) continue;
       final int cid = engine.addSpeaker(
         sp.speakerSKU,
-        sp.pos.dx,
-        sp.pos.dy,
-        sp.zAxis,
+        sp.pos.dx / 100,
+        sp.pos.dy / 100,
+        sp.zAxis / 100,
         sp.gain,
         (sp.roll) * (pi / 180),
         (sp.pitch) * (pi / 180),
@@ -61,13 +60,11 @@ class SPLCalculationManager {
 
     // add each surface and its field points
     for (final ListeningArea cs in surfaces) {
-      final List<List<double>> poly3d =
-          cs.vertices.map((Offset o) => <double>[o.dx, o.dy, 0.0]).toList();
+      final List<List<double>> poly3d = cs.vertices.map((Offset o) => <double>[o.dx / 100, o.dy / 100, 0.0]).toList();
       engine.addSurface(poly3d);
 
       final List<Offset> pts = cs.getFieldPoints(resolutionSpacing);
-      final List<List<double>> list3d =
-          pts.map((Offset o) => <double>[o.dx, o.dy, 0.0]).toList();
+      final List<List<double>> list3d = pts.map((Offset o) => <double>[o.dx / 100, o.dy / 100, 0.0]).toList();
       final int fph = engine.addFieldPoints(list3d);
 
       final SPLCalculation sc = SPLCalculation(cs, fph);
