@@ -4,7 +4,7 @@
 #define SAFERVECTOR_H
 
 #include <vector>
-#include "Lock/Lock.h"
+#include <bose/Lock/Lock.h>
 
 namespace bosepro
 {	

@@ -90,7 +90,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+    _projectNameController = TextEditingController(
+      text: serviceLocator<ProjectViewModel>().projectName,
+    );
     _initMace();
     _initSplRangeDefaults();
 
@@ -159,10 +161,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
   }
 
   Future<void> calculateSPL() async {
-    if (_engine == null) return;
-    if (!_floorCanvasController.isShowingSpl.value) return;
+    if (_engine == null) {
+      debugPrint('calculateSPL: _engine is null');
+      return;
+    }
+    if (!_floorCanvasController.isShowingSpl.value) {
+      debugPrint('calculateSPL: isShowingSpl is false');
+      return;
+    }
 
-    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    final int currentFloorIndex =
+        serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
@@ -179,13 +188,26 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       floorId: currentFloor.id,
     );
 
-    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
+    await SPLCalculationManager.calculateSpl(
+      _engine!,
+      speakers,
+      surfaces,
+      _lastPanelData!.getResolutionSpacing(),
+    );
 
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
-    final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final Bandwidth maceBandwidth = _mapToMaceBandwidth(
+      currentPanelData.bandwidth,
+    );
     final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
-    final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
-    await updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+    final double frequency =
+        currentPanelData.frequency.frequencyValue.toDouble();
+    await updateSpl(
+      maceBandwidth,
+      frequency,
+      weighting,
+      currentPanelData.relative,
+    );
   }
 
   Future<void> updateSpl(
@@ -197,7 +219,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     if (_engine == null) return;
     if (!_floorCanvasController.isShowingSpl.value) return;
 
-    final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
+    final int currentFloorIndex =
+        serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
 
     final FloorModel currentFloor = serviceLocator<ProjectViewModel>().floors[currentFloorIndex];
@@ -207,7 +230,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
-    final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
+    final Iterable<SPLCalculation> currentCalcs =
+        SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
       if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
@@ -216,7 +240,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         _engine!,
         sc.fphHandle,
         bw,
-        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave)
+            ? frequency
+            : 2000,
         weighting,
         relative,
         _lastPanelData?.getResolutionSpacing() ?? 20.0,
@@ -226,7 +252,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     }
 
     for (final SPLCalculation calc in toApply) {
-      final List<ui.Offset> pts = calc.surface.getFieldPoints(_lastPanelData?.getResolutionSpacing() ?? 20.0);
+      final List<ui.Offset> pts = calc.surface.getFieldPoints(
+        _lastPanelData?.getResolutionSpacing() ?? 20.0,
+      );
       calc.surface.setSplData(pts, calc.spl);
     }
   }
@@ -702,7 +730,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
           color: Theme.of(context).colorScheme.white,
           // border right
           border: Border(
-            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+            right: BorderSide(
+              color: Theme.of(context).colorScheme.dividerColor,
+              width: 1,
+            ),
           ),
         ),
         child: Row(
@@ -715,12 +746,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, ProjectViewModelState state) {
+                    builder: (
+                      BuildContext context,
+                      ProjectViewModelState state,
+                    ) {
                       return FusionAppText(
                         text: serviceLocator<ProjectViewModel>().projectName,
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       );
                     },
                   ),
@@ -747,13 +783,18 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
   /// Show Edit Project Name Dropdown
   void _showEditProjectNameDropdown() {
-    final RenderBox button = _projectNameKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RenderBox button =
+        _projectNameKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
 
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       const Offset(-100, -20) & overlay.size,
     );
@@ -801,7 +842,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       maxLength: 24,
                       autofocus: true,
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        color:
+                            Theme.of(context).colorScheme.fusionTextViewColor,
                         fontSize: 12,
                       ),
                       decoration: InputDecoration(
@@ -813,11 +855,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
@@ -828,7 +874,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                                     : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
                         isDense: true,
                       ),
                       onChanged: (String value) {
@@ -868,7 +917,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                           height: 28,
                           width: 64,
                           label: "Cancel",
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          textStyle: Theme.of(
+                            context,
+                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
                             _clearFields();
                             Navigator.of(context).pop();
@@ -885,7 +936,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
                           label: "Edit Name",
                           onTap: () {
-                            final String trimmedName = _projectNameController.text.trim();
+                            final String trimmedName =
+                                _projectNameController.text.trim();
                             if (trimmedName.isNotEmpty) {
                               serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
                               Navigator.of(context).pop();
@@ -912,7 +964,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     serviceLocator<ProjectViewModel>().saveProject();
 
     const JsonEncoder encoder = JsonEncoder.withIndent('  ');
-    final Map<String, dynamic> jsonMap = serviceLocator<ProjectViewModel>().getProjectJson();
+    final Map<String, dynamic> jsonMap =
+        serviceLocator<ProjectViewModel>().getProjectJson();
     final String prettyJson = encoder.convert(jsonMap);
 
     showDialog(
@@ -926,7 +979,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   elevation: 0,
                 ),
                 child: const Text(
