@@ -959,34 +959,38 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         final String fileName = result.files.single.name;
 
         // Close the dialog first
-        if (mounted) Navigator.of(context).pop();
+        // if (mounted) Navigator.of(context).pop();
 
         // Show loading indicator
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder:
-              (BuildContext context) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-        );
-
-        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
-
-        if (mounted) Navigator.of(context).pop();
-
-        // ignore: use_build_context_synchronously
-        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
-
-        if (responseCallback.success && responseCallback.data != null) {
-          final String savedImagePath = responseCallback.data!;
-          _calibrateFloorPlan(savedImagePath);
-        }
-
         if (mounted) {
-          Navigator.of(context).pop();
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder:
+                (BuildContext context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+          );
+
+          final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
+
+          if (mounted) Navigator.of(context).pop();
+
+          // ignore: use_build_context_synchronously
+          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
+
+          if (responseCallback.success && responseCallback.data != null) {
+            final String savedImagePath = responseCallback.data!;
+            _calibrateFloorPlan(savedImagePath);
+          }
+
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+          debugPrint('Floor plan imported successfully: $fileName');
+        } else {
+          debugPrint("Dialog is not mounted !!!!!");
         }
-        debugPrint('Floor plan imported successfully: $fileName');
       }
     } catch (e) {
       if (!mounted) return;
@@ -1009,17 +1013,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     try {
       final ui.Image image = await serviceLocator<ImageLoaderService>().loadImage(savedImagePath);
 
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (_) => const Center(child: CircularProgressIndicator()),
-      );
-
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-
-      if (mounted) Navigator.of(context).pop();
+      // if (!mounted) return;
+      //
+      // showDialog(
+      //   context: context,
+      //   barrierDismissible: false,
+      //   builder: (_) => const Center(child: CircularProgressIndicator()),
+      // );
+      //
+      // await Future<void>.delayed(const Duration(milliseconds: 100));
+      //
+      // if (mounted) Navigator.of(context).pop();
 
       if (!mounted) return;
 
@@ -1032,10 +1036,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
                   serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
-                  Navigator.of(context).pop(data);
+                  if (context.mounted) {
+                    Navigator.of(context).pop(data);
+                  }
                 },
                 onCancel: () {
-                  Navigator.of(context).pop();
+                  if (context.mounted) {
+                    Navigator.of(context).pop();
+                  }
                 },
               ),
             ),
