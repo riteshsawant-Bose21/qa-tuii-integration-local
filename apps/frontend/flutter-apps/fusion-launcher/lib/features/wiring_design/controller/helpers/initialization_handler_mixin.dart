@@ -127,6 +127,7 @@ extension InitializationHandlerMixin on CircuitController {
         components: circuitComponents,
         wires: wires,
       ),
+      notifyToPM: false,
     );
     final List<WiringConnectionModel> connections =
         projectManager.getAllWiringConnections();
@@ -156,6 +157,7 @@ extension InitializationHandlerMixin on CircuitController {
         components: circuitComponents,
         wires: wires,
       ),
+      notifyToPM: false,
     );
     cache.cacheForState(state);
     stack.push(state.toMap());

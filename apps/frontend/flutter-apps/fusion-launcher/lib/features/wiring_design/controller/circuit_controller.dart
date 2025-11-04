@@ -28,7 +28,6 @@ class CircuitController extends ChangeNotifier
   CircuitController(this.projectManager) {
     loadFromPM();
     _loadAllHardwareImages();
-
   }
 
   @override
@@ -184,19 +183,23 @@ class CircuitController extends ChangeNotifier
     setState(state.updateCanvasState(canvasState));
   }
 
-  void setState(WiringState state) {
+  void setState(WiringState state, {bool notifyToPM = true}) {
+    final WiringState oldState = this.state;
+
     this.state = state;
     notifyListeners();
-    switch (state) {
-      case ElementSelectionState(element: final CanvasElement element):
-        selectElementToPM(element.id);
-        break;
-      case ElementMovingState(element: final CanvasElement element):
-        selectElementToPM(element.id);
-        break;
+    if (notifyToPM) {
+      switch (state) {
+        case ElementSelectionState(element: final CanvasElement element):
+          selectElementToPM(element.id);
+          break;
+        case ElementMovingState(element: final CanvasElement element):
+          selectElementToPM(element.id);
+          break;
 
-      default:
-        selectElementToPM(null);
+        default:
+          if (oldState is! IdleWiringState) selectElementToPM(null);
+      }
     }
   }
 
