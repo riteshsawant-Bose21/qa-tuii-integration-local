@@ -1,0 +1,483 @@
+
+#include <bosepro/algorithm.h>
+
+#include <cmath>
+#include <cstdint>
+#include <iostream> 
+#include "rnnoise.h"
+
+namespace {
+
+
+    class VadAgc : public bosepro::Algorithm
+    {
+        public:
+            VadAgc(const bosepro::BlockConfiguration &configuration);
+            virtual ~VadAgc() = default;
+
+            virtual void process() override;
+
+        private:
+            int_fast32_t channels;
+
+            bosepro::DspSignalMemory<const float *[]> in;
+            bosepro::DspSignalMemory<float *[]> out;
+
+            bosepro::DspCoeffMemory<float[]> in_meter;
+            bosepro::DspCoeffMemory<float[]> activity_threshold;
+            bosepro::DspCoeffMemory<float[]> target_minimum;
+            bosepro::DspCoeffMemory<float[]> target_maximum;
+            bosepro::DspParamMemory<float[]> cut_rate;
+            bosepro::DspParamMemory<float[]> boost_rate;
+            bosepro::DspCoeffMemory<float[]> cut_range;
+            bosepro::DspCoeffMemory<float[]> boost_range;
+            bosepro::DspParamMemory<float[]> cut_hold_time;
+            bosepro::DspParamMemory<float[]> boost_hold_time;
+            bosepro::DspCoeffMemory<bool[]> channel_bypass;
+            float max_total_boost;
+
+            bosepro::DspTelemetryMemory<float[]> current_gain;
+            bosepro::DspTelemetryMemory<bool[]> hold_meter;
+            float current_total_boost;
+
+            bosepro::DspStateMemory<float[]> smoothed_level;
+            bosepro::DspStateMemory<float[]> fast_level;
+            bosepro::DspStateMemory<float[]> cut_step;
+            bosepro::DspStateMemory<float[]> boost_step;
+            bosepro::DspStateMemory<float[]> target_gain;
+            bosepro::DspStateMemory<int_fast32_t[]> cut_hold_count;
+            bosepro::DspStateMemory<int_fast32_t[]> boost_hold_count;
+            bosepro::DspStateMemory<int_fast32_t[]> hold_counter;
+
+            bosepro::DspStateMemory<int_fast32_t[]> vad_hangover_counter;   
+
+            float level_attack_coeff;
+            float level_release_coeff;
+            float fast_release_coeff;
+
+            void update_cut_rate(int row);
+            void update_boost_rate(int row);
+            void update_cut_hold(int row);
+            void update_boost_hold(int row);
+
+            bool vad_activity;                 
+            int vad_hangover_frames;         
+            
+
+            bool denoise_frame;
+            float vad_threshold;
+            int frame_size_rnnoise;
+            float alpha;
+            float delayed_vad;
+            int subframe_size;
+            float smoothed_vad;
+            std::vector<float> in_buffer;
+            std::vector<float> out_buffer;
+            // bool initialized;
+            // int count;
+            DenoiseState *st;
+
+            
+            int out_buffer_index;
+
+            ALGORITHM_DECLARE(VadAgc);
+    };
+
+    ALGORITHM_REGISTER(VadAgc, "vadagc");
+
+
+    VadAgc::VadAgc(const bosepro::BlockConfiguration &configuration): bosepro::Algorithm(configuration)
+    {
+        get_property("channels", channels);
+
+        assign_terminal("in", in);
+        assign_terminal("out", out);
+
+        assign_parameter("activity_threshold", activity_threshold);
+        assign_parameter("target_minimum", target_minimum);
+        assign_parameter("target_maximum", target_maximum);
+        assign_parameter("cut_rate", cut_rate,
+                        POST_FUNCTION_VECTOR(update_cut_rate));
+        assign_parameter("boost_rate", boost_rate,
+                        POST_FUNCTION_VECTOR(update_boost_rate));
+        assign_parameter("cut_range", cut_range);
+        assign_parameter("boost_range", boost_range);
+        assign_parameter("cut_hold", cut_hold_time,
+                        POST_FUNCTION_VECTOR(update_cut_hold));
+        assign_parameter("boost_hold", boost_hold_time,
+                        POST_FUNCTION_VECTOR(update_boost_hold));
+        assign_parameter("channel_bypass", channel_bypass);
+        assign_parameter("max_total_boost", &max_total_boost);
+
+        assign_parameter("denoise_frame", &denoise_frame);
+        assign_parameter("vad_threshold", &vad_threshold);
+        assign_parameter("alpha", &alpha);
+
+        assign_telemetry("in_meter", in_meter, bosepro::linear_to_db);
+        assign_telemetry("gain_meter", current_gain);
+        assign_telemetry("hold_meter", hold_meter);
+
+        smoothed_level.resize(channels);
+        fast_level.resize(channels);
+        cut_step.resize(channels);
+        boost_step.resize(channels);
+        target_gain.resize(channels);
+        cut_hold_count.resize(channels);
+        boost_hold_count.resize(channels);
+        hold_counter.resize(channels);
+        
+        vad_hangover_counter.resize(channels);
+
+        level_attack_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.0005f));
+        level_release_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.1f));
+        fast_release_coeff = 1.0f - exp(-1.0f / (get_sample_rate() * 0.005f));
+        
+        vad_hangover_frames = 500;
+        vad_activity = false;
+        delayed_vad = 0.0f;
+        subframe_size = get_frame_size();
+        smoothed_vad = 0.0f;
+        frame_size_rnnoise = 480;
+        // initialized = false;
+        // if (!initialized) {
+        //     buffer.reserve(frame_size_rnnoise);  
+        //     initialized = true;
+        // }
+        // count = 0;
+
+        out_buffer.assign(480, 0.0f);
+        st = rnnoise_create(NULL);
+        
+        // right now only works when frame_size = FRAME_SIZE = 480,
+        // print error if frame_size is different
+        if (frame_size_rnnoise != 480)
+            SPDLOG_ERROR("Frame size for the RNNoise model can only be 480");
+
+        out_buffer_index = 0;
+    }
+
+
+    void VadAgc::process()
+    {
+        
+        float total_boost = 0.0f;
+
+        for (int_fast32_t channel = 0; channel < channels; channel++)
+        {
+            
+            if (!denoise_frame)
+            {
+                in_buffer.insert(in_buffer.end(), in[channel], in[channel] + subframe_size); 
+                vad_activity = (delayed_vad >= vad_threshold);
+                if (in_buffer.size() >= static_cast<size_t>(frame_size_rnnoise)) {
+                    
+                    float frame[frame_size_rnnoise];
+                    float frame_out[frame_size_rnnoise];
+                    std::copy(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise, frame);
+                    float vad_prob = rnnoise_process_frame(st, frame_out, frame);
+                    smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
+                    delayed_vad  = smoothed_vad;  
+                    in_buffer.erase(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise);
+                    out_buffer_index = 0;
+                    
+                }
+                if (static_cast<size_t>(out_buffer_index + 32) <= out_buffer.size()) {
+                    std::copy(in[channel], in[channel] + 32, out_buffer.begin() + out_buffer_index);
+                    
+                } else {
+                    SPDLOG_ERROR("Out of range buffer update!");
+                }
+            }
+            else
+            {
+                
+                in_buffer.insert(in_buffer.end(), in[channel], in[channel] + subframe_size);
+                
+                if (in_buffer.size() >= static_cast<size_t>(frame_size_rnnoise)) {
+                    
+                    float frame[frame_size_rnnoise];
+                    float frame_out[frame_size_rnnoise];
+                    std::copy(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise, frame);
+                    float vad_prob = rnnoise_process_frame(st, frame_out, frame);
+                    smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
+                    vad_activity = (smoothed_vad >= vad_threshold);
+                    in_buffer.erase(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise);
+                    out_buffer.assign(frame_out, frame_out + 480);
+                    out_buffer_index = 0;
+                }
+                  
+            }
+
+            ///////////////////////////////////////////////////////////////////////
+            
+            
+            in_meter[channel] = 0.0;
+            for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
+            {
+                float energy = out_buffer[out_buffer_index + sample] * out_buffer[out_buffer_index + sample];
+                smoothed_level[channel] += (energy - smoothed_level[channel]) *
+                    ((energy > smoothed_level[channel])
+                    ? level_attack_coeff : level_release_coeff);
+                fast_level[channel] += (energy - fast_level[channel]) *
+                    ((energy > fast_level[channel])
+                    ? level_attack_coeff : fast_release_coeff);
+                in_meter[channel] = std::max(in_meter[channel],
+                                            std::fabs(out_buffer[out_buffer_index + sample]));
+            }
+
+            float log_level = 10.0f * log10(smoothed_level[channel]) + 20.0f;
+            float log_fast_level = 10.0f * log10(fast_level[channel]) + 20.0f;
+
+            if (vad_activity) {
+                
+                vad_hangover_counter[channel] = vad_hangover_frames;
+            } else if (vad_hangover_counter[channel] > 0) {
+                
+                vad_hangover_counter[channel] -= 1;
+            }
+
+            if ((log_fast_level > activity_threshold[channel]) || (hold_counter[channel] <= 0))
+            {
+                if (log_level > target_maximum[channel])
+                {
+                    target_gain[channel] =
+                        std::max(target_maximum[channel] - log_level,
+                                -cut_range[channel]);
+                    hold_counter[channel] = cut_hold_count[channel];
+                }
+                else if (vad_activity && (log_level < target_minimum[channel]))
+                {
+                    target_gain[channel] =
+                        std::min(target_minimum[channel] - log_level,
+                                boost_range[channel]);
+                    hold_counter[channel] = boost_hold_count[channel];
+                }
+                else if (vad_hangover_counter[channel] > 0) 
+                {
+
+                }
+                else if (!vad_activity && (log_level < target_minimum[channel])) 
+                {    
+                    target_gain[channel] *= 0.995f;
+                }
+                else
+                {
+                    target_gain[channel] = 0.0f;
+                    hold_counter[channel] = 0;
+                }
+
+                hold_meter[channel] = false;
+            }
+            else
+            {
+                hold_counter[channel]--;
+                hold_meter[channel] = true;
+            }
+
+            if ((target_gain[channel] > 0.0f) && !channel_bypass[channel])
+            {
+                total_boost += target_gain[channel];
+            }
+        }
+
+        float boost_limit_adjustment = 1.0f;
+
+        if (total_boost > max_total_boost)
+        {
+            boost_limit_adjustment = max_total_boost / total_boost;
+        }
+
+        current_total_boost = std::min(total_boost, max_total_boost);
+
+        for (int_fast32_t channel = 0; channel < channels; channel++)
+        {
+            float target = target_gain[channel];
+
+            if (target > 0.0f)
+            {
+                target *= boost_limit_adjustment;
+            }
+
+            if (channel_bypass[channel])
+            {
+                target = 0.0f;
+            }
+
+            float g = current_gain[channel];
+            float g_step = (target > 0.0f) ? boost_step[channel] : cut_step[channel];
+
+            if (target < g)
+            {
+                g_step *= -1.0f;
+            }
+
+            if (std::abs(target - g) < (g_step * get_frame_size()))
+            {
+                g = target;
+                g_step = 0.0f;
+            }
+
+            g = powf(10.0f, g / 20.0f);
+            g_step = powf(10.0f, g_step / 20.0f);
+
+            for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
+            {
+                out[channel][sample] = out_buffer[out_buffer_index + sample] * g;
+                g *= g_step;
+            }
+
+            current_gain[channel] = 20.0f * log10f(g);
+            
+        }
+        out_buffer_index += 32;
+    }
+
+    //         in_meter[channel] = 0.0;
+    //         for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
+    //         {
+    //             float energy = in[channel][sample] * in[channel][sample];
+    //             smoothed_level[channel] += (energy - smoothed_level[channel]) *
+    //                 ((energy > smoothed_level[channel])
+    //                 ? level_attack_coeff : level_release_coeff);
+    //             fast_level[channel] += (energy - fast_level[channel]) *
+    //                 ((energy > fast_level[channel])
+    //                 ? level_attack_coeff : fast_release_coeff);
+    //             in_meter[channel] = std::max(in_meter[channel],
+    //                                         std::fabs(in[channel][sample]));
+    //         }
+
+    //         float log_level = 10.0f * log10(smoothed_level[channel]) + 20.0f;
+    //         float log_fast_level = 10.0f * log10(fast_level[channel]) + 20.0f;
+
+    //         if (vad_activity) {
+                
+    //             vad_hangover_counter[channel] = vad_hangover_frames;
+    //         } else if (vad_hangover_counter[channel] > 0) {
+                
+    //             vad_hangover_counter[channel] -= 1;
+    //         }
+
+    //         if ((log_fast_level > activity_threshold[channel]) || (hold_counter[channel] <= 0))
+    //         {
+    //             if (log_level > target_maximum[channel])
+    //             {
+    //                 target_gain[channel] =
+    //                     std::max(target_maximum[channel] - log_level,
+    //                             -cut_range[channel]);
+    //                 hold_counter[channel] = cut_hold_count[channel];
+    //             }
+    //             else if (vad_activity && (log_level < target_minimum[channel]))
+    //             {
+    //                 target_gain[channel] =
+    //                     std::min(target_minimum[channel] - log_level,
+    //                             boost_range[channel]);
+    //                 hold_counter[channel] = boost_hold_count[channel];
+    //             }
+    //             else if (vad_hangover_counter[channel] > 0) 
+    //             {
+
+    //             }
+    //             else if (!vad_activity && (log_level < target_minimum[channel])) 
+    //             {    
+    //                 target_gain[channel] *= 0.995f;
+    //             }
+    //             else
+    //             {
+    //                 target_gain[channel] = 0.0f;
+    //                 hold_counter[channel] = 0;
+    //             }
+
+    //             hold_meter[channel] = false;
+    //         }
+    //         else
+    //         {
+    //             hold_counter[channel]--;
+    //             hold_meter[channel] = true;
+    //         }
+
+    //         if ((target_gain[channel] > 0.0f) && !channel_bypass[channel])
+    //         {
+    //             total_boost += target_gain[channel];
+    //         }
+    //     }
+
+    //     float boost_limit_adjustment = 1.0f;
+
+    //     if (total_boost > max_total_boost)
+    //     {
+    //         boost_limit_adjustment = max_total_boost / total_boost;
+    //     }
+
+    //     current_total_boost = std::min(total_boost, max_total_boost);
+
+    //     for (int_fast32_t channel = 0; channel < channels; channel++)
+    //     {
+    //         float target = target_gain[channel];
+
+    //         if (target > 0.0f)
+    //         {
+    //             target *= boost_limit_adjustment;
+    //         }
+
+    //         if (channel_bypass[channel])
+    //         {
+    //             target = 0.0f;
+    //         }
+
+    //         float g = current_gain[channel];
+    //         float g_step = (target > 0.0f) ? boost_step[channel] : cut_step[channel];
+
+    //         if (target < g)
+    //         {
+    //             g_step *= -1.0f;
+    //         }
+
+    //         if (std::abs(target - g) < (g_step * get_frame_size()))
+    //         {
+    //             g = target;
+    //             g_step = 0.0f;
+    //         }
+
+    //         g = powf(10.0f, g / 20.0f);
+    //         g_step = powf(10.0f, g_step / 20.0f);
+
+    //         for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
+    //         {
+    //             out[channel][sample] = in[channel][sample] * g;
+    //             g *= g_step;
+    //         }
+
+    //         current_gain[channel] = 20.0f * log10f(g);
+            
+    //     }
+
+    // }
+
+
+    void VadAgc::update_cut_rate(int row)
+    {
+        cut_step[row] = cut_rate[row] * get_frame_size() / get_sample_rate();
+    }
+
+
+    void VadAgc::update_boost_rate(int row)
+    {
+        boost_step[row] = boost_rate[row] * get_frame_size() / get_sample_rate();
+    }
+
+
+    void VadAgc::update_cut_hold(int row)
+    {
+        cut_hold_count[row] = cut_hold_time[row] * get_sample_rate() /
+            get_frame_size();
+    }
+
+
+    void VadAgc::update_boost_hold(int row)
+    {
+        boost_hold_count[row] = boost_hold_time[row] * get_sample_rate() /
+            get_frame_size();
+    }
+
+} // namespace
+
