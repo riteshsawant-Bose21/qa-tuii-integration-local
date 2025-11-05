@@ -33,4 +33,9 @@ class PBGraphParam extends PBItemParam {
 
   @override
   int get hashCode => label.hashCode;
+
+  @override
+  PBItemParam loadMap(Map<String, dynamic> map) {
+    return PBGraphParam.fromMap(map);
+  }
 }

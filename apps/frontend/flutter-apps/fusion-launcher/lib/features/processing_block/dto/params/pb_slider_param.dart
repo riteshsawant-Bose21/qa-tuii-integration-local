@@ -15,8 +15,12 @@ class PBSliderParam extends PBItemParam {
     return <String, dynamic>{'label': label, 'min': min, 'max': max};
   }
 
-  factory PBSliderParam.fromMap(Map<dynamic,dynamic> map) {
-    return PBSliderParam(label: map['label'] as String, min: map['min'] as num, max: map['max'] as num);
+  factory PBSliderParam.fromMap(Map<dynamic, dynamic> map) {
+    return PBSliderParam(
+      label: map['label'] as String,
+      min: WiringSerializationUtil.numDeserializer.deserialize(map['min']) ?? 0,
+      max: WiringSerializationUtil.numDeserializer.deserialize(map['max']) ?? 0,
+    );
   }
 
   String toJson() => json.encode(toMap());
@@ -35,4 +39,8 @@ class PBSliderParam extends PBItemParam {
 
   @override
   int get hashCode => label.hashCode ^ min.hashCode ^ max.hashCode;
+  @override
+  PBItemParam loadMap(Map<String, dynamic> map) {
+    return PBSliderParam.fromMap(map);
+  }
 }

@@ -43,4 +43,8 @@ class PBSwitchParam extends PBItemParam {
 
   @override
   int get hashCode => label.hashCode ^ enableValueLabel.hashCode ^ disabledValueLabel.hashCode;
+  @override
+  PBItemParam loadMap(Map<String, dynamic> map) {
+    return PBSwitchParam.fromMap(map);
+  }
 }
