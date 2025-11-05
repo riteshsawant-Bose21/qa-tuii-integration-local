@@ -50,7 +50,7 @@ type ClusterMember struct {
 
 // ClusterStatus holds information of the cluster state
 type ClusterStatus struct {
-	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.64.100")
+	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.2.100")
 	Host      string   `json:"host"`    // Local IP address of the node holding VIP
 	Cluster   []string `json:"cluster"` // All known cluster node addresses
 	Timestamp int64    `json:"ts"`      // Unix timestamp for freshness
@@ -158,7 +158,7 @@ func (c *Cluster) getClusterIPs() []string {
 }
 
 // canonicalVIP canonicalizes an IP address.
-// "192.168.64.100/24" becomes "192.168.64.100"
+// "192.168.2.100/24" becomes "192.168.2.100"
 func canonicalVIP(s string) string {
 	if s == "" {
 		return ""

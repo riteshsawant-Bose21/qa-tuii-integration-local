@@ -879,7 +879,7 @@
             "params": [
               {
                 "name": "vip",
-                "value": "192.168.64.100",
+                "value": "192.168.2.100",
                 "type": "path",
                 "enabled": true
               }
@@ -1242,7 +1242,7 @@
             "params": [
               {
                 "name": "vip",
-                "value": "192.168.64.100",
+                "value": "192.168.2.100",
                 "type": "path",
                 "enabled": true
               }
@@ -2315,21 +2315,21 @@
       "variables": [
         {
           "name": "api_url",
-          "value": "192.168.64.100:8080",
+          "value": "192.168.2.100:8080",
           "enabled": true,
           "secret": false,
           "type": "text"
         },
         {
           "name": "metrics_url",
-          "value": "192.168.64.100:8080",
+          "value": "192.168.2.100:8080",
           "enabled": true,
           "secret": false,
           "type": "text"
         },
         {
           "name": "admin_url",
-          "value": "192.168.64.100:9090",
+          "value": "192.168.2.100:9090",
           "enabled": true,
           "secret": false,
           "type": "text"
@@ -2396,7 +2396,7 @@
         "mode": "none"
       }
     },
-    "docs": "# Fusion Server API Documentation\n\n## Overview\n\n- **Dev Base URL:** `http://192.168.64.100:8080`\n- **Local Base URL:** `http://localhost:8080`\n- **Auth:** None required\n\n---\n\n## 🌱 Root\n\n### `GET /`\nReturns basic server info. Used to check server status.\n\n---\n\n## 👥 Members\n\n### `GET /members`\nRetrieves the list of active cluster members.\n\n---\n\n## 📦 Binaries\n\n### `POST /rollbackVersion?index=-1`\nRollback the server binary to a previous version.\n\n**Query Parameters:**\n- `index`: integer (e.g. `-1` for latest rollback)\n\n---\n\n### `POST /updateVersion`\nUploads a new server binary.\n\n**Multipart Form Data:**\n- `binary` (file): Required\n- `checksum` (text): SHA256 checksum of the file\n\n---\n\n### `POST /uploadAudio`\nUploads an audio file.\n\n**Multipart Form Data:**\n- `binary` (file): Required audio file\n\n---\n\n## ⏱️ Timers\n\n### `GET /tasks`\nList all scheduled tasks.\n\n---\n\n### `POST /tasks`\nAdd a new scheduled task.\n\n**JSON Body:**\n```json\n{\n  \"id\": \"task_id\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"Task description\"\n}\n",
+    "docs": "# Fusion Server API Documentation\n\n## Overview\n\n- **Dev Base URL:** `http://192.168.2.100:8080`\n- **Local Base URL:** `http://localhost:8080`\n- **Auth:** None required\n\n---\n\n## 🌱 Root\n\n### `GET /`\nReturns basic server info. Used to check server status.\n\n---\n\n## 👥 Members\n\n### `GET /members`\nRetrieves the list of active cluster members.\n\n---\n\n## 📦 Binaries\n\n### `POST /rollbackVersion?index=-1`\nRollback the server binary to a previous version.\n\n**Query Parameters:**\n- `index`: integer (e.g. `-1` for latest rollback)\n\n---\n\n### `POST /updateVersion`\nUploads a new server binary.\n\n**Multipart Form Data:**\n- `binary` (file): Required\n- `checksum` (text): SHA256 checksum of the file\n\n---\n\n### `POST /uploadAudio`\nUploads an audio file.\n\n**Multipart Form Data:**\n- `binary` (file): Required audio file\n\n---\n\n## ⏱️ Timers\n\n### `GET /tasks`\nList all scheduled tasks.\n\n---\n\n### `POST /tasks`\nAdd a new scheduled task.\n\n**JSON Body:**\n```json\n{\n  \"id\": \"task_id\",\n  \"cron_expr\": \"*/5 * * * *\",\n  \"description\": \"Task description\"\n}\n",
     "meta": {
       "name": "Fusion Server"
     }

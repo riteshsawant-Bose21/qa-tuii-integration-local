@@ -10,7 +10,7 @@ Devices typically determine their IP addresses in one of the following ways:
 
 1. **Static Configuration**  
    - The node is manually assigned a static IP address in the system or configuration file.
-   - Example: `192.168.64.100` is preconfigured for a node.
+   - Example: `192.168.2.100` is preconfigured for a node.
 
 2. **DHCP (Dynamic Host Configuration Protocol)**  
    - The device requests an IP from a DHCP server, which assigns an available address dynamically.

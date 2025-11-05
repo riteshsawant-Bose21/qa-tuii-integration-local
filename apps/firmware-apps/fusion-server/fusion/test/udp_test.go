@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	fusionUDPAddr = "192.168.64.100:7947"
+	fusionUDPAddr = "192.168.2.100:7947"
 )
 
 // contains is helper to check substring
