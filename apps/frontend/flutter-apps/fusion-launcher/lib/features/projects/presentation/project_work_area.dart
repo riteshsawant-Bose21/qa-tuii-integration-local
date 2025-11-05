@@ -23,8 +23,8 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../processing_block/view/processing_block_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
-import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
@@ -450,7 +450,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         tabKey: "zone_config_tab",
         showLeft: false,
         showRight: false,
-        mainArea: ZoneCircuitConfigPage(),
+        mainArea: ProcessingBlockPage(),
         dockItemList: <DockItemConfig>[],
       ),
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 
+import '../dto/pb_item.dart';
 import '../dto/pb_layout.dart';
 import 'item_widget_builder.dart';
 
