@@ -1,0 +1,33 @@
+import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
+
+import '../dto/pb_layout.dart';
+import 'item_widget_builder.dart';
+
+class DynamicGridView extends StatelessWidget {
+  const DynamicGridView({super.key, required this.layout});
+  final PBLayout layout;
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double widthPerCell = constraints.maxWidth / layout.width;
+
+        return Stack(
+          children: <Widget>[
+            for (final PBItem child in layout.children)
+              Positioned(
+                left: widthPerCell * child.x,
+                top: widthPerCell * child.y,
+                child: SizedBox(
+                  width: widthPerCell * child.width,
+                  height: widthPerCell * child.height,
+                  child: ItemWidgetBuilder(item: child),
+                ),
+              ),
+          ],
+        );
+      },
+    );
+  }
+}

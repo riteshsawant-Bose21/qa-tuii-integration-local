@@ -1,0 +1,122 @@
+class SampleData {
+  static Map<String, dynamic> get sampleData => <String, dynamic>{
+    "width": 100,
+    "height": 100,
+    "children": <Map<String, Object>>[
+      /// Top Switch
+      <String, Object>{
+        "x": 0,
+        "y": 0,
+        "width": 20,
+        "height": 5,
+        "field": "detector",
+        "type": "switch",
+        "params": <String, String>{"label": "Detector", "enable_value_label": "ON", "disabled_value_label": "OFF"},
+      },
+      <String, Object>{
+        "x": 60,
+        "y": 0,
+        "width": 20,
+        "height": 5,
+        "field": "detector",
+        "type": "indicator",
+        "params": <String, String>{"label": "OPEN", "enable_value_label": "ON", "disabled_value_label": "OFF"},
+      },
+
+      /// Sliders
+      <String, Object>{
+        "x": 0,
+        "y": 5,
+        "width": 10,
+        "height": 25,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 10,
+        "y": 5,
+        "width": 10,
+        "height": 25,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 20,
+        "y": 5,
+        "width": 10,
+        "height": 25,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 0,
+        "y": 30,
+        "width": 10,
+        "height": 25,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 10,
+        "y": 30,
+        "width": 10,
+        "height": 25,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 20,
+        "y": 30,
+        "width": 10,
+        "height": 25,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+
+      /// Graph
+      <String, Object>{
+        "x": 30,
+        "y": 5,
+        "width": 50,
+        "height": 50,
+        "field": "gain",
+        "type": "graph",
+        "params": <String, String>{"label": "Graph goes here"},
+      },
+
+      <String, Object>{
+        "x": 85,
+        "y": 0,
+        "width": 10,
+        "height": 5,
+        "field": "gain",
+        "type": "text",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 84,
+        "y": 5,
+        "width": 10,
+        "height": 50,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+      <String, Object>{
+        "x": 90,
+        "y": 5,
+        "width": 10,
+        "height": 50,
+        "field": "gain",
+        "type": "slider",
+        "params": <String, Object>{"min": 0, "max": 20, "label": "Gain"},
+      },
+    ],
+  };
+}
