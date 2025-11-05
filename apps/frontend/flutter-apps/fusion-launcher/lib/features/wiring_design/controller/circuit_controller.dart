@@ -27,8 +27,6 @@ class CircuitController extends ChangeNotifier
   final ProjectViewModel projectManager;
   CircuitController(this.projectManager) {
     loadFromPM();
-    _loadAllHardwareImages();
-
   }
 
   @override
@@ -39,7 +37,7 @@ class CircuitController extends ChangeNotifier
   );
 
   Map<String, ui.Image> imagesCache = <String, ui.Image>{};
-  void _loadAllHardwareImages() {
+  void loadAllHardwareImages() {
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
     for (final CircuitComponent comp in state.components) {
       final String? path = comp.data.image;
@@ -146,24 +144,32 @@ class CircuitController extends ChangeNotifier
   }
 
   void _updateWirePath(CircuitComponent component) {
-    final List<Wire> connectedWires = cache.wiresOfComponent(component);
-    if (component.parent != null) {
-      connectedWires.addAll(
-        cache.wiresOfComponent(component.parent!),
-      );
-      for (final CircuitComponent child
-          in component.parent?.children ?? <CircuitComponent>[]) {
-        if (component != child) {
-          connectedWires.addAll(cache.wiresOfComponent(child));
-        }
-      }
-    }
+    // final List<Wire> connectedWires = cache.wiresOfComponent(component);
+    // if (component.parent != null) {
+    //   connectedWires.addAll(
+    //     cache.wiresOfComponent(component.parent!),
+    //   );
+    //   for (final CircuitComponent child
+    //       in component.parent?.children ?? <CircuitComponent>[]) {
+    //     if (component != child) {
+    //       connectedWires.addAll(cache.wiresOfComponent(child));
+    //     }
+    //   }
+    // }
 
-    for (final CircuitComponent child in component.children) {
+    // for (final CircuitComponent child in component.children) {
+    //   connectedWires.addAll(cache.wiresOfComponent(child));
+    //   for (final CircuitComponent child2 in child.children) {
+    //     connectedWires.addAll(cache.wiresOfComponent(child2));
+    //   }
+    // }
+    final List<Wire> connectedWires = <Wire>[];
+    final List<CircuitComponent> allComps = allConnectedComponents(
+      component,
+      <CircuitComponent>[component],
+    );
+    for (final CircuitComponent child in allComps) {
       connectedWires.addAll(cache.wiresOfComponent(child));
-      for (final CircuitComponent child2 in child.children) {
-        connectedWires.addAll(cache.wiresOfComponent(child2));
-      }
     }
 
     for (final Wire wire in connectedWires) {
@@ -176,6 +182,24 @@ class CircuitController extends ChangeNotifier
     }
   }
 
+  List<CircuitComponent> allConnectedComponents(
+    CircuitComponent component,
+    List<CircuitComponent> comps,
+  ) {
+    for (final CircuitComponent child in component.children) {
+      if (!comps.contains(child)) {
+        comps.add(child);
+        comps.addAll(allConnectedComponents(child, comps));
+      }
+    }
+
+    if (component.parent != null && !comps.contains(component.parent)) {
+      comps.add(component.parent!);
+      comps.addAll(allConnectedComponents(component.parent!, comps));
+    }
+    return comps.toSet().toList();
+  }
+
   @override
   CircuitController get self => this;
 
@@ -184,19 +208,23 @@ class CircuitController extends ChangeNotifier
     setState(state.updateCanvasState(canvasState));
   }
 
-  void setState(WiringState state) {
+  void setState(WiringState state, {bool notifyToPM = true}) {
+    final WiringState oldState = this.state;
+
     this.state = state;
     notifyListeners();
-    switch (state) {
-      case ElementSelectionState(element: final CanvasElement element):
-        selectElementToPM(element.id);
-        break;
-      case ElementMovingState(element: final CanvasElement element):
-        selectElementToPM(element.id);
-        break;
+    if (notifyToPM) {
+      switch (state) {
+        case ElementSelectionState(element: final CanvasElement element):
+          selectElementToPM(element.id);
+          break;
+        case ElementMovingState(element: final CanvasElement element):
+          selectElementToPM(element.id);
+          break;
 
-      default:
-        selectElementToPM(null);
+        default:
+          if (oldState is! IdleWiringState) selectElementToPM(null);
+      }
     }
   }
 
