@@ -169,7 +169,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     ));
 
     // Step 4: Diagonal Corner Coverage
-    final bool utdGreaterThanDiagonal = utd > room.diagonal;
+    final bool utdGreaterThanDiagonal = utd >= room.diagonal;
     _calculationSteps.add(CalculationStep(
       stepNumber: 4,
       title: 'Diagonal Corner Coverage Decision',
@@ -179,10 +179,10 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
         'Room Diagonal': '${room.diagonal.toStringAsFixed(2)}m',
       },
       outputs: <String, dynamic>{
-        'UTD vs Diagonal': utdGreaterThanDiagonal ? 'UTD > Diagonal' : 'UTD ≤ Diagonal',
-        'Corner Strategy': utdGreaterThanDiagonal ? 'Place Corner #1 & #3' : 'Place Corner #1 only',
+        'UTD vs Diagonal': utdGreaterThanDiagonal ? 'UTD ≥ Diagonal' : 'UTD < Diagonal',
+        'Corner Strategy': utdGreaterThanDiagonal ? 'Place Corner #1 only' : 'Place Corner #1 & #3',
       },
-      result: utdGreaterThanDiagonal ? 'Place speakers in opposite corners (1 & 3)' : 'Place speaker in corner 1 only',
+      result: utdGreaterThanDiagonal ? 'Place speaker in corner 1 only' : 'Place speakers in opposite corners (1 & 3)',
     ));
 
     // Step 5: LSD Calculation
@@ -206,7 +206,7 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
     ));
 
     // Step 6: Adjacent Corner Analysis
-    final bool needsCorner2 = room.length < lsd;
+    final bool needsCorner2 = room.length > lsd;
     final bool needsCorner4 = utd < room.diagonal;
     _calculationSteps.add(CalculationStep(
       stepNumber: 6,
@@ -219,15 +219,15 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
         'Room Diagonal (d1)': '${room.diagonal.toStringAsFixed(2)}m',
       },
       outputs: <String, dynamic>{
-        'd2 < LSD': needsCorner2 ? 'Yes → Add Corner #2' : 'No',
+        'd2 > LSD': needsCorner2 ? 'Yes → Add Corner #2' : 'No',
         'UTD < d1': needsCorner4 ? 'Yes → Add Corner #4' : 'No',
       },
       result: 'Additional corners: ${needsCorner2 ? 'Corner #2 ' : ''}${needsCorner4 ? 'Corner #4' : ''}${!needsCorner2 && !needsCorner4 ? 'None' : ''}',
     ));
 
     // Step 7: Wall Speaker Analysis
-    final bool needsLengthWall = room.length < 2 * lsd;
-    final bool needsWidthWall = room.width < 2 * lsd;
+    final bool needsLengthWall = room.length > 2 * lsd;
+    final bool needsWidthWall = room.width > 2 * lsd;
     _calculationSteps.add(CalculationStep(
       stepNumber: 7,
       title: 'Wall Speaker Analysis',
@@ -238,8 +238,8 @@ class _EdgeMaxSpeakerLayoutWidgetState extends State<EdgeMaxSpeakerLayoutWidget>
         'Double LSD (2×LSD)': '${(2 * lsd).toStringAsFixed(2)}m',
       },
       outputs: <String, dynamic>{
-        'd2 < 2×LSD': needsLengthWall ? 'Yes → Add $speakerType between corners 1-2 (and 3-4 if speakers exist)' : 'No',
-        'd3 < 2×LSD': needsWidthWall ? 'Yes → Add $speakerType between corners 1-4 and 2-3' : 'No',
+        'd2 > 2×LSD': needsLengthWall ? 'Yes → Add $speakerType between corners 1-2 (and 3-4 if speakers exist)' : 'No',
+        'd3 > 2×LSD': needsWidthWall ? 'Yes → Add $speakerType between corners 1-4 and 2-3' : 'No',
       },
       result: 'Wall speakers: ${needsLengthWall ? 'Top/Bottom walls (1-2, 3-4) ' : ''}${needsWidthWall ? 'Left/Right walls (1-4, 2-3)' : ''}${!needsLengthWall && !needsWidthWall ? 'None needed' : ''}',
     ));

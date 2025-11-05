@@ -38,9 +38,9 @@
 /// 1. Validate room shape (rectangular)
 /// 2. Select speaker type (EM vs EM-LP based on ceiling height ≤ 12ft/3.7m)
 /// 3. Calculate UTD (Usable Throw Distance)
-/// 4. Determine diagonal corner coverage (Corner #1 if UTD < d1, else Corner #1 & #3)
+/// 4. Determine diagonal corner coverage (Corner #1 if UTD ≥ d1, else Corner #1 & #3)
 /// 5. Calculate LSD (Loudspeaker Spacing Distance)  
-/// 6. Determine adjacent corner coverage (Corner #2 if d2 < LSD, Corner #4 if d3 < LSD & UTD ≤ d1)
+/// 6. Determine adjacent corner coverage (Corner #2 if d2 > LSD, Corner #4 if d3 < LSD & UTD < d1)
 /// 7. Place corner speakers (EM90/EM-LP90)
 /// 8. Place wall speakers (EM180/EM-LP180 if d2 > 2*LSD or d3 > 2*LSD)
 /// 
@@ -214,7 +214,7 @@ class EdgeMaxAutoPlacement {
   static Set<int> _getDiagonalCorners(RectangularRoom room, double utd) {
     final double diagonal = room.diagonal;
 
-    if (utd <= diagonal) {
+    if (utd >= diagonal) {
       return <int>{0}; // Corner 1 only
     } else {
       return <int>{0, 2}; // Corner 1 and Corner 3 (opposite corners)
@@ -238,8 +238,8 @@ class EdgeMaxAutoPlacement {
   ) {
     final Set<int> adjacentCorners = <int>{};
 
-    // Following spec: if d2 < LSD, add Corner #2
-    if (room.length < lsd) {
+    // Following spec: if d2 > LSD, add Corner #2
+    if (room.length > lsd) {
       adjacentCorners.add(1); // Corner 2 (index 1)
     }
 
@@ -261,9 +261,9 @@ class EdgeMaxAutoPlacement {
     // Use the LSD from step 5 (90° speakers) to determine wall coverage gaps
     final double doubleLSD = 2 * lsd;
 
-    // Wall speakers are needed when room dimension is LESS than 2*LSD_90
+    // Wall speakers are needed when room dimension is GREATER than 2*LSD_90
     // This means the 90° corner speakers cannot provide adequate coverage
-    if (room.length < doubleLSD && populatedCorners.isNotEmpty) {
+    if (room.length > doubleLSD && populatedCorners.isNotEmpty) {
       // Always add top wall (between corners 1&2)
       wallSpeakers.add('wall_top');
       
@@ -271,8 +271,8 @@ class EdgeMaxAutoPlacement {
       wallSpeakers.add('wall_bottom');
     }
 
-    // Wall speakers needed when width is less than 2*LSD_90
-    if (room.width < doubleLSD && populatedCorners.isNotEmpty) {
+    // Wall speakers needed when width is greater than 2*LSD_90
+    if (room.width > doubleLSD && populatedCorners.isNotEmpty) {
       // Always add left wall (between corners 1&4)
       wallSpeakers.add('wall_left');
       
