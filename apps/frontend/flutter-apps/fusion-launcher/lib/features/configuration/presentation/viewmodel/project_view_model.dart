@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -103,11 +105,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   /// Update selection state
   void setSelectedDevice(String? deviceId, SelectedItemType? type) {
-
-    final SelectedItem? newSelectedDevice =
-        (deviceId != null && type != null)
-            ? SelectedItem(id: deviceId, type: type)
-            : null;
+    final SelectedItem? newSelectedDevice = (deviceId != null && type != null) ? SelectedItem(id: deviceId, type: type) : null;
 
     if (_selectedDevice != newSelectedDevice) {
       _selectedDevice = newSelectedDevice;
@@ -133,8 +131,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     print("Loading all local projects...");
     emit(ProjectLoading());
     try {
-      final ResponseCallback<List<ProjectData>> projectsResponse =
-          await projectManager.loadProjectsFromLocal();
+      final ResponseCallback<List<ProjectData>> projectsResponse = await projectManager.loadProjectsFromLocal();
       if (projectsResponse.success) {
         allProjects = projectsResponse.data ?? <ProjectData>[];
         emit(
@@ -161,8 +158,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(ProjectLoading());
     try {
       print("Saving current project...");
-      final ResponseCallback<void> saveResponse =
-          await projectManager.saveCurrentProject();
+      final ResponseCallback<void> saveResponse = await projectManager.saveCurrentProject();
       if (!saveResponse.success) {
         emit(
           ProjectError(
@@ -179,8 +175,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   /// Delete Project from local storage
   Future<void> deleteProjectFromLocal(String projectId) async {
     try {
-      final ResponseCallback<void> deleteResponse = await projectManager
-          .deleteProject(projectId);
+      final ResponseCallback<void> deleteResponse = await projectManager.deleteProject(projectId);
       if (deleteResponse.success) {
         // Reload projects after deletion
         await loadAllLocalProjects();
@@ -213,8 +208,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ) async {
     emit(CreatingProject());
     try {
-      final ResponseCallback<ProjectData?> saveResponse = await projectManager
-          .createAndSaveNewProject(newProject);
+      final ResponseCallback<ProjectData?> saveResponse = await projectManager.createAndSaveNewProject(newProject);
       if (saveResponse.success) {
         // Reload projects after creation
         await loadAllLocalProjects();
@@ -235,8 +229,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ///Open project by Project id
   void openProject(String projectId) {
-    final ResponseCallback<ProjectData> projectResponse = projectManager
-        .openProjectById(projectId);
+    final ResponseCallback<ProjectData> projectResponse = projectManager.openProjectById(projectId);
 
     if (projectResponse.success && projectResponse.data != null) {
       _currentProject = projectResponse.data;
@@ -411,6 +404,15 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       }
       clearSelections();
       updateProject();
+    }
+  }
+
+  Future<File?> getCurrentProjectFile() async {
+    if (_currentProject != null) {
+      return projectManager.getProjectZipFile(projectId: _currentProject!.id);
+    } else {
+      FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently open.");
+      return null;
     }
   }
 }

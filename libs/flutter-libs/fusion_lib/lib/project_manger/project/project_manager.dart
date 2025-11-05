@@ -168,4 +168,12 @@ class ProjectManager {
   Map<String, dynamic> getCurrentProjectJson() {
     return projectService?.toJson() ?? {};
   }
+
+  Future<File?> getProjectZipFile({required String projectId}) async {
+    final Directory projectDirectory = await localProjectManager.getProjectDirectoryById(projectId);
+    if (await projectDirectory.exists()) {
+      return FusionUtils().zipProjectDirectory(projectDirectory);
+    }
+    return null;
+  }
 }
