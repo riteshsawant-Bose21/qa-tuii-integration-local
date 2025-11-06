@@ -23,9 +23,18 @@ class PbcViewmodel extends ChangeNotifier {
     final PBItem? oldValue = selected;
     if (oldValue == null) return;
     selected = selected?.copyWith(
-      x: x + delta.dx,
-      y: y + delta.dy,
+      x: roundTo2Digit(x + delta.dx),
+      y: roundTo2Digit(y + delta.dy),
     );
+
+    items.remove(oldValue);
+    items.add(selected!);
+  }
+
+  void resize(num width, num height) {
+    final PBItem? oldValue = selected;
+    if (oldValue == null) return;
+    selected = selected?.copyWith(width: roundTo2Digit(width), height: roundTo2Digit(height));
 
     items.remove(oldValue);
     items.add(selected!);
@@ -80,5 +89,9 @@ class PbcViewmodel extends ChangeNotifier {
   void delete() {
     items.remove(selected);
     selected = null;
+  }
+
+  num roundTo2Digit(num val) {
+    return (val * 100).round() / 100;
   }
 }
