@@ -3,12 +3,7 @@ import 'package:flutter/widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 
 import '../dto/pb_item_param.dart';
-import '../view/widgets/pb_empty.dart';
-import '../view/widgets/pb_graph.dart';
-import '../view/widgets/pb_indicator.dart';
-import '../view/widgets/pb_slider.dart';
-import '../view/widgets/pb_switch.dart';
-import '../view/widgets/pb_text.dart';
+import '../view/widgets/widgets.dart';
 
 class PbWidgets {
   final String type;
