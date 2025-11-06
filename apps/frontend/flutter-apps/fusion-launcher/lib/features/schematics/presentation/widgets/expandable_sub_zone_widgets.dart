@@ -276,11 +276,6 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   );
                 },
               );
-
-              // return Container(
-              //   key: ValueKey<String>(deviceId),
-              //   child:
-              // );
             },
           ),
         );

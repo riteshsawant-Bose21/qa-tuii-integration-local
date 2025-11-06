@@ -13,8 +13,10 @@ import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class SourceSetItem extends StatefulWidget {
   final SourceSet sourceSet;
+  final bool isDragHovered;
+  final VoidCallback? onSourceDropped;
 
-  const SourceSetItem({required this.sourceSet, super.key});
+  const SourceSetItem({required this.sourceSet, this.isDragHovered = false, this.onSourceDropped, super.key});
 
   @override
   State<SourceSetItem> createState() => _SourceSetItemState();
@@ -37,6 +39,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
     super.dispose();
   }
 
+  /// Add method to expand source set externally
+  void expandSourceSet() {
+    if (!_isSourcesSetExpanded.value) {
+      _isSourcesSetExpanded.value = true;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
@@ -44,10 +53,6 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext context, bool subZoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            /// Check if this Source set is selected
-            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            final bool isSelected = selectedDevice?.id == widget.sourceSet.id && selectedDevice?.type == SelectedItemType.sourceSet;
-
             return Column(
               children: <Widget>[
                 MouseRegion(
@@ -56,9 +61,8 @@ class _SourceSetItemState extends State<SourceSetItem> {
 
                   child: GestureDetector(
                     onTap: () {
-                      /// Select source set on tap
+                      /// Toggle expand/collapse
                       _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
-                      _projectViewModel.setSelectedDevice(widget.sourceSet.id, SelectedItemType.sourceSet);
                     },
                     child: Container(
                       margin: const EdgeInsets.only(top: 8),
@@ -66,9 +70,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                       height: 36,
                       decoration: BoxDecoration(
                         border: Border.all(
-                          color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                          color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
+                          width: 1.0,
                         ),
-                        color: _isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
+                        color:
+                            widget.isDragHovered
+                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                                : (_isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight),
                       ),
                       child: Row(
                         children: <Widget>[
@@ -112,6 +120,19 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             height: 22,
                             fit: BoxFit.contain,
                           ),
+                          // delete icon
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: () {
+                              _projectViewModel.removeSourceSet(sourceSetId: widget.sourceSet.id);
+                            },
+                            child: const FusionImage.asset(
+                              Assets.trashIcon,
+                              width: 20,
+                              height: 20,
+                              fit: BoxFit.contain,
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -140,52 +161,25 @@ class _SourceSetItemState extends State<SourceSetItem> {
             itemCount: sourceList.length,
             onReorder: (int oldIndex, int newIndex) {},
             itemBuilder: (BuildContext context, int index) {
-              return DragTarget<Source>(
+              return Draggable<Source>(
                 key: ValueKey<String>(sourceList[index].id),
-                // onWillAccept: (Source? incoming) {
-                //   return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU && incoming.id != circuitData.id;
-                // },
-                // onAccept: (Source incoming) {
-                //   /// Add speaker to target circuit
-                //   final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
-                //
-                //   if (incomingSpeakers.isNotEmpty) {
-                //     for (final Speaker speaker in incomingSpeakers) {
-                //       // serviceLocator<ProjectViewModel>().addHardware(hardware: speaker, autoSave: false);
-                //       serviceLocator<ProjectViewModel>().addHardwareToCircuit(hwId: speaker.id, circuitId: circuitData.id);
-                //     }
-                //   }
-                //
-                //   /// Remove the dragged circuit from the zone
-                //   _projectViewModel.removeCircuitFromSubZone(circuitId: incoming.id, subZoneId: widget.subZoneId);
-                //   setState(() {});
-                // },
-                builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-                  return Draggable<Source>(
-                    data: sourceList[index],
-                    feedback: Material(
-                      color: Colors.transparent,
-                      child: Opacity(
-                        opacity: 0.8,
-                        child: SizedBox(width: 220, child: SourceItem(source: sourceList[index])),
-                      ),
-                    ),
-                    childWhenDragging: Material(
-                      color: Colors.transparent,
-                      child: Opacity(
-                        opacity: 0.8,
-                        child: SizedBox(width: 220, child: SourceItem(source: sourceList[index])),
-                      ),
-                    ),
-                    child: SourceItem(source: sourceList[index]),
-                  );
-                },
+                data: sourceList[index],
+                feedback: Material(
+                  color: Colors.transparent,
+                  child: Opacity(
+                    opacity: 0.8,
+                    child: SizedBox(width: 220, child: SourceItem(source: sourceList[index])),
+                  ),
+                ),
+                childWhenDragging: Material(
+                  color: Colors.transparent,
+                  child: Opacity(
+                    opacity: 0.8,
+                    child: SizedBox(width: 220, child: SourceItem(source: sourceList[index])),
+                  ),
+                ),
+                child: SourceItem(source: sourceList[index]),
               );
-
-              // return Container(
-              //   key: ValueKey<String>(deviceId),
-              //   child:
-              // );
             },
           ),
         );

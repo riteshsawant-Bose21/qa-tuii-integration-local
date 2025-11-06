@@ -35,6 +35,12 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
 
   late double _sourcesHeight;
 
+  /// Track drag state for visual feedback
+  String? _draggingSourceId;
+
+  /// Map to store GlobalKeys for each SourceSetItem
+  final Map<String, GlobalKey> _sourceSetKeys = <String, GlobalKey<State<StatefulWidget>>>{};
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -56,6 +62,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
   void dispose() {
     searchController.dispose();
     _sourceSetNameController.dispose();
+    _sourceSetKeys.clear();
     super.dispose();
   }
 
@@ -135,7 +142,40 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                 }
                 return ListView.builder(
                   itemCount: _projectViewModel.sources.length,
-                  itemBuilder: (BuildContext context, int index) => SourceItem(source: _projectViewModel.sources[index]),
+                  itemBuilder: (BuildContext context, int index) {
+                    final Source source = _projectViewModel.sources[index];
+                    return Draggable<Source>(
+                      data: source,
+                      dragAnchorStrategy: pointerDragAnchorStrategy,
+                      onDragStarted: () {
+                        setState(() {
+                          _draggingSourceId = source.id;
+                        });
+                      },
+                      onDraggableCanceled: (_, __) {
+                        setState(() {
+                          _draggingSourceId = null;
+                        });
+                      },
+                      onDragEnd: (_) {
+                        setState(() {
+                          _draggingSourceId = null;
+                        });
+                      },
+                      feedback: Material(
+                        color: Colors.transparent,
+                        child: Opacity(
+                          opacity: 0.8,
+                          child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: source, isDragging: true)),
+                        ),
+                      ),
+                      childWhenDragging: Opacity(
+                        opacity: 0.5,
+                        child: SourceItem(source: source, isDragging: true),
+                      ),
+                      child: SourceItem(source: source, isDragging: _draggingSourceId == source.id),
+                    );
+                  },
                 );
               },
             ),
@@ -205,19 +245,46 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                     physics: const ClampingScrollPhysics(),
                     buildDefaultDragHandles: false,
                     itemCount: _projectViewModel.sourceSets.length,
-                    onReorder: (int oldIndex, int newIndex) {
-                      // if (oldIndex < newIndex) {
-                      //   newIndex -= 1;
-                      // }
-                      // _projectViewModel.reOrderSubZoneInZone(parentId: widget.zoneId, oldIndex: oldIndex, newIndex: newIndex);
-                      // _projectViewModel.setSelectedDevice(widget.subZones[oldIndex].id, SelectedItemType.subzone);
-                    },
+                    onReorder: (int oldIndex, int newIndex) {},
                     itemBuilder: (BuildContext context, int index) {
                       final SourceSet sourceSet = _projectViewModel.sourceSets[index];
-                      return ReorderableDragStartListener(
+
+                      /// Create or get the GlobalKey for this source set
+                      _sourceSetKeys.putIfAbsent(sourceSet.id, () => GlobalKey());
+                      final GlobalKey<State<StatefulWidget>> sourceSetKey = _sourceSetKeys[sourceSet.id]!;
+
+                      return DragTarget<Source>(
                         key: ValueKey<String>(sourceSet.id),
-                        index: index,
-                        child: SourceSetItem(sourceSet: sourceSet),
+                        onWillAccept: (Source? data) {
+                          if (data == null) return false;
+
+                          /// Check if source is not already in this source set
+                          final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+                          return !sourcesInSet.any((Source source) => source.id == data.id);
+                        },
+                        onLeave: (Source? data) {},
+                        onAccept: (Source data) {
+                          _projectViewModel.addSourceToSourceSet(sourceId: data.id, sourceSetId: sourceSet.id);
+
+                          /// Expand the source set after dropping
+                          final dynamic sourceSetState = sourceSetKey.currentState as dynamic;
+                          sourceSetState?.expandSourceSet();
+
+                          setState(() {
+                            _draggingSourceId = null;
+                          });
+                        },
+                        builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
+                          final bool isHovered = candidateData.isNotEmpty;
+                          return ReorderableDragStartListener(
+                            index: index,
+                            child: SourceSetItem(
+                              key: sourceSetKey,
+                              sourceSet: sourceSet,
+                              isDragHovered: isHovered,
+                            ),
+                          );
+                        },
                       );
                     },
                   ),
@@ -245,7 +312,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
     showMenu<void>(
       color: Theme.of(context).colorScheme.white,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(4),
       ),
       context: context,
       menuPadding: EdgeInsets.zero,
@@ -409,7 +476,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   Widget build(BuildContext context) {
     return Container(
       color: Theme.of(context).colorScheme.white,
-      width: 240,
+      width: 250,
       padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -418,7 +485,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
           FusionAppText(
             text: "Create source set",
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 12,
+              fontSize: 14,
               fontWeight: FontWeight.w600,
             ),
           ),
