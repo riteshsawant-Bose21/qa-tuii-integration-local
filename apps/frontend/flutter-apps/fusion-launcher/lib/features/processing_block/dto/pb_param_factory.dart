@@ -13,6 +13,8 @@ class PBParamFactory {
         return PBTextParam.fromMap(map);
       case 'graph':
         return PBGraphParam.fromMap(map);
+      case 'meter':
+        return PBMeterParam.fromMap(map);
       default:
         return PBEmptyParam();
     }

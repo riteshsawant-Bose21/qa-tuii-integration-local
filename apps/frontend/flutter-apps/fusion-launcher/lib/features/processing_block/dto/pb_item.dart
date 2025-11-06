@@ -38,7 +38,7 @@ class PBItem {
       height: (map['height'] ?? 0) as num,
       field: (map['field'] ?? '') as String,
       type: (map['type'] ?? '') as String,
-      param: PBParamFactory.build(map['params'] as Map<String, dynamic>, (map['type'] ?? '') as String),
+      param: PBParamFactory.build(map['param'] as Map<String, dynamic>, (map['type'] ?? '') as String),
     );
   }
 

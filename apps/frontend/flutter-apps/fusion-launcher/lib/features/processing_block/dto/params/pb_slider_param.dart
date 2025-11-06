@@ -15,7 +15,7 @@ class PBSliderParam extends PBItemParam {
     return <String, dynamic>{'label': label, 'min': min, 'max': max};
   }
 
-  factory PBSliderParam.fromMap(Map<dynamic,dynamic> map) {
+  factory PBSliderParam.fromMap(Map<dynamic, dynamic> map) {
     return PBSliderParam(label: map['label'] as String, min: map['min'] as num, max: map['max'] as num);
   }
 

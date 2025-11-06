@@ -12,7 +12,12 @@ class PBText extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return Center(
-          child: Text(data.label, style: TextStyle(fontSize: (constraints.maxWidth * 0.1).clamp(15, 25))),
+          child: Text(
+            data.label,
+            style: TextStyle(
+              fontSize: (constraints.maxWidth * 0.1).clamp(15, 25),
+            ),
+          ),
         );
       },
     );
