@@ -3,7 +3,6 @@ package cluster
 import (
 	"bufio"
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -17,6 +16,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	json "github.com/goccy/go-json"
 )
 
 const (
@@ -331,15 +332,6 @@ func (c *Cluster) reloadVIP() error {
 	if err := c.restartKeepalived(); err != nil {
 		return err
 	}
-
-	logger := logging.GetLogger()
-
-	// After reload, attempt to join the gossip ring so cluster size grows
-	if err := c.JoinMemberlist(); err != nil {
-		logger.Error("JoinMemberlist after reloadVIP: %v", err)
-	}
-
-	logger.Debug("Reloaded VIP")
 
 	return nil
 }

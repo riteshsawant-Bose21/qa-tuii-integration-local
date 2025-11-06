@@ -35,8 +35,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
     ///--------------------------------------------------------
     /// Heading
     ///--------------------------------------------------------
-    final Rect headingRect =
-        component.position & Size(component.size.width, 50);
+    final Rect headingRect = component.position & Size(component.size.width, 50);
     canvas.drawRect(
       headingRect,
       Paint()..color = painter.colorScheme.componentHeadingBG,
@@ -85,9 +84,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       painter.drawText(
         canvas: canvas,
         text: "INPUT",
-        position:
-            component.inputPorts.first.absolutePosition +
-            const Offset(WiringViewConstants.portRadius * 2, 0),
+        position: component.inputPorts.first.absolutePosition + const Offset(WiringViewConstants.portRadius * 2, 0),
         positionAlignment: Alignment.centerLeft,
         style: TextStyle(
           color: painter.colorScheme.componentFG,
@@ -100,9 +97,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       painter.drawText(
         canvas: canvas,
         text: "OUTPUT",
-        position:
-            component.outputPorts.first.absolutePosition -
-            const Offset(WiringViewConstants.portRadius * 2, 0),
+        position: component.outputPorts.first.absolutePosition - const Offset(WiringViewConstants.portRadius * 2, 0),
         positionAlignment: Alignment.centerRight,
         style: TextStyle(
           color: painter.colorScheme.componentFG,
@@ -137,10 +132,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         text: TextSpan(
           text: port.data.label ?? Random().nextInt(20).toString(),
           style: TextStyle(
-            color:
-                hasConnection
-                    ? painter.colorScheme.activePortFG
-                    : painter.colorScheme.inactivePortFG,
+            color: hasConnection ? painter.colorScheme.activePortFG : painter.colorScheme.inactivePortFG,
             fontSize: WiringViewConstants.portRadius * 0.75,
           ),
         ),
@@ -163,14 +155,16 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
     for (final CircuitPort port in <CircuitPort>[
       ...component.otherPorts,
     ]) {
-      painter.drawImage(
-        canvas: canvas,
-        path: port.data.image!,
-        rect: Rect.fromCircle(
-          center: port.absolutePosition,
-          radius: WiringViewConstants.portRadius,
-        ),
-      );
+      if (port.data.image != null) {
+        painter.drawImage(
+          canvas: canvas,
+          path: port.data.image!,
+          rect: Rect.fromCircle(
+            center: port.absolutePosition,
+            radius: WiringViewConstants.portRadius,
+          ),
+        );
+      }
 
       final PortPosition? position2 = port.data.position;
       painter.drawText(
@@ -179,9 +173,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         maxWidth: WiringViewConstants.comPortWidth,
         positionAlignment: switch (position2) {
           PortPosition.bottomRight => Alignment.bottomRight,
-          PortPosition.footerLeft ||
-          PortPosition.footerCenter ||
-          PortPosition.footerRight => Alignment.bottomCenter,
+          PortPosition.footerLeft || PortPosition.footerCenter || PortPosition.footerRight => Alignment.bottomCenter,
           _ => Alignment.centerLeft,
         },
         position: switch (position2) {
@@ -189,9 +181,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
             port.absolutePosition.dx - WiringViewConstants.portDimension,
             port.absolutePosition.dy + WiringViewConstants.portRadius / 2,
           ),
-          PortPosition.footerLeft ||
-          PortPosition.footerCenter ||
-          PortPosition.footerRight => Offset(
+          PortPosition.footerLeft || PortPosition.footerCenter || PortPosition.footerRight => Offset(
             port.absolutePosition.dx,
             port.absolutePosition.dy - WiringViewConstants.portRadius - 5,
           ),
@@ -208,8 +198,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         final Offset center = port.absolutePosition + const Offset(0, 75);
         canvas.drawLine(
           center - const Offset(0, WiringViewConstants.portRadius),
-          port.absolutePosition +
-              const Offset(0, WiringViewConstants.portRadius),
+          port.absolutePosition + const Offset(0, WiringViewConstants.portRadius),
           Paint()
             ..color = color
             ..strokeWidth = 3

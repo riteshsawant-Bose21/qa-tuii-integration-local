@@ -1,5 +1,5 @@
 import 'package:bloc/bloc.dart';
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 export 'circuit/circuit_viewmodel.dart';
@@ -83,6 +83,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   String? currentSelectedHardwareId;
   String? currentSelectedListeningAreaId;
   String? currentSelectedZoneId;
+  String? currentSelectedSubZoneId;
 
   /// Listening area selection mode flag
   bool isInListeningAreaMode = false;
@@ -103,7 +104,11 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   /// Update selection state
   void setSelectedDevice(String? deviceId, SelectedItemType? type) {
-    final SelectedItem? newSelectedDevice = (deviceId != null && type != null) ? SelectedItem(id: deviceId, type: type) : null;
+
+    final SelectedItem? newSelectedDevice =
+        (deviceId != null && type != null)
+            ? SelectedItem(id: deviceId, type: type)
+            : null;
 
     if (_selectedDevice != newSelectedDevice) {
       _selectedDevice = newSelectedDevice;
@@ -129,12 +134,22 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     print("Loading all local projects...");
     emit(ProjectLoading());
     try {
-      final ResponseCallback<List<ProjectData>> projectsResponse = await projectManager.loadProjectsFromLocal();
+      final ResponseCallback<List<ProjectData>> projectsResponse =
+          await projectManager.loadProjectsFromLocal();
       if (projectsResponse.success) {
         allProjects = projectsResponse.data ?? <ProjectData>[];
-        emit(ProjectLoaded(projects: projectsResponse.data ?? <ProjectData>[], currentProject: null));
+        emit(
+          ProjectLoaded(
+            projects: projectsResponse.data ?? <ProjectData>[],
+            currentProject: null,
+          ),
+        );
       } else {
-        emit(ProjectError(message: "Failed to load projects: ${projectsResponse.message}"));
+        emit(
+          ProjectError(
+            message: "Failed to load projects: ${projectsResponse.message}",
+          ),
+        );
         return;
       }
     } catch (e) {
@@ -147,9 +162,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     emit(ProjectLoading());
     try {
       print("Saving current project...");
-      final ResponseCallback<void> saveResponse = await projectManager.saveCurrentProject();
+      final ResponseCallback<void> saveResponse =
+          await projectManager.saveCurrentProject();
       if (!saveResponse.success) {
-        emit(ProjectError(message: "Failed to save project: ${saveResponse.message}"));
+        emit(
+          ProjectError(
+            message: "Failed to save project: ${saveResponse.message}",
+          ),
+        );
         return;
       }
     } catch (e) {
@@ -160,12 +180,17 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   /// Delete Project from local storage
   Future<void> deleteProjectFromLocal(String projectId) async {
     try {
-      final ResponseCallback<void> deleteResponse = await projectManager.deleteProject(projectId);
+      final ResponseCallback<void> deleteResponse = await projectManager
+          .deleteProject(projectId);
       if (deleteResponse.success) {
         // Reload projects after deletion
         await loadAllLocalProjects();
       } else {
-        emit(ProjectError(message: "Failed to delete project: ${deleteResponse.message}"));
+        emit(
+          ProjectError(
+            message: "Failed to delete project: ${deleteResponse.message}",
+          ),
+        );
         return;
       }
     } catch (e) {
@@ -184,16 +209,23 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   /// Create new Project and save to local storage
-  Future<ProjectData?> createAndSaveNewProject(NewProjectDetails newProject) async {
+  Future<ProjectData?> createAndSaveNewProject(
+    NewProjectDetails newProject,
+  ) async {
     emit(CreatingProject());
     try {
-      final ResponseCallback<ProjectData?> saveResponse = await projectManager.createAndSaveNewProject(newProject);
+      final ResponseCallback<ProjectData?> saveResponse = await projectManager
+          .createAndSaveNewProject(newProject);
       if (saveResponse.success) {
         // Reload projects after creation
         await loadAllLocalProjects();
         return saveResponse.data;
       } else {
-        emit(ProjectError(message: "Failed to create project: ${saveResponse.message}"));
+        emit(
+          ProjectError(
+            message: "Failed to create project: ${saveResponse.message}",
+          ),
+        );
         return null;
       }
     } catch (e) {
@@ -204,13 +236,23 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ///Open project by Project id
   void openProject(String projectId) {
-    final ResponseCallback<ProjectData> projectResponse = projectManager.openProjectById(projectId);
+    final ResponseCallback<ProjectData> projectResponse = projectManager
+        .openProjectById(projectId);
 
     if (projectResponse.success && projectResponse.data != null) {
       _currentProject = projectResponse.data;
-      emit(ProjectLoaded(projects: allProjects, currentProject: projectResponse.data));
+      emit(
+        ProjectLoaded(
+          projects: allProjects,
+          currentProject: projectResponse.data,
+        ),
+      );
     } else {
-      emit(OpenProjectError(message: "Unable to open project: ${projectResponse.message}"));
+      emit(
+        OpenProjectError(
+          message: "Unable to open project: ${projectResponse.message}",
+        ),
+      );
       // throwError("Unable to open project ${projectResponse.message}");
     }
   }
@@ -225,7 +267,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     if (state is ProjectLoaded) {
       final ProjectLoaded currentState = state as ProjectLoaded;
       _currentProject = null;
-      emit(ProjectLoaded(projects: currentState.projects, currentProject: null));
+      emit(
+        ProjectLoaded(projects: currentState.projects, currentProject: null),
+      );
     }
   }
 
@@ -248,6 +292,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = false;
     currentSelectedListeningAreaId = null;
     currentSelectedZoneId = null;
+    currentSelectedSubZoneId = null;
     updateProject();
   }
 
@@ -256,16 +301,54 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = true;
     currentSelectedZoneId = zone.id;
     currentSelectedListeningAreaId = null;
+    currentSelectedSubZoneId = null;
     resetDeviceTypeIndex();
     emit(ZoneSelectionMode(zone));
+  }
+
+  void enterSubZoneSelectionMode(SubZone subZone) {
+    isInListeningAreaMode = false;
+    isInZoneSelectionMode = true;
+    currentSelectedSubZoneId = subZone.id;
+    currentSelectedZoneId = null;
+    currentSelectedListeningAreaId = null;
+    resetDeviceTypeIndex();
+    emit(SubZoneSelectionMode(subZone));
   }
 
   void enterListeningAreaMode() {
     isInZoneSelectionMode = false;
     isInListeningAreaMode = true;
     currentSelectedZoneId = null;
+    currentSelectedSubZoneId = null;
     resetDeviceTypeIndex();
     emit(ListeningAreaSelectionMode());
+  }
+
+  Color getCurrentSelectionZoneColor() {
+    if (currentSelectedZoneId != null) {
+      final Zone zone = projectManager.getZoneById(currentSelectedZoneId!);
+      return zone.color;
+    } else if (currentSelectedSubZoneId != null) {
+      final Zone zone = projectManager.getZoneForSubZone(
+        subZoneId: currentSelectedSubZoneId!,
+      );
+      return zone.color;
+    }
+    return Colors.grey;
+  }
+
+  String getCurrentSelectionZoneName() {
+    if (currentSelectedZoneId != null) {
+      final Zone zone = projectManager.getZoneById(currentSelectedZoneId!);
+      return zone.name;
+    } else if (currentSelectedSubZoneId != null) {
+      final Zone zone = projectManager.getZoneForSubZone(
+        subZoneId: currentSelectedSubZoneId!,
+      );
+      return zone.name;
+    }
+    return "Unknown Zone";
   }
 
   void changeDeviceTypeIndex(int index) {
@@ -273,6 +356,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     isInZoneSelectionMode = false;
     isInListeningAreaMode = false;
     currentSelectedZoneId = null;
+    currentSelectedSubZoneId = null;
     print("Device type index changed to $index");
     emit(DeviceTypeIndexChanged(index));
   }

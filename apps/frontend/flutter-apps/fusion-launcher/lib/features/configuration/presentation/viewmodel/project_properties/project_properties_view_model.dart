@@ -276,4 +276,9 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
     currentSelectedZoneId = null;
     updateProject();
   }
+
+  void clearSelectedSubZone() {
+    currentSelectedSubZoneId = null;
+    updateProject();
+  }
 }

@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
 import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'add_speakers_menu.dart';
 import 'circuit_device_widget.dart';
 import 'create_new_location_widget.dart';

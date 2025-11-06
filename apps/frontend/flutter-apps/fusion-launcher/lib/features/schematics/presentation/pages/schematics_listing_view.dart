@@ -267,8 +267,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     final PortType portType = switch (type) {
                       SourceType.analogInput ||
                       SourceType.aes67input => PortType.analogOutput,
-                      SourceType.bluetooth => PortType.ble,
-                      SourceType.usb => PortType.usb,
+                      SourceType.bluetooth => PortType.bleOut,
+                      SourceType.usb => PortType.usbOut,
                     };
                     final Source source = Source(
                       name: item.name,
@@ -294,9 +294,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                             PortType.endpointInput,
                           ],
                           SourceType.bluetooth => <PortType>[
-                            PortType.ble,
+                            PortType.bleIn,
                           ],
-                          SourceType.usb => <PortType>[PortType.usb],
+                          SourceType.usb => <PortType>[PortType.usbIn],
                         },
                         portPosition: PortPosition.topLeft,
                       ),
