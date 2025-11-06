@@ -25,6 +25,10 @@ class CircuitComponent extends CanvasElement {
     }
   }
 
+  void setPosition(Offset offset) {
+    _position = offset;
+  }
+
   @override
   Size get size {
     if (children.isEmpty) return data.size;
@@ -65,11 +69,11 @@ class CircuitComponent extends CanvasElement {
     final CircuitComponent circuitComponent = CircuitComponent(
       id: data.id,
       position:
-          (parent?.position ?? Offset.zero) +
-          Offset(
-            10,
-            parent?.size.height ?? 0,
-          ), //Offset(100, 100.0 * index),
+      // (parent?.position ?? Offset.zero) +
+      Offset(
+        10,
+        parent?.size.height ?? 0,
+      ), //Offset(100, 100.0 * index),
       // ports: ports,
       data: data,
     );
@@ -301,11 +305,17 @@ class CircuitComponent extends CanvasElement {
   }
 
   void setParent(CircuitComponent parent) {
+    if (this.parent != null) {
+      this.parent?.children.remove(this);
+    }
     this.parent = parent;
     parent.children.add(this);
   }
 
   CanvasElement? isHit(Offset position) {
+    if (data is ZoneComponentData && children.isEmpty) {
+      return null;
+    }
     for (final CircuitPort port in ports) {
       final Rect portRect = Rect.fromCircle(
         center: port.position,

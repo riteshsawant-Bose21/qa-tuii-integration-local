@@ -20,7 +20,9 @@ class SchematicProperties extends StatefulWidget {
 
 class SchematicPropertiesState extends State<SchematicProperties> {
   final ExpansibleController viewMoreExpansibleController = ExpansibleController();
-  final TextEditingController speakerQtyController = TextEditingController(text: "1"); // default value 1
+  final TextEditingController speakerQtyController = TextEditingController(
+    text: "1",
+  ); // default value 1
   final TextEditingController propertyModelNameController = TextEditingController(text: "1"); // default value 1
 
   int get speakerQty => int.tryParse(speakerQtyController.text) ?? 1;
@@ -30,8 +32,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
     final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
     if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
 
-    final int totalSpeakers =
-        projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList().length;
+    final int totalSpeakers = projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList().length;
 
     if (shouldIncrement && (qty ?? totalSpeakers) >= _MAX_SPEAKER_COUNT) {
       return FusionToast.error(context, message: "Maximum speaker count reached");
@@ -65,8 +66,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
     final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
 
     if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
-    final List<Speaker> speakers =
-        projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
+    final List<Speaker> speakers = projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
 
     final Speaker speaker = speakers.first.getClone();
     projectViewModel.addHardware(hardware: speaker, autoSave: false);
@@ -81,8 +81,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
     final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
 
     if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
-    final List<Speaker> speakers =
-        projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
+    final List<Speaker> speakers = projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
     final Speaker speaker = speakers.last;
     projectViewModel.removeHardwareFromCircuit(circuitId: selectedItem.id, hwId: speaker.id);
   }
@@ -109,15 +108,18 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
     String? assetImagePath;
     if (selectedItem!.type == SelectedItemType.circuit) {
-      final List<Speaker> speakers =
-          projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
+      final List<Speaker> speakers = projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id).whereType<Speaker>().toList();
 
       if (speakers.isEmpty) return const _NoPropertiesWidget();
       selectedDevice = speakers.first;
       assetImagePath = selectedDevice.assetImagePath;
     } else {
-      selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
-      assetImagePath = selectedDevice?.assetImagePath;
+      try {
+        selectedDevice = projectViewModel.getHardware(
+          hardwareId: selectedItem.id,
+        );
+        assetImagePath = selectedDevice?.assetImagePath;
+      } catch (e) {}
     }
 
     if (selectedItem.type == SelectedItemType.zone) {
@@ -203,6 +205,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                         } else if (selectedItem.type == SelectedItemType.subzone) {
                           final SubZone? subzone = projectViewModel.getSubZone(subZoneId: selectedItem.id);
                           projectViewModel.updateSubZone(subZone: subzone!.copyWith(name: value));
+                        } else if (selectedItem.type == SelectedItemType.circuit) {
+                          final CircuitModel? circuit = projectViewModel.getCircuitById(circuitId: selectedItem.id);
+                          projectViewModel.updateCircuit(circuit: circuit!.copyWith(name: value));
                         } else {
                           final HardwareComponent hardware = selectedDevice!.copyWith(name: value);
                           projectViewModel.updateHardware(hardware: hardware);
@@ -399,8 +404,12 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                               speakerQtyModify(qty: modifiedQty);
                             },
                             style: Theme.of(context).textTheme.bodySmall,
-                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration.collapsed(hintText: '0'),
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration.collapsed(
+                              hintText: '0',
+                            ),
                           ),
                         ),
                       ),
@@ -490,8 +499,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                     Expanded(
                       child: Builder(
                         builder: (BuildContext context) {
-                          if (selectedItem.type == SelectedItemType.zone ||
-                              selectedItem.type == SelectedItemType.subzone) {
+                          if (selectedItem.type == SelectedItemType.zone || selectedItem.type == SelectedItemType.subzone) {
                             return _CreateZoneListeningAreaSelectorDropDown(
                               selectedItem: selectedItem,
                             );
@@ -536,16 +544,25 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                   }
                 },
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: isExpanded ? 10.0 : 0.0),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isExpanded ? 10.0 : 0.0,
+                  ),
                   child: FusionAppText(
                     text: isExpanded ? 'view less' : 'view more',
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF186E79)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF186E79),
+                    ),
                   ),
                 ),
               );
             },
-            expansibleBuilder: (BuildContext context, Widget header, Widget body, Animation<double> animation) {
+            expansibleBuilder: (
+              BuildContext context,
+              Widget header,
+              Widget body,
+              Animation<double> animation,
+            ) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -607,7 +624,9 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: title,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black38),
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(color: Colors.black38),
     );
   }
 }
@@ -712,8 +731,7 @@ class _LocationSelecDropDownState extends State<_LocationSelecDropDown> {
     final String selectedId = widget.selectedListeningAreaIds.first;
 
     // Find the listening area by ID
-    final ListeningArea? selectedArea =
-        widget.listeningAreas.where((ListeningArea area) => area.id == selectedId).firstOrNull;
+    final ListeningArea? selectedArea = widget.listeningAreas.where((ListeningArea area) => area.id == selectedId).firstOrNull;
 
     if (selectedArea != null) {
       final FloorModel? floorName = context.read<ProjectViewModel>().getFloorForListeningArea(areaId: selectedArea.id);
@@ -828,9 +846,7 @@ class _LocationSelecDropDownState extends State<_LocationSelecDropDown> {
                                       final Zone? zoneData = context.read<ProjectViewModel>().getZonesForListeningArea(
                                         areaId: area.id,
                                       );
-                                      final FloorModel? floorName = context
-                                          .read<ProjectViewModel>()
-                                          .getFloorForListeningArea(areaId: area.id);
+                                      final FloorModel? floorName = context.read<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
 
                                       return InkWell(
                                         onTap: () {
@@ -847,10 +863,7 @@ class _LocationSelecDropDownState extends State<_LocationSelecDropDown> {
                                               Radio<String>(
                                                 value: area.id,
                                                 activeColor: Theme.of(context).colorScheme.greyDark,
-                                                groupValue:
-                                                    widget.selectedListeningAreaIds.isNotEmpty
-                                                        ? widget.selectedListeningAreaIds.first
-                                                        : null,
+                                                groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
                                                 onChanged: (String? value) {
                                                   if (value != null) {
                                                     _toggleListeningAreaSelection(value, floorName?.id ?? '');
@@ -861,10 +874,7 @@ class _LocationSelecDropDownState extends State<_LocationSelecDropDown> {
                                               const SizedBox(width: 8),
                                               Expanded(
                                                 child: FusionAppText(
-                                                  text:
-                                                      area.name.isNotEmpty
-                                                          ? "${floorName?.name}/${area.name}"
-                                                          : 'Unnamed Location',
+                                                  text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Location',
                                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                     fontWeight: FontWeight.w500,
                                                     fontSize: 10,
@@ -919,9 +929,7 @@ class _LocationSelecDropDownState extends State<_LocationSelecDropDown> {
                                         ),
                                       ),
                                       Icon(
-                                        showCreateNewLocationForm
-                                            ? Icons.keyboard_arrow_up
-                                            : Icons.keyboard_arrow_down,
+                                        showCreateNewLocationForm ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                                         size: 20,
                                         color: Colors.grey[600],
                                       ),
@@ -1027,9 +1035,7 @@ class _LocationSelecDropDownState extends State<_LocationSelecDropDown> {
                                         child: FusionButton(
                                           height: 32,
                                           label: "Add",
-                                          isActive:
-                                              _areaNameController.text.trim().isNotEmpty &&
-                                              _selectedFloorId.isNotEmpty,
+                                          isActive: _areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
                                           onTap: () {
                                             _createNewArea(floorId: _selectedFloorId);
                                           },
@@ -1073,10 +1079,7 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
 
     if (widget.selectedItem.type == SelectedItemType.zone) {
       final List<String> selectedListeningAreaIds =
-          projectViewModel
-              .getListeningAreasForZone(zoneId: widget.selectedItem.id)
-              .map((ListeningArea e) => e.id)
-              .toList();
+          projectViewModel.getListeningAreasForZone(zoneId: widget.selectedItem.id).map((ListeningArea e) => e.id).toList();
 
       if (selectedListeningAreaIds.contains(areaID)) {
         selectedListeningAreaIds.remove(areaID);
@@ -1090,10 +1093,7 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
       );
     } else {
       final List<String> selectedListeningAreaIds =
-          projectViewModel
-              .getListeningAreasInSubZone(subZoneId: widget.selectedItem.id)
-              .map((ListeningArea e) => e.id)
-              .toList();
+          projectViewModel.getListeningAreasInSubZone(subZoneId: widget.selectedItem.id).map((ListeningArea e) => e.id).toList();
 
       if (selectedListeningAreaIds.contains(areaID)) {
         selectedListeningAreaIds.remove(areaID);
@@ -1140,16 +1140,10 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
                 }
 
                 return FusionAppText(
-                  text:
-                      listeningAreas.isEmpty
-                          ? "Select Location"
-                          : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
+                  text: listeningAreas.isEmpty ? "Select Location" : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
                   maxLine: 1,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:
-                        listeningAreas.isEmpty
-                            ? Theme.of(context).colorScheme.greyDark
-                            : Theme.of(context).textTheme.bodySmall?.color,
+                    color: listeningAreas.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
                   ),
                 );
               },
@@ -1264,10 +1258,7 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
                                     }
 
                                     return InkWell(
-                                      onTap:
-                                          isAlreadySelectedInZone || isAvailable
-                                              ? () => onLocationSaveTap(area.id, popupSetState)
-                                              : null,
+                                      onTap: isAlreadySelectedInZone || isAvailable ? () => onLocationSaveTap(area.id, popupSetState) : null,
                                       child: Container(
                                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                                         child: Row(
@@ -1280,9 +1271,7 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
                                                 value: !isAvailable ? true : isAlreadySelectedInZone,
                                                 activeColor: Theme.of(context).colorScheme.greyDark,
                                                 onChanged:
-                                                    !isAvailable && !isAlreadySelectedInZone
-                                                        ? null
-                                                        : (bool? v) => onLocationSaveTap(area.id, popupSetState),
+                                                    !isAvailable && !isAlreadySelectedInZone ? null : (bool? v) => onLocationSaveTap(area.id, popupSetState),
                                                 materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                 visualDensity: VisualDensity.compact,
                                                 shape: const RoundedRectangleBorder(
@@ -1296,10 +1285,7 @@ class _CreateZoneListeningAreaSelectorDropDownState extends State<_CreateZoneLis
                                             /// Area and zone names
                                             Expanded(
                                               child: FusionAppText(
-                                                text:
-                                                    area.name.isNotEmpty
-                                                        ? "${floorName?.name}/${area.name}"
-                                                        : 'Unnamed Area',
+                                                text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   fontWeight: FontWeight.w500,
                                                   fontSize: 10,

@@ -32,11 +32,9 @@ extension ProjectManagerMethods on CircuitController {
               ((canvasSize ?? const Size(100, 100)) * 0.25),
             ),
       );
-      setState(
-        updateCanvasState.select(element),
-      );
+      setState(updateCanvasState.select(element), notifyToPM: false);
     } else {
-      setState(state.idle());
+      setState(state.idle(), notifyToPM: false);
     }
   }
 
@@ -49,6 +47,8 @@ extension ProjectManagerMethods on CircuitController {
         getType(element),
       );
     } else {
+      if (projectManager.selectedDevice?.id == null) return;
+
       projectManager.setSelectedDevice(null, null);
     }
   }

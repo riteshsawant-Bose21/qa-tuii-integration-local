@@ -40,7 +40,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
   void _initializePossibleConnections() {
     possibleConnections.clear();
     final List<CircuitComponent> allComponents =
-        widget.componentDB.getAllComponents();
+        widget.controller.state.components;
     for (final CircuitComponent component in allComponents) {
       if (component.id == widget.port.parent.id) {
         continue;
@@ -120,13 +120,16 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
             titleBuilder:
                 (BuildContext context, bool isExpanded) => Row(
                   children: <Widget>[
+                    const SizedBox(
+                      width: 10,
+                    ),
                     Icon(
                       isExpanded ? Icons.arrow_drop_down : Icons.arrow_drop_up,
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        component.data.label,
+                        _buildName(component),
                         style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
@@ -140,7 +143,9 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
                 for (final CircuitPort port
                     in possibleConnections[component]!) ...<Widget>[
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                    ),
                     child: InkWell(
                       onTap: () {
                         widget.controller.addWire(
@@ -189,12 +194,22 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
               ],
             ),
           ),
+          const SizedBox(
+            height: 10,
+          ),
         ],
         const SizedBox(
           height: 20,
         ),
       ],
     );
+  }
+
+  String _buildName(CircuitComponent component) {
+    final String label2 = component.data.label;
+    final String parentName =
+        component.parent == null ? "" : "${_buildName(component.parent!)} > ";
+    return parentName + label2;
   }
 }
 
