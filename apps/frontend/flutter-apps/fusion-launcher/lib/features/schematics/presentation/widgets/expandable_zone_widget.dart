@@ -652,7 +652,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           ..._projectViewModel.getAvailableListeningAreasForSubZone(parentZoneId: zoneId),
           ...newlyCreatedAreas.map((Map<String, dynamic> e) => e['area'] as ListeningArea),
         ];
-        List<String> selectedListeningAreaIds = List<String>.from(_selectedListeningAreaIds);
+        final List<String> selectedListeningAreaIds = List<String>.from(_selectedListeningAreaIds);
 
         /// Combine assigned areas and available areas to show all
         final List<ListeningArea> allAreas = <ListeningArea>[

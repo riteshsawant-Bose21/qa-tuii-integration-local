@@ -23,6 +23,7 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_page/pages/configuration_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -467,9 +468,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       /// Config tab without docking area
       const FusionDockableArea(
         tabKey: "configuration_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: AudioSystemDesignPage(),
+        showLeft: true,
+        showRight: true,
+        mainArea: ConfigurationPage(),
         dockItemList: <DockItemConfig>[],
       ),
 

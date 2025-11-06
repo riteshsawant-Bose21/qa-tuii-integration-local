@@ -32,6 +32,7 @@ enum ToolbarMode { acoustics, system }
 
 enum SelectedItemType {
   source,
+  sourceSet,
   endpoint,
   processor,
   amplifier,
@@ -323,6 +324,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
           break;
         case SelectedItemType.subzone:
           projectManager.removeSubZone(_selectedDevice!.id);
+          break;
+        case SelectedItemType.sourceSet:
+          projectManager.removeSourceSet(_selectedDevice!.id);
           break;
       }
       clearSelections();
