@@ -188,6 +188,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
         return;
       }
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Failed to delete project: $e");
       emit(ProjectError(message: "Failed to delete project: $e"));
     }
   }
