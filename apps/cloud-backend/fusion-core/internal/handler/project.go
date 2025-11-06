@@ -10,7 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const ()
+const (
+	projectNotFoundMsg     = "project not found"
+	userNotFoundMsg        = "user not found"
+	internalServerErr      = "Internal server error"
+	sqlNoRowsErr           = "sql: no rows in result set"
+	userAlreadyAssignedMsg = "user is already assigned to the project"
+	userNotAssignedMsg     = "user not assigned to the project"
+)
 
 // ProjectHandler handles HTTP requests for project management.
 type ProjectHandler struct {
@@ -31,9 +38,9 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Produce json
 // @Param body body types.ProjectCreateRequest true "Project details"
 // @Success 201 {object} types.ProjectCreateResponse "Successfully created project"
-// @Failure 400 {object} map[string]string "Bad request - Invalid payload"
-// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
+// @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	var p types.ProjectCreateRequest
@@ -41,12 +48,15 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 		return
 	}
-	if err := h.project.CreateProject(ctx, &p); err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+
+	response, err := h.project.CreateProject(ctx, &p)
+
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, p)
+	ctx.JSON(http.StatusCreated, response)
 }
 
 // GetProjects retrieves all projects.
@@ -59,35 +69,35 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Param sort_by query string false "Field to sort projects by (e.g., created_at, updated_at)"
 // @Param sort_order query string false "Sort order (ascending or descending)" Enums(asc, desc)
 // @Success 200 {object} types.GetAllProjectsResponse "Successfully retrieved all projects"
-// @Failure 400 {object} map[string]string "Bad request - Invalid query parameters"
-// @Failure 401 {object} map[string]string "Unauthorized do perform this action"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid query parameters"
+// @Failure 401 {object} types.UnauthorizedError "Unauthorized do perform this action"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
 	params := types.GetAllProjectsParams{}
 	if err := ctx.ShouldBindQuery(&params); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 		return
 	}
 
 	if params.SortBy == "" {
 		params.SortBy = "updated_at"
 	} else if params.SortBy != "created_at" && params.SortBy != "updated_at" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort_by parameter"})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "Invalid sort_by parameter"})
 		return
 	}
 
 	if params.SortOrder == "" {
 		params.SortOrder = "desc"
 	} else if params.SortOrder != "asc" && params.SortOrder != "desc" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid sort_order parameter"})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "Invalid sort_order parameter"})
 		return
 	}
 
 	response, err := h.project.GetAllProjects(ctx, &params)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: err.Error()})
 		return
 	}
 
@@ -100,68 +110,31 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param id path string true "Project ID"
+// @Param projectId path string true "Project ID"
 // @Param body body types.ProjectUpdateRequest true "Updated project details"
 // @Success 200 {object} types.ProjectUpdateResponse "Successfully created project"
-// @Failure 400 {object} map[string]string "Bad request - Invalid payload"
-// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
-// @Failure 404 {object} map[string]string "Project not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /projects/{id} [patch]
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
+// @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
+// @Failure 404 {object} types.NotFoundError "Project not found"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Router /projects/{projectId} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
-	id := ctx.Param("id")
-	var p types.ProjectUpdateRequest
-	if err := ctx.ShouldBindJSON(&p); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	// Validate UUIDs
-	if !validation.IsValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
-		return
-	}
-
-	// TODO: Remove when auth is implemented
-	if !validation.IsValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
-		return
-	}
-
+	id := ctx.Param("projectId")
 	var p types.ProjectUpdateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
 		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	// Validate request
-	if err := validation.ValidateProjectUpdateRequest(&p); err != nil {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
-		return
-	}
-
-	// Use authenticated update method which includes all validations
-	response, err := h.project.UpdateProject(ctx, projectID, userID, &p)
+	response, err := h.project.UpdateProject(ctx, id, &p)
 	if err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: err.Error()})
-			return
-		}
-
-		if err.Error() == types.ErrMsgUserNotFound {
-			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: err.Error()})
-		}
-
-		// Check if it's authorization errors
-		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
-			err.Error() == types.ErrMsgProjectArchived ||
-			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) {
-			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: err.Error()})
+		if err.Error() == projectNotFoundMsg || err.Error() == sqlNoRowsErr {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: "Project not found"})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
 		return
 	}
 	ctx.JSON(http.StatusOK, response)
@@ -175,47 +148,90 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Produce json
 // @Param projectId path string true "Project ID"
 // @Success 204 "Successfully deleted project"
-// @Failure 401 {object} map[string]string "Unauthorized to perform this action"
-// @Failure 404 {object} map[string]string "Project not found"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /projects/{id} [delete]
+// @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
+// @Failure 404 {object} types.NotFoundError "Project not found"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Router /projects/{projectId} [delete]
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
-	projectID := ctx.Param("projectId")
-	userID := ctx.Query("user_id")
-
-	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
-		return
-	}
-
-	// Validate UUIDs
-	if !validation.IsValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
-		return
-	}
-	if !validation.IsValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
-		return
-	}
-
-	if err := h.project.DeleteProject(ctx, projectID, userID); err != nil {
+	id := ctx.Param("projectId")
+	if err := h.project.DeleteProject(ctx, id); err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: err.Error()})
-			return
-		}
-
-		// Check if it's authorization errors
-		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
-			err.Error() == types.ErrMsgUserNotFound ||
-			err.Error() == types.ErrMsgProjectArchived ||
-			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) {
-			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: err.Error()})
+		if err.Error() == projectNotFoundMsg || err.Error() == sqlNoRowsErr {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: "Project not found"})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
 		return
 	}
 	ctx.JSON(204, nil)
+}
+
+// AssignUserToProject assigns a user to a project.
+// @Summary Assign a user to a project
+// @Description Assign a user to a project by project ID and user email
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param projectId path string true "Project ID"
+// @Param userEmail path string true "User Email"
+// @Success 204 "User successfully assigned to the project"
+// @Failure 404 {object} types.NotFoundError "Project or User not found"
+// @Failure 409 {object} types.ConflictError "User is already assigned to the project"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Router /projects/{projectId}/users/{userEmail} [put]
+func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
+	projectID := ctx.Param("projectId")
+	userEmail := ctx.Param("userEmail")
+
+	_, err := h.project.AssignUserToProjectByEmail(ctx, projectID, userEmail)
+	if err != nil {
+		errorMsg := err.Error()
+		// Check for specific error types
+		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		if errorMsg == userAlreadyAssignedMsg {
+			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
+}
+
+// RemoveUserFromProject removes a user from a project.
+// @Summary Remove a user from a project
+// @Description Remove a user from a project by project ID and user email
+// @Tags projects
+// @Accept json
+// @Produce json
+// @Param projectId path string true "Project ID"
+// @Param userEmail path string true "User Email"
+// @Success 204 "User successfully removed from the project"
+// @Failure 404 {object} types.NotFoundError "Project or User not found, or user not assigned to the project"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Router /projects/{projectId}/users/{userEmail} [delete]
+func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
+	projectID := ctx.Param("projectId")
+	userEmail := ctx.Param("userEmail")
+
+	_, err := h.project.RemoveUserFromProjectByEmail(ctx, projectID, userEmail)
+	if err != nil {
+		errorMsg := err.Error()
+		// Check for specific error types
+		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg || errorMsg == userNotAssignedMsg {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+
+	ctx.JSON(http.StatusNoContent, nil)
 }

@@ -105,14 +105,14 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
-	s3Handler, err := cloudfs.NewS3Client(context.Background(), "", "", "us-east2")
+	s3Handler, err := cloudfs.NewS3Client(context.Background())
 
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
 	logger.Info("Initialized S3 client")
 
-	presignHandler := s3Handler.Bucket("bose-test")
+	presignHandler := s3Handler.Bucket("bose.cloud-backend.test")
 
 	// Initialize Project DB Service
 	projectDBSvc := projectdb.NewService(pgs)

@@ -6,28 +6,29 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/aarondl/null/v8"
+	boilerTypes "github.com/aarondl/sqlboiler/v4/types"
+	"github.com/ericlagergren/decimal"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNewProject(t *testing.T) {
 	t.Run("successfully creates project from valid row", func(t *testing.T) {
 		row := &model.Project{
-			ID:                    "test-id",
-			PrimaryOwnerAccountID: 123,
-			Name:                  null.NewString("Test Project", true),
-			Description:           null.NewString("Test Description", true),
-			Venue:                 null.NewString("Test Venue", true),
-			EnvironmentType:       null.NewString("Indoor", true),
-			Application:           null.NewString("Test App", true),
-			BudgetAmount:          1000.0,
-			Currency:              null.NewString("USD", true),
+			ID:                 "test-id",
+			PrimaryOwnerUserID: null.NewString("123", true),
+			Name:               null.NewString("Test Project", true),
+			Description:        null.NewString("Test Description", true),
+			Venue:              null.NewString("Test Venue", true),
+			EnvironmentType:    null.NewString("Indoor", true),
+			Application:        null.NewString("Test App", true),
+			BudgetAmount:       boilerTypes.NewNullDecimal(decimal.New(1000, 0)),
+			Currency:           null.NewString("USD", true),
 		}
 
 		project, err := newProject(row)
 		assert.NoError(t, err)
 		assert.NotNil(t, project)
 		assert.Equal(t, row.ID, project.ID)
-		assert.Equal(t, "123", project.AccountID)
 		assert.Equal(t, row.Name.String, project.Name)
 		assert.Equal(t, row.Description.String, project.Description)
 		assert.Equal(t, row.Venue.String, project.Venue)
@@ -39,15 +40,15 @@ func TestNewProject(t *testing.T) {
 
 	t.Run("successfully creates project with null fields", func(t *testing.T) {
 		row := &model.Project{
-			ID:                    "test-id",
-			PrimaryOwnerAccountID: 123,
-			Name:                  null.NewString("Test Project", true),
-			Description:           null.NewString("", false),
-			Venue:                 null.NewString("", false),
-			EnvironmentType:       null.NewString("", false),
-			Application:           null.NewString("", false),
-			BudgetAmount:          1000.0,
-			Currency:              null.NewString("", false),
+			ID:                 "test-id",
+			PrimaryOwnerUserID: null.NewString("123", true),
+			Name:               null.NewString("Test Project", true),
+			Description:        null.NewString("", false),
+			Venue:              null.NewString("", false),
+			EnvironmentType:    null.NewString("", false),
+			Application:        null.NewString("", false),
+			BudgetAmount:       boilerTypes.NewNullDecimal(decimal.New(1000, 0)),
+			Currency:           null.NewString("", false),
 		}
 
 		project, err := newProject(row)

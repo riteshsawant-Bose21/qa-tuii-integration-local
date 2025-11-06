@@ -30,6 +30,8 @@ type S3 struct {
 
 func NewS3Client(ctx context.Context) (*S3, error) {
 
+func NewS3Client(ctx context.Context) (*S3, error) {
+
 	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
@@ -40,7 +42,6 @@ func NewS3Client(ctx context.Context) (*S3, error) {
 	return &S3{
 		client:        client,
 		presignClient: s3.NewPresignClient(client),
-		config:        awsconfig,
 	}, nil
 }
 

@@ -13,15 +13,17 @@ import (
 )
 
 const (
-	testProjectID          = "test-id"
-	testProjectName        = "Test Project"
-	testProjectDesc        = "Test Description"
-	testProjectVenue       = "Test Venue"
-	testProjectEnvType     = types.EnvironmentTypeIndoor
-	testProjectPhase       = types.ProjectPhaseProposal
-	testProjectApp         = "Test App"
-	testProjectAccountID   = "123"
-	testSelectProjectsStmt = "SELECT .*"
+	testProjectID             = "123e4567-e89b-12d3-a456-426614174000"
+	testProjectName           = "Test Project"
+	testProjectDesc           = "Test Description"
+	testProjectVenue          = "Test Venue"
+	testProjectEnvType        = types.EnvironmentTypeIndoor
+	testProjectPhase          = types.ProjectPhaseProposal
+	testProjectApp            = "Test App"
+	testProjectAccountID      = "123"
+	testSelectProjectsStmt    = "SELECT .*"
+	testInsertProjectStmt     = "INSERT INTO \"project\""
+	testInsertProjectUserStmt = "INSERT INTO \"project_user\""
 )
 
 func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
@@ -55,7 +57,7 @@ func TestServiceInsert(t *testing.T) {
 	t.Run("successfully inserts project", func(t *testing.T) {
 		project := &types.ProjectCreateRequest{
 			ID:              testProjectID,
-			AccountID:       testProjectAccountID,
+			UserID:          testProjectAccountID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Venue:           testProjectVenue,
@@ -68,25 +70,195 @@ func TestServiceInsert(t *testing.T) {
 			},
 		}
 
-		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
-			AddRow(false, false, nil)
-		mock.ExpectQuery("INSERT INTO \"project\"").WillReturnRows(returnRows)
+		// Mock transaction operations
+		mock.ExpectBegin()
 
-		err := service.Insert(ctx, project)
+		// Mock project insert
+		mock.ExpectExec(testInsertProjectStmt).
+			WithArgs(testProjectID, 123, testProjectName, testProjectDesc, testProjectVenue,
+				string(testProjectEnvType), string(testProjectPhase), testProjectApp,
+				1000.0, "USD", sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(1, 1))
+
+		// Mock project user insert
+		mock.ExpectExec(testInsertProjectUserStmt).
+			WithArgs(testProjectID, testProjectAccountID, sqlmock.AnyArg(), sqlmock.AnyArg()).
+			WillReturnResult(sqlmock.NewResult(1, 1)) // Mock commit
+		mock.ExpectCommit()
+
+		id, err := service.Insert(ctx, project)
 		assert.NoError(t, err)
+		assert.Equal(t, testProjectID, id)
+
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("successfully inserts project with generated ID", func(t *testing.T) {
+		project := &types.ProjectCreateRequest{
+			// ID is empty, should be generated
+			UserID:          testProjectAccountID,
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Venue:           testProjectVenue,
+			EnvironmentType: testProjectEnvType,
+			ProjectPhase:    testProjectPhase,
+			Application:     testProjectApp,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+
+		// Mock transaction operations
+		mock.ExpectBegin()
+		mock.ExpectExec(testInsertProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec(testInsertProjectUserStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit()
+
+		id, err := service.Insert(ctx, project)
+		assert.NoError(t, err)
+		assert.NotEmpty(t, id)
+		assert.NotEqual(t, "", id)
+
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
 	t.Run("returns error when project is nil", func(t *testing.T) {
-		err := service.Insert(ctx, nil)
+		id, err := service.Insert(ctx, nil)
 		assert.Error(t, err)
+		assert.Empty(t, id)
+		assert.Contains(t, err.Error(), "validation failed")
 	})
 
 	t.Run("returns error when account ID is invalid", func(t *testing.T) {
 		project := &types.ProjectCreateRequest{
-			AccountID: "invalid",
+			UserID: "invalid",
 		}
-		err := service.Insert(ctx, project)
+		id, err := service.Insert(ctx, project)
 		assert.Error(t, err)
+		assert.Empty(t, id)
+		assert.Contains(t, err.Error(), "failed to convert account ID to int")
+	})
+
+	t.Run("rolls back transaction on project insert failure", func(t *testing.T) {
+		project := &types.ProjectCreateRequest{
+			ID:              testProjectID,
+			UserID:          testProjectAccountID,
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Venue:           testProjectVenue,
+			EnvironmentType: testProjectEnvType,
+			ProjectPhase:    testProjectPhase,
+			Application:     testProjectApp,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+
+		// Mock transaction operations
+		mock.ExpectBegin()
+		mock.ExpectExec(testInsertProjectStmt).WillReturnError(assert.AnError)
+		mock.ExpectRollback()
+
+		id, err := service.Insert(ctx, project)
+		assert.Error(t, err)
+		assert.Empty(t, id)
+		assert.Contains(t, err.Error(), "failed to insert project")
+
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("rolls back transaction on project user insert failure", func(t *testing.T) {
+		project := &types.ProjectCreateRequest{
+			ID:              testProjectID,
+			UserID:          testProjectAccountID,
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Venue:           testProjectVenue,
+			EnvironmentType: testProjectEnvType,
+			ProjectPhase:    testProjectPhase,
+			Application:     testProjectApp,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+
+		// Mock transaction operations
+		mock.ExpectBegin()
+		mock.ExpectExec(testInsertProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec(testInsertProjectUserStmt).WillReturnError(assert.AnError)
+		mock.ExpectRollback()
+
+		id, err := service.Insert(ctx, project)
+		assert.Error(t, err)
+		assert.Empty(t, id)
+		assert.Contains(t, err.Error(), "failed to insert project user")
+
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error when begin transaction fails", func(t *testing.T) {
+		project := &types.ProjectCreateRequest{
+			ID:              testProjectID,
+			UserID:          testProjectAccountID,
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Venue:           testProjectVenue,
+			EnvironmentType: testProjectEnvType,
+			ProjectPhase:    testProjectPhase,
+			Application:     testProjectApp,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+
+		mock.ExpectBegin().WillReturnError(assert.AnError)
+
+		id, err := service.Insert(ctx, project)
+		assert.Error(t, err)
+		assert.Empty(t, id)
+		assert.Contains(t, err.Error(), "failed to begin transaction")
+
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
+	})
+
+	t.Run("returns error when commit fails", func(t *testing.T) {
+		project := &types.ProjectCreateRequest{
+			ID:              testProjectID,
+			UserID:          testProjectAccountID,
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Venue:           testProjectVenue,
+			EnvironmentType: testProjectEnvType,
+			ProjectPhase:    testProjectPhase,
+			Application:     testProjectApp,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+
+		// Mock transaction operations
+		mock.ExpectBegin()
+		mock.ExpectExec(testInsertProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec(testInsertProjectUserStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectCommit().WillReturnError(assert.AnError)
+
+		id, err := service.Insert(ctx, project)
+		assert.Error(t, err)
+		assert.Empty(t, id)
+		assert.Contains(t, err.Error(), "failed to commit transaction")
+
+		// Verify all expectations were met
+		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 }
 
@@ -156,15 +328,18 @@ func TestServiceUpdate(t *testing.T) {
 		mock.ExpectQuery(testSelectProjectsStmt).WillReturnRows(rows)
 		mock.ExpectExec("UPDATE \"project\"").WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.Update(ctx, testProjectID, updateReq)
+		project, err := service.Update(ctx, testProjectID, updateReq)
 		assert.NoError(t, err)
+		assert.NotNil(t, project)
+		assert.Equal(t, testProjectID, project.ID)
 	})
 
 	t.Run("returns error when project not found", func(t *testing.T) {
 		mock.ExpectQuery(testSelectProjectsStmt).WillReturnError(sql.ErrNoRows)
 
-		err := service.Update(ctx, "non-existent", &types.ProjectUpdateRequest{})
+		project, err := service.Update(ctx, "non-existent", &types.ProjectUpdateRequest{})
 		assert.Error(t, err)
+		assert.Nil(t, project)
 	})
 }
 

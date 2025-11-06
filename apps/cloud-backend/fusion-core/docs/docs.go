@@ -153,19 +153,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid query parameters",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized do perform this action",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.UnauthorizedError"
                         }
                     },
                     "500": {
@@ -209,16 +203,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "401": {
                         "description": "Unauthorized to perform this action",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
+                            "$ref": "#/definitions/types.UnauthorizedError"
                         }
                     },
                     "500": {
@@ -230,7 +221,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/projects/{id}": {
+        "/projects/{projectId}": {
             "delete": {
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
@@ -259,26 +250,11 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized to perform this action",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.UnauthorizedError"
                         }
                     },
                     "404": {
                         "description": "Project not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
-                        }
-                    },
-                    "404": {
-                        "description": "Project or user not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -334,157 +310,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
-                        }
-                    },
                     "401": {
                         "description": "Unauthorized to perform this action",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project or project locked by another user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.UnauthorizedError"
                         }
                     },
                     "404": {
                         "description": "Project not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
-                        }
-                    }
-                }
-            }
-        },
-        "/projects/{projectId}/lock": {
-            "post": {
-                "description": "Lock or unlock a project for a specific user based on request body",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Update project lock status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Lock/unlock request",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.ProjectLockRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully updated project lock status"
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid payload",
-                        "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project or project already locked by another user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
-                        }
-                    },
-                    "404": {
-                        "description": "Project not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
-                        }
-                    }
-                }
-            }
-        },
-        "/projects/{projectId}/star/{userId}": {
-            "post": {
-                "description": "Star or unstar a project for a specific user based on request body",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Update project star status",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "userId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Star/unstar request",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.ProjectStarRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully updated project star status"
-                    },
-                    "400": {
-                        "description": "Bad request - Invalid payload",
-                        "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
-                        }
-                    },
-                    "404": {
-                        "description": "Project or User not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -535,6 +368,12 @@ const docTemplate = `{
                         "description": "Project or User not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "409": {
+                        "description": "User is already assigned to the project",
+                        "schema": {
+                            "$ref": "#/definitions/types.ConflictError"
                         }
                     },
                     "500": {
@@ -631,12 +470,35 @@ const docTemplate = `{
                 }
             }
         },
-        "types.Budget": {
+        "types.BadRequestError": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "Bad Request"
+                    "example": "Invalid input data"
+                }
+            }
+        },
+        "types.Budget": {
+            "type": "object",
+            "required": [
+                "currency"
+            ],
+            "properties": {
+                "amount": {
+                    "type": "integer"
+                },
+                "currency": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.ConflictError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "User is already assigned to the project"
                 }
             }
         },
@@ -861,6 +723,24 @@ const docTemplate = `{
                 }
             }
         },
+        "types.InternalServerError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Internal Server Error"
+                }
+            }
+        },
+        "types.NotFoundError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Project not found"
+                }
+            }
+        },
         "types.ProductResponse": {
             "type": "object",
             "properties": {
@@ -887,9 +767,6 @@ const docTemplate = `{
         "types.Project": {
             "type": "object",
             "properties": {
-                "account_id": {
-                    "type": "string"
-                },
                 "application": {
                     "type": "string",
                     "example": "Audio System Design"
@@ -967,18 +844,25 @@ const docTemplate = `{
         },
         "types.ProjectCreateRequest": {
             "type": "object",
+            "required": [
+                "application",
+                "budget",
+                "environment_type",
+                "name",
+                "user_id"
+            ],
             "properties": {
-                "account_id": {
-                    "type": "string"
-                },
                 "application": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 1000
                 },
                 "environment_type": {
                     "$ref": "#/definitions/types.EnvironmentType"
@@ -990,13 +874,20 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "project_phase": {
                     "$ref": "#/definitions/types.ProjectPhase"
                 },
+                "user_id": {
+                    "type": "string",
+                    "minLength": 1
+                },
                 "venue": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -1028,16 +919,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "account_id": {
-                    "type": "string"
+                    "type": "string",
+                    "minLength": 1
                 },
                 "application": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 1000
                 },
                 "environment_type": {
                     "$ref": "#/definitions/types.EnvironmentType"
@@ -1058,13 +953,16 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1
                 },
                 "project_phase": {
                     "$ref": "#/definitions/types.ProjectPhase"
                 },
                 "venue": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
@@ -1169,6 +1067,15 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
+                }
+            }
+        },
+        "types.UnauthorizedError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Unauthorized"
                 }
             }
         },

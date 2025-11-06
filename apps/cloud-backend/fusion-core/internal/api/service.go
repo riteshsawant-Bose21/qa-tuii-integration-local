@@ -25,7 +25,6 @@ type Config struct {
 	Port string
 }
 
-
 // New returns a new API from the given services.
 func New(cfg *Config,
 	product fusion.Product,

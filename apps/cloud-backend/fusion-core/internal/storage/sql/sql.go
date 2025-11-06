@@ -3,6 +3,8 @@ package sql
 import (
 	"database/sql"
 	"fmt"
+
+	"github.com/aarondl/sqlboiler/v4/boil"
 )
 
 // New creates a new SQL database connection.
@@ -22,7 +24,9 @@ func New(
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping postgres database: %w", err)
 	}
+	boil.SetDB(db)
 
+	boil.DebugMode = true
 	return db, nil
 }
 
