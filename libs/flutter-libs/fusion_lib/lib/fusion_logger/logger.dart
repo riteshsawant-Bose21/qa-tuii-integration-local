@@ -123,18 +123,14 @@ class FusionLogger {
       /// setup the log file if it doesn't set already
       ///
       if (_logFile == null) {
-        print("Setting up log file ");
         await _setupLogFile();
       }
-      print("Writing Log to file : $logString with path : ${_logFile?.path}");
+
       try {
         final String data = "$logString\n";
         final RandomAccessFile file = await _logFile!.open(mode: FileMode.append);
         await file.writeString(data);
         await file.close();
-
-        print("Wrote Log to file : $logString");
-        print("file path : ${_logFile!.path}");
 
         /// check if file size is exceeding the limit, if yes, rotate the file
         await _checkAndRotateLogFile();
@@ -180,8 +176,6 @@ class FusionLogger {
     final directory = Directory.systemTemp.createTempSync();
     final logsDir = await FusionUtils.getOrCreateDirectory(logsDirectory);
     final logsFiles = await FusionUtils.contentsOfDirectory(logsDir);
-
-    print("Logs files : $logsFiles");
 
     List<File> logs = [];
     if (logsFiles.isNotEmpty) {
