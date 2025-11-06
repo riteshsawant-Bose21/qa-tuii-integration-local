@@ -1,6 +1,7 @@
 import 'package:collection/collection.dart';
 import 'package:flutter/widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
+import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 
 import '../dto/pb_item_param.dart';
 import '../view/widgets/widgets.dart';
@@ -43,6 +44,16 @@ class PbWidgets {
       builder: (BuildContext context, PBItem item) => PBGraph(item: item),
       paramFactory: PBGraphParam.fromMap,
     ),
+    PbWidgets(
+      type: 'meter',
+      builder: (BuildContext context, PBItem item) => PBMeter(item: item),
+      paramFactory: PBMeterParam.fromMap,
+    ),
+    // PbWidgets(
+    //   type: 'radio',
+    //   builder: (BuildContext context, PBItem item) => PBRadio(item: item),
+    //   paramFactory: PBMeterParam.fromMap,
+    // ),
   ];
 
   static PbWidgets? getFor(String type) {

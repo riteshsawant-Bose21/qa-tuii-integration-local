@@ -35,4 +35,9 @@ class PBMeterParam extends PBItemParam {
 
   @override
   int get hashCode => label.hashCode ^ min.hashCode ^ max.hashCode;
+
+  @override
+  PBItemParam loadMap(Map<String, dynamic> map) {
+    return PBMeterParam.fromMap(map);
+  }
 }
