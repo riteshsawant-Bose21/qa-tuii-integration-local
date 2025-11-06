@@ -25,7 +25,6 @@ import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
-import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
@@ -60,7 +59,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematics'),
-    Tab(text: 'Zone config'),
     Tab(text: 'Budget'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
@@ -454,14 +452,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             ],
           );
         },
-      ),
-
-      const FusionDockableArea(
-        tabKey: "zone_config_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: ZoneCircuitConfigPage(),
-        dockItemList: <DockItemConfig>[],
       ),
 
       /// budget tab with docking area
