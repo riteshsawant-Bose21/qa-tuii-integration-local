@@ -16,7 +16,7 @@ class PBMeterParam extends PBItemParam {
   }
 
   factory PBMeterParam.fromMap(Map<dynamic, dynamic> map) {
-    return PBMeterParam(label: map['label'] as String, min: map['min'] as num, max: map['max'] as num);
+    return PBMeterParam(label: map['label'] ?? "", min: map['min'] ?? 0, max: map['max'] ?? 100);
   }
 
   String toJson() => json.encode(toMap());

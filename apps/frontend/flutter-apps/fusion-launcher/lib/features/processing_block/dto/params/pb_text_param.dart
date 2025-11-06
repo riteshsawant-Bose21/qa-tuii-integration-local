@@ -13,7 +13,7 @@ class PBTextParam extends PBItemParam {
     return <String, dynamic>{'label': label};
   }
 
-  factory PBTextParam.fromMap(Map<String, dynamic> map) {
+  factory PBTextParam.fromMap(Map<dynamic, dynamic> map) {
     return PBTextParam(label: (map['label'] ?? '') as String);
   }
 

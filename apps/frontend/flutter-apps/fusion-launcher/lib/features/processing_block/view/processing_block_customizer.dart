@@ -23,66 +23,71 @@ class ProcessingBlockCustomizer extends StatelessWidget {
           ),
           Expanded(
             flex: 5,
-            child: Container(
-              color: Colors.white,
-              child: LayoutBuilder(
-                builder: (BuildContext context, BoxConstraints constraints) {
-                  final double wpc = constraints.maxWidth / 100;
-                  return Consumer<PbcViewmodel>(
-                    builder: (BuildContext context, PbcViewmodel viewModel, Widget? child) {
-                      return FusionKeyboardWrapper(
-                        onDelete: () {
-                          viewModel.delete();
-                        },
-                        onDown: () {
-                          viewModel.move(const Offset(0, 1));
-                        },
-                        onLeft: () {
-                          viewModel.move(const Offset(-1, 0));
-                        },
-                        onRight: () {
-                          viewModel.move(const Offset(1, 0));
-                        },
-                        onUp: () {
-                          viewModel.move(const Offset(0, -1));
-                        },
-                        child: DragTarget<String>(
-                          onAcceptWithDetails: (DragTargetDetails<String> details) {
-                            viewModel.addItem(details.data, details.offset / wpc);
-                          },
-                          builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
-                            return Stack(
-                              children: <Widget>[
-                                for (final PBItem child in viewModel.items)
-                                  Positioned(
-                                    left: wpc * child.x,
-                                    top: wpc * child.y,
-                                    child: SizedBox(
-                                      width: wpc * child.width,
-                                      height: wpc * child.height,
-                                      child: InkWell(
-                                        onTap: () {
-                                          viewModel.selected = child;
-                                        },
+            child: Center(
+              child: AspectRatio(
+                aspectRatio: 840 / 368,
+                child: Container(
+                  color: Colors.white,
+                  child: LayoutBuilder(
+                    builder: (BuildContext context, BoxConstraints constraints) {
+                      final double wpc = constraints.maxHeight / 100;
+                      return Consumer<PbcViewmodel>(
+                        builder: (BuildContext context, PbcViewmodel viewModel, Widget? child) {
+                          return FusionKeyboardWrapper(
+                            onDelete: () {
+                              viewModel.delete();
+                            },
+                            onDown: () {
+                              viewModel.move(const Offset(0, 1));
+                            },
+                            onLeft: () {
+                              viewModel.move(const Offset(-1, 0));
+                            },
+                            onRight: () {
+                              viewModel.move(const Offset(1, 0));
+                            },
+                            onUp: () {
+                              viewModel.move(const Offset(0, -1));
+                            },
+                            child: DragTarget<String>(
+                              onAcceptWithDetails: (DragTargetDetails<String> details) {
+                                viewModel.addItem(details.data, details.offset / wpc);
+                              },
+                              builder: (BuildContext context, List<String?> candidateData, List<dynamic> rejectedData) {
+                                return Stack(
+                                  children: <Widget>[
+                                    for (final PBItem child in viewModel.items)
+                                      Positioned(
+                                        left: wpc * child.x,
+                                        top: wpc * child.y,
+                                        child: SizedBox(
+                                          width: wpc * child.width,
+                                          height: wpc * child.height,
+                                          child: InkWell(
+                                            onTap: () {
+                                              viewModel.selected = child;
+                                            },
 
-                                        child: AbsorbPointer(absorbing: true, child: ItemWidgetBuilder(item: child)),
+                                            child: AbsorbPointer(absorbing: true, child: ItemWidgetBuilder(item: child)),
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ),
 
-                                if (viewModel.selected != null)
-                                  _ActiveControlWidget(
-                                    active: viewModel.selected!,
-                                    widthPerCell: wpc,
-                                  ),
-                              ],
-                            );
-                          },
-                        ),
+                                    if (viewModel.selected != null)
+                                      _ActiveControlWidget(
+                                        active: viewModel.selected!,
+                                        widthPerCell: wpc,
+                                      ),
+                                  ],
+                                );
+                              },
+                            ),
+                          );
+                        },
                       );
                     },
-                  );
-                },
+                  ),
+                ),
               ),
             ),
           ),

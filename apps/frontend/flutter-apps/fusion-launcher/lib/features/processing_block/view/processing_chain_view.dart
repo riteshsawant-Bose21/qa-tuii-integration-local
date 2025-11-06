@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/processing_block/utils/pb_icons.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
+import 'processing_block_page.dart';
 import 'widgets/dotted_line.dart';
 
 class ProcessingChainView extends StatelessWidget {
@@ -10,6 +12,7 @@ class ProcessingChainView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         /// --------------------------------------------------------------------------------
         /// HEADING
@@ -64,20 +67,24 @@ class ProcessingChainView extends StatelessWidget {
                   const SizedBox(
                     width: 30,
                   ),
-                  const _PBIcon(
-                    icon: Icons.gas_meter,
+                  _PBIcon(
+                    icon: PbIcons.icon1,
                     isActive: true,
                   ),
-                  const _PBIcon(
-                    icon: Icons.graphic_eq,
+                  _PBIcon(
+                    icon: PbIcons.icon2,
                     isActive: false,
                   ),
-                  const _PBIcon(
-                    icon: Icons.grain_sharp,
+                  _PBIcon(
+                    icon: PbIcons.icon3,
                     isActive: false,
                   ),
-                  const _PBIcon(
-                    icon: Icons.account_tree_outlined,
+                  _PBIcon(
+                    icon: PbIcons.icon4,
+                    isActive: false,
+                  ),
+                  _PBIcon(
+                    icon: PbIcons.icon5,
                     isActive: false,
                   ),
                   const Spacer(),
@@ -95,29 +102,60 @@ class ProcessingChainView extends StatelessWidget {
             ],
           ),
         ),
+        const SizedBox(
+          height: 40,
+        ),
+        Row(
+          spacing: 10,
+          children: <Widget>[
+            const SizedBox(),
+            Container(
+              decoration: BoxDecoration(color: Colors.grey.withValues(alpha: 0.3), borderRadius: BorderRadius.circular(10)),
+              padding: const EdgeInsets.all(10),
+              child: Image.asset(
+                PbIcons.icon1,
+                color: Colors.black,
+                height: 18,
+                width: 18,
+              ),
+            ),
+
+            const Text(
+              "Gate",
+            ),
+            const Spacer(),
+            const Icon(Icons.more_vert),
+            const SizedBox(),
+          ],
+        ),
+        const Divider(),
+        const Flexible(child: ProcessingBlockPage()),
       ],
     );
   }
 
   static void showForSource(BuildContext context, Source source) {
-    showDialog(context: context, builder: (BuildContext context) => const Dialog(child: ProcessingChainView()));
+    showDialog(
+      context: context,
+      builder: (BuildContext context) => const Dialog(insetPadding: EdgeInsets.symmetric(horizontal: 200, vertical: 100), child: ProcessingChainView()),
+    );
   }
 }
 
 class _PBIcon extends StatelessWidget {
-  const _PBIcon({required this.icon, required this.isActive, this.isDense = false});
+  const _PBIcon({required this.icon, required this.isActive});
   final bool isActive;
-  final IconData icon;
-  final bool isDense;
+  final String icon;
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: BoxDecoration(color: isActive ? Colors.black : Colors.grey.shade400, borderRadius: BorderRadius.circular(isDense ? 5 : 10)),
-      padding: EdgeInsets.all(isDense ? 5 : 10),
-      child: Icon(
+      decoration: BoxDecoration(color: isActive ? Colors.black : Colors.grey.shade400, borderRadius: BorderRadius.circular(10)),
+      padding: const EdgeInsets.all(10),
+      child: Image.asset(
         icon,
         color: Colors.white,
-        size: isDense ? 14 : 18,
+        height: 18,
+        width: 18,
       ),
     );
   }

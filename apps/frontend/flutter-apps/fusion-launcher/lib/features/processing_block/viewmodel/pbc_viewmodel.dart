@@ -2,10 +2,15 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
+import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
+import 'package:fusion_launcher/features/processing_block/sample_data/layout_data.dart';
 
 import '../dto/pb_item_param.dart';
 
 class PbcViewmodel extends ChangeNotifier {
+  PbcViewmodel() {
+    items.addAll(PBLayout.fromMap(SampleData.sampleData).children);
+  }
   List<PBItem> items = <PBItem>[];
 
   PBItem? _selected;

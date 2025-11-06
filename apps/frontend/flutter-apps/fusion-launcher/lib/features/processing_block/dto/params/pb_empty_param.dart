@@ -2,7 +2,7 @@ part of '../pb_item_param.dart';
 
 class PBEmptyParam extends PBItemParam {
   PBEmptyParam();
-  factory PBEmptyParam.fromMap(Map<String, dynamic> map) {
+  factory PBEmptyParam.fromMap(Map<dynamic, dynamic> map) {
     return PBEmptyParam();
   }
 

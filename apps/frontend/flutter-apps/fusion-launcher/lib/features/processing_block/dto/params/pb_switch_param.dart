@@ -19,7 +19,7 @@ class PBSwitchParam extends PBItemParam {
     return <String, dynamic>{'label': label, 'enable_value_label': enableValueLabel, 'disabled_value_label': disabledValueLabel};
   }
 
-  factory PBSwitchParam.fromMap(Map<String, dynamic> map) {
+  factory PBSwitchParam.fromMap(Map<dynamic, dynamic> map) {
     return PBSwitchParam(
       label: (map['label'] ?? '') as String,
       enableValueLabel: (map['enable_value_label']) as String?,

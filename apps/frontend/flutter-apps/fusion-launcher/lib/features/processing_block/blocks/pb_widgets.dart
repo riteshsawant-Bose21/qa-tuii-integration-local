@@ -9,7 +9,7 @@ import '../view/widgets/widgets.dart';
 class PbWidgets {
   final String type;
   final Widget Function(BuildContext context, PBItem item) builder;
-  final PBItemParam Function(Map<String, dynamic> map) paramFactory;
+  final PBItemParam Function(Map<dynamic, dynamic> map) paramFactory;
 
   PbWidgets({required this.type, required this.builder, required this.paramFactory});
 
