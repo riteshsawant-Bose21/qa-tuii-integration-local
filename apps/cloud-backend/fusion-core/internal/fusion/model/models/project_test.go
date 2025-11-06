@@ -708,59 +708,59 @@ func testProjectToOneUserUsingLockedByUser(t *testing.T) {
 	}
 }
 
-func testProjectToOneAccountUsingPrimaryOwnerAccount(t *testing.T) {
+func testProjectToOneUserUsingPrimaryOwnerUser(t *testing.T) {
 	ctx := context.Background()
 	tx := MustTx(boil.BeginTx(ctx, nil))
 	defer func() { _ = tx.Rollback() }()
 
 	var local Project
-	var foreign Account
+	var foreign User
 
 	seed := randomize.NewSeed()
-	if err := randomize.Struct(seed, &local, projectDBTypes, false, projectColumnsWithDefault...); err != nil {
+	if err := randomize.Struct(seed, &local, projectDBTypes, true, projectColumnsWithDefault...); err != nil {
 		t.Errorf("Unable to randomize Project struct: %s", err)
 	}
-	if err := randomize.Struct(seed, &foreign, accountDBTypes, false, accountColumnsWithDefault...); err != nil {
-		t.Errorf("Unable to randomize Account struct: %s", err)
+	if err := randomize.Struct(seed, &foreign, userDBTypes, false, userColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize User struct: %s", err)
 	}
 
 	if err := foreign.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
 
-	local.PrimaryOwnerAccountID = foreign.ID
+	queries.Assign(&local.PrimaryOwnerUserID, foreign.ID)
 	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
 
-	check, err := local.PrimaryOwnerAccount().One(ctx, tx)
+	check, err := local.PrimaryOwnerUser().One(ctx, tx)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if check.ID != foreign.ID {
+	if !queries.Equal(check.ID, foreign.ID) {
 		t.Errorf("want: %v, got %v", foreign.ID, check.ID)
 	}
 
 	ranAfterSelectHook := false
-	AddAccountHook(boil.AfterSelectHook, func(ctx context.Context, e boil.ContextExecutor, o *Account) error {
+	AddUserHook(boil.AfterSelectHook, func(ctx context.Context, e boil.ContextExecutor, o *User) error {
 		ranAfterSelectHook = true
 		return nil
 	})
 
 	slice := ProjectSlice{&local}
-	if err = local.L.LoadPrimaryOwnerAccount(ctx, tx, false, (*[]*Project)(&slice), nil); err != nil {
+	if err = local.L.LoadPrimaryOwnerUser(ctx, tx, false, (*[]*Project)(&slice), nil); err != nil {
 		t.Fatal(err)
 	}
-	if local.R.PrimaryOwnerAccount == nil {
+	if local.R.PrimaryOwnerUser == nil {
 		t.Error("struct should have been eager loaded")
 	}
 
-	local.R.PrimaryOwnerAccount = nil
-	if err = local.L.LoadPrimaryOwnerAccount(ctx, tx, true, &local, nil); err != nil {
+	local.R.PrimaryOwnerUser = nil
+	if err = local.L.LoadPrimaryOwnerUser(ctx, tx, true, &local, nil); err != nil {
 		t.Fatal(err)
 	}
-	if local.R.PrimaryOwnerAccount == nil {
+	if local.R.PrimaryOwnerUser == nil {
 		t.Error("struct should have been eager loaded")
 	}
 
@@ -878,7 +878,7 @@ func testProjectToOneRemoveOpUserUsingLockedByUser(t *testing.T) {
 	}
 }
 
-func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
+func testProjectToOneSetOpUserUsingPrimaryOwnerUser(t *testing.T) {
 	var err error
 
 	ctx := context.Background()
@@ -886,16 +886,16 @@ func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
 	defer func() { _ = tx.Rollback() }()
 
 	var a Project
-	var b, c Account
+	var b, c User
 
 	seed := randomize.NewSeed()
 	if err = randomize.Struct(seed, &a, projectDBTypes, false, strmangle.SetComplement(projectPrimaryKeyColumns, projectColumnsWithoutDefault)...); err != nil {
 		t.Fatal(err)
 	}
-	if err = randomize.Struct(seed, &b, accountDBTypes, false, strmangle.SetComplement(accountPrimaryKeyColumns, accountColumnsWithoutDefault)...); err != nil {
+	if err = randomize.Struct(seed, &b, userDBTypes, false, strmangle.SetComplement(userPrimaryKeyColumns, userColumnsWithoutDefault)...); err != nil {
 		t.Fatal(err)
 	}
-	if err = randomize.Struct(seed, &c, accountDBTypes, false, strmangle.SetComplement(accountPrimaryKeyColumns, accountColumnsWithoutDefault)...); err != nil {
+	if err = randomize.Struct(seed, &c, userDBTypes, false, strmangle.SetComplement(userPrimaryKeyColumns, userColumnsWithoutDefault)...); err != nil {
 		t.Fatal(err)
 	}
 
@@ -906,33 +906,84 @@ func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for i, x := range []*Account{&b, &c} {
-		err = a.SetPrimaryOwnerAccount(ctx, tx, i != 0, x)
+	for i, x := range []*User{&b, &c} {
+		err = a.SetPrimaryOwnerUser(ctx, tx, i != 0, x)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if a.R.PrimaryOwnerAccount != x {
+		if a.R.PrimaryOwnerUser != x {
 			t.Error("relationship struct not set to correct value")
 		}
 
-		if x.R.PrimaryOwnerAccountProjects[0] != &a {
+		if x.R.PrimaryOwnerUserProjects[0] != &a {
 			t.Error("failed to append to foreign relationship struct")
 		}
-		if a.PrimaryOwnerAccountID != x.ID {
-			t.Error("foreign key was wrong value", a.PrimaryOwnerAccountID)
+		if !queries.Equal(a.PrimaryOwnerUserID, x.ID) {
+			t.Error("foreign key was wrong value", a.PrimaryOwnerUserID)
 		}
 
-		zero := reflect.Zero(reflect.TypeOf(a.PrimaryOwnerAccountID))
-		reflect.Indirect(reflect.ValueOf(&a.PrimaryOwnerAccountID)).Set(zero)
+		zero := reflect.Zero(reflect.TypeOf(a.PrimaryOwnerUserID))
+		reflect.Indirect(reflect.ValueOf(&a.PrimaryOwnerUserID)).Set(zero)
 
 		if err = a.Reload(ctx, tx); err != nil {
 			t.Fatal("failed to reload", err)
 		}
 
-		if a.PrimaryOwnerAccountID != x.ID {
-			t.Error("foreign key was wrong value", a.PrimaryOwnerAccountID, x.ID)
+		if !queries.Equal(a.PrimaryOwnerUserID, x.ID) {
+			t.Error("foreign key was wrong value", a.PrimaryOwnerUserID, x.ID)
 		}
+	}
+}
+
+func testProjectToOneRemoveOpUserUsingPrimaryOwnerUser(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Project
+	var b User
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, projectDBTypes, false, strmangle.SetComplement(projectPrimaryKeyColumns, projectColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &b, userDBTypes, false, strmangle.SetComplement(userPrimaryKeyColumns, userColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = a.SetPrimaryOwnerUser(ctx, tx, true, &b); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = a.RemovePrimaryOwnerUser(ctx, tx, &b); err != nil {
+		t.Error("failed to remove relationship")
+	}
+
+	count, err := a.PrimaryOwnerUser().Count(ctx, tx)
+	if err != nil {
+		t.Error(err)
+	}
+	if count != 0 {
+		t.Error("want no relationships remaining")
+	}
+
+	if a.R.PrimaryOwnerUser != nil {
+		t.Error("R struct entry should be nil")
+	}
+
+	if !queries.IsValuerNil(a.PrimaryOwnerUserID) {
+		t.Error("foreign key value should be nil")
+	}
+
+	if len(b.R.PrimaryOwnerUserProjects) != 0 {
+		t.Error("failed to remove a from b's relationships")
 	}
 }
 
@@ -1010,7 +1061,7 @@ func testProjectsSelect(t *testing.T) {
 }
 
 var (
-	projectDBTypes = map[string]string{`ID`: `uuid`, `Application`: `text`, `BudgetAmount`: `numeric`, `Currency`: `character varying`, `Description`: `text`, `Name`: `text`, `ProjectPhase`: `character varying`, `Venue`: `text`, `EnvironmentType`: `character varying`, `IsArchived`: `boolean`, `IsDeleted`: `boolean`, `LockedByUserID`: `uuid`, `PrimaryOwnerAccountID`: `integer`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`}
+	projectDBTypes = map[string]string{`ID`: `uuid`, `Application`: `text`, `BudgetAmount`: `numeric`, `Currency`: `character varying`, `Description`: `text`, `Name`: `text`, `ProjectPhase`: `character varying`, `Venue`: `text`, `EnvironmentType`: `character varying`, `IsArchived`: `boolean`, `IsDeleted`: `boolean`, `LockedByUserID`: `uuid`, `CreatedAt`: `timestamp without time zone`, `UpdatedAt`: `timestamp without time zone`, `PrimaryOwnerUserID`: `uuid`}
 	_              = bytes.MinRead
 )
 

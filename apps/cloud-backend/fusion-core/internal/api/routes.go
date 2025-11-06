@@ -19,8 +19,10 @@ func (a *API) registerRoutes() {
 	projects := v1.Group("/projects")
 	{
 		projects.POST("", projectHandler.CreateProject)
-		projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
-		projects.PATCH("/:id", projectHandler.UpdateProject)
-		projects.DELETE("/:id", projectHandler.DeleteProject)
+		projects.GET("", projectHandler.GetAllProjects)
+		projects.PATCH("/:projectId", projectHandler.UpdateProject)
+		projects.DELETE("/:projectId", projectHandler.DeleteProject)
+		projects.PUT("/:projectId/users/:userEmail", projectHandler.AssignUserToProject)
+		projects.DELETE("/:projectId/users/:userEmail", projectHandler.RemoveUserFromProject)
 	}
 }

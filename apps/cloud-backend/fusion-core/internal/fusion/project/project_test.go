@@ -8,21 +8,40 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
 
+const (
+	databaseErrorMsg = "database error"
+)
+
 var (
-	errDatabaseMsg = errors.New("database error")
+	errDatabaseMsg = errors.New(databaseErrorMsg)
+)
+
+const (
+	testProjectID1         = "project-1"
+	testUserID1            = "user-1"
+	projectNotFoundMsg     = "project not found"
+	userNotFoundMsg        = "user not found"
+	userAlreadyAssignedMsg = "user is already assigned to the project"
+	userNotAssignedMsg     = "user not assigned to the project"
+)
+
+const (
+	updatedProjectName = "Updated Project"
 )
 
 type mockDBService struct {
 	mock.Mock
 }
 
-func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest) error {
+func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error) {
 	args := m.Called(ctx, project)
-	return args.Error(0)
+	return args.String(0), args.Error(1)
 }
 
 func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProjectsParams) ([]*types.Project, error) {
@@ -33,14 +52,47 @@ func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProje
 	return args.Get(0).([]*types.Project), args.Error(1)
 }
 
-func (m *mockDBService) Update(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
+func (m *mockDBService) Update(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*models.Project, error) {
 	args := m.Called(ctx, id, project)
-	return args.Error(0)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*models.Project), args.Error(1)
 }
 
 func (m *mockDBService) Delete(ctx context.Context, id string) error {
 	args := m.Called(ctx, id)
 	return args.Error(0)
+}
+
+func (m *mockDBService) AssignUser(ctx context.Context, projectID, userID string) error {
+	args := m.Called(ctx, projectID, userID)
+	return args.Error(0)
+}
+
+func (m *mockDBService) RemoveUser(ctx context.Context, projectID, userID string) error {
+	result := m.Called(ctx, projectID, userID)
+	return result.Error(0)
+}
+
+func (m *mockDBService) IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error) {
+	args := m.Called(ctx, projectID, userID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockDBService) ProjectExists(ctx context.Context, projectID string) (bool, error) {
+	args := m.Called(ctx, projectID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockDBService) UserExists(ctx context.Context, userID string) (bool, error) {
+	args := m.Called(ctx, userID)
+	return args.Bool(0), args.Error(1)
+}
+
+func (m *mockDBService) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
+	args := m.Called(ctx, email)
+	return args.String(0), args.Error(1)
 }
 
 type mockPresigner struct {
@@ -58,43 +110,59 @@ func (m *mockPresigner) PresignPut(ctx context.Context, key string, ttl time.Dur
 
 func TestCreateProject(t *testing.T) {
 	tests := []struct {
-		name        string
-		project     *types.ProjectCreateRequest
-		mockErr     error
-		expectedErr error
+		name           string
+		project        *types.ProjectCreateRequest
+		mockID         string
+		mockErr        error
+		expectedID     string
+		expectedErr    error
+		expectResponse bool
 	}{
 		{
 			name: "successful creation",
 			project: &types.ProjectCreateRequest{
 				Name: "Test Project",
 			},
-			mockErr:     nil,
-			expectedErr: nil,
+			mockID:         "123e4567-e89b-12d3-a456-426614174000",
+			mockErr:        nil,
+			expectedID:     "123e4567-e89b-12d3-a456-426614174000",
+			expectedErr:    nil,
+			expectResponse: true,
 		},
 		{
 			name: "database error",
 			project: &types.ProjectCreateRequest{
 				Name: "Test Project",
 			},
-			mockErr:     errDatabaseMsg,
-			expectedErr: fmt.Errorf("failed to insert project: %w", errDatabaseMsg),
+			mockID:         "",
+			mockErr:        errDatabaseMsg,
+			expectedID:     "",
+			expectedErr:    fmt.Errorf("failed to insert project: %v", errDatabaseMsg),
+			expectResponse: false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := &mockDBService{}
-			mockDB.On("Insert", mock.Anything, tt.project).Return(tt.mockErr)
+			mockPresigner := &mockPresigner{}
+			mockDB.On("Insert", mock.Anything, tt.project).Return(tt.mockID, tt.mockErr)
 
 			service := &Service{
 				dbService: mockDB,
+				presigner: mockPresigner,
 			}
 
-			err := service.CreateProject(context.Background(), tt.project)
+			response, err := service.CreateProject(context.Background(), tt.project)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
+				assert.Nil(t, response)
 			} else {
 				assert.NoError(t, err)
+				if tt.expectResponse {
+					assert.NotNil(t, response)
+					assert.Equal(t, tt.expectedID, response.ID)
+				}
 			}
 			mockDB.AssertExpectations(t)
 		})
@@ -104,14 +172,12 @@ func TestCreateProject(t *testing.T) {
 func TestGetAllProjects(t *testing.T) {
 	mockProjects := []*types.Project{
 		{
-			ID:        "1",
-			AccountID: "acc1",
-			Name:      "Project 1",
+			ID:   "1",
+			Name: "Project 1",
 		},
 		{
-			ID:        "2",
-			AccountID: "acc2",
-			Name:      "Project 2",
+			ID:   "2",
+			Name: "Project 2",
 		},
 	}
 
@@ -162,7 +228,7 @@ func TestGetAllProjects(t *testing.T) {
 			for _, p := range tt.mockProjects {
 				mockPresigner.On("PresignGet",
 					mock.Anything,
-					fmt.Sprintf("projects/%s/%s/", p.AccountID, p.ID),
+					fmt.Sprintf("projects/%s/%s/%s.zip", tt.params.UserID, p.ID, p.ID),
 					time.Minute*5,
 				).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
 			}
@@ -196,47 +262,60 @@ func TestGetAllProjects(t *testing.T) {
 }
 
 func TestUpdateProject(t *testing.T) {
+	mockProjectRow := &models.Project{
+		ID:                 "1",
+		PrimaryOwnerUserID: null.NewString("123", true),
+		Name:               null.NewString(updatedProjectName, true),
+	}
+
 	tests := []struct {
-		name        string
-		id          string
-		project     *types.ProjectUpdateRequest
-		mockErr     error
-		expectedErr error
+		name           string
+		id             string
+		project        *types.ProjectUpdateRequest
+		mockProjectRow *models.Project
+		mockErr        error
+		expectedErr    error
 	}{
 		{
 			name: "successful update",
 			id:   "1",
 			project: &types.ProjectUpdateRequest{
-				Name: "Updated Project",
+				Name: updatedProjectName,
 			},
-			mockErr:     nil,
-			expectedErr: nil,
+			mockProjectRow: mockProjectRow,
+			mockErr:        nil,
+			expectedErr:    nil,
 		},
 		{
 			name: "database error",
 			id:   "1",
 			project: &types.ProjectUpdateRequest{
-				Name: "Updated Project",
+				Name: updatedProjectName,
 			},
-			mockErr:     errDatabaseMsg,
-			expectedErr: errDatabaseMsg,
+			mockProjectRow: nil,
+			mockErr:        errDatabaseMsg,
+			expectedErr:    fmt.Errorf("failed to update project: %v", errDatabaseMsg),
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := &mockDBService{}
-			mockDB.On("Update", mock.Anything, tt.id, tt.project).Return(tt.mockErr)
+			mockPresigner := &mockPresigner{}
+			mockDB.On("Update", mock.Anything, tt.id, tt.project).Return(tt.mockProjectRow, tt.mockErr)
 
 			service := &Service{
 				dbService: mockDB,
+				presigner: mockPresigner,
 			}
 
-			err := service.UpdateProject(context.Background(), tt.id, tt.project)
+			response, err := service.UpdateProject(context.Background(), tt.id, tt.project)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
+				assert.Nil(t, response)
 			} else {
 				assert.NoError(t, err)
+				assert.NotNil(t, response)
 			}
 			mockDB.AssertExpectations(t)
 		})
@@ -279,6 +358,333 @@ func TestDeleteProject(t *testing.T) {
 			} else {
 				assert.NoError(t, err)
 			}
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestAssignUserToProject(t *testing.T) {
+	tests := []struct {
+		name                string
+		projectID           string
+		userID              string
+		projectExists       bool
+		projectExistsErr    error
+		userExists          bool
+		userExistsErr       error
+		userAlreadyAssigned bool
+		userAssignedErr     error
+		assignErr           error
+		expectedErr         string
+	}{
+		{
+			name:                "successful assignment",
+			projectID:           testProjectID1,
+			userID:              testUserID1,
+			projectExists:       true,
+			projectExistsErr:    nil,
+			userExists:          true,
+			userExistsErr:       nil,
+			userAlreadyAssigned: false,
+			userAssignedErr:     nil,
+			assignErr:           nil,
+			expectedErr:         "",
+		},
+		{
+			name:                projectNotFoundMsg,
+			projectID:           testProjectID1,
+			userID:              testUserID1,
+			projectExists:       false,
+			projectExistsErr:    nil,
+			userExists:          true,
+			userExistsErr:       nil,
+			userAlreadyAssigned: false,
+			userAssignedErr:     nil,
+			assignErr:           nil,
+			expectedErr:         projectNotFoundMsg,
+		},
+		{
+			name:                userNotFoundMsg,
+			projectID:           testProjectID1,
+			userID:              testUserID1,
+			projectExists:       true,
+			projectExistsErr:    nil,
+			userExists:          false,
+			userExistsErr:       nil,
+			userAlreadyAssigned: false,
+			userAssignedErr:     nil,
+			assignErr:           nil,
+			expectedErr:         userNotFoundMsg,
+		},
+		{
+			name:                "user already assigned",
+			projectID:           testProjectID1,
+			userID:              testUserID1,
+			projectExists:       true,
+			projectExistsErr:    nil,
+			userExists:          true,
+			userExistsErr:       nil,
+			userAlreadyAssigned: true,
+			userAssignedErr:     nil,
+			assignErr:           nil,
+			expectedErr:         userAlreadyAssignedMsg,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+
+			mockDB.On("ProjectExists", mock.Anything, tt.projectID).Return(tt.projectExists, tt.projectExistsErr)
+			if tt.projectExists {
+				mockDB.On("UserExists", mock.Anything, tt.userID).Return(tt.userExists, tt.userExistsErr)
+				if tt.userExists {
+					mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.userID).Return(tt.userAlreadyAssigned, tt.userAssignedErr)
+					if !tt.userAlreadyAssigned {
+						mockDB.On("AssignUser", mock.Anything, tt.projectID, tt.userID).Return(tt.assignErr)
+					}
+				}
+			}
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			response, err := service.AssignUserToProject(context.Background(), tt.projectID, tt.userID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, response)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+				assert.Equal(t, "User successfully assigned to the project", response.Message)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestRemoveUserFromProject(t *testing.T) {
+	tests := []struct {
+		name             string
+		projectID        string
+		userID           string
+		projectExists    bool
+		projectExistsErr error
+		userExists       bool
+		userExistsErr    error
+		userAssigned     bool
+		userAssignedErr  error
+		removeErr        error
+		expectedErr      string
+	}{
+		{
+			name:             "successful removal",
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    true,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			userAssigned:     true,
+			userAssignedErr:  nil,
+			removeErr:        nil,
+			expectedErr:      "",
+		},
+		{
+			name:             projectNotFoundMsg,
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    false,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			userAssigned:     true,
+			userAssignedErr:  nil,
+			removeErr:        nil,
+			expectedErr:      projectNotFoundMsg,
+		},
+		{
+			name:             "user not assigned",
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    true,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			userAssigned:     false,
+			userAssignedErr:  nil,
+			removeErr:        nil,
+			expectedErr:      userNotAssignedMsg,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+
+			mockDB.On("ProjectExists", mock.Anything, tt.projectID).Return(tt.projectExists, tt.projectExistsErr)
+			if tt.projectExists {
+				mockDB.On("UserExists", mock.Anything, tt.userID).Return(tt.userExists, tt.userExistsErr)
+				if tt.userExists {
+					mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.userID).Return(tt.userAssigned, tt.userAssignedErr)
+					if tt.userAssigned {
+						mockDB.On("RemoveUser", mock.Anything, tt.projectID, tt.userID).Return(tt.removeErr)
+					}
+				}
+			}
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			response, err := service.RemoveUserFromProject(context.Background(), tt.projectID, tt.userID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, response)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+				assert.Equal(t, "User successfully removed from the project", response.Message)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestAssignUserToProjectByEmail(t *testing.T) {
+	tests := []struct {
+		name        string
+		projectID   string
+		userEmail   string
+		mockUserID  string
+		mockErr     error
+		expectedErr string
+	}{
+		{
+			name:        "successful assignment by email",
+			projectID:   testProjectID1,
+			userEmail:   "test@example.com",
+			mockUserID:  testUserID1,
+			mockErr:     nil,
+			expectedErr: "",
+		},
+		{
+			name:        "user not found by email",
+			projectID:   testProjectID1,
+			userEmail:   "nonexistent@example.com",
+			mockUserID:  "",
+			mockErr:     errors.New("user not found"),
+			expectedErr: "user not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+
+			mockDB.On("GetUserIDByEmail", mock.Anything, tt.userEmail).Return(tt.mockUserID, tt.mockErr)
+
+			if tt.mockErr == nil {
+				// Setup mocks for successful user assignment
+				mockDB.On("ProjectExists", mock.Anything, tt.projectID).Return(true, nil)
+				mockDB.On("UserExists", mock.Anything, tt.mockUserID).Return(true, nil)
+				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.mockUserID).Return(false, nil)
+				mockDB.On("AssignUser", mock.Anything, tt.projectID, tt.mockUserID).Return(nil)
+			}
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			response, err := service.AssignUserToProjectByEmail(context.Background(), tt.projectID, tt.userEmail)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, response)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+				assert.Equal(t, "User successfully assigned to the project", response.Message)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestRemoveUserFromProjectByEmail(t *testing.T) {
+	tests := []struct {
+		name        string
+		projectID   string
+		userEmail   string
+		mockUserID  string
+		mockErr     error
+		expectedErr string
+	}{
+		{
+			name:        "successful removal by email",
+			projectID:   testProjectID1,
+			userEmail:   "test@example.com",
+			mockUserID:  testUserID1,
+			mockErr:     nil,
+			expectedErr: "",
+		},
+		{
+			name:        "user not found by email",
+			projectID:   testProjectID1,
+			userEmail:   "nonexistent@example.com",
+			mockUserID:  "",
+			mockErr:     errors.New("user not found"),
+			expectedErr: "user not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+
+			mockDB.On("GetUserIDByEmail", mock.Anything, tt.userEmail).Return(tt.mockUserID, tt.mockErr)
+
+			if tt.mockErr == nil {
+				// Setup mocks for successful user removal
+				mockDB.On("ProjectExists", mock.Anything, tt.projectID).Return(true, nil)
+				mockDB.On("UserExists", mock.Anything, tt.mockUserID).Return(true, nil)
+				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.mockUserID).Return(true, nil)
+				mockDB.On("RemoveUser", mock.Anything, tt.projectID, tt.mockUserID).Return(nil)
+			}
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			response, err := service.RemoveUserFromProjectByEmail(context.Background(), tt.projectID, tt.userEmail)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, response)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, response)
+				assert.Equal(t, "User successfully removed from the project", response.Message)
+			}
+
 			mockDB.AssertExpectations(t)
 		})
 	}

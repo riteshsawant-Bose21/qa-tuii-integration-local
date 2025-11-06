@@ -2,7 +2,6 @@ package db
 
 import (
 	"errors"
-	"strconv"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
@@ -46,14 +45,23 @@ func newProject(row *model.Project) (*types.Project, error) {
 		application = row.Application.String
 	}
 
+	var budgetAmount int64
+	if !row.BudgetAmount.IsZero() {
+		budgetAmount, _ = row.BudgetAmount.Int64()
+	}
+
 	budget := types.Budget{
 		Currency: row.Currency.String,
-		Amount:   row.BudgetAmount,
+		Amount:   budgetAmount,
+	}
+
+	lockedByUser := ""
+	if row.LockedByUserID.Valid {
+		lockedByUser = row.LockedByUserID.String
 	}
 
 	return &types.Project{
 		ID:              row.ID,
-		AccountID:       strconv.Itoa(row.PrimaryOwnerAccountID),
 		Name:            row.Name.String,
 		Description:     description,
 		Venue:           venue,
@@ -61,5 +69,9 @@ func newProject(row *model.Project) (*types.Project, error) {
 		ProjectPhase:    projectPhase,
 		Application:     application,
 		Budget:          budget,
+		IsArchived:      row.IsArchived,
+		LockedByUser:    lockedByUser,
+		CreatedAt:       row.CreatedAt,
+		UpdatedAt:       row.UpdatedAt,
 	}, nil
 }

@@ -21,20 +21,20 @@ const (
 )
 
 type Budget struct {
-	Amount   float64 `json:"amount" validate:"min=0"`
-	Currency string  `json:"currency" validate:"required,currency,len=3"`
+	Amount   int64  `json:"amount"`
+	Currency string `json:"currency" validate:"required,currency,len=3"`
 }
 
 // Request body for creating or updating a project.
 type ProjectCreateRequest struct {
 	ID                   string          `json:"id" validate:"omitempty,uuid"`
 	Application          string          `json:"application" validate:"required,min=1,max=255"`
-	AccountID            string          `json:"account_id" validate:"required,min=1"`
+	UserID               string          `json:"user_id" validate:"required,min=1"`
 	Name                 string          `json:"name" validate:"required,min=1,max=255"`
 	Description          string          `json:"description" validate:"omitempty,max=1000"`
 	Venue                string          `json:"venue" validate:"omitempty,max=255"`
 	EnvironmentType      EnvironmentType `json:"environment_type" validate:"required,environment_type"`
-	ProjectPhase         ProjectPhase    `json:"project_phase" validate:"required,project_phase"`
+	ProjectPhase         ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase"`
 	Budget               Budget          `json:"budget" validate:"required"`
 	IsProjectFileCreated bool            `json:"is_project_file_created"`
 }
@@ -60,7 +60,6 @@ type ProjectUpdateRequest struct {
 type Project struct {
 	ID              string          `json:"id"`
 	Application     string          `json:"application"`
-	AccountID       string          `json:"account_id"`
 	Name            string          `json:"name"`
 	Description     string          `json:"description"`
 	Venue           string          `json:"venue"`
@@ -78,6 +77,7 @@ type Project struct {
 
 // Parameters for retrieving all projects.
 type GetAllProjectsParams struct {
+	UserID     string `form:"user_id" validate:"required,min=1"`
 	IsArchived bool   `form:"is_archived"`
 	SortBy     string `form:"sort_by" validate:"omitempty,project_sort_field"`
 	SortOrder  string `form:"sort_order" validate:"omitempty,sort_order"`
@@ -100,4 +100,39 @@ type ProjectCreateResponse struct {
 // Response for updating a project.
 type ProjectUpdateResponse struct {
 	ProjectUploadURL string `json:"project_upload_url"`
+}
+
+// Response for user assignment operations.
+type UserAssignmentResponse struct {
+	Message string `json:"message"`
+}
+
+// ErrorResponse represents the standard error response structure.
+type ErrorResponse struct {
+	Message string `json:"message" example:"Error message"`
+}
+
+// BadRequestError represents a 400 Bad Request error.
+type BadRequestError struct {
+	Message string `json:"message" example:"Invalid input data"`
+}
+
+// UnauthorizedError represents a 401 Unauthorized error.
+type UnauthorizedError struct {
+	Message string `json:"message" example:"Unauthorized"`
+}
+
+// NotFoundError represents a 404 Not Found error.
+type NotFoundError struct {
+	Message string `json:"message" example:"Project not found"`
+}
+
+// ConflictError represents a 409 Conflict error.
+type ConflictError struct {
+	Message string `json:"message" example:"User is already assigned to the project"`
+}
+
+// InternalServerError represents a 500 Internal Server Error.
+type InternalServerError struct {
+	Message string `json:"message" example:"Internal Server Error"`
 }

@@ -24,11 +24,25 @@ definitions:
       total_capacity:
         type: number
     type: object
+  types.BadRequestError:
+    properties:
+      message:
+        example: Invalid input data
+        type: string
+    type: object
   types.Budget:
     properties:
       amount:
-        type: number
+        type: integer
       currency:
+        type: string
+    required:
+    - currency
+    type: object
+  types.ConflictError:
+    properties:
+      message:
+        example: User is already assigned to the project
         type: string
     type: object
   types.DSP_meta:
@@ -175,6 +189,18 @@ definitions:
       total_pages:
         type: integer
     type: object
+  types.InternalServerError:
+    properties:
+      message:
+        example: Internal Server Error
+        type: string
+    type: object
+  types.NotFoundError:
+    properties:
+      message:
+        example: Project not found
+        type: string
+    type: object
   types.ProductResponse:
     properties:
       amplifier:
@@ -192,8 +218,6 @@ definitions:
     type: object
   types.Project:
     properties:
-      account_id:
-        type: string
       application:
         type: string
       budget:
@@ -227,13 +251,14 @@ definitions:
     type: object
   types.ProjectCreateRequest:
     properties:
-      account_id:
-        type: string
       application:
+        maxLength: 255
+        minLength: 1
         type: string
       budget:
         $ref: '#/definitions/types.Budget'
       description:
+        maxLength: 1000
         type: string
       environment_type:
         $ref: '#/definitions/types.EnvironmentType'
@@ -242,11 +267,23 @@ definitions:
       is_project_file_created:
         type: boolean
       name:
+        maxLength: 255
+        minLength: 1
         type: string
       project_phase:
         $ref: '#/definitions/types.ProjectPhase'
-      venue:
+      user_id:
+        minLength: 1
         type: string
+      venue:
+        maxLength: 255
+        type: string
+    required:
+    - application
+    - budget
+    - environment_type
+    - name
+    - user_id
     type: object
   types.ProjectCreateResponse:
     properties:
@@ -268,12 +305,16 @@ definitions:
   types.ProjectUpdateRequest:
     properties:
       account_id:
+        minLength: 1
         type: string
       application:
+        maxLength: 255
+        minLength: 1
         type: string
       budget:
         $ref: '#/definitions/types.Budget'
       description:
+        maxLength: 1000
         type: string
       environment_type:
         $ref: '#/definitions/types.EnvironmentType'
@@ -288,10 +329,13 @@ definitions:
       lock_project:
         type: boolean
       name:
+        maxLength: 255
+        minLength: 1
         type: string
       project_phase:
         $ref: '#/definitions/types.ProjectPhase'
       venue:
+        maxLength: 255
         type: string
     type: object
   types.ProjectUpdateResponse:
@@ -360,6 +404,12 @@ definitions:
           unit:
             type: string
         type: object
+    type: object
+  types.UnauthorizedError:
+    properties:
+      message:
+        example: Unauthorized
+        type: string
     type: object
   types.nominal_impedence:
     properties:
@@ -596,21 +646,15 @@ paths:
         "400":
           description: Bad request - Invalid query parameters
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestError'
         "401":
           description: Unauthorized do perform this action
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.UnauthorizedError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Get all projects
       tags:
       - projects
@@ -635,25 +679,19 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestError'
         "401":
           description: Unauthorized to perform this action
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.UnauthorizedError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Create a new project
       tags:
       - projects
-  /projects/{id}:
+  /projects/{projectId}:
     delete:
       consumes:
       - application/json
@@ -661,7 +699,7 @@ paths:
       parameters:
       - description: Project ID
         in: path
-        name: id
+        name: projectId
         required: true
         type: string
       produces:
@@ -672,21 +710,15 @@ paths:
         "401":
           description: Unauthorized to perform this action
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.UnauthorizedError'
         "404":
           description: Project not found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Delete project
       tags:
       - projects
@@ -697,7 +729,7 @@ paths:
       parameters:
       - description: Project ID
         in: path
-        name: id
+        name: projectId
         required: true
         type: string
       - description: Updated project details
@@ -716,28 +748,87 @@ paths:
         "400":
           description: Bad request - Invalid payload
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestError'
         "401":
           description: Unauthorized to perform this action
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.UnauthorizedError'
         "404":
           description: Project not found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.NotFoundError'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerError'
       summary: Update project
+      tags:
+      - projects
+  /projects/{projectId}/users/{userEmail}:
+    delete:
+      consumes:
+      - application/json
+      description: Remove a user from a project by project ID and user email
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: User Email
+        in: path
+        name: userEmail
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User successfully removed from the project
+        "404":
+          description: Project or User not found, or user not assigned to the project
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Remove a user from a project
+      tags:
+      - projects
+    put:
+      consumes:
+      - application/json
+      description: Assign a user to a project by project ID and user email
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: User Email
+        in: path
+        name: userEmail
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: User successfully assigned to the project
+        "404":
+          description: Project or User not found
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: User is already assigned to the project
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Assign a user to a project
       tags:
       - projects
 schemes:

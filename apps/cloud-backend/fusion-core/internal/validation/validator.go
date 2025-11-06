@@ -31,6 +31,11 @@ func ValidateProjectCreateRequest(req *types.ProjectCreateRequest) error {
 		return errors.New("request cannot be nil")
 	}
 
+	// Set default project phase to "Proposal" if empty
+	if req.ProjectPhase == "" {
+		req.ProjectPhase = types.ProjectPhaseProposal
+	}
+
 	// Add struct tags validation
 	if err := validate.Struct(req); err != nil {
 		return formatValidationError(err)
@@ -41,8 +46,8 @@ func ValidateProjectCreateRequest(req *types.ProjectCreateRequest) error {
 		return errors.New("project name is required and cannot be empty")
 	}
 
-	if strings.TrimSpace(req.AccountID) == "" {
-		return errors.New("account ID is required and cannot be empty")
+	if strings.TrimSpace(req.UserID) == "" {
+		return errors.New("user ID is required and cannot be empty")
 	}
 
 	if req.Budget.Amount < 0 {

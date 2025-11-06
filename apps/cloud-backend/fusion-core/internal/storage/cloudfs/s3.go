@@ -9,7 +9,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
@@ -35,17 +34,9 @@ type s3Config struct {
 	region    string
 }
 
-func NewS3Client(ctx context.Context, accessKey string, secretKey string, region string) (*S3, error) {
+func NewS3Client(ctx context.Context) (*S3, error) {
 
-	awsconfig := &s3Config{
-		accessKey: accessKey,
-		secretKey: secretKey,
-		region:    region,
-	}
-	cfg, err := config.LoadDefaultConfig(ctx,
-		config.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(awsconfig.accessKey, awsconfig.secretKey, "")),
-		config.WithRegion(awsconfig.region),
-	)
+	cfg, err := config.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
@@ -55,7 +46,6 @@ func NewS3Client(ctx context.Context, accessKey string, secretKey string, region
 	return &S3{
 		client:        client,
 		presignClient: s3.NewPresignClient(client),
-		config:        awsconfig,
 	}, nil
 }
 

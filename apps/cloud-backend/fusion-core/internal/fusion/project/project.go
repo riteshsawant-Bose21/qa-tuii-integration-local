@@ -8,13 +8,36 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
+const (
+	projectFilePathFormat = "projects/%s/%s/%s.zip"
+)
+
 // CreateProject adds a new project to the database.
-func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) error {
-	err := s.dbService.Insert(ctx, project)
+func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) (*types.ProjectCreateResponse, error) {
+	id, err := s.dbService.Insert(ctx, project)
+
 	if err != nil {
-		return fmt.Errorf("failed to insert project: %v", err)
+		return nil, fmt.Errorf("failed to insert project: %v", err)
 	}
-	return nil
+
+	response := &types.ProjectCreateResponse{
+		ID: id,
+	}
+
+	if project.IsProjectFileCreated {
+		// Generate presigned URL for project file upload
+		presignURL, err := s.presigner.PresignPut(
+			ctx,
+			fmt.Sprintf(projectFilePathFormat, project.UserID, id, id),
+			time.Minute*15,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
+		}
+		response.ProjectUploadURL = presignURL
+	}
+
+	return response, nil
 }
 
 // GetAllProjects retrieves all projects.
@@ -29,7 +52,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 
 		presignURL, err := s.presigner.PresignGet(
 			ctx,
-			fmt.Sprintf("projects/%s/%s/", project.AccountID, project.ID), time.Minute*5,
+			fmt.Sprintf(projectFilePathFormat, queryParams.UserID, project.ID, project.ID), time.Minute*5,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", project.ID, err)
@@ -55,10 +78,130 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 }
 
 // UpdateProject modifies an existing project.
-func (s *Service) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) error {
-	return s.dbService.Update(ctx, id, project)
+func (s *Service) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
+	projectRow, err := s.dbService.Update(ctx, id, project)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update project: %v", err)
+	}
+
+	response := &types.ProjectUpdateResponse{}
+
+	if project.IsProjectFileDirty {
+		presignURL, err := s.presigner.PresignPut(
+			ctx,
+			fmt.Sprintf(projectFilePathFormat, projectRow.PrimaryOwnerUserID.String, projectRow.ID, projectRow.ID),
+			time.Minute*15,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
+		}
+		response.ProjectUploadURL = presignURL
+	}
+	return response, nil
 }
 
 func (s *Service) Delete(ctx context.Context, id string) error {
 	return s.dbService.Delete(ctx, id)
+}
+
+// AssignUserToProject assigns a user to a project.
+func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
+	// Check if project exists
+	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if project exists: %v", err)
+	}
+	if !projectExists {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	// Check if user exists
+	userExists, err := s.dbService.UserExists(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if user exists: %v", err)
+	}
+	if !userExists {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Check if user is already assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check user assignment: %v", err)
+	}
+	if isAssigned {
+		return nil, fmt.Errorf("user is already assigned to the project")
+	}
+
+	// Assign the user to the project
+	if err := s.dbService.AssignUser(ctx, projectID, userID); err != nil {
+		return nil, fmt.Errorf("failed to assign user to project: %v", err)
+	}
+
+	return &types.UserAssignmentResponse{
+		Message: "User successfully assigned to the project",
+	}, nil
+}
+
+// RemoveUserFromProject removes a user from a project.
+func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
+	// Check if project exists
+	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if project exists: %v", err)
+	}
+	if !projectExists {
+		return nil, fmt.Errorf("project not found")
+	}
+
+	// Check if user exists
+	userExists, err := s.dbService.UserExists(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check if user exists: %v", err)
+	}
+	if !userExists {
+		return nil, fmt.Errorf("user not found")
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check user assignment: %v", err)
+	}
+	if !isAssigned {
+		return nil, fmt.Errorf("user not assigned to the project")
+	}
+
+	// Remove the user from the project
+	if err := s.dbService.RemoveUser(ctx, projectID, userID); err != nil {
+		return nil, fmt.Errorf("failed to remove user from project: %v", err)
+	}
+
+	return &types.UserAssignmentResponse{
+		Message: "User successfully removed from the project",
+	}, nil
+}
+
+// AssignUserToProjectByEmail assigns a user to a project by email.
+func (s *Service) AssignUserToProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error) {
+	// Get user ID by email
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	if err != nil {
+		return nil, err // This will return "user not found" from the database service
+	}
+
+	// Use the existing AssignUserToProject method
+	return s.AssignUserToProject(ctx, projectID, userID)
+}
+
+// RemoveUserFromProjectByEmail removes a user from a project by email.
+func (s *Service) RemoveUserFromProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error) {
+	// Get user ID by email
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	if err != nil {
+		return nil, err // This will return "user not found" from the database service
+	}
+
+	// Use the existing RemoveUserFromProject method
+	return s.RemoveUserFromProject(ctx, projectID, userID)
 }
