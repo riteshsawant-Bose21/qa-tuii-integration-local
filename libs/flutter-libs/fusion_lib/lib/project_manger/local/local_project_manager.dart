@@ -22,8 +22,9 @@ class LocalProjectManager {
     final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
     Directory? appDocDir;
     if (Platform.isWindows) {
-      final userProfile = Platform.environment['USERPROFILE'];
-      appDocDir = userProfile != null ? Directory('$userProfile\\Documents') : await getApplicationDocumentsDirectory();
+      // final userProfile = Platform.environment['USERPROFILE'];
+      // appDocDir = userProfile != null ? Directory('$userProfile\\Documents') : await getApplicationDocumentsDirectory();
+      appDocDir = await getApplicationSupportDirectory();
     } else {
       appDocDir = await getApplicationDocumentsDirectory();
     }
