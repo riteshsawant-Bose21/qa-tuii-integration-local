@@ -9,6 +9,16 @@ class Assets {
   static const String trashIcon = "assets/icons/trash.webp";
   static const String typeIcon = "assets/icons/type.webp";
 
+  /// configuration icons
+  static const String configurationIcon = 'assets/icons/configuration_icon.png';
+  static const String configurationFilledIcon = 'assets/icons/configuration_filled_icon.png';
+  static const String processingBlocksFilledIcon = 'assets/icons/processing_blocks_filled_icon.png';
+  static const String processingBlocksFilledWhiteIcon = 'assets/icons/processing_blocks_filled_white_icon.png';
+  static const String processingBlocksIcon = 'assets/icons/processing_blocks_icon.png';
+  static const String linkIcon = 'assets/icons/link_icon.png';
+  static const String addSourceIcon = 'assets/icons/add_source.png';
+  static const String subZoneIcon = 'assets/icons/sub_zone_icon.png';
+
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';
 
