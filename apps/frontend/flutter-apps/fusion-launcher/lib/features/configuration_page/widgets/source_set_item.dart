@@ -63,6 +63,33 @@ class _SourceSetItemState extends State<SourceSetItem> {
     }
   }
 
+  /// Add source set to project view model
+  // TODO: update with proper edit logic
+  void _editSourceSet() {
+    /// create source set and add to project view model
+    final SourceSet newSourceSet = SourceSet(
+      name: _sourceSetNameController.text.trim(),
+    );
+
+    /// Add selected sources to the new source set
+    _projectViewModel.updateSourceSet(sourceSet: newSourceSet);
+
+    // todo : use batch add method
+    for (final SelectedSource selectedSource in _selectedSources) {
+      _projectViewModel.addSourceToSourceSet(sourceId: selectedSource.id, sourceSetId: newSourceSet.id);
+    }
+
+    /// Clear dialog and close popup
+    _clearSourceSetDialog();
+  }
+
+  /// Clear source set dialog inputs
+  void _clearSourceSetDialog() {
+    _sourceSetNameController.clear();
+    _selectedSources.clear();
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<bool>(
@@ -141,16 +168,13 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               fit: BoxFit.contain,
                             ),
                           ),
-                          // delete icon
-                          const SizedBox(width: 8),
                           GestureDetector(
-                            onTap: () {
-                              _projectViewModel.removeSourceSet(sourceSetId: widget.sourceSet.id);
-                            },
+                            // delete icon
+                            onTap: _confirmDeleteSourceSet, // was direct delete call
                             child: const FusionImage.asset(
-                              Assets.trashIcon,
-                              width: 30,
-                              height: 30,
+                              Assets.deleteIcon,
+                              width: 17,
+                              height: 17,
                               fit: BoxFit.contain,
                             ),
                           ),
@@ -168,18 +192,24 @@ class _SourceSetItemState extends State<SourceSetItem> {
     );
   }
 
-  /// Clear source set dialog inputs
-  void _clearSourceSetDialog() {
-    _sourceSetNameController.clear();
-    _selectedSources.clear();
-    setState(() {});
-  }
-
   /// Show popup to edit source set
   Future<void> _showEditSourceSetPopup() async {
+    /// Pre-fill name
+    if (_sourceSetNameController.text.isEmpty) {
+      _sourceSetNameController.text = widget.sourceSet.name;
+    }
+
+    /// Pre-select sources already in this source set
+    final List<Source> currentSourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
+    for (final Source s in currentSourcesInSet) {
+      final bool alreadyAdded = _selectedSources.any((SelectedSource sel) => sel.id == s.id);
+      if (!alreadyAdded) {
+        _selectedSources.add(SelectedSource(id: s.id, name: s.name));
+      }
+    }
+
     final RenderBox button = _addSourceIconKey.currentContext!.findRenderObject() as RenderBox;
     final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-
     final Offset offset = button.localToGlobal(Offset.zero, ancestor: overlay);
     final RelativeRect position = RelativeRect.fromLTRB(
       offset.dx,
@@ -187,7 +217,6 @@ class _SourceSetItemState extends State<SourceSetItem> {
       overlay.size.width - offset.dx - button.size.width,
       overlay.size.height - offset.dy - button.size.height,
     );
-
     await showMenu<dynamic>(
       context: context,
       position: position,
@@ -207,8 +236,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     availableSources: _projectViewModel.sources,
                     selectedSources: _selectedSources,
                     onAddSourceSet: () {
-                      // TODO: implement save logic
-                      Navigator.of(context).pop();
+                      _editSourceSet();
                     },
                     onCancel: () {
                       _clearSourceSetDialog();
@@ -284,6 +312,75 @@ class _SourceSetItemState extends State<SourceSetItem> {
                 child: SourceItem(source: sourceData, isDragging: _draggingSourceId == sourceData.id),
               );
             },
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _confirmDeleteSourceSet() async {
+    await showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext ctx) {
+        final ColorScheme scheme = Theme.of(ctx).colorScheme;
+        return Dialog(
+          backgroundColor: scheme.white,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 50),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  FusionAppText(
+                    text: "Delete source set?",
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  FusionAppText(
+                    text: "This will remove '${widget.sourceSet.name}' from the source set. Sources will be moved to sources section.",
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontSize: 11),
+                  ),
+                  const SizedBox(height: 20),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: <Widget>[
+                      SizedBox(
+                        width: 90,
+                        child: FusionOutlinedButton(
+                          label: "Cancel",
+                          textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(fontSize: 11),
+                          onTap: () => Navigator.of(ctx).pop(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SizedBox(
+                        width: 90,
+                        child: FusionButton(
+                          label: "Delete",
+                          textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(
+                            fontSize: 11,
+                            color: scheme.fusionButtonTextColor,
+                          ),
+                          isActive: true,
+                          onTap: () {
+                            Navigator.of(ctx).pop();
+                            _projectViewModel.removeSourceSet(sourceSetId: widget.sourceSet.id);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
@@ -438,11 +535,83 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                         ? SingleChildScrollView(
                                           physics: const ClampingScrollPhysics(),
                                           child: Column(
-                                            children:
-                                                widget.availableSources.map<Widget>((Source source) {
-                                                  final bool isSelected = widget.selectedSources.any(
-                                                    (SelectedSource selectedSource) => selectedSource.id == source.id,
+                                            children: <Widget>[
+                                              /// Selected sources at the top (if any)
+                                              if (widget.selectedSources.isNotEmpty) ...<Widget>[
+                                                Container(
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                                  color: Theme.of(context).colorScheme.greyLight.withAlpha(40),
+                                                  child: FusionAppText(
+                                                    text: "Selected (${widget.selectedSources.length})",
+                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      fontSize: 10,
+                                                      fontWeight: FontWeight.w600,
+                                                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                    ),
+                                                  ),
+                                                ),
+
+                                                /// List of selected sources (interactive to unselect)
+                                                ...widget.selectedSources.map((SelectedSource sel) {
+                                                  final Source source = widget.availableSources.firstWhere(
+                                                    (Source s) => s.id == sel.id,
+                                                    // orElse: () => Source(id: sel.id, name: sel.name),
                                                   );
+                                                  return InkWell(
+                                                    onTap: () {
+                                                      widget.onSourceChanged(source!, false);
+                                                      setPopupState(() {});
+                                                      setState(() {});
+                                                    },
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                      child: Row(
+                                                        children: <Widget>[
+                                                          SizedBox(
+                                                            width: 14,
+                                                            height: 14,
+                                                            child: Checkbox(
+                                                              value: true,
+                                                              onChanged: (bool? value) {
+                                                                widget.onSourceChanged(source!, false);
+                                                                setPopupState(() {});
+                                                                setState(() {});
+                                                              },
+                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              visualDensity: VisualDensity.compact,
+                                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+                                                          Expanded(
+                                                            child: FusionAppText(
+                                                              text: source?.name ?? sel.name,
+                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                fontWeight: FontWeight.w500,
+                                                                fontSize: 10,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                }),
+                                                const Divider(height: 8, thickness: 0.5),
+                                              ],
+
+                                              /// Remaining (unselected) sources
+                                              ...(() {
+                                                final List<Source> remaining =
+                                                    widget.availableSources
+                                                        .where(
+                                                          (Source s) => !widget.selectedSources.any((SelectedSource sel) => sel.id == s.id),
+                                                        )
+                                                        .toList();
+                                                return remaining.map<Widget>((Source source) {
+                                                  final bool isSelected = widget.selectedSources.any((SelectedSource sel) => sel.id == source.id);
                                                   return InkWell(
                                                     onTap: () {
                                                       widget.onSourceChanged(source, !isSelected);
@@ -455,7 +624,6 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                       child: Row(
                                                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                                         children: <Widget>[
-                                                          /// Checkbox for selection
                                                           SizedBox(
                                                             width: 14,
                                                             height: 14,
@@ -463,28 +631,22 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                               value: isSelected,
                                                               onChanged: (bool? value) {
                                                                 widget.onSourceChanged(source, value ?? false);
-                                                                setPopupState(() {}); // Update popup state
-                                                                setState(() {}); // Update main widget state
+                                                                setPopupState(() {});
+                                                                setState(() {});
                                                               },
                                                               activeColor: Theme.of(context).colorScheme.greyDark,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
-                                                              shape: const RoundedRectangleBorder(
-                                                                borderRadius: BorderRadius.zero,
-                                                                side: BorderSide(width: 0.5),
-                                                              ),
+                                                              shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
                                                             ),
                                                           ),
                                                           const SizedBox(width: 12),
-
-                                                          /// Source name
                                                           Expanded(
                                                             child: FusionAppText(
                                                               text: source.name,
                                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                                 fontWeight: FontWeight.w500,
                                                                 fontSize: 10,
-                                                                color: Theme.of(context).textTheme.bodySmall?.color,
                                                               ),
                                                             ),
                                                           ),
@@ -492,7 +654,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                       ),
                                                     ),
                                                   );
-                                                }).toList(),
+                                                }).toList();
+                                              })(),
+                                            ],
                                           ),
                                         )
                                         : Padding(

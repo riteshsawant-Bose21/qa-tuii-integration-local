@@ -18,6 +18,7 @@ class Assets {
   static const String linkIcon = 'assets/icons/link_icon.png';
   static const String addSourceIcon = 'assets/icons/add_source.png';
   static const String subZoneIcon = 'assets/icons/sub_zone_icon.png';
+  static const String deleteIcon = 'assets/icons/delete_icon.png';
 
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';
