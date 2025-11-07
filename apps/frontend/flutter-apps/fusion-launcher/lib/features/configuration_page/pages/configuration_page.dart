@@ -125,60 +125,93 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
           const SizedBox(height: 8),
 
           /// Sources list with controlled height
-          SizedBox(
-            height: _sourcesHeight,
-            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                if (_projectViewModel.sources.isEmpty) {
-                  return Center(
-                    child: FusionAppText(
-                      text: 'No sources added yet',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  );
+          DragTarget<Source>(
+            onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
+              return true;
+            },
+            onLeave: (Source? data) {},
+            onAcceptWithDetails: (DragTargetDetails<Source> details) {
+              /// Find which source set contains this source and remove it
+              for (final SourceSet sourceSet in _projectViewModel.sourceSets) {
+                final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+                if (sourcesInSet.any((Source source) => source.id == details.data.id)) {
+                  _projectViewModel.removeSourceFromSourceSet(sourceId: details.data.id, sourceSetId: sourceSet.id);
+                  break;
                 }
-                return ListView.builder(
-                  itemCount: _projectViewModel.sources.length,
-                  itemBuilder: (BuildContext context, int index) {
-                    final Source source = _projectViewModel.sources[index];
-                    return Draggable<Source>(
-                      data: source,
-                      dragAnchorStrategy: pointerDragAnchorStrategy,
-                      onDragStarted: () {
-                        setState(() {
-                          _draggingSourceId = source.id;
-                        });
-                      },
-                      onDraggableCanceled: (_, __) {
-                        setState(() {
-                          _draggingSourceId = null;
-                        });
-                      },
-                      onDragEnd: (_) {
-                        setState(() {
-                          _draggingSourceId = null;
-                        });
-                      },
-                      feedback: Material(
-                        color: Colors.transparent,
-                        child: Opacity(
-                          opacity: 0.8,
-                          child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: source, isDragging: true)),
+              }
+
+              setState(() {
+                _draggingSourceId = null;
+              });
+            },
+            builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
+              final bool isHovered = candidateData.isNotEmpty;
+              return Container(
+                height: _sourcesHeight,
+                decoration: BoxDecoration(
+                  color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+                  border:
+                      isHovered
+                          ? Border.all(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                            width: 2,
+                          )
+                          : null,
+                ),
+                child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                  builder: (BuildContext context, ProjectViewModelState state) {
+                    if (_projectViewModel.sources.isEmpty) {
+                      return Center(
+                        child: FusionAppText(
+                          text: 'No sources added yet',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ),
-                      childWhenDragging: Opacity(
-                        opacity: 0.5,
-                        child: SourceItem(source: source, isDragging: true),
-                      ),
-                      child: SourceItem(source: source, isDragging: _draggingSourceId == source.id),
+                      );
+                    }
+                    return ListView.builder(
+                      itemCount: _projectViewModel.sources.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final Source source = _projectViewModel.sources[index];
+                        return Draggable<Source>(
+                          data: source,
+                          dragAnchorStrategy: pointerDragAnchorStrategy,
+                          onDragStarted: () {
+                            setState(() {
+                              _draggingSourceId = source.id;
+                            });
+                          },
+                          onDraggableCanceled: (_, __) {
+                            setState(() {
+                              _draggingSourceId = null;
+                            });
+                          },
+                          onDragEnd: (_) {
+                            setState(() {
+                              _draggingSourceId = null;
+                            });
+                          },
+                          feedback: Material(
+                            color: Colors.transparent,
+                            child: Opacity(
+                              opacity: 0.8,
+                              child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: source, isDragging: true)),
+                            ),
+                          ),
+                          childWhenDragging: Opacity(
+                            opacity: 0.5,
+                            child: SourceItem(source: source, isDragging: true),
+                          ),
+                          child: SourceItem(source: source, isDragging: _draggingSourceId == source.id),
+                        );
+                      },
                     );
                   },
-                );
-              },
-            ),
+                ),
+              );
+            },
           ),
 
           /// Draggable divider

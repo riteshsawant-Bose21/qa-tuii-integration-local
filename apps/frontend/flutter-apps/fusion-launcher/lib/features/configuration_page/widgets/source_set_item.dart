@@ -27,6 +27,9 @@ class _SourceSetItemState extends State<SourceSetItem> {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   bool _isHovered = false;
 
+  /// Track drag state for visual feedback
+  String? _draggingSourceId;
+
   @override
   void initState() {
     super.initState();
@@ -161,24 +164,38 @@ class _SourceSetItemState extends State<SourceSetItem> {
             itemCount: sourceList.length,
             onReorder: (int oldIndex, int newIndex) {},
             itemBuilder: (BuildContext context, int index) {
+              final Source sourceData = sourceList[index];
               return Draggable<Source>(
+                data: sourceData,
                 key: ValueKey<String>(sourceList[index].id),
-                data: sourceList[index],
+                dragAnchorStrategy: pointerDragAnchorStrategy,
+                onDragStarted: () {
+                  setState(() {
+                    _draggingSourceId = sourceData.id;
+                  });
+                },
+                onDraggableCanceled: (_, __) {
+                  setState(() {
+                    _draggingSourceId = null;
+                  });
+                },
+                onDragEnd: (_) {
+                  setState(() {
+                    _draggingSourceId = null;
+                  });
+                },
                 feedback: Material(
                   color: Colors.transparent,
                   child: Opacity(
                     opacity: 0.8,
-                    child: SizedBox(width: 220, child: SourceItem(source: sourceList[index])),
+                    child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
                   ),
                 ),
-                childWhenDragging: Material(
-                  color: Colors.transparent,
-                  child: Opacity(
-                    opacity: 0.8,
-                    child: SizedBox(width: 220, child: SourceItem(source: sourceList[index])),
-                  ),
+                childWhenDragging: Opacity(
+                  opacity: 0.5,
+                  child: SourceItem(source: sourceData, isDragging: true),
                 ),
-                child: SourceItem(source: sourceList[index]),
+                child: SourceItem(source: sourceData, isDragging: _draggingSourceId == sourceData.id),
               );
             },
           ),
