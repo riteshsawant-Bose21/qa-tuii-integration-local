@@ -407,7 +407,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
       _projectViewModel.addSourceToSourceSet(sourceId: selectedSource.id, sourceSetId: newSourceSet.id);
     }
 
-    // Clear + close only the popup, not the whole page.
+    /// Clear dialog and close popup
     _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
 

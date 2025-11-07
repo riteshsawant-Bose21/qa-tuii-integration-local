@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
+import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
@@ -10,6 +13,13 @@ import 'package:fusion_lib/models/project_entities/source_set_model.dart';
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+
+class SelectedSource {
+  final String id;
+  final String name;
+
+  SelectedSource({required this.id, required this.name});
+}
 
 class SourceSetItem extends StatefulWidget {
   final SourceSet sourceSet;
@@ -25,10 +35,14 @@ class SourceSetItem extends StatefulWidget {
 class _SourceSetItemState extends State<SourceSetItem> {
   late ValueNotifier<bool> _isSourcesSetExpanded;
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+  final TextEditingController _sourceSetNameController = TextEditingController();
+  final List<SelectedSource> _selectedSources = <SelectedSource>[];
   bool _isHovered = false;
 
   /// Track drag state for visual feedback
   String? _draggingSourceId;
+
+  final GlobalKey _addSourceIconKey = GlobalKey(); // anchor for popup
 
   @override
   void initState() {
@@ -117,11 +131,15 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             fit: BoxFit.contain,
                           ),
                           const SizedBox(width: 8),
-                          const FusionImage.asset(
-                            Assets.addSourceIcon,
-                            width: 22,
-                            height: 22,
-                            fit: BoxFit.contain,
+                          GestureDetector(
+                            key: _addSourceIconKey,
+                            onTap: _showEditSourceSetPopup,
+                            child: const FusionImage.asset(
+                              Assets.addSourceIcon,
+                              width: 22,
+                              height: 22,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                           // delete icon
                           const SizedBox(width: 8),
@@ -131,8 +149,8 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             },
                             child: const FusionImage.asset(
                               Assets.trashIcon,
-                              width: 20,
-                              height: 20,
+                              width: 30,
+                              height: 30,
                               fit: BoxFit.contain,
                             ),
                           ),
@@ -148,6 +166,74 @@ class _SourceSetItemState extends State<SourceSetItem> {
         );
       },
     );
+  }
+
+  /// Clear source set dialog inputs
+  void _clearSourceSetDialog() {
+    _sourceSetNameController.clear();
+    _selectedSources.clear();
+    setState(() {});
+  }
+
+  /// Show popup to edit source set
+  Future<void> _showEditSourceSetPopup() async {
+    final RenderBox button = _addSourceIconKey.currentContext!.findRenderObject() as RenderBox;
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+
+    final Offset offset = button.localToGlobal(Offset.zero, ancestor: overlay);
+    final RelativeRect position = RelativeRect.fromLTRB(
+      offset.dx,
+      offset.dy + button.size.height,
+      overlay.size.width - offset.dx - button.size.width,
+      overlay.size.height - offset.dy - button.size.height,
+    );
+
+    await showMenu<dynamic>(
+      context: context,
+      position: position,
+      color: Theme.of(context).colorScheme.white,
+      constraints: const BoxConstraints(maxHeight: 500, maxWidth: 250),
+      items: <PopupMenuEntry<dynamic>>[
+        PopupMenuItem<dynamic>(
+          enabled: false,
+          padding: EdgeInsets.zero,
+          child: SizedBox(
+            width: 250,
+            child: StatefulBuilder(
+              builder: (BuildContext context, StateSetter setMenuState) {
+                return SingleChildScrollView(
+                  child: _SourceSetCreationWidget(
+                    sourceSetNameController: _sourceSetNameController,
+                    availableSources: _projectViewModel.sources,
+                    selectedSources: _selectedSources,
+                    onAddSourceSet: () {
+                      // TODO: implement save logic
+                      Navigator.of(context).pop();
+                    },
+                    onCancel: () {
+                      _clearSourceSetDialog();
+                      Navigator.of(context).pop();
+                    },
+                    onSourceChanged: (Source source, bool isSelected) {
+                      setState(() {
+                        if (isSelected) {
+                          _selectedSources.add(SelectedSource(id: source.id, name: source.name));
+                        } else {
+                          _selectedSources.removeWhere((SelectedSource s) => s.id == source.id);
+                        }
+                      });
+                      setMenuState(() {});
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+
+    setState(() {}); // refresh after popup closes if needed
   }
 
   /// Build the list of sources within the source set
@@ -201,6 +287,291 @@ class _SourceSetItemState extends State<SourceSetItem> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Widget for creating a new source set
+class _SourceSetCreationWidget extends StatefulWidget {
+  final TextEditingController sourceSetNameController;
+  final List<Source> availableSources;
+  final List<SelectedSource> selectedSources;
+  final VoidCallback onAddSourceSet;
+  final VoidCallback onCancel;
+  final Function(Source, bool) onSourceChanged;
+
+  const _SourceSetCreationWidget({
+    required this.sourceSetNameController,
+    required this.availableSources,
+    required this.selectedSources,
+    required this.onAddSourceSet,
+    required this.onCancel,
+    required this.onSourceChanged,
+  });
+
+  @override
+  State<_SourceSetCreationWidget> createState() => _SourceSetCreationWidgetState();
+}
+
+class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: Theme.of(context).colorScheme.white,
+      width: 250,
+      padding: const EdgeInsets.all(12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FusionAppText(
+            text: "Edit source set",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          FusionAppText(
+            text: "Source Set Name",
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          /// Source Set Name Input
+          FusionTextField(
+            controller: widget.sourceSetNameController,
+            hintText: "Enter source set name",
+            decoration: FusionInputDecoration.fusionDense(
+              colorScheme: Theme.of(context).colorScheme,
+              hintText: 'Enter source set name',
+            ),
+            onChanged: (String value) {
+              setState(() {});
+            },
+          ),
+          const SizedBox(height: 12),
+
+          /// Source Selection Label
+          FusionAppText(
+            text: 'Select sources',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          /// Source Selection Dropdown
+          Container(
+            height: 28,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey[300]!),
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: PopupMenuButton<String>(
+              onCanceled: () {
+                // Handle popup close if needed
+              },
+              constraints: const BoxConstraints(
+                maxHeight: 500,
+                maxWidth: 240,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              color: Theme.of(context).colorScheme.white,
+              offset: const Offset(0, 35),
+              itemBuilder: (BuildContext context) {
+                return <PopupMenuEntry<String>>[
+                  PopupMenuItem<String>(
+                    enabled: false,
+                    padding: EdgeInsets.zero,
+                    child: StatefulBuilder(
+                      builder: (BuildContext context, StateSetter setPopupState) {
+                        return Container(
+                          width: 240,
+                          constraints: const BoxConstraints(maxHeight: 460),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: <Widget>[
+                              /// Header with close button
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border: Border(
+                                    bottom: BorderSide(color: Colors.grey[300]!),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: <Widget>[
+                                    FusionAppText(
+                                      text: "Select source",
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    InkWell(
+                                      onTap: () {
+                                        Navigator.of(context).pop();
+                                      },
+                                      child: Icon(
+                                        Icons.close,
+                                        size: 16,
+                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              /// Scrollable list of sources
+                              Flexible(
+                                child:
+                                    widget.availableSources.isNotEmpty
+                                        ? SingleChildScrollView(
+                                          physics: const ClampingScrollPhysics(),
+                                          child: Column(
+                                            children:
+                                                widget.availableSources.map<Widget>((Source source) {
+                                                  final bool isSelected = widget.selectedSources.any(
+                                                    (SelectedSource selectedSource) => selectedSource.id == source.id,
+                                                  );
+                                                  return InkWell(
+                                                    onTap: () {
+                                                      widget.onSourceChanged(source, !isSelected);
+                                                      setPopupState(() {});
+                                                      setState(() {});
+                                                    },
+                                                    child: Container(
+                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                      color: Colors.transparent,
+                                                      child: Row(
+                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                        children: <Widget>[
+                                                          /// Checkbox for selection
+                                                          SizedBox(
+                                                            width: 14,
+                                                            height: 14,
+                                                            child: Checkbox(
+                                                              value: isSelected,
+                                                              onChanged: (bool? value) {
+                                                                widget.onSourceChanged(source, value ?? false);
+                                                                setPopupState(() {}); // Update popup state
+                                                                setState(() {}); // Update main widget state
+                                                              },
+                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                              visualDensity: VisualDensity.compact,
+                                                              shape: const RoundedRectangleBorder(
+                                                                borderRadius: BorderRadius.zero,
+                                                                side: BorderSide(width: 0.5),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                          const SizedBox(width: 12),
+
+                                                          /// Source name
+                                                          Expanded(
+                                                            child: FusionAppText(
+                                                              text: source.name,
+                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                fontWeight: FontWeight.w500,
+                                                                fontSize: 10,
+                                                                color: Theme.of(context).textTheme.bodySmall?.color,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                  );
+                                                }).toList(),
+                                          ),
+                                        )
+                                        : Padding(
+                                          padding: const EdgeInsets.all(12.0),
+                                          child: FusionAppText(
+                                            text: "No Source Available",
+                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ];
+              },
+              child: Container(
+                height: 29,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text:
+                            widget.selectedSources.isEmpty
+                                ? "Select Sources"
+                                : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: widget.selectedSources.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ),
+                    Icon(
+                      Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: Theme.of(context).colorScheme.greyDark,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: <Widget>[
+              Flexible(
+                child: FusionOutlinedButton(
+                  width: double.infinity,
+                  label: "Cancel",
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                  onTap: () {
+                    widget.onCancel.call();
+                  },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: FusionButton(
+                  width: double.infinity,
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+
+                  label: "Create",
+                  isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
+                  onTap: () {
+                    widget.onAddSourceSet.call();
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
