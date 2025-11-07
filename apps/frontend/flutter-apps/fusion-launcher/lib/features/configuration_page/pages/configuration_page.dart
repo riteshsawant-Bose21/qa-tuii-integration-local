@@ -127,11 +127,13 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
           /// Sources list with controlled height
           DragTarget<Source>(
             onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
-              return true;
+              /// Accept only if this source currently lives inside any source set.
+              /// This prevents dropping a source back onto the same sources list when dragging from itself.
+              return _isSourceInAnySourceSet(details.data.id);
             },
             onLeave: (Source? data) {},
             onAcceptWithDetails: (DragTargetDetails<Source> details) {
-              /// Find which source set contains this source and remove it
+              /// Remove source from the source set it belongs to (moving it back to raw sources list)
               for (final SourceSet sourceSet in _projectViewModel.sourceSets) {
                 final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
                 if (sourcesInSet.any((Source source) => source.id == details.data.id)) {
@@ -139,7 +141,6 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   break;
                 }
               }
-
               setState(() {
                 _draggingSourceId = null;
               });
@@ -479,6 +480,15 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
         ],
       ),
     );
+  }
+
+  /// Helper: check if a source is part of any source set
+  bool _isSourceInAnySourceSet(String sourceId) {
+    for (final SourceSet sourceSet in _projectViewModel.sourceSets) {
+      final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+      if (sourcesInSet.any((Source s) => s.id == sourceId)) return true;
+    }
+    return false;
   }
 }
 
