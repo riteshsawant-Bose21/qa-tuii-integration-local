@@ -76,8 +76,11 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   Color? getZoneColor(String hardwareId) {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final Color? zoneColor = projectViewModel.getZoneForHardware(hardwareId: hardwareId)?.color;
-    // zoneColor ??= projectViewModel.getSubZoneForHardware(hardwareId: hardwareId)?.;
+    Color? zoneColor = projectViewModel.getZoneForHardware(hardwareId: hardwareId)?.color;
+    if (zoneColor == null) {
+      final SubZone? subZone = projectViewModel.getSubZoneForHardware(hardwareId: hardwareId);
+      if (subZone != null) zoneColor = projectViewModel.getZoneForSubZone(subZoneId: subZone.id)?.color;
+    }
     return zoneColor;
   }
 
