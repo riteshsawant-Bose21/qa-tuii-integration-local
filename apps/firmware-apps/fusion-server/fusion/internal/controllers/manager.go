@@ -107,19 +107,7 @@ func (cm *ControllerManager) OnControllerDisconnected(connectionID string) {
 	if exists && controller.IsIdentified {
 		logger.Debug("Controller disconnected: %s (ID: %s)", connectionID, controller.Info.ID)
 
-		// // Broadcast disconnection event
-		// event := &api.NotifyMessage{
-		// 	Operation: api.NotifyOpControllerRemove,
-		// 	ConfigUpdate: &api.ConfigUpdate{
-		// 		Data: map[string]interface{}{
-		// 			"action":       "controller_disconnected",
-		// 			"controllerID": controller.Info.ID,
-		// 			"timestamp":    time.Now(),
-		// 		},
-		// 	},
-		// }
-		// cm.hub.Broadcast(event)
-		// logger.Debug("📡 Broadcasted controller disconnection event for %s", controller.Info.ID)
+		// TODO: Broadcast controller disconnection event here if/when needed.
 	} else {
 		logger.Info("🔌 Unidentified controller disconnected: %s", connectionID)
 	}
