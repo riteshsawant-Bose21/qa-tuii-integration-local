@@ -127,7 +127,6 @@ type VersionUpdate struct {
 type NotifyOp string
 
 const (
-
 	NotifyOpAck           NotifyOp = "ack"
 	NotifyOpConfigUpdate  NotifyOp = "config_update"
 	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
