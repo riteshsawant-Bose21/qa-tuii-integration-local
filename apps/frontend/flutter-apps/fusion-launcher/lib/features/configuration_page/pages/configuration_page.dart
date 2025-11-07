@@ -7,7 +7,6 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/drag_divider.dart';
-import '../widgets/panel_header.dart';
 import '../widgets/source_item.dart';
 import '../widgets/source_set_item.dart';
 import '../widgets/zone_card.dart';
@@ -100,7 +99,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
       color: Colors.white,
       child: Column(
         children: <Widget>[
-          const PanelHeader(title: 'INPUT'),
+          // const PanelHeader(title: 'INPUT'),
           SectionHeader(
             title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
@@ -434,7 +433,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
       child: Column(
         children: <Widget>[
           /// Output Panel Header
-          const PanelHeader(title: 'OUTPUT'),
+          // const PanelHeader(title: 'OUTPUT'),
 
           /// Zones Section
           SectionHeader(
@@ -466,17 +465,17 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                     buildDefaultDragHandles: false,
                     itemCount: _projectViewModel.zones.length,
                     onReorder: (int oldIndex, int newIndex) {
-                      // if (oldIndex < newIndex) newIndex -= 1;
-                      // final String zoneToMove = filteredZones[oldIndex].id;
-                      // final String zoneAtNewIndex = filteredZones[newIndex].id;
-                      // _projectViewModel.reorderZones(
-                      //   zoneIdToMove: zoneToMove,
-                      //   zoneIdAtNewIndex: zoneAtNewIndex,
-                      // );
-                      // _projectViewModel.setSelectedDevice(
-                      //   zoneToMove,
-                      //   SelectedItemType.zone,
-                      // );
+                      if (oldIndex < newIndex) newIndex -= 1;
+                      final String zoneToMove = _projectViewModel.zones[oldIndex].id;
+                      final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
+                      _projectViewModel.reorderZones(
+                        zoneIdToMove: zoneToMove,
+                        zoneIdAtNewIndex: zoneAtNewIndex,
+                      );
+                      _projectViewModel.setSelectedDevice(
+                        zoneToMove,
+                        SelectedItemType.zone,
+                      );
                     },
                     itemBuilder: (BuildContext context, int index) {
                       final Zone zoneData = _projectViewModel.zones[index];

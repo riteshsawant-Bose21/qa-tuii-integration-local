@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:flutter/foundation.dart'; // added for kDebugMode
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
@@ -130,37 +131,54 @@ class _SubZoneCardState extends State<SubZoneCard> {
     );
   }
 
+  /// Empty circuits placeholder (ensures visible height)
+  Widget _buildEmptyCircuitsPlaceholder() {
+    return SizedBox(
+      height: 60,
+      child: Center(
+        child: FusionAppText(
+          text: 'No circuits added yet',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+      ),
+    );
+  }
+
   /// Subzone content - shows circuits/devices
   Widget _buildSubZoneContent() {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         final List<CircuitModel> circuitList = _projectViewModel.getCircuitsInSubZone(subZoneId: widget.subZoneId);
-
+        if (kDebugMode) {
+          debugPrint('SubZone ${widget.subZoneId} (${widget.subZoneName}) circuits: ${circuitList.map((c) => c.id).join(", ")}');
+        }
         return Container(
-          // decoration: BoxDecoration(
-          //   border: Border(
-          //     bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
-          //   ),
-          // ),
-          constraints: const BoxConstraints(maxHeight: 400),
-          child: ListView.builder(
-            shrinkWrap: true,
-            physics: const ClampingScrollPhysics(),
-            itemCount: circuitList.length,
-            itemBuilder: (BuildContext context, int index) {
-              final CircuitModel circuitData = circuitList[index];
-              final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-              return MouseRegion(
-                onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
-                onExit: (_) => setState(() => _hoveredCircuitIndex = null),
-                child: _buildCircuitCard(
-                  index: index,
-                  circuitData: circuitData,
-                  speakersList: speakersList,
-                ),
-              );
-            },
-          ),
+          constraints: const BoxConstraints(minHeight: 60, maxHeight: 400),
+          child:
+              circuitList.isEmpty
+                  ? _buildEmptyCircuitsPlaceholder()
+                  : ListView.builder(
+                    shrinkWrap: true,
+                    physics: const ClampingScrollPhysics(),
+                    itemCount: circuitList.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final CircuitModel circuitData = circuitList[index];
+                      final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                      return MouseRegion(
+                        onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                        onExit: (_) => setState(() => _hoveredCircuitIndex = null),
+                        child: _buildCircuitCard(
+                          index: index,
+                          circuitData: circuitData,
+                          speakersList: speakersList,
+                        ),
+                      );
+                    },
+                  ),
         );
       },
     );

@@ -124,18 +124,17 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Zone content
   Widget _buildZoneContent() {
-    /// Calculate dynamic height based on subzones
-    /// Each subzone card is approximately 40-50px, add padding
-    final int subZoneCount = _projectViewModel.subZones.length;
-    final double calculatedHeight = (subZoneCount * 100.0);
-
-    /// Constrain between min and max heights
-    final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
-
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
+            final List<SubZone> subZonesForZone = _projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneId);
+            final int subZoneCount = subZonesForZone.length;
+            final double calculatedHeight = subZoneCount * 100.0;
+            final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
+            // Debug
+            print('Zone ${widget.zoneId} (${widget.zoneName}) -> subZones: $subZoneCount');
+
             return SizedBox(
               height: constrainedHeight,
               child: Row(
@@ -165,7 +164,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   Expanded(
                     child: SizedBox(
                       height: constrainedHeight,
-                      child: _buildSubZonePanel(),
+                      child: _buildSubZonePanel(subZonesForZone),
                     ),
                   ),
                 ],
@@ -209,54 +208,56 @@ class _ZoneCardState extends State<ZoneCard> {
     );
   }
 
-  /// Subzone panel
-  Widget _buildSubZonePanel() {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        print('Building SubZone Panel with ${_projectViewModel.subZones.length} subzones');
-        return Container(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
-            ),
-          ),
-          child:
-              _projectViewModel.subZones.isEmpty
-                  ? Center(
-                    child: FusionAppText(
-                      text: 'No sub zones added yet',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                        // color: Theme.of(context).colorScheme.greyDark,
-                      ),
-                    ),
-                  )
-                  : SingleChildScrollView(
-                    child: ReorderableListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      buildDefaultDragHandles: false,
-                      itemCount: _projectViewModel.subZones.length,
-                      onReorder: (int oldIndex, int newIndex) {},
-                      itemBuilder: (BuildContext context, int index) {
-                        final SubZone subZoneData = _projectViewModel.subZones[index];
-                        return ReorderableDragStartListener(
-                          key: ValueKey<String>(subZoneData.id),
-                          index: index,
-                          child: Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: SubZoneCard(
-                              subZoneId: subZoneData.id,
-                              subZoneName: subZoneData.name,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
+  /// Subzone panel (now uses filtered list)
+  Widget _buildSubZonePanel(List<SubZone> subZonesForZone) {
+    print('Building SubZone Panel for zone ${widget.zoneId} with ${subZonesForZone.length} subzones');
+    return Container(
+      decoration: BoxDecoration(
+        border: Border(
+          bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
+        ),
+      ),
+      child:
+          subZonesForZone.isEmpty
+              ? Center(
+                child: FusionAppText(
+                  text: 'No sub zones added yet',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-        );
-      },
+                ),
+              )
+              : SingleChildScrollView(
+                child: ReorderableListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  buildDefaultDragHandles: false,
+                  itemCount: subZonesForZone.length,
+                  onReorder: (int oldIndex, int newIndex) {
+                    if (oldIndex < newIndex) newIndex -= 1;
+                    _projectViewModel.reOrderSubZoneInZone(
+                      parentId: widget.zoneId,
+                      oldIndex: oldIndex,
+                      newIndex: newIndex,
+                    );
+                  },
+                  itemBuilder: (BuildContext context, int index) {
+                    final SubZone subZone = subZonesForZone[index];
+                    return ReorderableDragStartListener(
+                      key: ValueKey<String>(subZone.id),
+                      index: index,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: SubZoneCard(
+                          subZoneId: subZone.id,
+                          subZoneName: subZone.name,
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
     );
   }
 }
