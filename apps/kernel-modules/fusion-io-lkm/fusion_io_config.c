@@ -907,21 +907,21 @@ const struct base_device bd_fusion_c0 = {
                 }
             },
             {
-                .name = "ep9512t_config",
-                .parent_ep_name = "ep_hdmi_ep9512t",
-                .num_msgs = 3,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr  = EP9512T_REG_GENERAL_CTRL, .data = 0x21 }, // ARC_EN = 1, Audio_Path = 1
-                    { .reg_addr  = EP9512T_REG_TX_CTRL,      .data = 0x00 },
-                    { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
-                }
-            },
-            {
                 .name = "ak4137_config",
                 .parent_ep_name = "ep_src_ak4137",
                 .num_msgs = 1,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 } // input format i2s
+                }
+            },
+            {
+                .name = "ep9512t_config",
+                .parent_ep_name = "ep_hdmi_ep9512t",
+                .num_msgs = 3,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    // from tests, this turns on arc and 5v en
+                    // also, prevents tv from going black for a second.
+                    { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
                 }
             }
         },
@@ -1801,21 +1801,19 @@ const struct base_device bd_fusion_c1 = {
                 }
             },
             {
-                .name = "ep9512t_config",
-                .parent_ep_name = "ep_hdmi_ep9512t",
-                .num_msgs = 3,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr  = EP9512T_REG_GENERAL_CTRL, .data = 0x21 }, // ARC_EN = 1, Audio_Path = 1
-                    { .reg_addr  = EP9512T_REG_TX_CTRL,      .data = 0x00 },
-                    { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
-                }
-            },
-            {
                 .name = "ak4137_config",
                 .parent_ep_name = "ep_src_ak4137",
                 .num_msgs = 1,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 } // input format i2s
+                }
+            },
+            {
+                .name = "ep9512t_config",
+                .parent_ep_name = "ep_hdmi_ep9512t",
+                .num_msgs = 1,
+                .msgs = (struct endpoint_cmd_msg[]) {
+                    { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
                 }
             }
         },

@@ -616,7 +616,7 @@ int ads7128_handle_irq(struct endpoint_gpio *ep_gpio)
                 continue;
             }
         } else {
-            // cannot use Digital input with C0 due to voltage divider scheme at input
+            // cannot use Digital input with c0/c1 due to voltage divider scheme at input
         }
 
         // clear event flag bits
@@ -1343,7 +1343,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     // TODO
     // Read IMX8 ROM for this. hardcode for now
-    data.type = BD_TYPE_FUSION_C0;
+    data.type = BD_TYPE_FUSION_C1;
 
     if (data.type >= BD_TYPE_FIXED_IO_START && data.type < BD_TYPE_FIXED_IO_END) {
         has_slot_io = false;
