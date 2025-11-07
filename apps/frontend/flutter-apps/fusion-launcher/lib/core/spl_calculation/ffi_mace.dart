@@ -12,12 +12,12 @@ import 'ffi_constants.dart';
 /// Load the dylib from the app bundle’s Frameworks folder
 final DynamicLibrary _mace = () {
   if (Platform.isMacOS) {
-    return DynamicLibrary.process();
-    // // On macOS we bundled a fat dylib into MyApp.app/Contents/Frameworks/
-    // final String exe = Platform.resolvedExecutable;
-    // final String bundleContents = File(exe).parent.parent.path;
-    // final String frameworksDir = p.join(bundleContents, 'Frameworks');
-    // return DynamicLibrary.open(p.join(frameworksDir, 'libMaceAPI.dylib'));
+    // return DynamicLibrary.process();
+    // On macOS we bundled a fat dylib into MyApp.app/Contents/Frameworks/
+    final String exe = Platform.resolvedExecutable;
+    final String bundleContents = File(exe).parent.parent.path;
+    final String frameworksDir = p.join(bundleContents, 'Frameworks');
+    return DynamicLibrary.open(p.join(frameworksDir, 'libMaceAPI.dylib'));
   } else if (Platform.isIOS) {
     return DynamicLibrary.process();
   } else {
@@ -112,54 +112,25 @@ typedef Clear = Void Function(Uint64);
 typedef DartClear = void Function(int);
 
 /// Lookup the C functions
-final DartCreateEngine maceCreateEngine =
-    _mace
-        .lookup<NativeFunction<CreateEngine>>('mace_create_engine')
-        .asFunction();
-final DartDestroyEngine maceDestroyEngine =
-    _mace
-        .lookup<NativeFunction<DestroyEngine>>('mace_destroy_engine')
-        .asFunction();
-final DartAddPolygon maceAddPolygon =
-    _mace.lookup<NativeFunction<AddPolygon>>('mace_add_polygon').asFunction();
-final DartAddSpeakerCluster maceAddSpeakerCluster =
-    _mace
-        .lookup<NativeFunction<AddSpeakerCluster>>('mace_add_speaker_cluster')
-        .asFunction();
-final DartAddFieldPoints maceAddFieldPoints =
-    _mace
-        .lookup<NativeFunction<AddFieldPoints>>('mace_add_field_points')
-        .asFunction();
-final DartCreateMeasurement maceCreateMeasurement =
-    _mace
-        .lookup<NativeFunction<CreateMeasurement>>('mace_create_measurement')
-        .asFunction();
-final DartCreateGroup maceCreateGroup =
-    _mace.lookup<NativeFunction<CreateGroup>>('mace_create_group').asFunction();
-final DartAddToGroup maceAddToGroup =
-    _mace.lookup<NativeFunction<AddToGroup>>('mace_add_to_group').asFunction();
+final DartCreateEngine maceCreateEngine = _mace.lookup<NativeFunction<CreateEngine>>('mace_create_engine').asFunction();
+final DartDestroyEngine maceDestroyEngine = _mace.lookup<NativeFunction<DestroyEngine>>('mace_destroy_engine').asFunction();
+final DartAddPolygon maceAddPolygon = _mace.lookup<NativeFunction<AddPolygon>>('mace_add_polygon').asFunction();
+final DartAddSpeakerCluster maceAddSpeakerCluster = _mace.lookup<NativeFunction<AddSpeakerCluster>>('mace_add_speaker_cluster').asFunction();
+final DartAddFieldPoints maceAddFieldPoints = _mace.lookup<NativeFunction<AddFieldPoints>>('mace_add_field_points').asFunction();
+final DartCreateMeasurement maceCreateMeasurement = _mace.lookup<NativeFunction<CreateMeasurement>>('mace_create_measurement').asFunction();
+final DartCreateGroup maceCreateGroup = _mace.lookup<NativeFunction<CreateGroup>>('mace_create_group').asFunction();
+final DartAddToGroup maceAddToGroup = _mace.lookup<NativeFunction<AddToGroup>>('mace_add_to_group').asFunction();
 final DartAddGroupsToMeasurement maceAddGroupsToMeasurement =
     _mace
         .lookup<NativeFunction<AddGroupsToMeasurement>>(
           'mace_add_groups_to_measurement',
         )
         .asFunction();
-final DartRunCalc maceRunCalc =
-    _mace
-        .lookup<NativeFunction<RunCalculation>>('mace_run_calculation')
-        .asFunction();
-final DartGetSpl maceGetSpl =
-    _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
-final GetAllSplJsonDart _maceGetAllSplJson =
-    _mace
-        .lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json')
-        .asFunction<GetAllSplJsonDart>();
-final DartDebugSpeakers maceDebugSpeakers =
-    _mace
-        .lookup<NativeFunction<DebugSpeakers>>('mace_debug_speakers')
-        .asFunction();
-final DartGetSplAt maceGetSplAt =
-    _mace.lookup<NativeFunction<GetSplAt>>('mace_get_spl_at').asFunction();
+final DartRunCalc maceRunCalc = _mace.lookup<NativeFunction<RunCalculation>>('mace_run_calculation').asFunction();
+final DartGetSpl maceGetSpl = _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
+final GetAllSplJsonDart _maceGetAllSplJson = _mace.lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json').asFunction<GetAllSplJsonDart>();
+final DartDebugSpeakers maceDebugSpeakers = _mace.lookup<NativeFunction<DebugSpeakers>>('mace_debug_speakers').asFunction();
+final DartGetSplAt maceGetSplAt = _mace.lookup<NativeFunction<GetSplAt>>('mace_get_spl_at').asFunction();
 
 /// Copy .bsf assets into the macOS sandbox and return that folder path
 Future<String> prepareLoudspeakersFolder() async {
@@ -224,8 +195,7 @@ Future<String> prepareLoudspeakersFolder() async {
   return lsDir.path;
 }
 
-final DartClear maceClear =
-    _mace.lookup<NativeFunction<Clear>>('mace_clear').asFunction();
+final DartClear maceClear = _mace.lookup<NativeFunction<Clear>>('mace_clear').asFunction();
 
 /// High-level Dart wrapper
 class MaceEngine {
@@ -249,10 +219,7 @@ class MaceEngine {
 
   /// Adds a polygon; [vertices] is a list of [x,y,z] triples.
   int addSurface(List<List<num>> vertices) {
-    final List<double> flat =
-        vertices
-            .expand((List<num> r) => r.map((num e) => e.toDouble()))
-            .toList();
+    final List<double> flat = vertices.expand((List<num> r) => r.map((num e) => e.toDouble())).toList();
     final Pointer<Double> ptr = calloc<Double>(flat.length);
     for (int i = 0; i < flat.length; i++) {
       ptr[i] = flat[i];
@@ -291,8 +258,7 @@ class MaceEngine {
 
   /// Adds field points; [pts] is a list of [x,y,z] triples.
   int addFieldPoints(List<List<num>> pts) {
-    final List<double> flat =
-        pts.expand((List<num> r) => r.map((num e) => e.toDouble())).toList();
+    final List<double> flat = pts.expand((List<num> r) => r.map((num e) => e.toDouble())).toList();
     final Pointer<Double> ptr = calloc<Double>(flat.length);
     for (int i = 0; i < flat.length; i++) {
       ptr[i] = flat[i];
@@ -309,12 +275,10 @@ class MaceEngine {
   int createGroup() => maceCreateGroup();
 
   /// Adds cluster and fieldPoints to the group.
-  void addToGroup(int groupId, int sourceId, int fieldPointsId) =>
-      maceAddToGroup(groupId, sourceId, fieldPointsId);
+  void addToGroup(int groupId, int sourceId, int fieldPointsId) => maceAddToGroup(groupId, sourceId, fieldPointsId);
 
   /// Associates group with measurement.
-  void addGroupsToMeasurement(int measId, int groupId) =>
-      maceAddGroupsToMeasurement(measId, groupId);
+  void addGroupsToMeasurement(int measId, int groupId) => maceAddGroupsToMeasurement(measId, groupId);
 
   /// Runs the acoustic calculation synchronously.
   void runCalculation() => maceRunCalc(_handle);
@@ -349,10 +313,7 @@ class MaceEngine {
     final Map<String, dynamic> json = getAllSplJson(fph);
 
     // Fix: Properly cast dynamic list to num list, then to int list
-    final List<int> freqs =
-        (json['frequencies'] as List<dynamic>)
-            .map((dynamic e) => (e as num).toInt())
-            .toList();
+    final List<int> freqs = (json['frequencies'] as List<dynamic>).map((dynamic e) => (e as num).toInt()).toList();
 
     switch (bw) {
       case Bandwidth.oneThirdOctave:
@@ -367,30 +328,19 @@ class MaceEngine {
 
         // Fix: Correctly parse the matrix structure
         final List<List<double>> mat =
-            (json['spl'][bw == Bandwidth.oneThirdOctave
-                        ? 'oneThirdOctave'
-                        : 'oneOctave']
-                    as List<dynamic>)
+            (json['spl'][bw == Bandwidth.oneThirdOctave ? 'oneThirdOctave' : 'oneOctave'] as List<dynamic>)
                 .map<List<double>>(
-                  (dynamic row) =>
-                      (row as List<dynamic>)
-                          .cast<num>()
-                          .map((num e) => e.toDouble())
-                          .toList(),
+                  (dynamic row) => (row as List<dynamic>).cast<num>().map((num e) => e.toDouble()).toList(),
                 )
                 .toList();
 
         return List<double>.generate(mat.length, (int p) => mat[p][idx]);
 
       case Bandwidth.vocalBands:
-        return (json['spl']['vocalBands'] as List<dynamic>)
-            .map((dynamic e) => (e as num).toDouble())
-            .toList();
+        return (json['spl']['vocalBands'] as List<dynamic>).map((dynamic e) => (e as num).toDouble()).toList();
 
       case Bandwidth.allBands:
-        return (json['spl']['broadband'] as List<dynamic>)
-            .map((dynamic e) => (e as num).toDouble())
-            .toList();
+        return (json['spl']['broadband'] as List<dynamic>).map((dynamic e) => (e as num).toDouble()).toList();
     }
   }
 

@@ -347,7 +347,7 @@ extension HardwareViewModel on ProjectViewModel {
           zAxis: 300.0,
           // 200 cm default height
           speakerSKU: product.sku,
-          gain: 20.0,
+          gain: 0.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
