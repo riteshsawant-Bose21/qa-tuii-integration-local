@@ -221,10 +221,70 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
           SectionHeader(
             title: 'Source Sets',
             assetPath: 'assets/images/source_set_icon.png',
-            trailing: GestureDetector(
-              key: _popupButtonKey,
-              onTap: () => _showCustomSourceSetPopup(context),
-              child: const Icon(Icons.add, size: 20),
+            trailing: PopupMenuButton<dynamic>(
+              onCanceled: () {
+                // Just reset form values, do NOT pop the page.
+                _clearSourceSetDialog();
+                setState(() {});
+              },
+              tooltip: "Add Source Set",
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(
+                maxHeight: 500,
+                maxWidth: 250,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              color: Theme.of(context).colorScheme.white,
+              menuPadding: EdgeInsets.zero,
+
+              itemBuilder: (BuildContext context) {
+                return <PopupMenuItem<dynamic>>[
+                  PopupMenuItem<dynamic>(
+                    enabled: false,
+                    padding: EdgeInsets.zero,
+                    child: SizedBox(
+                      width: 250,
+                      child: StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setMenuState) {
+                          return SingleChildScrollView(
+                            child: _SourceSetCreationWidget(
+                              sourceSetNameController: _sourceSetNameController,
+                              availableSources: _projectViewModel.sources,
+                              selectedSources: _selectedSources,
+                              onAddSourceSet: () {
+                                // Pass popup context so only the menu closes.
+                                _addSourceSet(context);
+                              },
+                              onCancel: () {
+                                // Cancel inside popup: close only popup.
+                                _clearSourceSetDialog(pop: true, popContext: context);
+                              },
+                              onSourceChanged: (Source source, bool isSelected) {
+                                setState(() {
+                                  if (isSelected) {
+                                    _selectedSources.add(SelectedSource(id: source.id, name: source.name));
+                                  } else {
+                                    _selectedSources.removeWhere((SelectedSource s) => s.id == source.id);
+                                  }
+                                });
+                                setMenuState(() {});
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ];
+              },
+              child: IconButton(
+                icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                onPressed: null,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+              ),
             ),
           ),
 
@@ -233,6 +293,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
                 if (_projectViewModel.sourceSets.isEmpty) {
+                  /// Show informational text when no source sets exist
                   return SingleChildScrollView(
                     child: Padding(
                       padding: const EdgeInsets.all(16),
@@ -331,57 +392,8 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
     );
   }
 
-  /// Show custom popup for adding source set
-  void _showCustomSourceSetPopup(BuildContext context) {
-    final RenderBox button = _popupButtonKey.currentContext!.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    final RelativeRect position = RelativeRect.fromRect(
-      Rect.fromPoints(
-        button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
-      ),
-      Offset.zero & overlay.size,
-    );
-
-    showMenu<void>(
-      color: Theme.of(context).colorScheme.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(4),
-      ),
-      context: context,
-      menuPadding: EdgeInsets.zero,
-      position: position,
-      items: <PopupMenuEntry<void>>[
-        PopupMenuItem<void>(
-          enabled: false,
-          child: _SourceSetCreationWidget(
-            sourceSetNameController: _sourceSetNameController,
-            availableSources: _projectViewModel.sources,
-            selectedSources: _selectedSources,
-            onAddSourceSet: () {
-              print('Adding source set');
-              _addSourceSet(context);
-            },
-            onCancel: () {
-              _clearSourceSetDialog();
-            },
-            onSourceChanged: (Source source, bool isSelected) {
-              setState(() {
-                if (isSelected) {
-                  _selectedSources.add(SelectedSource(id: source.id, name: source.name));
-                } else {
-                  _selectedSources.removeWhere((SelectedSource selectedSource) => selectedSource.id == source.id);
-                }
-              });
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
   /// Add source set to project view model
-  void _addSourceSet(BuildContext context) {
+  void _addSourceSet(BuildContext popupContext) {
     /// create source set and add to project view model
     final SourceSet newSourceSet = SourceSet(
       name: _sourceSetNameController.text.trim(),
@@ -395,14 +407,18 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
       _projectViewModel.addSourceToSourceSet(sourceId: selectedSource.id, sourceSetId: newSourceSet.id);
     }
 
-    _clearSourceSetDialog();
-    Navigator.of(context).pop();
+    // Clear + close only the popup, not the whole page.
+    _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
 
   /// Clear source set dialog inputs
-  void _clearSourceSetDialog() {
+  void _clearSourceSetDialog({bool pop = false, BuildContext? popContext}) {
     _sourceSetNameController.clear();
     _selectedSources.clear();
+    if (pop && popContext != null && Navigator.of(popContext).canPop()) {
+      Navigator.of(popContext).pop();
+    }
+    setState(() {});
   }
 
   /// Build Output Panel
@@ -520,7 +536,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
     return Container(
       color: Theme.of(context).colorScheme.white,
       width: 250,
-      padding: const EdgeInsets.only(left: 12, top: 12, bottom: 12),
+      padding: const EdgeInsets.all(12),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
