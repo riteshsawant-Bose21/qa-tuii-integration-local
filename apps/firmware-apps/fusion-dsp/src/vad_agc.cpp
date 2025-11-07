@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <iostream> 
 #include "rnnoise.h"
+#include "fft.h"
+#include "denoise.h"
 
 namespace {
 
@@ -82,6 +84,8 @@ namespace {
             
             int out_buffer_index;
 
+            std::unique_ptr<fft::Fft> curr_fft;
+
             ALGORITHM_DECLARE(VadAgc);
     };
 
@@ -148,6 +152,8 @@ namespace {
         // count = 0;
 
         out_buffer.assign(480, 0.0f);
+
+        curr_fft = std::make_unique<fft::Fft>(WINDOW_SIZE);
         //use_weights_file = true;
         
         #ifdef USE_WEIGHTS_FILE
@@ -156,10 +162,10 @@ namespace {
                 SPDLOG_ERROR("Error: could not load weights_blob.bin");
                 
             st = rnnoise_create(model);
-            //std::cout << "Yes"<< std::endl;
+            std::cout << "Yes"<< std::endl;
         #else
             st = rnnoise_create(NULL);
-            //std::cout << "No" << std::endl;
+            std::cout << "No" << std::endl;
         #endif
         
         // right now only works when frame_size = FRAME_SIZE = 480,
@@ -188,7 +194,7 @@ namespace {
                     float frame[frame_size_rnnoise];
                     float frame_out[frame_size_rnnoise];
                     std::copy(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise, frame);
-                    float vad_prob = rnnoise_process_frame(st, frame_out, frame);
+                    float vad_prob = rnnoise_process_frame(st, frame_out, frame, curr_fft.get());
                     smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
                     delayed_vad  = smoothed_vad;  
                     in_buffer.erase(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise);
@@ -212,7 +218,7 @@ namespace {
                     float frame[frame_size_rnnoise];
                     float frame_out[frame_size_rnnoise];
                     std::copy(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise, frame);
-                    float vad_prob = rnnoise_process_frame(st, frame_out, frame);
+                    float vad_prob = rnnoise_process_frame(st, frame_out, frame, curr_fft.get());
                     smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
                     vad_activity = (smoothed_vad >= vad_threshold);
                     in_buffer.erase(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise);
@@ -222,7 +228,7 @@ namespace {
                   
             }
 
-            ///////////////////////////////////////////////////////////////////////
+    
             
             
             in_meter[channel] = 0.0;

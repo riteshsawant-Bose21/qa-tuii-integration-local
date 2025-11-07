@@ -29,6 +29,7 @@
 #define RNNOISE_H 1
 
 #include <stdio.h>
+#include "fft.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -91,7 +92,7 @@ RNNOISE_EXPORT void rnnoise_destroy(DenoiseState *st);
  *
  * in and out must be at least rnnoise_get_frame_size() large.
  */
-RNNOISE_EXPORT float rnnoise_process_frame(DenoiseState *st, float *out, const float *in);
+RNNOISE_EXPORT float rnnoise_process_frame(DenoiseState *st, float *out, const float *in, fft::Fft *curr_fft);
 
 /**
  * Load a model from a memory buffer
@@ -123,6 +124,14 @@ RNNOISE_EXPORT RNNModel *rnnoise_model_from_filename(const char *filename);
  * It must be called after all the DenoiseStates referring to it are freed.
  */
 RNNOISE_EXPORT void rnnoise_model_free(RNNModel *model);
+
+
+// fft data
+typedef struct 
+{
+	float r;
+	float i;
+} fft_cpx;
 
 #ifdef __cplusplus
 }

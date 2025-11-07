@@ -23,9 +23,10 @@
    NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
    SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#pragma once
 
 #include "rnnoise.h"
-#include "kiss_fft.h"
+#include "fft.h"
 #include "nnet.h"
 #include "rnnoise_tables.h"
 
@@ -45,13 +46,12 @@ extern const WeightArray rnnoise_arrays[];
 
 extern const int eband20ms[];
 
-
 void rnn_biquad(float *y, float mem[2], const float *x, const float *b, const float *a, int N);
 
-void rnn_pitch_filter(kiss_fft_cpx *X, const kiss_fft_cpx *P, const float *Ex, const float *Ep,
+void rnn_pitch_filter(fft_cpx *X, const fft_cpx *P, const float *Ex, const float *Ep,
                   const float *Exp, const float *g);
 
-void rnn_frame_analysis(DenoiseState *st, kiss_fft_cpx *X, float *Ex, const float *in);
+void rnn_frame_analysis(DenoiseState *st, fft_cpx *X, float *Ex, const float *in, fft::Fft *curr_fft);
 
-int rnn_compute_frame_features(DenoiseState *st, kiss_fft_cpx *X, kiss_fft_cpx *P,
-                                  float *Ex, float *Ep, float *Exp, float *features, const float *in);
+int rnn_compute_frame_features(DenoiseState *st, fft_cpx *X, fft_cpx *P,
+                                  float *Ex, float *Ep, float *Exp, float *features, const float *in, fft::Fft *curr_fft);
