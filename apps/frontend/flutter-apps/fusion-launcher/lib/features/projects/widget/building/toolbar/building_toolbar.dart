@@ -178,7 +178,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             step: GuideShowCaseSteps.acousticMode,
             onHighlightedSpotTap: (TapDownDetails details) {
               _switchMode(ToolbarMode.acoustics);
-              context.read<GuideShowCaseController>().completeStep();
+              serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.acousticMode);
             },
             child: _buildModeTab(
               label: "Acoustics",
@@ -193,7 +193,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             step: GuideShowCaseSteps.systemMode,
             onHighlightedSpotTap: (TapDownDetails details) {
               _switchMode(ToolbarMode.system);
-              context.read<GuideShowCaseController>().completeStep();
+              serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemMode);
             },
             child: _buildModeTab(
               label: "System",
@@ -655,7 +655,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           widget.onProductSelected();
         }
 
-        context.read<GuideShowCaseController>().completeStep();
+        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.selectSpeakersTool);
         break;
 
       case _AcousticsToolType.spl:

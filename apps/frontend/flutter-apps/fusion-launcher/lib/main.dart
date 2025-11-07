@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:provider/provider.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -69,28 +68,28 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
-      ],
-      child: ChangeNotifierProvider<GuideShowCaseController>(
-        create: (BuildContext context) => GuideShowCaseController(globalNavigatorKey.currentContext!),
-        child: FusionThemeBuilder(
-          builder: (BuildContext context, ThemeMode mode) {
-            return MaterialApp(
-              title: 'Fusion Launcher',
-              debugShowCheckedModeBanner: false,
-              theme: FusionAppTheme.lightTheme,
-              darkTheme: FusionAppTheme.darkTheme,
-              themeMode: mode,
-              home: Scaffold(
-                body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
-              ),
-              navigatorKey: globalNavigatorKey,
-              navigatorObservers: <NavigatorObserver>[
-                AppNavigatorObserver(),
-              ],
-              onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
-            );
-          },
+        BlocProvider<GuideShowCaseController>(
+          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
+      ],
+      child: FusionThemeBuilder(
+        builder: (BuildContext context, ThemeMode mode) {
+          return MaterialApp(
+            title: 'Fusion Launcher',
+            debugShowCheckedModeBanner: false,
+            theme: FusionAppTheme.lightTheme,
+            darkTheme: FusionAppTheme.darkTheme,
+            themeMode: mode,
+            home: Scaffold(
+              body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
+            ),
+            navigatorKey: globalNavigatorKey,
+            navigatorObservers: <NavigatorObserver>[
+              AppNavigatorObserver(),
+            ],
+            onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+          );
+        },
       ),
     );
   }

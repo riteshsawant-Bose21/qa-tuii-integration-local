@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
+import 'package:flutter/services.dart'
+    show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -13,9 +14,13 @@ class SchematicProperties extends StatefulWidget {
 }
 
 class SchematicPropertiesState extends State<SchematicProperties> {
-  final ExpansibleController viewMoreExpansibleController = ExpansibleController();
-  final TextEditingController speakerQtyController = TextEditingController(text: "1"); // default value 1
-  final TextEditingController propertyModelNameController = TextEditingController(text: "1"); // default value 1
+  final ExpansibleController viewMoreExpansibleController =
+      ExpansibleController();
+  final TextEditingController speakerQtyController = TextEditingController(
+    text: "1",
+  ); // default value 1
+  final TextEditingController propertyModelNameController =
+      TextEditingController(text: "1"); // default value 1
 
   int get speakerQty => int.tryParse(speakerQtyController.text) ?? 1;
   void speakerQtyModify(int value, bool increment) {
@@ -35,9 +40,11 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
   @override
   Widget build(BuildContext context) {
-    final SelectedItem? selectedItem = context.watch<ProjectViewModel>().selectedDevice;
+    final SelectedItem? selectedItem =
+        context.watch<ProjectViewModel>().selectedDevice;
 
-    if (selectedItem?.id == null || selectedItem?.type == null) return const SizedBox.shrink();
+    if (selectedItem?.id == null || selectedItem?.type == null)
+      return const SizedBox.shrink();
 
     final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
 
@@ -45,13 +52,18 @@ class SchematicPropertiesState extends State<SchematicProperties> {
 
     String? assetImagePath;
     if (selectedItem!.type == SelectedItemType.circuit) {
-      final List<HardwareComponent> hardwares = projectViewModel.getHardwareForCircuit(circuitId: selectedItem.id);
+      final List<HardwareComponent> hardwares = projectViewModel
+          .getHardwareForCircuit(circuitId: selectedItem.id);
       if (hardwares.isEmpty) return const SizedBox.shrink();
       selectedDevice = hardwares.first;
       assetImagePath = selectedDevice.assetImagePath;
     } else {
-      selectedDevice = projectViewModel.getHardware(hardwareId: selectedItem.id);
-      assetImagePath = selectedDevice?.assetImagePath;
+      try {
+        selectedDevice = projectViewModel.getHardware(
+          hardwareId: selectedItem.id,
+        );
+        assetImagePath = selectedDevice?.assetImagePath;
+      } catch (e) {}
     }
 
     return Padding(
@@ -94,7 +106,9 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                   controller: propertyModelNameController,
                   maxLines: 1,
                   style: Theme.of(context).textTheme.bodySmall,
-                  decoration: const InputDecoration.collapsed(hintText: 'Enter model name'),
+                  decoration: const InputDecoration.collapsed(
+                    hintText: 'Enter model name',
+                  ),
                 ),
               ),
             ],
@@ -157,11 +171,16 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                             textAlign: TextAlign.center,
                             onChanged: (String value) {
                               final int modifiedQty = int.tryParse(value) ?? 0;
-                              if (modifiedQty == 0) speakerQtyController.text = "1";
+                              if (modifiedQty == 0)
+                                speakerQtyController.text = "1";
                             },
                             style: Theme.of(context).textTheme.bodySmall,
-                            inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration.collapsed(hintText: '0'),
+                            inputFormatters: <TextInputFormatter>[
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: const InputDecoration.collapsed(
+                              hintText: '0',
+                            ),
                           ),
                         ),
                       ),
@@ -215,8 +234,11 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                 Expanded(
                   child: DropdownButton<ListeningArea>(
                     value: projectViewModel.getAllListeningAreas().firstWhere(
-                      (ListeningArea area) => area.id == selectedDevice?.locationEntity.listeningAreaId,
-                      orElse: () => projectViewModel.getAllListeningAreas().first,
+                      (ListeningArea area) =>
+                          area.id ==
+                          selectedDevice?.locationEntity.listeningAreaId,
+                      orElse:
+                          () => projectViewModel.getAllListeningAreas().first,
                     ),
                     underline: const SizedBox.shrink(),
                     padding: const EdgeInsets.only(),
@@ -226,7 +248,10 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                     onChanged: (ListeningArea? v) {
                       final LocationModel newLocation = LocationModel(
                         listeningAreaId: v?.id,
-                        floorId: projectViewModel.getFloorForListeningArea(areaId: v?.id ?? '')?.id,
+                        floorId:
+                            projectViewModel
+                                .getFloorForListeningArea(areaId: v?.id ?? '')
+                                ?.id,
                       );
                       projectViewModel.updateHardwareLocation(
                         hardwareId: selectedDevice!.id,
@@ -236,7 +261,8 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                     items: <DropdownMenuItem<ListeningArea>>[
                       ...projectViewModel.getAllListeningAreas().map(
                         (ListeningArea area) {
-                          final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
+                          final FloorModel? floorName = projectViewModel
+                              .getFloorForListeningArea(areaId: area.id);
 
                           return DropdownMenuItem<ListeningArea>(
                             value: area,
@@ -268,16 +294,25 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                   }
                 },
                 child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: isExpanded ? 10.0 : 0.0),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isExpanded ? 10.0 : 0.0,
+                  ),
                   child: FusionAppText(
                     text: isExpanded ? 'view less' : 'view more',
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: const Color(0xFF186E79)),
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: const Color(0xFF186E79),
+                    ),
                   ),
                 ),
               );
             },
-            expansibleBuilder: (BuildContext context, Widget header, Widget body, Animation<double> animation) {
+            expansibleBuilder: (
+              BuildContext context,
+              Widget header,
+              Widget body,
+              Animation<double> animation,
+            ) {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -458,7 +493,9 @@ class SectionHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: title,
-      style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.black38),
+      style: Theme.of(
+        context,
+      ).textTheme.bodySmall?.copyWith(color: Colors.black38),
     );
   }
 }
