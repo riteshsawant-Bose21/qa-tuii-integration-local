@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -18,18 +20,29 @@ import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  await runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-    DeviceOrientation.landscapeRight,
-    DeviceOrientation.landscapeLeft,
-  ]);
+    SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
+    ]);
 
-  await setupServiceLocator();
+    await setupServiceLocator();
 
-  runApp(const MyApp());
+    runApp(const MyApp());
 
-  _setupMacOSDeepLinkListener();
+    _setupMacOSDeepLinkListener();
+  }, reportCrash);
+}
+
+Future<void> reportCrash(Object exception, StackTrace stack) async {
+  try {
+    FusionLogger.log(tag: LogTag.exceptions, message: "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ");
+    // FirebaseCrashlytics.instance.recordError(exception, stack);
+  } catch (ex) {
+    debugPrint("Unable to report crash: $ex");
+  }
 }
 
 void _setupMacOSDeepLinkListener() {
