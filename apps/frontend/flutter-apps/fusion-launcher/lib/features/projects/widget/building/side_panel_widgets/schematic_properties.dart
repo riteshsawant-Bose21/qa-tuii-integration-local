@@ -575,6 +575,8 @@ class _LocationSelecDropDown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
     return PopupMenuButton<void>(
       tooltip: "Select Location",
       constraints: const BoxConstraints(
@@ -668,13 +670,16 @@ class _LocationSelecDropDown extends StatelessWidget {
                                   ...listeningAreas.map(
                                     (ListeningArea area) {
                                       final bool isSelected = selectedListeningAreaIds.contains(area.id);
-                                      final Zone? zoneData = context.read<ProjectViewModel>().getZonesForListeningArea(areaId: area.id);
-                                      final FloorModel? floorName = context.read<ProjectViewModel>().getFloorForListeningArea(areaId: area.id);
+
+                                      String? zoneName = projectViewModel.getZonesForListeningArea(areaId: area.id)?.name;
+                                      if (zoneName == null || zoneName.trim().isEmpty) {
+                                        zoneName = projectViewModel.getSubZoneForListeningArea(areaId: area.id)?.name;
+                                      }
+
+                                      final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
 
                                       return InkWell(
-                                        onTap: () {
-                                          _toggleListeningAreaSelection(context, area.id);
-                                        },
+                                        onTap: () => _toggleListeningAreaSelection(context, area.id),
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                           decoration: BoxDecoration(
@@ -703,7 +708,7 @@ class _LocationSelecDropDown extends StatelessWidget {
                                                 ),
                                               ),
                                               FusionAppText(
-                                                text: zoneData?.name ?? "No zone",
+                                                text: zoneName ?? "No zone",
                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                   fontSize: 9,
                                                   color: Colors.grey[600],
@@ -927,7 +932,11 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                   ...allListeningAreas.map(
                     (ListeningArea area) {
                       final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
-                      final Zone? zoneData = projectViewModel.getZonesForListeningArea(areaId: area.id);
+
+                      String? zoneName = projectViewModel.getZonesForListeningArea(areaId: area.id)?.name;
+                      if (zoneName == null || zoneName.trim().isEmpty) {
+                        zoneName = projectViewModel.getSubZoneForListeningArea(areaId: area.id)?.name;
+                      }
 
                       /// Check if this area is in the available list
                       final bool isAvailable = availableListeningAreas.any((ListeningArea availableArea) => availableArea.id == area.id);
@@ -969,7 +978,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 ),
                               ),
                               FusionAppText(
-                                text: zoneData?.name ?? "No zone",
+                                text: zoneName ?? "No zone",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 9,
                                   color: !isAvailable ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
@@ -1186,6 +1195,7 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                         projectViewModel.addListeningArea(area: newListeningArea, floorId: _selectedFloor!.id);
                         widget.onLocationAdd.call(newListeningArea);
                         setState(() => _isExpanded = !_isExpanded);
+                        widget.onExpanded.call(_isExpanded);
                       } else {
                         FusionToast.error(
                           context,

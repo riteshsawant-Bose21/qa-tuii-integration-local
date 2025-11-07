@@ -3,7 +3,6 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/app_enums.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -13,7 +12,8 @@ class HardwareItemCard extends StatefulWidget {
   final String assetImagePath;
   final String? itemId;
   final String? location;
-  final Zone? zone;
+  final String? zoneName;
+  final Color? zoneColor;
   final bool isSelected;
   final VoidCallback? onTap;
   final Function(String)? onDelete;
@@ -32,7 +32,8 @@ class HardwareItemCard extends StatefulWidget {
     this.onDelete,
     this.onRename,
     this.onDuplicate,
-    this.zone,
+    this.zoneName,
+    this.zoneColor,
     this.highlightQuery,
   });
 
@@ -132,7 +133,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                     const SizedBox(height: 6),
 
                     /// device location
-                    if (widget.zone != null)
+                    if (widget.zoneName != null)
                       IntrinsicWidth(
                         child: Tooltip(
                           decoration: BoxDecoration(
@@ -165,13 +166,13 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                   width: 7,
                                   height: 16,
                                   decoration: BoxDecoration(
-                                    color: widget.zone?.color ?? Colors.transparent,
+                                    color: widget.zoneColor ?? Colors.transparent,
                                     borderRadius: BorderRadius.circular(2),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 FusionAppText(
-                                  text: widget.zone?.name ?? "",
+                                  text: widget.zoneName ?? "",
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
                                   maxLine: 1,
                                 ),
