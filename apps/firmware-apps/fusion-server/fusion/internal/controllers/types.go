@@ -9,9 +9,11 @@ import (
 )
 
 type ControllerManager struct {
+	// Core components
 	tcpServer *WallControllerTCPServer
 	hub       *pubsub.Hub
 
+	// Controller tracking
 	controllers map[string]*ControllerConnection // key: connectionID
 	mutex       sync.RWMutex
 }

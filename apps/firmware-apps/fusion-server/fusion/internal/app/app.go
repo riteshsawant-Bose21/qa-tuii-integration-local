@@ -521,8 +521,8 @@ func withWebSocketMetrics(config *api.AppConfig, handler http.HandlerFunc, metri
 	if config.Verbose {
 		return func(w http.ResponseWriter, r *http.Request) {
 			metrics.UpdateWSCount(1)
-			defer metrics.UpdateWSCount(-1)
 			handler(w, r)
+			metrics.UpdateWSCount(-1)
 		}
 	} else {
 		return handler
