@@ -20,14 +20,7 @@ class LocalProjectManager {
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
     final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
-    Directory? appDocDir;
-    if (Platform.isWindows) {
-      // final userProfile = Platform.environment['USERPROFILE'];
-      // appDocDir = userProfile != null ? Directory('$userProfile\\Documents') : await getApplicationDocumentsDirectory();
-      appDocDir = await getApplicationSupportDirectory();
-    } else {
-      appDocDir = await getApplicationDocumentsDirectory();
-    }
+    Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
 
     if (!await fusionDir.exists()) {

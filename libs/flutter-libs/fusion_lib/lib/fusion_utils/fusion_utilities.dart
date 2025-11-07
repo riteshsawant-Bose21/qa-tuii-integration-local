@@ -46,9 +46,21 @@ class FusionUtils {
     return Set<Offset>.from(list1).containsAll(list2);
   }
 
+  static Future<Directory> getFusionAppDirectory() async {
+    Directory? appDocDir;
+    if (Platform.isWindows) {
+      // final userProfile = Platform.environment['USERPROFILE'];
+      // appDocDir = userProfile != null ? Directory('$userProfile\\Documents') : await getApplicationDocumentsDirectory();
+      appDocDir = await getApplicationSupportDirectory();
+    } else {
+      appDocDir = await getApplicationDocumentsDirectory();
+    }
+    return appDocDir;
+  }
+
   static Future<Directory> getOrCreateDirectory(String directoryName) async {
     try {
-      Directory appDocDir = await getApplicationDocumentsDirectory();
+      Directory appDocDir = await FusionUtils.getFusionAppDirectory();
       Directory rawDataDir = Directory('${appDocDir.path}/$directoryName');
 
       if (!await rawDataDir.exists()) {
