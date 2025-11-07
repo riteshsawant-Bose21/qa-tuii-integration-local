@@ -20,7 +20,7 @@ class LocalProjectManager {
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
     final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
-    final Directory appDocDir = await getApplicationDocumentsDirectory();
+    Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
 
     if (!await fusionDir.exists()) {
@@ -70,6 +70,12 @@ class LocalProjectManager {
       FusionLogger.log(tag: LogTag.project, message: "Error loading projects: $e", logLevel: LogLevel.error);
       return ResponseCallback.failure('Error loading projects: $e');
     }
+  }
+
+  Future<Directory> getProjectDirectoryById(String projectId) async {
+    final Directory fusionDir = await fusionProjectDirectory;
+    final Directory projectDir = Directory('${fusionDir.path}/$projectId');
+    return projectDir;
   }
 
   /// Creates a new project folder
