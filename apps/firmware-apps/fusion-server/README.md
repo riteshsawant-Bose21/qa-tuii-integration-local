@@ -1,4 +1,4 @@
-# Fusion Server-trigger
+# Fusion Server
 
 Fusion Server is a distributed configuration management system with high availability features, built using Go. It provides configuration synchronization across multiple nodes with support for load balancing and failover.
 
