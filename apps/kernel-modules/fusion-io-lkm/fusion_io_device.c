@@ -1337,8 +1337,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     i2c_adapter = i2c_get_adapter(I2C_ADAPTER);
     if (!i2c_adapter) {
-        dev_err(&pdev->dev, "Failed to get I2C adapter %d\n", I2C_ADAPTER);
-        return -ENODEV;
+        return dev_err_probe(dev, -EPROBE_DEFER, "i2c bus not ready\n");;
     }
 
     // TODO
@@ -1544,13 +1543,21 @@ error:
     return ret;
 }
 
+static const struct of_device_id fusion_io_of_match[] = {
+    { .compatible = "bosepro,fusion-io", },
+    { /* sentinel */ }
+};
+MODULE_DEVICE_TABLE(of, fusion_io_of_match);
+
 static struct platform_driver fusion_io_driver = {
     .driver = {
         .name = "fusion-io",
+        .of_match_table = fusion_io_of_match
     },
     .probe = fusion_io_probe,
     .remove = fusion_io_remove,
 };
+module_platform_driver(fusion_io_driver);
 
 // Define the release function for the platform device
 static void fusion_io_device_release(struct device *dev)

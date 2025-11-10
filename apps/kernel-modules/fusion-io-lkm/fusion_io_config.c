@@ -917,7 +917,7 @@ const struct base_device bd_fusion_c0 = {
             {
                 .name = "ep9512t_config",
                 .parent_ep_name = "ep_hdmi_ep9512t",
-                .num_msgs = 3,
+                .num_msgs = 1,
                 .msgs = (struct endpoint_cmd_msg[]) {
                     // from tests, this turns on arc and 5v en
                     // also, prevents tv from going black for a second.
@@ -925,17 +925,8 @@ const struct base_device bd_fusion_c0 = {
                 }
             }
         },
-        .num_post_cfg_cmds = 2,
+        .num_post_cfg_cmds = 1,
         .post_cfg_cmds = (struct config_sequence_cmd[]) {
-            {
-                .name = "hdmi_5v_en",
-                .parent_ep_name = "ep_ioexp_tcal6408",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x1f }
-                },
-                .seq_delay_ms = 25
-            },
             {
                 .name = "dac_mute",
                 .parent_ep_name = "ep_ioexp_tca9535-1",
@@ -992,7 +983,7 @@ const struct base_device bd_fusion_c1 = {
             .i2c_addr = 0x70,
             .ep_handle_irq = tca9544_handle_irq,
             .ep_configure = tca9544_configure,
-            .num_gpios = 5,
+            .num_gpios = 4,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_ana_int",
@@ -1016,13 +1007,6 @@ const struct base_device bd_fusion_c1 = {
                     .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
-                    .name = "gpio_amp_int",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .is_irq = true,
-                    .num = 4,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING
-                },
-                {
                     .name = "gpio_tca9544_int",
                     .type = EP_GPIO_TYPE_PHYS,
                     .is_irq = true,
@@ -1036,7 +1020,7 @@ const struct base_device bd_fusion_c1 = {
             .ioexp_id = 1,
             .i2c_addr = 0x20,
             .ep_handle_irq = tcal6408_handle_irq,
-            .num_gpios = 9,
+            .num_gpios = 6,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_ana_3v3_psw",
@@ -1062,21 +1046,6 @@ const struct base_device bd_fusion_c1 = {
                     .name = "gpio_hdmi_reset",
                     .type = EP_GPIO_TYPE_VIRT,
                     .num = 5
-                },
-                {
-                    .name = "gpio_amp_stby",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .num = 6
-                },
-                {
-                    .name = "gpio_amp_reset",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .num = 7
-                },
-                {
-                    .name = "gpio_ui_reset",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .num = 8
                 },
                 {
                     .name = "gpio_tcal6408_int",
@@ -1557,7 +1526,7 @@ const struct base_device bd_fusion_c1 = {
                     .ioexp_id = 4,
                     .i2c_addr = 0x23,
                     .ep_handle_irq = tca9535_handle_irq,
-                    .num_gpios = 11,
+                    .num_gpios = 15,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_ctrl0_gpio0",
@@ -1572,51 +1541,81 @@ const struct base_device bd_fusion_c1 = {
                             .aggregate_id = 1
                         },
                         {
-                            .name = "gpio_ctrl0_gpio1",
+                            .name = "gpio_ctrl2_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 3,
-                            .aggregate_id = 2
+                            .aggregate_id = 1
                         },
                         {
-                            .name = "gpio_ctrl1_gpio1",
+                            .name = "gpio_ctrl0_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 4,
                             .aggregate_id = 2
                         },
                         {
-                            .name = "gpio_ctrl0_gpio2",
+                            .name = "gpio_ctrl1_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 5,
+                            .aggregate_id = 2
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio1",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 6,
+                            .aggregate_id = 2
+                        },
+                        {
+                            .name = "gpio_ctrl0_gpio2",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 7,
                             .aggregate_id = 3
                         },
                         {
                             .name = "gpio_ctrl1_gpio2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 6,
+                            .num = 8,
+                            .aggregate_id = 3
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio2",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 9,
                             .aggregate_id = 3
                         },
                         {
                             .name = "gpio_ctrl0_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 7,
+                            .num = 10,
                             .aggregate_id = 4
                         },
                         {
                             .name = "gpio_ctrl1_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 8,
+                            .num = 11,
+                            .aggregate_id = 4
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio3",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 12,
                             .aggregate_id = 4
                         },
                         {
                             .name = "gpio_ctrl0_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 9,
+                            .num = 13,
                             .aggregate_id = 5
                         },
                         {
                             .name = "gpio_ctrl1_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 10,
+                            .num = 14,
+                            .aggregate_id = 5
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio4",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 15,
                             .aggregate_id = 5
                         },
                         {
@@ -1813,21 +1812,14 @@ const struct base_device bd_fusion_c1 = {
                 .parent_ep_name = "ep_hdmi_ep9512t",
                 .num_msgs = 1,
                 .msgs = (struct endpoint_cmd_msg[]) {
+                    // from tests, this turns on arc and 5v en
+                    // also, prevents tv from going black for a second.
                     { .reg_addr  = EP9512T_REG_AUDIO_CFG,    .data = 0x01 }  // A_IN = 01 (I2S)
                 }
             }
         },
         .num_post_cfg_cmds = 2,
         .post_cfg_cmds = (struct config_sequence_cmd[]) {
-            {
-                .name = "hdmi_5v_en",
-                .parent_ep_name = "ep_ioexp_tcal6408",
-                .num_msgs = 1,
-                .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = TCAL6408_REG_OUTPUT_PORT, .data = 0x1f }
-                },
-                .seq_delay_ms = 25
-            },
             {
                 .name = "dac_mute",
                 .parent_ep_name = "ep_ioexp_tca9535-1",
