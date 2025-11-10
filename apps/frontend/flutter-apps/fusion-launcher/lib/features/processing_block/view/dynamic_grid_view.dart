@@ -9,31 +9,25 @@ class DynamicGridView extends StatelessWidget {
   final PBLayout layout;
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 840 / 368,
-      child: Container(
-        // color: Colors.grey,
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double widthPerCell = constraints.maxHeight / layout.height;
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double widthPerCell = constraints.maxHeight / layout.height;
 
-            return Stack(
-              children: <Widget>[
-                for (final PBItem child in layout.children)
-                  Positioned(
-                    left: widthPerCell * child.x,
-                    top: widthPerCell * child.y,
-                    child: SizedBox(
-                      width: widthPerCell * child.width,
-                      height: widthPerCell * child.height,
-                      child: ItemWidgetBuilder(item: child),
-                    ),
-                  ),
-              ],
-            );
-          },
-        ),
-      ),
+        return Stack(
+          children: <Widget>[
+            for (final PBItem child in layout.children)
+              Positioned(
+                left: widthPerCell * child.x,
+                top: widthPerCell * child.y,
+                child: SizedBox(
+                  width: widthPerCell * child.width,
+                  height: widthPerCell * child.height,
+                  child: ItemWidgetBuilder(item: child),
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

@@ -102,7 +102,7 @@ flutter:
     - assets/images/splash/
     - assets/icons/
     - assets/icons/wiring_ports/
-    - assets/icons/processing_blocks/
+    # - packages/fusion_lib/lib/assets/
     - assets/svg/
 
 

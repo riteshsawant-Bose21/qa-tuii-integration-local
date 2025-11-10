@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_block_customizer.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -23,7 +24,6 @@ import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_page.dart';
-import '../../processing_block/view/processing_block_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -450,7 +450,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         tabKey: "zone_config_tab",
         showLeft: false,
         showRight: false,
-        mainArea: ProcessingBlockPage(),
+        mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
         dockItemList: <DockItemConfig>[],
       ),
 
