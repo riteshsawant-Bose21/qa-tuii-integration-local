@@ -201,6 +201,14 @@ class FusionAppTheme {
         ),
       ),
 
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: WidgetStateProperty.all(3), // small thickness globally
+        radius: const Radius.circular(4),
+        thumbColor: WidgetStateProperty.all(Colors.grey.shade400),
+        trackColor: WidgetStateProperty.all(Colors.transparent),
+        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
+      ),
+
       /// Outlined button styling with primary color border and text
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
@@ -320,6 +328,12 @@ class FusionAppTheme {
             fontWeight: FontWeight.w500,
           ),
         ),
+      ),
+
+      scrollbarTheme: ScrollbarThemeData(
+        thickness: WidgetStateProperty.all(3), // small thickness globally
+        radius: const Radius.circular(4),
+        thumbVisibility: WidgetStateProperty.all(true), // always visible (optional)
       ),
 
       /// Outlined button styling with primary color border for dark theme

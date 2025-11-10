@@ -7,8 +7,16 @@ const Color inactiveColor = Color(0xFFE5E5E5);
 class PBRadio extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
+  final Size? size;
+  final EdgeInsetsGeometry? padding;
 
-  const PBRadio({super.key, required this.value, required this.onChanged});
+  const PBRadio({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.size,
+    this.padding,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,14 +29,14 @@ class PBRadio extends StatelessWidget {
         return GestureDetector(
           onTap: () => onChanged.call(!value),
           child: Container(
-            height: radioSize,
-            width: radioSize,
+            height: size?.height ?? radioSize,
+            width: size?.width ?? radioSize,
             color: bgColor,
             child: Container(
               height: double.infinity,
               width: double.infinity,
               alignment: Alignment.center,
-              padding: EdgeInsets.all(outerPadding),
+              padding: padding ?? EdgeInsets.all(outerPadding),
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), border: Border.all(color: inactiveColor)),
               child: Container(
                 height: double.infinity,
