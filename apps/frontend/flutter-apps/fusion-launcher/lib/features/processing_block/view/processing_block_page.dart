@@ -266,6 +266,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                     builder: (BuildContext context, num value, Widget? child) {
                                       return PBSlider(
                                         item: PBItem(
+                                          id: '567567',
                                           x: 20,
                                           y: 10,
                                           width: 50,
@@ -287,6 +288,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                     padding: const EdgeInsets.symmetric(vertical: 5),
                                     child: PBMeter(
                                       item: PBItem(
+                                        id: 'u8678',
                                         x: 20,
                                         y: 10,
                                         width: 50,
@@ -546,6 +548,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                     builder: (BuildContext context, num value, Widget? child) {
                                       return PBSlider(
                                         item: PBItem(
+                                          id: '12213',
                                           x: 20,
                                           y: 10,
                                           width: 50,
@@ -566,6 +569,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                     padding: const EdgeInsets.symmetric(vertical: 5),
                                     child: PBMeter(
                                       item: PBItem(
+                                        id: '4353',
                                         x: 20,
                                         y: 10,
                                         width: 50,

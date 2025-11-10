@@ -530,6 +530,7 @@ extension ColorExtends on ColorScheme {
   Color get portOverlayTitle => Color(0xFF929292);
 }
 
+/// Extension on [BuildContext] to easily access commonly used theme properties.
 extension ColorContextExtension on BuildContext {
   ColorScheme get colorScheme => Theme.of(this).colorScheme;
   TextTheme get textTheme => Theme.of(this).textTheme;

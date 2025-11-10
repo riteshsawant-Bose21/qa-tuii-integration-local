@@ -13,7 +13,7 @@ class PBGraphParam extends PBItemParam {
     return <String, dynamic>{'label': label};
   }
 
-  factory PBGraphParam.fromMap(Map<String, dynamic> map) {
+  factory PBGraphParam.fromMap(Map<dynamic, dynamic> map) {
     return PBGraphParam(label: (map['label'] ?? '') as String);
   }
 
@@ -33,4 +33,9 @@ class PBGraphParam extends PBItemParam {
 
   @override
   int get hashCode => label.hashCode;
+
+  @override
+  PBItemParam loadMap(Map<String, dynamic> map) {
+    return PBGraphParam.fromMap(map);
+  }
 }
