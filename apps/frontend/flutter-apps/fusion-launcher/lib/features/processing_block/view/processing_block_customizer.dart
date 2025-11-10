@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/blocks/pb_widgets.dart';
+import 'package:fusion_launcher/features/processing_block/datasource/pb_widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';

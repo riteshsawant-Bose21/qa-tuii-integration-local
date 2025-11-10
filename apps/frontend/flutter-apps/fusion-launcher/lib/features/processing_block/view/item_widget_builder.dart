@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../blocks/pb_widgets.dart';
+import '../datasource/pb_widgets.dart';
 import '../dto/pb_item.dart';
 
 class ItemWidgetBuilder extends StatelessWidget {
