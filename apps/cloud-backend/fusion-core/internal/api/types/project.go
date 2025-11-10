@@ -51,9 +51,6 @@ type ProjectUpdateRequest struct {
 	ProjectPhase       ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase"`
 	Budget             Budget          `json:"budget"`
 	IsProjectFileDirty bool            `json:"is_project_file_dirty"`
-	IsArchived         bool            `json:"is_archived"`
-	IsStarred          bool            `json:"is_starred"`
-	LockProject        bool            `json:"lock_project"`
 }
 
 // Project object for Get.

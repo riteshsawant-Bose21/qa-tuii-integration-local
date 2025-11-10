@@ -26,6 +26,10 @@ type DatabaseService interface {
 	ProjectExists(ctx context.Context, projectID string) (bool, error)
 	UserExists(ctx context.Context, userID string) (bool, error)
 	GetUserIDByEmail(ctx context.Context, email string) (string, error)
+	StarProject(ctx context.Context, projectID, userID string) error
+	UnstarProject(ctx context.Context, projectID, userID string) error
+	ArchiveProject(ctx context.Context, projectID string) error
+	UnarchiveProject(ctx context.Context, projectID string) error
 }
 
 // NewService creates a new project service.

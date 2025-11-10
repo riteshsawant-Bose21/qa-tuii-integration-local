@@ -12,10 +12,54 @@ const (
 	projectFilePathFormat = "projects/%s/%s/%s.zip"
 )
 
+// validateProjectExistence is a helper function to validate that a project exists
+func (s *Service) validateProjectExistence(ctx context.Context, projectID string) error {
+	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
+	if err != nil {
+		return err
+	}
+	if !projectExists {
+		return fmt.Errorf("project not found")
+	}
+	return nil
+}
+
+// validateProjectAndUserExistence is a helper function to validate that both project and user exist
+func (s *Service) validateProjectAndUserExistence(ctx context.Context, projectID, userID string) error {
+	// Check if project exists
+	if err := s.validateProjectExistence(ctx, projectID); err != nil {
+		return err
+	}
+
+	// Check if user exists
+	userExists, err := s.dbService.UserExists(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !userExists {
+		return fmt.Errorf("user not found")
+	}
+
+	return nil
+}
+
+// generateProjectFileURL generates a presigned URL for project file operations
+func (s *Service) generateProjectFileURL(ctx context.Context, userID, projectID string, ttl time.Duration, operation string) (string, error) {
+	key := fmt.Sprintf(projectFilePathFormat, userID, projectID, projectID)
+
+	switch operation {
+	case "get":
+		return s.presigner.PresignGet(ctx, key, ttl)
+	case "put":
+		return s.presigner.PresignPut(ctx, key, ttl)
+	default:
+		return "", fmt.Errorf("unsupported operation: %s", operation)
+	}
+}
+
 // CreateProject adds a new project to the database.
 func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) (*types.ProjectCreateResponse, error) {
 	id, err := s.dbService.Insert(ctx, project)
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to insert project: %v", err)
 	}
@@ -25,12 +69,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectFileCreated {
-		// Generate presigned URL for project file upload
-		presignURL, err := s.presigner.PresignPut(
-			ctx,
-			fmt.Sprintf(projectFilePathFormat, project.UserID, id, id),
-			time.Minute*15,
-		)
+		presignURL, err := s.generateProjectFileURL(ctx, project.UserID, id, time.Minute*15, "put")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -43,17 +82,13 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 // GetAllProjects retrieves all projects.
 func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) (*types.GetAllProjectsResponse, error) {
 	projects, err := s.dbService.SelectAll(ctx, queryParams)
-
 	if err != nil {
 		return nil, err
 	}
 
+	// Generate presigned URLs for all projects
 	for _, project := range projects {
-
-		presignURL, err := s.presigner.PresignGet(
-			ctx,
-			fmt.Sprintf(projectFilePathFormat, queryParams.UserID, project.ID, project.ID), time.Minute*5,
-		)
+		presignURL, err := s.generateProjectFileURL(ctx, queryParams.UserID, project.ID, time.Minute*5, "get")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", project.ID, err)
 		}
@@ -66,15 +101,12 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 		projectList[i] = *project
 	}
 
-	// Create response with pagination info (for now using basic values)
-	response := &types.GetAllProjectsResponse{
+	return &types.GetAllProjectsResponse{
 		Data:       projectList,
 		TotalCount: len(projectList),
 		Page:       1,
 		TotalPages: 1,
-	}
-
-	return response, nil
+	}, nil
 }
 
 // UpdateProject modifies an existing project.
@@ -87,16 +119,13 @@ func (s *Service) UpdateProject(ctx context.Context, id string, project *types.P
 	response := &types.ProjectUpdateResponse{}
 
 	if project.IsProjectFileDirty {
-		presignURL, err := s.presigner.PresignPut(
-			ctx,
-			fmt.Sprintf(projectFilePathFormat, projectRow.PrimaryOwnerUserID.String, projectRow.ID, projectRow.ID),
-			time.Minute*15,
-		)
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.PrimaryOwnerUserID.String, projectRow.ID, time.Minute*15, "put")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
 		response.ProjectUploadURL = presignURL
 	}
+
 	return response, nil
 }
 
@@ -106,22 +135,9 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 
 // AssignUserToProject assigns a user to a project.
 func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
-	// Check if project exists
-	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if project exists: %v", err)
-	}
-	if !projectExists {
-		return nil, fmt.Errorf("project not found")
-	}
-
-	// Check if user exists
-	userExists, err := s.dbService.UserExists(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if user exists: %v", err)
-	}
-	if !userExists {
-		return nil, fmt.Errorf("user not found")
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return nil, err
 	}
 
 	// Check if user is already assigned to the project
@@ -145,22 +161,9 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID str
 
 // RemoveUserFromProject removes a user from a project.
 func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
-	// Check if project exists
-	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if project exists: %v", err)
-	}
-	if !projectExists {
-		return nil, fmt.Errorf("project not found")
-	}
-
-	// Check if user exists
-	userExists, err := s.dbService.UserExists(ctx, userID)
-	if err != nil {
-		return nil, fmt.Errorf("failed to check if user exists: %v", err)
-	}
-	if !userExists {
-		return nil, fmt.Errorf("user not found")
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return nil, err
 	}
 
 	// Check if user is assigned to the project
@@ -204,4 +207,74 @@ func (s *Service) RemoveUserFromProjectByEmail(ctx context.Context, projectID, u
 
 	// Use the existing RemoveUserFromProject method
 	return s.RemoveUserFromProject(ctx, projectID, userID)
+}
+
+// StarProject stars a project for a user.
+func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	// Star the project
+	if err := s.dbService.StarProject(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UnstarProject unstars a project for a user.
+func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	// Unstar the project
+	if err := s.dbService.UnstarProject(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ArchiveProject archives a project.
+func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
+	// Validate project existence
+	if err := s.validateProjectExistence(ctx, projectID); err != nil {
+		return err
+	}
+
+	// Archive the project
+	if err := s.dbService.ArchiveProject(ctx, projectID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UnarchiveProject unarchives a project.
+func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
+	// Validate project existence
+	if err := s.validateProjectExistence(ctx, projectID); err != nil {
+		return err
+	}
+
+	// Unarchive the project
+	if err := s.dbService.UnarchiveProject(ctx, projectID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ProjectExists checks if a project exists.
+func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, error) {
+	return s.dbService.ProjectExists(ctx, projectID)
+}
+
+// IsUserAssigned checks if a user is assigned to a project.
+func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error) {
+	return s.dbService.IsUserAssigned(ctx, projectID, userID)
 }

@@ -320,13 +320,7 @@ definitions:
         $ref: '#/definitions/types.EnvironmentType'
       id:
         type: string
-      is_archived:
-        type: boolean
       is_project_file_dirty:
-        type: boolean
-      is_starred:
-        type: boolean
-      lock_project:
         type: boolean
       name:
         maxLength: 255
@@ -702,6 +696,11 @@ paths:
         name: projectId
         required: true
         type: string
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -730,6 +729,11 @@ paths:
       - description: Project ID
         in: path
         name: projectId
+        required: true
+        type: string
+      - description: User ID
+        in: query
+        name: user_id
         required: true
         type: string
       - description: Updated project details
@@ -762,6 +766,126 @@ paths:
           schema:
             $ref: '#/definitions/types.InternalServerError'
       summary: Update project
+      tags:
+      - projects
+  /projects/{projectId}/archive:
+    delete:
+      description: Unarchive a project by project ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Project unarchived successfully
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: Project is not archived
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Unarchive a project
+      tags:
+      - projects
+    put:
+      description: Archive a project by project ID
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Project archived successfully
+        "404":
+          description: Project not found
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: Project is already archived
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Archive a project
+      tags:
+      - projects
+  /projects/{projectId}/star/{userId}:
+    delete:
+      description: Unstar a project for a specific user
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Successfully unstarred project
+        "401":
+          description: User not assigned to the project
+          schema:
+            $ref: '#/definitions/types.UnauthorizedError'
+        "404":
+          description: Project or User not found
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: Project is not starred
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Unstar a project
+      tags:
+      - projects
+    put:
+      description: Star a project for a specific user
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Successfully starred project
+        "404":
+          description: Project or User not found, or user not assigned to the project
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: Project is already starred
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Star a project
       tags:
       - projects
   /projects/{projectId}/users/{userEmail}:

@@ -34,7 +34,8 @@ func TestNewProject(t *testing.T) {
 		assert.Equal(t, row.Venue.String, project.Venue)
 		assert.Equal(t, types.EnvironmentType(row.EnvironmentType.String), project.EnvironmentType)
 		assert.Equal(t, row.Application.String, project.Application)
-		assert.Equal(t, row.BudgetAmount, project.Budget.Amount)
+		expectedBudget, _ := row.BudgetAmount.Int64()
+		assert.Equal(t, expectedBudget, project.Budget.Amount)
 		assert.Equal(t, row.Currency.String, project.Budget.Currency)
 	})
 

@@ -15,4 +15,10 @@ type Project interface {
 	RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error)
 	AssignUserToProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error)
 	RemoveUserFromProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error)
+	StarProject(ctx context.Context, projectID, userID string) error
+	UnstarProject(ctx context.Context, projectID, userID string) error
+	ArchiveProject(ctx context.Context, projectID string) error
+	UnarchiveProject(ctx context.Context, projectID string) error
+	ProjectExists(ctx context.Context, projectID string) (bool, error)
+	IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error)
 }

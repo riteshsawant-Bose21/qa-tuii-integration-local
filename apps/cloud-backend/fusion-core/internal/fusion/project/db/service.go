@@ -15,14 +15,13 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/validation"
 	boilerTypes "github.com/aarondl/sqlboiler/v4/types"
 
 	ericDecimal "github.com/ericlagergren/decimal"
 )
 
 const (
-	validationFailedMsg = "validation failed: %w"
+	failedUserAssignmentCheckMsg = "failed to check user assignment: %v"
 )
 
 // Executor can perform SQL queries.
@@ -60,9 +59,8 @@ func NewService(db DBContextExecutor) *Service {
 
 // Insert inserts a new project into the database.
 func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error) {
-	// Validate input data
-	if err := validation.ValidateProjectCreateRequest(project); err != nil {
-		return "", fmt.Errorf(validationFailedMsg, err)
+	if project == nil {
+		return "", errors.New("project cannot be nil")
 	}
 
 	// Generate ID if not provided
@@ -123,11 +121,6 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 // SelectAll retrieves all projects from the database.
 func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
-	// Validate query parameters
-	if err := validation.ValidateGetAllProjectsParams(queryParams); err != nil {
-		return nil, fmt.Errorf(validationFailedMsg, err)
-	}
-
 	rows, err := model.ProjectUsers(qm.Select("project_id"), qm.Where("user_id = ?", queryParams.UserID)).All(ctx, s.db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get project users: %v", err)
@@ -189,11 +182,6 @@ func (s *Service) Update(ctx context.Context, id string, project *types.ProjectU
 		return nil, errors.New("id cannot be empty")
 	}
 
-	// Validate input data
-	if err := validation.ValidateProjectUpdateRequest(project); err != nil {
-		return nil, fmt.Errorf(validationFailedMsg, err)
-	}
-
 	row, err := model.Projects(model.ProjectWhere.ID.EQ(id)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -237,20 +225,6 @@ func (s *Service) Update(ctx context.Context, id string, project *types.ProjectU
 	if project.Budget.Amount != 0 {
 		row.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 2))
 	}
-
-	if project.IsArchived {
-		row.IsArchived = project.IsArchived
-	}
-
-	// TODO: Need to implement once user logic is finalized
-	// if project.IsStarred {
-	//
-	// }
-
-	// TODO: Need to implement once user logic and locking is finalized
-	// if project.LockProject {
-	//
-	// }
 
 	row.UpdatedAt = time.Now()
 
@@ -317,7 +291,7 @@ func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) 
 	).Exists(ctx, s.db)
 
 	if err != nil {
-		return false, fmt.Errorf("failed to check user assignment: %v", err)
+		return false, fmt.Errorf(failedUserAssignmentCheckMsg, err)
 	}
 	return exists, nil
 }
@@ -359,4 +333,142 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, e
 		return "", fmt.Errorf("failed to get user by email: %v", err)
 	}
 	return user.ID, nil
+}
+
+// StarProject stars a project for a user.
+func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
+	// Check if user is assigned to the project
+	isAssigned, err := s.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(failedUserAssignmentCheckMsg, err)
+	}
+	if !isAssigned {
+		return fmt.Errorf("user not assigned to project")
+	}
+
+	// Get the project user record
+	projectUser, err := model.ProjectUsers(
+		model.ProjectUserWhere.ProjectID.EQ(projectID),
+		model.ProjectUserWhere.UserID.EQ(userID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		return fmt.Errorf("failed to get project user: %v", err)
+	}
+
+	// Check if already starred
+	if projectUser.IsStarred {
+		return fmt.Errorf("project is already starred")
+	}
+
+	// Star the project
+	projectUser.IsStarred = true
+	projectUser.UpdatedAt = time.Now()
+
+	// Update the record
+	if _, err := projectUser.Update(ctx, s.db, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to star project: %v", err)
+	}
+
+	return nil
+}
+
+// UnstarProject unstars a project for a user.
+func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
+	// Check if user is assigned to the project
+	isAssigned, err := s.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(failedUserAssignmentCheckMsg, err)
+	}
+	if !isAssigned {
+		return fmt.Errorf("user not assigned to project")
+	}
+
+	// Get the project user record
+	projectUser, err := model.ProjectUsers(
+		model.ProjectUserWhere.ProjectID.EQ(projectID),
+		model.ProjectUserWhere.UserID.EQ(userID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		return fmt.Errorf("failed to get project user: %v", err)
+	}
+
+	// Check if not starred
+	if !projectUser.IsStarred {
+		return fmt.Errorf("project is not starred")
+	}
+
+	// Unstar the project
+	projectUser.IsStarred = false
+	projectUser.UpdatedAt = time.Now()
+
+	// Update the record
+	if _, err := projectUser.Update(ctx, s.db, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to unstar project: %v", err)
+	}
+
+	return nil
+}
+
+// ArchiveProject archives a project.
+func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
+	// Get the project record
+	project, err := model.Projects(
+		model.ProjectWhere.ID.EQ(projectID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("project not found")
+		}
+		return fmt.Errorf("failed to get project: %v", err)
+	}
+
+	// Check if already archived
+	if project.IsArchived {
+		return fmt.Errorf("project is already archived")
+	}
+
+	// Archive the project
+	project.IsArchived = true
+	project.UpdatedAt = time.Now()
+
+	// Update the record
+	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to archive project: %v", err)
+	}
+
+	return nil
+}
+
+// UnarchiveProject unarchives a project.
+func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
+	// Get the project record
+	project, err := model.Projects(
+		model.ProjectWhere.ID.EQ(projectID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("project not found")
+		}
+		return fmt.Errorf("failed to get project: %v", err)
+	}
+
+	// Check if not archived
+	if !project.IsArchived {
+		return fmt.Errorf("project is not archived")
+	}
+
+	// Unarchive the project
+	project.IsArchived = false
+	project.UpdatedAt = time.Now()
+
+	// Update the record
+	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to unarchive project: %v", err)
+	}
+
+	return nil
 }
