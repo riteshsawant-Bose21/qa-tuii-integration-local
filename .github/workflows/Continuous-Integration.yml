@@ -387,7 +387,7 @@ jobs:
       - name: Generate Git hash
         id: hash-step
         run: |
-          HASH=$(git rev-parse --short HEAD)
+          HASH=$(git rev-parse HEAD)
           echo "git-hash=$HASH" >> $GITHUB_OUTPUT
 
   yocto-image-build:
@@ -411,7 +411,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: BoseProfessional/meta-fusion
-          ref: devops/publish-components-version-info
+          ref: develop
           token: ${{ secrets.META_FUSION_REPO_TOKEN }}
           fetch-depth: 0
 
