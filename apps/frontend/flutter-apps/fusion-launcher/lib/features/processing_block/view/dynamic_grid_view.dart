@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../dto/pb_item.dart';
@@ -12,20 +14,30 @@ class DynamicGridView extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double widthPerCell = constraints.maxHeight / layout.height;
-
-        return Stack(
-          children: <Widget>[
-            for (final PBItem child in layout.children)
-              Positioned(
-                left: widthPerCell * child.x,
-                top: widthPerCell * child.y,
-                child: SizedBox(
-                  width: widthPerCell * child.width,
-                  height: widthPerCell * child.height,
-                  child: ItemWidgetBuilder(item: child),
-                ),
-              ),
-          ],
+        final int maxRowNum = layout.children.fold<int>(
+          0,
+          (int previousValue, PBItem element) => max(previousValue, element.x.toInt() + element.width.toInt()),
+        );
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: SizedBox(
+            width: max(widthPerCell * maxRowNum, constraints.maxWidth),
+            height: widthPerCell * layout.height,
+            child: Stack(
+              children: <Widget>[
+                for (final PBItem child in layout.children)
+                  Positioned(
+                    left: widthPerCell * child.x,
+                    top: widthPerCell * child.y,
+                    child: SizedBox(
+                      width: widthPerCell * child.width,
+                      height: widthPerCell * child.height,
+                      child: ItemWidgetBuilder(item: child),
+                    ),
+                  ),
+              ],
+            ),
+          ),
         );
       },
     );
