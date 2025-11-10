@@ -1,4 +1,7 @@
+import 'dart:ui';
+
 import '../../fusion_utils/app_enums.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// Unified Product model
 class ProductQueryModel {

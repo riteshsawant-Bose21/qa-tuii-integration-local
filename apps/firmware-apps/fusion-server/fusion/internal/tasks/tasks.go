@@ -63,12 +63,10 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 
 	tm.actionFactories = map[api.TaskType]func(*api.Task) func(){
 		api.TaskTypeSnapshot: func(t *api.Task) func() {
-			snapID := t.Params[api.SnapshotIDKey]
-			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(snapID))
+			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(t))
 		},
-		api.TaskTypeAudioPlayback: func(t *api.Task) func() {
-			path := t.Params[api.MessageIDKey]
-			return tm.wrapTask(t, tm.taskPlayAudioFunc(t, path))
+		api.TaskTypeMessage: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskTriggerMessageFunc(t))
 		},
 	}
 	return tm
@@ -503,19 +501,25 @@ func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	switch task.Type {
 
+	case api.TaskTypeMessage:
+		id := task.Params[api.MessageIDKey]
+		if id == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		}
+
+		path := task.Params[api.MessagePathKey]
+		if path == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		}
+
+		return tm.taskTriggerMessageFunc(task), nil
+
 	case api.TaskTypeSnapshot:
 		id := task.Params[api.SnapshotIDKey]
 		if id == "" {
 			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
 		}
-		return tm.taskActivateSnapshotFunc(id), nil
-
-	case api.TaskTypeAudioPlayback:
-		id := task.Params[api.MessageIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
-		}
-		return tm.taskPlayAudioFunc(task, id), nil
+		return tm.taskActivateSnapshotFunc(task), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)

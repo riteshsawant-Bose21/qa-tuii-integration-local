@@ -1,11 +1,14 @@
+import 'dart:developer';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/strings/fusion_strings.dart';
 
+import '../di/service_locator.dart';
 import '../fusion_widgets/buttons/fusion_text_button.dart';
 
 class FloorPlanCalibrationDialog extends StatelessWidget {
@@ -187,6 +190,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         _endPointDisplay = d.localPosition;
         _isDrawing = false;
       });
+      fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showFloorPickCalibration);
     }
   }
 
@@ -451,7 +455,12 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
       croppedImage: croppedImage,
     );
     widget.onCalibrationComplete(data);
+
+    // ignore: use_build_context_synchronously
+    fusionLibLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
   }
+
+  final GlobalKey _customPaintKey = GlobalKey();
 
   // ---------- build ----------
   @override
@@ -639,6 +648,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
         Expanded(
           child: Container(
             clipBehavior: Clip.hardEdge,
+            alignment: Alignment.center,
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerLow,
             ),
@@ -656,30 +666,52 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                     setState(() => _isDrawing = false);
                   }
                 },
-                child: Center(
-                  child: SemanticHelper.container(
-                    testId: SemanticHelper.createTestId(SemanticTypes.container, "Floor Plan Calibration"),
-                    child: CustomPaint(
-                      painter: FloorPlanCalibrationPainter(
-                        image: widget.floorPlanImage,
-                        startPoint: _startPointDisplay,
-                        endPoint: _endPointDisplay,
-                        distanceText: _distanceController.text.trim(),
-                        unit: _selectedUnit,
-                        cropRectNormalized: _cropRectN,
-                        showCropHandles: _mode == _ToolMode.crop,
-                        onImageRectChanged: (ui.Rect r) {
-                          _imageRect = r;
-                          // keep display points in sync if image rect changes
-                          if (_startPointNormalized != null) {
-                            _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
-                          }
-                          if (_endPointNormalized != null) {
-                            _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
-                          }
-                        },
+                child: GuideShowcaseWrapper(
+                  step: GuideShowCaseSteps.showFloorPickCalibration,
+                  onHighlightedSpotTap: (TapDownDetails details) {
+                    if (_mode == _ToolMode.measure) {
+                      // Get the exact RenderBox of the CustomPaint
+                      final RenderBox? renderBox = _customPaintKey.currentContext?.findRenderObject() as RenderBox?;
+                      if (renderBox != null) {
+                        final Offset localPosition = renderBox.globalToLocal(details.globalPosition);
+
+                        // Create new TapDownDetails with local position
+                        final TapDownDetails localDetails = TapDownDetails(
+                          globalPosition: details.globalPosition,
+                          localPosition: localPosition,
+                          kind: details.kind,
+                        );
+
+                        _onMeasureTapDown(localDetails);
+                      }
+                    }
+                  },
+                  child: Center(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "Floor Plan Calibration"),
+                      child: CustomPaint(
+                        key: _customPaintKey,
+                        painter: FloorPlanCalibrationPainter(
+                          image: widget.floorPlanImage,
+                          startPoint: _startPointDisplay,
+                          endPoint: _endPointDisplay,
+                          distanceText: _distanceController.text.trim(),
+                          unit: _selectedUnit,
+                          cropRectNormalized: _cropRectN,
+                          showCropHandles: _mode == _ToolMode.crop,
+                          onImageRectChanged: (ui.Rect r) {
+                            _imageRect = r;
+                            // keep display points in sync if image rect changes
+                            if (_startPointNormalized != null) {
+                              _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
+                            }
+                            if (_endPointNormalized != null) {
+                              _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
+                            }
+                          },
+                        ),
+                        child: const SizedBox.expand(),
                       ),
-                      child: const SizedBox.expand(),
                     ),
                   ),
                 ),
@@ -717,15 +749,24 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 },
               ),
               const SizedBox(width: 8),
-              FusionButton(
-                label: FusionStrings.confirmButton,
-                width: 120,
-                height: 36,
-                onTap: () {
+              GuideShowcaseWrapper(
+                step: GuideShowCaseSteps.confirmFloorCalibrated,
+                onHighlightedSpotTap: (TapDownDetails details) {
                   if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
                     _completeCalibration();
                   }
                 },
+                child: FusionButton(
+                  label: FusionStrings.confirmButton,
+                  width: 120,
+                  height: 36,
+                  onTap: () {
+                    log("${_startPointNormalized}   ${_endPointNormalized} && ${_distanceController.text.trim().isNotEmpty}");
+                    if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
+                      _completeCalibration();
+                    }
+                  },
+                ),
               ),
             ],
           ),
@@ -1022,6 +1063,7 @@ class CalibrationData {
   double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0 ? realWorldDistance / pixelDistance : 0;
 
   double pixelsToUnits(double px) => unitsPerPixel > 0 ? px * unitsPerPixel : 0;
+
   double unitsToPixels(double u) => pixelsPerUnit > 0 ? u * pixelsPerUnit : 0;
 
   @override

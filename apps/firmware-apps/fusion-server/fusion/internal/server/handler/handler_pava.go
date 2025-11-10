@@ -204,7 +204,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine MIME type.
+	// Determine MIME type
 	mimeType := http.DetectContentType(sniffBuf[:n])
 	if mimeType == "application/octet-stream" || mimeType == "" {
 		// Try by extension

@@ -1,3 +1,5 @@
+import 'package:fusion_lib/models/project_entities/circuit_model.dart';
+
 import '../../../fusion_lib.dart';
 
 /// -------------------
@@ -70,12 +72,32 @@ class FloorRepository extends Repository<FloorModel> {}
 
 class ListeningAreaRepository extends Repository<ListeningArea> {}
 
-class ZoneRepository extends Repository<Zone> {}
+class ZoneRepository extends Repository<Zone> {
+  ZoneRepository copyWith(Map<String, Zone> items) {
+    final newRepo = ZoneRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+class SubZoneRepository extends Repository<SubZone> {}
 
 class SourceSetRepository extends Repository<SourceSet> {}
 
-class HardwareRepository extends Repository<HardwareComponent> {}
+class HardwareRepository extends Repository<HardwareComponent> {
+  HardwareRepository copyWith(Map<String, HardwareComponent> items) {
+    final newRepo = HardwareRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
-class FusionDeviceRepository extends Repository<FusionDevice> {}
+class FusionDeviceRepository extends Repository<FusionDsp> {}
 
 class AmplifierRepository extends Repository<Amplifier> {}
+
+class CircuitRepository extends Repository<CircuitModel> {}
+
+class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
+
+class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}

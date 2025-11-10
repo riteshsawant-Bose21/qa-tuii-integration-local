@@ -99,17 +99,28 @@ class SourceData extends DeviceComponent {
       id: "laptop_usb_hdmi",
       name: "Laptop - USB - or HDMI",
       assetPath: "assets/images/products/laptop.png",
-      type: SourceType.analogInput,
+      type: SourceType.usb,
       price: 100.0,
     ),
     SourceData(
       id: "deskpc_usb_hdmi",
       name: "DeskPC - USB - or HDMI",
       assetPath: "assets/images/products/laptop.png",
-      type: SourceType.analogInput,
+      type: SourceType.usb,
       price: 100.0,
     ),
   ];
+
+  static SourceType getSourceType(String id) {
+    //search both microphone list and media list and return type
+    for (SourceData item in <SourceData>[...microphoneItems, ...mediaSourceItems]) {
+      if (item.id == id) {
+        return item.type;
+      }
+    }
+
+    return SourceType.analogInput;
+  }
 
   static const List<SourceData> demoSources = <SourceData>[
     SourceData(
@@ -145,6 +156,7 @@ class SourceData extends DeviceComponent {
 
 class ControllerData extends DeviceComponent {
   final String sku;
+
   const ControllerData({
     required super.assetPath,
     required super.name,
@@ -190,6 +202,30 @@ class RackData extends DeviceComponent {
       assetPath: 'assets/images/products/rack1.png',
       name: 'Big Rack',
       id: 'RACK4U',
+      price: 2000.0,
+    ),
+  ];
+}
+
+class SwitchData extends DeviceComponent {
+  const SwitchData({
+    required super.assetPath,
+    required super.name,
+    required super.id,
+    required super.price,
+  });
+
+  static const List<SwitchData> demoSwitchs = <SwitchData>[
+    SwitchData(
+      assetPath: 'assets/images/products/rack2.png',
+      name: 'Switch 1',
+      id: '1',
+      price: 1000.0,
+    ),
+    SwitchData(
+      assetPath: 'assets/images/products/rack1.png',
+      name: 'Switch 2',
+      id: '2',
       price: 2000.0,
     ),
   ];

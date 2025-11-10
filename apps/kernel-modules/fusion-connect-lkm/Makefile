@@ -8,7 +8,8 @@ fusion_connect-y := fusion_connect_alsa.o \
                     fusion_connect_manager.o \
                     fusion_connect_module.o \
                     fusion_connect_netfilter.o \
-                    fusion_connect_rtp.o
+                    fusion_connect_rtp.o \
+					fusion_connect_metrics.o 
 
 SRC ?= $(shell pwd)
 
