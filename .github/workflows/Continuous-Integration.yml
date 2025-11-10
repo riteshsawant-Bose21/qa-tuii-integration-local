@@ -439,7 +439,6 @@ jobs:
             else
               echo "FUSION_MONOREPO_COMMIT_HASH=\"${MONOREPO_COMMIT_HASH}\"" >> "$FILE"
             fi
-            echo "FUSION_SERVER_VERSION=\"${{ needs.fusion-server-build.outputs.fusion_server_version }}\"" >> "$FILE"
           fi
 
           if [ ! -f "$VERSION_INFO_FILE" ]; then
