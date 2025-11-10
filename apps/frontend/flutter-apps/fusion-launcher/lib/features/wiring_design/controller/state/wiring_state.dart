@@ -168,6 +168,14 @@ extension WiringStateMutation on WiringState {
     );
   }
 
+  IdleWiringState addExistingWire(Wire wire) {
+    return IdleWiringState(
+      components: components,
+      wires: <Wire>[...wires, wire],
+      canvasState: canvasState,
+    );
+  }
+
   IdleWiringState addComponent(CircuitComponent component) {
     return IdleWiringState(
       components: <CircuitComponent>[...components, component],

@@ -12,6 +12,7 @@ import 'ffi_constants.dart';
 /// Load the dylib from the app bundle’s Frameworks folder
 final DynamicLibrary _mace = () {
   if (Platform.isMacOS) {
+    // return DynamicLibrary.process();
     // On macOS we bundled a fat dylib into MyApp.app/Contents/Frameworks/
     final String exe = Platform.resolvedExecutable;
     final String bundleContents = File(exe).parent.parent.path;
@@ -34,8 +35,30 @@ typedef DartDestroyEngine = void Function();
 typedef AddPolygon = Uint64 Function(Uint64, Pointer<Double>, Int32);
 typedef DartAddPolygon = int Function(int, Pointer<Double>, int);
 
-typedef AddSpeakerCluster = Uint64 Function(Uint64, Pointer<Utf8>, Double, Double, Double, Double, Double, Double, Double);
-typedef DartAddSpeakerCluster = int Function(int, Pointer<Utf8>, double, double, double, double, double, double, double);
+typedef AddSpeakerCluster =
+    Uint64 Function(
+      Uint64,
+      Pointer<Utf8>,
+      Double,
+      Double,
+      Double,
+      Double,
+      Double,
+      Double,
+      Double,
+    );
+typedef DartAddSpeakerCluster =
+    int Function(
+      int,
+      Pointer<Utf8>,
+      double,
+      double,
+      double,
+      double,
+      double,
+      double,
+      double,
+    );
 
 typedef AddFieldPoints = Uint64 Function(Uint64, Pointer<Double>, Int32);
 typedef DartAddFieldPoints = int Function(int, Pointer<Double>, int);
@@ -61,8 +84,26 @@ typedef DartGetSpl = int Function(int, int, Pointer<Double>, int);
 typedef GetAllSplJsonNative = Pointer<Utf8> Function(Uint64, Uint64);
 typedef GetAllSplJsonDart = Pointer<Utf8> Function(int, int);
 
-typedef GetSplAt = Int32 Function(Uint64, Uint64, Int32, Double, Pointer<Double>, Pointer<Double>, Pointer<Utf8>);
-typedef DartGetSplAt = int Function(int, int, int, double, Pointer<Double>, Pointer<Double>, Pointer<Utf8>);
+typedef GetSplAt =
+    Int32 Function(
+      Uint64,
+      Uint64,
+      Int32,
+      Double,
+      Pointer<Double>,
+      Pointer<Double>,
+      Pointer<Utf8>,
+    );
+typedef DartGetSplAt =
+    int Function(
+      int,
+      int,
+      int,
+      double,
+      Pointer<Double>,
+      Pointer<Double>,
+      Pointer<Utf8>,
+    );
 
 typedef DebugSpeakers = Void Function();
 typedef DartDebugSpeakers = void Function();
@@ -80,7 +121,11 @@ final DartCreateMeasurement maceCreateMeasurement = _mace.lookup<NativeFunction<
 final DartCreateGroup maceCreateGroup = _mace.lookup<NativeFunction<CreateGroup>>('mace_create_group').asFunction();
 final DartAddToGroup maceAddToGroup = _mace.lookup<NativeFunction<AddToGroup>>('mace_add_to_group').asFunction();
 final DartAddGroupsToMeasurement maceAddGroupsToMeasurement =
-    _mace.lookup<NativeFunction<AddGroupsToMeasurement>>('mace_add_groups_to_measurement').asFunction();
+    _mace
+        .lookup<NativeFunction<AddGroupsToMeasurement>>(
+          'mace_add_groups_to_measurement',
+        )
+        .asFunction();
 final DartRunCalc maceRunCalc = _mace.lookup<NativeFunction<RunCalculation>>('mace_run_calculation').asFunction();
 final DartGetSpl maceGetSpl = _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
 final GetAllSplJsonDart _maceGetAllSplJson = _mace.lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json').asFunction<GetAllSplJsonDart>();
@@ -196,7 +241,17 @@ class MaceEngine {
     double yaw,
   ) {
     final Pointer<Utf8> namePtr = name.toNativeUtf8();
-    final int id = maceAddSpeakerCluster(_handle, namePtr, x, y, z, gain, roll, pitch, yaw);
+    final int id = maceAddSpeakerCluster(
+      _handle,
+      namePtr,
+      x,
+      y,
+      z,
+      gain,
+      roll,
+      pitch,
+      yaw,
+    );
     calloc.free(namePtr);
     return id;
   }
@@ -274,7 +329,9 @@ class MaceEngine {
         // Fix: Correctly parse the matrix structure
         final List<List<double>> mat =
             (json['spl'][bw == Bandwidth.oneThirdOctave ? 'oneThirdOctave' : 'oneOctave'] as List<dynamic>)
-                .map<List<double>>((dynamic row) => (row as List<dynamic>).cast<num>().map((num e) => e.toDouble()).toList())
+                .map<List<double>>(
+                  (dynamic row) => (row as List<dynamic>).cast<num>().map((num e) => e.toDouble()).toList(),
+                )
                 .toList();
 
         return List<double>.generate(mat.length, (int p) => mat[p][idx]);
@@ -313,7 +370,7 @@ class MaceEngine {
         act,
         weighting.toNativeUtf8(),
       );
-      final double usedHz = act.value; // show in UI if you want
+      //final double usedHz = act.value; // show in UI if you want
       final List<double> list = List<double>.generate(n, (int i) => out[i]);
       // Optionally: return usedHz too (tuple)
       return list;

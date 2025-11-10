@@ -65,6 +65,13 @@ type MemberMetadata struct {
 	Metadata DatabaseMetadata
 }
 
+// RemoteStateSnapshot is what we send/receive during anti-entropy.
+type RemoteStateSnapshot struct {
+	Version Version                `json:"version"`
+	NodeID  string                 `json:"node_id"`
+	State   map[string]*StateEntry `json:"state"`
+}
+
 // SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
 type SnapshotUpdate struct {
 	Name      string         `json:"name"`
@@ -76,26 +83,19 @@ type SnapshotUpdate struct {
 type TaskType string
 
 const (
-	TaskTypeSnapshot      TaskType = "snapshot"
-	TaskTypeAudioPlayback TaskType = "audio_playback"
+	TaskTypeMessage  TaskType = "message"
+	TaskTypeSnapshot TaskType = "snapshot"
 )
 
 // Task represents a task
 type Task struct {
-	ID          string            `json:"id"`
-	Description string            `json:"description"`
-	CronExpr    string            `json:"cron_expr"`
-	Enabled     bool              `json:"active"`
-	Type        TaskType          `json:"type"`
-	Params      map[string]string `json:"params"`
-	CronEntryID cron.EntryID      `json:"-"`
-}
-
-// RemoteStateSnapshot is what we send/receive during anti-entropy.
-type RemoteStateSnapshot struct {
-	Version Version                `json:"version"`
-	NodeID  string                 `json:"node_id"`
-	State   map[string]*StateEntry `json:"state"`
+	ID          string         `json:"id"`
+	Description string         `json:"description"`
+	CronExpr    string         `json:"cron_expr"`
+	Enabled     bool           `json:"active"`
+	Type        TaskType       `json:"type"`
+	Params      map[string]any `json:"params"`
+	CronEntryID cron.EntryID   `json:"-"`
 }
 
 // StateEntry represents a single entry in the state

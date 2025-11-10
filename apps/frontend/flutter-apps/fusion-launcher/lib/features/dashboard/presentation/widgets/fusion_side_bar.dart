@@ -1,6 +1,5 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -609,7 +608,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 // }
 
                 if (context.mounted) {
-                  context.read<GuideShowCaseController>().completeStep();
+                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
                   Navigator.of(context).pop();
                   // Navigator.pushNamed(context, Routes.projectPage);
                 }
