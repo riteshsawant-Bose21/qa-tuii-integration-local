@@ -104,12 +104,12 @@ class _FusionCloudWebViewState extends State<FusionCloudWebView> {
               ),
             ),
 
-          // WebView
-          Expanded(
-            child: Webview(
-              url: webUiUrl,
-            ),
-          ),
+          // // WebView
+          // Expanded(
+          //   child: Webview(
+          //     url: webUiUrl,
+          //   ),
+          // ),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endTop,

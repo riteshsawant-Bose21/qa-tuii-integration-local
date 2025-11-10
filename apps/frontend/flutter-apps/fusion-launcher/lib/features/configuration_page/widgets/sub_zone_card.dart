@@ -153,9 +153,6 @@ class _SubZoneCardState extends State<SubZoneCard> {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         final List<CircuitModel> circuitList = _projectViewModel.getCircuitsInSubZone(subZoneId: widget.subZoneId);
-        if (kDebugMode) {
-          debugPrint('SubZone ${widget.subZoneId} (${widget.subZoneName}) circuits: ${circuitList.map((c) => c.id).join(", ")}');
-        }
         return Container(
           constraints: const BoxConstraints(minHeight: 60, maxHeight: 400),
           child:
