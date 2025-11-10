@@ -24,5 +24,9 @@ func (a *API) registerRoutes() {
 		projects.DELETE("/:projectId", projectHandler.DeleteProject)
 		projects.PUT("/:projectId/users/:userEmail", projectHandler.AssignUserToProject)
 		projects.DELETE("/:projectId/users/:userEmail", projectHandler.RemoveUserFromProject)
+		projects.PUT("/:projectId/star/:userId", projectHandler.StarProject)
+		projects.DELETE("/:projectId/star/:userId", projectHandler.UnstarProject)
+		projects.PUT("/:projectId/archive", projectHandler.ArchiveProject)
+		projects.DELETE("/:projectId/archive", projectHandler.UnarchiveProject)
 	}
 }

@@ -95,6 +95,26 @@ func (m *mockDBService) GetUserIDByEmail(ctx context.Context, email string) (str
 	return args.String(0), args.Error(1)
 }
 
+func (m *mockDBService) StarProject(ctx context.Context, projectID, userID string) error {
+	args := m.Called(ctx, projectID, userID)
+	return args.Error(0)
+}
+
+func (m *mockDBService) UnstarProject(ctx context.Context, projectID, userID string) error {
+	args := m.Called(ctx, projectID, userID)
+	return args.Error(0)
+}
+
+func (m *mockDBService) ArchiveProject(ctx context.Context, projectID string) error {
+	args := m.Called(ctx, projectID)
+	return args.Error(0)
+}
+
+func (m *mockDBService) UnarchiveProject(ctx context.Context, projectID string) error {
+	args := m.Called(ctx, projectID)
+	return args.Error(0)
+}
+
 type mockPresigner struct {
 	mock.Mock
 }
@@ -683,6 +703,280 @@ func TestRemoveUserFromProjectByEmail(t *testing.T) {
 				assert.NoError(t, err)
 				assert.NotNil(t, response)
 				assert.Equal(t, "User successfully removed from the project", response.Message)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestStarProject(t *testing.T) {
+	tests := []struct {
+		name             string
+		projectID        string
+		userID           string
+		projectExists    bool
+		projectExistsErr error
+		userExists       bool
+		userExistsErr    error
+		starErr          error
+		expectedErr      string
+	}{
+		{
+			name:             "successful star",
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    true,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			starErr:          nil,
+			expectedErr:      "",
+		},
+		{
+			name:             projectNotFoundMsg,
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    false,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			starErr:          nil,
+			expectedErr:      projectNotFoundMsg,
+		},
+		{
+			name:             userNotFoundMsg,
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    true,
+			projectExistsErr: nil,
+			userExists:       false,
+			userExistsErr:    nil,
+			starErr:          nil,
+			expectedErr:      userNotFoundMsg,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+
+			mockDB.On("ProjectExists", mock.Anything, tt.projectID).Return(tt.projectExists, tt.projectExistsErr)
+			if tt.projectExists {
+				mockDB.On("UserExists", mock.Anything, tt.userID).Return(tt.userExists, tt.userExistsErr)
+				if tt.userExists {
+					mockDB.On("StarProject", mock.Anything, tt.projectID, tt.userID).Return(tt.starErr)
+				}
+			}
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			err := service.StarProject(context.Background(), tt.projectID, tt.userID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUnstarProject(t *testing.T) {
+	tests := []struct {
+		name             string
+		projectID        string
+		userID           string
+		projectExists    bool
+		projectExistsErr error
+		userExists       bool
+		userExistsErr    error
+		unstarErr        error
+		expectedErr      string
+	}{
+		{
+			name:             "successful unstar",
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    true,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			unstarErr:        nil,
+			expectedErr:      "",
+		},
+		{
+			name:             projectNotFoundMsg,
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    false,
+			projectExistsErr: nil,
+			userExists:       true,
+			userExistsErr:    nil,
+			unstarErr:        nil,
+			expectedErr:      projectNotFoundMsg,
+		},
+		{
+			name:             userNotFoundMsg,
+			projectID:        testProjectID1,
+			userID:           testUserID1,
+			projectExists:    true,
+			projectExistsErr: nil,
+			userExists:       false,
+			userExistsErr:    nil,
+			unstarErr:        nil,
+			expectedErr:      userNotFoundMsg,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+
+			mockDB.On("ProjectExists", mock.Anything, tt.projectID).Return(tt.projectExists, tt.projectExistsErr)
+			if tt.projectExists {
+				mockDB.On("UserExists", mock.Anything, tt.userID).Return(tt.userExists, tt.userExistsErr)
+				if tt.userExists {
+					mockDB.On("UnstarProject", mock.Anything, tt.projectID, tt.userID).Return(tt.unstarErr)
+				}
+			}
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			err := service.UnstarProject(context.Background(), tt.projectID, tt.userID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestArchiveProject(t *testing.T) {
+	tests := []struct {
+		name        string
+		projectID   string
+		mockSetup   func(*mockDBService)
+		expectedErr string
+	}{
+		{
+			name:      "successful archive",
+			projectID: testProjectID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("ProjectExists", mock.Anything, testProjectID1).Return(true, nil)
+				m.On("ArchiveProject", mock.Anything, testProjectID1).Return(nil)
+			},
+		},
+		{
+			name:      "project not found",
+			projectID: testProjectID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("ProjectExists", mock.Anything, testProjectID1).Return(false, nil)
+			},
+			expectedErr: projectNotFoundMsg,
+		},
+		{
+			name:      "database error on project exists",
+			projectID: testProjectID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("ProjectExists", mock.Anything, testProjectID1).Return(false, errDatabaseMsg)
+			},
+			expectedErr: databaseErrorMsg,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+			tt.mockSetup(mockDB)
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			err := service.ArchiveProject(context.Background(), tt.projectID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUnarchiveProject(t *testing.T) {
+	tests := []struct {
+		name        string
+		projectID   string
+		mockSetup   func(*mockDBService)
+		expectedErr string
+	}{
+		{
+			name:      "successful unarchive",
+			projectID: testProjectID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("ProjectExists", mock.Anything, testProjectID1).Return(true, nil)
+				m.On("UnarchiveProject", mock.Anything, testProjectID1).Return(nil)
+			},
+		},
+		{
+			name:      "project not found",
+			projectID: testProjectID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("ProjectExists", mock.Anything, testProjectID1).Return(false, nil)
+			},
+			expectedErr: projectNotFoundMsg,
+		},
+		{
+			name:      "database error on project exists",
+			projectID: testProjectID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("ProjectExists", mock.Anything, testProjectID1).Return(false, errDatabaseMsg)
+			},
+			expectedErr: databaseErrorMsg,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+			tt.mockSetup(mockDB)
+
+			service := &Service{
+				dbService: mockDB,
+				presigner: mockPresigner,
+			}
+
+			err := service.UnarchiveProject(context.Background(), tt.projectID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
 			}
 
 			mockDB.AssertExpectations(t)

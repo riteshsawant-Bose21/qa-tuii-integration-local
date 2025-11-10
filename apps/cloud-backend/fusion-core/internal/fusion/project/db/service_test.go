@@ -73,17 +73,18 @@ func TestServiceInsert(t *testing.T) {
 		// Mock transaction operations
 		mock.ExpectBegin()
 
-		// Mock project insert
-		mock.ExpectExec(testInsertProjectStmt).
-			WithArgs(testProjectID, 123, testProjectName, testProjectDesc, testProjectVenue,
-				string(testProjectEnvType), string(testProjectPhase), testProjectApp,
-				1000.0, "USD", sqlmock.AnyArg(), sqlmock.AnyArg()).
-			WillReturnResult(sqlmock.NewResult(1, 1))
+		// Mock project insert with RETURNING clause
+		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
+			AddRow(false, false, nil)
+		mock.ExpectQuery(`INSERT INTO "project"`).
+			WillReturnRows(returnRows)
 
-		// Mock project user insert
-		mock.ExpectExec(testInsertProjectUserStmt).
-			WithArgs(testProjectID, testProjectAccountID, sqlmock.AnyArg(), sqlmock.AnyArg()).
-			WillReturnResult(sqlmock.NewResult(1, 1)) // Mock commit
+		// Mock project user insert with RETURNING clause
+		userReturnRows := sqlmock.NewRows([]string{"id", "is_starred"}).
+			AddRow(1, false)
+		mock.ExpectQuery(`INSERT INTO "project_user"`).
+			WillReturnRows(userReturnRows)
+		// Mock commit
 		mock.ExpectCommit()
 
 		id, err := service.Insert(ctx, project)
@@ -112,8 +113,15 @@ func TestServiceInsert(t *testing.T) {
 
 		// Mock transaction operations
 		mock.ExpectBegin()
-		mock.ExpectExec(testInsertProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
-		mock.ExpectExec(testInsertProjectUserStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		// Mock project insert with RETURNING clause
+		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
+			AddRow(false, false, nil)
+		mock.ExpectQuery(`INSERT INTO "project"`).
+			WillReturnRows(returnRows)
+		userReturnRows := sqlmock.NewRows([]string{"id", "is_starred"}).
+			AddRow(1, false)
+		mock.ExpectQuery(`INSERT INTO "project_user"`).
+			WillReturnRows(userReturnRows)
 		mock.ExpectCommit()
 
 		id, err := service.Insert(ctx, project)
@@ -129,17 +137,7 @@ func TestServiceInsert(t *testing.T) {
 		id, err := service.Insert(ctx, nil)
 		assert.Error(t, err)
 		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "validation failed")
-	})
-
-	t.Run("returns error when account ID is invalid", func(t *testing.T) {
-		project := &types.ProjectCreateRequest{
-			UserID: "invalid",
-		}
-		id, err := service.Insert(ctx, project)
-		assert.Error(t, err)
-		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "failed to convert account ID to int")
+		assert.Contains(t, err.Error(), "project cannot be nil")
 	})
 
 	t.Run("rolls back transaction on project insert failure", func(t *testing.T) {
@@ -160,7 +158,8 @@ func TestServiceInsert(t *testing.T) {
 
 		// Mock transaction operations
 		mock.ExpectBegin()
-		mock.ExpectExec(testInsertProjectStmt).WillReturnError(assert.AnError)
+		mock.ExpectQuery(`INSERT INTO "project"`).
+			WillReturnError(assert.AnError)
 		mock.ExpectRollback()
 
 		id, err := service.Insert(ctx, project)
@@ -190,8 +189,12 @@ func TestServiceInsert(t *testing.T) {
 
 		// Mock transaction operations
 		mock.ExpectBegin()
-		mock.ExpectExec(testInsertProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
-		mock.ExpectExec(testInsertProjectUserStmt).WillReturnError(assert.AnError)
+		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
+			AddRow(false, false, nil)
+		mock.ExpectQuery(`INSERT INTO "project"`).
+			WillReturnRows(returnRows)
+		mock.ExpectQuery(`INSERT INTO "project_user"`).
+			WillReturnError(assert.AnError)
 		mock.ExpectRollback()
 
 		id, err := service.Insert(ctx, project)
@@ -248,8 +251,14 @@ func TestServiceInsert(t *testing.T) {
 
 		// Mock transaction operations
 		mock.ExpectBegin()
-		mock.ExpectExec(testInsertProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
-		mock.ExpectExec(testInsertProjectUserStmt).WillReturnResult(sqlmock.NewResult(1, 1))
+		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
+			AddRow(false, false, nil)
+		mock.ExpectQuery(`INSERT INTO "project"`).
+			WillReturnRows(returnRows)
+		userReturnRows := sqlmock.NewRows([]string{"id", "is_starred"}).
+			AddRow(1, false)
+		mock.ExpectQuery(`INSERT INTO "project_user"`).
+			WillReturnRows(userReturnRows)
 		mock.ExpectCommit().WillReturnError(assert.AnError)
 
 		id, err := service.Insert(ctx, project)
@@ -270,22 +279,28 @@ func TestServiceSelectAll(t *testing.T) {
 
 	t.Run("successfully retrieves all projects", func(t *testing.T) {
 		queryParams := &types.GetAllProjectsParams{
+			UserID:     testProjectAccountID,
 			IsArchived: false,
 			SortBy:     "created_at",
 			SortOrder:  "asc",
 		}
 
-		rows := sqlmock.NewRows([]string{
-			"id", "primary_owner_account_id", "name", "description",
-			"venue", "environment_type", "project_phase", "application", "budget_amount",
-			"currency", "created_at", "updated_at", "is_archived", "is_deleted",
-		}).AddRow(
-			testProjectID, 123, testProjectName, testProjectDesc,
-			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
-			"USD", time.Now(), time.Now(), false, false,
-		)
+		// Mock first query for project_user table
+		projectUserRows := sqlmock.NewRows([]string{"project_id"}).
+			AddRow(testProjectID)
+		mock.ExpectQuery("SELECT \"project_id\" FROM \"project_user\"").WillReturnRows(projectUserRows)
 
-		mock.ExpectQuery(testSelectProjectsStmt).WillReturnRows(rows)
+		// Mock second query for project table
+		projectRows := sqlmock.NewRows([]string{
+			"id", "primary_owner_user_id", "name", "description",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
+			"currency", "created_at", "updated_at", "is_archived", "is_deleted", "locked_by_user_id",
+		}).AddRow(
+			testProjectID, testProjectAccountID, testProjectName, testProjectDesc,
+			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
+			"USD", time.Now(), time.Now(), false, false, nil,
+		)
+		mock.ExpectQuery("SELECT .* FROM \"project\"").WillReturnRows(projectRows)
 
 		projects, err := service.SelectAll(ctx, queryParams)
 		assert.NoError(t, err)
@@ -308,7 +323,6 @@ func TestServiceUpdate(t *testing.T) {
 			Venue:           "Updated Venue",
 			EnvironmentType: types.EnvironmentTypeOutdoor,
 			ProjectPhase:    types.ProjectPhaseDevelopment,
-			IsArchived:      true,
 			Budget: types.Budget{
 				Amount:   2000,
 				Currency: "EUR",
