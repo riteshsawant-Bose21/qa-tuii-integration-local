@@ -32,6 +32,7 @@ class _ZoneCardState extends State<ZoneCard> {
   bool get _hasSelectedFunction => (selectedFunction != null && selectedFunction!.isNotEmpty);
   String? selectedPrioritySource1;
   String? selectedPrioritySource2;
+  List<String> selectedZoneSources = <String>[]; // multi-select sources (ordered)
 
   final List<String> functions = <String>[
     'Priority Override',
@@ -214,11 +215,13 @@ class _ZoneCardState extends State<ZoneCard> {
         const SizedBox(height: 12),
         buildFunctionWidget(),
 
-        const SizedBox(height: 12),
+        const Spacer(),
 
-        buildPriorityFunctionWidget(priorityIndex: 1),
+        buildPriorityFunctionWidget(priorityIndex: 1), // fixed invalid 'd'
         const SizedBox(height: 8),
         buildPriorityFunctionWidget(priorityIndex: 2),
+        const SizedBox(height: 8),
+        buildSourceSelectionForZone(), // new multi-select source widget
       ],
     );
   }
@@ -378,8 +381,8 @@ class _ZoneCardState extends State<ZoneCard> {
             ),
             const SizedBox(width: 4),
             Container(
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               alignment: Alignment.center,
               decoration: BoxDecoration(
                 color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.primary,
@@ -498,10 +501,184 @@ class _ZoneCardState extends State<ZoneCard> {
             const SizedBox(width: 8),
             const FusionImage.asset(
               Assets.configurationFilledIcon,
-              width: 16,
-              height: 16,
+              width: 14,
+              height: 14,
               fit: BoxFit.contain,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Multi-select source selection for zone (checkboxes)
+  Widget buildSourceSelectionForZone() {
+    final bool hasSelection = selectedZoneSources.isNotEmpty;
+    final String badgeText = hasSelection ? selectedZoneSources.first.replaceAll(RegExp(r'^(SRC:|SET:)'), '').characters.take(3).toString() : '';
+
+    return PopupMenuButton<String>(
+      onSelected: (String value) {
+        setState(() {
+          if (selectedZoneSources.contains(value)) {
+            selectedZoneSources.remove(value);
+          } else {
+            selectedZoneSources.add(value);
+          }
+        });
+      },
+      offset: const Offset(0, 25),
+      tooltip: "Select Sources",
+      padding: EdgeInsets.zero,
+      color: Theme.of(context).colorScheme.white,
+      itemBuilder: (BuildContext context) {
+        final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
+
+        // Header: Sources
+        entries.add(
+          PopupMenuItem<String>(
+            enabled: false,
+            height: 24,
+            child: FusionAppText(
+              text: 'SOURCES',
+              maxLine: 1,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+
+        // Sources (individual)
+        for (final Source src in _projectViewModel.sources) {
+          final String value = 'SRC:${src.name}';
+          entries.add(
+            PopupMenuItem<String>(
+              value: value,
+              height: 30,
+              padding: EdgeInsets.zero,
+              child: Row(
+                children: <Widget>[
+                  Checkbox(
+                    value: selectedZoneSources.contains(value),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                    onChanged: (bool? checked) {
+                      Navigator.pop(context, value); // toggles via onSelected
+                    },
+                  ),
+                  Expanded(
+                    child: FusionAppText(
+                      text: src.name,
+                      maxLine: 1,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
+
+        // Divider
+        entries.add(const PopupMenuDivider(height: 4));
+
+        // Header: Source Sets
+        entries.add(
+          PopupMenuItem<String>(
+            enabled: false,
+            height: 24,
+            child: FusionAppText(
+              text: 'SOURCE SETS',
+              maxLine: 1,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+
+        // Source sets and their sources
+        for (final SourceSet set in _projectViewModel.getSourceSetsInZone(zoneId: widget.zoneId)) {
+          final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: set.id);
+          for (final Source src in sources) {
+            final String value = 'SET:${set.name} • ${src.name}';
+            entries.add(
+              PopupMenuItem<String>(
+                value: value,
+                height: 30,
+                padding: EdgeInsets.zero,
+                child: Row(
+                  children: <Widget>[
+                    Checkbox(
+                      value: selectedZoneSources.contains(value),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                      onChanged: (bool? checked) {
+                        Navigator.pop(context, value); // toggles via onSelected
+                      },
+                    ),
+                    Expanded(
+                      child: FusionAppText(
+                        text: '${set.name} • ${src.name}',
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+        }
+
+        return entries;
+      },
+      child: Container(
+        height: 22,
+        width: 170,
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+          ),
+          borderRadius: BorderRadius.circular(3),
+        ),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                text: hasSelection ? 'Sources selected' : 'Select sources',
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                ),
+              ),
+            ),
+            if (hasSelection)
+              IntrinsicWidth(
+                child: Container(
+                  // width: 16,
+                  height: 14,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: FusionAppText(
+                    text: "100",
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 10,
+                      color: Theme.of(context).colorScheme.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),
