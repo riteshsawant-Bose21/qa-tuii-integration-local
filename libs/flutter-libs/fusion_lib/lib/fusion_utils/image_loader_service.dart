@@ -4,6 +4,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 
+import '../fusion_lib.dart';
+
 class ImageLoaderService {
   final Map<String, ui.Image> _cache = <String, ui.Image>{};
 
@@ -40,7 +42,7 @@ class ImageLoaderService {
 
   /// Loads an image from the file system
   Future<ui.Image> _loadFileImage(String filePath) async {
-    final Directory dir = await getApplicationDocumentsDirectory();
+    final Directory dir = await FusionUtils.getFusionAppDirectory();
     final File file = File("${dir.path}/$filePath");
 
     if (!await file.exists()) {
@@ -55,7 +57,7 @@ class ImageLoaderService {
 
   static Future<void> deleteImageFile(String imagePath) async {
     if (!_isAssetPath(imagePath)) {
-      final Directory dir = await getApplicationDocumentsDirectory();
+      final Directory dir = await FusionUtils.getFusionAppDirectory();
       final File file = File("${dir.path}/$imagePath");
 
       if (await file.exists()) {
