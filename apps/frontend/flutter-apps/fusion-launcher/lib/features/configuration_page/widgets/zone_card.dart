@@ -514,7 +514,6 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Multi-select source selection for zone (checkboxes)
   Widget buildSourceSelectionForZone() {
     final bool hasSelection = selectedZoneSources.isNotEmpty;
-    final String badgeText = hasSelection ? selectedZoneSources.first.replaceAll(RegExp(r'^(SRC:|SET:)'), '').characters.take(3).toString() : '';
 
     return PopupMenuButton<String>(
       onSelected: (String value) {
@@ -549,7 +548,7 @@ class _ZoneCardState extends State<ZoneCard> {
           ),
         );
 
-        // Sources (individual)
+        /// Sources (individual)
         for (final Source src in _projectViewModel.sources) {
           final String value = 'SRC:${src.name}';
           entries.add(
@@ -564,7 +563,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                     onChanged: (bool? checked) {
-                      Navigator.pop(context, value); // toggles via onSelected
+                      Navigator.pop(context, value);
                     },
                   ),
                   Expanded(
@@ -600,7 +599,7 @@ class _ZoneCardState extends State<ZoneCard> {
         );
 
         // Source sets and their sources
-        for (final SourceSet set in _projectViewModel.getSourceSetsInZone(zoneId: widget.zoneId)) {
+        for (final SourceSet set in _projectViewModel.getAllSourceSets()) {
           final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: set.id);
           for (final Source src in sources) {
             final String value = 'SET:${set.name} • ${src.name}';
