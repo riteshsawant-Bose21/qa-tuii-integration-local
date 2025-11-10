@@ -613,13 +613,13 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     return;
                   }
 
-                FusionUiUtils.showLoader(context);
+                  FusionUiUtils.showLoader(context);
                   final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(
-                  newProject,
-                );
+                  final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(
+                    newProject,
+                  );
                   if (context.mounted) {
-                  FusionUiUtils.hideLoader(context);
+                    FusionUiUtils.hideLoader(context);
                   }
 
                   serviceLocator<ProjectViewModel>().openProject(projectData!.id);
@@ -630,9 +630,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   // }
 
                   if (context.mounted) {
-                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
-                  Navigator.of(context).pop();
-                  // Navigator.pushNamed(context, Routes.projectPage);
+                    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
+                    Navigator.of(context).pop();
+                    // Navigator.pushNamed(context, Routes.projectPage);
                   }
                 },
                 style: ElevatedButton.styleFrom(

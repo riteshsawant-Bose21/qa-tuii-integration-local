@@ -693,7 +693,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,
-              semanticsId: "Upload Floor-plan",
+                semanticsId: "Upload Floor-plan",
                 label: "Upload Floor-plan",
                 textStyle: Theme.of(context).textTheme.titleSmall,
                 onTap: () {
@@ -719,81 +719,81 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       context: context,
       builder:
           (BuildContext ctx) => Dialog(
-        backgroundColor: Theme.of(context).colorScheme.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        child: Container(
-          width: 720,
-          height: 600,
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            backgroundColor: Theme.of(context).colorScheme.white,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            child: Container(
+              width: 720,
+              height: 600,
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  FusionAppText(
-                    text: 'Upload Floor Plan',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor,
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    icon: Icon(
-                      Icons.close,
-                      color: Theme.of(context).colorScheme.greyDark,
-                      size: 20,
-                    ),
-                    splashRadius: 16,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-
-              // Import Section (Primary)
-              Expanded(
-                flex: 3,
-                child: _buildImportSection(ctx),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Divider
-              Row(
-                children: <Widget>[
-                  Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: FusionAppText(
-                      text: 'or choose from samples',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.greyDark,
-                        fontWeight: FontWeight.w500,
+                  // Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      FusionAppText(
+                        text: 'Upload Floor Plan',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        ),
                       ),
-                    ),
+                      IconButton(
+                        onPressed: () => Navigator.of(ctx).pop(),
+                        icon: Icon(
+                          Icons.close,
+                          color: Theme.of(context).colorScheme.greyDark,
+                          size: 20,
+                        ),
+                        splashRadius: 16,
+                      ),
+                    ],
                   ),
-                  Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                  const SizedBox(height: 24),
+
+                  // Import Section (Primary)
+                  Expanded(
+                    flex: 3,
+                    child: _buildImportSection(ctx),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // Divider
+                  Row(
+                    children: <Widget>[
+                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: FusionAppText(
+                          text: 'or choose from samples',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.greyDark,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children:
+                        plans
+                            .map(
+                              (String planPath) => Expanded(
+                                child: _buildSamplePlanCard(planPath),
+                              ),
+                            )
+                            .toList(),
+                  ),
                 ],
               ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                children:
-                plans
-                    .map(
-                      (String planPath) => Expanded(
-                    child: _buildSamplePlanCard(planPath),
-                  ),
-                )
-                    .toList(),
-              ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 
