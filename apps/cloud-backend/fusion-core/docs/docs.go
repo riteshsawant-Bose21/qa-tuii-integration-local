@@ -359,11 +359,30 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "Project archived successfully"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized to perform this action",
+                        "schema": {
+                            "$ref": "#/definitions/types.UnauthorizedError"
+                        }
                     },
                     "404": {
                         "description": "Project not found",
@@ -398,11 +417,30 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "Project unarchived successfully"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized to perform this action",
+                        "schema": {
+                            "$ref": "#/definitions/types.UnauthorizedError"
+                        }
                     },
                     "404": {
                         "description": "Project not found",
@@ -412,6 +450,130 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Project is not archived",
+                        "schema": {
+                            "$ref": "#/definitions/types.ConflictError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectId}/lock/{userId}": {
+            "put": {
+                "description": "Lock a project for a specific user",
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Lock a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully locked project"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "401": {
+                        "description": "User not assigned to the project",
+                        "schema": {
+                            "$ref": "#/definitions/types.UnauthorizedError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project or User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "409": {
+                        "description": "Project is already locked",
+                        "schema": {
+                            "$ref": "#/definitions/types.ConflictError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Unlock a project for a specific user (only if they locked it)",
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Unlock a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully unlocked project"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "401": {
+                        "description": "User not assigned to the project",
+                        "schema": {
+                            "$ref": "#/definitions/types.UnauthorizedError"
+                        }
+                    },
+                    "403": {
+                        "description": "Project is not locked by this user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project or User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "409": {
+                        "description": "Project is not locked",
                         "schema": {
                             "$ref": "#/definitions/types.ConflictError"
                         }
@@ -896,6 +1058,15 @@ const docTemplate = `{
                 "EnvironmentTypeOutdoor",
                 "EnvironmentTypeHybrid"
             ]
+        },
+        "types.ForbiddenError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Project is locked by another user"
+                }
+            }
         },
         "types.GetAllProjectsResponse": {
             "type": "object",

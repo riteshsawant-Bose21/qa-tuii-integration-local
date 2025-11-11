@@ -278,3 +278,82 @@ func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, er
 func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error) {
 	return s.dbService.IsUserAssigned(ctx, projectID, userID)
 }
+
+// LockProject locks a project for a user.
+func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check user assignment: %v", err)
+	}
+	if !isAssigned {
+		return fmt.Errorf("user not assigned to the project")
+	}
+
+	// Lock the project
+	if err := s.dbService.LockProject(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UnlockProject unlocks a project for a user.
+func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf("failed to check user assignment: %v", err)
+	}
+	if !isAssigned {
+		return fmt.Errorf("user not assigned to the project")
+	}
+
+	// Unlock the project
+	if err := s.dbService.UnlockProject(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ValidateProjectNotLockedByOther validates that a project is not locked by another user.
+// Returns an error with the locking user's email if the project is locked by someone else.
+func (s *Service) ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error {
+	isLocked, lockedByEmail, err := s.dbService.GetProjectLockInfo(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	if !isLocked {
+		return nil // Project is not locked, operation can proceed
+	}
+
+	// Check if the project is locked by the same user trying to perform the operation
+	lockedUserID, err := s.dbService.GetUserIDByEmail(ctx, lockedByEmail)
+	if err != nil {
+		return fmt.Errorf("failed to get locked user ID: %v", err)
+	}
+
+	if lockedUserID == userID {
+		return nil // Project is locked by the same user, operation can proceed
+	}
+
+	// Project is locked by a different user
+	return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+}
+
+// GetProjectLockInfo returns project lock information.
+func (s *Service) GetProjectLockInfo(ctx context.Context, projectID string) (isLocked bool, lockedByEmail string, err error) {
+	return s.dbService.GetProjectLockInfo(ctx, projectID)
+}

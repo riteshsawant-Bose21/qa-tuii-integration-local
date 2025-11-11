@@ -124,6 +124,26 @@ func (m *MockProjectService) IsUserAssigned(ctx context.Context, projectID, user
 	return args.Bool(0), args.Error(1)
 }
 
+func (m *MockProjectService) LockProject(ctx context.Context, projectID, userID string) error {
+	args := m.Called(ctx, projectID, userID)
+	return args.Error(0)
+}
+
+func (m *MockProjectService) UnlockProject(ctx context.Context, projectID, userID string) error {
+	args := m.Called(ctx, projectID, userID)
+	return args.Error(0)
+}
+
+func (m *MockProjectService) ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error {
+	args := m.Called(ctx, projectID, userID)
+	return args.Error(0)
+}
+
+func (m *MockProjectService) GetProjectLockInfo(ctx context.Context, projectID string) (bool, string, error) {
+	args := m.Called(ctx, projectID)
+	return args.Bool(0), args.String(1), args.Error(2)
+}
+
 func setupTest() (*gin.Engine, *MockProjectService) {
 	gin.SetMode(gin.TestMode)
 	r := gin.New()

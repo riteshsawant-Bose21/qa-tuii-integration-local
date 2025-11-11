@@ -30,6 +30,9 @@ type DatabaseService interface {
 	UnstarProject(ctx context.Context, projectID, userID string) error
 	ArchiveProject(ctx context.Context, projectID string) error
 	UnarchiveProject(ctx context.Context, projectID string) error
+	LockProject(ctx context.Context, projectID, userID string) error
+	UnlockProject(ctx context.Context, projectID, userID string) error
+	GetProjectLockInfo(ctx context.Context, projectID string) (isLocked bool, lockedByEmail string, err error)
 }
 
 // NewService creates a new project service.
