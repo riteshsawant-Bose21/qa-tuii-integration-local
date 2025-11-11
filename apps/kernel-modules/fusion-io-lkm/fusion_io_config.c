@@ -948,6 +948,12 @@ const struct base_device bd_fusion_c1 = {
     .num_gpios = 4,
     .gpios = (struct endpoint_gpio[]) {
         {
+            .name = "gpio_a_mute_out",
+            .type = EP_GPIO_TYPE_PHYS,
+            .num = 5, // GPIO1_IO5
+            .dir = EP_GPIO_DIR_I
+        },
+        {
             .name = "gpio_tca9544_int",
             .type = EP_GPIO_TYPE_PHYS,
             .is_irq = true,
@@ -960,12 +966,6 @@ const struct base_device bd_fusion_c1 = {
             .is_irq = true,
             .num = 14, // GPIO1_IO14
             .trigger_type = IRQ_TYPE_EDGE_FALLING
-        },
-        {
-            .name = "gpio_a_mute_out",
-            .type = EP_GPIO_TYPE_PHYS,
-            .num = 5, // GPIO1_IO5
-            .dir = EP_GPIO_DIR_I
         },
         {
             .name = "gpio_uv_warn",

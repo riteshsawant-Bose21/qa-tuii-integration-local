@@ -1337,7 +1337,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     i2c_adapter = i2c_get_adapter(I2C_ADAPTER);
     if (!i2c_adapter) {
-        return dev_err_probe(dev, -EPROBE_DEFER, "i2c bus not ready\n");;
+        return dev_err_probe(&pdev->dev, -EPROBE_DEFER, "i2c bus not ready\n");;
     }
 
     // TODO
@@ -1555,60 +1555,9 @@ static struct platform_driver fusion_io_driver = {
         .of_match_table = fusion_io_of_match
     },
     .probe = fusion_io_probe,
-    .remove = fusion_io_remove,
+    .remove = fusion_io_remove
 };
 module_platform_driver(fusion_io_driver);
-
-// Define the release function for the platform device
-static void fusion_io_device_release(struct device *dev)
-{
-    pr_info("fusion-io: Device release called\n");
-}
-
-// Update the platform device to include the release function
-static struct platform_device fusion_io_device = {
-    .name = "fusion-io",
-    .id = -1,
-    .dev = {
-        .release = fusion_io_device_release,
-    },
-};
-
-static int __init fusion_io_init(void)
-{
-    int ret;
-
-    // Register the platform device
-    ret = platform_device_register(&fusion_io_device);
-    if (ret) {
-        pr_err("fusion-io: Failed to register device\n");
-        return ret;
-    }
-
-    // Register the platform driver
-    ret = platform_driver_register(&fusion_io_driver);
-    if (ret) {
-        pr_err("fusion-io: Failed to register driver\n");
-        platform_device_unregister(&fusion_io_device);
-        return ret;
-    }
-
-    return 0;
-}
-
-static void __exit fusion_io_exit(void)
-{
-    pr_info("fusion-io: Exiting driver\n");
-
-    platform_driver_unregister(&fusion_io_driver);
-    platform_device_unregister(&fusion_io_device);
-
-    pr_info("fusion-io: Driver exit completed\n");
-}
-
-
-module_init(fusion_io_init);
-module_exit(fusion_io_exit);
 
 MODULE_AUTHOR("Nathan Mark");
 MODULE_DESCRIPTION("Fusion IO Driver");
