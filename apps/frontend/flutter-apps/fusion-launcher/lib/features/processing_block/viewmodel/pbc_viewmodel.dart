@@ -1,16 +1,15 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
+import 'package:fusion_launcher/features/processing_block/datasource/pb_widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
-import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
-import 'package:fusion_launcher/features/processing_block/sample_data/layout_data.dart';
 
 import '../dto/pb_item_param.dart';
 
 class PbcViewmodel extends ChangeNotifier {
-  PbcViewmodel() {
-    items.addAll(PBLayout.fromMap(SampleData.sampleData).children);
-  }
+  final Algorithm algorithm;
+  PbcViewmodel({required this.algorithm});
   List<PBItem> items = <PBItem>[];
 
   PBItem? _selected;
@@ -55,22 +54,14 @@ class PbcViewmodel extends ChangeNotifier {
     items.add(selected!);
   }
 
-  void addItem(String type, Offset position) {
-    final PBItemParam param = switch (type) {
-      'indicator' => PBIndicatorParam(label: "Indicator"),
-      'slider' => PBSliderParam(max: 100, min: 0, label: "Slider"),
-      'switch' => PBSwitchParam(label: "", enableValueLabel: "Yes", disabledValueLabel: "No"),
-      'text' => PBTextParam(label: "Text Goes Here"),
-      'graph' => PBGraphParam(label: "Graph goes here"),
-
-      _ => PBEmptyParam(),
-    };
-    final ({num height, num width}) size = switch (type) {
-      'indicator' => (width: 20, height: 5),
-      'slider' => (width: 10, height: 25),
-      'switch' => (width: 20, height: 5),
-      'text' => (width: 20, height: 20),
-      'graph' => (width: 50, height: 50),
+  void addItem(PbWidgets type, Offset position, Parameter data) {
+    final PBItemParam param = type.fromParameter(data);
+    final ({num height, num width}) size = switch (param) {
+      PBIndicatorParam() => (width: 20, height: 15),
+      PBSliderParam() => (width: 10, height: 25),
+      PBSwitchParam() => (width: 20, height: 5),
+      PBTextParam() => (width: 20, height: 20),
+      PBGraphParam() => (width: 50, height: 50),
 
       _ => (width: 20, height: 20),
     };
@@ -82,11 +73,13 @@ class PbcViewmodel extends ChangeNotifier {
         y: position.dy,
         width: size.width,
         height: size.height,
-        field: "",
-        type: type,
+        field: data.name,
+        type: type.type,
         param: param,
+        value: data.defaultValue,
       ),
     );
+    notifyListeners();
   }
 
   Map<String, dynamic> get currentJson => <String, dynamic>{"width": 100, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};

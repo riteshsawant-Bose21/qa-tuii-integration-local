@@ -14,6 +14,7 @@ class PBItem {
   final String field;
   final String type;
   final PBItemParam param;
+  final dynamic value;
   PBItem({
     required this.id,
     required this.x,
@@ -23,6 +24,7 @@ class PBItem {
     required this.field,
     required this.type,
     required this.param,
+    this.value,
   });
 
   PBItem copyWith({
@@ -34,6 +36,7 @@ class PBItem {
     String? field,
     String? type,
     PBItemParam? param,
+    dynamic value,
   }) {
     return PBItem(
       id: id ?? this.id,
@@ -44,6 +47,7 @@ class PBItem {
       field: field ?? this.field,
       type: type ?? this.type,
       param: param ?? this.param,
+      value: value ?? this.value,
     );
   }
 
@@ -57,6 +61,7 @@ class PBItem {
       'field': field,
       'type': type,
       'param': param.toMap(),
+      'value': value,
     };
   }
 
@@ -70,6 +75,7 @@ class PBItem {
       field: (map['field'] ?? '') as String,
       type: (map['type'] ?? '') as String,
       param: PBParamFactory.build(map['param'] as Map<dynamic, dynamic>, (map['type'] ?? '') as String),
+      value: map['value'],
     );
   }
 

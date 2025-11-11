@@ -52,11 +52,11 @@ class MixWidgetState extends State<MixWidget> {
       //set mix source levels to default if not already set
       final Map<String, double> updatedLevels = <String, double>{};
       for (final String id in selectedIds) {
-        if (!mix.sourceMixLevels.containsKey(id)) {
-          updatedLevels[id] = 0.0; // Default level
-        } else {
-          updatedLevels[id] = mix.sourceMixLevels[id]!;
-        }
+        // if (!mix.sourceMixLevels.containsKey(id)) {
+        //   updatedLevels[id] = 0.0; // Default level
+        // } else {
+        //   updatedLevels[id] = mix.sourceMixLevels[id]!;
+        // }
       }
 
       widget.onSourcesSetUpdated(widget.mix.id, selectedIds);
@@ -175,7 +175,7 @@ class MixWidgetState extends State<MixWidget> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: colors.surfaceVariant.withOpacity(0.3),
+                          color: colors.surfaceContainerHighest.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: colors.outline.withOpacity(0.2),
@@ -216,8 +216,8 @@ class MixWidgetState extends State<MixWidget> {
                           },
                           itemBuilder: (BuildContext context, int index) {
                             final Source source = widget.selectedSources[index];
-                            final double currentValue =
-                                widget.mix.sourceMixLevels.containsKey(source.id) ? double.parse(widget.mix.sourceMixLevels[source.id].toString()) : 0.0;
+                            final double currentValue = 0;
+                            // widget.mix.sourceMixLevels.containsKey(source.id) ? double.parse(widget.mix.sourceMixLevels[source.id].toString()) : 0.0;
 
                             return Padding(
                               padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 3),
@@ -311,7 +311,7 @@ class MixWidgetState extends State<MixWidget> {
                                             divisions: 80,
                                             onChanged: (double value) {
                                               final Map<String, double> updatedLevels = Map<String, double>.from(
-                                                widget.mix.sourceMixLevels,
+                                                <dynamic, dynamic>{}, // widget.mix.sourceMixLevels,
                                               );
                                               updatedLevels[source.id] = value;
                                               final SourceSet updatedMix = widget.mix.copyWith(sourceMixLevels: updatedLevels);
