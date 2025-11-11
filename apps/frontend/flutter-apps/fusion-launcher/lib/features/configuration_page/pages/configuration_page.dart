@@ -132,13 +132,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
             },
             onLeave: (Source? data) {},
             onAcceptWithDetails: (DragTargetDetails<Source> details) {
-              /// Remove source from the source set it belongs to (moving it back to raw sources list)
-              for (final SourceSet sourceSet in _projectViewModel.sourceSets) {
-                final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-                if (sourcesInSet.any((Source source) => source.id == details.data.id)) {
-                  _projectViewModel.removeSourceFromSourceSet(sourceId: details.data.id, sourceSetId: sourceSet.id);
-                  break;
-                }
+              final SourceSet? sourceSet = _projectViewModel.getSourceSetForSource(sourceId: details.data.id);
+              if (sourceSet != null) {
+                _projectViewModel.removeSourceFromSourceSet(sourceId: details.data.id, sourceSetId: sourceSet.id);
               }
               setState(() {
                 _draggingSourceId = null;
@@ -160,7 +156,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                 ),
                 child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                   builder: (BuildContext context, ProjectViewModelState state) {
-                    if (_projectViewModel.sources.isEmpty) {
+                    final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
+
+                    if (sourcesWithoutSourceSet.isEmpty) {
                       return Center(
                         child: FusionAppText(
                           text: 'No sources added yet',
@@ -172,9 +170,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                       );
                     }
                     return ListView.builder(
-                      itemCount: _projectViewModel.sources.length,
+                      itemCount: sourcesWithoutSourceSet.length,
                       itemBuilder: (BuildContext context, int index) {
-                        final Source source = _projectViewModel.sources[index];
+                        final Source source = sourcesWithoutSourceSet[index];
                         return Draggable<Source>(
                           data: source,
                           dragAnchorStrategy: pointerDragAnchorStrategy,
@@ -222,7 +220,6 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
             assetPath: 'assets/images/source_set_icon.png',
             trailing: PopupMenuButton<dynamic>(
               onCanceled: () {
-                // Just reset form values, do NOT pop the page.
                 _clearSourceSetDialog();
                 setState(() {});
               },
@@ -247,17 +244,19 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                       width: 250,
                       child: StatefulBuilder(
                         builder: (BuildContext context, StateSetter setMenuState) {
+                          final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
+
                           return SingleChildScrollView(
                             child: _SourceSetCreationWidget(
                               sourceSetNameController: _sourceSetNameController,
-                              availableSources: _projectViewModel.sources,
+                              availableSources: sourcesWithoutSourceSet,
                               selectedSources: _selectedSources,
                               onAddSourceSet: () {
-                                // Pass popup context so only the menu closes.
+                                /// Pass popup context so only the menu closes.
                                 _addSourceSet(context);
                               },
                               onCancel: () {
-                                // Cancel inside popup: close only popup.
+                                /// Cancel inside popup: close only popup.
                                 _clearSourceSetDialog(pop: true, popContext: context);
                               },
                               onSourceChanged: (Source source, bool isSelected) {
@@ -401,10 +400,10 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
     /// Add selected sources to the new source set
     _projectViewModel.addSourceSet(sourceSet: newSourceSet);
 
-    // todo : use batch add method
-    for (final SelectedSource selectedSource in _selectedSources) {
-      _projectViewModel.addSourceToSourceSet(sourceId: selectedSource.id, sourceSetId: newSourceSet.id);
-    }
+    _projectViewModel.updateSourcesInSourceSet(
+      sourceSetId: newSourceSet.id,
+      sourceIds: _selectedSources.map((SelectedSource s) => s.id).toList(),
+    );
 
     /// Clear dialog and close popup
     _clearSourceSetDialog(pop: true, popContext: popupContext);

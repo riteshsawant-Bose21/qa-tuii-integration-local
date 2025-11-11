@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/source_set_model.dart';
@@ -64,20 +65,28 @@ class _SourceSetItemState extends State<SourceSetItem> {
   }
 
   /// Add source set to project view model
-  // TODO: update with proper edit logic
   void _editSourceSet() {
     /// create source set and add to project view model
-    final SourceSet newSourceSet = SourceSet(
+    final SourceSet newSourceSet = widget.sourceSet.copyWith(
       name: _sourceSetNameController.text.trim(),
     );
 
     /// Add selected sources to the new source set
     _projectViewModel.updateSourceSet(sourceSet: newSourceSet);
 
-    // todo : use batch add method
-    for (final SelectedSource selectedSource in _selectedSources) {
-      _projectViewModel.addSourceToSourceSet(sourceId: selectedSource.id, sourceSetId: newSourceSet.id);
-    }
+    _projectViewModel.updateSourcesInSourceSet(
+      sourceSetId: newSourceSet.id,
+      sourceIds: _selectedSources.map((SelectedSource s) => s.id).toList(),
+    );
+
+    /// Expand source set to show updated sources
+    _isSourcesSetExpanded.value = true;
+
+    /// Show success toast
+    FusionToast.success(
+      context,
+      message: "Source set updated successfully",
+    );
 
     /// Clear dialog and close popup
     _clearSourceSetDialog();
@@ -87,6 +96,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
   void _clearSourceSetDialog() {
     _sourceSetNameController.clear();
     _selectedSources.clear();
+    Navigator.of(context).pop();
     setState(() {});
   }
 
@@ -169,8 +179,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             ),
                           ),
                           GestureDetector(
-                            // delete icon
-                            onTap: _confirmDeleteSourceSet, // was direct delete call
+                            onTap: _confirmDeleteSourceSet,
                             child: const FusionImage.asset(
                               Assets.deleteIcon,
                               width: 17,
@@ -240,7 +249,6 @@ class _SourceSetItemState extends State<SourceSetItem> {
                     },
                     onCancel: () {
                       _clearSourceSetDialog();
-                      Navigator.of(context).pop();
                     },
                     onSourceChanged: (Source source, bool isSelected) {
                       setState(() {
@@ -725,7 +733,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   width: double.infinity,
                   textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
 
-                  label: "Create",
+                  label: "Edit",
                   isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
                   onTap: () {
                     widget.onAddSourceSet.call();

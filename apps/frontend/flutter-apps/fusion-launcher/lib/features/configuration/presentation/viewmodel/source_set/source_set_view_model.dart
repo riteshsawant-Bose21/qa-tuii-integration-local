@@ -112,6 +112,15 @@ extension SourceSetViewModel on ProjectViewModel {
     }
   }
 
+  SourceSet? getSourceSetForSource({required String sourceId}) {
+    try {
+      return projectManager.getSourceSetForSource(sourceId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get source set for source: $e");
+      return null;
+    }
+  }
+
   void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
     try {
       if (autoSave) {

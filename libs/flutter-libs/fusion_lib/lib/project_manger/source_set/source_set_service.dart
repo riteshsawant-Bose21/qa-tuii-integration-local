@@ -84,7 +84,8 @@ extension SourceSetService on ProjectService {
     relationships.unlink(RelationshipType.sourceSetSources, sourceSetId, sourceId);
 
     final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
-    if (sourcesInSet.isEmpty || sourceSetId.length == 1) {
+    if (sourcesInSet.isEmpty || sourcesInSet.length == 1) {
+      print('Removing empty SourceSet: $sourceSetId and length is ${sourcesInSet.length}');
       removeSourceSet(sourceSetId);
     }
   }
@@ -92,6 +93,12 @@ extension SourceSetService on ProjectService {
   // Get SourceSet by id
   SourceSet? getSourceSetById(String sourceSetId) {
     return sourceSets.get(sourceSetId);
+  }
+
+  SourceSet? getSourceSetForSource(String sourceId) {
+    final parentId = relationships.getParent(RelationshipType.sourceSetSources, sourceId);
+    if (parentId == null) return null;
+    return getSourceSetById(parentId);
   }
 
   // Get all Source in a SourceSet

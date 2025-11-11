@@ -518,12 +518,19 @@ class _ZoneCardState extends State<ZoneCard> {
     final bool hasSelection = selectedZoneSources.isNotEmpty;
 
     return PopupMenuButton<String>(
-      onSelected: (_) {},
+      onSelected: (String? value) {
+        if (value == 'add') {
+          setState(() {});
+        }
+      },
       offset: const Offset(0, 25),
       tooltip: "Select Sources",
       padding: EdgeInsets.zero,
       color: Theme.of(context).colorScheme.white,
       itemBuilder: (BuildContext context) {
+        /// Use a temporary list for selection inside the popup
+        final List<String> tempSelectedSources = List<String>.from(selectedZoneSources);
+
         final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
         /// Header: Sources
@@ -548,35 +555,56 @@ class _ZoneCardState extends State<ZoneCard> {
           entries.add(
             PopupMenuItem<String>(
               enabled: false,
-              height: 30,
-              // padding: EdgeInsets.zero,
+              height: 20,
               child: StatefulBuilder(
                 builder: (BuildContext context, setStatePopup) {
-                  return Row(
-                    children: <Widget>[
-                      Checkbox(
-                        value: selectedZoneSources.contains(value),
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                        onChanged: (bool? checked) {
-                          setState(() {
-                            if (selectedZoneSources.contains(value)) {
-                              selectedZoneSources.remove(value);
-                            } else {
-                              selectedZoneSources.add(value);
-                            }
-                          });
-                          setStatePopup(() {}); // update checkbox in popup
-                        },
-                      ),
-                      Expanded(
-                        child: FusionAppText(
-                          text: src.name,
-                          maxLine: 1,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                  return GestureDetector(
+                    onTap: () {
+                      if (tempSelectedSources.contains(value)) {
+                        tempSelectedSources.remove(value);
+                      } else {
+                        tempSelectedSources.add(value);
+                      }
+                      setStatePopup(() {});
+                    },
+                    child: Row(
+                      children: <Widget>[
+                        Transform.scale(
+                          scale: 0.7,
+                          child: Checkbox(
+                            value: tempSelectedSources.contains(value),
+                            activeColor: Theme.of(context).colorScheme.greyDark,
+                            onChanged: (bool? checked) {
+                              if (tempSelectedSources.contains(value)) {
+                                tempSelectedSources.remove(value);
+                              } else {
+                                tempSelectedSources.add(value);
+                              }
+                              setStatePopup(() {});
+                            },
+
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                            splashRadius: 8,
+
+                            // color of the check mark itself (when checked)
+                            checkColor: Colors.white,
+
+                            // optional: make the border/side gray when unchecked and match when checked
+                            side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
+                          ),
                         ),
-                      ),
-                    ],
+
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: FusionAppText(
+                            text: src.name,
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
@@ -585,7 +613,7 @@ class _ZoneCardState extends State<ZoneCard> {
         }
 
         /// Divider
-        entries.add(const PopupMenuDivider(height: 4));
+        entries.add(const PopupMenuDivider(height: 12));
 
         /// Header: Source Sets
         entries.add(
@@ -611,35 +639,56 @@ class _ZoneCardState extends State<ZoneCard> {
             entries.add(
               PopupMenuItem<String>(
                 enabled: false,
-                height: 30,
-                // padding: EdgeInsets.zero,
+                height: 20,
                 child: StatefulBuilder(
                   builder: (BuildContext context, setStatePopup) {
-                    return Row(
-                      children: <Widget>[
-                        Checkbox(
-                          value: selectedZoneSources.contains(value),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                          onChanged: (bool? checked) {
-                            setState(() {
-                              if (selectedZoneSources.contains(value)) {
-                                selectedZoneSources.remove(value);
-                              } else {
-                                selectedZoneSources.add(value);
-                              }
-                            });
-                            setStatePopup(() {});
-                          },
-                        ),
-                        Expanded(
-                          child: FusionAppText(
-                            text: '${set.name} • ${src.name}',
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                    return GestureDetector(
+                      onTap: () {
+                        if (tempSelectedSources.contains(value)) {
+                          tempSelectedSources.remove(value);
+                        } else {
+                          tempSelectedSources.add(value);
+                        }
+                        setStatePopup(() {});
+                      },
+                      child: Row(
+                        children: <Widget>[
+                          Transform.scale(
+                            scale: 0.7,
+                            child: Checkbox(
+                              value: tempSelectedSources.contains(value),
+                              activeColor: Theme.of(context).colorScheme.greyDark,
+                              onChanged: (bool? checked) {
+                                if (tempSelectedSources.contains(value)) {
+                                  tempSelectedSources.remove(value);
+                                } else {
+                                  tempSelectedSources.add(value);
+                                }
+                                setStatePopup(() {});
+                              },
+
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                              splashRadius: 8,
+
+                              // color of the check mark itself (when checked)
+                              checkColor: Colors.white,
+
+                              // optional: make the border/side gray when unchecked and match when checked
+                              side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
+                            ),
                           ),
-                        ),
-                      ],
+
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: FusionAppText(
+                              text: '${set.name} • ${src.name}',
+                              maxLine: 1,
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                            ),
+                          ),
+                        ],
+                      ),
                     );
                   },
                 ),
@@ -649,30 +698,30 @@ class _ZoneCardState extends State<ZoneCard> {
         }
 
         /// Divider before Add button
-        entries.add(const PopupMenuDivider(height: 8));
+        entries.add(
+          const PopupMenuDivider(
+            height: 14,
+            color: Colors.transparent,
+          ),
+        );
 
-        /// Add button to close popup
+        /// Add button to close popup and update selection
         entries.add(
           PopupMenuItem<String>(
             enabled: true,
-            height: 36,
-            value: '__add__',
+            height: 28,
+            value: 'add',
             child: Center(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  minimumSize: const Size(120, 28),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  backgroundColor: Theme.of(context).colorScheme.primary,
-                  foregroundColor: Theme.of(context).colorScheme.white,
-                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                ),
-                onPressed: () {
-                  Navigator.pop(context, '__add__');
-                  setState(() {});
+              child: FusionButton(
+                label: 'Add',
+                height: 28,
+                width: double.infinity,
+                onTap: () {
+                  setState(() {
+                    selectedZoneSources = List<String>.from(tempSelectedSources);
+                  });
+                  Navigator.pop(context, 'add');
                 },
-                child: const Text('Add'),
               ),
             ),
           ),
