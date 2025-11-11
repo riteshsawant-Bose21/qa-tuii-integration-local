@@ -192,6 +192,26 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
+  SubZone? getSubZoneForCircuit({required String circuitId}) {
+    try {
+      return projectManager.getSubZoneForCircuit(circuitId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sub zone for circuit: $e");
+      throwError("Failed to get sub zone for circuit: $e");
+      return null;
+    }
+  }
+
+  Zone? getZoneForCircuit({required String circuitId}) {
+    try {
+      return projectManager.getZoneForCircuit(circuitId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get zone for circuit: $e");
+      throwError("Failed to get zone for circuit: $e");
+      return null;
+    }
+  }
+
   void createCircuitWithSpeakers({
     required ProductQueryModel speakerData,
     required String listeningAreaId,

@@ -166,7 +166,11 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                   final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                   final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                  return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU && incoming.id != circuitData.id;
+                  final SubZone? circuitSubZone = _projectViewModel.getSubZoneForCircuit(circuitId: incoming.id);
+
+                  return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU &&
+                      incoming.id != circuitData.id &&
+                      (circuitSubZone != null && circuitSubZone.id == widget.subZoneId);
                 },
                 onAccept: (CircuitModel incoming) {
                   /// Add speaker to target circuit

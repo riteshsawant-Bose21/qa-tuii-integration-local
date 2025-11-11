@@ -17,6 +17,35 @@ extension SourceSetService on ProjectService {
     sourceSets.add(sourceSet.id, sourceSet);
   }
 
+  void updateSourcesInSourceSet(String sourceSetId, List<String> sourceIds) {
+    if (!sourceSets.exists(sourceSetId)) {
+      throw Exception('sourceSet $sourceSetId does not exist');
+    }
+
+    //find difference between current and new
+    final currentSources = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+
+    final currentSourceCopy = List<String>.from(currentSources);
+
+    final sourcesToRemove = currentSourceCopy.where((s) => !sourceIds.contains(s)).toList();
+    final sourcesToAdd = sourceIds.where((s) => !currentSourceCopy.contains(s)).toList();
+
+    //remove
+    for (var source in sourcesToRemove) {
+      relationships.unlink(RelationshipType.sourceSetSources, sourceSetId, source);
+    }
+
+    //to  add
+    for (var source in sourcesToAdd) {
+      relationships.link(RelationshipType.sourceSetSources, sourceSetId, source);
+    }
+
+    final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+    if (sourcesInSet.isEmpty || sourceSetId.length == 1) {
+      removeSourceSet(sourceSetId);
+    }
+  }
+
   /// Remove a sourceSet and unlink it from any zones that referenced it.
   void removeSourceSet(String sourceSetId) {
     if (!sourceSets.exists(sourceSetId)) return;
@@ -43,43 +72,21 @@ extension SourceSetService on ProjectService {
       throw Exception('SourceSet $sourceSetId not found');
     }
 
-    final ss = sourceSets.get(sourceSetId)!;
-
     // Add to id list idempotently
     relationships.link(RelationshipType.sourceSetSources, sourceSetId, sourceId);
-
-    // Ensure a mix level exists for this source (do not override existing level)
-    initialMixLevel ??= 0.0;
-    ss.sourceMixLevels.putIfAbsent(sourceId, () => initialMixLevel!);
   }
 
   /// Remove a source id from a SourceSet (idempotent).
   /// - If SourceSet not found, returns silently.
-  /// - Removes from sourceIds and removes any entry from sourceMixLevels.
   void removeSourceFromSourceSet(String sourceId, String sourceSetId) {
     if (!sourceSets.exists(sourceSetId)) return;
 
     relationships.unlink(RelationshipType.sourceSetSources, sourceSetId, sourceId);
 
-    final ss = sourceSets.get(sourceSetId)!;
-
-    ss.sourceMixLevels.remove(sourceId);
-  }
-
-  /// Update mix level for a source inside a SourceSet
-  void updateSourceMixLevelInSourceSet(String sourceId, String sourceSetId, double newMixLevel) {
-    final sourceSet = sourceSets.get(sourceSetId);
-    if (sourceSet == null) throw Exception('SourceSet $sourceSetId not found');
-
-    // If the source is not part of the SourceSet, it's likely a user error.
-    // We allow adding the source id into the set if you want, but here we'll require it to exist.
     final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
-    if (!sourcesInSet.contains(sourceId)) {
-      throw Exception('Source $sourceId is not part of SourceSet $sourceSetId');
+    if (sourcesInSet.isEmpty || sourceSetId.length == 1) {
+      removeSourceSet(sourceSetId);
     }
-
-    // Update the mix level (adds or replaces the value)
-    sourceSet.sourceMixLevels[sourceId] = newMixLevel;
   }
 
   // Get SourceSet by id
@@ -92,6 +99,18 @@ extension SourceSetService on ProjectService {
     final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
     if (sourcesInSet.isEmpty) return <Source>[];
     return sourcesInSet.map((s) => getHardwareById(s)).whereType<Source>().toList();
+  }
+
+  List<Source> getSourcesWithoutSourceSet() {
+    final allSources = getAllHardware().whereType<Source>().toList();
+    List<Source> sourcesWithoutSourceSet = [];
+    for (var source in allSources) {
+      //if no source set parent then add it
+      if (relationships.getParent(RelationshipType.sourceSetSources, source.id) == null) {
+        sourcesWithoutSourceSet.add(source);
+      }
+    }
+    return sourcesWithoutSourceSet;
   }
 
   void reOrderSourcesInSourceSet(String parentId, int oldIndex, int newIndex) {

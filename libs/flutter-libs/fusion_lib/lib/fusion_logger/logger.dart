@@ -1,7 +1,10 @@
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
+import 'package:mutex/mutex.dart';
 
 /// A utility class for logging messages to both the console and a log file.
 ///
@@ -52,7 +55,7 @@ class FusionLogger {
 
   /// Mutex to ensure only one writer is active at a time
   /// _mutex is similar to Lock in android, here we want a single writer at any given point of time
-  // static final Mutex _mutex = Mutex();
+  static final Mutex _mutex = Mutex();
 
   static File? _logFile;
 
@@ -116,34 +119,36 @@ class FusionLogger {
 
   /// Write Logs to the text file for debugging purposes
   static Future<void> writeLogToFile(String logString) async {
-    // await _mutex.protect(() async {
-    //   /// setup the log file if it doesn't set already
-    //   if (_logFile == null) {
-    //     await _setupLogFile();
-    //   }
-    //   try {
-    //     final String data = "$logString\n";
-    //     final RandomAccessFile file = await _logFile!.open(mode: FileMode.append);
-    //     await file.writeString(data);
-    //     await file.close();
-    //
-    //     /// check if file size is exceeding the limit, if yes, rotate the file
-    //     await _checkAndRotateLogFile();
-    //   } catch (error) {
-    //     debugPrint('Error saving the logs $error');
-    //   }
-    // });
+    await _mutex.protect(() async {
+      /// setup the log file if it doesn't set already
+      ///
+      if (_logFile == null) {
+        await _setupLogFile();
+      }
+
+      try {
+        final String data = "$logString\n";
+        final RandomAccessFile file = await _logFile!.open(mode: FileMode.append);
+        await file.writeString(data);
+        await file.close();
+
+        /// check if file size is exceeding the limit, if yes, rotate the file
+        await _checkAndRotateLogFile();
+      } catch (error) {
+        debugPrint('Error saving the logs $error');
+      }
+    });
   }
 
   /// Setup the log file
   static Future<void> _setupLogFile() async {
-    // final Directory directory = await FusionFileUtils().getOrCreateDataDirectory(logsDirectory);
-    // _logFile = File('${directory.path}/app_log.txt');
-    //
-    // // If file does not exist, create it
-    // if (!(await _logFile!.exists())) {
-    //   await _logFile!.create();
-    // }
+    final Directory directory = await FusionUtils.getOrCreateDirectory(logsDirectory);
+    _logFile = File('${directory.path}/app_log.txt');
+
+    // If file does not exist, create it
+    if (!(await _logFile!.exists())) {
+      await _logFile!.create();
+    }
   }
 
   /// Check if log file exceeds size limit, if yes, rotate it
@@ -158,12 +163,36 @@ class FusionLogger {
 
   /// Rotates the log file by renaming it with a timestamp
   static Future<void> _rotateLogFile() async {
-    // final Directory directory = await FusionFileUtils().getOrCreateDataDirectory(logsDirectory);
-    // final String timestamp = DateFormat('yyyy-MM-dd_HH:mm:ss').format(DateTime.now());
-    // final File rotatedFile = File('${directory.path}/app_log_$timestamp.txt');
-    //
-    // await _logFile!.rename(rotatedFile.path); // Rename old file
-    // await _setupLogFile(); // Create new log file
+    final Directory directory = await FusionUtils.getOrCreateDirectory(logsDirectory);
+    final String timestamp = DateFormat('yyyy-MM-dd_HH:mm:ss').format(DateTime.now());
+    final File rotatedFile = File('${directory.path}/app_log_$timestamp.txt');
+
+    await _logFile!.rename(rotatedFile.path); // Rename old file
+    await _setupLogFile(); // Create new log file
+  }
+
+  static Future<List<File>> getPendingLogsList() async {
+    List<File> files = [];
+    final directory = Directory.systemTemp.createTempSync();
+    final logsDir = await FusionUtils.getOrCreateDirectory(logsDirectory);
+    final logsFiles = await FusionUtils.contentsOfDirectory(logsDir);
+
+    List<File> logs = [];
+    if (logsFiles.isNotEmpty) {
+      for (final file in logsFiles) {
+        if (file.path.contains("app_log")) {
+          logs.add(file);
+        }
+      }
+    }
+
+    if (logs.isNotEmpty) {
+      var logZip = await FusionUtils.zipMultipleFile(logs, "FusionLogs", directory.path);
+      if (logZip != null) {
+        files.add(logZip);
+      }
+    }
+    return files;
   }
 }
 
