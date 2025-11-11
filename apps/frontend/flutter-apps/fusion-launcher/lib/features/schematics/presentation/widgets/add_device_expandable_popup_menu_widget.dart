@@ -5,8 +5,8 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/models/products_data.dart';
-import '../../../product_query/presentation/pages/product_query.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../product_query/presentation/pages/product_query.dart';
 import 'create_new_location_widget.dart';
 import 'listening_area_dropdown_widget.dart';
 
@@ -607,7 +607,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                                 children:
                                                     serviceLocator<ProjectViewModel>().getAllListeningAreas().map((ListeningArea area) {
                                                       final FloorModel? floorName = projectViewModel.getFloorForListeningArea(areaId: area.id);
-                                                      final Zone? zoneData = projectViewModel.getZonesForListeningArea(areaId: area.id);
+
+                                                      String? zoneName = projectViewModel.getZonesForListeningArea(areaId: area.id)?.name;
+                                                      if (zoneName == null || zoneName.trim().isEmpty) {
+                                                        zoneName = projectViewModel.getSubZoneForListeningArea(areaId: area.id)?.name;
+                                                      }
 
                                                       /// Get available areas for the current zone/sub-zone
                                                       final List<ListeningArea> availableListeningAreas = projectViewModel.getAvailableListeningAreasForZone();
@@ -679,7 +683,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
                                                               /// Zone name
                                                               FusionAppText(
-                                                                text: zoneData?.name ?? "No zone",
+                                                                text: zoneName ?? "No zone",
                                                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                                   fontSize: 9,
                                                                   color:

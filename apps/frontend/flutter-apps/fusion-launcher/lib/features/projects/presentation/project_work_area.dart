@@ -19,6 +19,7 @@ import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
 import '../../../core/spl_calculation/ffi_constants.dart';
 import '../../../core/utils/broadcast_controllers.dart';
+import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
@@ -59,7 +60,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematics'),
-    Tab(text: 'Zone config'),
     Tab(text: 'Budget'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
@@ -74,6 +74,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       length: _tabs.length,
       vsync: this,
       animationDuration: Duration.zero,
+    );
+    FusionLogger.log(
+      message: "Opened Project ",
+      tag: LogTag.project,
     );
 
     // Listen for tab changes to trigger rebuild for IndexedStack
@@ -102,6 +106,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (Platform.isMacOS || Platform.isIOS) {
       WidgetsFlutterBinding.ensureInitialized();
       _engine = await MaceEngine.create();
+
+      FusionLogger.log(
+        message: "Mace engine initialized ",
+        tag: LogTag.project,
+      );
     }
   }
 
@@ -659,11 +668,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                           ),
                         ),
-                        child: Image.asset(
-                          "assets/images/share_icon.png",
-                          width: 24,
-                          height: 24,
+                        child: Tooltip(
+                          message: 'Report Bug',
+                          child: InkWell(
+                            child: Icon(
+                              Icons.bug_report,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            onTap: () async {
+                              handleExportLogs(context);
+                            },
+                          ),
                         ),
+                        // child: Image.asset(
+                        //   "assets/images/share_icon.png",
+                        //   width: 24,
+                        //   height: 24,
+                        // ),
                       ),
                       const ControlDesignTabSwitcher(),
                     ],
