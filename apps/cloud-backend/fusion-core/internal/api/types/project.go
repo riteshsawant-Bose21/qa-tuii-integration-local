@@ -129,7 +129,13 @@ type ConflictError struct {
 	Message string `json:"message" example:"User is already assigned to the project"`
 }
 
+// ForbiddenError represents a 403 Forbidden error.
+type ForbiddenError struct {
+	Message string `json:"message" example:"Project is locked by another user"`
+}
+
 // InternalServerError represents a 500 Internal Server Error.
 type InternalServerError struct {
 	Message string `json:"message" example:"Internal Server Error"`
 }
+

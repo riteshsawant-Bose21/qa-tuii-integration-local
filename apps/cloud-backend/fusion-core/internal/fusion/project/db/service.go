@@ -22,6 +22,11 @@ import (
 
 const (
 	failedUserAssignmentCheckMsg = "failed to check user assignment: %v"
+	projectNotFoundErrMsg        = "project not found"
+	failedToGetProjectErrMsg     = "failed to get project: %v"
+	projectAlreadyLockedErrMsg   = "project is already locked"
+	projectNotLockedErrMsg       = "project is not locked"
+	projectNotLockedByUserErrMsg = "project is not locked by this user"
 )
 
 // Executor can perform SQL queries.
@@ -157,18 +162,6 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 // SelectAll retrieves all projects from the database.
 func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
-	rows, err := model.ProjectUsers(qm.Select("project_id"), qm.Where("user_id = ?", queryParams.UserID)).All(ctx, s.db)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get project users: %v", err)
-	}
-	projectIDs := make([]string, 0, len(rows))
-	for _, row := range rows {
-		projectIDs = append(projectIDs, row.ProjectID)
-	}
-
-	if len(projectIDs) == 0 {
-		return []*types.Project{}, nil
-	}
 	// Set default sort order and field if not provided
 	order := "ASC"
 	if queryParams.SortOrder != "" {
@@ -183,27 +176,23 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 		sortBy = queryParams.SortBy
 	}
 
-	// Convert []string to []interface{} for SQLBoiler
-	projectIDsInterface := make([]interface{}, len(projectIDs))
-	for i, id := range projectIDs {
-		projectIDsInterface[i] = id
-	}
-
+	// SELECT projects.*
+	// FROM projects
+	// INNER JOIN project_user pu ON projects.id = pu.project_id
+	// WHERE pu.user_id = ?
+	//   AND projects.is_archived = ?
+	//   AND projects.is_deleted = ?
+	// ORDER BY projects.created_at ASC
 	projectRows, err := model.Projects(
+		qm.InnerJoin("project_user pu ON project.id = pu.project_id"),
+		qm.Where("pu.user_id = ?", queryParams.UserID),
 		qm.Where("is_archived = ?", queryParams.IsArchived),
 		qm.Where("is_deleted = ?", false),
-		qm.WhereIn("id in ?", projectIDsInterface...),
 		qm.OrderBy(fmt.Sprintf("%s %s", sortBy, order)),
 	).All(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToGetProjects,
-			zap.Error(err),
-			zap.String("user_id", queryParams.UserID),
-			zap.Bool("is_archived", queryParams.IsArchived),
-			zap.String("sort_by", queryParams.SortBy),
-			zap.String("sort_order", order))
-		return nil, errors.New(types.ErrMsgFailedToGetProjects)
+		return nil, fmt.Errorf("failed to get projects: %v", err)
 	}
 	defer rows.Close()
 
@@ -311,7 +300,7 @@ func (s *Service) Update(ctx context.Context, id string, project *types.ProjectU
 	}
 
 	if project.Budget.Amount != 0 {
-		row.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 2))
+		row.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
 	}
 
 	row.UpdatedAt = time.Now()
@@ -688,4 +677,103 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error 
 	}
 
 	return nil
+}
+
+// LockProject locks a project for a specific user.
+func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
+	// Get the project record
+	project, err := model.Projects(
+		model.ProjectWhere.ID.EQ(projectID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New(projectNotFoundErrMsg)
+		}
+		return fmt.Errorf(failedToGetProjectErrMsg, err)
+	}
+
+	// Check if project is already locked
+	if project.LockedByUserID.Valid {
+		return errors.New(projectAlreadyLockedErrMsg)
+	}
+
+	// Lock the project
+	project.LockedByUserID = null.NewString(userID, true)
+	project.UpdatedAt = time.Now()
+
+	// Update the record
+	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to lock project: %v", err)
+	}
+
+	return nil
+}
+
+// UnlockProject unlocks a project for a specific user.
+func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
+	// Get the project record
+	project, err := model.Projects(
+		model.ProjectWhere.ID.EQ(projectID),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return errors.New(projectNotFoundErrMsg)
+		}
+		return fmt.Errorf(failedToGetProjectErrMsg, err)
+	}
+
+	// Check if project is locked
+	if !project.LockedByUserID.Valid {
+		return errors.New(projectNotLockedErrMsg)
+	}
+
+	// Check if project is locked by the requesting user
+	if project.LockedByUserID.String != userID {
+		return errors.New(projectNotLockedByUserErrMsg)
+	}
+
+	// Unlock the project
+	project.LockedByUserID = null.String{}
+	project.UpdatedAt = time.Now()
+
+	// Update the record
+	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		return fmt.Errorf("failed to unlock project: %v", err)
+	}
+
+	return nil
+}
+
+// GetProjectLockInfo returns project lock information including the email of the user who locked it.
+func (s *Service) GetProjectLockInfo(ctx context.Context, projectID string) (isLocked bool, lockedByEmail string, err error) {
+	// Get the project record with user information
+	project, err := model.Projects(
+		model.ProjectWhere.ID.EQ(projectID),
+		qm.Load(model.ProjectRels.LockedByUser),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return false, "", fmt.Errorf(projectNotFoundErrMsg)
+		}
+		return false, "", fmt.Errorf(failedToGetProjectErrMsg, err)
+	}
+
+	// Check if project is locked
+	if !project.LockedByUserID.Valid {
+		return false, "", nil
+	}
+
+	// Get the user who locked the project
+	lockedUser, err := model.Users(
+		model.UserWhere.ID.EQ(project.LockedByUserID.String),
+	).One(ctx, s.db)
+
+	if err != nil {
+		return true, "", fmt.Errorf("failed to get locked user information: %v", err)
+	}
+
+	return true, lockedUser.Email, nil
 }

@@ -160,18 +160,6 @@ func isValidCurrency(currency string) bool {
 		}
 	}
 
-	// Common currency codes validation (you can extend this list)
-	commonCurrencies := []string{
-		"USD", "EUR", "GBP", "JPY", "CAD", "AUD", "CHF", "CNY", "SEK", "NZD",
-		"MXN", "SGD", "HKD", "NOK", "TRY", "ZAR", "BRL", "INR", "RUB", "KRW",
-	}
-
-	for _, valid := range commonCurrencies {
-		if currency == valid {
-			return true
-		}
-	}
-
 	// If not in common list, still allow it if it matches the format
 	return true
 }
@@ -195,7 +183,7 @@ func validateProjectSortField(fl validator.FieldLevel) bool {
 }
 
 func isValidProjectSortField(field string) bool {
-	validFields := []string{"created_at", "updated_at", "name", "project_phase", "environment_type", "application"}
+	validFields := []string{"created_at", "updated_at"}
 	for _, valid := range validFields {
 		if field == valid {
 			return true

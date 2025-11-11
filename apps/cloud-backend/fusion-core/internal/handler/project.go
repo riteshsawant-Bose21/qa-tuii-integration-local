@@ -23,6 +23,10 @@ const (
 	projectNotStarredMsg      = "project is not starred"
 	projectAlreadyArchivedMsg = "project is already archived"
 	projectNotArchivedMsg     = "project is not archived"
+	projectAlreadyLockedMsg   = "project is already locked"
+	projectNotLockedMsg       = "project is not locked"
+	projectNotLockedByUserMsg = "project is not locked by this user"
+	projectLockedByOtherMsg   = "project is locked by user: %s"
 )
 
 // ProjectHandler handles HTTP requests for project management.
@@ -200,6 +204,17 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	}
 	if !isUserAssigned {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to update this project"})
+		return
+	}
+
+	// Check if project is locked by another user
+	if err := h.project.ValidateProjectNotLockedByOther(ctx, projectID, userID); err != nil {
+		if strings.Contains(err.Error(), "project is locked by user:") {
+			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: err.Error()})
+			return
+		}
+		// Other errors are internal server errors
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
 		return
 	}
 
@@ -473,21 +488,67 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 // @Description Archive a project by project ID
 // @Tags projects
 // @Param projectId path string true "Project ID"
+// @Param user_id query string true "User ID"
 // @Success 204 "Project archived successfully"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
+// @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
 // @Failure 404 {object} types.NotFoundError "Project not found"
 // @Failure 409 {object} types.ConflictError "Project is already archived"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/archive [put]
 func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
+	userID := ctx.Query("user_id")
 
-	// Validate projectID UUID
+	if userID == "" {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		return
+	}
+
+	// Validate UUIDs
 	if !isValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
 		return
 	}
+	if !isValidUUID(userID) {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		return
+	}
 
-	err := h.project.ArchiveProject(ctx, projectID)
+	// Check if project exists
+	projectExists, err := h.project.ProjectExists(ctx, projectID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+	if !projectExists {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		return
+	}
+
+	// Check if user is assigned to the project
+	isUserAssigned, err := h.project.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+	if !isUserAssigned {
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to archive this project"})
+		return
+	}
+
+	// Check if project is locked by another user
+	if err := h.project.ValidateProjectNotLockedByOther(ctx, projectID, userID); err != nil {
+		if strings.Contains(err.Error(), "project is locked by user:") {
+			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: err.Error()})
+			return
+		}
+		// Other errors are internal server errors
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+
+	err = h.project.ArchiveProject(ctx, projectID)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -512,21 +573,56 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 // @Description Unarchive a project by project ID
 // @Tags projects
 // @Param projectId path string true "Project ID"
+// @Param user_id query string true "User ID"
 // @Success 204 "Project unarchived successfully"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
+// @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
 // @Failure 404 {object} types.NotFoundError "Project not found"
 // @Failure 409 {object} types.ConflictError "Project is not archived"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/archive [delete]
 func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
+	userID := ctx.Query("user_id")
 
-	// Validate projectID UUID
+	if userID == "" {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		return
+	}
+
+	// Validate UUIDs
 	if !isValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
 		return
 	}
+	if !isValidUUID(userID) {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		return
+	}
 
-	err := h.project.UnarchiveProject(ctx, projectID)
+	// Check if project exists
+	projectExists, err := h.project.ProjectExists(ctx, projectID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+	if !projectExists {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		return
+	}
+
+	// Check if user is assigned to the project
+	isUserAssigned, err := h.project.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+	if !isUserAssigned {
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to unarchive this project"})
+		return
+	}
+
+	err = h.project.UnarchiveProject(ctx, projectID)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -536,6 +632,123 @@ func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 		}
 		if errorMsg == projectNotArchivedMsg {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+// LockProject locks a project for a user.
+// @Summary Lock a project
+// @Description Lock a project for a specific user
+// @Tags projects
+// @Param projectId path string true "Project ID"
+// @Param user_id query string true "User ID"
+// @Success 204 "Successfully locked project"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
+// @Failure 401 {object} types.UnauthorizedError "User not assigned to the project"
+// @Failure 404 {object} types.NotFoundError "Project or User not found"
+// @Failure 409 {object} types.ConflictError "Project is already locked"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Router /projects/{projectId}/lock [put]
+func (h *ProjectHandler) LockProject(ctx *gin.Context) {
+	projectID := ctx.Param("projectId")
+	userID := ctx.Query("user_id")
+
+	if userID == "" {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		return
+	}
+
+	// Validate UUIDs
+	if !isValidUUID(projectID) {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		return
+	}
+	if !isValidUUID(userID) {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		return
+	}
+
+	err := h.project.LockProject(ctx, projectID, userID)
+	if err != nil {
+		errorMsg := err.Error()
+		// Check for specific error types
+		if errorMsg == userNotAssignedMsg {
+			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		if errorMsg == projectAlreadyLockedMsg {
+			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		// All other errors are internal server errors
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		return
+	}
+
+	ctx.Status(http.StatusNoContent)
+}
+
+// UnlockProject unlocks a project for a user.
+// @Summary Unlock a project
+// @Description Unlock a project for a specific user (only if they locked it)
+// @Tags projects
+// @Param projectId path string true "Project ID"
+// @Param user_id query string true "User ID"
+// @Success 204 "Successfully unlocked project"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
+// @Failure 401 {object} types.UnauthorizedError "User not assigned to the project"
+// @Failure 403 {object} types.ForbiddenError "Project is not locked by this user"
+// @Failure 404 {object} types.NotFoundError "Project or User not found"
+// @Failure 409 {object} types.ConflictError "Project is not locked"
+// @Failure 500 {object} types.InternalServerError "Internal server error"
+// @Router /projects/{projectId}/lock [delete]
+func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
+	projectID := ctx.Param("projectId")
+	userID := ctx.Query("user_id")
+
+	if userID == "" {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		return
+	}
+
+	// Validate UUIDs
+	if !isValidUUID(projectID) {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		return
+	}
+	if !isValidUUID(userID) {
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		return
+	}
+
+	err := h.project.UnlockProject(ctx, projectID, userID)
+	if err != nil {
+		errorMsg := err.Error()
+		// Check for specific error types
+		if errorMsg == userNotAssignedMsg {
+			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		if errorMsg == projectNotLockedMsg {
+			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
+			return
+		}
+		if errorMsg == projectNotLockedByUserMsg {
+			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors

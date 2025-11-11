@@ -176,6 +176,12 @@ definitions:
     - EnvironmentTypeIndoor
     - EnvironmentTypeOutdoor
     - EnvironmentTypeHybrid
+  types.ForbiddenError:
+    properties:
+      message:
+        example: Project is locked by another user
+        type: string
+    type: object
   types.GetAllProjectsResponse:
     properties:
       data:
@@ -800,9 +806,22 @@ paths:
         name: projectId
         required: true
         type: string
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
       responses:
         "204":
           description: Project unarchived successfully
+        "400":
+          description: Bad request - Invalid parameters
+          schema:
+            $ref: '#/definitions/types.BadRequestError'
+        "401":
+          description: Unauthorized to perform this action
+          schema:
+            $ref: '#/definitions/types.UnauthorizedError'
         "404":
           description: Project not found
           schema:
@@ -826,9 +845,22 @@ paths:
         name: projectId
         required: true
         type: string
+      - description: User ID
+        in: query
+        name: user_id
+        required: true
+        type: string
       responses:
         "204":
           description: Project archived successfully
+        "400":
+          description: Bad request - Invalid parameters
+          schema:
+            $ref: '#/definitions/types.BadRequestError'
+        "401":
+          description: Unauthorized to perform this action
+          schema:
+            $ref: '#/definitions/types.UnauthorizedError'
         "404":
           description: Project not found
           schema:
@@ -842,6 +874,89 @@ paths:
           schema:
             $ref: '#/definitions/types.InternalServerError'
       summary: Archive a project
+      tags:
+      - projects
+  /projects/{projectId}/lock/{userId}:
+    delete:
+      description: Unlock a project for a specific user (only if they locked it)
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Successfully unlocked project
+        "400":
+          description: Bad request - Invalid parameters
+          schema:
+            $ref: '#/definitions/types.BadRequestError'
+        "401":
+          description: User not assigned to the project
+          schema:
+            $ref: '#/definitions/types.UnauthorizedError'
+        "403":
+          description: Project is not locked by this user
+          schema:
+            $ref: '#/definitions/types.ForbiddenError'
+        "404":
+          description: Project or User not found
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: Project is not locked
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Unlock a project
+      tags:
+      - projects
+    put:
+      description: Lock a project for a specific user
+      parameters:
+      - description: Project ID
+        in: path
+        name: projectId
+        required: true
+        type: string
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      responses:
+        "204":
+          description: Successfully locked project
+        "400":
+          description: Bad request - Invalid parameters
+          schema:
+            $ref: '#/definitions/types.BadRequestError'
+        "401":
+          description: User not assigned to the project
+          schema:
+            $ref: '#/definitions/types.UnauthorizedError'
+        "404":
+          description: Project or User not found
+          schema:
+            $ref: '#/definitions/types.NotFoundError'
+        "409":
+          description: Project is already locked
+          schema:
+            $ref: '#/definitions/types.ConflictError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerError'
+      summary: Lock a project
       tags:
       - projects
   /projects/{projectId}/star/{userId}:
