@@ -122,4 +122,34 @@ extension CircuitService on ProjectService {
 
     relationships.reOrder(RelationshipType.zoneCircuits, parentId, circuitsInZone);
   }
+
+  SubZone? getSubZoneForCircuit(String circuitId) {
+    if (!circuits.exists(circuitId)) {
+      throw Exception('Circuit with id $circuitId does not exist');
+    }
+    final zoneId = relationships.getParent(RelationshipType.zoneCircuits, circuitId);
+    if (zoneId == null) {
+      return null;
+    }
+
+    if (subZones.exists(zoneId)) {
+      return subZones.get(zoneId);
+    }
+    return null;
+  }
+
+  Zone? getZoneForCircuit(String circuitId) {
+    if (!circuits.exists(circuitId)) {
+      throw Exception('Circuit with id $circuitId does not exist');
+    }
+    final zoneId = relationships.getParent(RelationshipType.zoneCircuits, circuitId);
+    if (zoneId == null) {
+      return null;
+    }
+
+    if (zones.exists(zoneId)) {
+      return zones.get(zoneId);
+    }
+    return null;
+  }
 }

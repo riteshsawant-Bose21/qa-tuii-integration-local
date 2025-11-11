@@ -74,4 +74,18 @@ extension CircuitManager on ProjectManager {
     }
     projectService!.reOderCircuitsInZone(parentId, oldIndex, newIndex);
   }
+
+  SubZone? getSubZoneForCircuit(String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSubZoneForCircuit(circuitId);
+  }
+
+  Zone? getZoneForCircuit(String circuitId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZoneForCircuit(circuitId);
+  }
 }

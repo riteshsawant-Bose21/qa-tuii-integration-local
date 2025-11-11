@@ -12,6 +12,11 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
+import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
@@ -279,7 +284,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         }
                                         widget.onCalculateSpl();
                                         serviceLocator<ProjectViewModel>().saveProject();
-                                        context.read<GuideShowCaseController>().completeStep();
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.drawListeningArea);
                                       },
                                       onUpdateListeningArea: (ListeningArea area) {
                                         serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
@@ -299,7 +304,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       },
                                       onTapListeningArea: (ListeningArea value) {
                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
-                                        context.read<GuideShowCaseController>().completeStep();
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showListeningAreaSelectionArea);
                                       },
                                       onSelectedListeningAreaIdChanged: (String? value) {
                                         serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
@@ -324,7 +329,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           position: speakerPosition,
                                           listeningAreaId: listeningAreaId,
                                         );
-                                        context.read<GuideShowCaseController>().completeStep();
+
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
+
+                                        if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
+                                        }
                                       },
                                       listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                                       subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
@@ -465,7 +475,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             serviceLocator<ProjectViewModel>().clearSelectedZone();
                                             serviceLocator<ProjectViewModel>().clearSelectedSubZone();
                                             widget.floorCanvasController.completeListeningAreaSelection();
-                                            context.read<GuideShowCaseController>().completeStep();
+                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
                                           },
                                           child: InkWell(
                                             onTap: () {
@@ -683,6 +693,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,
+                semanticsId: "Upload Floor-plan",
                 label: "Upload Floor-plan",
                 textStyle: Theme.of(context).textTheme.titleSmall,
                 onTap: () {
@@ -930,7 +941,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Future<void> _selectAssetFloorPlan(String assetImagePath) async {
     if (mounted) Navigator.of(context).pop();
-    context.read<GuideShowCaseController>().completeStep();
+    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
 
     final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addAssetImageToProject(
       assetPath: assetImagePath,
@@ -954,31 +965,38 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         final String fileName = result.files.single.name;
 
         // Close the dialog first
-        if (mounted) Navigator.of(context).pop();
+        // if (mounted) Navigator.of(context).pop();
 
         // Show loading indicator
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder:
-              (BuildContext context) => const Center(
-                child: CircularProgressIndicator(),
-              ),
-        );
-
-        final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
-
-        if (mounted) Navigator.of(context).pop();
-
-        if (responseCallback.success && responseCallback.data != null) {
-          final String savedImagePath = responseCallback.data!;
-          _calibrateFloorPlan(savedImagePath);
-        }
-
         if (mounted) {
-          Navigator.of(context).pop();
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder:
+                (BuildContext context) => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+          );
+
+          final ResponseCallback<String?> responseCallback = await serviceLocator<ProjectViewModel>().addImageToProject(imagePath: sourcePath);
+
+          if (mounted) Navigator.of(context).pop();
+
+          // ignore: use_build_context_synchronously
+          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.uploadFloorPlan);
+
+          if (responseCallback.success && responseCallback.data != null) {
+            final String savedImagePath = responseCallback.data!;
+            _calibrateFloorPlan(savedImagePath);
+          }
+
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+          debugPrint('Floor plan imported successfully: $fileName');
+        } else {
+          debugPrint("Dialog is not mounted !!!!!");
         }
-        debugPrint('Floor plan imported successfully: $fileName');
       }
     } catch (e) {
       if (!mounted) return;
@@ -1001,20 +1019,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     try {
       final ui.Image image = await serviceLocator<ImageLoaderService>().loadImage(savedImagePath);
 
-      if (!mounted) return;
-
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder:
-            (BuildContext context) => const Center(
-              child: CircularProgressIndicator(),
-            ),
-      );
-
-      await Future<void>.delayed(const Duration(milliseconds: 100));
-
-      if (mounted) Navigator.of(context).pop();
+      // if (!mounted) return;
+      //
+      // showDialog(
+      //   context: context,
+      //   barrierDismissible: false,
+      //   builder: (_) => const Center(child: CircularProgressIndicator()),
+      // );
+      //
+      // await Future<void>.delayed(const Duration(milliseconds: 100));
+      //
+      // if (mounted) Navigator.of(context).pop();
 
       if (!mounted) return;
 
@@ -1022,16 +1037,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         context: context,
         barrierDismissible: true,
         builder:
-            (BuildContext context) => Dialog(
+            (_) => Dialog(
               child: FloorPlanCalibrationDialog(
                 floorPlanImage: image,
                 onCalibrationComplete: (CalibrationData data) {
-                  if (mounted) {
+                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
+                  if (context.mounted) {
                     Navigator.of(context).pop(data);
                   }
                 },
                 onCancel: () {
-                  if (mounted) {
+                  if (context.mounted) {
                     Navigator.of(context).pop();
                   }
                 },
@@ -1105,7 +1121,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
         widget.floorCanvasController.loadFloorPlanImage();
         // ignore: use_build_context_synchronously
-        context.read<GuideShowCaseController>().completeStep();
+        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmFloorCalibrated);
       } else {
         debugPrint('Calibration cancelled by user');
       }

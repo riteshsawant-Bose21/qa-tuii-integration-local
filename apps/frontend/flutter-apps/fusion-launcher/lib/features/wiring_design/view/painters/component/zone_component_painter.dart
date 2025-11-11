@@ -7,6 +7,7 @@ class ZoneComponentPainter extends ComponentDataPainter {
   ZoneComponentPainter({required this.component, required this.painter});
   @override
   void paint(Canvas canvas, Size size) {
+    if (component.children.isEmpty) return;
     final ZoneComponentData data = component.data as ZoneComponentData;
     final Rect rect = component.position & component.size;
     final Paint paint =
@@ -15,6 +16,7 @@ class ZoneComponentPainter extends ComponentDataPainter {
           ..style = PaintingStyle.fill;
 
     // Draw component body
+    canvas.drawRect(rect, Paint()..color = Colors.white);
     canvas.drawRect(rect, paint);
 
     // Draw component border

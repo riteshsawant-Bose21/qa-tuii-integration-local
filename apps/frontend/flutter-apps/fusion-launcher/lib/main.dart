@@ -1,9 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:provider/provider.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -19,18 +21,34 @@ import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 
 Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  await runZonedGuarded(() async {
+    WidgetsFlutterBinding.ensureInitialized();
 
-  SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-    DeviceOrientation.landscapeRight,
-    DeviceOrientation.landscapeLeft,
-  ]);
+    SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+      DeviceOrientation.landscapeRight,
+      DeviceOrientation.landscapeLeft,
+    ]);
 
-  await setupServiceLocator();
+    await setupServiceLocator();
 
-  runApp(const MyApp());
+    runApp(const MyApp());
 
-  _setupMacOSDeepLinkListener();
+    //TODO: Only for web automation build
+    //This needs to be conditionally switched on based on some commandline param.
+    //Else, this would create the semantics tree everytime misusing computation power.
+    SemanticsBinding.instance.ensureSemantics();
+
+    _setupMacOSDeepLinkListener();
+  }, reportCrash);
+}
+
+Future<void> reportCrash(Object exception, StackTrace stack) async {
+  try {
+    FusionLogger.log(tag: LogTag.exceptions, message: "Exception: ${exception.toString()} \n, StackTrace: ${stack.toString()} ");
+    // FirebaseCrashlytics.instance.recordError(exception, stack);
+  } catch (ex) {
+    debugPrint("Unable to report crash: $ex");
+  }
 }
 
 void _setupMacOSDeepLinkListener() {
@@ -69,28 +87,28 @@ class MyApp extends StatelessWidget {
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),
         ),
-      ],
-      child: ChangeNotifierProvider<GuideShowCaseController>(
-        create: (BuildContext context) => GuideShowCaseController(globalNavigatorKey.currentContext!),
-        child: FusionThemeBuilder(
-          builder: (BuildContext context, ThemeMode mode) {
-            return MaterialApp(
-              title: 'Fusion Launcher',
-              debugShowCheckedModeBanner: false,
-              theme: FusionAppTheme.lightTheme,
-              darkTheme: FusionAppTheme.darkTheme,
-              themeMode: mode,
-              home: Scaffold(
-                body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
-              ),
-              navigatorKey: globalNavigatorKey,
-              navigatorObservers: <NavigatorObserver>[
-                AppNavigatorObserver(),
-              ],
-              onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
-            );
-          },
+        BlocProvider<GuideShowCaseController>(
+          create: (BuildContext context) => serviceLocator<GuideShowCaseController>(),
         ),
+      ],
+      child: FusionThemeBuilder(
+        builder: (BuildContext context, ThemeMode mode) {
+          return MaterialApp(
+            title: 'Fusion Launcher',
+            debugShowCheckedModeBanner: false,
+            theme: FusionAppTheme.lightTheme,
+            darkTheme: FusionAppTheme.darkTheme,
+            themeMode: mode,
+            home: Scaffold(
+              body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
+            ),
+            navigatorKey: globalNavigatorKey,
+            navigatorObservers: <NavigatorObserver>[
+              AppNavigatorObserver(),
+            ],
+            onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+          );
+        },
       ),
     );
   }

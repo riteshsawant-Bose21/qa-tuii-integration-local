@@ -19,12 +19,12 @@ import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
 import '../../../core/spl_calculation/ffi_constants.dart';
 import '../../../core/utils/broadcast_controllers.dart';
+import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
-import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
@@ -41,8 +41,7 @@ class ProjectWorkArea extends StatefulWidget {
   State<ProjectWorkArea> createState() => _ProjectWorkAreaState();
 }
 
-class _ProjectWorkAreaState extends State<ProjectWorkArea>
-    with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
+class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProviderStateMixin, AutomaticKeepAliveClientMixin {
   late TabController _tabController;
   StreamSubscription<int>? subscription;
   late TextEditingController _projectNameController;
@@ -60,7 +59,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematics'),
-    Tab(text: 'Zone config'),
     Tab(text: 'Budget'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
@@ -76,6 +74,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       vsync: this,
       animationDuration: Duration.zero,
     );
+    FusionLogger.log(
+      message: "Opened Project ",
+      tag: LogTag.project,
+    );
 
     // Listen for tab changes to trigger rebuild for IndexedStack
     _tabController.addListener(() {
@@ -84,13 +86,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
 
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+    serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
       if (index >= 0 && index < _tabController.length) {
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+    _projectNameController = TextEditingController(
+      text: serviceLocator<ProjectViewModel>().projectName,
+    );
     _initMace();
     _initSplRangeDefaults();
 
@@ -102,6 +107,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     if (Platform.isMacOS || Platform.isIOS) {
       WidgetsFlutterBinding.ensureInitialized();
       _engine = await MaceEngine.create();
+
+      FusionLogger.log(
+        message: "Mace engine initialized ",
+        tag: LogTag.project,
+      );
     }
   }
 
@@ -159,8 +169,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
   }
 
   Future<void> calculateSPL() async {
-    if (_engine == null) return;
-    if (!_floorCanvasController.isShowingSpl.value) return;
+    if (_engine == null) {
+      debugPrint('calculateSPL: _engine is null');
+      return;
+    }
+    if (!_floorCanvasController.isShowingSpl.value) {
+      debugPrint('calculateSPL: isShowingSpl is false');
+      return;
+    }
 
     final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
@@ -179,13 +195,25 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
       floorId: currentFloor.id,
     );
 
-    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
+    await SPLCalculationManager.calculateSpl(
+      _engine!,
+      speakers,
+      surfaces,
+      _lastPanelData!.getResolutionSpacing(),
+    );
 
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
-    final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final Bandwidth maceBandwidth = _mapToMaceBandwidth(
+      currentPanelData.bandwidth,
+    );
     final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
     final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
-    await updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+    await updateSpl(
+      maceBandwidth,
+      frequency,
+      weighting,
+      currentPanelData.relative,
+    );
   }
 
   Future<void> updateSpl(
@@ -226,7 +254,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     }
 
     for (final SPLCalculation calc in toApply) {
-      final List<ui.Offset> pts = calc.surface.getFieldPoints(_lastPanelData?.getResolutionSpacing() ?? 20.0);
+      final List<ui.Offset> pts = calc.surface.getFieldPoints(
+        _lastPanelData?.getResolutionSpacing() ?? 20.0,
+      );
       calc.surface.setSplData(pts, calc.spl);
     }
   }
@@ -304,9 +334,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
               others:
                   serviceLocator<ProjectViewModel>().genericHardwareComponents
                       .where(
-                        (HardwareComponent component) =>
-                            component is GenericHardwareComponent &&
-                            component.type == GenericHardwareComponentType.other,
+                        (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                       )
                       .toList(),
             ),
@@ -318,9 +346,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget:
-            () =>
-                toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget: () => toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
       ),
       DockItemConfig(
         id: "8",
@@ -419,8 +445,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       racks:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (GenericHardwareComponent component) =>
-                                    component.type == GenericHardwareComponentType.rack,
+                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
                               )
                               .toList(),
                       amplifiers: <Amplifier>[],
@@ -428,9 +453,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                       others:
                           serviceLocator<ProjectViewModel>().genericHardwareComponents
                               .where(
-                                (HardwareComponent component) =>
-                                    component is GenericHardwareComponent &&
-                                    component.type == GenericHardwareComponentType.other,
+                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
                               )
                               .toList(),
                     ),
@@ -451,14 +474,6 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
             ],
           );
         },
-      ),
-
-      const FusionDockableArea(
-        tabKey: "zone_config_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: ZoneCircuitConfigPage(),
-        dockItemList: <DockItemConfig>[],
       ),
 
       /// budget tab with docking area
@@ -666,11 +681,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                             right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                           ),
                         ),
-                        child: Image.asset(
-                          "assets/images/share_icon.png",
-                          width: 24,
-                          height: 24,
+                        child: Tooltip(
+                          message: 'Report Bug',
+                          child: InkWell(
+                            child: Icon(
+                              Icons.bug_report,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            onTap: () async {
+                              handleExportLogs(context);
+                            },
+                          ),
                         ),
+                        // child: Image.asset(
+                        //   "assets/images/share_icon.png",
+                        //   width: 24,
+                        //   height: 24,
+                        // ),
                       ),
                       const ControlDesignTabSwitcher(),
                     ],
@@ -702,7 +730,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
           color: Theme.of(context).colorScheme.white,
           // border right
           border: Border(
-            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+            right: BorderSide(
+              color: Theme.of(context).colorScheme.dividerColor,
+              width: 1,
+            ),
           ),
         ),
         child: Row(
@@ -715,21 +746,25 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, ProjectViewModelState state) {
+                    builder: (
+                      BuildContext context,
+                      ProjectViewModelState state,
+                    ) {
                       return FusionAppText(
                         text: serviceLocator<ProjectViewModel>().projectName,
+                        semanticId: "Project Name",
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       );
                     },
                   ),
                   const SizedBox(height: 2),
                   FusionAppText(
-                    text: "File_Version",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                    text: "1.0.0",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
                   ),
                 ],
               ),
@@ -753,7 +788,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       const Offset(-100, -20) & overlay.size,
     );
@@ -813,22 +851,26 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
                           borderSide: BorderSide(
-                            color:
-                                _projectNameError != null
-                                    ? Colors.red
-                                    : Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
                         isDense: true,
                       ),
                       onChanged: (String value) {
@@ -868,7 +910,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                           height: 28,
                           width: 64,
                           label: "Cancel",
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          textStyle: Theme.of(
+                            context,
+                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
                             _clearFields();
                             Navigator.of(context).pop();
@@ -926,7 +970,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   elevation: 0,
                 ),
                 child: const Text(
