@@ -490,12 +490,14 @@ class _ZoneCardState extends State<ZoneCard> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            FusionAppText(
-              text: selectedFunction ?? '',
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w400,
+            Expanded(
+              child: FusionAppText(
+                text: selectedFunction ?? '',
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                ),
               ),
             ),
             const SizedBox(width: 8),
@@ -516,15 +518,7 @@ class _ZoneCardState extends State<ZoneCard> {
     final bool hasSelection = selectedZoneSources.isNotEmpty;
 
     return PopupMenuButton<String>(
-      onSelected: (String value) {
-        setState(() {
-          if (selectedZoneSources.contains(value)) {
-            selectedZoneSources.remove(value);
-          } else {
-            selectedZoneSources.add(value);
-          }
-        });
-      },
+      onSelected: (_) {},
       offset: const Offset(0, 25),
       tooltip: "Select Sources",
       padding: EdgeInsets.zero,
@@ -532,7 +526,7 @@ class _ZoneCardState extends State<ZoneCard> {
       itemBuilder: (BuildContext context) {
         final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
-        // Header: Sources
+        /// Header: Sources
         entries.add(
           PopupMenuItem<String>(
             enabled: false,
@@ -553,36 +547,47 @@ class _ZoneCardState extends State<ZoneCard> {
           final String value = 'SRC:${src.name}';
           entries.add(
             PopupMenuItem<String>(
-              value: value,
+              enabled: false,
               height: 30,
-              padding: EdgeInsets.zero,
-              child: Row(
-                children: <Widget>[
-                  Checkbox(
-                    value: selectedZoneSources.contains(value),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                    onChanged: (bool? checked) {
-                      Navigator.pop(context, value);
-                    },
-                  ),
-                  Expanded(
-                    child: FusionAppText(
-                      text: src.name,
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
-                    ),
-                  ),
-                ],
+              // padding: EdgeInsets.zero,
+              child: StatefulBuilder(
+                builder: (BuildContext context, setStatePopup) {
+                  return Row(
+                    children: <Widget>[
+                      Checkbox(
+                        value: selectedZoneSources.contains(value),
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                        onChanged: (bool? checked) {
+                          setState(() {
+                            if (selectedZoneSources.contains(value)) {
+                              selectedZoneSources.remove(value);
+                            } else {
+                              selectedZoneSources.add(value);
+                            }
+                          });
+                          setStatePopup(() {}); // update checkbox in popup
+                        },
+                      ),
+                      Expanded(
+                        child: FusionAppText(
+                          text: src.name,
+                          maxLine: 1,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                        ),
+                      ),
+                    ],
+                  );
+                },
               ),
             ),
           );
         }
 
-        // Divider
+        /// Divider
         entries.add(const PopupMenuDivider(height: 4));
 
-        // Header: Source Sets
+        /// Header: Source Sets
         entries.add(
           PopupMenuItem<String>(
             enabled: false,
@@ -598,39 +603,80 @@ class _ZoneCardState extends State<ZoneCard> {
           ),
         );
 
-        // Source sets and their sources
+        /// Source sets and their sources
         for (final SourceSet set in _projectViewModel.getAllSourceSets()) {
           final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: set.id);
           for (final Source src in sources) {
             final String value = 'SET:${set.name} • ${src.name}';
             entries.add(
               PopupMenuItem<String>(
-                value: value,
+                enabled: false,
                 height: 30,
-                padding: EdgeInsets.zero,
-                child: Row(
-                  children: <Widget>[
-                    Checkbox(
-                      value: selectedZoneSources.contains(value),
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                      onChanged: (bool? checked) {
-                        Navigator.pop(context, value); // toggles via onSelected
-                      },
-                    ),
-                    Expanded(
-                      child: FusionAppText(
-                        text: '${set.name} • ${src.name}',
-                        maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
-                      ),
-                    ),
-                  ],
+                // padding: EdgeInsets.zero,
+                child: StatefulBuilder(
+                  builder: (BuildContext context, setStatePopup) {
+                    return Row(
+                      children: <Widget>[
+                        Checkbox(
+                          value: selectedZoneSources.contains(value),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                          onChanged: (bool? checked) {
+                            setState(() {
+                              if (selectedZoneSources.contains(value)) {
+                                selectedZoneSources.remove(value);
+                              } else {
+                                selectedZoneSources.add(value);
+                              }
+                            });
+                            setStatePopup(() {});
+                          },
+                        ),
+                        Expanded(
+                          child: FusionAppText(
+                            text: '${set.name} • ${src.name}',
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
                 ),
               ),
             );
           }
         }
+
+        /// Divider before Add button
+        entries.add(const PopupMenuDivider(height: 8));
+
+        /// Add button to close popup
+        entries.add(
+          PopupMenuItem<String>(
+            enabled: true,
+            height: 36,
+            value: '__add__',
+            child: Center(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(120, 28),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.white,
+                  textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 12),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                ),
+                onPressed: () {
+                  Navigator.pop(context, '__add__');
+                  setState(() {});
+                },
+                child: const Text('Add'),
+              ),
+            ),
+          ),
+        );
 
         return entries;
       },
@@ -659,7 +705,6 @@ class _ZoneCardState extends State<ZoneCard> {
             if (hasSelection)
               IntrinsicWidth(
                 child: Container(
-                  // width: 16,
                   height: 14,
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   alignment: Alignment.center,
@@ -668,7 +713,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: FusionAppText(
-                    text: "100",
+                    text: '${selectedZoneSources.length}',
                     maxLine: 1,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 10,
