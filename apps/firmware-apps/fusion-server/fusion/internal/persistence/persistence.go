@@ -243,10 +243,20 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
 	state := p.stateManager.GetFullStateDeepCopy()
 
+	// Ensure we always have a checksum
+	chk := state.Checksum
+	if chk == "" {
+		// Compute over the state payload only
+		payload := state.State
+		if c, err := utils.CalculateChecksum(payload); err == nil {
+			chk = c
+		}
+	}
+
 	ps := &PersistentState{
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
-		Checksum:  state.Checksum,
+		Checksum:  chk,
 		State:     state.State,
 	}
 
@@ -262,7 +272,6 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 		}
 		return bucket.Put([]byte(snapshotKey), data)
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}

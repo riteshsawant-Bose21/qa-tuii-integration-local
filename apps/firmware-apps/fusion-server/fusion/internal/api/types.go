@@ -106,6 +106,21 @@ type Task struct {
 	CronEntryID cron.EntryID   `json:"-"`
 }
 
+// TaskMessage represents a message playback task
+type TaskMessage struct {
+	ID          string `json:"id"`
+	MessageID   string `json:"message_id"`
+	Description string `json:"description"`
+	CronExpr    string `json:"cron_expr"`
+}
+
+// TaskSnapshopPatch represents a patchable snapshot task
+type TaskSnapshopPatch struct {
+	Description *string `json:"description,omitempty"`
+	CronExpr    *string `json:"cron_expr,omitempty"`
+	Snapshot    *string `json:"snapshot,omitempty"`
+}
+
 // StateEntry represents a single entry in the state
 type StateEntry struct {
 	Data    any     `json:"data"`
