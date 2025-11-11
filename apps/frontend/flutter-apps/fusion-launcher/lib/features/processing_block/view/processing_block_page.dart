@@ -7,29 +7,17 @@ import 'package:fusion_launcher/features/processing_block/view/widgets/pb_radio.
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../dto/pb_layout.dart';
+import '../sample_data/layout_data.dart';
+import 'dynamic_grid_view.dart';
+
 class ProcessingBlockPage extends StatelessWidget {
   const ProcessingBlockPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    // return DynamicGridView(
-    //   layout: PBLayout.fromMap(SampleData.sampleData),
-    // );
-
-    return Scaffold(
-      body: Center(
-        child: ElevatedButton(
-          onPressed: () {
-            showDialog(
-              context: context,
-              builder: (BuildContext context) {
-                return const SourceMixZoneControlPanel();
-              },
-            );
-          },
-          child: const Text("data"),
-        ),
-      ),
+    return DynamicGridView(
+      layout: PBLayout.fromMap(SampleData.sampleData),
     );
   }
 }

@@ -23,7 +23,6 @@ class PBSlider extends StatelessWidget {
       value: 100,
       min: data.min,
       max: data.max,
-      thumbSize: 24,
       showIntervals: showIntervals,
       onChanged: onChanged,
     );
@@ -42,8 +41,8 @@ class VerticalSlider extends StatefulWidget {
     this.inactiveColor = const Color(0xFFBABABA),
     this.thumbColor = Colors.black,
     this.thumbInnerColor = Colors.white,
-    this.trackWidth = 8.0,
-    this.thumbSize = 28.0,
+    this.trackWidth = 4.0,
+    this.thumbSize = 16.0,
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
   });
@@ -179,6 +178,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: widget.inactiveColor,
                                     fontWeight: FontWeight.w500,
+                                    fontSize: 8,
                                   ),
                                 ),
                                 Container(

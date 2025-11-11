@@ -18,7 +18,7 @@ class PBMeter extends StatelessWidget {
     final PBMeterParam data = item.param as PBMeterParam;
 
     return VerticalMeter(
-      value: -20,
+      value: 40,
       min: data.min,
       max: data.max,
       showIntervals: showIntervals,
@@ -33,14 +33,8 @@ class VerticalMeter extends StatelessWidget {
     required this.min,
     required this.max,
     this.showIntervals = true,
-    this.meterWidth = 8.0,
+    this.meterWidth = 4.0,
     this.inactiveColor = const Color(0xFFBABABA),
-    this.gradientColors = const <Color>[
-      Colors.red,
-      Colors.orange,
-      Colors.yellow,
-      Colors.green,
-    ],
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
     this.intervalGap = 8.0,
@@ -55,7 +49,6 @@ class VerticalMeter extends StatelessWidget {
   // Styling
   final double meterWidth;
   final Color inactiveColor;
-  final List<Color> gradientColors;
   final double intervalSpacing;
   final double intervalTickWidth;
   final double intervalGap;
@@ -98,45 +91,48 @@ class VerticalMeter extends StatelessWidget {
                 SizedBox(
                   width: meterWidth,
                   height: height,
-                  child: Stack(
-                    alignment: Alignment.bottomCenter,
-                    clipBehavior: Clip.none,
-                    children: <Widget>[
-                      // Full gradient background
-                      Container(
-                        width: meterWidth,
-                        height: height,
-                        decoration: BoxDecoration(
-                          borderRadius: const BorderRadius.vertical(
-                            top: Radius.circular(_borderRadius),
-                            bottom: Radius.circular(_borderRadius),
-                          ),
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: gradientColors,
-                          ),
-                        ),
-                      ),
-
-                      // Grey inactive overlay (covers above the active section)
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: AnimatedContainer(
-                          duration: animationDuration,
-                          curve: Curves.easeOut,
+                  child: ClipRRect(
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(_borderRadius),
+                      bottom: Radius.circular(_borderRadius),
+                    ),
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: <Widget>[
+                        // Gradient background (no internal borderRadius)
+                        Container(
                           width: meterWidth,
-                          height: height - activeHeight,
-                          decoration: BoxDecoration(
-                            color: inactiveColor,
-                            borderRadius: BorderRadius.vertical(
-                              top: const Radius.circular(_borderRadius),
-                              bottom: value == min ? const Radius.circular(_borderRadius) : Radius.zero,
+                          height: height,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: <Color>[
+                                Colors.red,
+                                Colors.orange,
+                                Colors.yellow,
+                                Colors.green,
+                              ],
                             ),
                           ),
                         ),
-                      ),
-                    ],
+
+                        // Grey inactive overlay (clipped by parent)
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: AnimatedContainer(
+                            duration: animationDuration,
+                            curve: Curves.easeOut,
+                            width: meterWidth,
+                            height: height - activeHeight,
+                            decoration: BoxDecoration(
+                              color: inactiveColor,
+                              // no need to set radius here — already clipped by parent
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
 
@@ -168,6 +164,7 @@ class VerticalMeter extends StatelessWidget {
                                     style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                       color: inactiveColor,
                                       fontWeight: FontWeight.w500,
+                                      fontSize: 8,
                                     ),
                                   ),
                                 ],

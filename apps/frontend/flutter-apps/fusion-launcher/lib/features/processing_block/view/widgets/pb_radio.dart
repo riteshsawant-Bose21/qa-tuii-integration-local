@@ -23,8 +23,7 @@ class PBRadio extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double radioSize = (constraints.maxWidth * 0.3).clamp(36, 44);
-        final double outerPadding = (constraints.maxWidth * 0.1).clamp(4, 8);
-        final double innerPadding = (constraints.maxWidth * 0.05).clamp(1, 2);
+        final double outerPadding = (constraints.maxWidth * 0.1).clamp(6, 8);
 
         return GestureDetector(
           onTap: () => onChanged.call(!value),
@@ -41,7 +40,7 @@ class PBRadio extends StatelessWidget {
               child: Container(
                 height: double.infinity,
                 width: double.infinity,
-                padding: EdgeInsets.all(innerPadding),
+                padding: const EdgeInsets.all(1),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: value ? activeColor : inactiveColor,
@@ -58,7 +57,7 @@ class PBRadio extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: value ? activeColor : inactiveColor,
-                      border: Border.all(color: bgColor, width: innerPadding),
+                      border: Border.all(color: bgColor, width: 2),
                     ),
                   ),
                 ),
