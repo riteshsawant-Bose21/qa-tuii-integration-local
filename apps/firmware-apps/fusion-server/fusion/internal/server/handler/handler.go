@@ -19,8 +19,12 @@ type Handler struct {
 	updater      *Updater
 	hub          *pubsub.Hub
 	endpoints    []string
+
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
+
+	controllers     map[string]*api.ControllerInfo
+	controllersLock sync.RWMutex
 }
 
 func NewHandler(
@@ -36,6 +40,7 @@ func NewHandler(
 		updater:      updater,
 		hub:          hub,
 		sessions:     make(map[string]*SAPSession),
+		controllers:  make(map[string]*api.ControllerInfo),
 	}
 }
 

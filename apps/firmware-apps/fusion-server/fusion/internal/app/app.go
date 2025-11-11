@@ -167,6 +167,12 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
 
+	// Controllers
+	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
+	app.registerPublicPOST(routes.ControllersEndpoint, app.Server.RegisterController)
+	app.registerPublicDELETE(routes.ControllersIDEndpoint, app.Server.DeleteController)
+	app.registerPublicGET(routes.ControllersIDEndpoint, app.Server.GetControllerByID)
+
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)

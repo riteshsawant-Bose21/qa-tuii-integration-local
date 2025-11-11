@@ -121,7 +121,7 @@ case "$test_type" in
         go test -v --race ./cluster_test.go
         ;;
     "controllers")
-        go test -v --race ./cxa_test.go ./cxd_test.go
+        go test -v --race ./controllers_test.go
         ;;
     "fusion")
         go test -v --race ./fusion_test.go -args --auto --vip "$vip"
