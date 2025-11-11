@@ -28,6 +28,7 @@
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <unistd.h>
 #include <iostream>
+#include <sys/time.h>
 #include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
@@ -37,7 +38,7 @@
 #include "workers/ControlPalSwitchActuator.h"
 #include "ControlPalCommandHandler.h"
 #include "ControlPalOcaUtils.h"
-
+#include "ControlPalSideBandInterface.h"
 
 bool CheckNewMessages(ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
                       ControllerCmdIntfc& newCmd)
@@ -45,7 +46,7 @@ bool CheckNewMessages(ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
     return cmdQueue->try_pop(newCmd);
 }
 
-void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
+void ProcessOcaCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
 {
     ::OcaLiteRoot *target;
 
@@ -167,8 +168,48 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
             }
             break;
 
+        default:
+            break;
+    }
+}
+
+void ProcessSidebandCommand(ControllerCmdIntfc& newCmd,
+                            SidebandInterface &fServIntfc)
+{
+    switch (newCmd.cmd)
+    {
         case CTRL_CMD_REV_WINK_SET:
-            //TODO:
+            {
+                //TODO:
+                std::ostringstream message;
+                struct timeval tv;
+                uint64_t timeNow;
+
+                gettimeofday(&tv, NULL);
+                timeNow = tv.tv_sec*1000 + tv.tv_usec;
+                message << "{"
+                    << "\"action\": \"performReverseWink\", "
+                    << "\"payload\": {"
+                    << "\"duration\": \"" << 5000 << "\", "
+                    << "\"timestamp\": \"" << timeNow << "\""
+                    << "}"
+                    << "}";
+                fServIntfc.sendMessage(message.str());
+            }
+            break;
+
+        case CTRL_CMD_WINK_SET:
+            {
+                //TODO:
+                std::ostringstream message;
+                message << "{"
+                    << "\"action\": \"winkResponse\", "
+                    << "\"payload\": {"
+                    << "\"status\": \"done\""
+                    << "}"
+                    << "}";
+                fServIntfc.sendMessage(message.str());
+            }
             break;
 
         default:
@@ -179,18 +220,28 @@ void ProcessCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
 void ControlPalUICommandHandler(
                       ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
                       std::vector<::OcaONo>& zoneONos,
-                      FusionProxy& fusion_proxy)
+                      FusionProxy& fusion_proxy,
+                      SidebandInterface &fServIntfc)
 {
     ControllerCmdIntfc newCmd;
 
     if (CheckNewMessages(cmdQueue, newCmd))
     {
-        auto it = std::find(zoneONos.begin(), zoneONos.end(),
-                               static_cast<::OcaONo>(newCmd.ono));
-
-        if (it != zoneONos.end())
+        // Check if Sideband message
+        if ((newCmd.cmd >= CTRL_CMD_REV_WINK_SET) &&
+            (newCmd.cmd < CTRL_CMD_MAX))
         {
-            ProcessCommand(newCmd, fusion_proxy);
+           ProcessSidebandCommand(newCmd, fServIntfc);
+        }
+        else
+        {
+            auto it = std::find(zoneONos.begin(), zoneONos.end(),
+                    static_cast<::OcaONo>(newCmd.ono));
+
+            if (it != zoneONos.end())
+            {
+                ProcessOcaCommand(newCmd, fusion_proxy);
+            }
         }
     }
 }

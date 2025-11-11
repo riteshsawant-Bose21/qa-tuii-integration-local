@@ -154,6 +154,7 @@ APP_SOURCES := main.cpp \
                ControlPalSetupUtils.cpp \
                ControlPalOcaUtils.cpp \
                ControlPalCommandHandler.cpp \
+               ControlPalSideBandInterface.cpp \
                workers/ControlPalGainActuator.cpp \
                workers/ControlPalMuteActuator.cpp \
                workers/ControlPalSwitchActuator.cpp \

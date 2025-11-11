@@ -38,6 +38,7 @@
 #include "ControlPalCommandHandler.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "ControlPalSideBandInterface.h"
 
 #define OCA_RUN_TIMEOUT_MSEC    500
 
@@ -63,7 +64,7 @@ bool ocaMain(std::string& customNodeId,
 
     OCA_LOG_INFO("=== OCA Lite Controller with Service Discovery ===");
     // Set log level to show INFO messages (including client connection logs)
-    //::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
 
     // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
@@ -138,9 +139,33 @@ bool ocaMain(std::string& customNodeId,
                                 ::OcaLiteCommandHandler::GetInstance().RegisterConnectionLostEventHandler(
                                         static_cast<::OcaLiteCommandHandler::IConnectionLostDelegate*>(connMonitor));
 
+                                //TODO: 'Fusion' service discovery
+
+                                // TODO: 'controllerID' should be
+                                // read from Flash config partition
+
+                                ::OcaLiteString controllerId =
+                                            customNodeId.empty() ?
+                                            ::OcaLiteString("ctrl1") :
+                                            ::OcaLiteString(customNodeId);
+
+                                // TODO: Should be set at discovery
+                                std::string fservHost("OCALite@imx8mm-var-dart-fusion");
+                                int fservPort = 7950;
+
+                                // Create SidebandInterface object
+                                SidebandInterface fusionServerConn(
+                                                           controllerId.GetString(),
+                                                           fservHost,
+                                                           fservPort,
+                                                           static_cast<void *>(ocaMsgQueue));
+
                                 while(!terminateFlag)
                                 {
-                                    // Setup connection to the Device
+                                  // Establish Fusion server sideband connection
+                                  if (fusionServerConn.connect())
+                                  {
+                                    // Setup AES connection to the Device
                                     if (ControlPalSetupConnection(sessionId))
                                     {
                                         // Set connected status to true
@@ -152,13 +177,6 @@ bool ocaMain(std::string& customNodeId,
                                         OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u",
                                                 sessionId, ocp1Network->GetObjectNumber());
 
-                                        // TODO: 'controllerID' should be
-                                        // read from Flash config partition
-                                        ::OcaLiteString controllerId =
-                                            customNodeId.empty() ?
-                                            ::OcaLiteString("ctrl1") :
-                                            ::OcaLiteString(customNodeId);
-
                                         // Holds ONo of each zone assigned
                                         // to the controller
                                         std::vector<::OcaONo> zoneONos;
@@ -166,6 +184,13 @@ bool ocaMain(std::string& customNodeId,
                                         FusionProxy fusion_proxy(
                                                 sessionId,
                                                 ocp1Network->GetObjectNumber());
+
+                                        // Wait for side-band 'identity' request
+                                        while (!fusionServerConn.IsIdentified())
+                                        {
+                                            fusionServerConn.messageHandler();
+                                        }
+
                                         // Create and setup control objects
                                         if (ControlPalSetupControls(
                                                  controllerId,
@@ -181,12 +206,16 @@ bool ocaMain(std::string& customNodeId,
                                                 // Wait for Events from Device
                                                 ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
+                                                // Check side-band for messages
+                                                fusionServerConn.messageHandler();
+
                                                 //Check for local UI command
                                                 {
                                                     ControlPalUICommandHandler(
                                                                  uiMsgQueue,
                                                                  zoneONos,
-                                                                 fusion_proxy);
+                                                                 fusion_proxy,
+                                                                 fusionServerConn);
                                                 }
 
                                                 // Check Connection status
@@ -208,6 +237,11 @@ bool ocaMain(std::string& customNodeId,
                                     {
                                         OCA_LOG_ERROR("✗ Failed to Setup Connection");
                                     }
+                                  }
+                                  else
+                                  {
+                                      OCA_LOG_ERROR("✗ Failed Fusion Server Connection (SB)");
+                                  }
                                 }
 
                             }
