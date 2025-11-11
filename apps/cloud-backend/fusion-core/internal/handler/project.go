@@ -13,6 +13,7 @@ import (
 const (
 	projectNotFoundMsg        = "project not found"
 	userNotFoundMsg           = "user not found"
+	userIDRequiredMsg         = "user_id is required"
 	internalServerErr         = "Internal server error"
 	sqlNoRowsErr              = "sql: no rows in result set"
 	userAlreadyAssignedMsg    = "user is already assigned to the project"
@@ -21,7 +22,6 @@ const (
 	projectNotStarredMsg      = "project is not starred"
 	projectAlreadyArchivedMsg = "project is already archived"
 	projectNotArchivedMsg     = "project is not archived"
-	projectNotFoundResponse   = "Project not found"
 )
 
 // ProjectHandler handles HTTP requests for project management.
@@ -108,7 +108,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "user_id is required"})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
 		return
 	}
 
@@ -154,7 +154,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "user_id is required"})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
 		return
 	}
 
@@ -234,7 +234,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "user_id is required"})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
 		return
 	}
 
