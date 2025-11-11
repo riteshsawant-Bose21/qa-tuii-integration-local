@@ -1408,7 +1408,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             step: GuideShowCaseSteps.selectListeningArea,
             onHighlightedSpotTap: (TapDownDetails details) {
               serviceLocator<ProjectViewModel>().enterZoneSelectionMode(zone);
-              context.read<GuideShowCaseController>().completeStep();
+              serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.selectListeningArea);
             },
             child: GestureDetector(
               onTap: () {
@@ -1993,7 +1993,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       _expandedZones.add(zone.id);
       _expandedCircuitSections.add('zone_${zone.id}');
     });
-    context.read<GuideShowCaseController>().completeStep();
+    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addZone);
   }
 
   void _addSubZoneToZone(String zoneId) {

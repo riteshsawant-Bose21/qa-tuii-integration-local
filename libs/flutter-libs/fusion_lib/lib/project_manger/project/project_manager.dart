@@ -54,6 +54,7 @@ class ProjectManager {
       }
       return createProjectResponse;
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error creating and saving new project: $e");
       return ResponseCallback.failure("Error creating and saving new project: $e");
     }
   }
@@ -66,6 +67,8 @@ class ProjectManager {
       projectService = null;
       return ResponseCallback.success(true);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error deleting Fusion directory: $e");
+
       return ResponseCallback.failure("Error deleting Fusion directory: $e");
     }
   }
@@ -80,6 +83,7 @@ class ProjectManager {
       }
       return ResponseCallback.success(true);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error deleting project: $e");
       return ResponseCallback.failure("Error deleting project: $e");
     }
   }
@@ -95,6 +99,7 @@ class ProjectManager {
 
       return ResponseCallback.success(project);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error opening project: $e");
       return ResponseCallback.failure("Error opening project: $e");
     }
   }
@@ -120,6 +125,7 @@ class ProjectManager {
 
         return ResponseCallback.success(true);
       } catch (e) {
+        FusionLogger.log(tag: LogTag.exceptions, message: "Error saving project: $e");
         return ResponseCallback.failure("Error saving project: $e");
       }
     });
@@ -134,6 +140,7 @@ class ProjectManager {
       final String savedImagePath = await localProjectManager.saveImageToProject(projectId: projectService!.id, imagePath: imagePath);
       return ResponseCallback.success(savedImagePath);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving image to project directory: $e");
       return ResponseCallback.failure("Error saving image to project directory: $e");
     }
   }
@@ -147,6 +154,7 @@ class ProjectManager {
       final String savedImagePath = await localProjectManager.saveAssetImageToProject(projectId: projectService!.id, assetPath: assetPath);
       return ResponseCallback.success(savedImagePath);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving image to project directory: $e");
       return ResponseCallback.failure("Error saving image to project directory: $e");
     }
   }
@@ -160,6 +168,7 @@ class ProjectManager {
       final File file = await localProjectManager.getImageFromProject(projectId: projectService!.id, imageName: imageName);
       return ResponseCallback.success(file);
     } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error getting image from project directory: $e");
       return ResponseCallback.failure("Error getting image from project directory: $e");
     }
   }
@@ -167,5 +176,13 @@ class ProjectManager {
   // get Project JSon
   Map<String, dynamic> getCurrentProjectJson() {
     return projectService?.toJson() ?? {};
+  }
+
+  Future<File?> getProjectZipFile({required String projectId}) async {
+    final Directory projectDirectory = await localProjectManager.getProjectDirectoryById(projectId);
+    if (await projectDirectory.exists()) {
+      return FusionUtils().zipProjectDirectory(projectDirectory);
+    }
+    return null;
   }
 }

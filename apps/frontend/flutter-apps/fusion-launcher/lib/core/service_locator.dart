@@ -44,6 +44,7 @@ import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import 'constants/algorithms_data.dart';
 import 'models/user_profile_model.dart';
+import 'router/navigation_observer.dart';
 
 final GetIt serviceLocator = GetIt.instance;
 
@@ -174,6 +175,7 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerLazySingleton<ProjectViewModel>(() => ProjectViewModel(serviceLocator<ProjectManager>()));
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
+  serviceLocator.registerLazySingleton<GuideShowCaseController>(() => GuideShowCaseController(globalNavigatorKey.currentContext!));
 
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
   await setupFusionLib(serviceLocator);
