@@ -127,20 +127,25 @@ type VersionUpdate struct {
 type NotifyOp string
 
 const (
-	NotifyOpAck              NotifyOp = "ack"
-	NotifyOpControllerAdd    NotifyOp = "controller_add"
-	NotifyOpControllerRemove NotifyOp = "controller_remove"
-	NotifyOpConfigUpdate     NotifyOp = "config_update"
-	NotifyOpSnapActivate     NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate       NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete       NotifyOp = "snapshot_delete"
-	NotifyOpTaskCreate       NotifyOp = "task_create"
-	NotifyOpTaskDelete       NotifyOp = "task_delete"
-	NotifyOpTaskUpdate       NotifyOp = "task_update"
-	NotifyOpVIPStatus        NotifyOp = "vip_status"
-	NotifyOpValueGet         NotifyOp = "get"
-	NotifyOpValueSet         NotifyOp = "set"
-	NotifyOpVersionUpdate    NotifyOp = "version_update"
+	NotifyOpAck           NotifyOp = "ack"
+	NotifyOpConfigUpdate  NotifyOp = "config_update"
+	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
+	NotifyOpTaskCreate    NotifyOp = "task_create"
+	NotifyOpTaskDelete    NotifyOp = "task_delete"
+	NotifyOpTaskUpdate    NotifyOp = "task_update"
+	NotifyOpVIPStatus     NotifyOp = "vip_status"
+	NotifyOpValueGet      NotifyOp = "get"
+	NotifyOpValueSet      NotifyOp = "set"
+	NotifyOpVersionUpdate NotifyOp = "version_update"
+
+	// Wall Controller specific operations
+	NotifyOpIdentify       NotifyOp = "identify"       // Server-initiated controller identification
+	NotifyOpWinking        NotifyOp = "Winking"        // Controller winking response
+	NotifyOpReverseWinking NotifyOp = "ReverseWinking" // Controller-initiated wink
+	NotifyOpPerformWink    NotifyOp = "performWink"    // Server wink command
+
 )
 
 // NotifyMessage holds information about a cross-node message

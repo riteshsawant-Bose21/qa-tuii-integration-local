@@ -2350,14 +2350,14 @@
         },
         {
           "type": "http",
-          "name": "Remove Controller",
-          "filename": "Remove Controller.bru",
+          "name": "Wink Controller",
+          "filename": "Wink Controller.bru",
           "seq": 4,
           "settings": {},
           "tags": [],
           "request": {
-            "url": "{{api_url}}/controllers/:id",
-            "method": "DELETE",
+            "url": "{{api_url}}/controllers/wink/:id",
+            "method": "GET",
             "headers": [],
             "params": [
               {
@@ -2370,35 +2370,6 @@
             "body": {
               "mode": "json",
               "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Register Controller",
-          "filename": "Register Controller.bru",
-          "seq": 3,
-          "settings": {},
-          "tags": [],
-          "request": {
-            "url": "{{api_url}}/controllers",
-            "method": "POST",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"id\": \"ctrl-test-001\",\n  \"name\": \"Test Controller\",\n  \"address\": \"192.168.64.250\",\n  \"version\": \"1.0.0\"\n}\n",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
