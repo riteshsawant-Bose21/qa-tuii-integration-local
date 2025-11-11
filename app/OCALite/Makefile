@@ -56,6 +56,15 @@ PKG_LIBS += $(JSONCPP_LIBS)
 ifeq ($(UNAME_S),Darwin)
     # macOS: Use Homebrew Boost (header-only boost::system, don't force -lboost_system)
     BOOST_PREFIX := $(shell brew --prefix 2>/dev/null)
+    # Fallback to default Homebrew paths if BOOST_PREFIX is empty
+    ifeq ($(BOOST_PREFIX),)
+        # Try Apple Silicon default first, then Intel
+        ifeq ($(shell test -d /opt/homebrew && echo yes),yes)
+            BOOST_PREFIX := /opt/homebrew
+        else
+            BOOST_PREFIX := /usr/local
+        endif
+    endif
     BOOST_CFLAGS := -I$(BOOST_PREFIX)/include
     BOOST_LIBS :=
 
