@@ -19,16 +19,22 @@ inputs:
   nexus_url:
     description: 'Nexus repository URL'
     required: true
+outputs:
+  fusion_edge_gateway_version:
+    description: "Fusion Edge Gateway version built"
+    value: ${{ steps.build-fusion-edge-gateway.outputs.fusion_edge_gateway_version }}
         
 runs:
   using: "composite"
   steps:
     - name: Build with Make
+      id: build-fusion-edge-gateway
       shell: bash
       working-directory: apps/firmware-apps/fusion-edge-gateway
       run: |
         moon run fusion-edge-gateway:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        echo "fusion_edge_gateway_version=${VERSION}" >> $GITHUB_OUTPUT
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-edge-gateway ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION
         echo "Fusion Edge Gateway build uploaded to Nexus successfully!"
         echo "fusion-edge-gateway: ${{ inputs.nexus_url }}/Fusion-Edge-Gateway/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-edge-gateway/$VERSION/fusion-edge-gateway-$VERSION"
