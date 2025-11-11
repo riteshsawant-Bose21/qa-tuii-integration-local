@@ -74,7 +74,7 @@ runs:
         $password = "${{ inputs.nexus_password }}"
         
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
-        Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
+        Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
 
     - name: Clone project
       if: >-
@@ -124,10 +124,10 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
-        robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E
+        robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS > $null 2>&1
         cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
 
-        flutter pub get
+        flutter pub get --suppress-analytics --no-verbose | Out-Null
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
@@ -149,4 +149,5 @@ runs:
         $password = "${{ inputs.nexus_password }}"
         
         curl.exe -k --ssl-no-revoke -f -u "$username`:$password" -T $buildPath $nexusUrl
-        Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
+        Write-Output "flutter-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-$version.exe"
+        Write-Output "flutter-automation-build-windows: https://nexus.dev.prod.bosepro.internal:8445/repository/pro-fusion-local/Fusion-Frontend/Continuous/$branchName/$version/flutter-windows/Fusion-Launcher-Automation-Build-$version.exe"
