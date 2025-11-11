@@ -7,33 +7,40 @@ const Color inactiveColor = Color(0xFFE5E5E5);
 class PBRadio extends StatelessWidget {
   final bool value;
   final ValueChanged<bool> onChanged;
+  final Size? size;
+  final EdgeInsetsGeometry? padding;
 
-  const PBRadio({super.key, required this.value, required this.onChanged});
+  const PBRadio({
+    super.key,
+    required this.value,
+    required this.onChanged,
+    this.size,
+    this.padding,
+  });
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double radioSize = (constraints.maxWidth * 0.3).clamp(36, 44);
-        final double outerPadding = (constraints.maxWidth * 0.1).clamp(4, 8);
-        final double innerPadding = (constraints.maxWidth * 0.05).clamp(1, 2);
+        final double outerPadding = (constraints.maxWidth * 0.1).clamp(6, 8);
 
         return GestureDetector(
           onTap: () => onChanged.call(!value),
           child: Container(
-            height: radioSize,
-            width: radioSize,
+            height: size?.height ?? radioSize,
+            width: size?.width ?? radioSize,
             color: bgColor,
             child: Container(
               height: double.infinity,
               width: double.infinity,
               alignment: Alignment.center,
-              padding: EdgeInsets.all(outerPadding),
+              padding: padding ?? EdgeInsets.all(outerPadding),
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(4), border: Border.all(color: inactiveColor)),
               child: Container(
                 height: double.infinity,
                 width: double.infinity,
-                padding: EdgeInsets.all(innerPadding),
+                padding: const EdgeInsets.all(1),
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: value ? activeColor : inactiveColor,
@@ -50,7 +57,7 @@ class PBRadio extends StatelessWidget {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: value ? activeColor : inactiveColor,
-                      border: Border.all(color: bgColor, width: innerPadding),
+                      border: Border.all(color: bgColor, width: 2),
                     ),
                   ),
                 ),
