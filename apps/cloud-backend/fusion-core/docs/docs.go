@@ -463,7 +463,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/projects/{projectId}/lock/{userId}": {
+        "/projects/{projectId}/lock": {
             "put": {
                 "description": "Lock a project for a specific user",
                 "tags": [
@@ -481,8 +481,8 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "userId",
-                        "in": "path",
+                        "name": "user_id",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -539,8 +539,8 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "User ID",
-                        "name": "userId",
-                        "in": "path",
+                        "name": "user_id",
+                        "in": "query",
                         "required": true
                     }
                 ],
@@ -831,7 +831,7 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "Invalid input data"
+                    "example": "Bad Request"
                 }
             }
         },
@@ -842,10 +842,12 @@ const docTemplate = `{
             ],
             "properties": {
                 "amount": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 50000
                 },
                 "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "USD"
                 }
             }
         },
@@ -854,7 +856,7 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "User is already assigned to the project"
+                    "example": "Conflict"
                 }
             }
         },
@@ -1064,7 +1066,7 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "Project is locked by another user"
+                    "example": "Forbidden"
                 }
             }
         },
@@ -1078,13 +1080,16 @@ const docTemplate = `{
                     }
                 },
                 "page": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "total_count": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 25
                 },
                 "total_pages": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
@@ -1102,7 +1107,7 @@ const docTemplate = `{
             "properties": {
                 "message": {
                     "type": "string",
-                    "example": "Project not found"
+                    "example": "Not Found"
                 }
             }
         },
@@ -1140,7 +1145,8 @@ const docTemplate = `{
                     "$ref": "#/definitions/types.Budget"
                 },
                 "created_at": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-10-15T14:30:00Z"
                 },
                 "description": {
                     "type": "string",
@@ -1154,24 +1160,25 @@ const docTemplate = `{
                     ],
                     "example": "indoor"
                 },
-                "environment_type": {
-                    "$ref": "#/definitions/types.EnvironmentType"
-                },
                 "id": {
                     "type": "string",
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "is_archived": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": false
                 },
                 "is_starred": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "locked_by_user": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user456"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Conference Room Audio Setup"
                 },
                 "project_file_url": {
                     "type": "string",
@@ -1193,17 +1200,9 @@ const docTemplate = `{
                     "type": "string",
                     "example": "2023-10-20T16:45:00Z"
                 },
-                "project_phase": {
-                    "$ref": "#/definitions/types.ProjectPhase"
-                },
-                "thumbnail_url": {
-                    "type": "string"
-                },
-                "updated_at": {
-                    "type": "string"
-                },
                 "venue": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Building A - Conference Room 101"
                 }
             }
         },
@@ -1220,39 +1219,56 @@ const docTemplate = `{
                 "application": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "Audio System Design"
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 1000,
+                    "example": "Professional audio system for corporate conference room"
                 },
                 "environment_type": {
-                    "$ref": "#/definitions/types.EnvironmentType"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "is_project_file_created": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": false
                 },
                 "name": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "Conference Room Audio Setup"
                 },
                 "project_phase": {
-                    "$ref": "#/definitions/types.ProjectPhase"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Proposal"
                 },
                 "user_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "user123"
                 },
                 "venue": {
                     "type": "string",
-                    "maxLength": 255
+                    "maxLength": 255,
+                    "example": "Building A - Conference Room 101"
                 }
             }
         },
@@ -1260,10 +1276,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "project_upload_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
                 }
             }
         },
@@ -1285,40 +1303,57 @@ const docTemplate = `{
             "properties": {
                 "account_id": {
                     "type": "string",
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "account456"
                 },
                 "application": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "Audio System Design"
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
                     "type": "string",
-                    "maxLength": 1000
+                    "maxLength": 1000,
+                    "example": "Updated professional audio system for corporate conference room"
                 },
                 "environment_type": {
-                    "$ref": "#/definitions/types.EnvironmentType"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "is_project_file_dirty": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "name": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 1
+                    "minLength": 1,
+                    "example": "Updated Conference Room Audio Setup"
                 },
                 "project_phase": {
-                    "$ref": "#/definitions/types.ProjectPhase"
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Development"
                 },
                 "venue": {
                     "type": "string",
-                    "maxLength": 255
+                    "maxLength": 255,
+                    "example": "Building B - Conference Room 205"
                 }
             }
         },
@@ -1326,7 +1361,8 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "project_upload_url": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
                 }
             }
         },

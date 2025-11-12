@@ -27,14 +27,16 @@ definitions:
   types.BadRequestError:
     properties:
       message:
-        example: Invalid input data
+        example: Bad Request
         type: string
     type: object
   types.Budget:
     properties:
       amount:
+        example: 50000
         type: integer
       currency:
+        example: USD
         type: string
     required:
     - currency
@@ -42,7 +44,7 @@ definitions:
   types.ConflictError:
     properties:
       message:
-        example: User is already assigned to the project
+        example: Conflict
         type: string
     type: object
   types.DSP_meta:
@@ -179,7 +181,7 @@ definitions:
   types.ForbiddenError:
     properties:
       message:
-        example: Project is locked by another user
+        example: Forbidden
         type: string
     type: object
   types.GetAllProjectsResponse:
@@ -189,10 +191,13 @@ definitions:
           $ref: '#/definitions/types.Project'
         type: array
       page:
+        example: 1
         type: integer
       total_count:
+        example: 25
         type: integer
       total_pages:
+        example: 3
         type: integer
     type: object
   types.InternalServerError:
@@ -204,7 +209,7 @@ definitions:
   types.NotFoundError:
     properties:
       message:
-        example: Project not found
+        example: Not Found
         type: string
     type: object
   types.ProductResponse:
@@ -230,12 +235,15 @@ definitions:
       budget:
         $ref: '#/definitions/types.Budget'
       created_at:
+        example: "2023-10-15T14:30:00Z"
         type: string
       description:
         example: Professional audio system for corporate conference room
         type: string
       environment_type:
-        $ref: '#/definitions/types.EnvironmentType'
+        allOf:
+        - $ref: '#/definitions/types.EnvironmentType'
+        example: indoor
       id:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
@@ -248,13 +256,8 @@ definitions:
       locked_by_user:
         example: user456
         type: string
-      is_archived:
-        type: boolean
-      is_starred:
-        type: boolean
-      locked_by_user:
-        type: string
       name:
+        example: Conference Room Audio Setup
         type: string
       project_file_url:
         example: https://storage.example.com/projects/123e4567/project.json
@@ -269,42 +272,48 @@ definitions:
       updated_at:
         example: "2023-10-20T16:45:00Z"
         type: string
-      project_phase:
-        $ref: '#/definitions/types.ProjectPhase'
-      thumbnail_url:
-        type: string
-      updated_at:
-        type: string
       venue:
+        example: Building A - Conference Room 101
         type: string
     type: object
   types.ProjectCreateRequest:
     properties:
       application:
+        example: Audio System Design
         maxLength: 255
         minLength: 1
         type: string
       budget:
         $ref: '#/definitions/types.Budget'
       description:
+        example: Professional audio system for corporate conference room
         maxLength: 1000
         type: string
       environment_type:
-        $ref: '#/definitions/types.EnvironmentType'
+        allOf:
+        - $ref: '#/definitions/types.EnvironmentType'
+        example: indoor
       id:
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       is_project_file_created:
+        example: false
         type: boolean
       name:
+        example: Conference Room Audio Setup
         maxLength: 255
         minLength: 1
         type: string
       project_phase:
-        $ref: '#/definitions/types.ProjectPhase'
+        allOf:
+        - $ref: '#/definitions/types.ProjectPhase'
+        example: Proposal
       user_id:
+        example: user123
         minLength: 1
         type: string
       venue:
+        example: Building A - Conference Room 101
         maxLength: 255
         type: string
     required:
@@ -317,8 +326,10 @@ definitions:
   types.ProjectCreateResponse:
     properties:
       id:
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       project_upload_url:
+        example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
   types.ProjectPhase:
@@ -334,36 +345,48 @@ definitions:
   types.ProjectUpdateRequest:
     properties:
       account_id:
+        example: account456
         minLength: 1
         type: string
       application:
+        example: Audio System Design
         maxLength: 255
         minLength: 1
         type: string
       budget:
         $ref: '#/definitions/types.Budget'
       description:
+        example: Updated professional audio system for corporate conference room
         maxLength: 1000
         type: string
       environment_type:
-        $ref: '#/definitions/types.EnvironmentType'
+        allOf:
+        - $ref: '#/definitions/types.EnvironmentType'
+        example: indoor
       id:
+        example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       is_project_file_dirty:
+        example: true
         type: boolean
       name:
+        example: Updated Conference Room Audio Setup
         maxLength: 255
         minLength: 1
         type: string
       project_phase:
-        $ref: '#/definitions/types.ProjectPhase'
+        allOf:
+        - $ref: '#/definitions/types.ProjectPhase'
+        example: Development
       venue:
+        example: Building B - Conference Room 205
         maxLength: 255
         type: string
     type: object
   types.ProjectUpdateResponse:
     properties:
       project_upload_url:
+        example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
   types.Speaker:
@@ -876,7 +899,7 @@ paths:
       summary: Archive a project
       tags:
       - projects
-  /projects/{projectId}/lock/{userId}:
+  /projects/{projectId}/lock:
     delete:
       description: Unlock a project for a specific user (only if they locked it)
       parameters:
@@ -886,8 +909,8 @@ paths:
         required: true
         type: string
       - description: User ID
-        in: path
-        name: userId
+        in: query
+        name: user_id
         required: true
         type: string
       responses:
@@ -929,8 +952,8 @@ paths:
         required: true
         type: string
       - description: User ID
-        in: path
-        name: userId
+        in: query
+        name: user_id
         required: true
         type: string
       responses:
