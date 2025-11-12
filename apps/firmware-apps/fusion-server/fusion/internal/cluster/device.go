@@ -46,8 +46,7 @@ func (c *Cluster) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(info); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		logging.GetLogger().Error("Error encoding device info: %v", err)
 	}
 }
 
@@ -135,7 +134,7 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 
-		resp, err := httpClient.Do(req)
+		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("PATCH request failed: %v", err), http.StatusBadGateway)
 			return

@@ -75,10 +75,9 @@ func NewApp(config *api.AppConfig) *App {
 	hub := pubsub.NewHub()
 
 	controllerManager := controllers.NewControllerManager(hub, "7950")
-
-	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater, hub)
+	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, updater, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater, hub, controllerManager)
+	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, updater, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -277,6 +276,8 @@ func (app *App) setupPrivateRoutes() {
 
 	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
+
+	app.registerPrivateGET(routes.StateEndpoint, app.Server.ImportState)
 }
 
 func (app *App) startNetworkMonitor() {

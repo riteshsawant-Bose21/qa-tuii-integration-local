@@ -69,7 +69,8 @@ func (h *Handler) IsDefaultSnapshot(name string) bool {
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
 func (h *Handler) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
 
-	msg := api.NewNotifyMessage(update, node,
+	msg := api.NewNotifyMessage(update,
+		node,
 		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
 	)
 	return h.broadcastMessage(msg)

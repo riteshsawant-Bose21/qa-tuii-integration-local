@@ -14,6 +14,7 @@ import (
 
 // Handler is the container for server implimentations.
 type Handler struct {
+	appConfig    *api.AppConfig
 	memberlist   *memberlist.Memberlist
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
@@ -28,6 +29,7 @@ type Handler struct {
 }
 
 func NewHandler(
+	appConfig *api.AppConfig,
 	memberlist *memberlist.Memberlist,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,

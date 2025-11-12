@@ -24,7 +24,7 @@ func (c *Cluster) watchLocalVIP(iface string) {
 	// Watch only the correct interface
 	link, err := netlink.LinkByName(iface)
 	if err != nil {
-		logger.Error("VIP watcher: interface enp0s1 not found: %v", err)
+		logger.Error("VIP watcher: interface %s not found: %v", iface, err)
 		return
 	}
 

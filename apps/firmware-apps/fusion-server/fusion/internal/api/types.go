@@ -1,13 +1,12 @@
 package api
 
 import (
-	"errors"
+	"fmt"
 	"time"
 
 	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
-	"github.com/oklog/ulid/v2"
 	"github.com/robfig/cron/v3"
 )
 
@@ -20,6 +19,10 @@ type AppConfig struct {
 	Local    bool
 	Profile  bool
 	Verbose  bool
+}
+
+func (a *AppConfig) SelfUrl() string {
+	return fmt.Sprintf("http://%s:%s", a.BindAddr, HTTPPort)
 }
 
 // Version encodes a Lamport counter plus the origin node's ID.
@@ -35,6 +38,31 @@ func (v Version) Less(other Version) bool {
 		return v.Counter < other.Counter
 	}
 	return v.NodeID < other.NodeID
+}
+
+// AudioMetadata represents the persisted audio metadata.
+type AudioMetadata struct {
+	Id          string        `json:"id"`
+	OrigName    string        `json:"orig_name"`
+	DisplayName string        `json:"display_name"`
+	Filename    string        `json:"filename"`
+	MimeType    string        `json:"mime_type"`
+	Uploaded    time.Time     `json:"uploaded"`
+	Duration    time.Duration `json:"duration,omitempty"`
+	SizeBytes   int64         `json:"size_bytes"`
+	Tags        []string      `json:"tags"`
+	Checksum    string        `json:"checksum"`
+}
+
+// AudioSyncUpdate represents an audio file to remove across nodes
+type AudioRemoveUpdate struct {
+	ID string `json:"id"`
+}
+
+// AudioSyncUpdate represents an audio file to sync across nodes
+type AudioSyncUpdate struct {
+	Metadata AudioMetadata `json:"metadata"`
+	URL      string        `json:"url"`
 }
 
 // ConfigUpdate represents a data update in the system
@@ -136,120 +164,4 @@ type StatusMessage struct {
 type VersionUpdate struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
-}
-
-// NotifyOp is a custom type representing notification message operations.
-type NotifyOp string
-
-const (
-	NotifyOpAck           NotifyOp = "ack"
-	NotifyOpConfigUpdate  NotifyOp = "config_update"
-	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
-	NotifyOpTaskCreate    NotifyOp = "task_create"
-	NotifyOpTaskDelete    NotifyOp = "task_delete"
-	NotifyOpTaskUpdate    NotifyOp = "task_update"
-	NotifyOpVIPStatus     NotifyOp = "vip_status"
-	NotifyOpValueGet      NotifyOp = "get"
-	NotifyOpValueSet      NotifyOp = "set"
-	NotifyOpVersionUpdate NotifyOp = "version_update"
-
-	// Wall Controller specific operations
-	NotifyOpIdentify       NotifyOp = "identify"       // Server-initiated controller identification
-	NotifyOpWinking        NotifyOp = "Winking"        // Controller winking response
-	NotifyOpReverseWinking NotifyOp = "ReverseWinking" // Controller-initiated wink
-	NotifyOpPerformWink    NotifyOp = "performWink"    // Server wink command
-
-)
-
-// NotifyMessage holds information about a cross-node message
-type NotifyMessage struct {
-	ID             string   `json:"id"`
-	Operation      NotifyOp `json:"operation"`
-	Node           string
-	SentAt         time.Time
-	ConfigUpdate   *ConfigUpdate
-	ConfigValue    *ConfigValue
-	SnapshotUpdate *SnapshotUpdate
-	Task           *Task
-	VersionUpdate  *VersionUpdate
-}
-
-func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
-	msg := &NotifyMessage{
-		ID:        ulid.Make().String(),
-		Operation: op,
-		Node:      node,
-		SentAt:    time.Now().UTC(),
-	}
-
-	builder(msg)
-
-	return msg
-}
-
-func (m *NotifyMessage) Validate() error {
-	switch m.Operation {
-
-	case NotifyOpConfigUpdate:
-		if m.ConfigUpdate == nil {
-			return errors.New("ConfigUpdate required for update operation")
-		}
-
-	case NotifyOpTaskCreate, NotifyOpTaskDelete, NotifyOpTaskUpdate:
-		if m.Task == nil {
-			return errors.New("Task required for task operation")
-		}
-
-	case NotifyOpSnapActivate, NotifyOpSnapCreate, NotifyOpSnapDelete:
-		if m.SnapshotUpdate == nil {
-			return errors.New("SnapshotUpdate required for snapshot operation")
-		}
-
-	case NotifyOpValueGet, NotifyOpValueSet:
-		if m.ConfigValue == nil {
-			return errors.New("ConfigValue required for value operation")
-		}
-
-	case NotifyOpVersionUpdate:
-		if m.VersionUpdate == nil {
-			return errors.New("VersionUpdate required for update operation")
-		}
-	}
-
-	// NotifyOpAck           NotifyOp = "ack"
-	// NotifyOpVIPStatus     NotifyOp = "vip_status"
-
-	return nil
-}
-
-func (msg *NotifyMessage) IsPublic() bool {
-	return msg.Operation == NotifyOpConfigUpdate ||
-		msg.Operation == NotifyOpAck ||
-		msg.Operation == NotifyOpVIPStatus
-}
-
-func WithConfigUpdate(cfg *ConfigUpdate) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.ConfigUpdate = cfg
-	}
-}
-
-func WithSnapshotUpdate(snap *SnapshotUpdate) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.SnapshotUpdate = snap
-	}
-}
-
-func WithTask(task *Task) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.Task = task
-	}
-}
-
-func WithVersionUpdate(ver *VersionUpdate) func(*NotifyMessage) {
-	return func(m *NotifyMessage) {
-		m.VersionUpdate = ver
-	}
 }
