@@ -9,6 +9,7 @@ package main
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	inbuiltlog "log"
 	"os"
@@ -17,6 +18,8 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
@@ -36,25 +39,43 @@ func main() {
 
 	// Load logger
 	logger, err := log.NewProduction() // Move it to cmd parallel
-
 	if err != nil {
 		inbuiltlog.Fatalf("Error while initializing the logger: %v\n", err)
 	}
 
-	logger.Info(fmt.Sprintf("Starting Fusion Cloud Backend in %s mode", "production"))
-
 	// Parse the flags
+	envFile := flag.String("c", ".env", "config environment file")
+	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
+	flag.Parse()
 
-	// Load the configuration from the provided .env file.
+	env := environment.New(environment.DefaultLoadLookuper)
+	logger.Info("Loading environment file", zap.String("file", *envFile))
+	if *envName == "local" {
+		if err := env.Load(*envFile); err != nil {
+			logger.Fatal("error loading environment vars", zap.String("file", *envName), zap.Error(err))
+		}
+	}
+
+	// Initialize configuration service
+	configSVC, err := config.NewService(env)
+	if err != nil {
+		logger.Fatal("Failed to initialize config service", zap.Error(err))
+	}
+
+	// Load API configuration
+	cfg, err := api.NewAPIConfig(configSVC)
+	if err != nil {
+		logger.Fatal("Failed to load API config", zap.Error(err))
+	}
 
 	// Initialize the database connection.
 	pgs, err := sql.New(
 		sql.PostgresOpener,
-		"127.0.0.1",    // host
-		"5432",         // port
-		"fusion_cloud", // user
-		"bose123",      // password
-		"fusion_cloud", // instance (example: database name)
+		cfg.Postgres.Host,     // host
+		cfg.Postgres.Port,     // port
+		cfg.Postgres.User,     // user
+		cfg.Postgres.Password, // password
+		cfg.Postgres.Database, // instance (example: database name)
 	)
 	if err != nil {
 		logger.Fatal("Failed to connect to the database", zap.Error(err))
@@ -128,7 +149,7 @@ func main() {
 		cancel()
 
 		// Give server time to shutdown gracefully
-		shutdownTimeout := time.NewTimer(30 * time.Second)
+		shutdownTimeout := time.NewTimer(2 * time.Second)
 		defer shutdownTimeout.Stop()
 
 		select {
