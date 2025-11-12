@@ -6,8 +6,13 @@ import '../../../core/constants/assets_constants.dart';
 
 class SourceItem extends StatefulWidget {
   final Source source;
+  final bool isDragging;
 
-  const SourceItem({required this.source, super.key});
+  const SourceItem({
+    required this.source,
+    this.isDragging = false,
+    super.key,
+  });
 
   @override
   State<SourceItem> createState() => _SourceItemState();
@@ -19,15 +24,23 @@ class _SourceItemState extends State<SourceItem> {
   @override
   Widget build(BuildContext context) {
     return MouseRegion(
-      onEnter: (_) => setState(() => _isHovered = true),
-      onExit: (_) => setState(() => _isHovered = false),
+      onEnter: (_) {
+        if (!_isHovered) {
+          setState(() => _isHovered = true);
+        }
+      },
+      onExit: (_) {
+        if (_isHovered) {
+          setState(() => _isHovered = false);
+        }
+      },
       child: Container(
         decoration: BoxDecoration(
-          color: _isHovered ? Colors.grey[200] : null,
+          color: widget.isDragging ? Theme.of(context).colorScheme.primary.withOpacity(0.15) : (_isHovered ? Colors.grey[200] : null),
           borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 1.0),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        margin: const EdgeInsets.symmetric(vertical: 0),
         child: Row(
           children: <Widget>[
             FusionImage.asset(
@@ -40,12 +53,10 @@ class _SourceItemState extends State<SourceItem> {
             Expanded(
               child: FusionAppText(
                 text: widget.source.name,
-
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
               ),
             ),
-
             const FusionImage.asset(
               Assets.configurationFilledIcon,
               width: 24,
@@ -69,4 +80,17 @@ class _SourceItemState extends State<SourceItem> {
       ),
     );
   }
+
+  // /// Override equality operator and hashCode for proper comparison
+  // @override
+  // bool operator ==(Object other) {
+  //   if (identical(this, other)) return true;
+  //   return other is _SourceItemState &&
+  //       other.widget.source.id == widget.source.id &&
+  //       other.widget.isDragging == widget.isDragging &&
+  //       other._isHovered == _isHovered;
+  // }
+  //
+  // @override
+  // int get hashCode => Object.hash(widget.source.id, widget.isDragging, _isHovered);
 }

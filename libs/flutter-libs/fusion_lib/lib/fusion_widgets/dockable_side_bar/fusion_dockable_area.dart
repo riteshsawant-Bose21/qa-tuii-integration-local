@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
 import '../others/fusion_horizontal_resizable_widget.dart';
@@ -227,7 +228,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             Expanded(
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
-                  return SizedBox(
+                  return Container(
+                    color: Theme.of(context).colorScheme.white,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
                     child: widget.mainArea,

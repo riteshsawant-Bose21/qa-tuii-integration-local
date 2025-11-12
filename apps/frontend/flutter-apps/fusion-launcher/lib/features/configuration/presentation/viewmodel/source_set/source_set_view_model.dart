@@ -28,30 +28,30 @@ extension SourceSetViewModel on ProjectViewModel {
     }
   }
 
-  void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
-    try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      final List<Source> currentSources = getSourcesInSourceSet(sourceSetId: sourceSetId);
-      final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
-      final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
-      final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
-      for (final String id in toRemove) {
-        projectManager.removeSourceFromSourceSet(id, sourceSetId);
-      }
-      for (final String id in toAdd) {
-        projectManager.addSourceToSourceSet(id, sourceSetId);
-      }
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
-      throwError("Failed to update sources for source set: $e");
-    }
-  }
+  // void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
+  //   try {
+  //     if (autoSave) {
+  //       recordSnapshot();
+  //     }
+  //     final List<Source> currentSources = getSourcesInSourceSet(sourceSetId: sourceSetId);
+  //     final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
+  //     final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
+  //     final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
+  //     for (final String id in toRemove) {
+  //       projectManager.removeSourceFromSourceSet(id, sourceSetId);
+  //     }
+  //     for (final String id in toAdd) {
+  //       projectManager.addSourceToSourceSet(id, sourceSetId);
+  //     }
+  //     if (autoSave) {
+  //       saveProject();
+  //     }
+  //     updateProject();
+  //   } catch (e) {
+  //     FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
+  //     throwError("Failed to update sources for source set: $e");
+  //   }
+  // }
 
   void addSourceSet({required SourceSet sourceSet, bool autoSave = true}) {
     try {
@@ -100,6 +100,41 @@ extension SourceSetViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get sources in source set: $e");
       return <Source>[];
+    }
+  }
+
+  List<Source> getSourcesWithoutSourceSet() {
+    try {
+      return projectManager.getSourcesWithoutSourceSet();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources without source set: $e");
+      return <Source>[];
+    }
+  }
+
+  SourceSet? getSourceSetForSource({required String sourceId}) {
+    try {
+      return projectManager.getSourceSetForSource(sourceId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get source set for source: $e");
+      return null;
+    }
+  }
+
+  void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      projectManager.updateSourcesInSourceSet(sourceSetId, sourceIds);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
+      throwError("Failed to update sources for source set: $e");
     }
   }
 

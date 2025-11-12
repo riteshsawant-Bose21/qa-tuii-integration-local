@@ -54,12 +54,11 @@ extension SourceSetManager on ProjectManager {
     projectService!.removeSourceFromSourceSet(sourceId, sourceSetId);
   }
 
-  // Update Source Mix Level in SourceSet
-  void updateSourceMixLevelInSourceSet(String sourceId, String sourceSetId, double newMixLevel) {
+  void updateSourcesInSourceSet(String sourceSetId, List<String> sourceId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.updateSourceMixLevelInSourceSet(sourceId, sourceSetId, newMixLevel);
+    projectService!.updateSourcesInSourceSet(sourceSetId, sourceId);
   }
 
   // Get SourceSet by id
@@ -70,12 +69,26 @@ extension SourceSetManager on ProjectManager {
     return projectService!.getSourceSetById(sourceSetId);
   }
 
+  SourceSet? getSourceSetForSource(String sourceId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSourceSetForSource(sourceId);
+  }
+
   // Get all Sources in a SourceSet
   List<Source> getSourcesInSourceSet(String sourceSetId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     return projectService!.getSourcesInSourceSet(sourceSetId);
+  }
+
+  List<Source> getSourcesWithoutSourceSet() {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSourcesWithoutSourceSet();
   }
 
   void reOrderSourceInSourceSet(String parentId, int oldIndex, int newIndex) {
