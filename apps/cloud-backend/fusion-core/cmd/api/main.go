@@ -115,7 +115,7 @@ func main() {
 	presignHandler := s3Handler.Bucket("bose.cloud-backend.test")
 
 	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs)
+	projectDBSvc := projectdb.NewService(pgs, logger)
 	if projectDBSvc == nil {
 		logger.Fatal("Failed to initialize project service")
 	}
