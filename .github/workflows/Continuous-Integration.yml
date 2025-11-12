@@ -392,7 +392,11 @@ jobs:
       - name: Generate Git hash
         id: hash-step
         run: |
-          HASH=$(git rev-parse HEAD)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            HASH="${{ github.event.pull_request.head.sha }}"
+          else
+            HASH=$(git rev-parse HEAD)
+          fi
           echo "git-hash=$HASH" >> $GITHUB_OUTPUT
 
   yocto-image-build:
