@@ -1,4 +1,4 @@
-# Makefile for Fusion Sound Card and Codec kernel modules
+# Makefile for Fusion Sound Card and Codec kernel modules triggered by CI
 
 # Module names
 obj-m += fusion_sound_card.o

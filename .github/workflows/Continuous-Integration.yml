@@ -29,6 +29,7 @@ jobs:
       fusionSystemMonitor: ${{ steps.filter.outputs.fusionSystemMonitor }}
       fusionEdgeGateway: ${{ steps.filter.outputs.fusionEdgeGateway }}
       fusionTelemetryCore: ${{ steps.filter.outputs.fusionTelemetryCore }}
+      fusionKernelModules: ${{ steps.filter.outputs.fusionKernelModules }}
     
 
     steps:
@@ -61,7 +62,9 @@ jobs:
             fusionEdgeGateway:
               - "./apps/firmware-apps/fusion-edge-gateway/**"
             fusionTelemetryCore:
-              - "./apps/firmware-apps/fusion-telemetry-core/**" 
+              - "./apps/firmware-apps/fusion-telemetry-core/**"
+            fusionKernelModules:
+              - "./apps/kernel-modules/**"
 
   flutter-android-iOS-macOS-build:
     needs: buildChecks
@@ -392,6 +395,7 @@ jobs:
 
   yocto-image-build:
     needs:
+      - buildChecks
       - integration-tests
       - fusion-server-build
       - fusion-system-monitor-build
@@ -400,7 +404,8 @@ jobs:
       - fusion-dsp-build
     if: |
       always() && (
-        needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
+        (needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true')
+        || needs.buildChecks.outputs.fusionKernelModules == 'true'
       )
     concurrency:
       group: yocto-image-build
