@@ -84,7 +84,7 @@ abstract class HardwareComponent {
                id: _uuid.v4(),
                name: '${index + 1}',
                description:
-                   "${(portData?.inputPortType ?? PortType.analogOutput).description} ${index + 1}",
+                   "${(portData?.outputPortType ?? PortType.analogOutput).description} ${index + 1}",
                type: portData?.outputPortType ?? PortType.analogOutput,
                portNumber: index + 1,
                position: portData?.portPosition ?? PortPosition.topRight,

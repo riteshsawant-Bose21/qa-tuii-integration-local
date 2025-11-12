@@ -200,8 +200,7 @@ class FloorCanvasState extends State<FloorCanvas> {
         });
         // }
       },
-      setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) =>
-          _updateHardwareComponentListeningAreaId(hardwareComponent),
+      setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
     );
   }
 
@@ -222,8 +221,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     //   _zoomScale = widget.floorPlanEntity.canvasZoom;
     //   _panOffset = widget.floorPlanEntity.canvasPan;
     // }
-    if (oldWidget.floorPlanEntity.id != widget.floorPlanEntity.id ||
-        oldWidget.floorPlanEntity.imagePath != widget.floorPlanEntity.imagePath) {
+    if (oldWidget.floorPlanEntity.id != widget.floorPlanEntity.id || oldWidget.floorPlanEntity.imagePath != widget.floorPlanEntity.imagePath) {
       setState(() {
         _floorPlanImage = null;
         _loadPlanImage();
@@ -326,10 +324,14 @@ class FloorCanvasState extends State<FloorCanvas> {
   }
 
   Future<void> _loadPlanImage() async {
+    print("Load Plan Image method called @#@#@@#@#@#@#");
     final String imagePath = widget.floorPlanEntity.imagePath;
     if (imagePath.isNotEmpty) {
+      print("Loading image *&*&*&*&*&*&*& $imagePath");
       final ui.Image img = await fusionLibLocator<ImageLoaderService>().loadImage(imagePath);
+      print("Image Loaded **********");
       if (!mounted) return;
+      print("Updating the state ####################");
       setState(() {
         _floorPlanImage = img;
         _fitToViewport();
@@ -892,8 +894,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     print(
       "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
     );
-    if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId ||
-        hardwareComponent.pos != originalHardware.pos) {
+    if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
       print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
 
       //new logic
@@ -930,8 +931,7 @@ class FloorCanvasState extends State<FloorCanvas> {
       final p1 = polygon[i];
       final p2 = polygon[(i + 1) % polygon.length];
 
-      if (((p1.dy > point.dy) != (p2.dy > point.dy)) &&
-          (point.dx < (p2.dx - p1.dx) * (point.dy - p1.dy) / (p2.dy - p1.dy) + p1.dx)) {
+      if (((p1.dy > point.dy) != (p2.dy > point.dy)) && (point.dx < (p2.dx - p1.dx) * (point.dy - p1.dy) / (p2.dy - p1.dy) + p1.dx)) {
         intersections++;
       }
     }

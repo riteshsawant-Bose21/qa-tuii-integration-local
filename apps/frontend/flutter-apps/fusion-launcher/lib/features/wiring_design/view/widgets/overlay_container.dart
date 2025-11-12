@@ -16,18 +16,18 @@ class OverlayContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    _Side? side;
+    // _Side? side;
     double leftPadding = 0;
     double topPadding = 0;
     if (tipPosition.dy < position.dy) {
-      side = _Side.top;
+      // side = _Side.top;
       topPadding = -10;
     } else if (tipPosition.dx > position.dx) {
-      side = _Side.right;
+      //  side = _Side.right;
       leftPadding = 0;
       topPadding = 20;
     } else {
-      side = _Side.left;
+      //  side = _Side.left;
       leftPadding = -0;
       topPadding = 20;
     }

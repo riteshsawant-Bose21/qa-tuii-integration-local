@@ -1,0 +1,46 @@
+# Makefile for Wall Controller Simulator (C++)
+
+CXX = g++
+CXXFLAGS = -std=c++17 -Wall -Wextra -O2 -pthread
+TARGET = wall_controller_simulator
+SOURCE = wall_controller_simulator.cpp
+
+# Default target
+all: $(TARGET)
+
+# Build the simulator
+$(TARGET): $(SOURCE)
+	$(CXX) $(CXXFLAGS) -o $(TARGET) $(SOURCE)
+	@echo "✅ Built wall_controller_simulator successfully!"
+	@echo "Usage: ./$(TARGET) [controller_id] [host] [port]"
+	@echo "Example: ./$(TARGET) WC001 localhost 7950"
+
+# Clean build artifacts
+clean:
+	rm -f $(TARGET)
+	@echo "🧹 Cleaned build artifacts"
+
+# Install dependencies (if needed)
+deps:
+	@echo "ℹ️  No external dependencies required for this C++ simulator"
+	@echo "   Standard C++17 libraries are sufficient"
+
+# Run with default parameters
+run: $(TARGET)
+	./$(TARGET)
+
+# Run with custom controller ID
+run-test: $(TARGET)
+	./$(TARGET) WC002 localhost 7950
+
+# Help target
+help:
+	@echo "Available targets:"
+	@echo "  all       - Build the simulator (default)"
+	@echo "  clean     - Remove build artifacts"
+	@echo "  deps      - Show dependency information"
+	@echo "  run       - Build and run with default parameters"
+	@echo "  run-test  - Build and run with test parameters"
+	@echo "  help      - Show this help message"
+
+.PHONY: all clean deps run run-test help

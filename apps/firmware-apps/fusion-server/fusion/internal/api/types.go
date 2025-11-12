@@ -51,6 +51,14 @@ type ConfigValue struct {
 	Value json.RawMessage `json:"value,omitempty"`
 }
 
+// ControllerInfo represents a generic hardware controller
+type ControllerInfo struct {
+	ID      string `json:"id"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Version string `json:"version,omitempty"`
+}
+
 // DatabaseMetadata holds metadata information from the database.
 type DatabaseMetadata struct {
 	Version        Version `json:"version"`
@@ -131,6 +139,13 @@ const (
 	NotifyOpValueGet      NotifyOp = "get"
 	NotifyOpValueSet      NotifyOp = "set"
 	NotifyOpVersionUpdate NotifyOp = "version_update"
+
+	// Wall Controller specific operations
+	NotifyOpIdentify       NotifyOp = "identify"       // Server-initiated controller identification
+	NotifyOpWinking        NotifyOp = "Winking"        // Controller winking response
+	NotifyOpReverseWinking NotifyOp = "ReverseWinking" // Controller-initiated wink
+	NotifyOpPerformWink    NotifyOp = "performWink"    // Server wink command
+
 )
 
 // NotifyMessage holds information about a cross-node message

@@ -1,10 +1,12 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	"fusion/internal/controllers"
 	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
@@ -14,6 +16,7 @@ import (
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"fusion/internal/version"
+	"net"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -50,6 +53,7 @@ type App struct {
 	BLEServer         *network.BLEServer
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
+	ControllerManager *controllers.ControllerManager
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
@@ -70,9 +74,11 @@ func NewApp(config *api.AppConfig) *App {
 	updater := handler.NewUpdater()
 	hub := pubsub.NewHub()
 
+	controllerManager := controllers.NewControllerManager(hub, "7950")
+
 	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater, hub)
+	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -102,6 +108,7 @@ func NewApp(config *api.AppConfig) *App {
 		BLEServer:         bleServer,
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
+		ControllerManager: controllerManager,
 		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
@@ -116,6 +123,9 @@ func (app *App) Close() {
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
+	}
+	if app.ControllerManager != nil {
+		app.ControllerManager.Stop()
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -166,6 +176,11 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterMembersEndpoint, app.Server.GetMembers)
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
+
+	// Controllers
+	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
+	app.registerPublicGET(routes.ControllersIDEndpoint, app.Server.GetControllerByID)
+	app.registerPublicGET(routes.ControllersIDWinkEndpoint, app.Server.TriggerWinkById)
 
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
@@ -365,6 +380,11 @@ func (app *App) Start(ctx context.Context) {
 
 	app.StateManager.Start(app.memberlist)
 
+	// Start the Controller Manager for TCP wall controllers
+	if err := app.ControllerManager.Start(); err != nil {
+		app.Logger.Error("Failed to start ControllerManager: %v", err)
+	}
+
 	wg.Wait()
 }
 
@@ -551,4 +571,12 @@ type statusRecorder struct {
 func (rec *statusRecorder) WriteHeader(code int) {
 	rec.status = code
 	rec.ResponseWriter.WriteHeader(code)
+}
+
+// Hijack implements http.Hijacker interface for WebSocket support
+func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := rec.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
 }
