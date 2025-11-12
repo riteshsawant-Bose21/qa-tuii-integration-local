@@ -1839,5 +1839,7 @@ const enum base_device_type default_bd_types[] = {
 };
 
 const struct base_device *default_bds[] = {
-    &bd_fusion_c0
+    &bd_fusion_c0,
+    &bd_fusion_c1,
+    &bd_empty
 };
