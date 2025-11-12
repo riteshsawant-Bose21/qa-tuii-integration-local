@@ -1,15 +1,15 @@
 /**
  * Wall Controller Simulator (C++)
- * 
+ *
  * This C++ program simulates a wall controller that connects to the Fusion Server
  * on port 7950 and implements the JSON protocol with identification and wink commands.
- * 
+ *
  * Compilation:
  *   g++ -std=c++17 -o wall_controller_simulator wall_controller_simulator.cpp -pthread
- * 
+ *
  * Usage:
  *   ./wall_controller_simulator [controller_id] [host] [port]
- * 
+ *
  * Protocol:
  * - Server sends: {"action": "identify", "payload": {"timestamp": 123456}}
  * - Controller responds: {"action": "identity", "payload": {"id": "WC001", "deviceType": "WallController", "firmwareVersion": "1.0.0"}}
@@ -171,11 +171,12 @@ void SidebandInterface::messageHandler() {
     char recv_buffer[1024];
 
     try {
-        while (running && connected) {
+        //while (running && connected) {
+        if (running && connected) {
             // Set timeout for recv
             struct timeval timeout;
-            timeout.tv_sec = 1;
-            timeout.tv_usec = 0;
+            timeout.tv_sec = 0;
+            timeout.tv_usec = 100;
 
             fd_set read_fds;
             FD_ZERO(&read_fds);
@@ -185,35 +186,32 @@ void SidebandInterface::messageHandler() {
 
             if (result < 0) {
                 error("❌ Select error: " + std::string(strerror(errno)));
-                break;
-            } else if (result == 0) {
-                // Timeout, continue
-                continue;
             }
+            else if (result > 0) {
 
-            ssize_t bytes_received = recv(socket_fd, recv_buffer,
-                                          sizeof(recv_buffer) - 1, 0);
+                ssize_t bytes_received = recv(socket_fd, recv_buffer,
+                        sizeof(recv_buffer) - 1, 0);
 
-            if (bytes_received < 0) {
-                error("❌ Error receiving message: " + std::string(strerror(errno)));
-                break;
-            } else if (bytes_received > 0) {
+                if (bytes_received < 0) {
+                    error("❌ Error receiving message: " + std::string(strerror(errno)));
+                } else if (bytes_received > 0) {
 
-                recv_buffer[bytes_received] = '\0';
-                buffer += std::string(recv_buffer);
+                    recv_buffer[bytes_received] = '\0';
+                    buffer += std::string(recv_buffer);
 
-                // Process complete lines
-                size_t pos;
-                while ((pos = buffer.find('\n')) != std::string::npos) {
-                    std::string line = buffer.substr(0, pos);
-                    buffer = buffer.substr(pos + 1);
+                    // Process complete lines
+                    size_t pos;
+                    while ((pos = buffer.find('\n')) != std::string::npos) {
+                        std::string line = buffer.substr(0, pos);
+                        buffer = buffer.substr(pos + 1);
 
-                    // Trim whitespace
-                    line.erase(0, line.find_first_not_of(" \t\r\n"));
-                    line.erase(line.find_last_not_of(" \t\r\n") + 1);
+                        // Trim whitespace
+                        line.erase(0, line.find_first_not_of(" \t\r\n"));
+                        line.erase(line.find_last_not_of(" \t\r\n") + 1);
 
-                    if (!line.empty()) {
-                        handleMessage(line);
+                        if (!line.empty()) {
+                            handleMessage(line);
+                        }
                     }
                 }
             }
@@ -223,7 +221,7 @@ void SidebandInterface::messageHandler() {
         error("❌ Message handler error: " + std::string(e.what()));
     }
 
-    disconnect();
+    //disconnect();
 }
 
 bool SidebandInterface::connect() {
@@ -252,7 +250,6 @@ bool SidebandInterface::connect() {
         }
 #endif
 
-        char *addr = {"192.168.0.167"}; // DEBUG
 
         // Setup server address
         struct sockaddr_in server_addr;
@@ -260,7 +257,7 @@ bool SidebandInterface::connect() {
         server_addr.sin_family = AF_INET;
         server_addr.sin_port = htons(port);
         //memcpy(&server_addr.sin_addr.s_addr, server->h_addr, server->h_length);
-        memcpy(&server_addr.sin_addr.s_addr, addr, sizeof(addr));
+        server_addr.sin_addr.s_addr = inet_addr("192.168.0.167");
 
         info("Connecting to Fusion Server at " + host + ":" + std::to_string(port) + "...");
 
