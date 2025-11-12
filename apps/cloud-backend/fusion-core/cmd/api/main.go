@@ -145,12 +145,11 @@ func main() {
 	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start server in goroutine
-	serverErrChan := make(chan error, 1)
+	serverDoneChan := make(chan error, 1)
 	go func() {
 		logger.Info("Starting server...")
-		if err := server.Start(ctx); err != nil {
-			serverErrChan <- err
-		}
+		err := server.Start(ctx)
+		serverDoneChan <- err // Send result regardless of error or nil
 	}()
 
 	// Wait for shutdown signal or server error
@@ -159,20 +158,26 @@ func main() {
 		logger.Info("Received shutdown signal, initiating graceful shutdown...")
 		cancel()
 
-		// Give server time to shutdown gracefully
-		shutdownTimeout := time.NewTimer(2 * time.Second)
+		// Wait for server to complete shutdown
+		shutdownTimeout := time.NewTimer(30 * time.Second)
 		defer shutdownTimeout.Stop()
 
 		select {
-		case <-serverErrChan:
-			logger.Info("Server shutdown completed")
+		case err := <-serverDoneChan:
+			if err != nil {
+				logger.Error("Server shutdown with error", zap.Error(err))
+			} else {
+				logger.Info("Server shutdown completed successfully")
+			}
 		case <-shutdownTimeout.C:
-			logger.Info("Server shutdown timeout exceeded")
+			logger.Info("Server shutdown timeout exceeded - forcing exit")
 		}
 
-	case err := <-serverErrChan:
+	case err := <-serverDoneChan:
 		if err != nil {
 			logger.Error("Server error", zap.Error(err))
+		} else {
+			logger.Info("Server exited normally")
 		}
 		cancel()
 	}
