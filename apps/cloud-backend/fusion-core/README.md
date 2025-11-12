@@ -329,8 +329,8 @@ The project uses SQLBoiler for ORM code generation:
 
 ```bash
 # Install SQLBoiler
-go install github.com/volatiletech/sqlboiler/v4@latest
-go install github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql@latest
+go install github.com/aarondl/sqlboiler/v4@latest
+go install github.com/aarondl/sqlboiler/v4/drivers/sqlboiler-psql@latest
 
 # Generate models from database schema
 cd internal/fusion/model
