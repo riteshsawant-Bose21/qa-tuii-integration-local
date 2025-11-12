@@ -26,7 +26,6 @@ const (
 	projectAlreadyLockedMsg   = "project is already locked"
 	projectNotLockedMsg       = "project is not locked"
 	projectNotLockedByUserMsg = "project is not locked by this user"
-	projectLockedByOtherMsg   = "project is locked by user: %s"
 )
 
 // ProjectHandler handles HTTP requests for project management.

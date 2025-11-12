@@ -16,6 +16,13 @@ const (
 	projectFilePathFormat = "projects/%s/%s/%s.zip"
 )
 
+var (
+	errProjectNotFound          = errors.New("project not found")
+	errUserNotFound             = errors.New("user not found")
+	errUserNotAssignedToProject = errors.New("user not assigned to the project")
+	errUserAlreadyAssigned      = errors.New("user is already assigned to the project")
+)
+
 // validateProjectExistence is a helper function to validate that a project exists
 func (s *Service) validateProjectExistence(ctx context.Context, projectID string) error {
 	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
@@ -23,7 +30,7 @@ func (s *Service) validateProjectExistence(ctx context.Context, projectID string
 		return err
 	}
 	if !projectExists {
-		return fmt.Errorf("project not found")
+		return errProjectNotFound
 	}
 	return nil
 }
@@ -41,7 +48,7 @@ func (s *Service) validateProjectAndUserExistence(ctx context.Context, projectID
 		return err
 	}
 	if !userExists {
-		return fmt.Errorf("user not found")
+		return errUserNotFound
 	}
 
 	return nil
@@ -171,7 +178,7 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID str
 		return nil, fmt.Errorf("failed to check user assignment: %v", err)
 	}
 	if isAssigned {
-		return nil, fmt.Errorf("user is already assigned to the project")
+		return nil, errUserAlreadyAssigned
 	}
 
 	// Assign the user to the project
@@ -197,7 +204,7 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID s
 		return nil, fmt.Errorf("failed to check user assignment: %v", err)
 	}
 	if !isAssigned {
-		return nil, fmt.Errorf("user not assigned to the project")
+		return nil, errUserNotAssignedToProject
 	}
 
 	// Remove the user from the project
@@ -317,7 +324,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 		return fmt.Errorf("failed to check user assignment: %v", err)
 	}
 	if !isAssigned {
-		return fmt.Errorf("user not assigned to the project")
+		return errUserNotAssignedToProject
 	}
 
 	// Lock the project
@@ -341,7 +348,7 @@ func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) e
 		return fmt.Errorf("failed to check user assignment: %v", err)
 	}
 	if !isAssigned {
-		return fmt.Errorf("user not assigned to the project")
+		return errUserNotAssignedToProject
 	}
 
 	// Unlock the project

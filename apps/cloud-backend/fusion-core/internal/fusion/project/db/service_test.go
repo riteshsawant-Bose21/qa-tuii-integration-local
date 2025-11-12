@@ -285,12 +285,7 @@ func TestServiceSelectAll(t *testing.T) {
 			SortOrder:  "asc",
 		}
 
-		// Mock first query for project_user table
-		projectUserRows := sqlmock.NewRows([]string{"project_id"}).
-			AddRow(testProjectID)
-		mock.ExpectQuery("SELECT \"project_id\" FROM \"project_user\"").WillReturnRows(projectUserRows)
-
-		// Mock second query for project table
+		// Mock the actual JOIN query that SQLBoiler generates
 		projectRows := sqlmock.NewRows([]string{
 			"id", "primary_owner_user_id", "name", "description",
 			"venue", "environment_type", "project_phase", "application", "budget_amount",
@@ -300,7 +295,7 @@ func TestServiceSelectAll(t *testing.T) {
 			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
 			"USD", time.Now(), time.Now(), false, false, nil,
 		)
-		mock.ExpectQuery("SELECT .* FROM \"project\"").WillReturnRows(projectRows)
+		mock.ExpectQuery("SELECT \"project\".\\* FROM \"project\" INNER JOIN project_user pu ON project.id = pu.project_id WHERE \\(pu.user_id = \\$1\\) AND \\(is_archived = \\$2\\) AND \\(is_deleted = \\$3\\) ORDER BY created_at ASC").WillReturnRows(projectRows)
 
 		projects, err := service.SelectAll(ctx, queryParams)
 		assert.NoError(t, err)
