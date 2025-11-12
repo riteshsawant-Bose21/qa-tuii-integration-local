@@ -564,7 +564,7 @@ class _ZoneCardState extends State<ZoneCard> {
           );
         } else {
           for (final Source src in availableSources) {
-            final String value = 'SRC:${src.name}';
+            final String value = src.id;
             entries.add(
               PopupMenuItem<String>(
                 enabled: false,
@@ -662,7 +662,7 @@ class _ZoneCardState extends State<ZoneCard> {
             if (sources.isEmpty) continue;
             anySetHasSources = true;
             for (final Source src in sources) {
-              final String value = 'SET:${set.name} • ${src.name}';
+              final String value = '${set.name} • ${src.id}';
               entries.add(
                 PopupMenuItem<String>(
                   enabled: false,

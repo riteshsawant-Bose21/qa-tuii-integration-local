@@ -19,6 +19,10 @@ class Assets {
   static const String addSourceIcon = 'assets/icons/add_source.png';
   static const String subZoneIcon = 'assets/icons/sub_zone_icon.png';
   static const String deleteIcon = 'assets/icons/delete_icon.png';
+  static const String processingIcon = 'assets/icons/processing_icon.png';
+  static const String presetsIcon = 'assets/icons/presets_icon.png';
+  static const String gpioIcon = 'assets/icons/gpio_icon.png';
+  static const String schedulingIcon = 'assets/icons/scheduling_icon.png';
 
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';

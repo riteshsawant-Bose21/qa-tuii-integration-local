@@ -5,7 +5,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -33,6 +32,7 @@ import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
+import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -465,12 +465,47 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       ),
 
       /// Config tab without docking area
-      const FusionDockableArea(
+      FusionDockableArea(
         tabKey: "configuration_tab",
         showLeft: true,
         showRight: true,
-        mainArea: ConfigurationPage(),
-        dockItemList: <DockItemConfig>[],
+        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
+                ? const ConfigurationPage()
+                : Center(
+                  child: FusionAppText(
+                    text:
+                        _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
+                            ? "Sources Configuration Page"
+                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
+                            ? "Presets Configuration Page"
+                            : "Scheduling Configuration Page",
+                  ),
+                );
+          },
+        ),
+
+        dockItemList: <DockItemConfig>[
+          DockItemConfig(
+            id: "1",
+            title: "FLOORS",
+            side: "left",
+            allowUndock: true,
+            isCollapsibleSection: false,
+            dockItemWidget:
+                () => BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                  builder: (BuildContext context, ProjectViewModelState state) {
+                    return ConfigurationTabSwitcher(
+                      selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                      onModeChanged: (ConfigurationMenuMode mode) {
+                        _projectViewModel.setConfigurationMenuMode(mode);
+                      },
+                    );
+                  },
+                ),
+          ),
+        ],
       ),
 
       /// Cloud tab without docking area
