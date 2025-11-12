@@ -490,14 +490,12 @@ class _ZoneCardState extends State<ZoneCard> {
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
-            Expanded(
-              child: FusionAppText(
-                text: selectedFunction ?? '',
-                maxLine: 1,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w400,
-                ),
+            FusionAppText(
+              text: selectedFunction ?? '',
+              maxLine: 1,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w400,
               ),
             ),
             const SizedBox(width: 8),
@@ -516,7 +514,7 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Multi-select source selection for zone (checkboxes)
   Widget buildSourceSelectionForZone() {
     final bool hasSelection = selectedZoneSources.isNotEmpty;
-
+    final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
     return PopupMenuButton<String>(
       onSelected: (String? value) {
         if (value == 'add') {
@@ -550,98 +548,29 @@ class _ZoneCardState extends State<ZoneCard> {
         );
 
         /// Sources (individual)
-        for (final Source src in _projectViewModel.sources) {
-          final String value = 'SRC:${src.name}';
+        if (availableSources.isEmpty) {
           entries.add(
             PopupMenuItem<String>(
               enabled: false,
               height: 20,
-              child: StatefulBuilder(
-                builder: (BuildContext context, setStatePopup) {
-                  return GestureDetector(
-                    onTap: () {
-                      if (tempSelectedSources.contains(value)) {
-                        tempSelectedSources.remove(value);
-                      } else {
-                        tempSelectedSources.add(value);
-                      }
-                      setStatePopup(() {});
-                    },
-                    child: Row(
-                      children: <Widget>[
-                        Transform.scale(
-                          scale: 0.7,
-                          child: Checkbox(
-                            value: tempSelectedSources.contains(value),
-                            activeColor: Theme.of(context).colorScheme.greyDark,
-                            onChanged: (bool? checked) {
-                              if (tempSelectedSources.contains(value)) {
-                                tempSelectedSources.remove(value);
-                              } else {
-                                tempSelectedSources.add(value);
-                              }
-                              setStatePopup(() {});
-                            },
-
-                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                            splashRadius: 8,
-
-                            // color of the check mark itself (when checked)
-                            checkColor: Colors.white,
-
-                            // optional: make the border/side gray when unchecked and match when checked
-                            side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
-                          ),
-                        ),
-
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: FusionAppText(
-                            text: src.name,
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
+              child: Center(
+                child: FusionAppText(
+                  text: 'No available sources',
+                  maxLine: 1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                ),
               ),
             ),
           );
-        }
-
-        /// Divider
-        entries.add(const PopupMenuDivider(height: 12));
-
-        /// Header: Source Sets
-        entries.add(
-          PopupMenuItem<String>(
-            enabled: false,
-            height: 24,
-            child: FusionAppText(
-              text: 'SOURCE SETS',
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        );
-
-        /// Source sets and their sources
-        for (final SourceSet set in _projectViewModel.getAllSourceSets()) {
-          final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: set.id);
-          for (final Source src in sources) {
-            final String value = 'SET:${set.name} • ${src.name}';
+        } else {
+          for (final Source src in availableSources) {
+            final String value = 'SRC:${src.name}';
             entries.add(
               PopupMenuItem<String>(
                 enabled: false,
                 height: 20,
                 child: StatefulBuilder(
-                  builder: (BuildContext context, setStatePopup) {
+                  builder: (BuildContext context, StateSetter setStatePopup) {
                     return GestureDetector(
                       onTap: () {
                         if (tempSelectedSources.contains(value)) {
@@ -666,23 +595,17 @@ class _ZoneCardState extends State<ZoneCard> {
                                 }
                                 setStatePopup(() {});
                               },
-
                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                               splashRadius: 8,
-
-                              // color of the check mark itself (when checked)
                               checkColor: Colors.white,
-
-                              // optional: make the border/side gray when unchecked and match when checked
                               side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
                             ),
                           ),
-
                           const SizedBox(width: 4),
                           Expanded(
                             child: FusionAppText(
-                              text: '${set.name} • ${src.name}',
+                              text: src.name,
                               maxLine: 1,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                             ),
@@ -691,6 +614,120 @@ class _ZoneCardState extends State<ZoneCard> {
                       ),
                     );
                   },
+                ),
+              ),
+            );
+          }
+        }
+
+        /// Divider
+        entries.add(const PopupMenuDivider(height: 12));
+
+        /// Header: Source Sets
+        entries.add(
+          PopupMenuItem<String>(
+            enabled: false,
+            height: 24,
+            child: FusionAppText(
+              text: 'SOURCE SETS',
+              maxLine: 1,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        );
+
+        /// Source sets and their sources
+        final List<SourceSet> allSourceSets = _projectViewModel.getAllSourceSets();
+        if (allSourceSets.isEmpty) {
+          entries.add(
+            PopupMenuItem<String>(
+              enabled: false,
+              height: 20,
+              child: Center(
+                child: FusionAppText(
+                  text: 'No available source sets',
+                  maxLine: 1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                ),
+              ),
+            ),
+          );
+        } else {
+          bool anySetHasSources = false;
+          for (final SourceSet set in allSourceSets) {
+            final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: set.id);
+            if (sources.isEmpty) continue;
+            anySetHasSources = true;
+            for (final Source src in sources) {
+              final String value = 'SET:${set.name} • ${src.name}';
+              entries.add(
+                PopupMenuItem<String>(
+                  enabled: false,
+                  height: 20,
+                  child: StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setStatePopup) {
+                      return GestureDetector(
+                        onTap: () {
+                          if (tempSelectedSources.contains(value)) {
+                            tempSelectedSources.remove(value);
+                          } else {
+                            tempSelectedSources.add(value);
+                          }
+                          setStatePopup(() {});
+                        },
+                        child: Row(
+                          children: <Widget>[
+                            Transform.scale(
+                              scale: 0.7,
+                              child: Checkbox(
+                                value: tempSelectedSources.contains(value),
+                                activeColor: Theme.of(context).colorScheme.greyDark,
+                                onChanged: (bool? checked) {
+                                  if (tempSelectedSources.contains(value)) {
+                                    tempSelectedSources.remove(value);
+                                  } else {
+                                    tempSelectedSources.add(value);
+                                  }
+                                  setStatePopup(() {});
+                                },
+                                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                splashRadius: 8,
+                                checkColor: Colors.white,
+                                side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: FusionAppText(
+                                text: '${set.name} • ${src.name}',
+                                maxLine: 1,
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              );
+            }
+          }
+          if (!anySetHasSources) {
+            entries.add(
+              PopupMenuItem<String>(
+                enabled: false,
+                height: 20,
+                child: Center(
+                  child: FusionAppText(
+                    text: 'No available sources in sets',
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                  ),
                 ),
               ),
             );
