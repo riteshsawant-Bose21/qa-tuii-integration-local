@@ -21,87 +21,87 @@ const (
 )
 
 type Budget struct {
-	Amount   int64  `json:"amount"`
-	Currency string `json:"currency" validate:"required,currency,len=3"`
+	Amount   int64  `json:"amount" example:"50000"`
+	Currency string `json:"currency" validate:"required,currency,len=3" example:"USD"`
 }
 
 // Request body for creating or updating a project.
 type ProjectCreateRequest struct {
-	ID                   string          `json:"id" validate:"omitempty,uuid"`
-	Application          string          `json:"application" validate:"required,min=1,max=255"`
-	UserID               string          `json:"user_id" validate:"required,min=1"`
-	Name                 string          `json:"name" validate:"required,min=1,max=255"`
-	Description          string          `json:"description" validate:"omitempty,max=1000"`
-	Venue                string          `json:"venue" validate:"omitempty,max=255"`
-	EnvironmentType      EnvironmentType `json:"environment_type" validate:"required,environment_type"`
-	ProjectPhase         ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase"`
+	ID                   string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Application          string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
+	UserID               string          `json:"user_id" validate:"required,min=1" example:"user123"`
+	Name                 string          `json:"name" validate:"required,min=1,max=255" example:"Conference Room Audio Setup"`
+	Description          string          `json:"description" validate:"omitempty,max=1000" example:"Professional audio system for corporate conference room"`
+	Venue                string          `json:"venue" validate:"omitempty,max=255" example:"Building A - Conference Room 101"`
+	EnvironmentType      EnvironmentType `json:"environment_type" validate:"required,environment_type" example:"indoor"`
+	ProjectPhase         ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Proposal"`
 	Budget               Budget          `json:"budget" validate:"required"`
-	IsProjectFileCreated bool            `json:"is_project_file_created"`
+	IsProjectFileCreated bool            `json:"is_project_file_created" example:"false"`
 }
 
 // Request body for creating or updating a project.
 type ProjectUpdateRequest struct {
-	ID                 string          `json:"id" validate:"omitempty,uuid"`
-	Application        string          `json:"application" validate:"omitempty,min=1,max=255"`
-	AccountID          string          `json:"account_id" validate:"omitempty,min=1"`
-	Name               string          `json:"name" validate:"omitempty,min=1,max=255"`
-	Description        string          `json:"description" validate:"omitempty,max=1000"`
-	Venue              string          `json:"venue" validate:"omitempty,max=255"`
-	EnvironmentType    EnvironmentType `json:"environment_type" validate:"omitempty,environment_type"`
-	ProjectPhase       ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase"`
+	ID                 string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Application        string          `json:"application" validate:"omitempty,min=1,max=255" example:"Audio System Design"`
+	AccountID          string          `json:"account_id" validate:"omitempty,min=1" example:"account456"`
+	Name               string          `json:"name" validate:"omitempty,min=1,max=255" example:"Updated Conference Room Audio Setup"`
+	Description        string          `json:"description" validate:"omitempty,max=1000" example:"Updated professional audio system for corporate conference room"`
+	Venue              string          `json:"venue" validate:"omitempty,max=255" example:"Building B - Conference Room 205"`
+	EnvironmentType    EnvironmentType `json:"environment_type" validate:"omitempty,environment_type" example:"indoor"`
+	ProjectPhase       ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Development"`
 	Budget             Budget          `json:"budget"`
-	IsProjectFileDirty bool            `json:"is_project_file_dirty"`
+	IsProjectFileDirty bool            `json:"is_project_file_dirty" example:"true"`
 }
 
 // Project object for Get.
 type Project struct {
-	ID              string          `json:"id"`
-	Application     string          `json:"application"`
-	Name            string          `json:"name"`
-	Description     string          `json:"description"`
-	Venue           string          `json:"venue"`
-	EnvironmentType EnvironmentType `json:"environment_type"`
-	ProjectPhase    ProjectPhase    `json:"project_phase"`
-	IsArchived      bool            `json:"is_archived"`
-	IsStarred       bool            `json:"is_starred"`
-	LockedByUser    string          `json:"locked_by_user"`
+	ID              string          `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Application     string          `json:"application" example:"Audio System Design"`
+	Name            string          `json:"name" example:"Conference Room Audio Setup"`
+	Description     string          `json:"description" example:"Professional audio system for corporate conference room"`
+	Venue           string          `json:"venue" example:"Building A - Conference Room 101"`
+	EnvironmentType EnvironmentType `json:"environment_type" example:"indoor"`
+	ProjectPhase    ProjectPhase    `json:"project_phase" example:"Development"`
+	IsArchived      bool            `json:"is_archived" example:"false"`
+	IsStarred       bool            `json:"is_starred" example:"true"`
+	LockedByUser    string          `json:"locked_by_user" example:"user456"`
 	Budget          Budget          `json:"budget"`
-	ProjectFileURL  string          `json:"project_file_url"`
-	ThumbnailURL    string          `json:"thumbnail_url"`
-	CreatedAt       time.Time       `json:"created_at"`
-	UpdatedAt       time.Time       `json:"updated_at"`
+	ProjectFileURL  string          `json:"project_file_url" example:"https://storage.example.com/projects/123e4567/project.json"`
+	ThumbnailURL    string          `json:"thumbnail_url" example:"https://storage.example.com/projects/123e4567/thumbnail.jpg"`
+	CreatedAt       time.Time       `json:"created_at" example:"2023-10-15T14:30:00Z"`
+	UpdatedAt       time.Time       `json:"updated_at" example:"2023-10-20T16:45:00Z"`
 }
 
 // Parameters for retrieving all projects.
 type GetAllProjectsParams struct {
-	UserID     string `form:"user_id" validate:"required,min=1"`
-	IsArchived bool   `form:"is_archived"`
-	SortBy     string `form:"sort_by" validate:"omitempty,project_sort_field"`
-	SortOrder  string `form:"sort_order" validate:"omitempty,sort_order"`
+	UserID     string `form:"user_id" validate:"required,min=1" example:"user123"`
+	IsArchived bool   `form:"is_archived" example:"false"`
+	SortBy     string `form:"sort_by" validate:"omitempty,project_sort_field" example:"created_at"`
+	SortOrder  string `form:"sort_order" validate:"omitempty,sort_order" example:"asc"`
 }
 
 // Response for retrieving all projects with pagination.
 type GetAllProjectsResponse struct {
 	Data       []Project `json:"data"`
-	TotalCount int       `json:"total_count"`
-	Page       int       `json:"page"`
-	TotalPages int       `json:"total_pages"`
+	TotalCount int       `json:"total_count" example:"25"`
+	Page       int       `json:"page" example:"1"`
+	TotalPages int       `json:"total_pages" example:"3"`
 }
 
 // Response for creating a project.
 type ProjectCreateResponse struct {
-	ID               string `json:"id"`
-	ProjectUploadURL string `json:"project_upload_url"`
+	ID               string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ProjectUploadURL string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
 // Response for updating a project.
 type ProjectUpdateResponse struct {
-	ProjectUploadURL string `json:"project_upload_url"`
+	ProjectUploadURL string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
 // Response for user assignment operations.
 type UserAssignmentResponse struct {
-	Message string `json:"message"`
+	Message string `json:"message" example:"User successfully assigned to project"`
 }
 
 // API Error Message Constants
@@ -176,7 +176,7 @@ type ErrorResponse struct {
 
 // BadRequestError represents a 400 Bad Request error.
 type BadRequestError struct {
-	Message string `json:"message" example:"Invalid input data"`
+	Message string `json:"message" example:"Bad Request"`
 }
 
 // UnauthorizedError represents a 401 Unauthorized error.
@@ -186,17 +186,17 @@ type UnauthorizedError struct {
 
 // NotFoundError represents a 404 Not Found error.
 type NotFoundError struct {
-	Message string `json:"message" example:"Project not found"`
+	Message string `json:"message" example:"Not Found"`
 }
 
 // ConflictError represents a 409 Conflict error.
 type ConflictError struct {
-	Message string `json:"message" example:"User is already assigned to the project"`
+	Message string `json:"message" example:"Conflict"`
 }
 
 // ForbiddenError represents a 403 Forbidden error.
 type ForbiddenError struct {
-	Message string `json:"message" example:"Project is locked by another user"`
+	Message string `json:"message" example:"Forbidden"`
 }
 
 // InternalServerError represents a 500 Internal Server Error.
