@@ -11,22 +11,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const (
-	projectNotFoundMsg        = "project not found"
-	userNotFoundMsg           = "user not found"
-	userIDRequiredMsg         = "user_id is required"
-	internalServerErr         = "Internal server error"
-	sqlNoRowsErr              = "sql: no rows in result set"
-	userAlreadyAssignedMsg    = "user is already assigned to the project"
-	userNotAssignedMsg        = "user not assigned to the project"
-	projectAlreadyStarredMsg  = "project is already starred"
-	projectNotStarredMsg      = "project is not starred"
-	projectAlreadyArchivedMsg = "project is already archived"
-	projectNotArchivedMsg     = "project is not archived"
-	projectAlreadyLockedMsg   = "project is already locked"
-	projectNotLockedMsg       = "project is not locked"
-	projectNotLockedByUserMsg = "project is not locked by this user"
-)
+const ()
 
 // ProjectHandler handles HTTP requests for project management.
 type ProjectHandler struct {
@@ -112,12 +97,12 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
@@ -158,17 +143,17 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
@@ -187,22 +172,22 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	// Check if project exists
 	projectExists, err := h.project.ProjectExists(ctx, projectID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !projectExists {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 
 	// Check if user is assigned to the project
 	isUserAssigned, err := h.project.IsUserAssigned(ctx, projectID, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !isUserAssigned {
-		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to update this project"})
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUserNotAssignedToProject})
 		return
 	}
 
@@ -213,19 +198,19 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 			return
 		}
 		// Other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
 	response, err := h.project.UpdateProject(ctx, projectID, &p)
 	if err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == projectNotFoundMsg || err.Error() == sqlNoRowsErr {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	ctx.JSON(http.StatusOK, response)
@@ -249,50 +234,50 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
 	// Check if project exists
 	projectExists, err := h.project.ProjectExists(ctx, projectID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !projectExists {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 
 	// Check if user is assigned to the project
 	isUserAssigned, err := h.project.IsUserAssigned(ctx, projectID, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !isUserAssigned {
-		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to delete this project"})
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUserNotAssignedToProject})
 		return
 	}
 
 	if err := h.project.DeleteProject(ctx, projectID); err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == projectNotFoundMsg || err.Error() == sqlNoRowsErr {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	ctx.JSON(204, nil)
@@ -323,7 +308,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 
 	// Validate projectID UUID
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 
@@ -331,16 +316,16 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == userAlreadyAssignedMsg {
+		if errorMsg == types.ErrMsgUserAlreadyAssigned {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -365,7 +350,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 
 	// Validate projectID UUID
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 
@@ -373,16 +358,16 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == userNotAssignedMsg {
+		if errorMsg == types.ErrMsgUserNotAssignedToProject {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -406,11 +391,11 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
@@ -418,20 +403,20 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == userNotAssignedMsg {
+		if errorMsg == types.ErrMsgUserNotAssignedToProject {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectAlreadyStarredMsg {
+		if errorMsg == types.ErrMsgProjectAlreadyStarred {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -456,11 +441,11 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
@@ -468,20 +453,20 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types in priority order
-		if errorMsg == userNotAssignedMsg {
+		if errorMsg == types.ErrMsgUserNotAssignedToProject {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotStarredMsg {
+		if errorMsg == types.ErrMsgProjectNotStarred {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -506,39 +491,39 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
 	// Check if project exists
 	projectExists, err := h.project.ProjectExists(ctx, projectID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !projectExists {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 
 	// Check if user is assigned to the project
 	isUserAssigned, err := h.project.IsUserAssigned(ctx, projectID, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !isUserAssigned {
-		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to archive this project"})
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUserNotAssignedToProject})
 		return
 	}
 
@@ -549,7 +534,7 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 			return
 		}
 		// Other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -557,16 +542,16 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == projectNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectAlreadyArchivedMsg {
+		if errorMsg == types.ErrMsgProjectArchived {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -591,39 +576,39 @@ func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
 	// Check if project exists
 	projectExists, err := h.project.ProjectExists(ctx, projectID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !projectExists {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 
 	// Check if user is assigned to the project
 	isUserAssigned, err := h.project.IsUserAssigned(ctx, projectID, userID)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 	if !isUserAssigned {
-		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: "User not authorized to unarchive this project"})
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUserNotAssignedToProject})
 		return
 	}
 
@@ -631,16 +616,16 @@ func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == projectNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotArchivedMsg {
+		if errorMsg == types.ErrMsgProjectNotArchived {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -665,17 +650,17 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
@@ -683,20 +668,20 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == userNotAssignedMsg {
+		if errorMsg == types.ErrMsgUserNotAssignedToProject {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectAlreadyLockedMsg {
+		if errorMsg == types.ErrMsgProjectAlreadyLocked {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 
@@ -722,17 +707,17 @@ func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
 	userID := ctx.Query("user_id")
 
 	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: userIDRequiredMsg})
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
 	if !isValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: projectNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
 	if !isValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: userNotFoundMsg})
+		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
@@ -740,24 +725,24 @@ func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == userNotAssignedMsg {
+		if errorMsg == types.ErrMsgUserNotAssignedToProject {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotFoundMsg || errorMsg == userNotFoundMsg {
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotLockedMsg {
+		if errorMsg == types.ErrMsgProjectNotLocked {
 			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == projectNotLockedByUserMsg {
+		if errorMsg == types.ErrMsgProjectNotLockedByUser {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: internalServerErr})
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
 

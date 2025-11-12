@@ -7,43 +7,56 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 const (
-	testProjectID             = "123e4567-e89b-12d3-a456-426614174000"
-	testProjectName           = "Test Project"
-	testProjectDesc           = "Test Description"
-	testProjectVenue          = "Test Venue"
-	testProjectEnvType        = types.EnvironmentTypeIndoor
-	testProjectPhase          = types.ProjectPhaseProposal
-	testProjectApp            = "Test App"
-	testProjectAccountID      = "123"
-	testSelectProjectsStmt    = "SELECT .*"
-	testInsertProjectStmt     = "INSERT INTO \"project\""
-	testInsertProjectUserStmt = "INSERT INTO \"project_user\""
+	testProjectID          = "123e4567-e89b-12d3-a456-426614174000"
+	testProjectName        = "Test Project"
+	testProjectDesc        = "Test Description"
+	testProjectVenue       = "Test Venue"
+	testProjectEnvType     = types.EnvironmentTypeIndoor
+	testProjectPhase       = types.ProjectPhaseProposal
+	testProjectApp         = "Test App"
+	testProjectAccountID   = "123"
+	testSelectProjectsStmt = "SELECT .*"
 )
 
 func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
 	db, mock, err := sqlmock.New()
 	require.NoError(t, err)
 
-	service := NewService(db)
+	logger, err := log.NewProduction()
+	require.NoError(t, err)
+
+	service := NewService(db, logger)
 	return db, mock, service
 }
 
 func TestNewService(t *testing.T) {
 	t.Run("successfully creates new service", func(t *testing.T) {
 		db, _, _ := sqlmock.New()
-		service := NewService(db)
+		logger, err := log.NewProduction()
+		require.NoError(t, err)
+		service := NewService(db, logger)
 		assert.NotNil(t, service)
 	})
 
 	t.Run("panics when db is nil", func(t *testing.T) {
+		logger, err := log.NewProduction()
+		require.NoError(t, err)
 		assert.Panics(t, func() {
-			NewService(nil)
+			NewService(nil, logger)
+		})
+	})
+
+	t.Run("panics when logger is nil", func(t *testing.T) {
+		db, _, _ := sqlmock.New()
+		assert.Panics(t, func() {
+			NewService(db, nil)
 		})
 	})
 }

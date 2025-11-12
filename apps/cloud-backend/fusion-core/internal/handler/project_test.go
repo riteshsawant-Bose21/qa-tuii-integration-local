@@ -686,7 +686,7 @@ func TestRemoveUserFromProject(t *testing.T) {
 		projectID := testProjectID
 		userEmail := testUserEmail
 
-		mockSvc.On("RemoveUserFromProjectByEmail", mock.Anything, projectID, userEmail).Return((*types.UserAssignmentResponse)(nil), errors.New("user not assigned to the project"))
+		mockSvc.On("RemoveUserFromProjectByEmail", mock.Anything, projectID, userEmail).Return((*types.UserAssignmentResponse)(nil), errors.New("user not assigned to project"))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+usersPath+userEmail, nil)
 		w := httptest.NewRecorder()
@@ -888,7 +888,7 @@ func TestArchiveProject(t *testing.T) {
 		mockSvc.On("ProjectExists", mock.Anything, projectID).Return(true, nil)
 		mockSvc.On("IsUserAssigned", mock.Anything, projectID, userID).Return(true, nil)
 		mockSvc.On("ValidateProjectNotLockedByOther", mock.Anything, projectID, userID).Return(nil)
-		mockSvc.On("ArchiveProject", mock.Anything, projectID).Return(errors.New("project is already archived"))
+		mockSvc.On("ArchiveProject", mock.Anything, projectID).Return(errors.New("project is archived"))
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
