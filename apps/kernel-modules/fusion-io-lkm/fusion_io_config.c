@@ -1526,7 +1526,7 @@ const struct base_device bd_fusion_c1 = {
                     .ioexp_id = 4,
                     .i2c_addr = 0x23,
                     .ep_handle_irq = tca9535_handle_irq,
-                    .num_gpios = 15,
+                    .num_gpios = 16,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_ctrl0_gpio0",
@@ -1763,7 +1763,7 @@ const struct base_device bd_fusion_c1 = {
                 .parent_ep_name = "ep_ioexp_tca9535-2",
                 .num_msgs = 2,
                 .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x02aa },
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x36db }, // default Hi-Z
                     { .reg_addr = TCA9535_REG_CONFIGURATION0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 }
                 }
             },
@@ -1818,7 +1818,7 @@ const struct base_device bd_fusion_c1 = {
                 }
             }
         },
-        .num_post_cfg_cmds = 2,
+        .num_post_cfg_cmds = 1,
         .post_cfg_cmds = (struct config_sequence_cmd[]) {
             {
                 .name = "dac_mute",
