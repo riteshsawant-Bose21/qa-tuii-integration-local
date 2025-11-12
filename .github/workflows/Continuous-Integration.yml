@@ -356,6 +356,7 @@ jobs:
 
   integration-tests:
     needs:
+      - buildChecks
       - flutter-android-iOS-macOS-build
       - flutter-windows-build
       - flutter-web-build
@@ -371,7 +372,8 @@ jobs:
         (needs.fusion-server-build.result == 'success' && needs.fusion-server-build.outputs.ran == 'true') ||
         (needs.fusion-system-monitor-build.result == 'success' && needs.fusion-system-monitor-build.outputs.ran == 'true') ||
         (needs.fusion-edge-gateway-build.result == 'success' && needs.fusion-edge-gateway-build.outputs.ran == 'true') ||
-        (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true')
+        (needs.fusion-telemetry-core-build.result == 'success' && needs.fusion-telemetry-core-build.outputs.ran == 'true') ||
+        (needs.buildChecks.outputs.fusionKernelModules == 'true')
       )
     concurrency:
       group: integration-tests
@@ -395,7 +397,6 @@ jobs:
 
   yocto-image-build:
     needs:
-      - buildChecks
       - integration-tests
       - fusion-server-build
       - fusion-system-monitor-build
@@ -404,8 +405,7 @@ jobs:
       - fusion-dsp-build
     if: |
       always() && (
-        (needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true')
-        || needs.buildChecks.outputs.fusionKernelModules == 'true'
+        needs.integration-tests.result == 'success' && needs.integration-tests.outputs.ran == 'true'
       )
     concurrency:
       group: yocto-image-build
