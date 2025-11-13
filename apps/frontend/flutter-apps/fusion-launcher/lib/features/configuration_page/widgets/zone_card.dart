@@ -258,7 +258,7 @@ class _ZoneCardState extends State<ZoneCard> {
               text: 'SOURCES',
               maxLine: 1,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -290,21 +290,27 @@ class _ZoneCardState extends State<ZoneCard> {
                 height: 32,
                 child: Row(
                   children: <Widget>[
-                    Radio<String>(
-                      value: value,
-                      groupValue: selectedSource,
-                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                      onChanged: (String? v) {
-                        if (v != null) Navigator.pop(context, v);
-                      },
+                    Transform.scale(
+                      scale: 0.8,
+                      child: Radio<String>(
+                        value: value,
+                        groupValue: selectedSource,
+                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                        activeColor: Theme.of(context).colorScheme.greyDark,
+                        onChanged: (String? v) {
+                          if (v != null) Navigator.pop(context, v);
+                        },
+                      ),
                     ),
-                    const SizedBox(width: 8),
+
+                    const SizedBox(width: 4),
                     Expanded(
                       child: FusionAppText(
                         text: src.name,
+                        capitalize: true,
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                       ),
                     ),
                   ],
@@ -326,7 +332,7 @@ class _ZoneCardState extends State<ZoneCard> {
               text: 'SOURCE SETS',
               maxLine: 1,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 11,
+                fontSize: 10,
                 fontWeight: FontWeight.w600,
               ),
             ),
@@ -353,27 +359,34 @@ class _ZoneCardState extends State<ZoneCard> {
           for (final SourceSet sourceSet in allSourceSets) {
             final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
             for (final Source src in sources) {
-              final String value = '${sourceSet.name} • ${src.name}';
+              final String value = '${src.name} (${sourceSet.name})';
               entries.add(
                 PopupMenuItem<String>(
                   value: value,
                   height: 32,
                   child: Row(
                     children: <Widget>[
-                      Radio<String>(
-                        value: value,
-                        groupValue: selectedSource,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                        onChanged: (String? v) {
-                          if (v != null) Navigator.pop(context, v);
-                        },
+                      Transform.scale(
+                        scale: 0.8,
+                        child: Radio<String>(
+                          value: value,
+                          groupValue: selectedSource,
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                          activeColor: Theme.of(context).colorScheme.greyDark,
+                          onChanged: (String? v) {
+                            if (v != null) Navigator.pop(context, v);
+                          },
+                        ),
                       ),
+
+                      const SizedBox(width: 4),
                       Expanded(
                         child: FusionAppText(
                           text: value,
+                          capitalize: true,
                           maxLine: 1,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11),
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                         ),
                       ),
                     ],
@@ -414,15 +427,16 @@ class _ZoneCardState extends State<ZoneCard> {
             Container(
               width: 14,
               height: 14,
+
               alignment: Alignment.center,
               decoration: BoxDecoration(
-                color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.primary,
+                color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
                 borderRadius: BorderRadius.circular(3),
               ),
               child: FusionAppText(
                 text: 'P$priorityIndex',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
+                  fontSize: 8,
                   color: Theme.of(context).colorScheme.white,
                   fontWeight: FontWeight.w600,
                 ),
@@ -453,12 +467,12 @@ class _ZoneCardState extends State<ZoneCard> {
             height: 32,
             value: function,
             child: SizedBox(
-              width: 164,
+              width: 169,
               child: FusionAppText(
                 text: function,
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
+                  fontSize: 10,
                 ),
               ),
             ),
@@ -492,7 +506,7 @@ class _ZoneCardState extends State<ZoneCard> {
                       text: 'Add Function',
                       maxLine: 1,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 11,
+                        fontSize: 10,
                         color: Theme.of(context).colorScheme.greyDark,
                       ),
                     ),
@@ -547,7 +561,7 @@ class _ZoneCardState extends State<ZoneCard> {
     final bool hasSelection = selectedZoneSources.isNotEmpty;
     final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
 
-    // Calculate total source count including sources in selected source sets
+    /// Calculate total source count including sources in selected source sets
     int totalSourceCount = 0;
     for (final String selectedId in selectedZoneSources) {
       if (selectedId.startsWith('sourceset_')) {
@@ -650,6 +664,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           Expanded(
                             child: FusionAppText(
                               text: src.name,
+                              capitalize: true,
                               maxLine: 1,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                             ),
@@ -744,6 +759,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           Expanded(
                             child: FusionAppText(
                               text: '${sourceSet.name} (${sourcesInSet.length} sources)',
+                              capitalize: true,
                               maxLine: 1,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                             ),
@@ -826,7 +842,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     text: '$totalSourceCount',
                     maxLine: 1,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
+                      fontSize: 8,
                       color: Theme.of(context).colorScheme.white,
                       fontWeight: FontWeight.w600,
                     ),
