@@ -9,6 +9,7 @@ import (
 // APIconfig holds the configuration settings for the API service.
 type APIconfig struct {
 	Postgres *config.Postgres
+	S3       *config.S3
 }
 
 // NewAPIConfig initializes and returns the API configuration by loading necessary settings.
@@ -20,10 +21,17 @@ func NewAPIConfig(svc ConfigService) (*APIconfig, error) {
 		return nil, fmt.Errorf("failed to load postgres config: %w", err)
 	}
 	cfg.Postgres = pgConfig
+
+	s3Config, err := svc.S3()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load s3 config: %w", err)
+	}
+	cfg.S3 = s3Config
 	return cfg, nil
 }
 
 // ConfigService defines the methods required to fetch configuration settings.
 type ConfigService interface {
 	Postgres() (*config.Postgres, error)
+	S3() (*config.S3, error)
 }

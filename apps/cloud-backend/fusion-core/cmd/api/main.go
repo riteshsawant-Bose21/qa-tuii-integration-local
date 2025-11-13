@@ -36,7 +36,7 @@ import (
 )
 
 func main() {
-	// ctx := context.Background()
+	ctx := context.Background()
 
 	// Load logger
 	logger, err := log.NewProduction() // Move it to cmd parallel
@@ -105,14 +105,12 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
-	s3Handler, err := cloudfs.NewS3Client(context.Background())
+	s3Handler, err := cloudfs.NewS3Client(ctx)
 
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}
 	logger.Info("Initialized S3 client")
-
-	presignHandler := s3Handler.Bucket("bose.cloud-backend.test")
 
 	// Initialize Project DB Service
 	projectDBSvc := projectdb.NewService(pgs, logger)
@@ -121,7 +119,7 @@ func main() {
 	}
 
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc, presignHandler)
+	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.S3.ProjectBucket))
 	if projectSVC == nil {
 		logger.Fatal("Failed to initialize project service")
 	}
@@ -138,7 +136,7 @@ func main() {
 	logger.Info("Initialized the API.")
 
 	// Setup graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	shutdownChan := make(chan os.Signal, 1)
