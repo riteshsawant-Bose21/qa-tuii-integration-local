@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
@@ -20,58 +21,59 @@ var (
 )
 
 // newProject returns a new Project node from the provided Project row
-func newProject(row *model.Project) (*types.Project, error) {
+func newProject(row *customModel.GetProjectModel) (*types.Project, error) {
 	if row == nil {
 		return nil, errors.New("dbProject cannot be nil")
 	}
 	description := ""
-	if row.Description.Valid {
-		description = row.Description.String
+	if row.Project.Description.Valid {
+		description = row.Project.Description.String
 	}
 	venue := ""
-	if row.Venue.Valid {
-		venue = row.Venue.String
+	if row.Project.Venue.Valid {
+		venue = row.Project.Venue.String
 	}
 	environmentType := types.EnvironmentType("")
-	if row.EnvironmentType.Valid {
-		environmentType = types.EnvironmentType(row.EnvironmentType.String)
+	if row.Project.EnvironmentType.Valid {
+		environmentType = types.EnvironmentType(row.Project.EnvironmentType.String)
 	}
 	projectPhase := types.ProjectPhase("")
-	if row.ProjectPhase.Valid {
-		projectPhase = types.ProjectPhase(row.ProjectPhase.String)
+	if row.Project.ProjectPhase.Valid {
+		projectPhase = types.ProjectPhase(row.Project.ProjectPhase.String)
 	}
 	application := ""
-	if row.Application.Valid {
-		application = row.Application.String
+	if row.Project.Application.Valid {
+		application = row.Project.Application.String
 	}
 
 	var budgetAmount int64
-	if !row.BudgetAmount.IsZero() {
-		budgetAmount, _ = row.BudgetAmount.Int64()
+	if !row.Project.BudgetAmount.IsZero() {
+		budgetAmount, _ = row.Project.BudgetAmount.Int64()
 	}
 
 	budget := types.Budget{
-		Currency: row.Currency.String,
+		Currency: row.Project.Currency.String,
 		Amount:   budgetAmount,
 	}
 
 	lockedByUser := ""
-	if row.LockedByUserID.Valid {
-		lockedByUser = row.LockedByUserID.String
+	if row.Project.LockedByUserID.Valid && row.LockedByUserEmail != "" {
+		lockedByUser = row.LockedByUserEmail
 	}
 
 	return &types.Project{
-		ID:              row.ID,
-		Name:            row.Name.String,
+		ID:              row.Project.ID,
+		Name:            row.Project.Name.String,
 		Description:     description,
 		Venue:           venue,
 		EnvironmentType: environmentType,
 		ProjectPhase:    projectPhase,
 		Application:     application,
 		Budget:          budget,
-		IsArchived:      row.IsArchived,
+		IsArchived:      row.Project.IsArchived,
+		IsStarred:       row.IsStarred,
 		LockedByUser:    lockedByUser,
-		CreatedAt:       row.CreatedAt,
-		UpdatedAt:       row.UpdatedAt,
+		CreatedAt:       row.Project.CreatedAt,
+		UpdatedAt:       row.Project.UpdatedAt,
 	}, nil
 }

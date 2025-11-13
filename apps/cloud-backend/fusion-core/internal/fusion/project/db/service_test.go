@@ -298,22 +298,50 @@ func TestServiceSelectAll(t *testing.T) {
 			SortOrder:  "asc",
 		}
 
-		// Mock the actual JOIN query that SQLBoiler generates
+		// Mock the new raw SQL query with joined data (without primary_owner_user_id)
 		projectRows := sqlmock.NewRows([]string{
-			"id", "primary_owner_user_id", "name", "description",
+			"id", "name", "description",
 			"venue", "environment_type", "project_phase", "application", "budget_amount",
-			"currency", "created_at", "updated_at", "is_archived", "is_deleted", "locked_by_user_id",
+			"currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "is_starred", "locked_by_user_email",
 		}).AddRow(
-			testProjectID, testProjectAccountID, testProjectName, testProjectDesc,
+			testProjectID, testProjectName, testProjectDesc,
 			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
-			"USD", time.Now(), time.Now(), false, false, nil,
+			"USD", false, false, nil, time.Now(), time.Now(), false, nil,
 		)
-		mock.ExpectQuery("SELECT \"project\".\\* FROM \"project\" INNER JOIN project_user pu ON project.id = pu.project_id WHERE \\(pu.user_id = \\$1\\) AND \\(is_archived = \\$2\\) AND \\(is_deleted = \\$3\\) ORDER BY created_at ASC").WillReturnRows(projectRows)
+		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN "user" u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
 
 		projects, err := service.SelectAll(ctx, queryParams)
 		assert.NoError(t, err)
 		assert.Len(t, projects, 1)
 		assert.Equal(t, testProjectID, projects[0].ID)
+		assert.False(t, projects[0].IsStarred) // Should be false from the mock data
+	})
+
+	t.Run("successfully retrieves starred projects", func(t *testing.T) {
+		queryParams := &types.GetAllProjectsParams{
+			UserID:     testProjectAccountID,
+			IsArchived: false,
+			SortBy:     "created_at",
+			SortOrder:  "asc",
+		}
+
+		// Mock the new raw SQL query with joined data and is_starred = true (without primary_owner_user_id)
+		projectRows := sqlmock.NewRows([]string{
+			"id", "name", "description",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
+			"currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "is_starred", "locked_by_user_email",
+		}).AddRow(
+			testProjectID, testProjectName, testProjectDesc,
+			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
+			"USD", false, false, nil, time.Now(), time.Now(), true, nil, // is_starred = true
+		)
+		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN "user" u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
+
+		projects, err := service.SelectAll(ctx, queryParams)
+		assert.NoError(t, err)
+		assert.Len(t, projects, 1)
+		assert.Equal(t, testProjectID, projects[0].ID)
+		assert.True(t, projects[0].IsStarred) // Should be true from the mock data
 	})
 }
 

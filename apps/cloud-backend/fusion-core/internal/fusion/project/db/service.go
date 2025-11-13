@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	boilerTypes "github.com/aarondl/sqlboiler/v4/types"
@@ -143,32 +144,49 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	// Set default sort order and field if not provided
 	order := "ASC"
 	if queryParams.SortOrder != "" {
-		if strings.ToUpper(queryParams.SortOrder) == "DESC" {
+		upperOrder := strings.ToUpper(queryParams.SortOrder)
+		if upperOrder == "DESC" {
 			order = "DESC"
+		} else if upperOrder == "ASC" {
+			order = "ASC"
+		} else {
+			s.logger.Error("Invalid sort order provided, using default ASC",
+				zap.String("invalid_order", queryParams.SortOrder))
+			order = "ASC"
 		}
 	}
 
-	// Set default sort field if not provided
+	// Set default sort field if not provided and validate
 	sortBy := "created_at"
 	if queryParams.SortBy != "" {
-		sortBy = queryParams.SortBy
+		// Validate the sort field to prevent SQL injection
+		validSortFields := map[string]bool{
+			"created_at": true,
+			"updated_at": true,
+		}
+		if validSortFields[queryParams.SortBy] {
+			sortBy = queryParams.SortBy
+		} else {
+			s.logger.Error("Invalid sort field provided, using default",
+				zap.String("invalid_field", queryParams.SortBy),
+				zap.String("default_field", sortBy))
+		}
 	}
 
-	// SELECT projects.*
-	// FROM projects
-	// INNER JOIN project_user pu ON projects.id = pu.project_id
-	// WHERE pu.user_id = ?
-	//   AND projects.is_archived = ?
-	//   AND projects.is_deleted = ?
-	// ORDER BY projects.created_at ASC
-	projectRows, err := model.Projects(
-		qm.InnerJoin("project_user pu ON project.id = pu.project_id"),
-		qm.Where("pu.user_id = ?", queryParams.UserID),
-		qm.Where("is_archived = ?", queryParams.IsArchived),
-		qm.Where("is_deleted = ?", false),
-		qm.OrderBy(fmt.Sprintf("%s %s", sortBy, order)),
-	).All(ctx, s.db)
-
+	// Use raw SQL query to get project data, is_starred, and locked user email in one query
+	// Explicitly list all columns to match our scanning order
+	query := fmt.Sprintf(`
+		SELECT p.id, p.name, p.description, p.venue, 
+		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
+		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
+		FROM project p
+		INNER JOIN project_user pu ON p.id = pu.project_id
+		LEFT JOIN "user" u ON p.locked_by_user_id = u.id
+		WHERE pu.user_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
+		ORDER BY p.%s %s
+	`, sortBy, order)
+	rows, err := s.db.QueryContext(ctx, query, queryParams.UserID, queryParams.IsArchived, false)
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToGetProjects,
 			zap.Error(err),
@@ -178,20 +196,60 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 			zap.String("sort_order", order))
 		return nil, errors.New(types.ErrMsgFailedToGetProjects)
 	}
+	defer rows.Close()
 
-	projects := make([]*types.Project, 0, len(projectRows))
-	for _, row := range projectRows {
-		project, err := newProject(row)
+	projects := make([]customModel.GetProjectModel, 0)
+
+	for rows.Next() {
+		var projectRow model.Project
+		var isStarred bool
+		var lockedByUserEmail sql.NullString
+
+		err := rows.Scan(
+			&projectRow.ID,
+			&projectRow.Name,
+			&projectRow.Description,
+			&projectRow.Venue,
+			&projectRow.EnvironmentType,
+			&projectRow.ProjectPhase,
+			&projectRow.Application,
+			&projectRow.BudgetAmount,
+			&projectRow.Currency,
+			&projectRow.IsArchived,
+			&projectRow.IsDeleted,
+			&projectRow.LockedByUserID,
+			&projectRow.CreatedAt,
+			&projectRow.UpdatedAt,
+			&isStarred,
+			&lockedByUserEmail,
+		)
+
+		if err != nil {
+			s.logger.Error(types.ErrMsgFailedToParseRow,
+				zap.Error(err))
+			return nil, errors.New(types.ErrMsgFailedToParseRow)
+		}
+
+		projects = append(projects, customModel.GetProjectModel{
+			Project:           projectRow,
+			IsStarred:         isStarred,
+			LockedByUserEmail: lockedByUserEmail.String,
+		})
+	}
+
+	projectsArray := make([]*types.Project, 0, len(projects))
+	for _, projectWithMetadata := range projects {
+		project, err := newProject(&projectWithMetadata)
 		if err != nil {
 			s.logger.Error(types.ErrMsgFailedToParseRow,
 				zap.Error(err),
-				zap.String("project_id", row.ID))
+				zap.String("project_id", projectWithMetadata.Project.ID))
 			return nil, errors.New(types.ErrMsgFailedToParseRow)
 		}
-		projects = append(projects, project)
+		projectsArray = append(projectsArray, project)
 	}
 
-	return projects, nil
+	return projectsArray, nil
 }
 
 // Update updates an existing project in the database.
@@ -283,6 +341,7 @@ func (s *Service) Delete(ctx context.Context, id string) error {
 
 // AssignUser assigns a user to a project.
 func (s *Service) AssignUser(ctx context.Context, projectID, userID string) error {
+
 	projectUser := &model.ProjectUser{
 		ProjectID: projectID,
 		UserID:    userID,
@@ -411,7 +470,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 
 	// Check if already starred
 	if projectUser.IsStarred {
-		return errors.New(types.ErrMsgProjectAlreadyStarred)
+		return nil
 	}
 
 	// Star the project
@@ -453,7 +512,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 
 	// Check if not starred
 	if !projectUser.IsStarred {
-		return errors.New(types.ErrMsgProjectNotStarred)
+		return nil
 	}
 
 	// Unstar the project
@@ -484,7 +543,7 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
 
 	// Check if already archived
 	if project.IsArchived {
-		return errors.New(types.ErrMsgProjectArchived)
+		return nil
 	}
 
 	// Archive the project
@@ -515,7 +574,7 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error 
 
 	// Check if not archived
 	if !project.IsArchived {
-		return errors.New(types.ErrMsgProjectNotArchived)
+		return nil
 	}
 
 	// Unarchive the project
@@ -546,7 +605,10 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 
 	// Check if project is already locked
 	if project.LockedByUserID.Valid {
-		return errors.New(types.ErrMsgProjectAlreadyLocked)
+		if project.LockedByUserID.String == userID {
+			return nil // Already locked by the same user
+		}
+		return errors.New(types.ErrMsgProjectNotLockedByUser)
 	}
 
 	// Lock the project
@@ -577,7 +639,7 @@ func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) e
 
 	// Check if project is locked
 	if !project.LockedByUserID.Valid {
-		return errors.New(types.ErrMsgProjectNotLocked)
+		return nil
 	}
 
 	// Check if project is locked by the requesting user

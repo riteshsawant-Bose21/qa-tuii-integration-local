@@ -263,7 +263,7 @@ func TestGetAllProjects(t *testing.T) {
 			for _, p := range tt.mockProjects {
 				mockPresigner.On("PresignGet",
 					mock.Anything,
-					fmt.Sprintf("projects/%s/%s/%s.zip", tt.params.UserID, p.ID, p.ID),
+					fmt.Sprintf("projects/%s/%s.zip", p.ID, p.ID),
 					time.Minute*5,
 				).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
 			}
@@ -462,7 +462,7 @@ func TestAssignUserToProject(t *testing.T) {
 			userAlreadyAssigned: true,
 			userAssignedErr:     nil,
 			assignErr:           nil,
-			expectedErr:         userAlreadyAssignedMsg,
+			expectedErr:         "",
 		},
 	}
 
@@ -555,7 +555,7 @@ func TestRemoveUserFromProject(t *testing.T) {
 			userAssigned:     false,
 			userAssignedErr:  nil,
 			removeErr:        nil,
-			expectedErr:      userNotAssignedMsg,
+			expectedErr:      "",
 		},
 	}
 

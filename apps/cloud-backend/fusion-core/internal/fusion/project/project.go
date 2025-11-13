@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	projectFilePathFormat  = "projects/%s/%s/%s.zip"
+	projectFilePathFormat  = "projects/%s/%s.zip"
 	errorWithDetailsFormat = "%s: %v"
 )
 
@@ -46,8 +46,8 @@ func (s *Service) validateProjectAndUserExistence(ctx context.Context, projectID
 }
 
 // generateProjectFileURL generates a presigned URL for project file operations
-func (s *Service) generateProjectFileURL(ctx context.Context, userID, projectID string, ttl time.Duration, operation string) (string, error) {
-	key := fmt.Sprintf(projectFilePathFormat, userID, projectID, projectID)
+func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, ttl time.Duration, operation string) (string, error) {
+	key := fmt.Sprintf(projectFilePathFormat, projectID, projectID)
 
 	switch operation {
 	case "get":
@@ -71,7 +71,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectFileCreated {
-		presignURL, err := s.generateProjectFileURL(ctx, project.UserID, id, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, id, time.Minute*15, "put")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -90,7 +90,7 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 
 	// Generate presigned URLs for all projects
 	for _, project := range projects {
-		presignURL, err := s.generateProjectFileURL(ctx, queryParams.UserID, project.ID, time.Minute*5, "get")
+		presignURL, err := s.generateProjectFileURL(ctx, project.ID, time.Minute*5, "get")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", project.ID, err)
 		}
@@ -121,7 +121,7 @@ func (s *Service) UpdateProject(ctx context.Context, id string, project *types.P
 	response := &types.ProjectUpdateResponse{}
 
 	if project.IsProjectFileDirty {
-		presignURL, err := s.generateProjectFileURL(ctx, projectRow.PrimaryOwnerUserID.String, projectRow.ID, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, time.Minute*15, "put")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
@@ -147,8 +147,11 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID str
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
 	}
+
 	if isAssigned {
-		return nil, errors.New(types.ErrMsgUserAlreadyAssigned)
+		return &types.UserAssignmentResponse{
+			Message: "User successfully assigned to the project",
+		}, nil
 	}
 
 	// Assign the user to the project
@@ -174,7 +177,9 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID s
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
 	}
 	if !isAssigned {
-		return nil, errors.New(types.ErrMsgUserNotAssignedToProject)
+		return &types.UserAssignmentResponse{
+			Message: "User successfully removed from the project",
+		}, nil
 	}
 
 	// Remove the user from the project
