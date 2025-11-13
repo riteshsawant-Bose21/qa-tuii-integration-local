@@ -606,20 +606,24 @@ func TestAssignUserToProject(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
-	t.Run("returns conflict when user already assigned", func(t *testing.T) {
+	t.Run("successfully handles user already assigned (idempotent)", func(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := testProjectID
 		userEmail := testUserEmail
 
-		mockSvc.On("AssignUserToProjectByEmail", mock.Anything, projectID, userEmail).Return((*types.UserAssignmentResponse)(nil), errors.New("user is already assigned to the project"))
+		expectedResponse := &types.UserAssignmentResponse{
+			Message: "User successfully assigned to the project",
+		}
+
+		mockSvc.On("AssignUserToProjectByEmail", mock.Anything, projectID, userEmail).Return(expectedResponse, nil)
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+usersPath+userEmail, nil)
 		w := httptest.NewRecorder()
 
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusConflict, w.Code)
+		assert.Equal(t, http.StatusNoContent, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 }
@@ -733,20 +737,20 @@ func TestStarProject(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
-	t.Run("returns conflict when project already starred", func(t *testing.T) {
+	t.Run("successfully handles project already starred (idempotent)", func(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := testProjectID
 		userID := testUserID
 
-		mockSvc.On("StarProject", mock.Anything, projectID, userID).Return(errors.New("project is already starred"))
+		mockSvc.On("StarProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+starPath+userID, nil)
 		w := httptest.NewRecorder()
 
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusConflict, w.Code)
+		assert.Equal(t, http.StatusNoContent, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 
@@ -803,20 +807,20 @@ func TestUnstarProject(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
-	t.Run("returns not found when project not starred", func(t *testing.T) {
+	t.Run("successfully handles project not starred (idempotent)", func(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := testProjectID
 		userID := testUserID
 
-		mockSvc.On("UnstarProject", mock.Anything, projectID, userID).Return(errors.New("project is not starred"))
+		mockSvc.On("UnstarProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+starPath+userID, nil)
 		w := httptest.NewRecorder()
 
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusConflict, w.Code)
+		assert.Equal(t, http.StatusNoContent, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 
@@ -878,7 +882,7 @@ func TestArchiveProject(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
-	t.Run("returns conflict when project already archived", func(t *testing.T) {
+	t.Run("successfully handles project already archived (idempotent)", func(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := testProjectID
@@ -888,14 +892,14 @@ func TestArchiveProject(t *testing.T) {
 		mockSvc.On("ProjectExists", mock.Anything, projectID).Return(true, nil)
 		mockSvc.On("IsUserAssigned", mock.Anything, projectID, userID).Return(true, nil)
 		mockSvc.On("ValidateProjectNotLockedByOther", mock.Anything, projectID, userID).Return(nil)
-		mockSvc.On("ArchiveProject", mock.Anything, projectID).Return(errors.New("project is archived"))
+		mockSvc.On("ArchiveProject", mock.Anything, projectID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
 
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusConflict, w.Code)
+		assert.Equal(t, http.StatusNoContent, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 
@@ -960,7 +964,7 @@ func TestUnarchiveProject(t *testing.T) {
 		mockSvc.AssertExpectations(t)
 	})
 
-	t.Run("returns conflict when project not archived", func(t *testing.T) {
+	t.Run("successfully handles project not archived (idempotent)", func(t *testing.T) {
 		r, mockSvc := setupTest()
 
 		projectID := testProjectID
@@ -969,14 +973,14 @@ func TestUnarchiveProject(t *testing.T) {
 		// Mock the authorization checks
 		mockSvc.On("ProjectExists", mock.Anything, projectID).Return(true, nil)
 		mockSvc.On("IsUserAssigned", mock.Anything, projectID, userID).Return(true, nil)
-		mockSvc.On("UnarchiveProject", mock.Anything, projectID).Return(errors.New("project is not archived"))
+		mockSvc.On("UnarchiveProject", mock.Anything, projectID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
 
 		r.ServeHTTP(w, req)
 
-		assert.Equal(t, http.StatusConflict, w.Code)
+		assert.Equal(t, http.StatusNoContent, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 

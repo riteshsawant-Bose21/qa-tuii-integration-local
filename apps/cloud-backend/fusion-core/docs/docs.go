@@ -390,12 +390,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
-                    "409": {
-                        "description": "Project is already archived",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
-                        }
-                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -446,12 +440,6 @@ const docTemplate = `{
                         "description": "Project not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "409": {
-                        "description": "Project is not archived",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
                         }
                     },
                     "500": {
@@ -506,12 +494,6 @@ const docTemplate = `{
                         "description": "Project or User not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "409": {
-                        "description": "Project is already locked",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
                         }
                     },
                     "500": {
@@ -572,12 +554,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
-                    "409": {
-                        "description": "Project is not locked",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
-                        }
-                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -618,12 +594,6 @@ const docTemplate = `{
                         "description": "Project or User not found, or user not assigned to the project",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "409": {
-                        "description": "Project is already starred",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
                         }
                     },
                     "500": {
@@ -672,12 +642,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
-                    "409": {
-                        "description": "Project is not starred",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
-                        }
-                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -724,12 +688,6 @@ const docTemplate = `{
                         "description": "Project or User not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "409": {
-                        "description": "User is already assigned to the project",
-                        "schema": {
-                            "$ref": "#/definitions/types.ConflictError"
                         }
                     },
                     "500": {
@@ -848,15 +806,6 @@ const docTemplate = `{
                 "currency": {
                     "type": "string",
                     "example": "USD"
-                }
-            }
-        },
-        "types.ConflictError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Conflict"
                 }
             }
         },

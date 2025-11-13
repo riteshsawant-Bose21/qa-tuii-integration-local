@@ -293,7 +293,6 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 // @Param userEmail path string true "User Email"
 // @Success 204 "User successfully assigned to the project"
 // @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 409 {object} types.ConflictError "User is already assigned to the project"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/users/{userEmail} [put]
 func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
@@ -312,10 +311,6 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 		// Check for specific error types
 		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		if errorMsg == types.ErrMsgUserAlreadyAssigned {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
@@ -376,7 +371,6 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Param userId path string true "User ID"
 // @Success 204 "Successfully starred project"
 // @Failure 404 {object} types.NotFoundError "Project or User not found, or user not assigned to the project"
-// @Failure 409 {object} types.ConflictError "Project is already starred"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/star/{userId} [put]
 func (h *ProjectHandler) StarProject(ctx *gin.Context) {
@@ -405,10 +399,6 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == types.ErrMsgProjectAlreadyStarred {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
-			return
-		}
 		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -426,7 +416,6 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 // @Success 204 "Successfully unstarred project"
 // @Failure 401 {object} types.UnauthorizedError "User not assigned to the project"
 // @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 409 {object} types.ConflictError "Project is not starred"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/star/{userId} [delete]
 func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
@@ -455,10 +444,6 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == types.ErrMsgProjectNotStarred {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
-			return
-		}
 		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -477,7 +462,6 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 // @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
 // @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
 // @Failure 404 {object} types.NotFoundError "Project not found"
-// @Failure 409 {object} types.ConflictError "Project is already archived"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/archive [put]
 func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
@@ -540,10 +524,6 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == types.ErrMsgProjectArchived {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
-			return
-		}
 		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -562,7 +542,6 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 // @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
 // @Failure 401 {object} types.UnauthorizedError "Unauthorized to perform this action"
 // @Failure 404 {object} types.NotFoundError "Project not found"
-// @Failure 409 {object} types.ConflictError "Project is not archived"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/archive [delete]
 func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
@@ -614,10 +593,6 @@ func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == types.ErrMsgProjectNotArchived {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
-			return
-		}
 		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -636,7 +611,6 @@ func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 // @Failure 400 {object} types.BadRequestError "Bad request - Invalid parameters"
 // @Failure 401 {object} types.UnauthorizedError "User not assigned to the project"
 // @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 409 {object} types.ConflictError "Project is already locked"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/lock [put]
 func (h *ProjectHandler) LockProject(ctx *gin.Context) {
@@ -670,10 +644,6 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == types.ErrMsgProjectAlreadyLocked {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
-			return
-		}
 		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -693,7 +663,6 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 // @Failure 401 {object} types.UnauthorizedError "User not assigned to the project"
 // @Failure 403 {object} types.ForbiddenError "Project is not locked by this user"
 // @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 409 {object} types.ConflictError "Project is not locked"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/lock [delete]
 func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
@@ -725,10 +694,6 @@ func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
 		}
 		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		if errorMsg == types.ErrMsgProjectNotLocked {
-			ctx.JSON(http.StatusConflict, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		if errorMsg == types.ErrMsgProjectNotLockedByUser {
