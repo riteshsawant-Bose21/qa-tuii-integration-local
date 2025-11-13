@@ -1,23 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show TextInputFormatter;
 
 import 'pb_button.dart';
 
 class PBTextField extends StatefulWidget {
   final String hintText;
   final TextEditingController? controller;
-  final ValueChanged<String?>? onChanged;
+  final ValueChanged<String?>? onSubmitted;
   final double? height;
   final double? width;
   final double borderRadius;
+  final List<TextInputFormatter>? inputFormatters;
 
   const PBTextField({
     super.key,
     required this.hintText,
     this.controller,
-    this.onChanged,
+    this.onSubmitted,
     this.height,
     this.width,
     this.borderRadius = 10,
+    this.inputFormatters,
   });
 
   @override
@@ -64,6 +67,7 @@ class _PBTextFieldState extends State<PBTextField> {
           textAlign: TextAlign.center,
           focusNode: _focusNode,
           style: Theme.of(context).textTheme.labelLarge,
+          inputFormatters: widget.inputFormatters,
           decoration: InputDecoration(
             border: InputBorder.none,
             hintText: widget.hintText,
@@ -71,7 +75,7 @@ class _PBTextFieldState extends State<PBTextField> {
             hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
             contentPadding: const EdgeInsets.all(0),
           ),
-          onChanged: widget.onChanged,
+          onSubmitted: widget.onSubmitted,
         ),
       ),
     );
