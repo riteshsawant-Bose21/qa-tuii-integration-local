@@ -2,16 +2,16 @@ package project
 
 import (
 	"context"
+	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 )
 
 // Service provides methods to interact with the project database
 type Service struct {
 	dbService DatabaseService
-	presigner cloudfs.PresignHandle
+	presigner PresignerService
 }
 
 // DatabaseService defines the interface for database operations related to projects.
@@ -35,8 +35,14 @@ type DatabaseService interface {
 	GetProjectLockInfo(ctx context.Context, projectID string) (isLocked bool, lockedByEmail string, err error)
 }
 
+// PresignerService defines the interface for generating presigned URLs.
+type PresignerService interface {
+	PresignGet(ctx context.Context, objectKey string, ttl time.Duration) (string, error)
+	PresignPut(ctx context.Context, objectKey string, ttl time.Duration) (string, error)
+}
+
 // NewService creates a new project service.
-func NewService(dbService DatabaseService, presigner cloudfs.PresignHandle) *Service {
+func NewService(dbService DatabaseService, presigner PresignerService) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}

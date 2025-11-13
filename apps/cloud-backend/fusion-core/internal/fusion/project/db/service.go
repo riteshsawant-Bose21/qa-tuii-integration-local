@@ -23,8 +23,8 @@ import (
 	ericDecimal "github.com/ericlagergren/decimal"
 )
 
-// Executor can perform SQL queries.
-type DBExecutor interface {
+// ProjectDBExecutor can perform SQL queries.
+type ProjectDBExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
@@ -32,8 +32,8 @@ type DBExecutor interface {
 }
 
 // ContextExecutor can perform SQL queries with context
-type DBContextExecutor interface {
-	DBExecutor
+type ProjectDBContextExecutor interface {
+	ProjectDBExecutor
 
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
@@ -42,12 +42,12 @@ type DBContextExecutor interface {
 
 // Service is a service for managing projects in the database.
 type Service struct {
-	db     DBContextExecutor
+	db     ProjectDBContextExecutor
 	logger *log.Logger
 }
 
 // NewService creates a new database service.
-func NewService(db DBContextExecutor, logger *log.Logger) *Service {
+func NewService(db ProjectDBContextExecutor, logger *log.Logger) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
