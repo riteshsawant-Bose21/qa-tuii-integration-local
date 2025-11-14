@@ -31,7 +31,7 @@ func ValidateProjectCreateRequest(req *types.ProjectCreateRequest) error {
 		return errors.New("request cannot be nil")
 	}
 
-	// Set default project phase to "Proposal" if empty
+	// Set default project phase if empty
 	if req.ProjectPhase == "" {
 		req.ProjectPhase = types.ProjectPhaseProposal
 	}
@@ -41,15 +41,7 @@ func ValidateProjectCreateRequest(req *types.ProjectCreateRequest) error {
 		return formatValidationError(err)
 	}
 
-	// Additional business logic validation
-	if strings.TrimSpace(req.Name) == "" {
-		return errors.New("project name is required and cannot be empty")
-	}
-
-	if strings.TrimSpace(req.UserID) == "" {
-		return errors.New("user ID is required and cannot be empty")
-	}
-
+	// Additional budget validation (check for negative amount)
 	if req.Budget.Amount < 0 {
 		return errors.New("budget amount must be non-negative")
 	}
@@ -63,26 +55,13 @@ func ValidateProjectUpdateRequest(req *types.ProjectUpdateRequest) error {
 		return errors.New("request cannot be nil")
 	}
 
-	// For update requests, most fields are optional, so we only validate non-zero values
-	if req.EnvironmentType != "" {
-		if !isValidEnvironmentType(string(req.EnvironmentType)) {
-			return errors.New("invalid environment_type: must be 'indoor', 'outdoor', or 'hybrid'")
-		}
+	// Add struct tags validation
+	if err := validate.Struct(req); err != nil {
+		return formatValidationError(err)
 	}
 
-	if req.ProjectPhase != "" {
-		if !isValidProjectPhase(string(req.ProjectPhase)) {
-			return errors.New("invalid project_phase: must be 'Proposal', 'Development', or 'Commissioned'")
-		}
-	}
-
-	if req.Budget.Currency != "" {
-		if !isValidCurrency(req.Budget.Currency) {
-			return errors.New("invalid currency: must be a valid 3-letter ISO 4217 currency code")
-		}
-	}
-
-	if req.Budget.Amount < 0 {
+	// Additional budget validation (check for negative amount) - only if budget is provided
+	if req.Budget.Currency != "" && req.Budget.Amount < 0 {
 		return errors.New("budget amount must be non-negative")
 	}
 
@@ -102,7 +81,7 @@ func ValidateGetAllProjectsParams(params *types.GetAllProjectsParams) error {
 
 	// Validate sort_by field
 	if params.SortBy != "" && !isValidProjectSortField(params.SortBy) {
-		return errors.New("invalid sort_by field: must be one of 'created_at', 'updated_at', 'name', 'project_phase'")
+		return errors.New("invalid sort_by field: must be one of 'created_at', 'updated_at'")
 	}
 
 	// Validate sort_order

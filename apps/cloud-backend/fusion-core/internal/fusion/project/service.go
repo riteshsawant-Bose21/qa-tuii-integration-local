@@ -32,7 +32,8 @@ type DatabaseService interface {
 	UnarchiveProject(ctx context.Context, projectID string) error
 	LockProject(ctx context.Context, projectID, userID string) error
 	UnlockProject(ctx context.Context, projectID, userID string) error
-	GetProjectLockInfo(ctx context.Context, projectID string) (isLocked bool, lockedByEmail string, err error)
+	GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error)
+	GetUserEmailByID(ctx context.Context, userID string) (string, error)
 }
 
 // PresignerService defines the interface for generating presigned URLs.
