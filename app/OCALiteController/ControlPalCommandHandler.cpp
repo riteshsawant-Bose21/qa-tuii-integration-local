@@ -186,7 +186,7 @@ void ProcessSidebandCommand(ControllerCmdIntfc& newCmd,
                 uint64_t timeNow;
 
                 gettimeofday(&tv, NULL);
-                timeNow = tv.tv_sec*1000 + tv.tv_usec;
+                timeNow = tv.tv_sec*1000000 + tv.tv_usec;
                 message << "{"
                     << "\"action\": \"performReverseWink\", "
                     << "\"payload\": {"
