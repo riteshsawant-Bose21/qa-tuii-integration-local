@@ -69,6 +69,13 @@ extension SourceSetManager on ProjectManager {
     return projectService!.getSourceSetById(sourceSetId);
   }
 
+  SourceSet? getSourceSetForSource(String sourceId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSourceSetForSource(sourceId);
+  }
+
   // Get all Sources in a SourceSet
   List<Source> getSourcesInSourceSet(String sourceSetId) {
     if (projectService == null) {

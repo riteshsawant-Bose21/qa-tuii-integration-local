@@ -32,6 +32,8 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
+enum ConfigurationMenuMode { processing, presets, gpio, scheduling }
+
 enum SelectedItemType {
   source,
   sourceSet,
@@ -96,6 +98,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ProjectMode currentProjectMode = ProjectMode.systemListingMode;
 
   ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
+  ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
 
@@ -366,6 +369,13 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       changeDeviceTypeIndex(-1);
       setSelectedProductToAdd(null);
       emit(ToolbarModeChanged(mode));
+    }
+  }
+
+  void setConfigurationMenuMode(ConfigurationMenuMode mode) {
+    if (currentConfigurationMenuMode != mode) {
+      currentConfigurationMenuMode = mode;
+      emit(ConfigurationMenuModeChanged(mode));
     }
   }
 
