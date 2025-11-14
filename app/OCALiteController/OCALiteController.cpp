@@ -38,6 +38,7 @@
 #include "ControlPalCommandHandler.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#include "ControlPalSideBandInterface.h"
 
 #define OCA_RUN_TIMEOUT_MSEC    500
 
@@ -63,7 +64,7 @@ bool ocaMain(std::string& customNodeId,
 
     OCA_LOG_INFO("=== OCA Lite Controller with Service Discovery ===");
     // Set log level to show INFO messages (including client connection logs)
-    //::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
+    ::OcfLiteLogSetLogLevel(OCA_LOG_LVL_TRACE);
 
     // Initialize the host interfaces
     bool bSuccess = ::OcfLiteHostInterfaceInitialize();
@@ -138,76 +139,111 @@ bool ocaMain(std::string& customNodeId,
                                 ::OcaLiteCommandHandler::GetInstance().RegisterConnectionLostEventHandler(
                                         static_cast<::OcaLiteCommandHandler::IConnectionLostDelegate*>(connMonitor));
 
-                                while(!terminateFlag)
-                                {
-                                    // Setup connection to the Device
-                                    if (ControlPalSetupConnection(sessionId))
-                                    {
-                                        // Set connected status to true
-                                        connMonitor->SetSetting(static_cast<OcaBoolean>(true));
+                                //TODO: 'Fusion' service discovery
 
-                                        ::GeneralProxy proxy(
-                                                sessionId,
-                                                ocp1Network->GetObjectNumber());
-                                        OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u",
-                                                sessionId, ocp1Network->GetObjectNumber());
+                                // TODO: 'controllerID' should be
+                                // read from Flash config partition
 
-                                        // TODO: 'controllerID' should be
-                                        // read from Flash config partition
-                                        ::OcaLiteString controllerId =
+                                ::OcaLiteString controllerId =
                                             customNodeId.empty() ?
                                             ::OcaLiteString("ctrl1") :
                                             ::OcaLiteString(customNodeId);
 
-                                        // Holds ONo of each zone assigned
-                                        // to the controller
-                                        std::vector<::OcaONo> zoneONos;
+                                // TODO: Should be set at discovery
+                                //std::string fservHost("192.168.0.167");
+                                std::string fservHost("10.1.123.100");
+                                int fservPort = 7950;
 
-                                        FusionProxy fusion_proxy(
-                                                sessionId,
-                                                ocp1Network->GetObjectNumber());
-                                        // Create and setup control objects
-                                        if (ControlPalSetupControls(
-                                                 controllerId,
-                                                 proxy,
-                                                 fusion_proxy,
-                                                 static_cast<void *>(ocaMsgQueue),
-                                                 zoneONos))
-                                        {
-                                            ::OcaBoolean connectStatus(true);
+                                // Create SidebandInterface object
+                                SidebandInterface fusionServerConn(
+                                                           controllerId.GetString(),
+                                                           fservHost,
+                                                           fservPort,
+                                                           static_cast<void *>(ocaMsgQueue));
 
-                                            while (connectStatus  && !terminateFlag)
-                                            {
-                                                // Wait for Events from Device
-                                                ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+                                while(!terminateFlag)
+                                {
+                                  // Establish Fusion server sideband connection
+                                  if (fusionServerConn.connect())
+                                  {
+                                      // Wait for side-band 'identity' request
+                                      while (!fusionServerConn.IsIdentified())
+                                      {
+                                          fusionServerConn.messageHandler();
+                                      }
+                                      std::cout << " =========> IDENTIFIED SUCESSFULLY" << std::endl;
 
-                                                //Check for local UI command
-                                                {
-                                                    ControlPalUICommandHandler(
-                                                                 uiMsgQueue,
-                                                                 zoneONos,
-                                                                 fusion_proxy);
-                                                }
+                                      // Setup AES connection to the Device
+                                      if (ControlPalSetupConnection(sessionId))
+                                      {
+                                          // Set connected status to true
+                                          connMonitor->SetSetting(static_cast<OcaBoolean>(true));
 
-                                                // Check Connection status
-                                                connMonitor->GetSetting(
-                                                                connectStatus);
-                                            }
+                                          ::GeneralProxy proxy(
+                                                  sessionId,
+                                                  ocp1Network->GetObjectNumber());
+                                          OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u",
+                                                  sessionId, ocp1Network->GetObjectNumber());
 
-                                            // Connection lost, teardown all
-                                            // the control objects
-                                            ControlPalTeardownControls(
-                                                                    zoneONos);
-                                        }
-                                        else
-                                        {
-                                            OCA_LOG_ERROR("✗ SetupControls failed");
-                                        }
-                                    }
-                                    else
-                                    {
-                                        OCA_LOG_ERROR("✗ Failed to Setup Connection");
-                                    }
+                                          // Holds ONo of each zone assigned
+                                          // to the controller
+                                          std::vector<::OcaONo> zoneONos;
+
+                                          FusionProxy fusion_proxy(
+                                                  sessionId,
+                                                  ocp1Network->GetObjectNumber());
+
+                                          // Create and setup control objects
+                                          if (ControlPalSetupControls(
+                                                      controllerId,
+                                                      proxy,
+                                                      fusion_proxy,
+                                                      static_cast<void *>(ocaMsgQueue),
+                                                      zoneONos))
+                                          {
+                                              ::OcaBoolean connectStatus(true);
+
+                                              while (connectStatus  && !terminateFlag)
+                                              {
+                                                  // Wait for Events from Device
+                                                  ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+
+                                                  // Check side-band for messages
+                                                  fusionServerConn.messageHandler();
+
+                                                  //Check for local UI command
+                                                  {
+                                                      ControlPalUICommandHandler(
+                                                              uiMsgQueue,
+                                                              zoneONos,
+                                                              fusion_proxy,
+                                                              fusionServerConn);
+                                                  }
+
+                                                  // Check Connection status
+                                                  connMonitor->GetSetting(
+                                                          connectStatus);
+                                              }
+
+                                              // Connection lost, teardown all
+                                              // the control objects
+                                              ControlPalTeardownControls(
+                                                      zoneONos);
+                                          }
+                                          else
+                                          {
+                                              OCA_LOG_ERROR("✗ SetupControls failed");
+                                          }
+                                      }
+                                      else
+                                      {
+                                          OCA_LOG_ERROR("✗ Failed to Setup Connection");
+                                      }
+                                  }
+                                  else
+                                  {
+                                      OCA_LOG_ERROR("✗ Failed Fusion Server Connection (SB)");
+                                  }
                                 }
 
                             }

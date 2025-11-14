@@ -5,7 +5,7 @@
 #include "../../../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #include "../../../HostInterface/CommandInterface/CommandInterface.h"
 
-#define VIEW_GAIN_INCREMENT_STEP 0.5f
+#define VIEW_GAIN_INCREMENT_STEP 1.0f    //0.5f
 
 extern bool terminateFlag; // Defined in ControllerMenu.cpp
 

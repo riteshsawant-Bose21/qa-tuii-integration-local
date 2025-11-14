@@ -4,10 +4,12 @@
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "../common/FusionProxy.h"
+#include "ControlPalSideBandInterface.h"
 
 void ControlPalUICommandHandler(
                       ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
                       std::vector<::OcaONo>& zoneONos,
-                      FusionProxy& fusion_proxy);
+                      FusionProxy& fusion_proxy,
+                      SidebandInterface &fServIntfc);
 
 #endif
