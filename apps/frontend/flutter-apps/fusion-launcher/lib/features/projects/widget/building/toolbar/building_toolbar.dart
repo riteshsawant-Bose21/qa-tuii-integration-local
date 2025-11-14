@@ -215,36 +215,39 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16.0),
-          border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1.0) : null,
-          boxShadow:
-              isSelected
-                  ? <BoxShadow>[
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.15),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                  : null,
-        ),
-        child: AnimatedDefaultTextStyle(
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, label),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOutCubic,
-          style: TextStyle(
-            color: isSelected ? _getDarkerShade(color) : Colors.black54,
-            fontSize: 13.0,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(16.0),
+            border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1.0) : null,
+            boxShadow:
+                isSelected
+                    ? <BoxShadow>[
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.15),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                    : null,
           ),
-          child: Text(label),
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOutCubic,
+            style: TextStyle(
+              color: isSelected ? _getDarkerShade(color) : Colors.black54,
+              fontSize: 13.0,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+            child: FusionAppText(text:label),
+          ),
         ),
       ),
     );
@@ -260,40 +263,43 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }) {
     final Color color = selectedColor ?? Colors.green;
 
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: () {
-          onTap();
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 1.0),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6.0),
-            border: Border.all(
-              color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
-              width: 1,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, tooltip),
+      child: Tooltip(
+        message: tooltip,
+        child: GestureDetector(
+          onTap: () {
+            onTap();
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 1.0),
+            decoration: BoxDecoration(
+              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(
+                color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
+                width: 1,
+              ),
             ),
+            child:
+                icon != null
+                    ? Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Icon(
+                        icon,
+                        size: 18.0,
+                        color: isSelected ? _getDarkerShade(color) : Colors.black54,
+                      ),
+                    )
+                    : Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Image.asset(
+                        assetIcon!,
+                        width: 18.0,
+                        height: 18.0,
+                      ),
+                    ),
           ),
-          child:
-              icon != null
-                  ? Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Icon(
-                      icon,
-                      size: 18.0,
-                      color: isSelected ? _getDarkerShade(color) : Colors.black54,
-                    ),
-                  )
-                  : Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Image.asset(
-                      assetIcon!,
-                      width: 18.0,
-                      height: 18.0,
-                    ),
-                  ),
         ),
       ),
     );
@@ -439,7 +445,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           return <PopupMenuEntry<SourceData>>[
             const PopupMenuItem<SourceData>(
               enabled: false,
-              child: Text(
+              child: FusionAppText(text:
                 'MICROPHONES',
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
               ),
@@ -457,10 +463,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
+                      child: FusionAppText(text:
                         item.name,
                         style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
+                        // overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -470,7 +476,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             const PopupMenuDivider(),
             const PopupMenuItem<SourceData>(
               enabled: false,
-              child: Text(
+              child: FusionAppText(text:
                 'MEDIA SOURCES',
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
               ),
@@ -488,10 +494,10 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
+                      child: FusionAppText(text:
                         item.name,
                         style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
+                        // overflow: TextOverflow.ellipsis,
                       ),
                     ),
                   ],
@@ -551,7 +557,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         return <PopupMenuEntry<DeviceItemModel>>[
           const PopupMenuItem<DeviceItemModel>(
             enabled: false,
-            child: Text(
+            child: FusionAppText(text:
               'RACK OPTIONS',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
             ),
@@ -572,7 +578,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     width: 14,
                   ),
                   const SizedBox(width: 8),
-                  Text('$option Rack'),
+                  FusionAppText(text:'$option Rack'),
                 ],
               ),
             ),

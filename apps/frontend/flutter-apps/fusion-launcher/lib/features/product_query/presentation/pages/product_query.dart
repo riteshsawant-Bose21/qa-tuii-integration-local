@@ -1,4 +1,5 @@
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -101,6 +102,7 @@ class _ProductQueryViewState extends State<ProductQueryView> {
                         child: InkWell(
                           onTap: () => serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product),
                           child: ProductCard(
+                            index: index,
                             product: product,
                             searchQuery: state.searchQuery,
                           ),
@@ -141,51 +143,57 @@ class _ProductQueryViewState extends State<ProductQueryView> {
 /// Product card widget
 /// Updated ProductCard with search term highlighting
 class ProductCard extends StatelessWidget {
+  final int index;
   final ProductQueryModel product;
   final String searchQuery;
 
   const ProductCard({
     super.key,
+    required this.index,
     required this.product,
     this.searchQuery = '',
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          /// Product image
-          FusionImage.asset(
-            product.image.isNotEmpty ? product.image : _getDefaultImage(product.type),
-            width: 58,
-            height: 58,
-            fit: BoxFit.contain,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                /// Product information with highlighting
-                _buildProductInfo(context, product, searchQuery),
-                const SizedBox(height: 10),
-
-                /// Product price
-                FusionCurrencyText(
-                  text: product.price.toString(),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    fontSize: 11,
-                    color: Theme.of(context).colorScheme.greyDark,
-                    fontWeight: FontWeight.w400,
-                  ),
-                ),
-              ],
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, product.name),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            /// Product image
+            FusionImage.asset(
+              product.image.isNotEmpty ? product.image : _getDefaultImage(product.type),
+              width: 58,
+              height: 58,
+              fit: BoxFit.contain,
             ),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  /// Product information with highlighting
+                  _buildProductInfo(context, product, searchQuery),
+                  const SizedBox(height: 10),
+
+                  /// Product price
+                  FusionCurrencyText(
+                    text: product.price.toString(),
+                    accessIdentifier: 'product_price_$index',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      fontSize: 11,
+                      color: Theme.of(context).colorScheme.greyDark,
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -196,13 +204,16 @@ class ProductCard extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         /// Product name with highlighting
-        _buildHighlightedText(
-          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+        SemanticHelper.staticText(
+          testId: SemanticHelper.createTestId(SemanticTypes.text, 'product_name_index_$index'),
+          child: _buildHighlightedText(
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            text: product.name,
+            query: searchQuery,
           ),
-          text: product.name,
-          query: searchQuery,
         ),
 
         const SizedBox(height: 2),
@@ -222,13 +233,16 @@ class ProductCard extends StatelessWidget {
         // ],
 
         /// Product type with highlighting
-        _buildHighlightedText(
-          style: Theme.of(context).textTheme.bodySmall!.copyWith(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
+        SemanticHelper.staticText(
+          testId: SemanticHelper.createTestId(SemanticTypes.text, 'product_type_index_$index'),
+          child: _buildHighlightedText(
+            style: Theme.of(context).textTheme.bodySmall!.copyWith(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+            text: _getProductTypeAndSpecs(product),
+            query: searchQuery,
           ),
-          text: _getProductTypeAndSpecs(product),
-          query: searchQuery,
         ),
       ],
     );

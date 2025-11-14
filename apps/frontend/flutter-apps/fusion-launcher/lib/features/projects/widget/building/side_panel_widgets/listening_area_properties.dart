@@ -92,41 +92,47 @@ class ListeningAreaProperties extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     flex: 7,
-                    child: TextFormField(
-                      controller: listeningAreaController,
-                      maxLength: 24,
-                      decoration: const InputDecoration(
-                        counterText: "",
-                        hintText: 'Area Name',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
+                    child: SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input"),
+                      child: TextFormField(
+                        controller: listeningAreaController,
+                        maxLength: 24,
+                        decoration: const InputDecoration(
+                          counterText: "",
+                          hintText: 'Area Name',
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 14,
+                        ),
+                        onFieldSubmitted: (String v) {
+                          if (v.trim().isNotEmpty) {
+                            final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
+                            viewModel.updateListeningArea(area: updatedLA);
+                          } else {
+                            // Reset to previous value if empty
+                            listeningAreaController.text = selectedListeningArea.name;
+                          }
+                        },
                       ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      onFieldSubmitted: (String v) {
-                        if (v.trim().isNotEmpty) {
-                          final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
-                          viewModel.updateListeningArea(area: updatedLA);
-                        } else {
-                          // Reset to previous value if empty
-                          listeningAreaController.text = selectedListeningArea.name;
-                        }
-                      },
                     ),
                   ),
                   const SizedBox(width: 8),
                   //small delete icon button to delete the selectedListeningArea
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.error,
+                  SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_listening_area"),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.delete,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      onPressed: () {
+                        viewModel.removeListeningArea(areaId: selectedListeningArea.id);
+                      },
                     ),
-                    onPressed: () {
-                      viewModel.removeListeningArea(areaId: selectedListeningArea.id);
-                    },
                   ),
                 ],
               ),
@@ -137,7 +143,7 @@ class ListeningAreaProperties extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
+                  FusionAppText(text:
                     'Properties',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
@@ -264,7 +270,7 @@ class ListeningAreaProperties extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
+                  FusionAppText(text:
                     'Vertices',
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 11,
@@ -315,10 +321,13 @@ class ListeningAreaProperties extends StatelessWidget {
         }
 
         return options.map((String option) {
+          final int index = options.indexOf(option);
+
           return PopupMenuItem<String>(
             value: option,
             child: FusionAppText(
               text: option,
+              semanticId: "${label}_item_index_$index",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
               ),
@@ -395,26 +404,29 @@ class ListeningAreaProperties extends StatelessWidget {
           SizedBox(
             width: 80,
             height: 28,
-            child: TextField(
-              controller: controller,
-              onSubmitted: onSubmit,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
-              ),
-              decoration: InputDecoration(
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                hintText: hintText,
-                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            child: SemanticHelper.formControl(
+              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "${label}_input"),
+              child: TextField(
+                controller: controller,
+                onSubmitted: onSubmit,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
-                fillColor: Theme.of(context).colorScheme.white,
+                decoration: InputDecoration(
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  hintText: hintText,
+                  hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                  ),
+                  fillColor: Theme.of(context).colorScheme.white,
+                ),
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
+                ],
               ),
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*')),
-              ],
             ),
           ),
         ],
@@ -449,83 +461,86 @@ class ListeningAreaProperties extends StatelessWidget {
           SizedBox(
             width: 80,
             height: 28,
-            child: TextFormField(
-              controller: controller,
-              maxLength: 24,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
-              ),
-              decoration: InputDecoration(
-                counterText: "",
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
-                hintText: hintText,
-                hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+            child: SemanticHelper.formControl(
+              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "${label}_input"),
+              child: TextFormField(
+                controller: controller,
+                maxLength: 24,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                  color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
-                fillColor: Theme.of(context).colorScheme.white,
-              ),
+                decoration: InputDecoration(
+                  counterText: "",
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 6, horizontal: 10),
+                  hintText: hintText,
+                  hintStyle: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.5),
+                  ),
+                  fillColor: Theme.of(context).colorScheme.white,
+                ),
 
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
-                LengthLimitingTextInputFormatter(8), // Limit to reasonable length
-              ],
-              validator: (String? value) {
-                if (value == null || value.isEmpty) {
-                  return 'Required';
-                }
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*$')),
+                  LengthLimitingTextInputFormatter(8), // Limit to reasonable length
+                ],
+                validator: (String? value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Required';
+                  }
 
-                final double? parsed = double.tryParse(value);
-                if (parsed == null) {
-                  return 'Invalid decimal';
-                }
+                  final double? parsed = double.tryParse(value);
+                  if (parsed == null) {
+                    return 'Invalid decimal';
+                  }
 
-                if (parsed <= 0) {
-                  return 'Must be > 0';
-                }
+                  if (parsed <= 0) {
+                    return 'Must be > 0';
+                  }
 
-                if (parsed > 1000) {
-                  return 'Too large';
-                }
+                  if (parsed > 1000) {
+                    return 'Too large';
+                  }
 
-                return null;
-              },
-              onFieldSubmitted: (String value) {
-                final double? parsed = double.tryParse(value);
-                if (parsed != null && parsed > 0 && parsed <= 1000) {
-                  onSubmit?.call(value);
-                } else {
-                  // Reset to previous valid value if invalid
-                  controller.text = selectedListeningArea.listeningHeight.toString();
+                  return null;
+                },
+                onFieldSubmitted: (String value) {
+                  final double? parsed = double.tryParse(value);
+                  if (parsed != null && parsed > 0 && parsed <= 1000) {
+                    onSubmit?.call(value);
+                  } else {
+                    // Reset to previous valid value if invalid
+                    controller.text = selectedListeningArea.listeningHeight.toString();
 
-                  // Show error feedback
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        'Please enter a valid decimal value between 0.1 and 1000',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Colors.white,
+                    // Show error feedback
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: FusionAppText(text:
+                          'Please enter a valid decimal value between 0.1 and 1000',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Colors.white,
+                          ),
                         ),
+                        backgroundColor: Theme.of(context).colorScheme.error,
+                        duration: const Duration(seconds: 2),
                       ),
-                      backgroundColor: Theme.of(context).colorScheme.error,
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                }
-              },
-              onChanged: (String value) {
-                // Real-time validation feedback
-                final double? parsed = double.tryParse(value);
-                if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
-                  // Visual feedback for invalid input
-                  controller.selection = TextSelection.fromPosition(
-                    TextPosition(offset: controller.text.length),
-                  );
-                }
-              },
+                    );
+                  }
+                },
+                onChanged: (String value) {
+                  // Real-time validation feedback
+                  final double? parsed = double.tryParse(value);
+                  if (value.isNotEmpty && (parsed == null || parsed <= 0 || parsed > 1000)) {
+                    // Visual feedback for invalid input
+                    controller.selection = TextSelection.fromPosition(
+                      TextPosition(offset: controller.text.length),
+                    );
+                  }
+                },
+              ),
             ),
           ),
         ],
@@ -597,8 +612,8 @@ class _PropertyListWidgetState extends State<PropertyListWidget> {
               onTap: () {
                 setState(() => _showAll = !_showAll);
               },
-              child: Text(
-                _showAll ? "Show Less" : "Show More",
+              child: FusionAppText(
+                text: _showAll ? "Show Less" : "Show More",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 11,
                   color: Theme.of(context).primaryColor,
@@ -637,19 +652,19 @@ class _PropertyRowWidget extends StatelessWidget {
           // Title
           Expanded(
             flex: 1,
-            child: Text(row.title, style: textStyleGrey),
+            child: FusionAppText(text:row.title, style: textStyleGrey),
           ),
 
           Expanded(
             flex: 2,
             child: Row(
               children: <Widget>[
-                Text("X", style: textStyleGrey),
+                FusionAppText(text:"X", style: textStyleGrey),
                 const SizedBox(width: 4),
-                Text(
+                FusionAppText(text:
                   "${row.x}",
                   style: textStyleBlack,
-                  overflow: TextOverflow.ellipsis,
+                  // overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -659,12 +674,12 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                Text("Y", style: textStyleGrey),
+                FusionAppText(text:"Y", style: textStyleGrey),
                 const SizedBox(width: 4),
-                Text(
+                FusionAppText(text:
                   "${row.y}",
                   style: textStyleBlack,
-                  overflow: TextOverflow.ellipsis,
+                  // overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),
@@ -674,12 +689,12 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                Text("Z", style: textStyleGrey),
+                FusionAppText(text:"Z", style: textStyleGrey),
                 const SizedBox(width: 4),
-                Text(
+                FusionAppText(text:
                   "${row.z}",
                   style: textStyleBlack,
-                  overflow: TextOverflow.ellipsis,
+                  // overflow: TextOverflow.ellipsis,
                 ),
               ],
             ),

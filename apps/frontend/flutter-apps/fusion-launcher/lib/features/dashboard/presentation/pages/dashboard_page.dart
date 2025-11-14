@@ -4,7 +4,6 @@ import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/home_tab_content.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../../core/services/user_session_manager.dart';
@@ -52,7 +51,7 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: AppTheme.lightTheme.colorScheme.launcherBgColor1,
           // appbar with title "Fusion Suite"
           appBar: AppBar(
-            title: const Text(
+            title: const FusionAppText(text:
               'FUSION SUITE',
               style: TextStyle(
                 letterSpacing: 2.4,
@@ -64,22 +63,31 @@ class _HomePageState extends State<HomePage> {
             ),
             backgroundColor: Colors.black87,
             actions: <Widget>[
-              IconButton(
-                icon: const Icon(Icons.help, color: Colors.white),
-                tooltip: 'Guide Help',
-                onPressed: () => GuideShowcaseWrapper.askGuideNeededDialog(context),
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.guideHelp),
+                child: IconButton(
+                  icon: const Icon(Icons.help, color: Colors.white),
+                  tooltip: 'Guide Help',
+                  onPressed: () => GuideShowcaseWrapper.askGuideNeededDialog(context),
+                ),
               ),
 
-              IconButton(
-                icon: const Icon(Icons.bug_report, color: Colors.white),
-                tooltip: 'Share Logs',
-                onPressed: () {
-                  handleExportLogs(context);
-                },
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
+                child: IconButton(
+                  icon: const Icon(Icons.bug_report, color: Colors.white),
+                  tooltip: 'Share Logs',
+                  onPressed: () {
+                    handleExportLogs(context);
+                  },
+                ),
               ),
-              IconButton(
-                icon: const Icon(Icons.logout, color: Colors.white),
-                onPressed: () => _logoutDialog(context),
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.logout),
+                child: IconButton(
+                  icon: const Icon(Icons.logout, color: Colors.white),
+                  onPressed: () => _logoutDialog(context),
+                ),
               ),
               const SizedBox(width: 10),
             ],
@@ -136,17 +144,17 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder:
           (BuildContext ctx) => AlertDialog(
-            title: const Text("Logout"),
-            content: const Text("Are you sure you want to logout?"),
+            title: const FusionAppText(text: "Logout"),
+            content: const FusionAppText(text: "Are you sure you want to logout?"),
             actions: <Widget>[
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
+              TextButton(onPressed: () => Navigator.pop(ctx), child: const FusionAppText(text: "Cancel")),
               TextButton(
                 onPressed: () {
                   UserSessionManager.logout();
                   Navigator.pop(ctx);
                   Navigator.pushReplacementNamed(context, '/welcome');
                 },
-                child: const Text("Logout"),
+                child: const FusionAppText(text: "Logout"),
               ),
             ],
           ),
@@ -172,7 +180,7 @@ class _HomePageState extends State<HomePage> {
           child: ListTile(
             iconColor: Colors.black,
             leading: Icon(Icons.delete_sharp, color: Colors.black),
-            title: Text('Delete'),
+            title: FusionAppText(text:'Delete'),
           ),
         ),
       ],

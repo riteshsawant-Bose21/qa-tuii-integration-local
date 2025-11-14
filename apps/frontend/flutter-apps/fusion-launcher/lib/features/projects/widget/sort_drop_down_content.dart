@@ -64,45 +64,48 @@ class SortDropdownContent extends StatelessWidget {
   Widget _buildSortOption({required BuildContext context, required SortOption option, required String title, required String image}) {
     final bool isSelected = selectedSortOption == option;
 
-    return InkWell(
-      onTap: () {
-        print("Sort option tapped: $option, currently selected: $selectedSortOption");
-
-        // Call the callback immediately without any delay
-        onSortOptionChanged(option);
-
-        // Close popup immediately
-        Navigator.of(context).pop();
-      },
-      child: Container(
-        color: isSelected ? Theme.of(context).colorScheme.grey : Colors.transparent,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: <Widget>[
-            Image.asset(
-              image,
-              width: 24,
-              height: 24,
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: FusionAppText(
-                text: title,
-                textAlign: TextAlign.start,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
-                  color: isSelected ? Theme.of(context).primaryColor : null,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "$title ${option.name}"),
+      child: InkWell(
+        onTap: () {
+          print("Sort option tapped: $option, currently selected: $selectedSortOption");
+      
+          // Call the callback immediately without any delay
+          onSortOptionChanged(option);
+      
+          // Close popup immediately
+          Navigator.of(context).pop();
+        },
+        child: Container(
+          color: isSelected ? Theme.of(context).colorScheme.grey : Colors.transparent,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          child: Row(
+            children: <Widget>[
+              Image.asset(
+                image,
+                width: 24,
+                height: 24,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: FusionAppText(
+                  text: title,
+                  textAlign: TextAlign.start,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 11,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600,
+                    color: isSelected ? Theme.of(context).primaryColor : null,
+                  ),
                 ),
               ),
-            ),
-            if (isSelected)
-              Icon(
-                Icons.check,
-                size: 16,
-                color: Theme.of(context).primaryColor,
-              ),
-          ],
+              if (isSelected)
+                Icon(
+                  Icons.check,
+                  size: 16,
+                  color: Theme.of(context).primaryColor,
+                ),
+            ],
+          ),
         ),
       ),
     );

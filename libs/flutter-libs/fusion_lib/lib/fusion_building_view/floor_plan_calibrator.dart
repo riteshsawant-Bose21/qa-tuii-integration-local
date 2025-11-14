@@ -4,7 +4,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/strings/fusion_strings.dart';
 
@@ -82,7 +81,7 @@ class _FloorPlanShell extends StatelessWidget {
           ),
           child: Row(
             children: <Widget>[
-              Text(
+              FusionAppText(text:
                 title,
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   fontWeight: FontWeight.w600,
@@ -90,15 +89,18 @@ class _FloorPlanShell extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              IconButton(
-                tooltip: 'Close',
-                icon: Icon(
-                  Icons.close,
-                  size: 18,
-                  color: Theme.of(context).colorScheme.onSurface,
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                child: IconButton(
+                  tooltip: 'Close',
+                  icon: Icon(
+                    Icons.close,
+                    size: 18,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  splashRadius: 18,
+                  onPressed: onClose,
                 ),
-                splashRadius: 18,
-                onPressed: onClose,
               ),
             ],
           ),
@@ -478,7 +480,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               size: 48,
             ),
             const SizedBox(height: 12),
-            Text(
+            FusionAppText(text:
               'Invalid image',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
@@ -486,7 +488,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               ),
             ),
             const SizedBox(height: 6),
-            Text(
+            FusionAppText(text:
               'Image dimensions: ${widget.floorPlanImage.width}×${widget.floorPlanImage.height}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
@@ -517,6 +519,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               // Left: tool icons
               _ToolbarIcon(
                 icon: Icons.edit,
+                seemanticKey: FusionTestKeys.measureScale,
                 tooltip: 'Measure scale (draw line)',
                 active: _mode == _ToolMode.measure,
                 onTap: () => setState(() => _mode = _ToolMode.measure),
@@ -524,6 +527,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               const SizedBox(width: 8),
               _ToolbarIcon(
                 icon: Icons.crop,
+                seemanticKey: FusionTestKeys.cropImage,
                 tooltip: 'Crop',
                 active: _mode == _ToolMode.crop,
                 onTap: () => setState(() => _mode = _ToolMode.crop),
@@ -531,6 +535,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               const SizedBox(width: 8),
               _ToolbarIcon(
                 icon: Icons.center_focus_strong,
+                seemanticKey: FusionTestKeys.fitToScreen,
                 tooltip: 'Fit to screen',
                 onTap: _fitToScreen,
               ),
@@ -542,7 +547,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               // ),
               const Spacer(),
               // Right: distance + units controls
-              Text(
+              FusionAppText(text:
                 'Distance',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -551,46 +556,49 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               const SizedBox(width: 8),
               SizedBox(
                 width: 96,
-                child: TextField(
-                  controller: _distanceController,
-                  textAlign: TextAlign.right,
-                  keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
+                child: SemanticHelper.formControl(
+                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.calibrationDistance),
+                  child: TextField(
+                    controller: _distanceController,
+                    textAlign: TextAlign.right,
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    decoration: InputDecoration(
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                      hintText: '1.00',
+                      hintStyle: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(6),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    onChanged: (value) {
+                      setState(() {});
+                    },
                   ),
-                  decoration: InputDecoration(
-                    isDense: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                    hintText: '1.00',
-                    hintStyle: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5),
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(6),
-                      borderSide: BorderSide(
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                    ),
-                  ),
-                  onChanged: (value) {
-                    setState(() {});
-                  },
                 ),
               ),
               const SizedBox(width: 12),
-              Text(
+              FusionAppText(text:
                 'Units',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
@@ -601,6 +609,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 width: 140,
                 child: FusionDropdownButtonFormField(
                   value: '${_selectedUnit.displayName} (${_selectedUnit.symbol})',
+                  semanticKey: FusionTestKeys.calibrationUnit,
                   options: MeasurementUnit.values.map((u) => '${u.displayName} (${u.symbol})').toList(),
                   isDense: true,
                   decoration: InputDecoration(
@@ -688,7 +697,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   },
                   child: Center(
                     child: SemanticHelper.container(
-                      testId: SemanticHelper.createTestId(SemanticTypes.container, "Floor Plan Calibration"),
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.floorCalibrationCanvas),
                       child: CustomPaint(
                         key: _customPaintKey,
                         painter: FloorPlanCalibrationPainter(
@@ -761,7 +770,7 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                   width: 120,
                   height: 36,
                   onTap: () {
-                    log("${_startPointNormalized}   ${_endPointNormalized} && ${_distanceController.text.trim().isNotEmpty}");
+                    log("$_startPointNormalized   $_endPointNormalized && ${_distanceController.text.trim().isNotEmpty}");
                     if (_startPointNormalized != null && _endPointNormalized != null && _distanceController.text.trim().isNotEmpty) {
                       _completeCalibration();
                     }
@@ -779,37 +788,42 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
 class _ToolbarIcon extends StatelessWidget {
   final IconData icon;
   final String tooltip;
+  final String seemanticKey;
   final VoidCallback? onTap;
   final bool active;
 
   const _ToolbarIcon({
     required this.icon,
     required this.tooltip,
+    required this.seemanticKey,
     this.onTap,
     this.active = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkResponse(
-        onTap: onTap,
-        radius: 22,
-        child: Container(
-          width: 28,
-          height: 28,
-          decoration: BoxDecoration(
-            color: active ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.surface,
-            border: Border.all(
-              color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, seemanticKey),
+      child: Tooltip(
+        message: tooltip,
+        child: InkResponse(
+          onTap: onTap,
+          radius: 22,
+          child: Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              color: active ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.surface,
+              border: Border.all(
+                color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.4),
+              ),
+              borderRadius: BorderRadius.circular(6),
             ),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: active ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
+            child: Icon(
+              icon,
+              size: 16,
+              color: active ? Theme.of(context).colorScheme.surface : Theme.of(context).colorScheme.onSurface,
+            ),
           ),
         ),
       ),

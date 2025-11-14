@@ -17,3 +17,4 @@ export 'project_manger/fusion_project_manager.dart';
 export 'service/fusion_services.dart';
 export 'fusion_widgets/guide/pages/guide_showcase_wrapper.dart';
 export 'fusion_widgets/guide/controller/guide_showcase_controller.dart';
+export 'constants/fusion_constants.dart';

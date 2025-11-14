@@ -204,12 +204,15 @@ class _BuildingPlanState extends State<BuildingPlan> {
               crossAxisAlignment: CrossAxisAlignment.center,
               children: <Widget>[
                 FusionAppText(text: "FLOORS", style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
-                GestureDetector(
-                  onTap: _showAddFloorDropdown,
-                  child: Icon(
-                    Icons.add_sharp,
-                    size: 14,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.addFloorPlusButton),
+                  child: GestureDetector(
+                    onTap: _showAddFloorDropdown,
+                    child: Icon(
+                      Icons.add_sharp,
+                      size: 14,
+                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    ),
                   ),
                 ),
               ],
@@ -311,43 +314,46 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                       Expanded(
                                         child:
                                             isEditing
-                                                ? TextField(
-                                                  controller: _editControllers[index],
-                                                  focusNode: _editFocusNodes[index],
-                                                  maxLength: 24,
-                                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w600,
-                                                    color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                                  ),
-                                                  decoration: InputDecoration(
-                                                    counterText: "",
-                                                    border: InputBorder.none,
-                                                    contentPadding: EdgeInsets.zero,
-                                                    isDense: true,
-                                                    enabledBorder:
-                                                        _errorMessage != null
-                                                            ? const UnderlineInputBorder(
-                                                              borderSide: BorderSide(color: Colors.red),
-                                                            )
-                                                            : null,
-                                                    focusedBorder:
-                                                        _errorMessage != null
-                                                            ? const UnderlineInputBorder(
-                                                              borderSide: BorderSide(color: Colors.red),
-                                                            )
-                                                            : null,
-                                                  ),
-                                                  onChanged: (_) {
-                                                    if (_errorMessage != null) {
-                                                      setState(() {
-                                                        _errorMessage = null;
-                                                      });
-                                                    }
-                                                  },
-                                                  onSubmitted: (_) => _saveFloorName(index),
-                                                  onTapOutside: (_) => _saveFloorName(index),
-                                                )
+                                                ? SemanticHelper.formControl(
+                                                    testId: SemanticHelper.createTestId(SemanticTypes.formControl, FusionTestKeys.floorNameEditInput),
+                                                    child: TextField(
+                                                      controller: _editControllers[index],
+                                                      focusNode: _editFocusNodes[index],
+                                                      maxLength: 24,
+                                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w600,
+                                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                      ),
+                                                      decoration: InputDecoration(
+                                                        counterText: "",
+                                                        border: InputBorder.none,
+                                                        contentPadding: EdgeInsets.zero,
+                                                        isDense: true,
+                                                        enabledBorder:
+                                                            _errorMessage != null
+                                                                ? const UnderlineInputBorder(
+                                                                  borderSide: BorderSide(color: Colors.red),
+                                                                )
+                                                                : null,
+                                                        focusedBorder:
+                                                            _errorMessage != null
+                                                                ? const UnderlineInputBorder(
+                                                                  borderSide: BorderSide(color: Colors.red),
+                                                                )
+                                                                : null,
+                                                      ),
+                                                      onChanged: (_) {
+                                                        if (_errorMessage != null) {
+                                                          setState(() {
+                                                            _errorMessage = null;
+                                                          });
+                                                        }
+                                                      },
+                                                      onSubmitted: (_) => _saveFloorName(index),
+                                                      onTapOutside: (_) => _saveFloorName(index),
+                                                    ),
+                                                  )
                                                 : FusionAppText(
                                                   text: floor.name,
                                                   maxLine: 2,
@@ -362,62 +368,74 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                       // Edit icon and delete button for selected floor
                                       if (isSelected) ...<Widget>[
                                         (isEditing)
-                                            ? IconButton(
-                                              icon: Icon(
-                                                Icons.check,
-                                                size: 16,
-                                                color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                              ),
-                                              onPressed: () async {
-                                                // Prevent multiple rapid taps
-                                                if (_editingFloorIndex != index) return;
-
-                                                _saveFloorName(index);
-                                              },
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(
-                                                minWidth: 24,
-                                                minHeight: 24,
-                                              ),
-                                            )
+                                            ? SemanticHelper.button(
+                                                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.floorNameEditSaveCheckButton),
+                                                child: IconButton(
+                                                  icon: Icon(
+                                                    Icons.check,
+                                                    size: 16,
+                                                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                  ),
+                                                  onPressed: () async {
+                                                    // Prevent multiple rapid taps
+                                                    if (_editingFloorIndex != index) return;
+                                                
+                                                    _saveFloorName(index);
+                                                  },
+                                                  padding: EdgeInsets.zero,
+                                                  constraints: const BoxConstraints(
+                                                    minWidth: 24,
+                                                    minHeight: 24,
+                                                  ),
+                                                ),
+                                              )
                                             : Container(),
                                         (!isEditing)
-                                            ? IconButton(
-                                              icon: Icon(
-                                                Icons.edit,
-                                                size: 16,
-                                                color: Theme.of(context).colorScheme.fusionTextViewColor,
-                                              ),
-                                              onPressed: () {
-                                                // Prevent starting edit if already editing
-                                                if (_editingFloorIndex != null) return;
-
-                                                _startEditingFloor(index, floor.name);
-                                              },
-                                              padding: EdgeInsets.zero,
-                                              constraints: const BoxConstraints(
-                                                minWidth: 24,
-                                                minHeight: 24,
-                                              ),
-                                            )
+                                            ? SemanticHelper.button(
+                                                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.floorNameEditButton),
+                                                child: IconButton(
+                                                  icon: Icon(
+                                                    Icons.edit,
+                                                    size: 16,
+                                                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                  ),
+                                                  onPressed: () {
+                                                    // Prevent starting edit if already editing
+                                                    if (_editingFloorIndex != null) return;
+                                                
+                                                    _startEditingFloor(index, floor.name);
+                                                  },
+                                                  padding: EdgeInsets.zero,
+                                                  constraints: const BoxConstraints(
+                                                    minWidth: 24,
+                                                    minHeight: 24,
+                                                  ),
+                                                ),
+                                              )
                                             : Container(),
                                         // Only show delete if there's more than one floor and not editing
                                         if (floors.length > 1 && !isEditing)
-                                          GestureDetector(
-                                            onTap: () => _showDeleteConfirmDialog(index),
-                                            child: Icon(
-                                              Icons.delete_outline,
-                                              size: 16,
-                                              color: Theme.of(context).colorScheme.error,
+                                          SemanticHelper.button(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.deleteFloorButton),
+                                            child: GestureDetector(
+                                              onTap: () => _showDeleteConfirmDialog(index),
+                                              child: Icon(
+                                                Icons.delete_outline,
+                                                size: 16,
+                                                color: Theme.of(context).colorScheme.error,
+                                              ),
                                             ),
                                           ),
                                         if (floors.length == 1 && !isEditing)
-                                          GestureDetector(
-                                            onTap: () => _showRestConfirmDialog(index),
-                                            child: Icon(
-                                              Icons.delete_outline,
-                                              size: 16,
-                                              color: Theme.of(context).colorScheme.error,
+                                          SemanticHelper.button(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.deleteFloorButton),
+                                            child: GestureDetector(
+                                              onTap: () => _showRestConfirmDialog(index),
+                                              child: Icon(
+                                                Icons.delete_outline,
+                                                size: 16,
+                                                color: Theme.of(context).colorScheme.error,
+                                              ),
                                             ),
                                           ),
                                       ],
@@ -621,52 +639,55 @@ class _BuildingPlanState extends State<BuildingPlan> {
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _floorNameController,
-                      focusNode: _floorNameFocusNode,
-                      maxLength: 24,
-                      autofocus: true,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
-                        fontSize: 12,
-                      ),
-                      decoration: InputDecoration(
-                        counterText: "",
-                        hintText: 'Enter floor name',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.grey,
+                    SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.floorName),
+                      child: TextField(
+                        controller: _floorNameController,
+                        focusNode: _floorNameFocusNode,
+                        maxLength: 24,
+                        autofocus: true,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.fusionTextViewColor,
                           fontSize: 12,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
+                        decoration: InputDecoration(
+                          counterText: "",
+                          hintText: 'Enter floor name',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.grey,
+                            fontSize: 12,
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                          isDense: true,
                         ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-                        isDense: true,
+                        onChanged: (_) {
+                          if (_errorMessage != null) {
+                            setMenuState(() {
+                              _errorMessage = null;
+                            });
+                          }
+                        },
+                        onSubmitted: (_) {
+                          _addFloor();
+                          if (_errorMessage == null) {
+                            Navigator.of(context).pop();
+                          } else {
+                            setMenuState(() {});
+                          }
+                        },
                       ),
-                      onChanged: (_) {
-                        if (_errorMessage != null) {
-                          setMenuState(() {
-                            _errorMessage = null;
-                          });
-                        }
-                      },
-                      onSubmitted: (_) {
-                        _addFloor();
-                        if (_errorMessage == null) {
-                          Navigator.of(context).pop();
-                        } else {
-                          setMenuState(() {});
-                        }
-                      },
                     ),
                     if (_errorMessage != null) ...<Widget>[
                       const SizedBox(height: 4),

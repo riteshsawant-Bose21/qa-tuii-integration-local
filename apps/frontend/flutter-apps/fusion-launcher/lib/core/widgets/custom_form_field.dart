@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class CustomFormField extends StatelessWidget {
   final String label;
@@ -19,8 +20,8 @@ class CustomFormField extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          label,
+        FusionAppText(
+          text: label,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w400,

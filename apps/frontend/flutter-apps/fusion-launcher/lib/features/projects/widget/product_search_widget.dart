@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/projects/widget/sort_drop_down_content.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_utils/app_enums.dart';
 
 import 'filter_drop_down_content.dart';
 
@@ -53,23 +52,29 @@ class ProductSearchWidget extends StatelessWidget {
             child: Row(
               children: <Widget>[
                 Expanded(
-                  child: FusionTextField(
-                    controller: searchController,
-                    hintText: 'Search by name, series or type...',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
-                    onChanged: (String value) {
-                      /// If search is cleared, call onClearSearch to reset filters
-                      value.isEmpty ? onClearSearch?.call() : null;
-                    },
-                    suffixIcon:
-                        searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
-                              onPressed: onClearSearch,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            )
-                            : null,
+                  child: SemanticHelper.formControl(
+                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, 'product_search_field'),
+                    child: FusionTextField(
+                      controller: searchController,
+                      hintText: 'Search by name, series or type...',
+                      prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
+                      onChanged: (String value) {
+                        /// If search is cleared, call onClearSearch to reset filters
+                        value.isEmpty ? onClearSearch?.call() : null;
+                      },
+                      suffixIcon:
+                          searchController.text.isNotEmpty
+                              ? SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(SemanticTypes.button, 'product_query_search_clear'),
+                                child: IconButton(
+                                  icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
+                                  onPressed: onClearSearch,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              )
+                              : null,
+                    ),
                   ),
                 ),
 
@@ -141,19 +146,22 @@ class ProductSearchWidget extends StatelessWidget {
               child: dropdownBuilder(context),
             ),
           ],
-      child: Container(
-        padding: const EdgeInsets.all(4),
-        decoration:
-            hasActiveFilters
-                ? BoxDecoration(
-                  color: Theme.of(context).primaryColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                )
-                : null,
-        child: Image.asset(
-          image,
-          height: 16,
-          width: 16,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, tooltip),
+        child: Container(
+          padding: const EdgeInsets.all(4),
+          decoration:
+              hasActiveFilters
+                  ? BoxDecoration(
+                    color: Theme.of(context).primaryColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  )
+                  : null,
+          child: Image.asset(
+            image,
+            height: 16,
+            width: 16,
+          ),
         ),
       ),
     );

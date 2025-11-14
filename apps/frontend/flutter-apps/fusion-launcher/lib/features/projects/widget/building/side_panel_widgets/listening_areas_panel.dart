@@ -143,10 +143,14 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     child: AnimatedRotation(
                       duration: const Duration(milliseconds: 200),
                       turns: isExpanded ? 0.25 : 0.0,
-                      child: Icon(
-                        Icons.keyboard_arrow_right,
-                        size: 16,
-                        color: Colors.grey[600],
+                      child: SemanticHelper.toggle(
+                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse"),
+                        value: isExpanded,
+                        child: Icon(
+                          Icons.keyboard_arrow_right,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
                   ),
@@ -184,7 +188,21 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
           firstChild: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (speakers.isNotEmpty) ...speakers.map((Speaker speaker) => _buildSpeakerItem(speaker)) else _buildNoSpeakersMessage(),
+              if (speakers.isNotEmpty) ...<Widget>[
+                ...speakers.map(
+                  (Speaker speaker) {
+                    final int index = speakers.indexOf(speaker);
+                    return SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
+                      child: _buildSpeakerItem(speaker),
+                    );
+                  },
+                ),
+              ] else
+                SemanticHelper.staticText(
+                  testId: SemanticHelper.createTestId(SemanticTypes.text, "no_speakers_message"),
+                  child: _buildNoSpeakersMessage(),
+                ),
             ],
           ),
           secondChild: const SizedBox.shrink(),

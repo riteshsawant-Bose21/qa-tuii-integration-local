@@ -42,54 +42,60 @@ class FloorProperties extends StatelessWidget {
                 children: <Widget>[
                   Expanded(
                     flex: 7,
-                    child: TextFormField(
-                      controller: floorNameController,
-                      maxLength: 24,
-                      decoration: const InputDecoration(
-                        counterText: '',
-                        hintText: 'Floor Name',
-                        border: InputBorder.none,
+                    child: SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "floor_name_input"),
+                      child: TextFormField(
+                        controller: floorNameController,
+                        maxLength: 24,
+                        decoration: const InputDecoration(
+                          counterText: '',
+                          hintText: 'Floor Name',
+                          border: InputBorder.none,
+                        ),
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                        ),
+                        onFieldSubmitted: (String v) {
+                          // Validate that the name is not empty or just whitespace
+                          final String trimmedName = v.trim();
+                          if (trimmedName.isNotEmpty) {
+                            final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
+                            viewModel.updateFloor(floor: updated);
+                          } else {
+                            // Reset to previous name if empty
+                            floorNameController.text = selectedFloor.name;
+                            // Show a snackbar to inform user
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Floor name cannot be empty'),
+                                duration: Duration(seconds: 2),
+                              ),
+                            );
+                          }
+                        },
                       ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                      ),
-                      onFieldSubmitted: (String v) {
-                        // Validate that the name is not empty or just whitespace
-                        final String trimmedName = v.trim();
-                        if (trimmedName.isNotEmpty) {
-                          final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
-                          viewModel.updateFloor(floor: updated);
-                        } else {
-                          // Reset to previous name if empty
-                          floorNameController.text = selectedFloor.name;
-                          // Show a snackbar to inform user
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Floor name cannot be empty'),
-                              duration: Duration(seconds: 2),
-                            ),
-                          );
-                        }
-                      },
                     ),
                   ),
 
                   Expanded(
                     flex: 3,
-                    child: IconButton(
-                      icon: const Icon(
-                        Icons.delete,
-                        size: 15,
-                      ),
-                      disabledColor: Theme.of(context).colorScheme.grey,
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor"),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.delete,
+                          size: 15,
+                        ),
+                        disabledColor: Theme.of(context).colorScheme.grey,
 
-                      onPressed:
-                          viewModel.floors.length > 1
-                              ? () {
-                                viewModel.removeFloor(floorId: selectedFloor.id);
-                              }
-                              : null,
+                        onPressed:
+                            viewModel.floors.length > 1
+                                ? () {
+                                  viewModel.removeFloor(floorId: selectedFloor.id);
+                                }
+                                : null,
+                      ),
                     ),
                   ),
                 ],
@@ -144,10 +150,13 @@ class FloorProperties extends StatelessWidget {
         }
 
         return options.map((String option) {
+          final int index = options.indexOf(option);
+
           return PopupMenuItem<String>(
             value: option,
             child: FusionAppText(
               text: option,
+              semanticId: "${label}_option_$index",
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
               ),

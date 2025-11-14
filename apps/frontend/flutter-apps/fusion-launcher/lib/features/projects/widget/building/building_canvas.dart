@@ -12,11 +12,6 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';
@@ -419,7 +414,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: <Widget>[
-                                        Text(
+                                        FusionAppText(text:
                                           'Select listening areas for ${serviceLocator<ProjectViewModel>().getCurrentSelectionZoneName()}',
                                           style: TextStyle(
                                             fontSize: 14,
@@ -693,7 +688,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,
-                semanticsId: "Upload Floor-plan",
+                semanticsId: FusionTestKeys.uploadFloorPlan,
                 label: "Upload Floor-plan",
                 textStyle: Theme.of(context).textTheme.titleSmall,
                 onTap: () {
@@ -739,14 +734,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           color: Theme.of(context).colorScheme.fusionTextViewColor,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        icon: Icon(
-                          Icons.close,
-                          color: Theme.of(context).colorScheme.greyDark,
-                          size: 20,
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                        child: IconButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: Theme.of(context).colorScheme.greyDark,
+                            size: 20,
+                          ),
+                          splashRadius: 16,
                         ),
-                        splashRadius: 16,
                       ),
                     ],
                   ),
@@ -781,14 +779,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   const SizedBox(height: 16),
 
                   Row(
-                    children:
-                        plans
-                            .map(
-                              (String planPath) => Expanded(
-                                child: _buildSamplePlanCard(planPath),
-                              ),
-                            )
-                            .toList(),
+                    children: List<Widget>.generate(
+                      plans.length,
+                      (int index) {
+                        final String planPath = plans[index];
+                        return Expanded(
+                          child: _buildSamplePlanCard(index, planPath),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -873,43 +872,46 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     );
   }
 
-  Widget _buildSamplePlanCard(String planPath) {
+  Widget _buildSamplePlanCard(int index, String planPath) {
     final String title = planPath.split('/').last.split('.').first.replaceAll('_', ' ').toUpperCase();
 
-    return Container(
-      height: 120,
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.dividerColor,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'floor_plan_sample_${index + 1}'),
+      child: Container(
+        height: 120,
+        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.dividerColor,
+          ),
         ),
-      ),
-      child: GestureDetector(
-        onTap: () => _selectAssetFloorPlan(planPath),
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: _buildFloorPlanImage(planPath),
-            ),
-            const SizedBox(
-              height: 8,
-            ),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.black,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+        child: GestureDetector(
+          onTap: () => _selectAssetFloorPlan(planPath),
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: _buildFloorPlanImage(planPath),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(
-              height: 8,
-            ),
-          ],
+              const SizedBox(
+                height: 8,
+              ),
+              FusionAppText(text:
+                title,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+                maxLine: 1,
+                // overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(
+                height: 8,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1008,7 +1010,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error importing floor plan: ${e.toString()}'),
+          content: FusionAppText(text:'Error importing floor plan: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1138,7 +1140,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Error during calibration: $e'),
+                  child: FusionAppText(text:'Error during calibration: $e'),
                 ),
               ],
             ),

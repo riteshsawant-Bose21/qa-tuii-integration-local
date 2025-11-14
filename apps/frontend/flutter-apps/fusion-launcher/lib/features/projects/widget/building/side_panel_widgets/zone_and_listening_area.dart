@@ -132,7 +132,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 minimumSize: const Size(0, 32),
               ),
-              child: const Text(
+              child: const FusionAppText(text:
                 '+ Add Zone',
                 style: TextStyle(
                   fontSize: 11,
@@ -160,11 +160,16 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           const SizedBox(height: 3),
-          ...zones.map(
-            (Zone zone) => Container(
-              child: _buildZoneCard(zone),
-            ),
-          ),
+          ...zones.map((Zone zone) {
+            final int index = zones.indexOf(zone);
+
+            return SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_card_$index"),
+              child: Container(
+                child: _buildZoneCard(zone),
+              ),
+            );
+          }),
           const SizedBox(height: 8),
         ],
       ),
@@ -285,10 +290,14 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     child: AnimatedRotation(
                       duration: const Duration(milliseconds: 200),
                       turns: isCollapsed ? 0.0 : 0.25,
-                      child: Icon(
-                        Icons.keyboard_arrow_right,
-                        size: 16,
-                        color: Colors.grey[600],
+                      child: SemanticHelper.toggle(
+                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "zone_expand_collapse"),
+                        value: isCollapsed,
+                        child: Icon(
+                          Icons.keyboard_arrow_right,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
                   ),
@@ -341,7 +350,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                       color: Colors.green,
                                     ),
                                     SizedBox(width: 8),
-                                    Text('Add Subzone'),
+                                    FusionAppText(text:'Add Subzone'),
                                   ],
                                 ),
                               ),
@@ -357,7 +366,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                     children: <Widget>[
                                       Icon(Icons.add, size: 16, color: Colors.black54),
                                       SizedBox(width: 8),
-                                      Text('Select Listening Areas'),
+                                      FusionAppText(text:'Select Listening Areas'),
                                     ],
                                   ),
                                 ),
@@ -372,7 +381,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   children: <Widget>[
                                     Icon(Icons.delete_outline, size: 16, color: Colors.red),
                                     SizedBox(width: 8),
-                                    Text('Delete Zone', style: TextStyle(color: Colors.red)),
+                                    FusionAppText(text:'Delete Zone', style: TextStyle(color: Colors.red)),
                                   ],
                                 ),
                               ),
@@ -391,16 +400,19 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   }
 
   Widget _buildZoneIndicator(Zone zone) {
-    return ColorSelector(
-      enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
-      selectedColor: hexToColor(zone.zoneColor),
-      availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
-      onColorChanged: (Color color) {
-        serviceLocator<ProjectViewModel>().updateZone(zone: zone.copyWith(zoneColor: colorToHex(color)));
-      },
-      width: 18,
-      height: 18,
-      borderRadius: 4,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_color_selector"),
+      child: ColorSelector(
+        enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+        selectedColor: hexToColor(zone.zoneColor),
+        availableColors: Zone.zoneColors.map((String color) => hexToColor(color)).toList(),
+        onColorChanged: (Color color) {
+          serviceLocator<ProjectViewModel>().updateZone(zone: zone.copyWith(zoneColor: colorToHex(color)));
+        },
+        width: 18,
+        height: 18,
+        borderRadius: 4,
+      ),
     );
     // return Container(
     //   width: 4,
@@ -454,41 +466,44 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return Container(
       key: ValueKey<String>(zone.id),
       constraints: const BoxConstraints(),
-      child: TextFormField(
-        controller: controller,
-        maxLength: 24,
-        enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
-        decoration: const InputDecoration(
-          counterText: "",
-          hintText: 'Zone Name',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
+      child: SemanticHelper.formControl(
+        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "zone_name"),
+        child: TextFormField(
+          controller: controller,
+          maxLength: 24,
+          enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+          decoration: const InputDecoration(
+            counterText: "",
+            hintText: 'Zone Name',
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            fontSize: 11,
+          ),
+          scrollPadding: EdgeInsets.zero,
+          maxLines: 1,
+          onTapOutside: (PointerDownEvent event) {
+            FocusManager.instance.primaryFocus?.unfocus();
+            saveValue();
+          },
+          onFieldSubmitted: (String v) {
+            final String trimmedValue = v.trim();
+            if (trimmedValue.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: FusionAppText(text:'Zone name cannot be empty'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              controller.text = zone.name; // Revert to original name
+              return;
+            }
+            saveValue();
+          },
         ),
-        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          fontWeight: FontWeight.w600,
-          fontSize: 11,
-        ),
-        scrollPadding: EdgeInsets.zero,
-        maxLines: 1,
-        onTapOutside: (PointerDownEvent event) {
-          FocusManager.instance.primaryFocus?.unfocus();
-          saveValue();
-        },
-        onFieldSubmitted: (String v) {
-          final String trimmedValue = v.trim();
-          if (trimmedValue.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Zone name cannot be empty'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-            controller.text = zone.name; // Revert to original name
-            return;
-          }
-          saveValue();
-        },
       ),
     );
   }
@@ -509,41 +524,44 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     return Container(
       key: ValueKey<String>(subZone.id),
       constraints: const BoxConstraints(),
-      child: TextFormField(
-        controller: controller,
-        maxLength: 24,
-        enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
-        decoration: const InputDecoration(
-          counterText: "",
-          hintText: 'SubZone Name',
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.zero,
-          isDense: true,
+      child: SemanticHelper.formControl(
+        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "subzone_name"),
+        child: TextFormField(
+          controller: controller,
+          maxLength: 24,
+          enabled: serviceLocator<ProjectViewModel>().currentSelectedZoneId == null,
+          decoration: const InputDecoration(
+            counterText: "",
+            hintText: 'SubZone Name',
+            border: InputBorder.none,
+            contentPadding: EdgeInsets.zero,
+            isDense: true,
+          ),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+          ),
+          scrollPadding: EdgeInsets.zero,
+          maxLines: 1,
+          onTapOutside: (PointerDownEvent event) {
+            FocusManager.instance.primaryFocus?.unfocus();
+            saveValue();
+          },
+          onFieldSubmitted: (String v) {
+            final String trimmedValue = v.trim();
+            if (trimmedValue.isEmpty) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: FusionAppText(text:'SubZone name cannot be empty'),
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              controller.text = subZone.name; // Revert to original name
+              return;
+            }
+            saveValue();
+          },
         ),
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          fontSize: 11,
-          fontWeight: FontWeight.w500,
-        ),
-        scrollPadding: EdgeInsets.zero,
-        maxLines: 1,
-        onTapOutside: (PointerDownEvent event) {
-          FocusManager.instance.primaryFocus?.unfocus();
-          saveValue();
-        },
-        onFieldSubmitted: (String v) {
-          final String trimmedValue = v.trim();
-          if (trimmedValue.isEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('SubZone name cannot be empty'),
-                duration: Duration(seconds: 2),
-              ),
-            );
-            controller.text = subZone.name; // Revert to original name
-            return;
-          }
-          saveValue();
-        },
       ),
     );
   }
@@ -744,7 +762,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   children: <Widget>[
                                     Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
                                     SizedBox(width: 8),
-                                    Text('Remove from Subzone', style: TextStyle(color: Colors.red)),
+                                    FusionAppText(text:'Remove from Subzone', style: TextStyle(color: Colors.red)),
                                   ],
                                 ),
                               ),
@@ -803,7 +821,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     height: 14,
                   ),
                   const SizedBox(width: 6),
-                  Text(
+                  FusionAppText(text:
                     speaker.name,
                     style: const TextStyle(
                       fontSize: 11,
@@ -896,7 +914,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     //                 children: <Widget>[
                     //                   Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
                     //                   SizedBox(width: 6),
-                    //                   Text('Remove from Circuit', style: TextStyle(color: Colors.red)),
+                    //                   FusionAppText(text:'Remove from Circuit', style: TextStyle(color: Colors.red)),
                     //                 ],
                     //               ),
                     //             ),
@@ -942,7 +960,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     height: 14,
                   ),
                   const SizedBox(width: 6),
-                  Text(
+                  FusionAppText(text:
                     speaker.name,
                     style: const TextStyle(
                       fontSize: 11,
@@ -1035,7 +1053,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     //                 children: <Widget>[
                     //                   Icon(Icons.remove_circle_outline, size: 14, color: Colors.red),
                     //                   SizedBox(width: 6),
-                    //                   Text('Remove from Circuit', style: TextStyle(color: Colors.red)),
+                    //                   FusionAppText(text:'Remove from Circuit', style: TextStyle(color: Colors.red)),
                     //                 ],
                     //               ),
                     //             ),
@@ -1289,7 +1307,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                       children: <Widget>[
                                         Icon(Icons.add, size: 16, color: Colors.black54),
                                         SizedBox(width: 8),
-                                        Text('Select Listening Areas'),
+                                        FusionAppText(text:'Select Listening Areas'),
                                       ],
                                     ),
                                   ),
@@ -1301,7 +1319,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                       children: <Widget>[
                                         Icon(Icons.delete_outline, size: 16, color: Colors.red),
                                         SizedBox(width: 8),
-                                        Text('Delete Subzone', style: TextStyle(color: Colors.red)),
+                                        FusionAppText(text:'Delete Subzone', style: TextStyle(color: Colors.red)),
                                       ],
                                     ),
                                   ),
@@ -1423,7 +1441,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     color: Colors.blue[600],
                   ),
                   const SizedBox(width: 8),
-                  Text(
+                  FusionAppText(text:
                     'Select Listening Areas',
                     style: TextStyle(
                       fontSize: 10,
@@ -1451,12 +1469,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Subzone'),
-          content: Text('Are you sure you want to delete "${subZone.name}"?'),
+          title: const FusionAppText(text:'Delete Subzone'),
+          content: FusionAppText(text:'Are you sure you want to delete "${subZone.name}"?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const FusionAppText(text:'Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -1464,7 +1482,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 Navigator.of(context).pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: const FusionAppText(text:'Delete'),
             ),
           ],
         );
@@ -1477,12 +1495,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Circuit'),
-          content: Text('Are you sure you want to delete "${circuit.name}"?'),
+          title: const FusionAppText(text:'Delete Circuit'),
+          content: FusionAppText(text:'Are you sure you want to delete "${circuit.name}"?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const FusionAppText(text:'Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -1490,7 +1508,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 Navigator.of(context).pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: const FusionAppText(text:'Delete'),
             ),
           ],
         );
@@ -1505,7 +1523,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Rename Circuit'),
+          title: const FusionAppText(text:'Rename Circuit'),
           content: TextField(
             controller: controller,
             decoration: const InputDecoration(
@@ -1517,7 +1535,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const FusionAppText(text:'Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -1528,7 +1546,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 }
                 Navigator.of(context).pop();
               },
-              child: const Text('Rename'),
+              child: const FusionAppText(text:'Rename'),
             ),
           ],
         );
@@ -1555,7 +1573,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   void _showSpeakerAlreadyInCircuitError(Speaker speaker, CircuitModel circuit) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${speaker.name} is already in ${circuit.name}'),
+        content: FusionAppText(text:'${speaker.name} is already in ${circuit.name}'),
         backgroundColor: Colors.red,
       ),
     );
@@ -1564,7 +1582,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   void _showSpeakerModelValidationError(Speaker speaker, Speaker existingSpeaker) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Cannot mix ${speaker.name} with ${existingSpeaker.name} in the same circuit'),
+        content: FusionAppText(text:'Cannot mix ${speaker.name} with ${existingSpeaker.name} in the same circuit'),
         backgroundColor: Colors.red,
       ),
     );
@@ -1586,7 +1604,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(errorMessage),
+        content: FusionAppText(text:errorMessage),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 3),
       ),
@@ -1662,7 +1680,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
+                        child: FusionAppText(text:
                           '${zone.name} circuits',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontSize: 11,
@@ -1765,7 +1783,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
+                        child: FusionAppText(text:
                           '${subZone.name} circuits',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontSize: 11,
@@ -1954,7 +1972,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                 children: <Widget>[
                                   Icon(Icons.edit, size: 14, color: Colors.black54),
                                   SizedBox(width: 6),
-                                  Text('Rename'),
+                                  FusionAppText(text:'Rename'),
                                 ],
                               ),
                             ),
@@ -1966,7 +1984,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                 children: <Widget>[
                                   Icon(Icons.delete_outline, size: 14, color: Colors.red),
                                   SizedBox(width: 6),
-                                  Text('Delete', style: TextStyle(color: Colors.red)),
+                                  FusionAppText(text:'Delete', style: TextStyle(color: Colors.red)),
                                 ],
                               ),
                             ),
@@ -2020,12 +2038,12 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Delete Zone'),
-          content: Text('Are you sure you want to delete "${zone.name}"?'),
+          title: const FusionAppText(text:'Delete Zone'),
+          content: FusionAppText(text:'Are you sure you want to delete "${zone.name}"?'),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
+              child: const FusionAppText(text:'Cancel'),
             ),
             TextButton(
               onPressed: () {
@@ -2033,7 +2051,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 Navigator.of(context).pop();
               },
               style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Delete'),
+              child: const FusionAppText(text:'Delete'),
             ),
           ],
         );
@@ -2278,7 +2296,7 @@ class DraggingListItem extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 6),
-            Text(
+            FusionAppText(text:
               listeningArea,
               style: const TextStyle(
                 fontSize: 11,

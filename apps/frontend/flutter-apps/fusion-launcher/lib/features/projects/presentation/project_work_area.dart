@@ -524,17 +524,20 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 child: SizedBox(
                   width: 50,
                   height: 50,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios,
-                      color: Theme.of(context).colorScheme.white,
-                      size: 20,
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.backToProjects),
+                    child: IconButton(
+                      icon: Icon(
+                        Icons.arrow_back_ios,
+                        color: Theme.of(context).colorScheme.white,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        serviceLocator<ProjectViewModel>().closeProject();
+                        Navigator.of(context).pop();
+                      },
+                      tooltip: 'Back to projects',
                     ),
-                    onPressed: () {
-                      serviceLocator<ProjectViewModel>().closeProject();
-                      Navigator.of(context).pop();
-                    },
-                    tooltip: 'Back to projects',
                   ),
                 ),
               ), // List icon
@@ -588,55 +591,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       /// Undo Icon Section
                       Visibility(
                         visible: true,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (serviceLocator<ProjectViewModel>().canUndo) {
-                              serviceLocator<ProjectViewModel>().undo();
-                            }
-                          },
-                          child: Tooltip(
-                            message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
-                            child: Container(
-                              width: 56,
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.undo),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (serviceLocator<ProjectViewModel>().canUndo) {
+                                serviceLocator<ProjectViewModel>().undo();
+                              }
+                            },
+                            child: Tooltip(
+                              message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
+                              child: Container(
+                                width: 56,
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
 
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.white,
-                              ),
-                              child: const FusionImage.asset(
-                                "assets/images/return_icon.png",
-                                width: 20,
-                                height: 20,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      /// Redo Icon Section
-                      Visibility(
-                        visible: true,
-                        child: GestureDetector(
-                          onTap: () {
-                            if (serviceLocator<ProjectViewModel>().canRedo) {
-                              serviceLocator<ProjectViewModel>().redo();
-                            }
-                          },
-                          child: Tooltip(
-                            message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
-                            child: Container(
-                              width: 56,
-                              height: 48,
-                              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.white,
-                              ),
-
-                              child: Transform(
-                                alignment: Alignment.center,
-                                transform: Matrix4.rotationY(3.14),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.white,
+                                ),
                                 child: const FusionImage.asset(
                                   "assets/images/return_icon.png",
                                   width: 20,
@@ -648,57 +620,100 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                       ),
 
-                      /// Save Icon Section
-                      Container(
-                        width: 56,
-                        height: 48,
-                        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
-                        ),
-                        child: IconButton(
-                          icon: Icon(
-                            Icons.save,
-                            size: 24,
-                            color: Theme.of(context).colorScheme.greyDark,
+                      /// Redo Icon Section
+                      Visibility(
+                        visible: true,
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.redo),
+                          child: GestureDetector(
+                            onTap: () {
+                              if (serviceLocator<ProjectViewModel>().canRedo) {
+                                serviceLocator<ProjectViewModel>().redo();
+                              }
+                            },
+                            child: Tooltip(
+                              message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
+                              child: Container(
+                                width: 56,
+                                height: 48,
+                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.white,
+                                ),
+
+                                child: Transform(
+                                  alignment: Alignment.center,
+                                  transform: Matrix4.rotationY(3.14),
+                                  child: const FusionImage.asset(
+                                    "assets/images/return_icon.png",
+                                    width: 20,
+                                    height: 20,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
-                          tooltip: 'Save project',
-                          onPressed: () => _showProjectJsonDialog(context),
-                          onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                        ),
+                      ),
+
+                      /// Save Icon Section
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.saveProject),
+                        child: Container(
+                          width: 56,
+                          height: 48,
+                          // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.white,
+                          ),
+                          child: IconButton(
+                            icon: Icon(
+                              Icons.save,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            tooltip: 'Save project',
+                            onPressed: () => _showProjectJsonDialog(context),
+                            onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                          ),
                         ),
                       ),
 
                       /// Share Icon Section
-                      Container(
-                        width: 56,
-                        height: 48,
-                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
-                          // border horizontal
-                          border: Border(
-                            left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                          ),
-                        ),
-                        child: Tooltip(
-                          message: 'Report Bug',
-                          child: InkWell(
-                            child: Icon(
-                              Icons.bug_report,
-                              size: 24,
-                              color: Theme.of(context).colorScheme.greyDark,
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
+                        child: Container(
+                          width: 56,
+                          height: 48,
+                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.white,
+                            // border horizontal
+                            border: Border(
+                              left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                              right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                             ),
-                            onTap: () async {
-                              handleExportLogs(context);
-                            },
                           ),
+                          child: Tooltip(
+                            message: 'Report Bug',
+                            child: InkWell(
+                              child: Icon(
+                                Icons.bug_report,
+                                size: 24,
+                                color: Theme.of(context).colorScheme.greyDark,
+                              ),
+                              onTap: () async {
+                                handleExportLogs(context);
+                              },
+                            ),
+                          ),
+                          // child: Image.asset(
+                          //   "assets/images/share_icon.png",
+                          //   width: 24,
+                          //   height: 24,
+                          // ),
                         ),
-                        // child: Image.asset(
-                        //   "assets/images/share_icon.png",
-                        //   width: 24,
-                        //   height: 24,
-                        // ),
                       ),
                       const ControlDesignTabSwitcher(),
                     ],
@@ -752,7 +767,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                     ) {
                       return FusionAppText(
                         text: serviceLocator<ProjectViewModel>().projectName,
-                        semanticId: "Project Name",
+                        semanticId: FusionTestKeys.projectName,
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -833,69 +848,73 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       ),
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _projectNameController,
-                      focusNode: _projectNameFocusNode,
-                      maxLength: 24,
-                      autofocus: true,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
-                        fontSize: 12,
-                      ),
-                      decoration: InputDecoration(
-                        counterText: "",
-                        hintText: 'Enter project name',
-                        hintStyle: TextStyle(
-                          color: Theme.of(context).colorScheme.grey,
+                    SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.projectNameInput),
+                      child: TextField(
+                        controller: _projectNameController,
+                        focusNode: _projectNameFocusNode,
+                        maxLength: 24,
+                        autofocus: true,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.fusionTextViewColor,
                           fontSize: 12,
                         ),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.dividerColor,
+                        decoration: InputDecoration(
+                          counterText: "",
+                          hintText: 'Enter project name',
+                          hintStyle: TextStyle(
+                            color: Theme.of(context).colorScheme.grey,
+                            fontSize: 12,
                           ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: Theme.of(context).colorScheme.dividerColor,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.dividerColor,
+                            ),
                           ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(
+                              color: Theme.of(context).colorScheme.dividerColor,
+                            ),
                           ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(4),
+                            borderSide: BorderSide(
+                              color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 8,
+                          ),
+                          isDense: true,
                         ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 8,
-                        ),
-                        isDense: true,
+                        onChanged: (String value) {
+                          if (_projectNameError != null) {
+                            setMenuState(() {
+                              _projectNameError = null;
+                            });
+                          }
+                        },
+                        onSubmitted: (String value) {
+                          final String trimmedName = value.trim();
+                          if (trimmedName.isNotEmpty) {
+                            serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
+                            Navigator.of(context).pop();
+                          } else {
+                            setMenuState(() {
+                              _projectNameError = "Name cannot be empty";
+                            });
+                          }
+                        },
                       ),
-                      onChanged: (String value) {
-                        if (_projectNameError != null) {
-                          setMenuState(() {
-                            _projectNameError = null;
-                          });
-                        }
-                      },
-                      onSubmitted: (String value) {
-                        final String trimmedName = value.trim();
-                        if (trimmedName.isNotEmpty) {
-                          serviceLocator<ProjectViewModel>().setProjectName(name: trimmedName);
-                          Navigator.of(context).pop();
-                        } else {
-                          setMenuState(() {
-                            _projectNameError = "Name cannot be empty";
-                          });
-                        }
-                      },
                     ),
                     if (_projectNameError != null) ...<Widget>[
                       const SizedBox(height: 4),
                       FusionAppText(
                         text: _projectNameError!,
+                        semanticId: FusionTestKeys.projectNameInputError,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           fontSize: 10,
                           color: Colors.red,
@@ -965,19 +984,22 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           (BuildContext ctx) => CleanDialog(
             title: 'Project Saved!',
             actions: <Widget>[
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade800,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                child: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.grey.shade800,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    elevation: 0,
                   ),
-                  elevation: 0,
-                ),
-                child: const Text(
-                  'Close',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  child: const FusionAppText(
+                    text: 'Close',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
                 ),
               ),
             ],
