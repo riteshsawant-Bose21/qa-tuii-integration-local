@@ -49,7 +49,7 @@ type ProjectUpdateRequest struct {
 	Venue              string          `json:"venue" validate:"omitempty,max=255" example:"Building B - Conference Room 205"`
 	EnvironmentType    EnvironmentType `json:"environment_type" validate:"omitempty,environment_type" example:"indoor"`
 	ProjectPhase       ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Development"`
-	Budget             Budget          `json:"budget"`
+	Budget             Budget          `json:"budget" validate:"omitempty"`
 	IsProjectFileDirty bool            `json:"is_project_file_dirty" example:"true"`
 }
 
@@ -122,6 +122,7 @@ const (
 	ErrMsgProjectAlreadyLocked   = "project is already locked"
 	ErrMsgProjectNotLocked       = "project is not locked"
 	ErrMsgProjectNotLockedByUser = "project is not locked by this user"
+	ErrMsgProjectLockedByUser    = "project is locked by user"
 
 	// Project starring errors
 	ErrMsgProjectAlreadyStarred = "project is already starred"

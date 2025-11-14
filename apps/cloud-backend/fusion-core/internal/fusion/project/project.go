@@ -29,6 +29,18 @@ func (s *Service) validateProjectExistence(ctx context.Context, projectID string
 	return nil
 }
 
+// validateUserExistence is a helper function to validate that a user exists
+func (s *Service) validateUserExistence(ctx context.Context, userID string) error {
+	userExists, err := s.dbService.UserExists(ctx, userID)
+	if err != nil {
+		return err
+	}
+	if !userExists {
+		return errors.New(types.ErrMsgUserNotFound)
+	}
+	return nil
+}
+
 // validateProjectAndUserExistence is a helper function to validate that both project and user exist
 func (s *Service) validateProjectAndUserExistence(ctx context.Context, projectID, userID string) error {
 	// Check if project exists
@@ -37,12 +49,50 @@ func (s *Service) validateProjectAndUserExistence(ctx context.Context, projectID
 	}
 
 	// Check if user exists
-	userExists, err := s.dbService.UserExists(ctx, userID)
-	if err != nil {
+	if err := s.validateUserExistence(ctx, userID); err != nil {
 		return err
 	}
-	if !userExists {
-		return errors.New(types.ErrMsgUserNotFound)
+
+	return nil
+}
+
+// validateUserAssignedToProject validates that a user is assigned to a project
+func (s *Service) validateUserAssignedToProject(ctx context.Context, projectID, userID string) error {
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
+	}
+	return nil
+}
+
+// validateProjectAndUserAndAssignment validates project existence, user existence, and user assignment
+func (s *Service) validateProjectAndUserAndAssignment(ctx context.Context, projectID, userID string) error {
+	// Validate project and user existence
+	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	// Validate user assignment to project
+	if err := s.validateUserAssignedToProject(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// validateProjectUpdateAuthorization validates user can update/delete project (existence, assignment, and not locked by other)
+func (s *Service) validateProjectUpdateAuthorization(ctx context.Context, projectID, userID string) error {
+	// Validate project, user existence and assignment
+	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	// Check if project is locked by another user
+	if err := s.ValidateProjectNotLockedByOther(ctx, projectID, userID); err != nil {
+		return err
 	}
 
 	return nil
@@ -64,6 +114,16 @@ func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, 
 
 // CreateProject adds a new project to the database.
 func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) (*types.ProjectCreateResponse, error) {
+	// Validate user existence
+	if err := s.validateUserExistence(ctx, project.UserID); err != nil {
+		return nil, err
+	}
+
+	// Generate ID if not provided (moved from database layer)
+	if project.ID == "" {
+		project.ID = uuid.New().String()
+	}
+
 	id, err := s.dbService.Insert(ctx, project)
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
@@ -115,7 +175,10 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 }
 
 // UpdateProject modifies an existing project.
+// Note: This method should be called with userID for validation when invoked from handlers
 func (s *Service) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
+	// Note: Project existence validation happens in the database layer Update method
+	// This design allows for internal service calls that skip some validations
 	projectRow, err := s.dbService.Update(ctx, id, project)
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToUpdateProject, err)
@@ -134,29 +197,43 @@ func (s *Service) UpdateProject(ctx context.Context, id string, project *types.P
 	return response, nil
 }
 
-// DeleteProject removes a project by its ID.
-// Note: This method should be called with userID for validation when invoked from handlers
-func (s *Service) DeleteProject(ctx context.Context, projectID, userID string) error {
-
-	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
-		CheckDeleted:              false,
-		CheckArchived:             true,
-		CheckNotLockedByOtherUser: true,
+// UpdateProjectWithAuth modifies an existing project with full authorization checks
+func (s *Service) UpdateProjectWithAuth(ctx context.Context, id string, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
+	// Validate project exists first (optimization - avoid unnecessary DB calls)
+	if err := s.validateProjectExistence(ctx, id); err != nil {
+		return nil, err
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	// Validate AccountID exists if provided
+	if project.AccountID != "" {
+		if err := s.validateUserExistence(ctx, project.AccountID); err != nil {
+			return nil, err
+		}
+	}
 
-	if err != nil {
+	// Validate user can update this project (user exists, assigned, not locked)
+	if err := s.validateProjectUpdateAuthorization(ctx, id, userID); err != nil {
+		return nil, err
+	}
+
+	return s.UpdateProject(ctx, id, project)
+}
+
+// DeleteProject removes a project by its ID.
+// Note: This method should be called with userID for validation when invoked from handlers
+func (s *Service) DeleteProject(ctx context.Context, id string) error {
+	// Note: Project existence validation happens in the database layer
+	return s.dbService.Delete(ctx, id)
+}
+
+// DeleteProjectWithAuth removes a project by its ID with full authorization checks
+func (s *Service) DeleteProjectWithAuth(ctx context.Context, id string, userID string) error {
+	// Validate user can delete this project
+	if err := s.validateProjectUpdateAuthorization(ctx, id, userID); err != nil {
 		return err
 	}
 
-	if projectRow.IsDeleted {
-		return nil // Idempotent behavior
-	}
-
-	return s.dbService.Delete(ctx, projectRow)
+	return s.DeleteProject(ctx, id)
 }
 
 // AssignUserToProject assigns a user to a project.
@@ -242,8 +319,8 @@ func (s *Service) RemoveUserFromProjectByEmail(ctx context.Context, projectID, u
 
 // StarProject stars a project for a user.
 func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+	// Validate project, user existence and assignment
+	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
 		return err
 	}
 
@@ -257,8 +334,8 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 
 // UnstarProject unstars a project for a user.
 func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+	// Validate project, user existence and assignment
+	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
 		return err
 	}
 
@@ -272,11 +349,6 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 
 // ArchiveProject archives a project.
 func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
-	// Validate project existence
-	if err := s.validateProjectExistence(ctx, projectID); err != nil {
-		return err
-	}
-
 	// Archive the project
 	if err := s.dbService.ArchiveProject(ctx, projectID); err != nil {
 		return err
@@ -285,19 +357,34 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
 	return nil
 }
 
-// UnarchiveProject unarchives a project.
-func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
-	// Validate project existence
-	if err := s.validateProjectExistence(ctx, projectID); err != nil {
+// ArchiveProjectWithAuth archives a project with full authorization checks
+func (s *Service) ArchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error {
+	// Validate user can archive this project
+	if err := s.validateProjectUpdateAuthorization(ctx, projectID, userID); err != nil {
 		return err
 	}
 
+	return s.ArchiveProject(ctx, projectID)
+}
+
+// UnarchiveProject unarchives a project.
+func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
 	// Unarchive the project
 	if err := s.dbService.UnarchiveProject(ctx, projectID); err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// UnarchiveProjectWithAuth unarchives a project with full authorization checks
+func (s *Service) UnarchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error {
+	// Validate user can unarchive this project
+	if err := s.validateProjectUpdateAuthorization(ctx, projectID, userID); err != nil {
+		return err
+	}
+
+	return s.UnarchiveProject(ctx, projectID)
 }
 
 // ProjectExists checks if a project exists.
@@ -312,18 +399,9 @@ func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) 
 
 // LockProject locks a project for a user.
 func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+	// Validate project, user existence and assignment
+	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
 		return err
-	}
-
-	// Check if user is assigned to the project
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
-	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
-	}
-	if !isAssigned {
-		return errors.New(types.ErrMsgUserNotAssignedToProject)
 	}
 
 	// Lock the project
@@ -336,18 +414,9 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 
 // UnlockProject unlocks a project for a user.
 func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+	// Validate project, user existence and assignment
+	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
 		return err
-	}
-
-	// Check if user is assigned to the project
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
-	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
-	}
-	if !isAssigned {
-		return errors.New(types.ErrMsgUserNotAssignedToProject)
 	}
 
 	// Unlock the project
@@ -361,7 +430,7 @@ func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) e
 // ValidateProjectNotLockedByOther validates that a project is not locked by another user.
 // Returns an error with the locking user's email if the project is locked by someone else.
 func (s *Service) ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error {
-	isLocked, lockedByEmail, err := s.dbService.GetProjectLockInfo(ctx, projectID)
+	isLocked, lockedByUserID, err := s.dbService.GetProjectLockUserID(ctx, projectID)
 	if err != nil {
 		return err
 	}
@@ -371,20 +440,46 @@ func (s *Service) ValidateProjectNotLockedByOther(ctx context.Context, projectID
 	}
 
 	// Check if the project is locked by the same user trying to perform the operation
-	lockedUserID, err := s.dbService.GetUserIDByEmail(ctx, lockedByEmail)
-	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+	if lockedByUserID == userID {
+		return nil // Project is locked by the same user, operation can proceed
 	}
 
-	if lockedUserID == userID {
-		return nil // Project is locked by the same user, operation can proceed
+	// Get the email of the user who locked the project
+	lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, lockedByUserID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
 	}
 
 	// Project is locked by a different user
 	return fmt.Errorf("project is locked by user: %s", lockedByEmail)
 }
 
+// GetProjectLockUserID returns whether the project is locked and the user ID who locked it.
+func (s *Service) GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error) {
+	return s.dbService.GetProjectLockUserID(ctx, projectID)
+}
+
+// GetUserEmailByID returns the email address for a given user ID.
+func (s *Service) GetUserEmailByID(ctx context.Context, userID string) (string, error) {
+	return s.dbService.GetUserEmailByID(ctx, userID)
+}
+
 // GetProjectLockInfo returns project lock information.
 func (s *Service) GetProjectLockInfo(ctx context.Context, projectID string) (isLocked bool, lockedByEmail string, err error) {
-	return s.dbService.GetProjectLockInfo(ctx, projectID)
+	isLocked, lockedByUserID, err := s.dbService.GetProjectLockUserID(ctx, projectID)
+	if err != nil {
+		return false, "", err
+	}
+
+	if !isLocked {
+		return false, "", nil
+	}
+
+	// Get the email of the user who locked the project
+	lockedByEmail, err = s.dbService.GetUserEmailByID(ctx, lockedByUserID)
+	if err != nil {
+		return true, "", err
+	}
+
+	return true, lockedByEmail, nil
 }

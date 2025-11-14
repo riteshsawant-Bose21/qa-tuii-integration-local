@@ -121,6 +121,13 @@ const docTemplate = `{
                 "summary": "Get all projects",
                 "parameters": [
                     {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "user_id",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
                         "type": "boolean",
                         "description": "Filter projects by archived status",
                         "name": "is_archived",
@@ -151,15 +158,9 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid query parameters",
+                        "description": "Bad request - Invalid query parameters or user ID",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized do perform this action",
-                        "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
                         }
                     },
                     "500": {
@@ -201,15 +202,9 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid payload",
+                        "description": "Bad request - Invalid payload or user not found",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized to perform this action",
-                        "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
                         }
                     },
                     "500": {
@@ -241,27 +236,26 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
                     "204": {
                         "description": "Successfully deleted project"
                     },
-                    "401": {
-                        "description": "Unauthorized to perform this action",
+                    "400": {
+                        "description": "Bad request - Missing user ID",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
-                        "description": "Project not found",
+                        "description": "Project or user not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -295,13 +289,6 @@ const docTemplate = `{
                         "required": true
                     },
                     {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
                         "description": "Updated project details",
                         "name": "body",
                         "in": "body",
@@ -313,7 +300,7 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Successfully created project",
+                        "description": "Successfully updated project",
                         "schema": {
                             "$ref": "#/definitions/types.ProjectUpdateResponse"
                         }
@@ -324,14 +311,14 @@ const docTemplate = `{
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized to perform this action",
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
-                        "description": "Project not found",
+                        "description": "Project or user not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -359,13 +346,6 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -373,19 +353,19 @@ const docTemplate = `{
                         "description": "Project archived successfully"
                     },
                     "400": {
-                        "description": "Bad request - Invalid parameters",
+                        "description": "Bad request - Missing user ID",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized to perform this action",
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
-                        "description": "Project not found",
+                        "description": "Project or user not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -411,13 +391,6 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -425,19 +398,19 @@ const docTemplate = `{
                         "description": "Project unarchived successfully"
                     },
                     "400": {
-                        "description": "Bad request - Invalid parameters",
+                        "description": "Bad request - Missing user ID",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
-                    "401": {
-                        "description": "Unauthorized to perform this action",
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
-                        "description": "Project not found",
+                        "description": "Project or user not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -465,13 +438,6 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -479,15 +445,15 @@ const docTemplate = `{
                         "description": "Successfully locked project"
                     },
                     "400": {
-                        "description": "Bad request - Invalid parameters",
+                        "description": "Bad request - Missing user ID",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
-                    "401": {
-                        "description": "User not assigned to the project",
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project already locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
@@ -517,13 +483,6 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
                     }
                 ],
                 "responses": {
@@ -531,19 +490,13 @@ const docTemplate = `{
                         "description": "Successfully unlocked project"
                     },
                     "400": {
-                        "description": "Bad request - Invalid parameters",
+                        "description": "Bad request - Missing user ID",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
-                    "401": {
-                        "description": "User not assigned to the project",
-                        "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
-                        }
-                    },
                     "403": {
-                        "description": "Project is not locked by this user",
+                        "description": "Forbidden - User not assigned to project or project not locked by this user",
                         "schema": {
                             "$ref": "#/definitions/types.ForbiddenError"
                         }
