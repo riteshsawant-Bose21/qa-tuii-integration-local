@@ -40,8 +40,12 @@ class _CanvasView extends StatelessWidget {
                             "float" => PbWidgets.floatWidgets,
                             "integer" => PbWidgets.floatWidgets,
                             "bool" => PbWidgets.boolWidgets,
+                            "string" => <PbWidgets>[],
                             _ => PbWidgets.all,
                           }.toList();
+                      if (details.data.allowedValues?.isNotEmpty ?? false) {
+                        availableTypes.addAll(PbWidgets.selectWidgets);
+                      }
                       availableTypes.addAll(PbWidgets.genericWidgets);
                       final RenderBox renderBox = context.findRenderObject() as RenderBox;
                       final Offset localOffset = renderBox.globalToLocal(details.offset);

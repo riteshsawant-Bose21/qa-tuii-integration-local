@@ -5,3 +5,4 @@ export 'pb_indicator.dart';
 export 'pb_slider.dart';
 export 'pb_switch.dart';
 export 'pb_text.dart';
+export 'pb_dropdown.dart';

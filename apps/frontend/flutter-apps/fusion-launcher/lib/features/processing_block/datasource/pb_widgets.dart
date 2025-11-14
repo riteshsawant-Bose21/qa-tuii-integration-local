@@ -71,10 +71,23 @@ class PbWidgets {
     // ),
   ];
 
-  static List<PbWidgets> all = <PbWidgets>[
+  static List<PbWidgets> selectWidgets = <PbWidgets>[
+    PbWidgets(
+      type: 'dropdown',
+      builder: (BuildContext context, PBItem item) => PBDropdown(item: item),
+      paramFactory: PBDropdownParam.fromMap,
+      fromParameter:
+          (Parameter data) => PBDropdownParam(
+            label: data.name,
+          ),
+    ),
+  ];
+
+  static List<PbWidgets> get all => <PbWidgets>[
     ...floatWidgets,
     ...boolWidgets,
     ...genericWidgets,
+    ...selectWidgets,
     // PbWidgets(
     //   type: 'switch',
     //   builder: (BuildContext context, PBItem item) => PBSwitch(item: item),
