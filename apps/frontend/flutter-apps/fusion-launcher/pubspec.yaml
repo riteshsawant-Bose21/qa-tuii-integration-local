@@ -67,6 +67,7 @@ dependencies:
     
   dartzmq:
     path:  ../../../../libs/flutter-libs/dartzmq
+  recase: ^4.1.0
 
 dev_dependencies:
   flutter_test:

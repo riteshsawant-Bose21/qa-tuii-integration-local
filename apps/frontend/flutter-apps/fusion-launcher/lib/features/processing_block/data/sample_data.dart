@@ -2,8 +2,8 @@ class SampleData {
   static Map<String, dynamic> get sampleData => <String, dynamic>{
     "width": 100,
     "height": 100,
-    "children": <Map<String, Object>>[
-      <String, Object>{
+    "children": <Map<String, Object?>>[
+      <String, Object?>{
         "id": "368708",
         "x": 205.39,
         "y": 0.64,
@@ -12,18 +12,9 @@ class SampleData {
         "field": "",
         "type": "text",
         "param": <String, String>{"label": "OUTPUT"},
+        "value": null,
       },
-      <String, Object>{
-        "id": "489516",
-        "x": 164.41,
-        "y": 0.0,
-        "width": 20,
-        "height": 5,
-        "field": "",
-        "type": "indicator",
-        "param": <String, String>{"label": "Open"},
-      },
-      <String, Object>{
+      <String, Object?>{
         "id": "784848",
         "x": 0.0,
         "y": 54.0,
@@ -32,8 +23,9 @@ class SampleData {
         "field": "",
         "type": "slider",
         "param": <String, Object>{"label": "ATTACK", "min": 0, "max": 100},
+        "value": null,
       },
-      <String, Object>{
+      <String, Object?>{
         "id": "490063",
         "x": 25.0,
         "y": 55.47,
@@ -42,8 +34,9 @@ class SampleData {
         "field": "",
         "type": "slider",
         "param": <String, Object>{"label": "HOLD", "min": 0, "max": 100},
+        "value": null,
       },
-      <String, Object>{
+      <String, Object?>{
         "id": "766574",
         "x": 50.0,
         "y": 54.95,
@@ -52,8 +45,9 @@ class SampleData {
         "field": "",
         "type": "slider",
         "param": <String, Object>{"label": "DECAY", "min": 0, "max": 100},
+        "value": null,
       },
-      <String, Object>{
+      <String, Object?>{
         "id": "860530",
         "x": 0.0,
         "y": 10.0,
@@ -62,8 +56,9 @@ class SampleData {
         "field": "",
         "type": "slider",
         "param": <String, Object>{"label": "THRESHOLD", "min": 0, "max": 100},
+        "value": null,
       },
-      <String, Object>{
+      <String, Object?>{
         "id": "122421",
         "x": 25.0,
         "y": 10.0,
@@ -72,8 +67,9 @@ class SampleData {
         "field": "",
         "type": "slider",
         "param": <String, Object>{"label": "RANGE", "min": 0, "max": 100},
+        "value": null,
       },
-      <String, Object>{
+      <String, Object?>{
         "id": "388726",
         "x": 2.74,
         "y": 0.4,
@@ -82,36 +78,51 @@ class SampleData {
         "field": "",
         "type": "switch",
         "param": <String, String>{"label": "Detector", "enable_value_label": "Yes", "disabled_value_label": "No"},
+        "value": null,
       },
-      <String, Object>{
-        "id": "305678",
-        "x": 76.99,
-        "y": 9.39,
-        "width": 107.42,
-        "height": 89.72,
-        "field": "",
-        "type": "graph",
-        "param": <String, String>{"label": "Graph goes here"},
-      },
-      <String, Object>{
+      <String, Object?>{
         "id": "676584",
-        "x": 201.48,
-        "y": -0.85,
-        "width": 15.34,
-        "height": 100.45,
+        "x": 161.41,
+        "y": 14.31,
+        "width": 12.78,
+        "height": 81.57,
         "field": "",
         "type": "slider",
         "param": <String, Object>{"label": "", "min": 0, "max": 100},
+        "value": null,
       },
-      <String, Object>{
+      <String, Object?>{
         "id": "390872",
-        "x": 208.29,
-        "y": 10.81,
+        "x": 170.35,
+        "y": 15.57,
         "width": 19.12,
         "height": 78.97,
         "field": "",
         "type": "meter",
         "param": <String, Object>{"label": "", "min": 0, "max": 100},
+        "value": null,
+      },
+      <String, Object?>{
+        "id": "305678",
+        "x": 76.99,
+        "y": 9.39,
+        "width": 79.02,
+        "height": 88.63,
+        "field": "",
+        "type": "graph",
+        "param": <dynamic, dynamic>{},
+        "value": null,
+      },
+      <String, Object?>{
+        "id": "489516",
+        "x": 135.24,
+        "y": 1.91,
+        "width": 20,
+        "height": 5,
+        "field": "",
+        "type": "indicator",
+        "param": <String, String>{"label": "Open"},
+        "value": null,
       },
     ],
   };

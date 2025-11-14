@@ -187,7 +187,11 @@ class ProcessingChainView extends StatelessWidget {
                           ],
                         ),
                         const Divider(),
-                        const Flexible(child: ProcessingBlockPage()),
+                        Flexible(
+                          child: ProcessingBlockPage(
+                            algorithm: state.selectedBlock.algorithmId,
+                          ),
+                        ),
                       ],
                     );
                   },

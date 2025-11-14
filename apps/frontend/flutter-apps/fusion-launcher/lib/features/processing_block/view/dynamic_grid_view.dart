@@ -22,24 +22,22 @@ class DynamicGridView extends StatelessWidget {
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           physics: const AlwaysScrollableScrollPhysics(),
-          child: Scrollbar(
-            child: SizedBox(
-              width: max(widthPerCell * maxRowNum, constraints.maxWidth),
-              height: widthPerCell * layout.height,
-              child: Stack(
-                children: <Widget>[
-                  for (final PBItem child in layout.children)
-                    Positioned(
-                      left: widthPerCell * child.x,
-                      top: widthPerCell * child.y,
-                      child: SizedBox(
-                        width: widthPerCell * child.width,
-                        height: widthPerCell * child.height,
-                        child: ItemWidgetBuilder(item: child),
-                      ),
+          child: SizedBox(
+            width: max(widthPerCell * maxRowNum, constraints.maxWidth),
+            height: widthPerCell * layout.height,
+            child: Stack(
+              children: <Widget>[
+                for (final PBItem child in layout.children)
+                  Positioned(
+                    left: widthPerCell * child.x,
+                    top: widthPerCell * child.y,
+                    child: SizedBox(
+                      width: widthPerCell * child.width,
+                      height: widthPerCell * child.height,
+                      child: ItemWidgetBuilder(item: child),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           ),
         );

@@ -17,26 +17,26 @@ class PbWidgets {
 
   static List<PbWidgets> floatWidgets = <PbWidgets>[
     PbWidgets(
-      type: 'indicator',
-      builder: (BuildContext context, PBItem item) => PBIndicator(item: item),
-      paramFactory: PBIndicatorParam.fromMap,
-      fromParameter: (Parameter data) => PBIndicatorParam(label: data.name),
-    ),
-    PbWidgets(
       type: 'slider',
       builder: (BuildContext context, PBItem item) => PBSlider(item: item),
       paramFactory: PBSliderParam.fromMap,
-      fromParameter: (Parameter data) => PBSliderParam(label: data.name, min: data.minimumValue ?? 0, max: data.maximumValue ?? 100),
+      fromParameter: (Parameter data) => PBSliderParam(label: data.name, min: 0, max: 100),
     ),
     PbWidgets(
       type: 'meter',
       builder: (BuildContext context, PBItem item) => PBMeter(item: item),
       paramFactory: PBMeterParam.fromMap,
-      fromParameter: (Parameter data) => PBMeterParam(label: data.name, max: data.maximumValue ?? 100, min: data.minimumValue ?? 0),
+      fromParameter: (Parameter data) => PBMeterParam(label: data.name, max: 100, min: 0),
     ),
   ];
 
   static List<PbWidgets> boolWidgets = <PbWidgets>[
+    PbWidgets(
+      type: 'indicator',
+      builder: (BuildContext context, PBItem item) => PBIndicator(item: item),
+      paramFactory: PBIndicatorParam.fromMap,
+      fromParameter: (Parameter data) => PBIndicatorParam(label: data.name),
+    ),
     PbWidgets(
       type: 'switch',
       builder: (BuildContext context, PBItem item) => PBSwitch(item: item),
@@ -46,24 +46,24 @@ class PbWidgets {
   ];
 
   static List<PbWidgets> genericWidgets = <PbWidgets>[
-    PbWidgets(
-      type: 'empty',
-      builder: (BuildContext context, PBItem item) => PBEmpty(item: item),
-      paramFactory: PBEmptyParam.fromMap,
-      fromParameter: (Parameter data) => PBEmptyParam(),
-    ),
+    // PbWidgets(
+    //   type: 'empty',
+    //   builder: (BuildContext context, PBItem item) => PBEmpty(item: item),
+    //   paramFactory: PBEmptyParam.fromMap,
+    //   fromParameter: (Parameter data) => PBEmptyParam(),
+    // ),
     PbWidgets(
       type: 'text',
       builder: (BuildContext context, PBItem item) => PBText(item: item),
       paramFactory: PBTextParam.fromMap,
       fromParameter: (Parameter data) => PBTextParam(label: data.name),
     ),
-    PbWidgets(
-      type: 'graph',
-      builder: (BuildContext context, PBItem item) => PBGraph(item: item),
-      paramFactory: PBGraphParam.fromMap,
-      fromParameter: (Parameter data) => PBGraphParam(label: data.name),
-    ),
+    // PbWidgets(
+    //   type: 'graph',
+    //   builder: (BuildContext context, PBItem item) => PBGraph(item: item),
+    //   paramFactory: PBGraphParam.fromMap,
+    //   fromParameter: (Parameter data) => PBGraphParam(label: data.name),
+    // ),
     // PbWidgets(
     //   type: 'radio',
     //   builder: (BuildContext context, PBItem item) => PBRadio(item: item),

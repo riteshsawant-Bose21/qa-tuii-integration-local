@@ -5,7 +5,9 @@ import '../../../core/models/algorithm/algorithm_metadata.dart';
 class AlgorithmCustomizationVm extends ChangeNotifier {
   final FusionAlgorithmsConfig config;
 
-  AlgorithmCustomizationVm({required this.config});
+  AlgorithmCustomizationVm({required this.config}) {
+    selectedAlgorithm = config.algorithms.isNotEmpty ? config.algorithms.first : null;
+  }
 
   List<Algorithm> get availableAlgorithms => config.algorithms;
 

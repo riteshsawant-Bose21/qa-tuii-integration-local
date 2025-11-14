@@ -5,11 +5,19 @@ import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/features/processing_block/datasource/pb_widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 
+import '../data/algorithm_layout_data.dart';
 import '../dto/pb_item_param.dart';
+import '../dto/pb_layout.dart';
 
 class PbcViewmodel extends ChangeNotifier {
   final Algorithm algorithm;
-  PbcViewmodel({required this.algorithm});
+  PbcViewmodel({required this.algorithm}) {
+    final PBLayout? layout = AlgorithmLayoutData.getForAlgorithm(algorithm.name);
+    if (layout == null) return;
+    for (final PBItem item in layout.children) {
+      items.add(item);
+    }
+  }
   List<PBItem> items = <PBItem>[];
 
   PBItem? _selected;
@@ -69,16 +77,17 @@ class PbcViewmodel extends ChangeNotifier {
     items.add(
       PBItem(
         id: Random().nextInt(999999).toString(),
-        x: position.dx,
-        y: position.dy,
-        width: size.width,
-        height: size.height,
+        x: roundTo2Digit(position.dx),
+        y: roundTo2Digit(position.dy),
+        width: roundTo2Digit(size.width),
+        height: roundTo2Digit(size.height),
         field: data.name,
         type: type.type,
         param: param,
         value: data.defaultValue,
       ),
     );
+    selected = items.last;
     notifyListeners();
   }
 

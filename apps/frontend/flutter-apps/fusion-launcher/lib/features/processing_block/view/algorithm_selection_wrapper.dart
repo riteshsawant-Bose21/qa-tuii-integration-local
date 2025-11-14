@@ -29,7 +29,7 @@ class AlgorithmSelectionWrapper extends StatelessWidget {
                             padding: const EdgeInsets.all(4.0),
                             child: ElevatedButton(
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: isSelected ? Colors.blue : Colors.grey,
+                                backgroundColor: isSelected ? Colors.black : Colors.grey,
                               ),
                               onPressed: () {
                                 viewModel.selectAlgorithm(algo);

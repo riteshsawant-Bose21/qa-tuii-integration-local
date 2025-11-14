@@ -1,4 +1,4 @@
-// ignore_for_file: public_member_api_docs, sort_constructors_first
+
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -24,7 +24,9 @@ class PBLayout {
     return PBLayout(
       width: (map['width'] ?? 0) as int,
       height: (map['height'] ?? 0) as int,
-      children: List<PBItem>.from((map['children'] as List<Map<dynamic,dynamic>>).map<PBItem>((Map<dynamic,dynamic> x) => PBItem.fromMap(x as Map<String, dynamic>))),
+      children: List<PBItem>.from(
+        (map['children'] as List<Map<dynamic, dynamic>>).map<PBItem>((Map<dynamic, dynamic> x) => PBItem.fromMap(x as Map<String, dynamic>)),
+      ),
     );
   }
 
