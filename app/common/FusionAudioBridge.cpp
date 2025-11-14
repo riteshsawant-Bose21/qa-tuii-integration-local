@@ -378,6 +378,6 @@ bool FusionAudioBridge::processSourceUpdate(const std::string &zoneID, ::OcaUint
     }
 
     actuator->handleFusionSourceMessage(sourceIndex - 1);
-    OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Successfully updated source %s to %u", zoneID.c_str(), sourceIndex);
+    OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Successfully updated source %s to %u", zoneID.c_str(), sourceIndex - 1);
     return true;
 }
