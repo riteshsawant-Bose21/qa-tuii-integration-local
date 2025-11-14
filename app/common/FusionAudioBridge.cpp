@@ -246,7 +246,7 @@ std::string FusionAudioBridge::createSourceMessage(const std::string &zoneID, ::
 {
     std::ostringstream jsonStream;
     jsonStream << "{\"action\":\"set\",\"payload\":{\"settings\":{\"audio\":{\""
-               << zoneID << "\":{\"" << JSON_FIELD_INPUT << "\":" << sourceIndex << "}}}}}";
+               << zoneID << "\":{\"" << JSON_FIELD_INPUT << "\":" << sourceIndex + 1 << "}}}}}";
     return jsonStream.str();
 }
 
@@ -377,7 +377,7 @@ bool FusionAudioBridge::processSourceUpdate(const std::string &zoneID, ::OcaUint
         return false;
     }
 
-    actuator->handleFusionSourceMessage(sourceIndex);
-    OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Successfully updated source %s to %u", zoneID.c_str(), sourceIndex);
+    actuator->handleFusionSourceMessage(sourceIndex - 1);
+    OCA_LOG_INFO_PARAMS("[FusionAudioBridge] Successfully updated source %s to %u", zoneID.c_str(), sourceIndex - 1);
     return true;
 }
