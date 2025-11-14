@@ -56,7 +56,7 @@ const (
 	clusterTimout = 10 * time.Second
 	instancePort  = "7947"
 	requiredNodes = 3 // Number of nodes required for cluster tests
-	serverAddr    = "http://192.168.64.100:8080"
+	serverAddr    = "http://192.168.2.100:8080"
 	testTimeout   = 5 * time.Second
 )
 
@@ -1584,7 +1584,7 @@ func discoverMultipassNodes(baseName string) ([]MultipassNode, error) {
 func getClusterConfig() (*ClusterConfig, error) {
 	var (
 		nodesFlag    = flag.String("nodes", "", "Comma-separated list of node addresses (e.g., 192.168.64.229:8080,192.168.64.230:8080)")
-		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.64.100:8080)")
+		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.2.100:8080)")
 		baseNameFlag = flag.String("base-name", "fusion", "Base name for multipass instances")
 		portFlag     = flag.String("port", "8080", "Port for node services")
 		autoFlag     = flag.Bool("auto", false, "Automatically discover nodes using multipass")

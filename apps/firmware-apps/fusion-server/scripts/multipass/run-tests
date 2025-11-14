@@ -18,13 +18,13 @@ function show_help() {
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
     echo "  --updater     Run only updater tests"     
-    echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
+    echo "  --vip         VIP address and port (default: 192.168.2.100:8080)"
     echo "  --websocket   Run only websocket tests"     
     exit 1
 }
 
 test_type="short"
-vip="192.168.64.100:8080"
+vip="192.168.2.100:8080"
 
 while [[ $# -gt 0 ]]; do
     case $1 in

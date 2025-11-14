@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	tasksServerURL = "http://192.168.64.100:8080"
+	tasksServerURL = "http://192.168.2.100:8080"
 	snapshotID     = "test-snapshot"
 )
 

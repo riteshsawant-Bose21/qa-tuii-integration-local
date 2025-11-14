@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	audioServerAddr = "http://192.168.64.100:8080"
+	audioServerAddr = "http://192.168.2.100:8080"
 )
 
 // TestAudioUploadAndDeleteSuccess uploads a small WAV, verifies 201 + metadata,
