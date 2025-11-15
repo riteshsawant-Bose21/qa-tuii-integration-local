@@ -54,7 +54,7 @@ type AudioMetadata struct {
 	Checksum    string        `json:"checksum"`
 }
 
-// AudioSyncUpdate represents an audio file to remove across nodes
+// AudioRemoveUpdate represents an audio file to remove across nodes
 type AudioRemoveUpdate struct {
 	ID string `json:"id"`
 }
