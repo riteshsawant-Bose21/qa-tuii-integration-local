@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../algorithm/property_settings.dart';
 
@@ -212,12 +213,18 @@ class ProcessingBlockModel {
   final String algorithmId;
   List<PropertySetting> properties;
 
+  //todo add all bellow parameter in Algorithm
+  // final List<Property>? properties;
+  // final List<Terminal>? terminals;
+  // final List<Parameter>? parameters;
+  // final List<Telemetry>? telemetry;
   ProcessingBlockModel({
     required this.name,
-    required this.id,
+    String? id,
     required this.algorithmId,
     List<PropertySetting>? properties,
-  }) : properties = properties ?? <PropertySetting>[];
+  }) : properties = properties ?? <PropertySetting>[],
+       id = id ?? "${algorithmId.toUpperCase().replaceAll('_', '')}${FusionUtils.shortStringUUID()}";
 
   IconData get icon {
     return _iconNameMap[algorithmId] ?? Icons.memory;
@@ -229,6 +236,25 @@ class ProcessingBlockModel {
       id: id ?? this.id,
       algorithmId: algorithmId ?? this.algorithmId,
       properties: properties ?? this.properties,
+    );
+  }
+
+  ProcessingBlockModel clone() {
+    //todo clone all parameter in future
+    return ProcessingBlockModel(
+      name: name,
+      algorithmId: algorithmId,
+      properties: properties,
+    );
+  }
+
+  ProcessingBlockModel copyProperties({required ProcessingBlockModel model}) {
+    return ProcessingBlockModel(
+      id: id,
+      name: name,
+      algorithmId: algorithmId,
+      properties: model.properties,
+      //todo: copy all other properties in future
     );
   }
 

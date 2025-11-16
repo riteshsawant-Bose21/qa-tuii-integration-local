@@ -187,4 +187,61 @@ extension SourceSetViewModel on ProjectViewModel {
       throwError("Failed to reorder sources in source set: $e");
     }
   }
+
+  bool canLinkSourceSet({required String sourceSetId}) {
+    try {
+      return projectManager.canLinkSourceSet(sourceSetId: sourceSetId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to check if source set can be linked: $e");
+      return false;
+    }
+  }
+
+  void addProcessingBlockToSource({required String sourceId, required ProcessingBlockModel processingBlock, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.addProcessingBlockToSource(sourceId: sourceId, processingBlock: processingBlock);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add processing block to source: $e");
+      throwError("Failed to add processing block to source: $e");
+    }
+  }
+
+  void removeProcessingBlockFromSource({required String sourceId, required String processingBlockId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.removeProcessingBlockFromSource(sourceId: sourceId, processingBlockId: processingBlockId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove processing block from source: $e");
+      throwError("Failed to remove processing block from source: $e");
+    }
+  }
+
+  void updateProcessingBlockInSource({required String sourceId, required ProcessingBlockModel processingBlock, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updateProcessingBlockInSource(sourceId: sourceId, processingBlock: processingBlock);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update processing block in source: $e");
+      throwError("Failed to update processing block in source: $e");
+    }
+  }
 }
