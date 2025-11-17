@@ -209,7 +209,6 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Success 204 "Successfully deleted project"
 // @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
-// @Failure 401 {object} types.UnauthorizedError "Unauthorized - User not found"
 // @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
 // @Failure 404 {object} types.NotFoundError "Project or user not found"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
@@ -241,11 +240,9 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 			return
 		}
 
-		if err.Error() == types.ErrMsgUserNotFound {
-			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: err.Error()})
-		}
 		// Check if it's authorization errors
 		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
+			err.Error() == types.ErrMsgUserNotFound ||
 			err.Error() == types.ErrMsgProjectArchived ||
 			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: err.Error()})
@@ -389,7 +386,7 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param userId path string true "User ID"
 // @Success 204 "Successfully unstarred project"
-// @Failure 401 {object} types.UnauthorizedError "User not assigned to the project"
+// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
 // @Failure 404 {object} types.NotFoundError "Project or User not found"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/star/{userId} [delete]
@@ -412,7 +409,7 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 		errorMsg := err.Error()
 		// Check for specific error types in priority order
 		if errorMsg == types.ErrMsgUserNotAssignedToProject {
-			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
+			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
