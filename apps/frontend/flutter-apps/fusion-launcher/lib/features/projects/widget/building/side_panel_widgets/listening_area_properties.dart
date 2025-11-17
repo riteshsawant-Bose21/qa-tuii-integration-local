@@ -82,209 +82,212 @@ class ListeningAreaProperties extends StatelessWidget {
               );
             }).toList();
 
-        return Container(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              // Header section with name and delete button
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 7,
-                    child: SemanticHelper.formControl(
-                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input"),
-                      child: TextFormField(
-                        controller: listeningAreaController,
-                        maxLength: 24,
-                        decoration: const InputDecoration(
-                          counterText: "",
-                          hintText: 'Area Name',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_properties_panel"),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                // Header section with name and delete button
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      flex: 7,
+                      child: SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "listening_area_name_input"),
+                        child: TextFormField(
+                          controller: listeningAreaController,
+                          maxLength: 24,
+                          decoration: const InputDecoration(
+                            counterText: "",
+                            hintText: 'Area Name',
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                          onFieldSubmitted: (String v) {
+                            if (v.trim().isNotEmpty) {
+                              final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
+                              viewModel.updateListeningArea(area: updatedLA);
+                            } else {
+                              // Reset to previous value if empty
+                              listeningAreaController.text = selectedListeningArea.name;
+                            }
+                          },
                         ),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    //small delete icon button to delete the selectedListeningArea
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_listening_area"),
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.delete,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.error,
                         ),
-                        onFieldSubmitted: (String v) {
-                          if (v.trim().isNotEmpty) {
-                            final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
-                            viewModel.updateListeningArea(area: updatedLA);
-                          } else {
-                            // Reset to previous value if empty
-                            listeningAreaController.text = selectedListeningArea.name;
-                          }
+                        onPressed: () {
+                          viewModel.removeListeningArea(areaId: selectedListeningArea.id);
                         },
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  //small delete icon button to delete the selectedListeningArea
-                  SemanticHelper.button(
-                    testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_listening_area"),
-                    child: IconButton(
-                      icon: Icon(
-                        Icons.delete,
-                        size: 18,
-                        color: Theme.of(context).colorScheme.error,
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Properties section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: 'Properties',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
                       ),
-                      onPressed: () {
-                        viewModel.removeListeningArea(areaId: selectedListeningArea.id);
-                      },
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 20),
-
-              // Properties section
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  FusionAppText(text:
-                    'Properties',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Zone",
-                    value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
-                    options: viewModel.zones.map((Zone zone) => zone.name).toList(),
-                    onOptionSelected: (int selectedIndex) {
-                      final Zone selectedZone = viewModel.zones[selectedIndex];
-                      viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Type",
-                    value: selectedListeningArea.venuType,
-                    options: venueOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      final String selectedType = venueOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Listening Ht",
-                    value: displayValue,
-                    options: listeningHeightOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      final String selectedOption = listeningHeightOptions[selectedIndex];
-                      final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
-
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-
-                  // Show custom listening height text field if "Custom" is selected
-                  if (isCustomListeningHeight) ...<Widget>[
-                    const SizedBox(height: 10),
-                    _buildValidatedPropertyRowForTextField(
+                    const SizedBox(height: 12),
+                    _buildLAPropertyRow(
                       context: context,
-                      label: "Custom Height",
-                      controller: customListeningHeightController,
-                      hintText: "e.g., 4.5",
-                      onSubmit: (String newValue) {
-                        final double? customHeight = double.tryParse(newValue);
-                        if (customHeight != null && customHeight > 0) {
-                          final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
-                          viewModel.updateListeningArea(area: updatedLA);
-                        }
+                      label: "Zone",
+                      value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
+                      options: viewModel.zones.map((Zone zone) => zone.name).toList(),
+                      onOptionSelected: (int selectedIndex) {
+                        final Zone selectedZone = viewModel.zones[selectedIndex];
+                        viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
                       },
-                      viewModel: viewModel,
+                    ),
+                    const SizedBox(height: 10),
+                    _buildLAPropertyRow(
+                      context: context,
+                      label: "Type",
+                      value: selectedListeningArea.venuType,
+                      options: venueOptions,
+                      onOptionSelected: (int selectedIndex) {
+                        final String selectedType = venueOptions[selectedIndex];
+                        final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
+                        viewModel.updateListeningArea(area: updatedLA);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _buildLAPropertyRow(
+                      context: context,
+                      label: "Listening Ht",
+                      value: displayValue,
+                      options: listeningHeightOptions,
+                      onOptionSelected: (int selectedIndex) {
+                        final String selectedOption = listeningHeightOptions[selectedIndex];
+                        final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
+
+                        final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
+                        viewModel.updateListeningArea(area: updatedLA);
+                      },
+                    ),
+
+                    // Show custom listening height text field if "Custom" is selected
+                    if (isCustomListeningHeight) ...<Widget>[
+                      const SizedBox(height: 10),
+                      _buildValidatedPropertyRowForTextField(
+                        context: context,
+                        label: "Custom Height",
+                        controller: customListeningHeightController,
+                        hintText: "e.g., 4.5",
+                        onSubmit: (String newValue) {
+                          final double? customHeight = double.tryParse(newValue);
+                          if (customHeight != null && customHeight > 0) {
+                            final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
+                            viewModel.updateListeningArea(area: updatedLA);
+                          }
+                        },
+                        viewModel: viewModel,
+                      ),
+                    ],
+
+                    const SizedBox(height: 10),
+                    _buildLAPropertyRow(
+                      context: context,
+                      label: "SPL Range",
+                      value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
+                      options: splRangeOptions,
+                      onOptionSelected: (int selectedIndex) {
+                        // Set min/max SPL values based on selection
+                        double minSPL, maxSPL;
+                        switch (selectedIndex) {
+                          case 0: // Background Music
+                            minSPL = 60.0;
+                            maxSPL = 70.0;
+                            break;
+                          case 1: // Paging
+                            minSPL = 70.0;
+                            maxSPL = 80.0;
+                            break;
+                          case 2: // Foreground Music
+                            minSPL = 75.0;
+                            maxSPL = 90.0;
+                            break;
+                          case 3: // Moderate live sound reinforcement
+                            minSPL = 90.0;
+                            maxSPL = 100.0;
+                            break;
+                          case 4: // High-SPL live sound reinforcement
+                            minSPL = 100.0;
+                            maxSPL = 120.0;
+                            break;
+                          default:
+                            minSPL = 60.0;
+                            maxSPL = 70.0;
+                        }
+
+                        final ListeningArea updatedLA = selectedListeningArea.copyWith(
+                          minSPL: minSPL,
+                          maxSPL: maxSPL,
+                        );
+                        viewModel.updateListeningArea(area: updatedLA);
+                      },
+                    ),
+                    const SizedBox(height: 10),
+                    _buildPropertyRowForTextField(
+                      context: context,
+                      label: "Ceiling Ht",
+                      controller: ceilingHeightController,
+                      hintText: "e.g., 10 ft",
+                      onSubmit: (String newValue) {
+                        final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
+                        viewModel.updateListeningArea(area: updatedLA);
+                      },
                     ),
                   ],
+                ),
 
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "SPL Range",
-                    value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
-                    options: splRangeOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      // Set min/max SPL values based on selection
-                      double minSPL, maxSPL;
-                      switch (selectedIndex) {
-                        case 0: // Background Music
-                          minSPL = 60.0;
-                          maxSPL = 70.0;
-                          break;
-                        case 1: // Paging
-                          minSPL = 70.0;
-                          maxSPL = 80.0;
-                          break;
-                        case 2: // Foreground Music
-                          minSPL = 75.0;
-                          maxSPL = 90.0;
-                          break;
-                        case 3: // Moderate live sound reinforcement
-                          minSPL = 90.0;
-                          maxSPL = 100.0;
-                          break;
-                        case 4: // High-SPL live sound reinforcement
-                          minSPL = 100.0;
-                          maxSPL = 120.0;
-                          break;
-                        default:
-                          minSPL = 60.0;
-                          maxSPL = 70.0;
-                      }
+                const SizedBox(height: 12),
 
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(
-                        minSPL: minSPL,
-                        maxSPL: maxSPL,
-                      );
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPropertyRowForTextField(
-                    context: context,
-                    label: "Ceiling Ht",
-                    controller: ceilingHeightController,
-                    hintText: "e.g., 10 ft",
-                    onSubmit: (String newValue) {
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 12),
-
-              // Vertices section
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  FusionAppText(text:
-                    'Vertices',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
+                // Vertices section
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: 'Vertices',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  PropertyListWidget(
-                    rows: rows,
-                  ),
-                ],
-              ),
-            ],
+                    const SizedBox(height: 12),
+                    PropertyListWidget(
+                      rows: rows,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -518,8 +521,8 @@ class ListeningAreaProperties extends StatelessWidget {
                     // Show error feedback
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(
-                        content: FusionAppText(text:
-                          'Please enter a valid decimal value between 0.1 and 1000',
+                        content: FusionAppText(
+                          text: 'Please enter a valid decimal value between 0.1 and 1000',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Colors.white,
                           ),
@@ -652,17 +655,17 @@ class _PropertyRowWidget extends StatelessWidget {
           // Title
           Expanded(
             flex: 1,
-            child: FusionAppText(text:row.title, style: textStyleGrey),
+            child: FusionAppText(text: row.title, style: textStyleGrey),
           ),
 
           Expanded(
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text:"X", style: textStyleGrey),
+                FusionAppText(text: "X", style: textStyleGrey),
                 const SizedBox(width: 4),
-                FusionAppText(text:
-                  "${row.x}",
+                FusionAppText(
+                  text: "${row.x}",
                   style: textStyleBlack,
                   // overflow: TextOverflow.ellipsis,
                 ),
@@ -674,10 +677,10 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text:"Y", style: textStyleGrey),
+                FusionAppText(text: "Y", style: textStyleGrey),
                 const SizedBox(width: 4),
-                FusionAppText(text:
-                  "${row.y}",
+                FusionAppText(
+                  text: "${row.y}",
                   style: textStyleBlack,
                   // overflow: TextOverflow.ellipsis,
                 ),
@@ -689,10 +692,10 @@ class _PropertyRowWidget extends StatelessWidget {
             flex: 2,
             child: Row(
               children: <Widget>[
-                FusionAppText(text:"Z", style: textStyleGrey),
+                FusionAppText(text: "Z", style: textStyleGrey),
                 const SizedBox(width: 4),
-                FusionAppText(text:
-                  "${row.z}",
+                FusionAppText(
+                  text: "${row.z}",
                   style: textStyleBlack,
                   // overflow: TextOverflow.ellipsis,
                 ),

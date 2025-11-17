@@ -34,86 +34,89 @@ class FloorProperties extends StatelessWidget {
 
         floorNameController.text = selectedFloor.name;
 
-        return Container(
-          padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
-          child: Column(
-            children: <Widget>[
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 7,
-                    child: SemanticHelper.formControl(
-                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "floor_name_input"),
-                      child: TextFormField(
-                        controller: floorNameController,
-                        maxLength: 24,
-                        decoration: const InputDecoration(
-                          counterText: '',
-                          hintText: 'Floor Name',
-                          border: InputBorder.none,
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_properties_panel"),
+          child: Container(
+            padding: const EdgeInsets.only(top: 0, bottom: 16, left: 16, right: 16),
+            child: Column(
+              children: <Widget>[
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      flex: 7,
+                      child: SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "floor_name_input"),
+                        child: TextFormField(
+                          controller: floorNameController,
+                          maxLength: 24,
+                          decoration: const InputDecoration(
+                            counterText: '',
+                            hintText: 'Floor Name',
+                            border: InputBorder.none,
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12,
+                          ),
+                          onFieldSubmitted: (String v) {
+                            // Validate that the name is not empty or just whitespace
+                            final String trimmedName = v.trim();
+                            if (trimmedName.isNotEmpty) {
+                              final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
+                              viewModel.updateFloor(floor: updated);
+                            } else {
+                              // Reset to previous name if empty
+                              floorNameController.text = selectedFloor.name;
+                              // Show a snackbar to inform user
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Floor name cannot be empty'),
+                                  duration: Duration(seconds: 2),
+                                ),
+                              );
+                            }
+                          },
                         ),
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                        onFieldSubmitted: (String v) {
-                          // Validate that the name is not empty or just whitespace
-                          final String trimmedName = v.trim();
-                          if (trimmedName.isNotEmpty) {
-                            final FloorModel updated = selectedFloor.copyWith(name: trimmedName);
-                            viewModel.updateFloor(floor: updated);
-                          } else {
-                            // Reset to previous name if empty
-                            floorNameController.text = selectedFloor.name;
-                            // Show a snackbar to inform user
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Floor name cannot be empty'),
-                                duration: Duration(seconds: 2),
-                              ),
-                            );
-                          }
-                        },
                       ),
                     ),
-                  ),
 
-                  Expanded(
-                    flex: 3,
-                    child: SemanticHelper.button(
-                      testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor"),
-                      child: IconButton(
-                        icon: const Icon(
-                          Icons.delete,
-                          size: 15,
+                    Expanded(
+                      flex: 3,
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_floor"),
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.delete,
+                            size: 15,
+                          ),
+                          disabledColor: Theme.of(context).colorScheme.grey,
+
+                          onPressed:
+                              viewModel.floors.length > 1
+                                  ? () {
+                                    viewModel.removeFloor(floorId: selectedFloor.id);
+                                  }
+                                  : null,
                         ),
-                        disabledColor: Theme.of(context).colorScheme.grey,
-
-                        onPressed:
-                            viewModel.floors.length > 1
-                                ? () {
-                                  viewModel.removeFloor(floorId: selectedFloor.id);
-                                }
-                                : null,
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 5),
+                const SizedBox(height: 5),
 
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Total LA",
-                value: "${viewModel.getListeningAreasForFloor(floorId: selectedFloor.id).length}",
-              ),
-              _buildHardwarePropertyTextRow(
-                context: context,
-                label: "Total H/W",
-                value: "${viewModel.getHardwareForFloor(floorId: selectedFloor.id).length}",
-              ),
-            ],
+                _buildHardwarePropertyTextRow(
+                  context: context,
+                  label: "Total LA",
+                  value: "${viewModel.getListeningAreasForFloor(floorId: selectedFloor.id).length}",
+                ),
+                _buildHardwarePropertyTextRow(
+                  context: context,
+                  label: "Total H/W",
+                  value: "${viewModel.getHardwareForFloor(floorId: selectedFloor.id).length}",
+                ),
+              ],
+            ),
           ),
         );
       },
