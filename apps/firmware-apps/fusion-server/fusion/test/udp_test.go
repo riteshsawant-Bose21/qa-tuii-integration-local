@@ -140,6 +140,7 @@ func TestFusionUDP_StaleBroadcastBug(t *testing.T) {
 
 	const (
 		bufferSize   = 4096
+		drainTime    = 1000 * time.Millisecond
 		gatherTime   = 2 * time.Second
 		maxValues    = 2000
 		numUpdates   = 50
@@ -150,11 +151,14 @@ func TestFusionUDP_StaleBroadcastBug(t *testing.T) {
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
+
 	recvConn, err := net.ListenUDP("udp", laddr)
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
 	defer recvConn.Close()
+
+	drainUDP(recvConn, drainTime)
 
 	saddr, _ := net.ResolveUDPAddr("udp", fusionUDPAddr)
 
@@ -245,4 +249,17 @@ loop:
 	}
 
 	t.Logf("No stale broadcasts detected (maxSeen=%d)", maxSeen)
+}
+
+func drainUDP(conn *net.UDPConn, d time.Duration) {
+	buf := make([]byte, 4096)
+	deadline := time.Now().Add(d)
+
+	for time.Now().Before(deadline) {
+		conn.SetReadDeadline(time.Now().Add(50 * time.Millisecond))
+		if _, _, err := conn.ReadFromUDP(buf); err != nil {
+			// timeout → nothing to drain
+			continue
+		}
+	}
 }
