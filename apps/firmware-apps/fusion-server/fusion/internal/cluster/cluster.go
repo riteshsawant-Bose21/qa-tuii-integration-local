@@ -726,7 +726,7 @@ func (c *Cluster) initialAudioSyncFromPeer(peer *memberlist.Node) error {
 	return nil
 }
 
-// reconcileLocalAudioState reconnciles audio files and metadata
+// reconcileLocalAudioState reconciles audio files and metadata
 func (c *Cluster) reconcileLocalAudioState() {
 	logger := logging.GetLogger()
 
