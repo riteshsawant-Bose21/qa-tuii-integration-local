@@ -101,3 +101,5 @@ class CircuitRepository extends Repository<CircuitModel> {}
 class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
+
+class ZoneFunctionRepository extends Repository<ZoneFunctions> {}

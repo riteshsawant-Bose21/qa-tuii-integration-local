@@ -17,7 +17,7 @@ extension SourceSetManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.sourceSets.remove(sourceSetId);
+    projectService!.removeSourceSet(sourceSetId);
   }
 
   ///Update SourceSet
@@ -25,10 +25,8 @@ extension SourceSetManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    if (!projectService!.sourceSets.exists(sourceSet.id)) {
-      throw Exception('SourceSet with id ${sourceSet.id} does not exist');
-    }
-    projectService!.sourceSets.add(sourceSet.id, sourceSet);
+
+    projectService!.addSourceSet(sourceSet);
   }
 
   List<SourceSet> getAllSourceSets() {
@@ -96,5 +94,33 @@ extension SourceSetManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     projectService!.reOrderSourcesInSourceSet(parentId, oldIndex, newIndex);
+  }
+
+  bool canLinkSourceSet({required String sourceSetId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.canLinkSourceSet(sourceSetId);
+  }
+
+  void addProcessingBlockToSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addProcessingBlockToSource(sourceId: sourceId, processingBlock: processingBlock);
+  }
+
+  void removeProcessingBlockFromSource({required String sourceId, required String processingBlockId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removeProcessingBlockFromSource(sourceId: sourceId, processingBlockId: processingBlockId);
+  }
+
+  void updateProcessingBlockInSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateProcessingBlockInSource(sourceId: sourceId, processingBlock: processingBlock);
   }
 }

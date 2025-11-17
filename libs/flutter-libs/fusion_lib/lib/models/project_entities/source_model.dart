@@ -9,6 +9,10 @@ class Source extends HardwareComponent {
   final SourceType type;
   String? ipAddress; //for AES67 sources
   final String sku;
+  final double gain;
+  final bool muted;
+  final double leftMix;
+  final double rightMix;
 
   /// Constructor for SourceEntity
   Source({
@@ -30,6 +34,10 @@ class Source extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    this.gain = -24.0,
+    this.muted = false,
+    this.leftMix = 0.0,
+    this.rightMix = 0.0,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SOURCE${FusionUtils.shortStringUUID()}",
@@ -53,6 +61,10 @@ class Source extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    double? gain,
+    bool? muted,
+    double? leftMix,
+    double? rightMix,
   }) {
     return Source(
       id: id ?? this.id,
@@ -71,6 +83,10 @@ class Source extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      gain: gain ?? this.gain,
+      muted: muted ?? this.muted,
+      leftMix: leftMix ?? this.leftMix,
+      rightMix: rightMix ?? this.rightMix,
     );
   }
 
@@ -96,6 +112,10 @@ class Source extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      gain: (json['gain'] as num?)?.toDouble() ?? -24.0,
+      muted: json['muted'] as bool? ?? false,
+      leftMix: (json['leftMix'] as num?)?.toDouble() ?? 0.0,
+      rightMix: (json['rightMix'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
@@ -118,6 +138,10 @@ class Source extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'gain': gain,
+      'muted': muted,
+      'leftMix': leftMix,
+      'rightMix': rightMix,
     };
   }
 }
