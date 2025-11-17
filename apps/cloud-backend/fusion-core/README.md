@@ -228,9 +228,25 @@ Before you begin, ensure you have the following installed:
 
 ### Running the Application
 
+**Pre-requisites:**
+
+1. **Create environment configuration file**
+   ```bash
+   # Create .env file in cmd/api/ directory
+   cd cmd/api
+   cat > .env << EOF
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=fusion_cloud
+   POSTGRES_PASS=bose123
+   POSTGRES_INSTANCE=fusion_cloud
+   S3_PROJECT_BUCKET=bose.cloud-backend.test
+   EOF
+   ```
+
 1. **Start the development server**
    ```bash
-   go run cmd/api/main.go
+   go run main.go -c .env -e local
    ```
 
 2. **Verify the server is running**

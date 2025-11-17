@@ -583,10 +583,10 @@ const docTemplate = `{
                     "204": {
                         "description": "Successfully unstarred project"
                     },
-                    "401": {
-                        "description": "User not assigned to the project",
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
                         "schema": {
-                            "$ref": "#/definitions/types.UnauthorizedError"
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
@@ -1361,15 +1361,6 @@ const docTemplate = `{
                             "type": "string"
                         }
                     }
-                }
-            }
-        },
-        "types.UnauthorizedError": {
-            "type": "object",
-            "properties": {
-                "message": {
-                    "type": "string",
-                    "example": "Unauthorized"
                 }
             }
         },

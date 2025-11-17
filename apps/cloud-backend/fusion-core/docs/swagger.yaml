@@ -445,12 +445,6 @@ definitions:
             type: string
         type: object
     type: object
-  types.UnauthorizedError:
-    properties:
-      message:
-        example: Unauthorized
-        type: string
-    type: object
   types.nominal_impedence:
     properties:
       unit:
@@ -950,10 +944,11 @@ paths:
       responses:
         "204":
           description: Successfully unstarred project
-        "401":
-          description: User not assigned to the project
+        "403":
+          description: Forbidden - User not assigned to project, project archived,
+            or locked by another user
           schema:
-            $ref: '#/definitions/types.UnauthorizedError'
+            $ref: '#/definitions/types.ForbiddenError'
         "404":
           description: Project or User not found
           schema:
