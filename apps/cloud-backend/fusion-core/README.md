@@ -244,6 +244,29 @@ Before you begin, ensure you have the following installed:
    EOF
    ```
 
+2. **Setup AWS credentials locally**
+   ```bash
+   # Navigate to your home directory and create AWS credentials directory
+   cd
+   mkdir -p ~/.aws
+   
+   # Follow these steps to get your AWS credentials:
+   # 1. Go to https://myapps.microsoft.com/
+   # 2. Click on "AWS IAM Identity Center" app
+   # 3. Copy the provided credentials
+   # 4. Create/update your AWS credentials file:
+   
+   # Example credentials file format (~/.aws/credentials):
+   cat > ~/.aws/credentials << EOF
+   [default]
+   region=us-east-2
+   aws_access_key_id = YOUR_ACCESS_KEY_ID
+   aws_secret_access_key = YOUR_SECRET_ACCESS_KEY
+   aws_session_token = YOUR_SESSION_TOKEN
+   EOF
+   ```
+
+
 1. **Start the development server**
    ```bash
    go run main.go -c .env -e local
