@@ -132,4 +132,85 @@ extension ZoneService on ProjectService {
     // Convert back to Map
     return {for (var zone in items) zone.id: zone};
   }
+
+  //Zone Sources
+  void addSourceToZone(String sourceId, String zoneId) {
+    if (!hardware.exists(sourceId)) throw Exception('Source $sourceId not found');
+    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+
+    relationships.link(RelationshipType.zoneSources, zoneId, sourceId);
+  }
+
+  void removeSourceFromZone(String sourceId, String zoneId) {
+    if (!zones.exists(zoneId)) return;
+
+    relationships.unlink(RelationshipType.zoneSources, zoneId, sourceId);
+  }
+
+  List<Source> getSourcesInZone(String zoneId) {
+    final sourceIds = relationships.getChildren(RelationshipType.zoneSources, zoneId);
+    return sourceIds.map((id) => hardware.get(id)).where((m) => m != null).whereType<Source>().toList();
+  }
+
+  ///This method returns all the sources linked directly to the zone
+  /// as well as all the sources that are part of the source sets linked to the zone
+  List<Source> getSourcesAndSourceSetSourcesInZone({required String zoneId}) {
+    final sourcesInZone = getSourcesInZone(zoneId);
+    final sourceSetsInZone = relationships.getChildren(RelationshipType.zoneSourceSet, zoneId);
+
+    final sourceSetSources = <Source>[];
+    sourceSetSources.addAll(sourcesInZone);
+    for (final sourceSet in sourceSetsInZone) {
+      List<Source> sourcesInSourceSet = getSourcesInSourceSet(sourceSet);
+      sourceSetSources.addAll(sourcesInSourceSet);
+    }
+    return sourceSetSources;
+  }
+
+  //Add Priority sources
+  void addPrioritySourceToZone({required String sourceId, required String zoneId, required int priority}) {
+    if (!hardware.exists(sourceId)) throw Exception('Source $sourceId not found');
+    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+    if (priority < 1 || priority > 2) throw Exception('Priority should be [1,2]');
+
+    final prioritySources = relationships.getChildren(RelationshipType.prioritySources, zoneId).toList();
+
+    if (prioritySources.contains(sourceId)) {
+      throw Exception('Source $sourceId already exists in zone $zoneId ');
+    }
+
+    final priorityOrder = <String>[...prioritySources];
+
+    if (priority == 1) {
+      priorityOrder.insert(0, sourceId);
+    } else {
+      if (priorityOrder.isEmpty) priorityOrder.add("");
+
+      if (priorityOrder.length == 2) {
+        priorityOrder.insert(1, sourceId);
+      } else {
+        priorityOrder.add(sourceId);
+      }
+    }
+
+    relationships.reOrder(RelationshipType.prioritySources, zoneId, priorityOrder);
+  }
+
+  void removePrioritySourceFromZone({required String sourceId, required String zoneId}) {
+    if (!zones.exists(zoneId)) return;
+
+    final prioritySources = relationships.getChildren(RelationshipType.prioritySources, zoneId).toList();
+
+    if (!prioritySources.contains(sourceId)) return;
+
+    final updatedPrioritySources = prioritySources.map((id) => id == sourceId ? "" : id).toList();
+
+    relationships.reOrder(RelationshipType.prioritySources, zoneId, updatedPrioritySources);
+  }
+
+  List<String> getPrioritySourcesInZone(String zoneId) {
+    final prioritySources = relationships.getChildren(RelationshipType.prioritySources, zoneId).toList();
+
+    return prioritySources;
+  }
 }

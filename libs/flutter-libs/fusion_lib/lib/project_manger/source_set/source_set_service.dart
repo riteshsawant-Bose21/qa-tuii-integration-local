@@ -128,4 +128,140 @@ extension SourceSetService on ProjectService {
 
     relationships.reOrder(RelationshipType.sourceSetSources, parentId, sourceSetSources);
   }
+
+  /// Determine if source set can be linked
+  /// Returns true if all sources in the set have the same type and processing blocks
+  bool canLinkSourceSet(String sourceSetId) {
+    final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+
+    // Early return for empty or single source sets
+    if (sourcesInSet.length <= 1) return sourcesInSet.isNotEmpty;
+
+    // Use iterator to avoid creating a list copy
+    final iterator = sourcesInSet.iterator;
+    if (!iterator.moveNext()) return false;
+
+    // Get reference source properties
+    final firstSourceId = iterator.current;
+    final firstSource = getHardwareById(firstSourceId) as Source?;
+    if (firstSource == null) return false;
+
+    final referenceType = firstSource.type;
+    final referenceBlocks = getProcessingBlockFor(firstSourceId);
+
+    // Check remaining sources against reference using iterator
+    while (iterator.moveNext()) {
+      final sourceId = iterator.current;
+      final source = getHardwareById(sourceId) as Source?;
+
+      // Early return on type mismatch or null source
+      if (source == null || source.type != referenceType) return false;
+
+      final blocks = getProcessingBlockFor(sourceId);
+
+      // Fast length check first
+      if (blocks.length != referenceBlocks.length) return false;
+
+      // Efficient element-by-element comparison
+      // Use every() for more efficient comparison - stops at first mismatch
+      if (!blocks.asMap().entries.every((entry) => entry.value.algorithmId == referenceBlocks[entry.key].algorithmId)) return false;
+    }
+
+    return true;
+  }
+
+  //add Processing block to source,
+  // if source in source set and source set is linked then add processing block to all the sources in that source set
+  void addProcessingBlockToSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
+    final source = getHardwareById(sourceId) as Source?;
+    if (source == null) return;
+
+    final sourceSet = getSourceSetForSource(sourceId);
+    if (sourceSet == null) return;
+    addProcessingBlockToParent(processingBlock, sourceId);
+
+    if (sourceSet.isLinked) {
+      final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);
+
+      for (var source in sourcesInSet) {
+        //we already added this processing block to the source so skip it
+        if (source == sourceId) continue;
+
+        //add processing block to other sources in set cloned from current processing block
+        addProcessingBlockToParent(processingBlock.clone(), source);
+      }
+    }
+  }
+
+  void removeProcessingBlockFromSource({required String sourceId, required String processingBlockId}) {
+    final source = getHardwareById(sourceId) as Source?;
+    if (source == null) return;
+
+    final sourceSet = getSourceSetForSource(sourceId);
+    if (sourceSet == null) return;
+
+    //get the index
+    final allBlocksInSource = relationships.getChildren(RelationshipType.processingBlock, sourceId).toList();
+    final indexOfProcessingBlock = allBlocksInSource.indexOf(processingBlockId);
+
+    removeProcessingBlockFromParent(processingBlockId, sourceId);
+
+    if (sourceSet.isLinked) {
+      final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);
+
+      for (var source in sourcesInSet) {
+        if (source == sourceId) continue;
+
+        final allBlocksInOtherSource = relationships.getChildren(RelationshipType.processingBlock, source).toList();
+        final indexOfProcessingBlockInOtherSource = allBlocksInOtherSource.indexOf(processingBlockId);
+
+        if (indexOfProcessingBlockInOtherSource == -1) {
+          throw (Exception('Processing block $processingBlockId not found in source $source'));
+        }
+
+        final processingBlockToRemove = allBlocksInOtherSource[indexOfProcessingBlockInOtherSource];
+
+        removeProcessingBlockFromParent(processingBlockToRemove, source);
+      }
+    }
+  }
+
+  // Update Processing block in source
+  void updateProcessingBlockInSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
+    final source = getHardwareById(sourceId) as Source?;
+    if (source == null) return;
+
+    final sourceSet = getSourceSetForSource(sourceId);
+    if (sourceSet == null) return;
+
+    //update
+    updateProcessingBlock(processingBlock);
+
+    if (sourceSet.isLinked) {
+      final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);
+
+      //get the index of currently updated processing block
+      final allBlocksInSource = relationships.getChildren(RelationshipType.processingBlock, sourceId).toList();
+      final index = allBlocksInSource.indexOf(processingBlock.id);
+
+      for (var source in sourcesInSet) {
+        //skip for current source
+        if (source == sourceId) continue;
+
+        final allBlocksInOtherSource = relationships.getChildren(RelationshipType.processingBlock, source).toList();
+
+        final processingBlockId = allBlocksInOtherSource[index];
+
+        //get processing block
+        final processingBlockToUpdated = getProcessingBlock(processingBlockId);
+
+        if (processingBlockToUpdated == null) {
+          throw Exception('Processing block $processingBlockId not found');
+        }
+
+        //update processing block in other sources in set cloned from current processing block
+        updateProcessingBlock(processingBlockToUpdated.copyProperties(model: processingBlock));
+      }
+    }
+  }
 }

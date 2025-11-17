@@ -131,4 +131,13 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
       throwError("Failed to reorder processing blocks: $e");
     }
   }
+
+  ProcessingBlockModel? getProcessingBlockById({required String processingBlockId}) {
+    try {
+      return projectManager.getProcessingBlockById(processingBlockId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get processing block by id: $e");
+      return null;
+    }
+  }
 }
