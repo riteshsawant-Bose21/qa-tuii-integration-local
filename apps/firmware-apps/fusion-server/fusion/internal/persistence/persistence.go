@@ -7,8 +7,13 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/routes"
 	"fusion/internal/utils"
+	"io"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -133,7 +138,7 @@ func (p *Persistence) ValidateState() error {
 	payload := p.stateManager.GetStateMap()
 
 	// Recompute checksum over that payload
-	calculated, err := utils.CalculateChecksum(payload)
+	calculated, err := utils.JSONChecksum(payload)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
@@ -243,10 +248,20 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
 	state := p.stateManager.GetFullStateDeepCopy()
 
+	// Ensure we always have a checksum
+	chk := state.Checksum
+	if chk == "" {
+		// Compute over the state payload only
+		payload := state.State
+		if c, err := utils.JSONChecksum(payload); err == nil {
+			chk = c
+		}
+	}
+
 	ps := &PersistentState{
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
-		Checksum:  state.Checksum,
+		Checksum:  chk,
 		State:     state.State,
 	}
 
@@ -262,7 +277,6 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 		}
 		return bucket.Put([]byte(snapshotKey), data)
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}
@@ -502,4 +516,86 @@ func (p *Persistence) saveWorker() {
 			logging.GetLogger().Error("Failed to persist state: %v", err)
 		}
 	}
+}
+
+// RemoveAudioFile removes an audio file from a node
+func (p *Persistence) RemoveAudioFile(id string) error {
+	meta, err := p.GetAudioMetadata(id)
+	if err != nil {
+		return err
+	}
+	if meta == nil {
+		return nil
+	}
+
+	path := filepath.Join(api.AudioFilesLocation, meta.Filename)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove %s: %w", path, err)
+	}
+
+	return p.DeleteAudioMetadata(id)
+}
+
+// SyncAudioFile retrieves an audio file from another node and stores metadata.
+func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
+
+	finalPath := filepath.Join(api.AudioFilesLocation, update.Metadata.Filename)
+
+	// Ensure audio directory exists
+	if err := os.MkdirAll(api.AudioFilesLocation, 0755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", api.AudioFilesLocation, err)
+	}
+
+	if _, err := os.Stat(finalPath); err == nil {
+		return nil
+	}
+
+	// Fetch from source
+	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", update.Metadata.Id, 1)
+	streamURL := fmt.Sprintf("%s%s", update.URL, streamEndpoint)
+
+	resp, err := http.Get(streamURL)
+	if err != nil {
+		return fmt.Errorf("GET %s: %w", streamURL, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Write to temp first
+	tmp, err := os.CreateTemp(api.AudioFilesLocation, update.Metadata.Filename+".*.part")
+	if err != nil {
+		return fmt.Errorf("CreateTemp: %w", err)
+	}
+
+	if _, err := io.Copy(tmp, resp.Body); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return fmt.Errorf("copy: %w", err)
+	}
+
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		os.Remove(tmp.Name())
+		return fmt.Errorf("sync: %w", err)
+	}
+
+	if err := tmp.Close(); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("close: %w", err)
+	}
+
+	if err := os.Rename(tmp.Name(), finalPath); err != nil {
+		os.Remove(tmp.Name())
+		return fmt.Errorf("rename: %w", err)
+	}
+
+	if err := p.SaveAudioMeta(&update.Metadata); err != nil {
+		return fmt.Errorf("SaveAudioMeta: %w", err)
+	}
+
+	return nil
 }

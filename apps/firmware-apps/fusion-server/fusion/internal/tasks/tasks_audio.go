@@ -105,51 +105,73 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// messageID handles HTTP GET requests to list scheduled messages
+func (tm *TaskManager) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	tasks := tm.ListTasks()
+
+	messages := make([]api.TaskMessage, 0, len(tasks))
+
+	for _, t := range tasks {
+		if t.Type == api.TaskTypeMessage {
+			m := api.TaskMessage{
+				ID:          t.ID,
+				MessageID:   t.Params[api.MessageIDKey].(string),
+				Description: t.Description,
+				CronExpr:    t.CronExpr,
+			}
+			messages = append(messages, m)
+		}
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(messages)
+
+}
+
 // CreateScheduleMessageTask handles HTTP POST requests to add a message trigger task.
 func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequirePost(w, r) {
 		return
 	}
 
-	// Decode directly into api.Task
-	var task api.Task
-	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
+	var taskMessage api.TaskMessage
+	if err := json.NewDecoder(r.Body).Decode(&taskMessage); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 	defer r.Body.Close()
 
-	// Basic required fields
-	if task.ID == "" || task.CronExpr == "" || task.Description == "" {
+	if taskMessage.MessageID == "" || taskMessage.CronExpr == "" || taskMessage.Description == "" {
 		http.Error(w, "Task ID, cron expression and description are required", http.StatusBadRequest)
 		return
 	}
 
-	// Must be a audio task
-	if task.Type != api.TaskTypeMessage {
-		http.Error(w, "Task type must be 'message'", http.StatusBadRequest)
-		return
-	}
-
-	// Must have params[api.MessageIDKey]
-	messageId, ok := task.Params[api.MessageIDKey]
-	if !ok || messageId == "" {
-		http.Error(w, "params.message_id is required for audio playback tasks", http.StatusBadRequest)
-		return
-	}
-
-	// Check persistence for conflicts
-	exists, err := tm.persistence.TaskExists(&task)
+	// Verify message exists
+	_, err := tm.persistence.GetAudioMetadata(taskMessage.MessageID)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
-		return
-	}
-	if exists {
-		http.Error(w, "Task already exists", http.StatusConflict)
+		http.Error(w, "not found", http.StatusNotFound)
 		return
 	}
 
-	// Schedule it via the new AddTask(task) signature
+	// Create the scheduled message task
+	// id, err := uuid.NewUUID()
+	// if err != nil {
+	// 	http.Error(w, fmt.Sprintf("%v", err), http.StatusInternalServerError)
+	// 	return
+	// }
+
+	task := api.Task{
+		ID:          taskMessage.ID,
+		Description: taskMessage.Description,
+		CronExpr:    taskMessage.CronExpr,
+		Type:        api.TaskTypeMessage,
+		Params:      map[string]any{api.MessageIDKey: taskMessage.MessageID},
+	}
+
 	if err := tm.AddTask(&task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
 		return

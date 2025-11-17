@@ -14,6 +14,21 @@ func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 
 	switch message.Operation {
 
+	case api.NotifyOpAudioRemove:
+		if message.AudioRemove == nil {
+			return fmt.Errorf("AudioRemove required for operation")
+		}
+
+	case api.NotifyOpAudioSync:
+		if message.AudioSync == nil {
+			return fmt.Errorf("AudioSync required for operation")
+		}
+
+		err := h.handleAudioSync(message.AudioSync)
+		if err != nil {
+			return fmt.Errorf("audio sync failed: %w", err)
+		}
+
 	case api.NotifyOpConfigUpdate:
 		// Apply the configuration update and mark state as dirty for persistence.
 		if err := h.StateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {

@@ -641,18 +641,6 @@ func (s *FusionServer) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	s.handler.HandleAudioRemove(w, r)
 }
 
-func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-}
-
-func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-}
-
 func (s *FusionServer) ListZones(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return

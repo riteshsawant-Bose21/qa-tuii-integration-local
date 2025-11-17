@@ -21,7 +21,6 @@ import (
 
 const (
 	checkInterval = 30 * time.Second
-	httpTimeout   = 5 * time.Second
 )
 
 // StateManagerInterface defines the interface for state management
@@ -58,7 +57,7 @@ func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
 		state:      *NewVersionedState(),
 		version:    api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient: &http.Client{Timeout: httpTimeout},
+		httpClient: &http.Client{Timeout: api.HTTPTimeout},
 		verbose:    config.Verbose,
 	}
 }
@@ -74,7 +73,7 @@ func (sm *StateManager) NewConfigUpdate(data map[string]any) (*api.ConfigUpdate,
 
 // newConfigUpdateUnsafe assumes sm.Lock() is already held.
 func (sm *StateManager) newConfigUpdateUnsafe(data map[string]any) (*api.ConfigUpdate, error) {
-	hash, err := utils.CalculateChecksum(data)
+	hash, err := utils.JSONChecksum(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate hash: %w", err)
 	}
@@ -209,7 +208,7 @@ func (sm *StateManager) Get(key string) (any, bool) {
 func (sm *StateManager) Set(key string, value any) error {
 
 	data := map[string]any{key: value}
-	hash, err := utils.CalculateChecksum(data)
+	hash, err := utils.JSONChecksum(data)
 	if err != nil {
 		return fmt.Errorf("failed to generate hash: %w", err)
 	}
@@ -284,7 +283,7 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
 // updateChecksumUnsafe updates the checksum. Do not lock here.
 func (sm *StateManager) updateChecksumUnsafe() {
 	payload := sm.getFullStateUnsafe()
-	if sum, err := utils.CalculateChecksum(payload); err != nil {
+	if sum, err := utils.JSONChecksum(payload); err != nil {
 		logging.GetLogger().Error("failed to calculate checksum: %v", err)
 	} else {
 		sm.state.Checksum = sum

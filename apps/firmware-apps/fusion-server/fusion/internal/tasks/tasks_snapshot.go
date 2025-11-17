@@ -19,7 +19,6 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Decode directly into api.Task
 	var task api.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
@@ -27,26 +26,22 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 	defer r.Body.Close()
 
-	// Basic required fields
 	if task.ID == "" || task.CronExpr == "" || task.Description == "" {
 		http.Error(w, "Task ID, cron expression and description are required", http.StatusBadRequest)
 		return
 	}
 
-	// Must be a snapshot-type task
 	if task.Type != api.TaskTypeSnapshot {
 		http.Error(w, "Task type must be 'snapshot'", http.StatusBadRequest)
 		return
 	}
 
-	// Must have params[api.SnapshotIDKey]
 	snapID, ok := task.Params[api.SnapshotIDKey]
 	if !ok || snapID == "" {
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return
 	}
 
-	// Check persistence for conflicts
 	exists, err := tm.persistence.TaskExists(&task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
@@ -57,7 +52,6 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Schedule it via the new AddTask(task) signature
 	if err := tm.AddTask(&task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
 		return
@@ -70,10 +64,10 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	})
 }
 
-// UpdateApplySnapshotTask handles HTTP POST requests to update an existing task.
+// UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing task.
 func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.RequirePost(w, r) {
+	if !utils.RequirePatch(w, r) {
 		return
 	}
 
@@ -83,33 +77,56 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	task, err := tm.getTask(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
 
-	var task api.Task
-	if err := json.Unmarshal(body, &task); err != nil {
+	var patch api.TaskSnapshopPatch
+	if err := json.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
-	task.ID = id
 
-	if task.CronExpr == "" || task.Description == "" {
+	if patch.CronExpr == nil || patch.Description == nil {
 		http.Error(w, "Cron expression and description are required", http.StatusBadRequest)
 		return
 	}
 
-	// Must be a snapshot-type task
-	if task.Type != api.TaskTypeSnapshot {
-		http.Error(w, "Task type must be 'snapshot'", http.StatusBadRequest)
-		return
+	if patch.Description != nil {
+		task.Description = *patch.Description
 	}
 
-	if err = tm.UpdateTask(&task, tm.taskActivateSnapshotFunc(&task)); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	if patch.CronExpr != nil {
+		task.CronExpr = *patch.CronExpr
+	}
+
+	if patch.Snapshot != nil {
+
+		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !exists {
+			http.Error(w, fmt.Sprintf("Snapshot %s not found: %v", *patch.Snapshot, err), http.StatusNotFound)
+			return
+		}
+
+		task.Params[api.SnapshotIDKey] = *patch.Snapshot
+	}
+
+	if err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task)); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
