@@ -509,12 +509,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
               fontWeight: FontWeight.w600,
             ),
           ),
-          content: SemanticHelper.staticText(
-            testId: SemanticHelper.createTestId(SemanticTypes.text, "dialog_delete_floor_confirmation"),
-            child: Text(
-              'Are you sure you want to delete "$floorName"? This action cannot be undone.',
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
+          content: FusionAppText(
+            semanticId: "dialog_delete_floor_confirmation",
+            text: 'Are you sure you want to delete "$floorName"? This action cannot be undone.',
+            style: Theme.of(context).textTheme.bodyMedium,
           ),
           actions: <Widget>[
             FusionOutlinedButton(
