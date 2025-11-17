@@ -19,12 +19,26 @@ class PBSlider extends StatelessWidget {
   Widget build(BuildContext context) {
     final PBSliderParam data = item.param as PBSliderParam;
 
-    return VerticalSlider(
-      value: 100,
-      min: data.min,
-      max: data.max,
-      showIntervals: showIntervals,
-      onChanged: onChanged,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.only(left: 10),
+          child: Text(
+            data.label,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500, fontSize: 12),
+          ),
+        ),
+        Expanded(
+          child: VerticalSlider(
+            value: 100,
+            min: data.min,
+            max: data.max,
+            showIntervals: showIntervals,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
     );
   }
 }
