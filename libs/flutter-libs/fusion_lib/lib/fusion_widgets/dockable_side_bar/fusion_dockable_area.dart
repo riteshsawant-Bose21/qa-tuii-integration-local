@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
 import '../others/fusion_horizontal_resizable_widget.dart';
@@ -209,17 +211,20 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
           children: [
             /// Left Sidebar
             if (widget.showLeft)
-              FusionHorizontalResizableWidget(
-                minWidth: 240,
-                maxWidth: screenWidth * 0.3,
-                dragLeft: false,
-                dragRight: true,
-                child: FusionDockSidebar(
-                  side: "left",
-                  items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
-                  itemConfigs: widget.dockItemList,
-                  onItemUndock: _handleSidebarUndock,
-                  onExpansionChanged: _handleExpansionChanged,
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "horizontal_resizable_left"),
+                child: FusionHorizontalResizableWidget(
+                  minWidth: 240,
+                  maxWidth: screenWidth * 0.3,
+                  dragLeft: false,
+                  dragRight: true,
+                  child: FusionDockSidebar(
+                    side: "left",
+                    items: items.where((i) => i.docked && i.side == "left").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                    itemConfigs: widget.dockItemList,
+                    onItemUndock: _handleSidebarUndock,
+                    onExpansionChanged: _handleExpansionChanged,
+                  ),
                 ),
               ),
 
@@ -238,17 +243,20 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
 
             /// Right Sidebar
             if (widget.showRight)
-              FusionHorizontalResizableWidget(
-                minWidth: 240,
-                maxWidth: screenWidth * 0.3,
-                dragLeft: true,
-                dragRight: false,
-                child: FusionDockSidebar(
-                  side: "right",
-                  items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
-                  itemConfigs: widget.dockItemList,
-                  onItemUndock: _handleSidebarUndock,
-                  onExpansionChanged: _handleExpansionChanged,
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "horizontal_resizable_right"),
+                child: FusionHorizontalResizableWidget(
+                  minWidth: 240,
+                  maxWidth: screenWidth * 0.3,
+                  dragLeft: true,
+                  dragRight: false,
+                  child: FusionDockSidebar(
+                    side: "right",
+                    items: items.where((i) => i.docked && i.side == "right").toList()..sort((a, b) => (a.dockedOrder ?? 0).compareTo(b.dockedOrder ?? 0)),
+                    itemConfigs: widget.dockItemList,
+                    onItemUndock: _handleSidebarUndock,
+                    onExpansionChanged: _handleExpansionChanged,
+                  ),
                 ),
               ),
           ],

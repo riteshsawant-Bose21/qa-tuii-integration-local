@@ -67,19 +67,27 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
       return _buildEmptyState();
     }
 
-    return Container(
-      constraints: const BoxConstraints(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const SizedBox(height: 3),
-          ...listeningAreas.map(
-            (ListeningArea area) => Container(
-              child: _buildListeningAreaCard(area),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_lists"),
+      child: Container(
+        constraints: const BoxConstraints(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const SizedBox(height: 3),
+            ...listeningAreas.map(
+              (ListeningArea area) {
+                final int index = listeningAreas.indexOf(area);
+                return SemanticHelper.listItem(
+                  testId: SemanticHelper.createTestId(SemanticTypes.listItem, "listening_area_item_$index"),
+                  index: index,
+                  child: _buildListeningAreaCard(area),
+                );
+              },
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }

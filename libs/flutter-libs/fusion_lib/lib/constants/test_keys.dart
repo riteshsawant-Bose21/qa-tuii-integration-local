@@ -22,10 +22,6 @@ sealed class FusionTestKeys {
   static const String calibrationUnit = 'calibration_unit';
   static const String addFloorPlusButton = 'add_floor_plus_button';
   static const String floorName = 'floor_name';
-  static const String floorNameEditInput = 'floor_name_edit_input';
-  static const String floorNameEditSaveCheckButton = 'floor_name_edit_save_check_button';
-  static const String floorNameEditButton = 'floor_name_edit_button';
-  static const String deleteFloorButton = 'delete_floor_button';
   static const String applyProductQueryFilters = 'apply_product_query_filters';
   static const String clearProductQueryFilters = 'clear_product_query_filters';
   static const String splUpperLimitTextField = 'spl_upper_limit_text_field';
@@ -35,4 +31,7 @@ sealed class FusionTestKeys {
   static const String closeX = 'close_x';
   static const String uploadFloorPlan = 'upload_floor_plan';
   static const String floorCalibrationCanvas = 'floor_calibration_canvas';
+  static const String buildingCanvas = 'building_canvas';
+  static String dockLeftSideBar = 'dock_sidebar_left';
+  static String dockRightSideBar = 'dock_sidebar_right';
 }
