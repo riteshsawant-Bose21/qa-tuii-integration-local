@@ -277,7 +277,6 @@ func (app *App) setupPrivateRoutes() {
 	app.registerPrivateGET(routes.StateEndpoint, app.Server.ExportState)
 	app.registerPrivatePOST(routes.StateEndpoint, app.Server.ImportState)
 
-	app.registerPrivateGET(routes.StateEndpoint, app.Server.ImportState)
 }
 
 func (app *App) startNetworkMonitor() {
