@@ -51,8 +51,8 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: AppTheme.lightTheme.colorScheme.launcherBgColor1,
           // appbar with title "Fusion Suite"
           appBar: AppBar(
-            title: const FusionAppText(text:
-              'FUSION SUITE',
+            title: const FusionAppText(
+              text: 'FUSION SUITE',
               style: TextStyle(
                 letterSpacing: 2.4,
                 wordSpacing: 3.0,
@@ -145,7 +145,10 @@ class _HomePageState extends State<HomePage> {
       builder:
           (BuildContext ctx) => AlertDialog(
             title: const FusionAppText(text: "Logout"),
-            content: const FusionAppText(text: "Are you sure you want to logout?"),
+            content: SemanticHelper.staticText(
+              testId: SemanticHelper.createTestId(SemanticTypes.text, "dialog_logout_confirmation"),
+              child: const FusionAppText(text: "Are you sure you want to logout?"),
+            ),
             actions: <Widget>[
               TextButton(onPressed: () => Navigator.pop(ctx), child: const FusionAppText(text: "Cancel")),
               TextButton(
@@ -180,7 +183,7 @@ class _HomePageState extends State<HomePage> {
           child: ListTile(
             iconColor: Colors.black,
             leading: Icon(Icons.delete_sharp, color: Colors.black),
-            title: FusionAppText(text:'Delete'),
+            title: FusionAppText(text: 'Delete'),
           ),
         ),
       ],

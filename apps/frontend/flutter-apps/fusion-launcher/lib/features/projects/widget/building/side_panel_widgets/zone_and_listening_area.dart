@@ -1473,7 +1473,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       builder: (BuildContext context) {
         return AlertDialog(
           title: const FusionAppText(text: 'Delete Subzone'),
-          content: FusionAppText(text: 'Are you sure you want to delete "${subZone.name}"?'),
+          content: FusionAppText(
+            semanticId: "dialog_delete_subzone_confirmation",
+            text: 'Are you sure you want to delete "${subZone.name}"?',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -1499,7 +1502,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       builder: (BuildContext context) {
         return AlertDialog(
           title: const FusionAppText(text: 'Delete Circuit'),
-          content: FusionAppText(text: 'Are you sure you want to delete "${circuit.name}"?'),
+          content: FusionAppText(
+            semanticId: "dialog_delete_circuit_confirmation",
+            text: 'Are you sure you want to delete "${circuit.name}"?',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
@@ -2042,7 +2048,10 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
       builder: (BuildContext context) {
         return AlertDialog(
           title: const FusionAppText(text: 'Delete Zone'),
-          content: FusionAppText(text: 'Are you sure you want to delete "${zone.name}"?'),
+          content: FusionAppText(
+            semanticId: "dialog_delete_zone_confirmation",
+            text: 'Are you sure you want to delete "${zone.name}"?',
+          ),
           actions: <Widget>[
             TextButton(
               onPressed: () => Navigator.of(context).pop(),

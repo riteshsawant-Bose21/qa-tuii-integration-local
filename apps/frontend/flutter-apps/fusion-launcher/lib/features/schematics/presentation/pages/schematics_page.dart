@@ -4,7 +4,8 @@ import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/schematics/presentation/pages/schematics_listing_view.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_keyboard_wrapper.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
@@ -44,7 +45,10 @@ class _SchematicsPageState extends State<SchematicsPage> {
                 builder: (BuildContext context) {
                   return AlertDialog(
                     title: const Text("Delete Items"),
-                    content: Text("Are you sure you want to delete the selected ${selectedItem.type.name}?"),
+                    content: FusionAppText(
+                      semanticId: "dialog_delete_selected_item_confirmation",
+                      text: "Are you sure you want to delete the selected ${selectedItem.type.name}?",
+                    ),
                     actions: <Widget>[
                       TextButton(
                         onPressed: () {

@@ -232,7 +232,10 @@ class _FusionSidebarState extends State<FusionSidebar> {
       builder:
           (BuildContext ctx) => AlertDialog(
             title: const Text("Logout"),
-            content: const Text("Are you sure you want to logout?"),
+            content: SemanticHelper.staticText(
+              testId: SemanticHelper.createTestId(SemanticTypes.text, "dialog_logout_confirmation"),
+              child: const Text("Are you sure you want to logout?"),
+            ),
             actions: <Widget>[
               TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
               TextButton(
