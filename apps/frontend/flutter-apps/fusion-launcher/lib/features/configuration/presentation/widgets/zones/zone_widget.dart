@@ -3,7 +3,6 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
-import '../../../../../core/models/products_data.dart';
 import '../../../../../core/service_locator.dart';
 import '../../../../dynamic_config/data/datasources/panel_datasource.dart';
 import '../../../../dynamic_config/domain/entities/audio_widget_entity.dart';
@@ -70,12 +69,12 @@ class ZoneWidgetState extends State<ZoneWidget> {
           (_) => MultiMixPickerDialog(
             title: 'Select Mixes',
             devices: widget.availableMixes,
-            initiallySelected: widget.availableMixes.where((SourceSet m) => zone.sourceSetIds.contains(m.id)).toList(),
+            initiallySelected: serviceLocator<ProjectViewModel>().getSourceSetsInZone(zoneId: widget.zone.id),
           ),
     );
     if (picked != null) {
       final List<String> updatedMixIds = picked.map((SourceSet m) => m.id).toList();
-      widget.onZoneUpdated(zone.copyWith(sourceSetIds: updatedMixIds));
+      serviceLocator<ProjectViewModel>().updateSourceSets(zoneId: zone.id, sourceSetIds: updatedMixIds);
     }
   }
 
@@ -118,6 +117,8 @@ class ZoneWidgetState extends State<ZoneWidget> {
   Widget build(BuildContext context) {
     final ColorScheme colors = Theme.of(context).colorScheme;
     _nameController.text = widget.zone.name;
+
+    final List<SourceSet> sourceSetsInZone = serviceLocator<ProjectViewModel>().getSourceSetsInZone(zoneId: widget.zone.id);
 
     return Card(
       elevation: 0,
@@ -201,7 +202,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
-                                '${widget.zone.sourceSetIds.length}',
+                                '${sourceSetsInZone.length}',
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
@@ -225,7 +226,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                       ],
                     ),
                     const SizedBox(height: 12),
-                    if (widget.zone.sourceSetIds.isEmpty)
+                    if (sourceSetsInZone.isEmpty)
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
@@ -255,12 +256,9 @@ class ZoneWidgetState extends State<ZoneWidget> {
                         spacing: 8,
                         runSpacing: 8,
                         children:
-                            widget.zone.sourceSetIds.asMap().entries.map((MapEntry<int, String> sourceId) {
-                              final String d = sourceId.value;
-                              final int deviceIndex = sourceId.key;
-                              final SourceSet mix = widget.availableMixes.firstWhere(
-                                (SourceSet s) => s.id == d,
-                              );
+                            sourceSetsInZone.map((SourceSet sourceSet) {
+                              final int sourceSetIndex = sourceSetsInZone.indexOf(sourceSet);
+
                               return InkWell(
                                 onTap: () async {
                                   if (!widget.isControlMode) {
@@ -280,19 +278,19 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       dimensionIndex: 0,
                                       value: AudioWidgetValue.from(0, "integer"),
                                       minValue: AudioWidgetValue.from(1, "integer"),
-                                      maxValue: AudioWidgetValue.from(widget.zone.sourceSetIds.length, "integer"),
+                                      maxValue: AudioWidgetValue.from(sourceSetsInZone.length, "integer"),
                                     );
 
-                                    final AudioWidgetValue widgetValue = AudioWidgetValue.from(deviceIndex + 1, "integer");
+                                    final AudioWidgetValue widgetValue = AudioWidgetValue.from(sourceSetIndex + 1, "integer");
 
                                     final AudioWidgetEntity updatedEntity = await serviceLocator<PanelDataSource>().sendWidgetData(
                                       audioWidgetEntity,
                                       widgetValue,
                                     );
 
-                                    if (updatedEntity.value.value == deviceIndex + 1) {
+                                    if (updatedEntity.value.value == sourceSetIndex + 1) {
                                       setState(() {
-                                        selectedMixIndex = deviceIndex;
+                                        selectedMixIndex = sourceSetIndex;
                                       });
                                     }
                                   } else {
@@ -305,11 +303,11 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                   }
                                 },
                                 child: Chip(
-                                  label: Text(mix.name),
+                                  label: Text(sourceSet.name),
 
-                                  backgroundColor: selectedMixIndex == deviceIndex ? Theme.of(context).colorScheme.primaryContainer : AppColors.cardSoft,
+                                  backgroundColor: selectedMixIndex == sourceSetIndex ? Theme.of(context).colorScheme.primaryContainer : AppColors.cardSoft,
 
-                                  side: selectedMixIndex == deviceIndex ? BorderSide(color: colors.primary, width: 1.5) : null,
+                                  side: selectedMixIndex == sourceSetIndex ? BorderSide(color: colors.primary, width: 1.5) : null,
 
                                   labelStyle: TextStyle(color: colors.onSecondaryContainer, fontSize: 10),
                                   deleteIcon:
@@ -324,9 +322,7 @@ class ZoneWidgetState extends State<ZoneWidget> {
                                       (widget.isControlMode)
                                           ? null
                                           : () {
-                                            final List<String> updatedMixIds = List<String>.from(widget.zone.sourceSetIds);
-                                            updatedMixIds.removeAt(deviceIndex);
-                                            widget.onZoneUpdated(widget.zone.copyWith(sourceSetIds: updatedMixIds));
+                                            serviceLocator<ProjectViewModel>().removeSourceSetFromZone(sourceSetId: sourceSet.id, zoneId: widget.zone.id);
                                           },
                                 ),
                               );
@@ -341,100 +337,91 @@ class ZoneWidgetState extends State<ZoneWidget> {
             //Processing blocks
             ProcessingBlockView(
               processingType: ProcessingType.zone,
-              selectedBlocks: widget.zone.processingBlocks,
-              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
-                widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: chain));
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.zone.id),
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.zone.id, oldIndex: oldIndex, newIndex: newIndex);
               },
               isControlMode: widget.isControlMode,
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.zone.processingBlocks,
-                );
-                updatedBlocks.removeAt(index);
-                widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: updatedBlocks));
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.zone.processingBlocks,
-                );
-                updatedBlocks.add(block);
-                widget.onZoneUpdated(widget.zone.copyWith(processingBlocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.zone.id);
               },
             ),
 
             // ── Circuits header + Add button ──
-            if (!widget.isControlMode)
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    //todo: add localized ids from the listening area
-                    Text('Outputs: ${widget.zoneSpeakers.length}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
-                    PopupMenuButton<SpeakerData>(
-                      tooltip: 'Add Output',
-                      onSelected: (SpeakerData speakerData) {
-                        print('Selected: ${speakerData.name}');
-                        final Speaker newSpeaker = Speaker(
-                          name: speakerData.name,
-                          type: speakerData.type,
-                          assetImagePath: speakerData.assetPath,
-                          speakerSKU: speakerData.sku,
-                          locationEntity: LocationModel(
-                            zoneId: widget.zone.id,
-                          ),
-                          pos: const Offset(0, 0),
-                          gain: 0.0,
-                          blocks: <ProcessingBlockModel>[],
-                          price: speakerData.price,
-                        );
-                        print(
-                          "New Speaker: location - ${newSpeaker.locationEntity.zoneId} , floor - ${newSpeaker.locationEntity.floorId}, LA - ${newSpeaker.locationEntity.listeningAreaId}",
-                        );
-                        widget.onSpeakerAdded(newSpeaker, widget.zone.id);
-                      },
-                      color: Colors.white,
-                      itemBuilder: (BuildContext context) {
-                        return SpeakerData.demoSpeakers.map((SpeakerData speakerData) {
-                          return PopupMenuItem<SpeakerData>(
-                            value: speakerData,
-                            child: Row(
-                              children: <Widget>[
-                                Image.asset(
-                                  speakerData.assetPath,
-                                  height: 24,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(speakerData.name),
-                              ],
-                            ),
-                          );
-                        }).toList();
-                      },
-                      child: ElevatedButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.add, size: 14),
-                        label: Text(
-                          'Add Outputs',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: colors.primary,
-                          ),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB8956A),
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: const Size(0, 28),
-                          disabledBackgroundColor: colors.primaryContainer,
-                          disabledForegroundColor: colors.primary,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
+            // if (!widget.isControlMode)
+            //   Padding(
+            //     padding: const EdgeInsets.symmetric(horizontal: 8.0),
+            //     child: Row(
+            //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //       children: <Widget>[
+            //         //todo: add localized ids from the listening area
+            //         Text('Outputs: ${widget.zoneSpeakers.length}', style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 12)),
+            //         PopupMenuButton<SpeakerData>(
+            //           tooltip: 'Add Output',
+            //           onSelected: (SpeakerData speakerData) {
+            //             print('Selected: ${speakerData.name}');
+            //             final Speaker newSpeaker = Speaker(
+            //               name: speakerData.name,
+            //               type: speakerData.type,
+            //               assetImagePath: speakerData.assetPath,
+            //               speakerSKU: speakerData.sku,
+            //               locationEntity: LocationModel(
+            //                 zoneId: widget.zone.id,
+            //               ),
+            //               pos: const Offset(0, 0),
+            //               gain: 0.0,
+            //               blocks: <ProcessingBlockModel>[],
+            //               price: speakerData.price,
+            //             );
+            //             print(
+            //               "New Speaker: location - ${newSpeaker.locationEntity.zoneId} , floor - ${newSpeaker.locationEntity.floorId}, LA - ${newSpeaker.locationEntity.listeningAreaId}",
+            //             );
+            //             widget.onSpeakerAdded(newSpeaker, widget.zone.id);
+            //           },
+            //           color: Colors.white,
+            //           itemBuilder: (BuildContext context) {
+            //             return SpeakerData.demoSpeakers.map((SpeakerData speakerData) {
+            //               return PopupMenuItem<SpeakerData>(
+            //                 value: speakerData,
+            //                 child: Row(
+            //                   children: <Widget>[
+            //                     Image.asset(
+            //                       speakerData.assetPath,
+            //                       height: 24,
+            //                     ),
+            //                     const SizedBox(width: 8),
+            //                     Text(speakerData.name),
+            //                   ],
+            //                 ),
+            //               );
+            //             }).toList();
+            //           },
+            //           child: ElevatedButton.icon(
+            //             onPressed: null,
+            //             icon: const Icon(Icons.add, size: 14),
+            //             label: Text(
+            //               'Add Outputs',
+            //               style: TextStyle(
+            //                 fontSize: 11,
+            //                 color: colors.primary,
+            //               ),
+            //             ),
+            //             style: ElevatedButton.styleFrom(
+            //               backgroundColor: const Color(0xFFB8956A),
+            //               foregroundColor: Colors.white,
+            //               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            //               minimumSize: const Size(0, 28),
+            //               disabledBackgroundColor: colors.primaryContainer,
+            //               disabledForegroundColor: colors.primary,
+            //             ),
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
             const SizedBox(height: 6),
 
             // ── Render each circuit with your CircuitWidget ──

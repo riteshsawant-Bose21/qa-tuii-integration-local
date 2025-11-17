@@ -670,7 +670,7 @@ class _SplPanelState extends State<SplPanel> {
     return SizedBox(
       height: 32,
       child: DropdownButtonFormField<T>(
-        initialValue: value,
+        // initialValue: value,
         isExpanded: true,
         style: const TextStyle(fontSize: 12, color: Colors.black),
         items: items

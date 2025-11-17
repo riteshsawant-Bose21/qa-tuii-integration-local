@@ -6,6 +6,15 @@ extension UndoRedoViewModel on ProjectViewModel {
 
   bool get canRedo => projectManager.canRedo();
 
+  void recordSnapshot() {
+    try {
+      projectManager.recordSnapshot();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to record snapshot: $e");
+      throwError("Failed to record snapshot: $e");
+    }
+  }
+
   void undo() {
     try {
       projectManager.undo();

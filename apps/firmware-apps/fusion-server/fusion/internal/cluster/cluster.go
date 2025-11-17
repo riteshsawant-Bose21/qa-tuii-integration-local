@@ -5,6 +5,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/network"
+	"fusion/internal/utils"
 	"net"
 	"net/http"
 	"os"
@@ -13,8 +14,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -51,7 +50,7 @@ type ClusterMember struct {
 
 // ClusterStatus holds information of the cluster state
 type ClusterStatus struct {
-	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.64.100")
+	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.2.100")
 	Host      string   `json:"host"`    // Local IP address of the node holding VIP
 	Cluster   []string `json:"cluster"` // All known cluster node addresses
 	Timestamp int64    `json:"ts"`      // Unix timestamp for freshness
@@ -70,6 +69,7 @@ type Cluster struct {
 	configPath       string
 	Metrics          *MetricsCollector
 	networkLatencies *NetworkLatencyStore
+	vipMu            sync.Mutex
 }
 
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
@@ -158,7 +158,7 @@ func (c *Cluster) getClusterIPs() []string {
 }
 
 // canonicalVIP canonicalizes an IP address.
-// "192.168.64.100/24" becomes "192.168.64.100"
+// "192.168.2.100/24" becomes "192.168.2.100"
 func canonicalVIP(s string) string {
 	if s == "" {
 		return ""
@@ -654,19 +654,10 @@ func (c *Cluster) notifyLocalVIPChange(gained bool) {
 		"event":     event,
 		"timestamp": time.Now().Unix(),
 	}
-	data, _ := json.Marshal(msg)
 
 	addr := &net.UDPAddr{IP: net.IPv4(127, 0, 0, 1), Port: api.VIPNotifierPort}
-
-	conn, err := net.ListenPacket("udp4", "")
-	if err != nil {
-		logger.Error("UDP listen failed: %v", err)
-		return
-	}
-	defer conn.Close()
-
-	if _, err := conn.WriteTo(data, addr); err != nil {
-		logger.Error("UDP write failed: %v", err)
+	if err := utils.SendUDPMessage(addr, msg); err != nil {
+		logger.Error("SendUDPMessage failed: %v", err)
 		return
 	}
 

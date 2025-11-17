@@ -10,7 +10,7 @@ extension FloorService on ProjectService {
   }
 
   /// Remove Floor
-  void removeFloor(String floorId, {bool cascade = true}) {
+  void removeFloor(String floorId) {
     List<HardwareComponent> allHardwareComponents = getAllHardwareInFloor(floorId);
 
     //delete Hardware in the floor
@@ -19,12 +19,11 @@ extension FloorService on ProjectService {
     }
 
     floors.remove(floorId);
-    final areas = relationships.getChildren(RelationshipType.floorListening, floorId);
+    final areas = relationships.getChildren(RelationshipType.floorAreas, floorId);
     relationships.removeAllRelationships(floorId);
-    if (cascade) {
-      for (final areaId in areas) {
-        removeListeningArea(areaId);
-      }
+
+    for (final areaId in areas) {
+      removeListeningArea(areaId);
     }
   }
 
@@ -46,6 +45,16 @@ extension FloorService on ProjectService {
       throw Exception('Floor with id $floorId does not exist');
     }
     return floor;
+  }
+
+  FloorModel? getFloorForHardware({required String hardwareId}) {
+    final floorIds = relationships.getParents(RelationshipType.hardwareFloor, hardwareId);
+    if (floorIds.isNotEmpty) {
+      final floorId = floorIds.first;
+      final floor = floors.get(floorId);
+      return floor;
+    }
+    return null;
   }
 
   // List<ListeningArea> getListeningAreasForFloor(String floorId) {

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../semantics/semantic_helper.dart';
+import '../semantics/semantic_type.dart';
+
 /// A customizable and reusable outlined button for the Fusion design system.
 ///
 /// The [FusionOutlinedButton] supports:
@@ -85,7 +88,7 @@ class FusionOutlinedButton extends StatelessWidget {
   final IconData? suffixIcon;
 
   /// Identifier for testing or accessibility tools.
-  final String? accessIdentifier;
+  final String? semanticsId;
 
   /// Semantic label for screen readers.
   final String? accessLabel;
@@ -97,8 +100,8 @@ class FusionOutlinedButton extends StatelessWidget {
     super.key,
     required this.label,
     required this.onTap,
-    this.height = 55,
-    this.width = 350,
+    this.height = 32,
+    this.width = 100,
     this.topMargin = 0,
     this.bottomMargin = 0,
     this.borderRadius = 4,
@@ -113,17 +116,14 @@ class FusionOutlinedButton extends StatelessWidget {
     this.prefixIcon,
     this.showSuffixIcon = false,
     this.suffixIcon,
-    this.accessIdentifier,
+    this.semanticsId,
     this.accessLabel,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: accessLabel ?? label,
-      identifier: accessIdentifier ?? label,
-      enabled: isActive,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, semanticsId ?? label),
       child: Container(
         margin: EdgeInsets.only(top: topMargin, bottom: bottomMargin),
         child: IgnorePointer(

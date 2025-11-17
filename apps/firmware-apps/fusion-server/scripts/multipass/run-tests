@@ -18,13 +18,13 @@ function show_help() {
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
     echo "  --updater     Run only updater tests"     
-    echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
+    echo "  --vip         VIP address and port (default: 192.168.2.100:8080)"
     echo "  --websocket   Run only websocket tests"     
     exit 1
 }
 
 test_type="short"
-vip="192.168.64.100:8080"
+vip="192.168.2.100:8080"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -121,7 +121,7 @@ case "$test_type" in
         go test -v --race ./cluster_test.go
         ;;
     "controllers")
-        go test -v --race ./cxa_test.go ./cxd_test.go
+        go test -v --race ./controllers_test.go
         ;;
     "fusion")
         go test -v --race ./fusion_test.go -args --auto --vip "$vip"

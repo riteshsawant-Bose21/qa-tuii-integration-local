@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/version"
@@ -19,8 +20,11 @@ type Handler struct {
 	updater      *Updater
 	hub          *pubsub.Hub
 	endpoints    []string
+
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
+
+	controllerManager controllers.ControllerManagerInterface
 }
 
 func NewHandler(
@@ -28,14 +32,17 @@ func NewHandler(
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	updater *Updater,
-	hub *pubsub.Hub) *Handler {
+	hub *pubsub.Hub,
+	controllerManager controllers.ControllerManagerInterface,
+) *Handler {
 	return &Handler{
-		memberlist:   memberlist,
-		persistence:  persistence,
-		StateManager: stateManager,
-		updater:      updater,
-		hub:          hub,
-		sessions:     make(map[string]*SAPSession),
+		memberlist:        memberlist,
+		persistence:       persistence,
+		StateManager:      stateManager,
+		updater:           updater,
+		hub:               hub,
+		controllerManager: controllerManager,
+		sessions:          make(map[string]*SAPSession),
 	}
 }
 

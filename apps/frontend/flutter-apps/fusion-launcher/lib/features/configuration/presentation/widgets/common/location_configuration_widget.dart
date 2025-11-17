@@ -12,7 +12,6 @@ Future<LocationModel?> showConfigureDeviceDialog(
   Function(FloorModel) onNewFloorCreated,
   Function(FloorModel) onFloorUpdated,
 ) async {
-  String? selectedFloorId = locationEntity.floorId;
   String? selectedListeningAreaId = locationEntity.listeningAreaId;
 
   bool isLocationSelected = locationEntity.floorId != null && locationEntity.listeningAreaId != null;
@@ -22,12 +21,10 @@ Future<LocationModel?> showConfigureDeviceDialog(
     barrierDismissible: false,
     builder: (BuildContext ctx) {
       final double width = 400;
-      final bool isSmallScreen = MediaQuery.of(context).size.width < 700;
 
       return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
           final List<FloorModel> floors = serviceLocator<ProjectViewModel>().floors;
-          final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().listeningAreas;
 
           return StatefulBuilder(
             builder: (BuildContext context, StateSetter setState) {
@@ -202,10 +199,15 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                             crossAxisSpacing: 8,
                                             mainAxisExtent: 56,
                                           ),
-                                          itemCount: floor.listeningAreaIds.length,
+                                          itemCount:
+                                              serviceLocator<ProjectViewModel>()
+                                                  .getListeningAreasForFloor(
+                                                    floorId: floor.id,
+                                                  )
+                                                  .length,
                                           itemBuilder: (BuildContext context, int index) {
                                             final List<ListeningArea> allListeningAreaForFloor = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                              floor.id,
+                                              floorId: floor.id,
                                             );
                                             final ListeningArea listeningArea = allListeningAreaForFloor[index];
                                             final bool isSelected = selectedListeningAreaId == listeningArea.id;
@@ -233,7 +235,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                                     // Update the ListeningArea name in the parent widget
                                                     final ListeningArea updatedArea = listeningArea.copyWith(name: val);
 
-                                                    serviceLocator<ProjectViewModel>().updateListeningArea(updatedArea);
+                                                    serviceLocator<ProjectViewModel>().updateListeningArea(area: updatedArea);
                                                   },
                                                 ),
                                                 value: listeningArea.id,
@@ -245,7 +247,6 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                                       floorId: floor.id,
                                                       listeningAreaId: val,
                                                     );
-                                                    selectedFloorId = floor.id;
                                                     selectedListeningAreaId = val;
                                                     isLocationSelected = true;
                                                   });
@@ -260,7 +261,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                         InkWell(
                                           onTap: () {
                                             // Create a new ListeningArea
-                                            final String areaName = "Area ${floor.listeningAreaIds.length + 1}";
+                                            final String areaName = "Area ${serviceLocator<ProjectViewModel>().listeningAreas.length + 1}";
                                             final ListeningArea newListeningArea = ListeningArea(
                                               name: areaName,
                                               vertices: <Offset>[
@@ -271,7 +272,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                               ],
                                             );
 
-                                            serviceLocator<ProjectViewModel>().addListeningArea(newListeningArea, floor.id);
+                                            serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floor.id);
                                           },
                                           child: Container(
                                             margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 2),
@@ -310,12 +311,10 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                   //Create a new FloorEntity
                                   final FloorModel newFloor = FloorModel(
                                     name: 'Floor ${floors.length + 1}',
-                                    listeningAreaIds: <String>[],
                                     floorPlan: FloorPlanModel.defaultFloorPlan,
                                   );
 
-                                  serviceLocator<ProjectViewModel>().addFloor(newFloor);
-                                  // onNewFloorCreated(newFloor);
+                                  serviceLocator<ProjectViewModel>().addFloor(floor: newFloor);
                                 },
                                 child: Container(
                                   margin: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
@@ -544,9 +543,16 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                                   crossAxisSpacing: 8,
                                   mainAxisExtent: 56,
                                 ),
-                                itemCount: floor.listeningAreaIds.length,
+                                itemCount:
+                                    serviceLocator<ProjectViewModel>()
+                                        .getListeningAreasForFloor(
+                                          floorId: floor.id,
+                                        )
+                                        .length,
                                 itemBuilder: (BuildContext context, int index) {
-                                  final List<ListeningArea> allListeningAreaForFloor = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(floor.id);
+                                  final List<ListeningArea> allListeningAreaForFloor = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                    floorId: floor.id,
+                                  );
                                   final ListeningArea listeningArea = allListeningAreaForFloor[index];
                                   final bool isSelected = widget.selectedListeningAreaId == listeningArea.id;
 
@@ -637,10 +643,10 @@ class NewFloorRoomEntry extends StatefulWidget {
   });
 
   @override
-  _NewFloorRoomEntryState createState() => _NewFloorRoomEntryState();
+  NewFloorRoomEntryState createState() => NewFloorRoomEntryState();
 }
 
-class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
+class NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
   bool _isCreatingNewFloor = false;
 
   void _addNewListeningArea(FloorModel floor) {
@@ -652,28 +658,10 @@ class _NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
         vertices: <Offset>[const Offset(-0.5, -0.5), const Offset(0.5, -0.5), const Offset(0.5, 0.5), const Offset(-0.5, 0.5)],
       );
 
-      serviceLocator<ProjectViewModel>().addListeningArea(newListeningArea, floor.id);
+      serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floor.id);
 
       // floor.listeningAreas.add(newListeningArea);
       // widget.onFloorUpdated(widget.existingFloors, LocationModel(floorId: floor.id, listeningAreaId: newListeningArea.id));
-    }
-  }
-
-  void _submit() {
-    if ((widget.selectedFloor != null || widget.floorController.text.trim().isNotEmpty) && widget.roomController.text.trim().isNotEmpty) {
-      final FloorModel floorEntity =
-          widget.selectedFloor ??
-          FloorModel(
-            name: widget.floorController.text,
-            listeningAreaIds: <String>[],
-            floorPlan: FloorPlanModel.defaultFloorPlan,
-          );
-
-      _addNewListeningArea(floorEntity);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a floor and enter a room name')),
-      );
     }
   }
 
