@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"fusion/internal/api"
 	"sort"
@@ -161,36 +160,4 @@ func (p *Persistence) GetAudioByDisplayName(name string) (*api.AudioMetadata, er
 		return nil, err
 	}
 	return result, nil
-}
-
-// HasAudioChecksum returns true if an AudioMetadata record with the given checksum exists.
-func (p *Persistence) HasAudioChecksum(checksum string) (bool, error) {
-	found := false
-	err := p.db.View(func(tx *bbolt.Tx) error {
-		b := tx.Bucket([]byte(bucketAudio))
-		if b == nil {
-			return ErrNotFound
-		}
-
-		// Iterate through all audio metadata entries
-		return b.ForEach(func(k, v []byte) error {
-			var m api.AudioMetadata
-			if err := json.Unmarshal(v, &m); err != nil {
-				// Stop iteration on unmarshal error
-				return err
-			}
-			if m.Checksum == checksum {
-				found = true
-				// Stop iteration early
-				return errors.New("found")
-			}
-			return nil
-		})
-	})
-
-	// Swallow the sentinel "found" error
-	if err != nil && err.Error() == "found" {
-		err = nil
-	}
-	return found, err
 }

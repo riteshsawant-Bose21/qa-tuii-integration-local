@@ -61,11 +61,9 @@ type ClusterStatus struct {
 }
 
 type Cluster struct {
-	nodeName         string
-	bindAddr         string
-	bindPort         int
+	appConfig        *api.AppConfig
 	delegate         *ClusterDelegate
-	config           *api.AppConfig
+	httpClient       *http.Client
 	Memberlist       *memberlist.Memberlist
 	vip              string
 	vipHolder        string
@@ -79,11 +77,9 @@ type Cluster struct {
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
 
 	cluster := &Cluster{
-		nodeName:         appConfig.NodeName,
-		bindAddr:         appConfig.BindAddr,
-		bindPort:         appConfig.BindPort,
+		appConfig:        appConfig,
 		delegate:         delegate,
-		config:           appConfig,
+		httpClient:       &http.Client{Timeout: api.HTTPTimeout},
 		Memberlist:       memberlist,
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
@@ -92,7 +88,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 
 	logger := logging.GetLogger()
 
-	if !cluster.config.Local {
+	if !cluster.appConfig.Local {
 
 		if err := cluster.startVRRPListener(appConfig.NetIface); err != nil {
 			logger.Fatal("startVRRPListener: %v", err)
@@ -520,7 +516,7 @@ func fetchFromAdminSingle[T any](
 	// remoteFetch: decode one T, then wrap into []T
 	remoteFetch := func(addr, endpoint string) ([]T, error) {
 		var tmp T
-		if err := fetchAndDecode(addr, endpoint, &tmp); err != nil {
+		if err := fetchAndDecode(c, addr, endpoint, &tmp); err != nil {
 			return nil, err
 		}
 		return []T{tmp}, nil
@@ -541,7 +537,7 @@ func fetchFromAdminSlice[T any](
 
 	remoteFetch := func(addr, endpoint string) ([]T, error) {
 		var remoteSlice []T
-		if err := fetchAndDecode(addr, endpoint, &remoteSlice); err != nil {
+		if err := fetchAndDecode(c, addr, endpoint, &remoteSlice); err != nil {
 			return nil, err
 		}
 		return remoteSlice, nil
@@ -570,10 +566,11 @@ func fetchAllFromAdmin[T any](
 
 // fetchAndDecode calls an endpoint and decodes the value
 func fetchAndDecode[T any](
+	c *Cluster,
 	addr, endpoint string,
 	dest *T,
 ) error {
-	resp, err := getLocalEndpointResponse(addr, endpoint)
+	resp, err := getLocalEndpointResponse(c, addr, endpoint)
 	if err != nil {
 		return err
 	}
@@ -609,10 +606,10 @@ func postGenericToAdmin(
 }
 
 // getLocalEndpointResponse calls a endpoint
-func getLocalEndpointResponse(addr, endpoint string) (response *http.Response, err error) {
+func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http.Response, err error) {
 
 	url := getLocalURL(addr, endpoint)
-	resp, err := http.DefaultClient.Get(url)
+	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -651,7 +648,7 @@ func (c *Cluster) notifyLocalVIPChange(gained bool) {
 
 	msg := map[string]any{
 		"vip":       c.vip,
-		"host":      c.bindAddr,
+		"host":      c.appConfig.BindAddr,
 		"event":     event,
 		"timestamp": time.Now().Unix(),
 	}

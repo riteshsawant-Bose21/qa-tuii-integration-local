@@ -21,7 +21,6 @@ import (
 
 const (
 	checkInterval = 30 * time.Second
-	httpTimeout   = 5 * time.Second
 )
 
 // StateManagerInterface defines the interface for state management
@@ -58,7 +57,7 @@ func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
 		state:      *NewVersionedState(),
 		version:    api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient: &http.Client{Timeout: httpTimeout},
+		httpClient: &http.Client{Timeout: api.HTTPTimeout},
 		verbose:    config.Verbose,
 	}
 }

@@ -38,6 +38,7 @@ func NewHandler(
 	controllerManager controllers.ControllerManagerInterface,
 ) *Handler {
 	return &Handler{
+		appConfig:         appConfig,
 		memberlist:        memberlist,
 		persistence:       persistence,
 		StateManager:      stateManager,
