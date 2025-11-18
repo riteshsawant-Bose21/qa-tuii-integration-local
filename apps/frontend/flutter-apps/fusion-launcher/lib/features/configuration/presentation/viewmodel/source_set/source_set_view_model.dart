@@ -276,4 +276,20 @@ extension SourceSetViewModel on ProjectViewModel {
       throwError("Failed to unlink source set: $e");
     }
   }
+
+  void reOrderSourceSet({required String sourceSetIdToMove, required String sourceSetAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderSourceSetsInProject(sourceSetIdToMove: sourceSetIdToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder source sets in project: $e");
+      throwError("Failed to reorder source sets in project: $e");
+    }
+  }
 }
