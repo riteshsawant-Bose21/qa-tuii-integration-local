@@ -584,12 +584,16 @@ class _ZoneCardState extends State<ZoneCard> {
     final List<SourceSet> currentZoneSourceSets = _projectViewModel.getSourceSetsInZone(zoneId: widget.zoneId);
 
     final bool hasSelection = currentZoneSources.isNotEmpty || currentZoneSourceSets.isNotEmpty;
+
     final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
+    final List<SourceSet> sourceSetList = _projectViewModel.getAllSourceSets();
 
     return PopupMenuButton<String>(
       onSelected: (String? value) {
         if (value == 'add') {
           setState(() {});
+
+          /// refresh zone tile UI
         }
       },
       offset: const Offset(0, 25),
@@ -597,13 +601,16 @@ class _ZoneCardState extends State<ZoneCard> {
       padding: EdgeInsets.zero,
       color: Theme.of(context).colorScheme.white,
       itemBuilder: (BuildContext context) {
-        /// Initialize temporary lists with current zone selections
-        final List<String> tempSelectedSources = currentZoneSources.map((Source src) => src.id).toList();
-        final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet ss) => ss.id).toList();
+        /// Temporary selections mirror existing selections
+        final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
+
+        final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet e) => e.id).toList();
 
         final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
-        /// Header: Sources
+        // ----------------------------------------------------------
+        // SOURCES HEADER
+        // ----------------------------------------------------------
         entries.add(
           PopupMenuItem<String>(
             enabled: false,
@@ -619,7 +626,9 @@ class _ZoneCardState extends State<ZoneCard> {
           ),
         );
 
-        /// Sources (individual)
+        // ----------------------------------------------------------
+        // SOURCES LIST
+        // ----------------------------------------------------------
         if (availableSources.isEmpty) {
           entries.add(
             PopupMenuItem<String>(
@@ -636,42 +645,45 @@ class _ZoneCardState extends State<ZoneCard> {
           );
         } else {
           for (final Source src in availableSources) {
-            final String value = src.id;
+            final String id = src.id;
+
             entries.add(
               PopupMenuItem<String>(
                 enabled: false,
                 height: 20,
                 child: StatefulBuilder(
-                  builder: (BuildContext context, StateSetter setStatePopup) {
+                  builder: (BuildContext c, StateSetter setPopupState) {
                     return GestureDetector(
                       onTap: () {
-                        if (tempSelectedSources.contains(value)) {
-                          tempSelectedSources.remove(value);
+                        if (tempSelectedSources.contains(id)) {
+                          tempSelectedSources.remove(id);
                         } else {
-                          tempSelectedSources.add(value);
+                          tempSelectedSources.add(id);
                         }
-                        setStatePopup(() {});
+                        setPopupState(() {});
                       },
                       child: Row(
                         children: <Widget>[
                           Transform.scale(
                             scale: 0.7,
                             child: Checkbox(
-                              value: tempSelectedSources.contains(value),
+                              value: tempSelectedSources.contains(id),
                               activeColor: Theme.of(context).colorScheme.greyDark,
-                              onChanged: (bool? checked) {
-                                if (tempSelectedSources.contains(value)) {
-                                  tempSelectedSources.remove(value);
+                              onChanged: (bool? _) {
+                                if (tempSelectedSources.contains(id)) {
+                                  tempSelectedSources.remove(id);
                                 } else {
-                                  tempSelectedSources.add(value);
+                                  tempSelectedSources.add(id);
                                 }
-                                setStatePopup(() {});
+                                setPopupState(() {});
                               },
                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                              splashRadius: 8,
                               checkColor: Colors.white,
-                              side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
+                              side: BorderSide(
+                                width: 1,
+                                color: Theme.of(context).colorScheme.grey,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
@@ -693,10 +705,11 @@ class _ZoneCardState extends State<ZoneCard> {
           }
         }
 
-        /// Divider
         entries.add(const PopupMenuDivider(height: 12));
 
-        /// Header: Source Sets
+        // ----------------------------------------------------------
+        // SOURCE SETS HEADER
+        // ----------------------------------------------------------
         entries.add(
           PopupMenuItem<String>(
             enabled: false,
@@ -712,8 +725,9 @@ class _ZoneCardState extends State<ZoneCard> {
           ),
         );
 
-        /// Source sets (show as single items)
-        final List<SourceSet> sourceSetList = _projectViewModel.getAllSourceSets();
+        // ----------------------------------------------------------
+        // SOURCE SETS LIST
+        // ----------------------------------------------------------
         if (sourceSetList.isEmpty) {
           entries.add(
             PopupMenuItem<String>(
@@ -729,52 +743,55 @@ class _ZoneCardState extends State<ZoneCard> {
             ),
           );
         } else {
-          for (final SourceSet sourceSet in sourceSetList) {
-            final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-            final String value = sourceSet.id;
+          for (final SourceSet s in sourceSetList) {
+            final String id = s.id;
+            final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: s.id);
+
             entries.add(
               PopupMenuItem<String>(
                 enabled: false,
                 height: 20,
                 child: StatefulBuilder(
-                  builder: (BuildContext context, StateSetter setStatePopup) {
+                  builder: (BuildContext c, StateSetter setPopupState) {
                     return GestureDetector(
                       onTap: () {
-                        if (tempSelectedSourceSets.contains(value)) {
-                          tempSelectedSourceSets.remove(value);
+                        if (tempSelectedSourceSets.contains(id)) {
+                          tempSelectedSourceSets.remove(id);
                         } else {
-                          tempSelectedSourceSets.add(value);
+                          tempSelectedSourceSets.add(id);
                         }
-                        setStatePopup(() {});
+                        setPopupState(() {});
                       },
                       child: Row(
                         children: <Widget>[
                           Transform.scale(
                             scale: 0.7,
                             child: Checkbox(
-                              value: tempSelectedSourceSets.contains(value),
+                              value: tempSelectedSourceSets.contains(id),
                               activeColor: Theme.of(context).colorScheme.greyDark,
-                              onChanged: (bool? checked) {
-                                if (tempSelectedSourceSets.contains(value)) {
-                                  tempSelectedSourceSets.remove(value);
+                              onChanged: (bool? _) {
+                                if (tempSelectedSourceSets.contains(id)) {
+                                  tempSelectedSourceSets.remove(id);
                                 } else {
-                                  tempSelectedSourceSets.add(value);
+                                  tempSelectedSourceSets.add(id);
                                 }
-                                setStatePopup(() {});
+                                setPopupState(() {});
                               },
                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                              splashRadius: 8,
                               checkColor: Colors.white,
-                              side: BorderSide(width: 1.0, color: Theme.of(context).colorScheme.grey),
+                              side: BorderSide(
+                                width: 1,
+                                color: Theme.of(context).colorScheme.grey,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: FusionAppText(
-                              text: '${sourceSet.name} (${sourcesInSet.length} sources)',
-                              capitalize: true,
+                              text: '${s.name} (${sourcesInSet.length} sources)',
                               maxLine: 1,
+                              capitalize: true,
                               style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
                             ),
                           ),
@@ -788,15 +805,13 @@ class _ZoneCardState extends State<ZoneCard> {
           }
         }
 
-        /// Divider before Add button
         entries.add(
-          const PopupMenuDivider(
-            height: 14,
-            color: Colors.transparent,
-          ),
+          const PopupMenuDivider(height: 14, color: Colors.transparent),
         );
 
-        /// Add button to close popup and update selection
+        // ----------------------------------------------------------
+        // ADD BUTTON – FINAL SAVE
+        // ----------------------------------------------------------
         entries.add(
           PopupMenuItem<String>(
             enabled: true,
@@ -808,53 +823,21 @@ class _ZoneCardState extends State<ZoneCard> {
                 height: 28,
                 width: double.infinity,
                 onTap: () {
-                  /// Remove sources that were deselected
-                  final List<String> currentSourceIds = currentZoneSources.map((Source src) => src.id).toList();
-                  final List<String> sourcesToRemove = currentSourceIds.where((String id) => !tempSelectedSources.contains(id)).toList();
+                  /// Save full final selected lists
+                  _projectViewModel.updateSourcesInZone(
+                    zoneId: widget.zoneId,
+                    sourceIds: tempSelectedSources,
+                  );
 
-                  /// Remove source sets that were deselected
-                  final List<String> currentSourceSetIds = currentZoneSourceSets.map((SourceSet ss) => ss.id).toList();
-                  final List<String> sourceSetsToRemove = currentSourceSetIds.where((String id) => !tempSelectedSourceSets.contains(id)).toList();
-
-                  /// Add newly selected sources
-                  final List<String> sourcesToAdd = tempSelectedSources.where((String id) => !currentSourceIds.contains(id)).toList();
-
-                  /// Add newly selected source sets
-                  final List<String> sourceSetsToAdd = tempSelectedSourceSets.where((String id) => !currentSourceSetIds.contains(id)).toList();
-
-                  /// Remove deselected sources from zone
-                  for (final String sourceId in sourcesToRemove) {
-                    _projectViewModel.removeSourceFromZone(
-                      zoneId: widget.zoneId,
-                      sourceId: sourceId,
-                    );
-                  }
-
-                  /// Remove deselected source sets from zone
-                  for (final String sourceSetId in sourceSetsToRemove) {
-                    _projectViewModel.removeSourceSetFromZone(
-                      sourceSetId: sourceSetId,
-                      zoneId: widget.zoneId,
-                    );
-                  }
-
-                  /// Add newly selected sources to zone
-                  for (final String sourceId in sourcesToAdd) {
-                    _projectViewModel.addSourceToZone(
-                      zoneId: widget.zoneId,
-                      sourceId: sourceId,
-                    );
-                  }
-
-                  /// Add newly selected source sets to zone
-                  for (final String sourceSetId in sourceSetsToAdd) {
-                    _projectViewModel.addSourceSetToZone(
-                      sourceSetId: sourceSetId,
-                      zoneId: widget.zoneId,
-                    );
-                  }
+                  _projectViewModel.updateSourceSets(
+                    zoneId: widget.zoneId,
+                    sourceSetIds: tempSelectedSourceSets,
+                  );
 
                   Navigator.pop(context, 'add');
+                  setState(() {});
+
+                  /// rebuild UI
                 },
               ),
             ),
@@ -863,6 +846,10 @@ class _ZoneCardState extends State<ZoneCard> {
 
         return entries;
       },
+
+      // ----------------------------------------------------------
+      // BUTTON VIEW (with count)
+      // ----------------------------------------------------------
       child: Container(
         height: 22,
         width: 170,
@@ -892,7 +879,7 @@ class _ZoneCardState extends State<ZoneCard> {
                   padding: const EdgeInsets.symmetric(horizontal: 4),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
-                    color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                    color: Theme.of(context).colorScheme.greyDark,
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: FusionAppText(
