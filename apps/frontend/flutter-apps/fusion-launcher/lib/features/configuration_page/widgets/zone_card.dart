@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/models/project_entities/zone_functions.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
@@ -28,19 +29,13 @@ class _ZoneCardState extends State<ZoneCard> {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   bool isHovered = false;
 
-  String? selectedFunction;
-  bool get _hasSelectedFunction => (selectedFunction != null && selectedFunction!.isNotEmpty);
+  ZoneFunctionsType? selectedFunction;
+  bool get _hasSelectedFunction => selectedFunction != null;
+
   String? selectedPrioritySource1;
   String? selectedPrioritySource2;
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
-
-  final List<String> functions = <String>[
-    'Source Select',
-    'Source Select + Priority Override',
-    'Source Mix',
-    'Source Mix + Priority Override',
-  ];
 
   @override
   void initState() {
@@ -188,6 +183,17 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Zone functions panel
   Widget _buildZoneFunctionsPanel() {
+    /// Sync with model if underlying zone function changed externally
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    if (existingFunction != null && selectedFunction != existingFunction.type) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {
+            selectedFunction = existingFunction.type;
+          });
+        }
+      });
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -227,135 +233,72 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
     final String? selectedSource = priorityIndex == 1 ? selectedPrioritySource1 : selectedPrioritySource2;
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
-    return PopupMenuButton<String>(
-      onSelected: (String value) {
-        setState(() {
-          if (priorityIndex == 1) {
-            selectedPrioritySource1 = value;
-          } else {
-            selectedPrioritySource2 = value;
-          }
-        });
-      },
-      offset: const Offset(0, 25),
-      tooltip: "Select Priority Source P$priorityIndex",
-      padding: EdgeInsets.zero,
-      color: Theme.of(context).colorScheme.white,
-      itemBuilder: (BuildContext context) {
-        final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
+    return Visibility(
+      visible: existingFunction!.hasPriority,
+      child: PopupMenuButton<String>(
+        onSelected: (String value) {
+          setState(() {
+            if (priorityIndex == 1) {
+              selectedPrioritySource1 = _projectViewModel.getHardware(hardwareId: value)?.name;
+              _projectViewModel.addPrioritySourceToZone(
+                zoneId: widget.zoneId,
+                sourceId: value,
+                priority: 1,
+              );
+            } else {
+              selectedPrioritySource2 = _projectViewModel.getHardware(hardwareId: value)?.name;
+              _projectViewModel.addPrioritySourceToZone(
+                zoneId: widget.zoneId,
+                sourceId: value,
+                priority: 2,
+              );
+            }
+          });
+        },
+        offset: const Offset(0, 25),
+        tooltip: "Select Priority Source P$priorityIndex",
+        padding: EdgeInsets.zero,
+        color: Theme.of(context).colorScheme.white,
+        itemBuilder: (BuildContext context) {
+          final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
-        /// Header: Sources
-        entries.add(
-          PopupMenuItem<String>(
-            enabled: false,
-            height: 28,
-            child: FusionAppText(
-              text: 'SOURCES',
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        );
-
-        /// Individual sources
-        final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
-        if (availableSources.isEmpty) {
+          /// Header: Sources
           entries.add(
             PopupMenuItem<String>(
               enabled: false,
-              height: 20,
-              child: Center(
-                child: FusionAppText(
-                  text: 'No available sources',
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+              height: 28,
+              child: FusionAppText(
+                text: 'SOURCES',
+                maxLine: 1,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ),
           );
-        } else {
-          for (final Source src in availableSources) {
-            final String value = src.name;
+
+          /// Individual sources
+          final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
+          if (availableSources.isEmpty) {
             entries.add(
               PopupMenuItem<String>(
-                value: value,
-                height: 32,
-                child: Row(
-                  children: <Widget>[
-                    Transform.scale(
-                      scale: 0.8,
-                      child: Radio<String>(
-                        value: value,
-                        groupValue: selectedSource,
-                        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                        activeColor: Theme.of(context).colorScheme.greyDark,
-                        onChanged: (String? v) {
-                          if (v != null) Navigator.pop(context, v);
-                        },
-                      ),
-                    ),
-
-                    const SizedBox(width: 4),
-                    Expanded(
-                      child: FusionAppText(
-                        text: src.name,
-                        capitalize: true,
-                        maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                      ),
-                    ),
-                  ],
+                enabled: false,
+                height: 20,
+                child: Center(
+                  child: FusionAppText(
+                    text: 'No available sources',
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                  ),
                 ),
               ),
             );
-          }
-        }
-
-        /// Divider
-        entries.add(const PopupMenuDivider(height: 4));
-
-        /// Header: Source Sets
-        entries.add(
-          PopupMenuItem<String>(
-            enabled: false,
-            height: 28,
-            child: FusionAppText(
-              text: 'SOURCE SETS',
-              maxLine: 1,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        );
-
-        /// Source sets with their sources
-        final List<SourceSet> allSourceSets = _projectViewModel.getAllSourceSets();
-        if (allSourceSets.isEmpty) {
-          entries.add(
-            PopupMenuItem<String>(
-              enabled: false,
-              height: 20,
-              child: Center(
-                child: FusionAppText(
-                  text: 'No available source sets',
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
-                ),
-              ),
-            ),
-          );
-        } else {
-          for (final SourceSet sourceSet in allSourceSets) {
-            final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-            for (final Source src in sources) {
-              final String value = '${src.name} (${sourceSet.name})';
+          } else {
+            for (final Source src in availableSources) {
+              final String value = src.id;
               entries.add(
                 PopupMenuItem<String>(
                   value: value,
@@ -379,7 +322,7 @@ class _ZoneCardState extends State<ZoneCard> {
                       const SizedBox(width: 4),
                       Expanded(
                         child: FusionAppText(
-                          text: value,
+                          text: src.name,
                           capitalize: true,
                           maxLine: 1,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
@@ -391,55 +334,134 @@ class _ZoneCardState extends State<ZoneCard> {
               );
             }
           }
-        }
 
-        return entries;
-      },
-      child: Container(
-        height: 22,
-        width: 170,
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        decoration: BoxDecoration(
-          border: Border.all(
-            color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
-          ),
-          borderRadius: BorderRadius.circular(3),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
+          /// Divider
+          entries.add(const PopupMenuDivider(height: 4));
+
+          /// Header: Source Sets
+          entries.add(
+            PopupMenuItem<String>(
+              enabled: false,
+              height: 28,
               child: FusionAppText(
-                text: selectedSource ?? 'Select priority',
+                text: 'SOURCE SETS',
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 11,
-                  color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
-                ),
-              ),
-            ),
-            const SizedBox(width: 4),
-            Container(
-              width: 14,
-              height: 14,
-
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
-                borderRadius: BorderRadius.circular(3),
-              ),
-              child: FusionAppText(
-                text: 'P$priorityIndex',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 8,
-                  color: Theme.of(context).colorScheme.white,
+                  fontSize: 10,
                   fontWeight: FontWeight.w600,
                 ),
-                textAlign: TextAlign.center,
               ),
             ),
-          ],
+          );
+
+          /// Source sets with their sources
+          final List<SourceSet> allSourceSets = _projectViewModel.getAllSourceSets();
+          if (allSourceSets.isEmpty) {
+            entries.add(
+              PopupMenuItem<String>(
+                enabled: false,
+                height: 20,
+                child: Center(
+                  child: FusionAppText(
+                    text: 'No available source sets',
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                  ),
+                ),
+              ),
+            );
+          } else {
+            for (final SourceSet sourceSet in allSourceSets) {
+              final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
+              for (final Source src in sources) {
+                final String name = '${src.name} (${sourceSet.name})';
+                final String value = src.id;
+
+                entries.add(
+                  PopupMenuItem<String>(
+                    value: value,
+                    height: 32,
+                    child: Row(
+                      children: <Widget>[
+                        Transform.scale(
+                          scale: 0.8,
+                          child: Radio<String>(
+                            value: value,
+                            groupValue: selectedSource,
+                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                            activeColor: Theme.of(context).colorScheme.greyDark,
+                            onChanged: (String? v) {
+                              if (v != null) Navigator.pop(context, v);
+                            },
+                          ),
+                        ),
+
+                        const SizedBox(width: 4),
+                        Expanded(
+                          child: FusionAppText(
+                            text: name,
+                            capitalize: true,
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }
+            }
+          }
+
+          return entries;
+        },
+        child: Container(
+          height: 22,
+          width: 170,
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            border: Border.all(
+              color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+            ),
+            borderRadius: BorderRadius.circular(3),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: <Widget>[
+              Expanded(
+                child: FusionAppText(
+                  text: selectedSource ?? 'Select priority',
+                  maxLine: 1,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontSize: 11,
+                    color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 4),
+              Container(
+                width: 14,
+                height: 14,
+
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                  borderRadius: BorderRadius.circular(3),
+                ),
+                child: FusionAppText(
+                  text: 'P$priorityIndex',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 8,
+                    color: Theme.of(context).colorScheme.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -447,25 +469,27 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Add Function button (Popup Menu)
   Widget buildAddFunctionButton({bool isEdit = false}) {
-    return PopupMenuButton<String>(
-      onSelected: (String value) {
-        setState(() {
-          selectedFunction = value;
-        });
+    return PopupMenuButton<ZoneFunctionsType>(
+      onSelected: (ZoneFunctionsType value) {
+        setState(() => selectedFunction = value);
+        _projectViewModel.addFunctionToZone(
+          zoneId: widget.zoneId,
+          function: getNewZoneFunction(type: value),
+        );
       },
       offset: const Offset(0, 10),
       tooltip: isEdit ? "Edit Function" : "Add Function",
       padding: EdgeInsets.zero,
       color: Theme.of(context).colorScheme.white,
       itemBuilder: (BuildContext context) {
-        return functions.map((String function) {
-          return PopupMenuItem<String>(
+        return ZoneFunctionsType.values.map((ZoneFunctionsType function) {
+          return PopupMenuItem<ZoneFunctionsType>(
             height: 32,
             value: function,
             child: SizedBox(
               width: 169,
               child: FusionAppText(
-                text: function,
+                text: function.displayName,
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 10,
@@ -532,7 +556,7 @@ class _ZoneCardState extends State<ZoneCard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
             FusionAppText(
-              text: selectedFunction ?? '',
+              text: selectedFunction?.displayName ?? '',
               maxLine: 1,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 fontSize: 11,
@@ -554,7 +578,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Multi-select source selection for zone (checkboxes)
   Widget buildSourceSelectionForZone() {
-    // Get current selections from the zone
+    /// Get current selections from the zone
     final List<Source> currentZoneSources = _projectViewModel.getSourcesInZone(zoneId: widget.zoneId);
     final List<SourceSet> currentZoneSourceSets = _projectViewModel.getSourceSetsInZone(zoneId: widget.zoneId);
 
