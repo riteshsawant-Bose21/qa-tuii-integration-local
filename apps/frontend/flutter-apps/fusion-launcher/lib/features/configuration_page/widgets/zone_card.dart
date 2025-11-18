@@ -34,6 +34,10 @@ class _ZoneCardState extends State<ZoneCard> {
 
   String? selectedPrioritySource1;
   String? selectedPrioritySource2;
+
+  // Add these to store the actual hardware IDs for radio button groupValue
+  String? selectedPrioritySourceId1;
+  String? selectedPrioritySourceId2;
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
   int? _hoveredCircuitIndex;
@@ -54,16 +58,22 @@ class _ZoneCardState extends State<ZoneCard> {
   void _loadPrioritySources() {
     final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
-    // priority 1
+    /// priority 1
     if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
-      final HardwareComponent? hw = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
-      if (hw != null) selectedPrioritySource1 = hw.name;
+      final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
+      if (sourceData != null) {
+        selectedPrioritySource1 = sourceData.name;
+        selectedPrioritySourceId1 = prioritySources[0];
+      }
     }
 
-    // priority 2
+    /// priority 2
     if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
-      final HardwareComponent? hw = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
-      if (hw != null) selectedPrioritySource2 = hw.name;
+      final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
+      if (sourceData != null) {
+        selectedPrioritySource2 = sourceData.name;
+        selectedPrioritySourceId2 = prioritySources[1];
+      }
     }
 
     setState(() {});
@@ -253,15 +263,17 @@ class _ZoneCardState extends State<ZoneCard> {
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
     final String? selectedSource = priorityIndex == 1 ? selectedPrioritySource1 : selectedPrioritySource2;
+    final String? selectedSourceId = priorityIndex == 1 ? selectedPrioritySourceId1 : selectedPrioritySourceId2;
     final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
     return Visibility(
-      visible: existingFunction!.hasPriority,
+      visible: existingFunction?.hasPriority ?? false,
       child: PopupMenuButton<String>(
         onSelected: (String value) {
           setState(() {
             if (priorityIndex == 1) {
               selectedPrioritySource1 = _projectViewModel.getHardware(hardwareId: value)?.name;
+              selectedPrioritySourceId1 = value; // Store the ID
               _projectViewModel.addPrioritySourceToZone(
                 zoneId: widget.zoneId,
                 sourceId: value,
@@ -269,6 +281,7 @@ class _ZoneCardState extends State<ZoneCard> {
               );
             } else {
               selectedPrioritySource2 = _projectViewModel.getHardware(hardwareId: value)?.name;
+              selectedPrioritySourceId2 = value; // Store the ID
               _projectViewModel.addPrioritySourceToZone(
                 zoneId: widget.zoneId,
                 sourceId: value,
@@ -331,7 +344,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         scale: 0.7,
                         child: Radio<String>(
                           value: value,
-                          groupValue: selectedSource,
+                          groupValue: selectedSourceId, // Use the stored ID instead of name
                           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                           visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                           activeColor: Theme.of(context).colorScheme.greyDark,
@@ -416,7 +429,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           scale: 0.7,
                           child: Radio<String>(
                             value: value,
-                            groupValue: selectedSource,
+                            groupValue: selectedSourceId, // Use the stored ID instead of name
                             materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                             visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
                             activeColor: Theme.of(context).colorScheme.greyDark,
