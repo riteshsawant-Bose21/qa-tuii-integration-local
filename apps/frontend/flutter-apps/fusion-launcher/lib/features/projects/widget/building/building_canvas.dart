@@ -206,7 +206,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   child: GuideShowcaseWrapper(
                                     step: GuideShowCaseSteps.showListeningAreaSelectionArea,
                                     child: SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
                                       child: FloorCanvas(
                                         gridSize: 100,
                                         controller: widget.floorCanvasController,

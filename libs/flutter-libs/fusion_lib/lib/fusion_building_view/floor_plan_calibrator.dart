@@ -26,27 +26,33 @@ class FloorPlanCalibrationDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: _FloorPlanShell(
-          title: title,
-          onClose: onCancel,
-          child: FloorPlanCalibrator(
-            floorPlanImage: floorPlanImage,
-            onCalibrationComplete: onCalibrationComplete,
-            onCancel: onCancel,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibration_dialog"),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: <BoxShadow>[
+            BoxShadow(
+              color: Theme.of(context).colorScheme.shadow.withValues(alpha: 0.18),
+              blurRadius: 28,
+              offset: const Offset(0, 16),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: _FloorPlanShell(
+            title: title,
+            onClose: onCancel,
+            child: SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator"),
+              child: FloorPlanCalibrator(
+                floorPlanImage: floorPlanImage,
+                onCalibrationComplete: onCalibrationComplete,
+                onCancel: onCancel,
+              ),
+            ),
           ),
         ),
       ),
@@ -72,37 +78,40 @@ class _FloorPlanShell extends StatelessWidget {
     return Column(
       children: <Widget>[
         // Title bar
-        Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
-          ),
-          child: Row(
-            children: <Widget>[
-              FusionAppText(text:
-                title,
-                style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-              const Spacer(),
-              SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
-                child: IconButton(
-                  tooltip: 'Close',
-                  icon: Icon(
-                    Icons.close,
-                    size: 18,
+        SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "floor_plan_calibrator_title_bar"),
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+            ),
+            child: Row(
+              children: <Widget>[
+                FusionAppText(
+                  text: title,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
                     color: Theme.of(context).colorScheme.onSurface,
                   ),
-                  splashRadius: 18,
-                  onPressed: onClose,
                 ),
-              ),
-            ],
+                const Spacer(),
+                SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                  child: IconButton(
+                    tooltip: 'Close',
+                    icon: Icon(
+                      Icons.close,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                    splashRadius: 18,
+                    onPressed: onClose,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
         // The calibrator will render its own toolbar row + canvas + footer
@@ -480,16 +489,16 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               size: 48,
             ),
             const SizedBox(height: 12),
-            FusionAppText(text:
-              'Invalid image',
+            FusionAppText(
+              text: 'Invalid image',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: 6),
-            FusionAppText(text:
-              'Image dimensions: ${widget.floorPlanImage.width}×${widget.floorPlanImage.height}',
+            FusionAppText(
+              text: 'Image dimensions: ${widget.floorPlanImage.width}×${widget.floorPlanImage.height}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
@@ -547,8 +556,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
               // ),
               const Spacer(),
               // Right: distance + units controls
-              FusionAppText(text:
-                'Distance',
+              FusionAppText(
+                text: 'Distance',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),
@@ -598,8 +607,8 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                 ),
               ),
               const SizedBox(width: 12),
-              FusionAppText(text:
-                'Units',
+              FusionAppText(
+                text: 'Units',
                 style: Theme.of(context).textTheme.labelMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
                 ),

@@ -386,25 +386,28 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             showRight: true,
             mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
-                return BuildingCanvas(
-                  splRangeController: _splRangeController,
-                  onSplStateChanged: (bool value) {
-                    if (value) {
+                return SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                  child: BuildingCanvas(
+                    splRangeController: _splRangeController,
+                    onSplStateChanged: (bool value) {
+                      if (value) {
+                        productsController.collapse();
+                        splController.expand();
+                      } else {
+                        splController.collapse();
+                      }
+                    },
+                    floorCanvasController: _floorCanvasController,
+                    onCalculateSpl: calculateSPL,
+                    splPanelData: _lastPanelData!,
+                    onProductSelected: () {
+                      productsController.expand();
+                    },
+                    onProductDeselected: () {
                       productsController.collapse();
-                      splController.expand();
-                    } else {
-                      splController.collapse();
-                    }
-                  },
-                  floorCanvasController: _floorCanvasController,
-                  onCalculateSpl: calculateSPL,
-                  splPanelData: _lastPanelData!,
-                  onProductSelected: () {
-                    productsController.expand();
-                  },
-                  onProductDeselected: () {
-                    productsController.collapse();
-                  },
+                    },
+                  ),
                 );
               },
             ),
