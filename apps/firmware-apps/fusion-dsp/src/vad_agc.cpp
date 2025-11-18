@@ -18,13 +18,21 @@ namespace {
         public:
             VadAgc(const bosepro::BlockConfiguration &configuration);
             virtual ~VadAgc() {
+                // Signal shutdown to AudioSubtask thread
+                shutdown_requested = true;
+                
+                // Give thread time to see shutdown flag and exit safely
+                std::this_thread::sleep_for(std::chrono::milliseconds(20));
+                
                 if (st) {
                     rnnoise_destroy(st);
+                    st = nullptr; // Prevent double-free
                 }
                 
                 #ifdef USE_WEIGHTS_FILE
                 if (model) {
                     rnnoise_model_free(model);
+                    model = nullptr;
                 }
                 #endif
             }
@@ -111,6 +119,9 @@ namespace {
             
             // AudioSubtask for RNNoise processing
             bosepro::AudioSubtask rnnoise_task;
+            
+            // Shutdown flag for thread safety
+            volatile bool shutdown_requested;
 
             ALGORITHM_DECLARE(VadAgc);
     };
@@ -172,7 +183,6 @@ namespace {
         subframe_size = get_frame_size();
         smoothed_vad = 0.0f;
         frame_size_rnnoise = 480;
-        in_buff_ping_pong = 0;
         // initialized = false;
         // if (!initialized) {
         //     buffer.reserve(frame_size_rnnoise);  
@@ -192,6 +202,7 @@ namespace {
         in_buffer[1] = std::make_unique<float[]>(in_buffer_size);
         memset(in_buffer[0].get(), 0, in_buffer_size * sizeof(float));
         memset(in_buffer[1].get(), 0, in_buffer_size * sizeof(float));
+        in_buff_ping_pong = 0;
         in_buff_ptr = 0;
 
         curr_fft = std::make_unique<fft::Fft>(WINDOW_SIZE);
@@ -218,10 +229,15 @@ namespace {
         
         // Set priority for RNNoise task
         rnnoise_task.set_priority(4);
+        shutdown_requested = false;
     }
 
     void VadAgc::rnnoise_process()
     {
+        if (shutdown_requested) {
+            return;
+        }
+        
         // Process the other buffer (not currently being filled)
         float *pbuff = (in_buff_ping_pong == 0) ?
             in_buffer[1].get() : in_buffer[0].get();
