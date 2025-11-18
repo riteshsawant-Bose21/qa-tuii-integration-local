@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/constants/assets_constants.dart';
@@ -63,11 +64,16 @@ class _SourceItemState extends State<SourceItem> {
             //   fit: BoxFit.contain,
             // ),
             const SizedBox(width: 8),
-            const FusionImage.asset(
-              Assets.processingBlocksFilledIcon,
-              width: 24,
-              height: 24,
-              fit: BoxFit.contain,
+            InkWell(
+              onTap: () {
+                ProcessingChainView.showForSource(context, widget.source);
+              },
+              child: const FusionImage.asset(
+                Assets.processingBlocksFilledIcon,
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
             ),
           ],
         ),

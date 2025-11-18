@@ -204,6 +204,18 @@ extension ZoneService on ProjectService {
     relationships.reOrder(RelationshipType.prioritySources, zoneId, priorityOrder);
   }
 
+  void reOrderPrioritySourcesInZone({required String zoneId, required List<String> newOrder}) {
+    if (!zones.exists(zoneId)) return;
+
+    final prioritySources = relationships.getChildren(RelationshipType.prioritySources, zoneId).toList();
+
+    if (newOrder.length != prioritySources.length || !newOrder.every((id) => prioritySources.contains(id))) {
+      throw Exception('New order does not match existing priority sources in zone $zoneId');
+    }
+
+    relationships.reOrder(RelationshipType.prioritySources, zoneId, newOrder);
+  }
+
   void removePrioritySourceFromZone({required String sourceId, required String zoneId}) {
     if (!zones.exists(zoneId)) return;
 

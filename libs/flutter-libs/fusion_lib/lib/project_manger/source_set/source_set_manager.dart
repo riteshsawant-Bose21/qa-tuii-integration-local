@@ -123,4 +123,32 @@ extension SourceSetManager on ProjectManager {
     }
     projectService!.updateProcessingBlockInSource(sourceId: sourceId, processingBlock: processingBlock);
   }
+
+  void linkSourceSet({required String sourceSetId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.linkSourceSet(sourceSetId: sourceSetId);
+  }
+
+  void unlinkSourceSet({required String sourceSetId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.unlinkSourceSet(sourceSetId: sourceSetId);
+  }
+
+  void reOrderSourceSetsInProject({required String sourceSetIdToMove, required String sourceSetAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, SourceSet> reorderedList = projectService!.reOrderSourceSet(
+      sourceSetToMoveId: sourceSetIdToMove,
+      sourceSetAtNewIndexId: sourceSetAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      sourceSets: projectService!.sourceSets.copyWith(reorderedList),
+    );
+  }
 }

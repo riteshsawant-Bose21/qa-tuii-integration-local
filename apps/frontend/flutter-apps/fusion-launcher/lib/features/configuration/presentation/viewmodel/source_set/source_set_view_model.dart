@@ -244,4 +244,52 @@ extension SourceSetViewModel on ProjectViewModel {
       throwError("Failed to update processing block in source: $e");
     }
   }
+
+  void linkSourceSet({required String sourceSetId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.linkSourceSet(sourceSetId: sourceSetId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to link source set: $e");
+      throwError("Failed to link source set: $e");
+    }
+  }
+
+  void unlinkSourceSet({required String sourceSetId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.unlinkSourceSet(sourceSetId: sourceSetId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to unlink source set: $e");
+      throwError("Failed to unlink source set: $e");
+    }
+  }
+
+  void reOrderSourceSet({required String sourceSetIdToMove, required String sourceSetAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderSourceSetsInProject(sourceSetIdToMove: sourceSetIdToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder source sets in project: $e");
+      throwError("Failed to reorder source sets in project: $e");
+    }
+  }
 }

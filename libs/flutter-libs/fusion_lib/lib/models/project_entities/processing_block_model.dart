@@ -16,7 +16,7 @@ class ProcessingBlockModel {
   /// Output processing blocks
   /// "peq", "gain", "delay", "limiter"
 
-  static final List<ProcessingBlockModel> inputBlocks = <ProcessingBlockModel>[
+  static final List<ProcessingBlockModel> sourceBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
@@ -139,7 +139,7 @@ class ProcessingBlockModel {
     ),
   ];
 
-  static final List<ProcessingBlockModel> outputBlocks = <ProcessingBlockModel>[
+  static final List<ProcessingBlockModel> circuitBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
@@ -177,6 +177,10 @@ class ProcessingBlockModel {
 
   IconData get icon {
     return _iconNameMap[algorithmId] ?? Icons.memory;
+  }
+
+  String get iconAsset {
+    return "packages/fusion_lib/lib/${_algoIconMap[algorithmId] ?? 'assets/icons/processing_blocks/pb_1.png'}";
   }
 
   ProcessingBlockModel copyWith({String? name, String? id, String? algorithmId, List<PropertySetting>? properties}) {
@@ -247,5 +251,19 @@ class ProcessingBlockModel {
     'graphic_eq': Icons.equalizer,
     'delay': Icons.timer,
     'limiter': Icons.stop,
+  };
+
+  /// Lookup table for JSON “iconName” (e.g. algorithmId) → const IconData
+  static const Map<String, String> _algoIconMap = <String, String>{
+    'gain': 'assets/icons/processing_blocks/pb_1.png',
+    'peq': 'assets/icons/processing_blocks/pb_2.png',
+    'compressor': 'assets/icons/processing_blocks/pb_3.png',
+    'ducker': 'assets/icons/processing_blocks/pb_4.png',
+    'agc': 'assets/icons/processing_blocks/pb_5.png',
+    'gate': 'assets/icons/processing_blocks/pb_1.png',
+    'tone_control': 'assets/icons/processing_blocks/pb_2.png',
+    'graphic_eq': 'assets/icons/processing_blocks/pb_3.png',
+    'delay': 'assets/icons/processing_blocks/pb_4.png',
+    'limiter': 'assets/icons/processing_blocks/pb_5.png',
   };
 }
