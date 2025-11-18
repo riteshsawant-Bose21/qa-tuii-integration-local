@@ -7,28 +7,39 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/gin-gonic/gin"
 )
 
 // API is a service for the main API.
 type API struct {
-	engine  *gin.Engine
-	server  *http.Server
-	product fusion.Product
-	project fusion.Project
+	engine                *gin.Engine
+	server                *http.Server
+	product               fusion.Product
+	project               fusion.Project
+	user                  fusion.User
+	userDBService         *userdb.Service
+	roleManagementService *userdb.RoleManagementService
+	auth0Validator        *auth.Auth0Validator
 }
 
 type Config struct {
-	Mode string // "debug" or "release"
-	Host string
-	Port string
+	Mode          string // "debug" or "release"
+	Host          string
+	Port          string
+	Auth0Domain   string
+	Auth0Audience string
 }
 
 // New returns a new API from the given services.
 func New(cfg *Config,
 	productSvc fusion.Product,
 	projectSvc fusion.Project,
+	userSvc fusion.User,
+	userDBSvc *userdb.Service,
+	roleManagementSvc *userdb.RoleManagementService,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -51,10 +62,27 @@ func New(cfg *Config,
 		return nil, errors.New("missing project service")
 	}
 
+	if userSvc == nil {
+		return nil, errors.New("missing user service")
+	}
+
+	// Initialize Auth0 validator
+	var auth0Validator *auth.Auth0Validator
+	if cfg.Auth0Domain != "" {
+		auth0Config := auth.Auth0Config{
+			Domain: cfg.Auth0Domain,
+		}
+		auth0Validator = auth.NewAuth0Validator(auth0Config)
+	}
+
 	api := &API{
-		engine:  engine,
-		product: productSvc,
-		project: projectSvc,
+		engine:                engine,
+		product:               productSvc,
+		project:               projectSvc,
+		user:                  userSvc,
+		userDBService:         userDBSvc,
+		roleManagementService: roleManagementSvc,
+		auth0Validator:        auth0Validator,
 	}
 
 	api.registerRoutes()

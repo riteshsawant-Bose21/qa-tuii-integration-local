@@ -1,10 +1,23 @@
 // @title Fusion Cloud Backend API
 // @version 1.0
-// @description This is the Fusion Cloud Backend API server.
+// @description This is the Fusion Cloud Backend API server providing comprehensive role-based access control, user management, and project management capabilities.
+// @termsOfService http://swagger.io/terms/
+
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
 
 // @host localhost:8020
 // @BasePath /api/v1
 // @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 package main
 
 import (
@@ -29,6 +42,9 @@ import (
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
+	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 )
 
 func main() {
@@ -81,6 +97,20 @@ func main() {
 		logger.Fatal("Failed to initialize project service")
 	}
 
+	// Initialize User DB Service
+	userDBSvc := userdb.NewService(pgs)
+	if userDBSvc == nil {
+		logger.Fatal("Failed to initialize user service")
+	}
+	logger.Info("Initialized User DB Service.")
+
+	// Initialize Role Management Service
+	roleManagementSvc := userdb.NewRoleManagementService(pgs)
+	if roleManagementSvc == nil {
+		logger.Fatal("Failed to initialize role management service")
+	}
+	logger.Info("Initialized Role Management Service.")
+
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc, idSVC)
 	if productSVC == nil {
@@ -95,11 +125,19 @@ func main() {
 	}
 	logger.Info("Initialized Project Service.")
 
+	// Initialize User Service
+	userSVC := user.NewService(userDBSvc)
+	if userSVC == nil {
+		logger.Fatal("Failed to initialize user service")
+	}
+	logger.Info("Initialized User Service.")
+
 	// Initialize API Server
 	server, err := api.New(&api.Config{
-		Host: "localhost",
-		Port: "8080",
-	}, productSVC, projectSVC)
+		Host:        "localhost",
+		Port:        "8080",
+		Auth0Domain: "id-dev.boseprofessional.com", // Your Auth0 domain
+	}, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
@@ -128,7 +166,7 @@ func main() {
 		cancel()
 
 		// Give server time to shutdown gracefully
-		shutdownTimeout := time.NewTimer(30 * time.Second)
+		shutdownTimeout := time.NewTimer(1 * time.Second)
 		defer shutdownTimeout.Stop()
 
 		select {

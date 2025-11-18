@@ -154,7 +154,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Project ID"
-// @Param syncRequest body SyncProjectRequest true "Sync request containing metadata and ZIP file URL"
+// @Param syncRequest body types.SyncProjectRequest true "Sync request containing metadata and ZIP file URL"
 // @Success 200 {object} map[string]string "Successfully initiated project sync"
 // @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
 // @Failure 404 {object} map[string]string "Project not found"

@@ -9,12 +9,417 @@ const docTemplate = `{
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "termsOfService": "http://swagger.io/terms/",
+        "contact": {
+            "name": "API Support",
+            "url": "http://www.swagger.io/support",
+            "email": "support@swagger.io"
+        },
+        "license": {
+            "name": "MIT",
+            "url": "https://opensource.org/licenses/MIT"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/auth/status": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Check if the current user is properly authenticated and return basic status",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Check authentication status",
+                "responses": {
+                    "200": {
+                        "description": "User is authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "User is not authenticated",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/role-management": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get comprehensive role management data including roles, features, access levels, and users for the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Get organization role management data",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved role management data",
+                        "schema": {
+                            "$ref": "#/definitions/types.RoleManagementResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions for role management",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/roles": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new role with the specified name and description in the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Create a new role",
+                "parameters": [
+                    {
+                        "description": "Role creation details",
+                        "name": "role",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created role",
+                        "schema": {
+                            "$ref": "#/definitions/types.RoleWithPermissions"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to create roles",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/roles/{roleID}/permissions": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the permissions assigned to a specific role within the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Update role permissions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Role ID",
+                        "name": "roleID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Permission updates",
+                        "name": "permissions",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/types.PermissionUpdateRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated role permissions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload or invalid role ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to update role permissions",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/users": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get all users within the organization along with their role information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Get organization users",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved organization users",
+                        "schema": {
+                            "$ref": "#/definitions/types.OrganizationUsersResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to view organization users",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/organization/users/{userID}/role": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update the role assignment for a specific user within the organization",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "role-management"
+                ],
+                "summary": "Update user role",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Role assignment details",
+                        "name": "roleAssignment",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.AssignRoleRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated user role",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload or missing user ID",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - Insufficient permissions to update user roles",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/products": {
             "get": {
                 "description": "Get all available products including speakers, amplifiers and digital signal processors",
@@ -32,7 +437,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with all products",
                         "schema": {
-                            "$ref": "#/definitions/fusion.ProductResponse"
+                            "$ref": "#/definitions/types.ProductResponse"
                         }
                     },
                     "500": {
@@ -73,7 +478,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product details",
                         "schema": {
-                            "$ref": "#/definitions/fusion.ProductResponse"
+                            "$ref": "#/definitions/types.ProductResponse"
                         }
                     },
                     "400": {
@@ -125,7 +530,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/fusion.Project"
+                                "$ref": "#/definitions/types.Project"
                             }
                         }
                     },
@@ -159,7 +564,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.Project"
                         }
                     }
                 ],
@@ -167,7 +572,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created project",
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.Project"
                         }
                     },
                     "400": {
@@ -217,7 +622,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved project",
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.Project"
                         }
                     },
                     "404": {
@@ -311,7 +716,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.Project"
                         }
                     }
                 ],
@@ -319,7 +724,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully updated project",
                         "schema": {
-                            "$ref": "#/definitions/fusion.Project"
+                            "$ref": "#/definitions/types.Project"
                         }
                     },
                     "400": {
@@ -379,7 +784,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/handler.SyncProjectRequest"
+                            "$ref": "#/definitions/types.SyncProjectRequest"
                         }
                     }
                 ],
@@ -422,10 +827,318 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/user/me/authorization": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get authorization details including user info, account, role, and permissions for the current authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get user authorization details",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user authorization details",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserAuthorizationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/me/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current authenticated user's profile information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user profile",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user with the specified details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "description": "User creation details",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created user",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{email}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get a specific user by their email address",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user by email",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User email address",
+                        "name": "email",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/users/{userID}": {
+            "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Update an existing user's information by their ID",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Update user",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userID",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Updated user details",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.UpdateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated user",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
-        "fusion.Amplifier": {
+        "types.AccessLevel": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.AccountInfo": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.Amplifier": {
             "type": "object",
             "properties": {
                 "category": {
@@ -435,11 +1148,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "meta_info": {
-                    "$ref": "#/definitions/fusion.Amplifier_meta_response"
+                    "$ref": "#/definitions/types.Amplifier_meta_response"
                 }
             }
         },
-        "fusion.Amplifier_meta_response": {
+        "types.Amplifier_meta_response": {
             "type": "object",
             "properties": {
                 "channels": {
@@ -455,14 +1168,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "power_output": {
-                    "$ref": "#/definitions/fusion.powerOutput"
+                    "$ref": "#/definitions/types.powerOutput"
                 },
                 "total_capacity": {
                     "type": "number"
                 }
             }
         },
-        "fusion.Budget": {
+        "types.AssignRoleRequest": {
+            "type": "object",
+            "required": [
+                "role_id",
+                "user_id"
+            ],
+            "properties": {
+                "role_id": {
+                    "type": "integer"
+                },
+                "user_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.Budget": {
             "type": "object",
             "properties": {
                 "amount": {
@@ -473,7 +1201,49 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.DSP_meta": {
+        "types.CreateRoleRequest": {
+            "type": "object",
+            "required": [
+                "description",
+                "name"
+            ],
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 10
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3
+                }
+            }
+        },
+        "types.CreateUserRequest": {
+            "type": "object",
+            "required": [
+                "account_id",
+                "account_type_role_id",
+                "email",
+                "full_name"
+            ],
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "account_type_role_id": {
+                    "type": "integer"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.DSP_meta": {
             "type": "object",
             "properties": {
                 "acoustic_echo_cancellation": {
@@ -647,7 +1417,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.DigitalSignalProcessor": {
+        "types.DigitalSignalProcessor": {
             "type": "object",
             "properties": {
                 "category": {
@@ -657,41 +1427,113 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "meta_info": {
-                    "$ref": "#/definitions/fusion.DSP_meta"
+                    "$ref": "#/definitions/types.DSP_meta"
                 }
             }
         },
-        "fusion.ProductResponse": {
+        "types.Feature": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.FeaturePermissionDetail": {
+            "type": "object",
+            "properties": {
+                "access_label": {
+                    "type": "string"
+                },
+                "access_level": {
+                    "type": "string"
+                },
+                "access_level_id": {
+                    "type": "integer"
+                },
+                "feature_id": {
+                    "type": "integer"
+                },
+                "feature_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.OrganizationUsersResponse": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/types.AccountInfo"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.UserWithRole"
+                    }
+                }
+            }
+        },
+        "types.PermissionUpdateRequest": {
+            "type": "object",
+            "required": [
+                "access_level_id",
+                "action",
+                "feature_id"
+            ],
+            "properties": {
+                "access_level_id": {
+                    "type": "integer"
+                },
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "add",
+                        "update",
+                        "remove"
+                    ]
+                },
+                "feature_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.ProductResponse": {
             "type": "object",
             "properties": {
                 "amplifier": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/fusion.Amplifier"
+                        "$ref": "#/definitions/types.Amplifier"
                     }
                 },
                 "digital_signal_processors": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/fusion.DigitalSignalProcessor"
+                        "$ref": "#/definitions/types.DigitalSignalProcessor"
                     }
                 },
                 "speaker": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/fusion.Speaker"
+                        "$ref": "#/definitions/types.Speaker"
                     }
                 }
             }
         },
-        "fusion.Project": {
+        "types.Project": {
             "type": "object",
             "properties": {
                 "application": {
                     "type": "string"
                 },
                 "budget": {
-                    "$ref": "#/definitions/fusion.Budget"
+                    "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
                     "type": "string"
@@ -720,7 +1562,73 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.Speaker": {
+        "types.RoleInfo": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "integer"
+                },
+                "role_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.RoleManagementResponse": {
+            "type": "object",
+            "properties": {
+                "access_levels": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.AccessLevel"
+                    }
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Feature"
+                    }
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.RoleWithPermissions"
+                    }
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.UserBasicInfo"
+                    }
+                }
+            }
+        },
+        "types.RoleWithPermissions": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.FeaturePermissionDetail"
+                    }
+                },
+                "user_count": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.Speaker": {
             "type": "object",
             "properties": {
                 "category": {
@@ -730,11 +1638,11 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "meta_info": {
-                    "$ref": "#/definitions/fusion.Speaker_meta_response"
+                    "$ref": "#/definitions/types.Speaker_meta_response"
                 }
             }
         },
-        "fusion.Speaker_meta_response": {
+        "types.Speaker_meta_response": {
             "type": "object",
             "properties": {
                 "available_taps": {
@@ -776,7 +1684,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nominal_impedance": {
-                    "$ref": "#/definitions/fusion.nominal_impedence"
+                    "$ref": "#/definitions/types.nominal_impedence"
                 },
                 "power_handling": {
                     "type": "object",
@@ -816,7 +1724,125 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.nominal_impedence": {
+        "types.SyncProjectRequest": {
+            "type": "object"
+        },
+        "types.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "account_type_role_id": {
+                    "type": "integer"
+                },
+                "full_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.User": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string"
+                },
+                "account_type_role_id": {
+                    "type": "integer"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.UserAuthorizationResponse": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/types.AccountInfo"
+                },
+                "permissions": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "role": {
+                    "$ref": "#/definitions/types.RoleInfo"
+                },
+                "user": {
+                    "$ref": "#/definitions/types.UserInfo"
+                }
+            }
+        },
+        "types.UserBasicInfo": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "role_id": {
+                    "type": "integer"
+                },
+                "role_name": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.UserInfo": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.UserWithRole": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "full_name": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "joined_at": {
+                    "type": "string"
+                },
+                "role": {
+                    "$ref": "#/definitions/types.RoleInfo"
+                },
+                "status": {
+                    "description": "active, pending, suspended",
+                    "type": "string"
+                }
+            }
+        },
+        "types.nominal_impedence": {
             "type": "object",
             "properties": {
                 "unit": {
@@ -827,7 +1853,7 @@ const docTemplate = `{
                 }
             }
         },
-        "fusion.powerOutput": {
+        "types.powerOutput": {
             "type": "object",
             "properties": {
                 "asymmetrical": {
@@ -1030,9 +2056,14 @@ const docTemplate = `{
                     }
                 }
             }
-        },
-        "handler.SyncProjectRequest": {
-            "type": "object"
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
@@ -1044,7 +2075,7 @@ var SwaggerInfo = &swag.Spec{
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "Fusion Cloud Backend API",
-	Description:      "This is the Fusion Cloud Backend API server.",
+	Description:      "This is the Fusion Cloud Backend API server providing comprehensive role-based access control, user management, and project management capabilities.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

@@ -24,7 +24,7 @@ func NewProductHandler(productSvc fusion.Product) *ProductHandler {
 // @Tags products
 // @Accept json
 // @Produce json
-// @Success 200 {object} fusion.ProductResponse "Successful response with all products"
+// @Success 200 {object} types.ProductResponse "Successful response with all products"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /products [get]
 func (a *ProductHandler) GetAllProducts(c *gin.Context) {
@@ -43,7 +43,7 @@ func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param id path string true "Product ID"
-// @Success 200 {object} fusion.ProductResponse "Successful response with product details"
+// @Success 200 {object} types.ProductResponse "Successful response with product details"
 // @Failure 400 {object} map[string]string "Bad request - Product ID is required"
 // @Failure 404 {object} map[string]string "Product not found"
 // @Failure 500 {object} map[string]string "Internal server error"
