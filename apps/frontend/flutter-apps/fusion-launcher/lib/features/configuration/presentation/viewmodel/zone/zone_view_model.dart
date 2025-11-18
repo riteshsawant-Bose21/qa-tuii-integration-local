@@ -344,12 +344,37 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  void updateSourcesInZone({required String zoneId, required List<String> sourceIds, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      final List<Source> currentSources = getSourcesInZone(zoneId: zoneId);
+      final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
+      final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
+      final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
+      for (final String id in toRemove) {
+        projectManager.removeSourceFromZone(zoneId: zoneId, sourceId: id);
+      }
+      for (final String id in toAdd) {
+        projectManager.addSourceToZone(zoneId: zoneId, sourceId: id);
+      }
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for zone: $e");
+      throwError("Failed to update sources for zone: $e");
+    }
+  }
+
   void addSourceToZone({required String zoneId, required String sourceId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addSourceToZone(zoneId, sourceId);
+      projectManager.addSourceToZone(zoneId: zoneId, sourceId: sourceId);
       if (autoSave) {
         saveProject();
       }
@@ -365,7 +390,7 @@ extension ZoneViewModel on ProjectViewModel {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.removeSourceFromZone(zoneId, sourceId);
+      projectManager.removeSourceFromZone(zoneId: zoneId, sourceId: sourceId);
       if (autoSave) {
         saveProject();
       }
