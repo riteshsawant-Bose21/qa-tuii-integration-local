@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/processing_block/view/customization/processing_block_customizer.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -453,6 +454,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             ],
           );
         },
+      ),
+
+      const FusionDockableArea(
+        tabKey: "zone_config_tab",
+        showLeft: false,
+        showRight: false,
+        mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
+        dockItemList: <DockItemConfig>[],
       ),
 
       /// budget tab with docking area

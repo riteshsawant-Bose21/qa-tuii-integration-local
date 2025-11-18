@@ -37,7 +37,7 @@ class SourceSet {
     return SourceSet(
       id: json['id'] as String,
       name: json['name'] as String,
-      isLinked: json['isLinked'] as bool,
+      isLinked: json['isLinked'] as bool? ?? false,
     );
   }
 }

@@ -175,7 +175,7 @@ class MixWidgetState extends State<MixWidget> {
                       Container(
                         padding: const EdgeInsets.all(16),
                         decoration: BoxDecoration(
-                          color: colors.surfaceVariant.withOpacity(0.3),
+                          color: colors.surfaceContainerHighest.withOpacity(0.3),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: colors.outline.withOpacity(0.2),
