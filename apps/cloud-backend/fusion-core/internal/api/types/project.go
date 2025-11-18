@@ -11,6 +11,13 @@ const (
 	EnvironmentTypeHybrid  EnvironmentType = "hybrid"
 )
 
+type ProjectFileType string
+
+const (
+	ProjectFileTypeProjectFile      ProjectFileType = "projectFile"
+	ProjectFileTypeProjectThumbnail ProjectFileType = "projectThumbnail"
+)
+
 // ProjectPhase represents the phase of a project
 type ProjectPhase string
 
@@ -27,30 +34,32 @@ type Budget struct {
 
 // Request body for creating or updating a project.
 type ProjectCreateRequest struct {
-	ID                   string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Application          string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
-	UserID               string          `json:"user_id" validate:"required,min=1" example:"user123"`
-	Name                 string          `json:"name" validate:"required,min=1,max=255" example:"Conference Room Audio Setup"`
-	Description          string          `json:"description" validate:"omitempty,max=1000" example:"Professional audio system for corporate conference room"`
-	Venue                string          `json:"venue" validate:"omitempty,max=255" example:"Building A - Conference Room 101"`
-	EnvironmentType      EnvironmentType `json:"environment_type" validate:"required,environment_type" example:"indoor"`
-	ProjectPhase         ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Proposal"`
-	Budget               Budget          `json:"budget" validate:"required"`
-	IsProjectFileCreated bool            `json:"is_project_file_created" example:"false"`
+	ID                        string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Application               string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
+	UserID                    string          `json:"user_id" validate:"required,min=1" example:"user123"`
+	Name                      string          `json:"name" validate:"required,min=1,max=255" example:"Conference Room Audio Setup"`
+	Description               string          `json:"description" validate:"omitempty,max=1000" example:"Professional audio system for corporate conference room"`
+	Venue                     string          `json:"venue" validate:"omitempty,max=255" example:"Building A - Conference Room 101"`
+	EnvironmentType           EnvironmentType `json:"environment_type" validate:"required,environment_type" example:"indoor"`
+	ProjectPhase              ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Proposal"`
+	Budget                    Budget          `json:"budget" validate:"required"`
+	IsProjectFileCreated      bool            `json:"is_project_file_created" example:"false"`
+	IsProjectThumbnailCreated bool            `json:"is_project_thumbnail_created" example:"false"`
 }
 
 // Request body for creating or updating a project.
 type ProjectUpdateRequest struct {
-	ID                 string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
-	Application        string          `json:"application" validate:"omitempty,min=1,max=255" example:"Audio System Design"`
-	AccountID          string          `json:"account_id" validate:"omitempty,min=1" example:"account456"`
-	Name               string          `json:"name" validate:"omitempty,min=1,max=255" example:"Updated Conference Room Audio Setup"`
-	Description        string          `json:"description" validate:"omitempty,max=1000" example:"Updated professional audio system for corporate conference room"`
-	Venue              string          `json:"venue" validate:"omitempty,max=255" example:"Building B - Conference Room 205"`
-	EnvironmentType    EnvironmentType `json:"environment_type" validate:"omitempty,environment_type" example:"indoor"`
-	ProjectPhase       ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Development"`
-	Budget             Budget          `json:"budget" validate:"omitempty"`
-	IsProjectFileDirty bool            `json:"is_project_file_dirty" example:"true"`
+	ID                      string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	Application             string          `json:"application" validate:"omitempty,min=1,max=255" example:"Audio System Design"`
+	AccountID               string          `json:"account_id" validate:"omitempty,min=1" example:"account456"`
+	Name                    string          `json:"name" validate:"omitempty,min=1,max=255" example:"Updated Conference Room Audio Setup"`
+	Description             string          `json:"description" validate:"omitempty,max=1000" example:"Updated professional audio system for corporate conference room"`
+	Venue                   string          `json:"venue" validate:"omitempty,max=255" example:"Building B - Conference Room 205"`
+	EnvironmentType         EnvironmentType `json:"environment_type" validate:"omitempty,environment_type" example:"indoor"`
+	ProjectPhase            ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Development"`
+	Budget                  Budget          `json:"budget" validate:"omitempty"`
+	IsProjectFileDirty      bool            `json:"is_project_file_dirty" example:"true"`
+	IsProjectThumbnailDirty bool            `json:"is_project_thumbnail_dirty" example:"true"`
 }
 
 // Project object for Get.
@@ -90,13 +99,15 @@ type GetAllProjectsResponse struct {
 
 // Response for creating a project.
 type ProjectCreateResponse struct {
-	ID               string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	ProjectUploadURL string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ID                 string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ProjectUploadURL   string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ThumbnailUploadURL string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
 // Response for updating a project.
 type ProjectUpdateResponse struct {
-	ProjectUploadURL string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ProjectUploadURL   string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ThumbnailUploadURL string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
 // Response for user assignment operations.

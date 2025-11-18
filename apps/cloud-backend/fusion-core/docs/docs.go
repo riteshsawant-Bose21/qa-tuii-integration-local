@@ -1147,6 +1147,10 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": false
                 },
+                "is_project_thumbnail_created": {
+                    "type": "boolean",
+                    "example": false
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 255,
@@ -1181,6 +1185,10 @@ const docTemplate = `{
                     "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "project_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                },
+                "thumbnail_upload_url": {
                     "type": "string",
                     "example": "https://storage.example.com/upload/projects/123e4567"
                 }
@@ -1237,6 +1245,10 @@ const docTemplate = `{
                     "type": "boolean",
                     "example": true
                 },
+                "is_project_thumbnail_dirty": {
+                    "type": "boolean",
+                    "example": true
+                },
                 "name": {
                     "type": "string",
                     "maxLength": 255,
@@ -1262,6 +1274,10 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "project_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                },
+                "thumbnail_upload_url": {
                     "type": "string",
                     "example": "https://storage.example.com/upload/projects/123e4567"
                 }
