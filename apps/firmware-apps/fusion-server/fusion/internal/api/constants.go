@@ -1,5 +1,7 @@
 package api
 
+import "time"
+
 const (
 	AdminPort          = "9090"
 	HTTPPort           = "8080"
@@ -11,6 +13,8 @@ const (
 	ContentType  = "Content-Type"
 	JsonMIMEType = "application/json"
 	Protocol     = "http://"
+
+	HTTPTimeout = 5 * time.Second
 
 	AudioFilesLocation = "/var/lib/fusion/audio"
 

@@ -156,12 +156,12 @@ func (tm *TaskManager) ListTasks() []api.Task {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	var taskList []api.Task
+	tasks := make([]api.Task, 0, len(tm.tasks))
 	for _, task := range tm.tasks {
-		taskList = append(taskList, *task)
+		tasks = append(tasks, *task)
 	}
 
-	return taskList
+	return tasks
 }
 
 // RecordExecution records a task execution log entry with rotation.
@@ -238,12 +238,7 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tm.mu.Lock()
-	tasks := make([]api.Task, 0, len(tm.tasks))
-	for _, task := range tm.tasks {
-		tasks = append(tasks, *task)
-	}
-	tm.mu.Unlock()
+	tasks := tm.ListTasks()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(tasks)
