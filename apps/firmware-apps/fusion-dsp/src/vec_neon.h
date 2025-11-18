@@ -35,6 +35,17 @@
 #include "opus_types.h"
 #include "common.h"
 
+/* Define restrict for C++ compatibility */
+#ifndef restrict
+#  if defined(__GNUC__) || defined(__clang__)
+#    define restrict __restrict__
+#  elif defined(_MSC_VER)
+#    define restrict __restrict
+#  else
+#    define restrict
+#  endif
+#endif
+
 #if defined(__arm__) && !defined(__aarch64__) && (__ARM_ARCH < 8 || !defined(__clang__))
 /* Emulate vcvtnq_s32_f32() for ARMv7 Neon. */
 static OPUS_INLINE int32x4_t vcvtnq_s32_f32(float32x4_t x) {

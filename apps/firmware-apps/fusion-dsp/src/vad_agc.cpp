@@ -1,9 +1,11 @@
 
 #include <bosepro/algorithm.h>
+#include <bosepro/audio_task.h>
 
 #include <cmath>
 #include <cstdint>
 #include <iostream> 
+#include <chrono>
 #include "rnnoise.h"
 #include "fft.h"
 #include "denoise.h"
@@ -15,9 +17,25 @@ namespace {
     {
         public:
             VadAgc(const bosepro::BlockConfiguration &configuration);
-            virtual ~VadAgc() = default;
+            virtual ~VadAgc() {
+                if (st) {
+                    rnnoise_destroy(st);
+                }
+                
+                #ifdef USE_WEIGHTS_FILE
+                if (model) {
+                    rnnoise_model_free(model);
+                }
+                #endif
+            }
 
             virtual void process() override;
+
+            static void run_rnnoise_task(void *obj)
+            {
+                VadAgc *vad_agc = static_cast<VadAgc *>(obj);
+                vad_agc->rnnoise_process();
+            }
 
         private:
             int_fast32_t channels;
@@ -71,11 +89,13 @@ namespace {
             float vad_threshold;
             int frame_size_rnnoise;
             float alpha;
-            float delayed_vad;
             int subframe_size;
             float smoothed_vad;
-            std::vector<float> in_buffer;
-            std::vector<float> out_buffer;
+            std::unique_ptr<float[]> in_buffer[2];  // Ping-pong buffers
+            std::unique_ptr<float[]> out_buffer[2];  
+            int out_buff_ping_pong;           // Which buffer to read from in main process
+            int in_buff_ping_pong;              // Which buffer to write to in main process
+            int in_buff_ptr;
             // bool initialized;
             // int count;
             DenoiseState *st;
@@ -86,13 +106,22 @@ namespace {
 
             std::unique_ptr<fft::Fft> curr_fft;
 
+            // RNNoise processing functions
+            void rnnoise_process();
+            
+            // AudioSubtask for RNNoise processing
+            bosepro::AudioSubtask rnnoise_task;
+
             ALGORITHM_DECLARE(VadAgc);
     };
 
     ALGORITHM_REGISTER(VadAgc, "vadagc");
 
 
-    VadAgc::VadAgc(const bosepro::BlockConfiguration &configuration): bosepro::Algorithm(configuration)
+    VadAgc::VadAgc(const bosepro::BlockConfiguration &configuration)
+        : bosepro::Algorithm(configuration),
+          rnnoise_task(&VadAgc::run_rnnoise_task, this,
+                       get_sample_rate(), 480, get_frame_size())
     {
         get_property("channels", channels);
 
@@ -140,10 +169,10 @@ namespace {
         
         vad_hangover_frames = 500;
         vad_activity = false;
-        delayed_vad = 0.0f;
         subframe_size = get_frame_size();
         smoothed_vad = 0.0f;
         frame_size_rnnoise = 480;
+        in_buff_ping_pong = 0;
         // initialized = false;
         // if (!initialized) {
         //     buffer.reserve(frame_size_rnnoise);  
@@ -151,7 +180,19 @@ namespace {
         // }
         // count = 0;
 
-        out_buffer.assign(480, 0.0f);
+        out_buffer[0] = std::make_unique<float[]>(frame_size_rnnoise);
+        out_buffer[1] = std::make_unique<float[]>(frame_size_rnnoise);
+        memset(out_buffer[0].get(), 0, frame_size_rnnoise * sizeof(float));
+        memset(out_buffer[1].get(), 0, frame_size_rnnoise * sizeof(float));
+        out_buff_ping_pong = 0;
+        
+        // Initialize input buffers with proper size
+        size_t in_buffer_size = frame_size_rnnoise + get_frame_size();
+        in_buffer[0] = std::make_unique<float[]>(in_buffer_size);
+        in_buffer[1] = std::make_unique<float[]>(in_buffer_size);
+        memset(in_buffer[0].get(), 0, in_buffer_size * sizeof(float));
+        memset(in_buffer[1].get(), 0, in_buffer_size * sizeof(float));
+        in_buff_ptr = 0;
 
         curr_fft = std::make_unique<fft::Fft>(WINDOW_SIZE);
         //use_weights_file = true;
@@ -174,75 +215,114 @@ namespace {
             SPDLOG_ERROR("Frame size for the RNNoise model can only be 480");
 
         out_buffer_index = 0;
+        
+        // Set priority for RNNoise task
+        rnnoise_task.set_priority(4);
     }
 
+    void VadAgc::rnnoise_process()
+    {
+        // Process the other buffer (not currently being filled)
+        float *pbuff = (in_buff_ping_pong == 0) ?
+            in_buffer[1].get() : in_buffer[0].get();
+
+        float frame[frame_size_rnnoise];
+        float frame_out[frame_size_rnnoise];
+        
+        // Copy data from the processing buffer
+        memcpy(frame, pbuff, sizeof(float) * frame_size_rnnoise);
+        
+        // // Validate input data to prevent PFFFT corruption
+        // bool data_valid = true;
+        // for (int i = 0; i < frame_size_rnnoise; i++) {
+        //     if (!std::isfinite(frame[i])) {
+        //         data_valid = false;
+        //         SPDLOG_ERROR("Invalid input data at index {}: {}", i, frame[i]);
+        //         break;
+        //     }
+        // }
+        // if (!data_valid) {
+        //     // Fill with zeros if data is corrupted
+        //     memset(frame, 0, sizeof(float) * frame_size_rnnoise);
+        //     memset(frame_out, 0, sizeof(float) * frame_size_rnnoise);
+        //     smoothed_vad = (1.0f - alpha) * smoothed_vad; // decay without new input
+        //     vad_activity = (smoothed_vad >= vad_threshold);
+        //     return;
+        // }
+        
+        // SPDLOG_DEBUG("RNNoise processing: using buffer {}, current fill buffer: {}", 
+        //             (in_buff_ping_pong == 0) ? 1 : 0, in_buff_ping_pong);
+        
+        auto start_time = std::chrono::high_resolution_clock::now();
+        float vad_prob = rnnoise_process_frame(st, frame_out, frame, curr_fft.get());
+
+        auto end_time = std::chrono::high_resolution_clock::now();
+        auto duration_us = std::chrono::duration_cast<std::chrono::microseconds>(end_time - start_time).count();
+        if (duration_us > 10000) { // More than 10ms - this shouldn't happen!
+            SPDLOG_ERROR("RNNoise took {}us (exceeds 10ms real-time limit!)", duration_us);
+        }
+        
+        smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
+
+        if (denoise_frame) {
+            // Write to the buffer that main thread is NOT reading from
+            int write_buffer = 1 - out_buff_ping_pong;  // Main thread reads from out_buff_ping_pong
+            memcpy(out_buffer[write_buffer].get(), frame_out, 480 * sizeof(float));
+        }
+        vad_activity = (smoothed_vad >= vad_threshold);
+    }
 
     void VadAgc::process()
     {
         
         float total_boost = 0.0f;
 
+        // Store data (first channel) to input buffer
+        float *pbuff = in_buffer[in_buff_ping_pong].get();
+        memcpy(&pbuff[in_buff_ptr], in[0], sizeof(float)*get_frame_size());
+        // SPDLOG_DEBUG("Storing {} samples to input buffer {} at index {}", get_frame_size(), in_buff_ping_pong, in_buff_ptr);
+        in_buff_ptr += get_frame_size();
+        
+        // When input buffer is filled, mark ready and trigger processing
+        if (in_buff_ptr >= frame_size_rnnoise) {
+            // Check if need to store remaining samples
+            int buff_remain_len = in_buff_ptr - frame_size_rnnoise;
+            if (buff_remain_len > 0) {
+                memcpy(&pbuff[0], &pbuff[frame_size_rnnoise], sizeof(float)*buff_remain_len);
+            }
+            // Reset input buffer pointer
+            in_buff_ptr = buff_remain_len;
+            
+            // Switch to other buffer
+            in_buff_ping_pong = (in_buff_ping_pong == 0) ? 1 : 0;
+            // SPDLOG_DEBUG("Buffer full, switched to buffer {}, remaining samples: {}", in_buff_ping_pong, buff_remain_len);
+        }
+        
+        // Trigger RNNoise processing
+        rnnoise_task.tick();
+
         for (int_fast32_t channel = 0; channel < channels; channel++)
         {
-            
-            if (!denoise_frame)
-            {
-                in_buffer.insert(in_buffer.end(), in[channel], in[channel] + subframe_size); 
-                vad_activity = (delayed_vad >= vad_threshold);
-                if (in_buffer.size() >= static_cast<size_t>(frame_size_rnnoise)) {
-                    
-                    float frame[frame_size_rnnoise];
-                    float frame_out[frame_size_rnnoise];
-                    std::copy(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise, frame);
-                    float vad_prob = rnnoise_process_frame(st, frame_out, frame, curr_fft.get());
-                    smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
-                    delayed_vad  = smoothed_vad;  
-                    in_buffer.erase(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise);
-                    out_buffer_index = 0;
-                    
+
+            if (!denoise_frame) {
+                // Copy input to current buffer (no thread conflict in non-denoise mode)
+                for (int_fast32_t sample = 0; sample < get_frame_size(); sample++) {
+                    out_buffer[out_buff_ping_pong].get()[out_buffer_index + sample] = in[channel][sample];
                 }
-                if (static_cast<size_t>(out_buffer_index + 32) <= out_buffer.size()) {
-                    std::copy(in[channel], in[channel] + 32, out_buffer.begin() + out_buffer_index);
-                    
-                } else {
-                    SPDLOG_ERROR("Out of range buffer update!");
-                }
-            }
-            else
-            {
-                
-                in_buffer.insert(in_buffer.end(), in[channel], in[channel] + subframe_size);
-                
-                if (in_buffer.size() >= static_cast<size_t>(frame_size_rnnoise)) {
-                    
-                    float frame[frame_size_rnnoise];
-                    float frame_out[frame_size_rnnoise];
-                    std::copy(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise, frame);
-                    float vad_prob = rnnoise_process_frame(st, frame_out, frame, curr_fft.get());
-                    smoothed_vad = alpha * vad_prob + (1.0f - alpha) * smoothed_vad;
-                    vad_activity = (smoothed_vad >= vad_threshold);
-                    in_buffer.erase(in_buffer.begin(), in_buffer.begin() + frame_size_rnnoise);
-                    out_buffer.assign(frame_out, frame_out + 480);
-                    out_buffer_index = 0;
-                }
-                  
             }
 
-    
-            
-            
             in_meter[channel] = 0.0;
             for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
             {
-                float energy = out_buffer[out_buffer_index + sample] * out_buffer[out_buffer_index + sample];
+                float sample_val = out_buffer[out_buff_ping_pong].get()[out_buffer_index + sample];
+                float energy = sample_val * sample_val;
                 smoothed_level[channel] += (energy - smoothed_level[channel]) *
                     ((energy > smoothed_level[channel])
                     ? level_attack_coeff : level_release_coeff);
                 fast_level[channel] += (energy - fast_level[channel]) *
                     ((energy > fast_level[channel])
                     ? level_attack_coeff : fast_release_coeff);
-                in_meter[channel] = std::max(in_meter[channel],
-                                            std::fabs(out_buffer[out_buffer_index + sample]));
+                in_meter[channel] = std::max(in_meter[channel], std::fabs(sample_val));
             }
 
             float log_level = 10.0f * log10(smoothed_level[channel]) + 20.0f;
@@ -342,14 +422,22 @@ namespace {
 
             for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
             {
-                out[channel][sample] = out_buffer[out_buffer_index + sample] * g;
+                out[channel][sample] = out_buffer[out_buff_ping_pong].get()[out_buffer_index + sample] * g;
                 g *= g_step;
             }
 
             current_gain[channel] = 20.0f * log10f(g);
             
         }
-        out_buffer_index += 32;
+        
+        out_buffer_index += get_frame_size();
+        if (out_buffer_index >= frame_size_rnnoise) {
+            out_buffer_index = 0;
+            // Switch ping-pong buffers when we've consumed the full buffer
+            if (denoise_frame) {
+                out_buff_ping_pong = 1 - out_buff_ping_pong;
+            }
+        }
     }
 
     //         in_meter[channel] = 0.0;
