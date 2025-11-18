@@ -174,19 +174,16 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   builder: (BuildContext context, ProjectViewModelState state) {
                     final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
 
-                    // Initialize filtered sources if empty or if sources list changed
-                    if (_filteredSources.isEmpty && sourcesWithoutSourceSet.isNotEmpty) {
+                    if (searchController.text.isEmpty) {
                       _filteredSources = sourcesWithoutSourceSet;
-                    } else if (searchController.text.isNotEmpty) {
+                    } else {
                       _filterSources(searchController.text);
-                    } else if (searchController.text.isEmpty) {
-                      _filteredSources = sourcesWithoutSourceSet;
                     }
 
                     if (_filteredSources.isEmpty) {
                       return Center(
                         child: FusionAppText(
-                          text: searchController.text.isNotEmpty ? 'No sources found matching "${searchController.text}"' : 'No sources added yet',
+                          text: searchController.text.isNotEmpty ? 'No search data for "${searchController.text}"' : 'No sources added yet',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
