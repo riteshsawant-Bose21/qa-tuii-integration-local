@@ -493,7 +493,6 @@ func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *netw
 	}
 
 	hub.Register(udpServer)
-	udpServer.Start()
 	return udpServer
 }
 

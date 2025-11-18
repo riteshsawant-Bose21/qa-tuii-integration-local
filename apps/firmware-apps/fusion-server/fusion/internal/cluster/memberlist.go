@@ -22,22 +22,24 @@ import (
 )
 
 const (
-	gossipInterval   = 100 * time.Millisecond
-	probeInterval    = 5 * time.Second
-	probeTimeout     = 2 * time.Second
-	pushPullInterval = 30 * time.Second
-	retryInterval    = 2 * time.Second
-	retryTimes       = 5
-	serialPath       = "/sys/firmware/devicetree/base/serial-number"
-	serialUnknown    = "Unknown"
-	suspicionMult    = 3
-	tcpTimeout       = 10 * time.Second
+	gossipInterval      = 20 * time.Millisecond
+	gossipToTheDeadTime = 30 * time.Second
+	probeInterval       = 100 * time.Millisecond
+	probeTimeout        = 100 * time.Millisecond
+	pushPullInterval    = 1 * time.Second
+	retryInterval       = 2 * time.Second
+	retryTimes          = 5
+	serialPath          = "/sys/firmware/devicetree/base/serial-number"
+	serialUnknown       = "Unknown"
+	suspicionMult       = 3
+	tcpTimeout          = 10 * time.Second
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()
 	config.GossipInterval = gossipInterval
+	config.GossipToTheDeadTime = gossipToTheDeadTime
 	config.Name = appConfig.NodeName
 	config.BindAddr = appConfig.BindAddr
 	config.BindPort = appConfig.BindPort

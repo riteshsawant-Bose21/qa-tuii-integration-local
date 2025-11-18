@@ -15,6 +15,7 @@ const (
 	NotifyOpAudioRemove   NotifyOp = "audio_remove"
 	NotifyOpAudioSync     NotifyOp = "audio_sync"
 	NotifyOpConfigUpdate  NotifyOp = "config_update"
+	NotifyOpNoop          NotifyOp = "no_op"
 	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"

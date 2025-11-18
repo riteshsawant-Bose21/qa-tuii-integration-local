@@ -48,7 +48,7 @@ func (s *SkewStore) Add(node string, skew time.Duration, detected time.Time) {
 	s.mu.Unlock()
 }
 
-// Prune remomves stale records from the store.
+// Prune removes stale records from the store.
 func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 	for range ticker.C {
 		now := time.Now()
@@ -183,10 +183,23 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	case api.NotifyOpConfigUpdate:
-		if err := d.stateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+		dirty, err := d.stateManager.ApplyUpdate(*message.ConfigUpdate)
+		if err != nil {
 			logger.Error("Error applying update: %v", err)
 			return
 		}
+
+		if !dirty {
+			logger.Debug("delegate: skipping stale ConfigUpdate version=%v from %s",
+				message.ConfigUpdate.Version, message.Node)
+			return
+		}
+
+		// Overwrite with effective local Lamport version
+		updated := *message.ConfigUpdate
+		updated.Version = d.stateManager.GetVersion()
+		message.ConfigUpdate = &updated
+
 		d.persistence.MarkDirty()
 		d.hub.Broadcast(&message)
 
