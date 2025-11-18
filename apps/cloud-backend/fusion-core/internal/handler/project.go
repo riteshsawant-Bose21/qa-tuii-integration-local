@@ -8,7 +8,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/validation"
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 )
 
 const ()
@@ -22,13 +21,6 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 	return &ProjectHandler{
 		project: project,
 	}
-}
-
-// isValidUUID checks if a string is a valid UUID format.
-// Returns true if valid, false otherwise.
-func isValidUUID(str string) bool {
-	_, err := uuid.Parse(str)
-	return err == nil
 }
 
 // CreateProject creates a new project.
@@ -58,12 +50,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	response, err := h.project.CreateProject(ctx, &p)
 
 	if err != nil {
-		// Check if it's a user not found or validation error
-		if err.Error() == types.ErrMsgUserNotFound || err.Error() == types.ErrMsgProjectCannotBeNil {
-			ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
-			return
-		}
-		// All other errors are internal server errors
+		// Internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
 	}
@@ -77,12 +64,11 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
-// @Param user_id query string true "User ID"
 // @Param is_archived query bool false "Filter projects by archived status"
 // @Param sort_by query string false "Field to sort projects by (e.g., created_at, updated_at)"
 // @Param sort_order query string false "Sort order (ascending or descending)" Enums(asc, desc)
 // @Success 200 {object} types.GetAllProjectsResponse "Successfully retrieved all projects"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid query parameters or user ID"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid query parameters"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
@@ -106,7 +92,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 		return
 	}
 
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
@@ -144,19 +130,22 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Router /projects/{projectId} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
-	userID := ctx.Query("user_id")
 
+	// TODO: Remove when auth is implemented
+	userID := ctx.Query("user_id")
 	if userID == "" {
 		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
 		return
 	}
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+
+	// TODO: Remove when auth is implemented
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
@@ -174,7 +163,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	}
 
 	// Use authenticated update method which includes all validations
-	response, err := h.project.UpdateProjectWithAuth(ctx, projectID, userID, &p)
+	response, err := h.project.UpdateProject(ctx, projectID, userID, &p)
 	if err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
@@ -223,17 +212,17 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	}
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
 	// Use authenticated delete method which includes all validations
-	if err := h.project.DeleteProjectWithAuth(ctx, projectID, userID); err != nil {
+	if err := h.project.DeleteProject(ctx, projectID, userID); err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: err.Error()})
@@ -278,7 +267,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 
 	// Validate projectID UUID
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "Invalid project ID format"})
 		return
 	}
@@ -316,7 +305,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 
 	// Validate projectID UUID
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: "Invalid project ID format"})
 		return
 	}
@@ -348,6 +337,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Param projectId path string true "Project ID"
 // @Param userId path string true "User ID"
 // @Success 204 "Successfully starred project"
+// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
 // @Failure 404 {object} types.NotFoundError "Project or User not found, or user not assigned to the project"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/star/{userId} [put]
@@ -356,11 +346,11 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 	userID := ctx.Param("userId")
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
@@ -374,7 +364,7 @@ func (h *ProjectHandler) StarProject(ctx *gin.Context) {
 			return
 		}
 		if errorMsg == types.ErrMsgUserNotAssignedToProject {
-			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: errorMsg})
+			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// All other errors are internal server errors
@@ -401,11 +391,11 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 	userID := ctx.Param("userId")
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
@@ -451,17 +441,17 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 	}
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
 	// Use authenticated archive method which includes all validations
-	err := h.project.ArchiveProjectWithAuth(ctx, projectID, userID)
+	err := h.project.ArchiveProject(ctx, projectID, userID)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -504,17 +494,17 @@ func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
 	}
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
 
 	// Use authenticated unarchive method which includes all validations
-	err := h.project.UnarchiveProjectWithAuth(ctx, projectID, userID)
+	err := h.project.UnarchiveProject(ctx, projectID, userID)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -557,11 +547,11 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 	}
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
@@ -570,12 +560,12 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
+		if errorMsg == types.ErrMsgProjectNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// Check if it's authorization errors
-		if errorMsg == types.ErrMsgUserNotAssignedToProject ||
+		if errorMsg == types.ErrMsgUserNotAssignedToProject || errorMsg == types.ErrMsgUserNotFound ||
 			errorMsg == types.ErrMsgProjectNotLockedByUser ||
 			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
@@ -610,11 +600,11 @@ func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
 	}
 
 	// Validate UUIDs
-	if !isValidUUID(projectID) {
+	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
 		return
 	}
-	if !isValidUUID(userID) {
+	if !validation.IsValidUUID(userID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
 		return
 	}
@@ -623,12 +613,12 @@ func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
+		if errorMsg == types.ErrMsgProjectNotFound {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
 			return
 		}
 		// Check if it's authorization errors
-		if errorMsg == types.ErrMsgUserNotAssignedToProject ||
+		if errorMsg == types.ErrMsgUserNotAssignedToProject || errorMsg == types.ErrMsgUserNotFound ||
 			errorMsg == types.ErrMsgProjectNotLockedByUser ||
 			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})

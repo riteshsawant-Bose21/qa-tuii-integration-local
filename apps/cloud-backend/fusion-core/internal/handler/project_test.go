@@ -57,15 +57,7 @@ func (m *MockProjectService) GetAllProjects(ctx context.Context, queryParams *ty
 	return args.Get(0).(*types.GetAllProjectsResponse), args.Error(1)
 }
 
-func (m *MockProjectService) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
-	args := m.Called(ctx, id, project)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*types.ProjectUpdateResponse), args.Error(1)
-}
-
-func (m *MockProjectService) UpdateProjectWithAuth(ctx context.Context, id string, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
+func (m *MockProjectService) UpdateProject(ctx context.Context, id string, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
 	args := m.Called(ctx, id, userID, project)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
@@ -73,12 +65,7 @@ func (m *MockProjectService) UpdateProjectWithAuth(ctx context.Context, id strin
 	return args.Get(0).(*types.ProjectUpdateResponse), args.Error(1)
 }
 
-func (m *MockProjectService) DeleteProject(ctx context.Context, id string) error {
-	args := m.Called(ctx, id)
-	return args.Error(0)
-}
-
-func (m *MockProjectService) DeleteProjectWithAuth(ctx context.Context, id string, userID string) error {
+func (m *MockProjectService) DeleteProject(ctx context.Context, id string, userID string) error {
 	args := m.Called(ctx, id, userID)
 	return args.Error(0)
 }
@@ -127,22 +114,12 @@ func (m *MockProjectService) UnstarProject(ctx context.Context, projectID, userI
 	return args.Error(0)
 }
 
-func (m *MockProjectService) ArchiveProject(ctx context.Context, projectID string) error {
-	args := m.Called(ctx, projectID)
-	return args.Error(0)
-}
-
-func (m *MockProjectService) ArchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error {
+func (m *MockProjectService) ArchiveProject(ctx context.Context, projectID string, userID string) error {
 	args := m.Called(ctx, projectID, userID)
 	return args.Error(0)
 }
 
-func (m *MockProjectService) UnarchiveProject(ctx context.Context, projectID string) error {
-	args := m.Called(ctx, projectID)
-	return args.Error(0)
-}
-
-func (m *MockProjectService) UnarchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error {
+func (m *MockProjectService) UnarchiveProject(ctx context.Context, projectID string, userID string) error {
 	args := m.Called(ctx, projectID, userID)
 	return args.Error(0)
 }
@@ -370,7 +347,7 @@ func TestUpdateProject(t *testing.T) {
 		expectedResponse := &types.ProjectUpdateResponse{}
 
 		// Use authenticated method which includes all validations
-		mockSvc.On("UpdateProjectWithAuth", mock.Anything, projectID, userID, updateReq).Return(expectedResponse, nil)
+		mockSvc.On("UpdateProject", mock.Anything, projectID, userID, updateReq).Return(expectedResponse, nil)
 
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+projectID+userQueryParam+userID, bytes.NewBuffer(body))
@@ -424,7 +401,7 @@ func TestUpdateProject(t *testing.T) {
 		}
 
 		// Mock project doesn't exist
-		mockSvc.On("UpdateProjectWithAuth", mock.Anything, projectID, userID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("UpdateProject", mock.Anything, projectID, userID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectNotFound))
 
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+projectID+userQueryParam+userID, bytes.NewBuffer(body))
@@ -447,7 +424,7 @@ func TestUpdateProject(t *testing.T) {
 		}
 
 		// Mock project exists but user is not assigned
-		mockSvc.On("UpdateProjectWithAuth", mock.Anything, projectID, userID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("UpdateProject", mock.Anything, projectID, userID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgUserNotAssignedToProject))
 
 		body, _ := json.Marshal(updateReq)
 		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+projectID+userQueryParam+userID, bytes.NewBuffer(body))
@@ -467,7 +444,7 @@ func TestDeleteProject(t *testing.T) {
 		projectID := testProjectID
 		userID := testUserID
 		// Use authenticated method which includes all validations
-		mockSvc.On("DeleteProjectWithAuth", mock.Anything, projectID, userID).Return(nil)
+		mockSvc.On("DeleteProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -497,7 +474,7 @@ func TestDeleteProject(t *testing.T) {
 
 		projectID := "323e4567-e89b-12d3-a456-426614174000"
 		userID := testUserID
-		mockSvc.On("DeleteProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("DeleteProject", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgProjectNotFound))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -513,7 +490,7 @@ func TestDeleteProject(t *testing.T) {
 
 		projectID := testProjectID
 		userID := "423e4567-e89b-12d3-a456-426614174000"
-		mockSvc.On("DeleteProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		mockSvc.On("DeleteProject", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -529,7 +506,7 @@ func TestDeleteProject(t *testing.T) {
 
 		projectID := testProjectID
 		userID := testUserID
-		mockSvc.On("DeleteProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New("database error"))
+		mockSvc.On("DeleteProject", mock.Anything, projectID, userID).Return(errors.New("database error"))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -547,7 +524,7 @@ func TestDeleteProject(t *testing.T) {
 		projectID := testProjectID
 		userID := testUserID
 		// Use authenticated method which includes all validations
-		mockSvc.On("DeleteProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New(serviceErrorMsg))
+		mockSvc.On("DeleteProject", mock.Anything, projectID, userID).Return(errors.New(serviceErrorMsg))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -859,7 +836,7 @@ func TestArchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Use authenticated method which includes all validations
-		mockSvc.On("ArchiveProjectWithAuth", mock.Anything, projectID, userID).Return(nil)
+		mockSvc.On("ArchiveProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -877,7 +854,7 @@ func TestArchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Mock project doesn't exist
-		mockSvc.On("ArchiveProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("ArchiveProject", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgProjectNotFound))
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -895,7 +872,7 @@ func TestArchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Use authenticated method which includes all validations
-		mockSvc.On("ArchiveProjectWithAuth", mock.Anything, projectID, userID).Return(nil)
+		mockSvc.On("ArchiveProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -913,7 +890,7 @@ func TestArchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Use authenticated method which includes all validations
-		mockSvc.On("ArchiveProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New("internal error"))
+		mockSvc.On("ArchiveProject", mock.Anything, projectID, userID).Return(errors.New("internal error"))
 
 		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -933,7 +910,7 @@ func TestUnarchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Mock the unarchive operation with authentication
-		mockSvc.On("UnarchiveProjectWithAuth", mock.Anything, projectID, userID).Return(nil)
+		mockSvc.On("UnarchiveProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -951,7 +928,7 @@ func TestUnarchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Mock project not found error
-		mockSvc.On("UnarchiveProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgProjectNotFound))
+		mockSvc.On("UnarchiveProject", mock.Anything, projectID, userID).Return(errors.New(types.ErrMsgProjectNotFound))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -969,7 +946,7 @@ func TestUnarchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Mock the unarchive operation with authentication
-		mockSvc.On("UnarchiveProjectWithAuth", mock.Anything, projectID, userID).Return(nil)
+		mockSvc.On("UnarchiveProject", mock.Anything, projectID, userID).Return(nil)
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()
@@ -987,7 +964,7 @@ func TestUnarchiveProject(t *testing.T) {
 		userID := testUserID
 
 		// Use authenticated method which includes all validations
-		mockSvc.On("UnarchiveProjectWithAuth", mock.Anything, projectID, userID).Return(errors.New("internal error"))
+		mockSvc.On("UnarchiveProject", mock.Anything, projectID, userID).Return(errors.New("internal error"))
 
 		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+archivePath+userQueryParam+userID, nil)
 		w := httptest.NewRecorder()

@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
 const (
@@ -97,6 +98,69 @@ func (s *Service) validateProjectUpdateAuthorization(ctx context.Context, projec
 	return nil
 }
 
+// ValidateProjectNotLockedByOther validates that a project is not locked by another user.
+// Returns an error with the locking user's email if the project is locked by someone else.
+func (s *Service) ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error {
+	isLocked, lockedByUserID, err := s.dbService.GetProjectLockUserID(ctx, projectID)
+	if err != nil {
+		return err
+	}
+
+	if !isLocked {
+		return nil // Project is not locked, operation can proceed
+	}
+
+	// Check if the project is locked by the same user trying to perform the operation
+	if lockedByUserID == userID {
+		return nil // Project is locked by the same user, operation can proceed
+	}
+
+	// Get the email of the user who locked the project
+	lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, lockedByUserID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+	}
+
+	// Project is locked by a different user
+	return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+}
+
+func (s *Service) GetValidProjectForUpdate(ctx context.Context, projectID, userID string) (*models.Project, error) {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if projectRow.IsArchived {
+		return nil, errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return nil, errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return nil, fmt.Errorf("project is locked by user: %s", lockedByEmail)
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return nil, errors.New(types.ErrMsgUserNotAssignedToProject)
+	}
+
+	return projectRow, nil
+}
+
 // generateProjectFileURL generates a presigned URL for project file operations
 func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, ttl time.Duration, operation string) (string, error) {
 	key := fmt.Sprintf(projectFilePathFormat, projectID, projectID)
@@ -118,10 +182,8 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 		return nil, err
 	}
 
-	// Generate ID if not provided (moved from database layer)
-	if project.ID == "" {
-		project.ID = uuid.New().String()
-	}
+	// Generate ID
+	project.ID = uuid.New().String()
 
 	id, err := s.dbService.Insert(ctx, project)
 	if err != nil {
@@ -174,11 +236,41 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 }
 
 // UpdateProject modifies an existing project.
-// Note: This method should be called with userID for validation when invoked from handlers
-func (s *Service) UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
-	// Note: Project existence validation happens in the database layer Update method
-	// This design allows for internal service calls that skip some validations
-	projectRow, err := s.dbService.Update(ctx, id, project)
+func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
+
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	if projectRow.IsArchived {
+		return nil, errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return nil, errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return nil, fmt.Errorf("project is locked by user: %s", lockedByEmail)
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return nil, errors.New(types.ErrMsgUserNotAssignedToProject)
+	}
+
+	err = s.dbService.Update(ctx, projectRow, project)
 	if err != nil {
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToUpdateProject, err)
 	}
@@ -196,50 +288,59 @@ func (s *Service) UpdateProject(ctx context.Context, id string, project *types.P
 	return response, nil
 }
 
-// UpdateProjectWithAuth modifies an existing project with full authorization checks
-func (s *Service) UpdateProjectWithAuth(ctx context.Context, id string, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
-	// Validate project exists first (optimization - avoid unnecessary DB calls)
-	if err := s.validateProjectExistence(ctx, id); err != nil {
-		return nil, err
-	}
-
-	// Validate AccountID exists if provided
-	if project.AccountID != "" {
-		if err := s.validateUserExistence(ctx, project.AccountID); err != nil {
-			return nil, err
-		}
-	}
-
-	// Validate user can update this project (user exists, assigned, not locked)
-	if err := s.validateProjectUpdateAuthorization(ctx, id, userID); err != nil {
-		return nil, err
-	}
-
-	return s.UpdateProject(ctx, id, project)
-}
-
 // DeleteProject removes a project by its ID.
 // Note: This method should be called with userID for validation when invoked from handlers
-func (s *Service) DeleteProject(ctx context.Context, id string) error {
-	// Note: Project existence validation happens in the database layer
-	return s.dbService.Delete(ctx, id)
-}
+func (s *Service) DeleteProject(ctx context.Context, projectID, userID string) error {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
 
-// DeleteProjectWithAuth removes a project by its ID with full authorization checks
-func (s *Service) DeleteProjectWithAuth(ctx context.Context, id string, userID string) error {
-	// Validate user can delete this project
-	if err := s.validateProjectUpdateAuthorization(ctx, id, userID); err != nil {
+	if err != nil {
 		return err
 	}
 
-	return s.DeleteProject(ctx, id)
+	if projectRow.IsDeleted {
+		return nil // Idempotent behavior
+	}
+
+	if projectRow.IsArchived {
+		return errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
+	}
+
+	return s.dbService.Delete(ctx, projectRow)
 }
 
 // AssignUserToProject assigns a user to a project.
 func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return nil, err
+	}
+
+	if projectRow.IsArchived {
+		return nil, errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return nil, errors.New(types.ErrMsgProjectNotFound)
 	}
 
 	// Check if user is already assigned to the project
@@ -266,9 +367,26 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID str
 
 // RemoveUserFromProject removes a user from a project.
 func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return nil, err
+	}
+
+	if projectRow.IsArchived {
+		return nil, errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return nil, errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return nil, fmt.Errorf("project is locked by user: %s", lockedByEmail)
 	}
 
 	// Check if user is assigned to the project
@@ -318,9 +436,28 @@ func (s *Service) RemoveUserFromProjectByEmail(ctx context.Context, projectID, u
 
 // StarProject stars a project for a user.
 func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
-	// Validate project, user existence and assignment
-	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return err
+	}
+
+	if projectRow.IsArchived {
+		return errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
 	}
 
 	// Star the project
@@ -333,9 +470,28 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 
 // UnstarProject unstars a project for a user.
 func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
-	// Validate project, user existence and assignment
-	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return err
+	}
+
+	if projectRow.IsArchived {
+		return errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
 	}
 
 	// Unstar the project
@@ -347,7 +503,39 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 }
 
 // ArchiveProject archives a project.
-func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
+func (s *Service) ArchiveProject(ctx context.Context, projectID, userID string) error {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
+		return err
+	}
+
+	if projectRow.IsDeleted {
+		return errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	if projectRow.IsArchived {
+		return nil // Idempotent behavior
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+	}
+
 	// Archive the project
 	if err := s.dbService.ArchiveProject(ctx, projectID); err != nil {
 		return err
@@ -356,34 +544,46 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
 	return nil
 }
 
-// ArchiveProjectWithAuth archives a project with full authorization checks
-func (s *Service) ArchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error {
-	// Validate user can archive this project
-	if err := s.validateProjectUpdateAuthorization(ctx, projectID, userID); err != nil {
+// UnarchiveProject unarchives a project.
+func (s *Service) UnarchiveProject(ctx context.Context, projectID, userID string) error {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return err
 	}
 
-	return s.ArchiveProject(ctx, projectID)
-}
+	if projectRow.IsDeleted {
+		return errors.New(types.ErrMsgProjectNotFound)
+	}
 
-// UnarchiveProject unarchives a project.
-func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
+	}
+
+	if !projectRow.IsArchived {
+		return nil // Idempotent behavior
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+	}
+
 	// Unarchive the project
 	if err := s.dbService.UnarchiveProject(ctx, projectID); err != nil {
 		return err
 	}
 
 	return nil
-}
-
-// UnarchiveProjectWithAuth unarchives a project with full authorization checks
-func (s *Service) UnarchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error {
-	// Validate user can unarchive this project
-	if err := s.validateProjectUpdateAuthorization(ctx, projectID, userID); err != nil {
-		return err
-	}
-
-	return s.UnarchiveProject(ctx, projectID)
 }
 
 // ProjectExists checks if a project exists.
@@ -398,9 +598,41 @@ func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) 
 
 // LockProject locks a project for a user.
 func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
-	// Validate project, user existence and assignment
-	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return err
+	}
+
+	if projectRow.IsArchived {
+		return errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	if projectRow.LockedByUserID.String != "" {
+		if projectRow.LockedByUserID.String != userID {
+			lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+			if err != nil {
+				return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+			}
+			return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+
+		} else {
+			return nil // Project is already locked by the same user, idempotent behavior
+		}
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
 	}
 
 	// Lock the project
@@ -413,9 +645,36 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 
 // UnlockProject unlocks a project for a user.
 func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
-	// Validate project, user existence and assignment
-	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
+	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
+
+	if err != nil {
 		return err
+	}
+
+	if projectRow.IsArchived {
+		return errors.New(types.ErrMsgProjectArchived)
+	}
+
+	if projectRow.IsDeleted {
+		return errors.New(types.ErrMsgProjectNotFound)
+	}
+
+	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+		if err != nil {
+			return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+		}
+		return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+	}
+
+	// Check if user is assigned to the project
+	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
+	if err != nil {
+		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
+	}
+
+	if !isAssigned {
+		return errors.New(types.ErrMsgUserNotAssignedToProject)
 	}
 
 	// Unlock the project
@@ -424,33 +683,6 @@ func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) e
 	}
 
 	return nil
-}
-
-// ValidateProjectNotLockedByOther validates that a project is not locked by another user.
-// Returns an error with the locking user's email if the project is locked by someone else.
-func (s *Service) ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error {
-	isLocked, lockedByUserID, err := s.dbService.GetProjectLockUserID(ctx, projectID)
-	if err != nil {
-		return err
-	}
-
-	if !isLocked {
-		return nil // Project is not locked, operation can proceed
-	}
-
-	// Check if the project is locked by the same user trying to perform the operation
-	if lockedByUserID == userID {
-		return nil // Project is locked by the same user, operation can proceed
-	}
-
-	// Get the email of the user who locked the project
-	lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, lockedByUserID)
-	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
-	}
-
-	// Project is locked by a different user
-	return fmt.Errorf("project is locked by user: %s", lockedByEmail)
 }
 
 // GetProjectLockUserID returns whether the project is locked and the user ID who locked it.

@@ -655,11 +655,6 @@ paths:
       - application/json
       description: Get all projects in the system
       parameters:
-      - description: User ID
-        in: query
-        name: user_id
-        required: true
-        type: string
       - description: Filter projects by archived status
         in: query
         name: is_archived
@@ -683,7 +678,7 @@ paths:
           schema:
             $ref: '#/definitions/types.GetAllProjectsResponse'
         "400":
-          description: Bad request - Invalid query parameters or user ID
+          description: Bad request - Invalid query parameters
           schema:
             $ref: '#/definitions/types.BadRequestError'
         "500":
@@ -976,6 +971,11 @@ paths:
       responses:
         "204":
           description: Successfully starred project
+        "403":
+          description: Forbidden - User not assigned to project, project archived,
+            or locked by another user
+          schema:
+            $ref: '#/definitions/types.ForbiddenError'
         "404":
           description: Project or User not found, or user not assigned to the project
           schema:
