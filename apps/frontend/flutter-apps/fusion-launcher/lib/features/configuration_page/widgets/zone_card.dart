@@ -42,12 +42,31 @@ class _ZoneCardState extends State<ZoneCard> {
   void initState() {
     super.initState();
     _isZoneExpanded = ValueNotifier<bool>(false);
+    _loadPrioritySources();
   }
 
   @override
   void dispose() {
     _isZoneExpanded.dispose();
     super.dispose();
+  }
+
+  void _loadPrioritySources() {
+    final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+
+    // priority 1
+    if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
+      final HardwareComponent? hw = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
+      if (hw != null) selectedPrioritySource1 = hw.name;
+    }
+
+    // priority 2
+    if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
+      final HardwareComponent? hw = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
+      if (hw != null) selectedPrioritySource2 = hw.name;
+    }
+
+    setState(() {});
   }
 
   @override
