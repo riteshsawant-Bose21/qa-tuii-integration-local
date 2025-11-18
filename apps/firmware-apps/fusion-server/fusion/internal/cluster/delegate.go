@@ -239,7 +239,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	logger := logging.GetLogger()
 	logger.Debug("LocalState requested (join=%v)", join)
 
-	state := d.stateManager.GetFullStateDeepCopy()
+	state := d.stateManager.GetFullState()
 	snapshot := struct {
 		Version api.Version                `json:"version"`
 		NodeID  string                     `json:"node_id"`
