@@ -98,6 +98,30 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
     }
   }
 
+  void updateBlockProperty({required String blockId, required PropertySetting property, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      final ProcessingBlockModel? processingBlock = projectManager.getProcessingBlockById(processingBlockId: blockId);
+
+      if (processingBlock == null) {
+        throwError("Processing block with id $blockId not found");
+      } else {
+        final ProcessingBlockModel updatedBlock = processingBlock.updateProperty(property);
+        projectManager.updateProcessingBlock(updatedBlock);
+      }
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update block property: $e");
+      throwError("Failed to update block property: $e");
+    }
+  }
+
   List<ProcessingBlockModel> getAllProcessingBlocks() {
     try {
       return projectManager.getAllProcessingBlocks();
@@ -134,7 +158,7 @@ extension ProcessingBlockViewmodel on ProjectViewModel {
 
   ProcessingBlockModel? getProcessingBlockById({required String processingBlockId}) {
     try {
-      return projectManager.getProcessingBlockById(processingBlockId);
+      return projectManager.getProcessingBlockById(processingBlockId: processingBlockId);
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get processing block by id: $e");
       return null;
