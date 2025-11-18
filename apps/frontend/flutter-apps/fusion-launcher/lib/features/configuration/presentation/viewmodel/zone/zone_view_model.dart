@@ -459,4 +459,20 @@ extension ZoneViewModel on ProjectViewModel {
       return <String>[];
     }
   }
+
+  void reOrderPrioritySourcesInZone({required String zoneId, required List<String> newOrder, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder priority sources in zone: $e");
+      throwError("Failed to reorder priority sources in zone: $e");
+    }
+  }
 }

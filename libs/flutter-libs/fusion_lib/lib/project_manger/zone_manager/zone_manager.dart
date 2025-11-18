@@ -171,4 +171,11 @@ extension ZoneManager on ProjectManager {
     }
     return projectService!.getPrioritySourcesInZone(zoneId);
   }
+
+  void reOrderPrioritySourcesInZone({required String zoneId, required List<String> newOrder}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
+  }
 }
