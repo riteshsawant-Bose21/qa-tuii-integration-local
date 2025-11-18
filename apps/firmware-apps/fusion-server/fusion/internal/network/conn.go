@@ -38,7 +38,7 @@ func JoinMulticastGroups(conn *net.UDPConn, groups []string, port string) error 
 
 		for _, group := range groups {
 			hostPort := net.JoinHostPort(group, port)
-			groupAddr, err := net.ResolveUDPAddr("udp", hostPort)
+			groupAddr, err := net.ResolveUDPAddr("udp4", hostPort)
 			if err != nil {
 				return fmt.Errorf("resolve group %q: %w", groupAddr, err)
 			}

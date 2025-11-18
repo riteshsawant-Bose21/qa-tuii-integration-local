@@ -25,7 +25,7 @@ const (
 
 // StateManagerInterface defines the interface for state management
 type StateManagerInterface interface {
-	GetFullStateDeepCopy() VersionedState
+	GetFullState() VersionedState
 }
 
 // VersionedState represents a version of instance state
@@ -323,7 +323,8 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 		if incomingMap, ok := rawValue.(map[string]any); ok {
 			if exists {
 				if existingMap, ok2 := localEntry.Data.(map[string]any); ok2 {
-					newData = mergeMaps(existingMap, incomingMap)
+					existingMapCopy := utils.DeepCopy(existingMap).(map[string]any)
+					newData = mergeMaps(existingMapCopy, incomingMap)
 				} else {
 					newData = incomingMap
 				}
@@ -349,22 +350,8 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 	return dirty, nil
 }
 
-// GetFullState returns the internal state
-
-// This returns a copy of the struct VersionedState by value,
-// but in Go copying a struct that contains a map does NOT copy the map’s contents.
-// It copies only the map header (a small descriptor) which still points to the
-// SAME underlying map backing array/hash table. So after GetFullState() returns,
-// the caller holds a struct whose State field is an alias of the original shared map.
-
-func (sm *StateManager) GetFullState() VersionedState {
-	sm.RLock()
-	defer sm.RUnlock()
-	return sm.state
-}
-
 // GetFullState returns the internal state after deep copy.
-func (sm *StateManager) GetFullStateDeepCopy() VersionedState {
+func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
 	defer sm.RUnlock()
 
@@ -378,12 +365,12 @@ func (sm *StateManager) GetFullStateDeepCopy() VersionedState {
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 
-	state := sm.GetFullStateDeepCopy().State
+	state := sm.GetFullState().State
 
 	result := make(map[string]any, len(state))
 	for k, e := range state {
 		if e != nil {
-			result[k] = e.Data // already deep-copied inside GetFullStateDeepCopy
+			result[k] = e.Data // already deep-copied inside GetFullState
 		}
 	}
 	return result
@@ -401,7 +388,9 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 
 		// if we don’t have it yet, or the remote version is newer...
 		if !exists || localEntry.Version.Less(remoteEntry.Version) {
-			sm.state.State[key] = remoteEntry
+			copy := *remoteEntry
+			copy.Data = utils.DeepCopy(remoteEntry.Data)
+			sm.state.State[key] = &copy
 
 			// bump our “highest‐seen” version if this remote one is newer
 			if sm.version.Less(remoteEntry.Version) {

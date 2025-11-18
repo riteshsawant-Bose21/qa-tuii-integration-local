@@ -1313,7 +1313,7 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 	for i := 0; time.Now().Before(deadline); i++ {
 		// note the "2>&1" so we capture nc's stderr (where -v prints)
 		cmd := fmt.Sprintf(
-			`(echo '{"action":"get"}' | nc -u -vv -w1 localhost %s) 2>&1 || true`,
+			`(echo '{"action":"get"}' | nc -u -w1 localhost %s) 2>/dev/null || true`,
 			instancePort,
 		)
 
@@ -1324,6 +1324,11 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 		//t.Logf("iter %02d, nc err: %v, raw UDP payload: %q", i, errRun, raw)
 
 		if raw != "" {
+
+			if idx := strings.Index(raw, "{"); idx > 0 {
+				raw = raw[idx:]
+			}
+
 			var result UDPResult
 			if err := json.Unmarshal([]byte(raw), &result); err == nil {
 				// check status
