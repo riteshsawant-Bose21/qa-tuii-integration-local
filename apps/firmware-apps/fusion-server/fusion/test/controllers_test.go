@@ -12,7 +12,7 @@ import (
 	"fusion/internal/routes"
 )
 
-const controllersServerAddr = "http://192.168.64.100:8080"
+const controllersServerAddr = "http://192.168.2.100:8080"
 
 // ControllerInfo mirrors the server's API model.
 type ControllerInfo struct {

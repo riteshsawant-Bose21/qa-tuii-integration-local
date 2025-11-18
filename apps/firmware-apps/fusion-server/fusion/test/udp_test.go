@@ -23,6 +23,12 @@ const (
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
 func TestFusionUDP_BasicRoundTrip(t *testing.T) {
+
+	if runtime.GOOS == "darwin" {
+		t.Skip("macOS and Multipass networking prevents VM to host UDP responses.")
+		return
+	}
+
 	conn, err := net.Dial("udp", fusionUDPAddr)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
@@ -54,18 +60,18 @@ func TestFusionUDP_BasicRoundTrip(t *testing.T) {
 
 func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 	// Prepare UDP listener to act as a "client"
-	listenerAddr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
+	listenerAddr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:0")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	listenerConn, err := net.ListenUDP("udp", listenerAddr)
+	listenerConn, err := net.ListenUDP("udp4", listenerAddr)
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
 	defer listenerConn.Close()
 
 	// Send an initial registration message to server
-	serverAddr, _ := net.ResolveUDPAddr("udp", fusionUDPAddr)
+	serverAddr, _ := net.ResolveUDPAddr("udp4", fusionUDPAddr)
 	initMsg := []byte(`{"action":"get"}`)
 	if _, err := listenerConn.WriteToUDP(initMsg, serverAddr); err != nil {
 		t.Fatalf("register: %v", err)
@@ -97,7 +103,7 @@ func TestFusionUDP_Stress(t *testing.T) {
 	var wg sync.WaitGroup
 	stop := time.Now().Add(testDuration)
 
-	t.Logf("Starting %d UDP writers for %v\n", numWriters, testDuration)
+	//t.Logf("Starting %d UDP writers for %v\n", numWriters, testDuration)
 
 	for i := range numWriters {
 		wg.Add(1)
@@ -125,7 +131,7 @@ func TestFusionUDP_Stress(t *testing.T) {
 			}
 
 			atomic.AddUint64(&totalWrites, count)
-			t.Logf("writer %d sent %d packets", id, count)
+			//t.Logf("writer %d sent %d packets", id, count)
 		}(i)
 	}
 
