@@ -165,7 +165,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 }
 
 // SelectAll retrieves all projects from the database.
-func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
+func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]types.Project, error) {
 
 	order := strings.ToUpper(queryParams.SortOrder)
 
@@ -233,7 +233,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 		})
 	}
 
-	projectsArray := make([]*types.Project, 0, len(projects))
+	projectsArray := make([]types.Project, 0, len(projects))
 	for _, projectWithMetadata := range projects {
 		project, err := newProject(&projectWithMetadata)
 		if err != nil {
@@ -242,7 +242,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 				zap.String("project_id", projectWithMetadata.Project.ID))
 			return nil, errors.New(types.ErrMsgFailedToParseRow)
 		}
-		projectsArray = append(projectsArray, project)
+		projectsArray = append(projectsArray, *project)
 	}
 
 	return projectsArray, nil

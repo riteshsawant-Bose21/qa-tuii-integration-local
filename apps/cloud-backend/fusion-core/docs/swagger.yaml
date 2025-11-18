@@ -293,6 +293,9 @@ definitions:
       is_project_file_created:
         example: false
         type: boolean
+      is_project_thumbnail_created:
+        example: false
+        type: boolean
       name:
         example: Conference Room Audio Setup
         maxLength: 255
@@ -323,6 +326,9 @@ definitions:
         example: 123e4567-e89b-12d3-a456-426614174000
         type: string
       project_upload_url:
+        example: https://storage.example.com/upload/projects/123e4567
+        type: string
+      thumbnail_upload_url:
         example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
@@ -363,6 +369,9 @@ definitions:
       is_project_file_dirty:
         example: true
         type: boolean
+      is_project_thumbnail_dirty:
+        example: true
+        type: boolean
       name:
         example: Updated Conference Room Audio Setup
         maxLength: 255
@@ -380,6 +389,9 @@ definitions:
   types.ProjectUpdateResponse:
     properties:
       project_upload_url:
+        example: https://storage.example.com/upload/projects/123e4567
+        type: string
+      thumbnail_upload_url:
         example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object

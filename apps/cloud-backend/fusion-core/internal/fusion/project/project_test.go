@@ -44,12 +44,12 @@ func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreate
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProjectsParams) ([]*types.Project, error) {
+func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProjectsParams) ([]types.Project, error) {
 	args := m.Called(ctx, params)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
-	return args.Get(0).([]*types.Project), args.Error(1)
+	return args.Get(0).([]types.Project), args.Error(1)
 }
 
 func (m *mockDBService) Update(ctx context.Context, projectRow *models.Project, project *types.ProjectUpdateRequest) error {
@@ -220,7 +220,7 @@ func TestCreateProject(t *testing.T) {
 }
 
 func TestGetAllProjects(t *testing.T) {
-	mockProjects := []*types.Project{
+	mockProjects := []types.Project{
 		{
 			ID:   "1",
 			Name: "Project 1",
@@ -234,7 +234,7 @@ func TestGetAllProjects(t *testing.T) {
 	tests := []struct {
 		name           string
 		params         *types.GetAllProjectsParams
-		mockProjects   []*types.Project
+		mockProjects   []types.Project
 		mockDBErr      error
 		mockPresignURL string
 		mockPresignErr error
@@ -275,12 +275,22 @@ func TestGetAllProjects(t *testing.T) {
 			mockPresigner := &mockPresigner{}
 
 			mockDB.On("SelectAll", mock.Anything, tt.params).Return(tt.mockProjects, tt.mockDBErr)
-			for _, p := range tt.mockProjects {
-				mockPresigner.On("PresignGet",
-					mock.Anything,
-					fmt.Sprintf("projects/%s/%s.zip", p.ID, p.ID),
-					time.Minute*5,
-				).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
+			if tt.mockDBErr == nil {
+				for _, p := range tt.mockProjects {
+					// Mock project file URL generation
+					mockPresigner.On("PresignGet",
+						mock.Anything,
+						fmt.Sprintf("projects/%s/projectFile/%s.zip", p.ID, p.ID),
+						time.Minute*5,
+					).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
+
+					// Mock thumbnail URL generation
+					mockPresigner.On("PresignGet",
+						mock.Anything,
+						fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", p.ID, p.ID),
+						time.Minute*5,
+					).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
+				}
 			}
 
 			service := &Service{
@@ -301,6 +311,7 @@ func TestGetAllProjects(t *testing.T) {
 				assert.Equal(t, 1, response.TotalPages)
 				for i, p := range response.Data {
 					assert.Equal(t, tt.mockPresignURL, p.ProjectFileURL)
+					assert.Equal(t, tt.mockPresignURL, p.ThumbnailURL)
 					assert.Equal(t, tt.mockProjects[i].ID, p.ID)
 				}
 			}

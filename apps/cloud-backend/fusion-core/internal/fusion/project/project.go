@@ -9,25 +9,12 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
 const (
-	projectFilePathFormat  = "projects/%s/%s.zip"
+	projectFilePathFormat  = "projects/%s/%s/%s.zip"
 	errorWithDetailsFormat = "%s: %v"
 )
-
-// validateProjectExistence is a helper function to validate that a project exists
-func (s *Service) validateProjectExistence(ctx context.Context, projectID string) error {
-	projectExists, err := s.dbService.ProjectExists(ctx, projectID)
-	if err != nil {
-		return err
-	}
-	if !projectExists {
-		return errors.New(types.ErrMsgProjectNotFound)
-	}
-	return nil
-}
 
 // validateUserExistence is a helper function to validate that a user exists
 func (s *Service) validateUserExistence(ctx context.Context, userID string) error {
@@ -41,129 +28,9 @@ func (s *Service) validateUserExistence(ctx context.Context, userID string) erro
 	return nil
 }
 
-// validateProjectAndUserExistence is a helper function to validate that both project and user exist
-func (s *Service) validateProjectAndUserExistence(ctx context.Context, projectID, userID string) error {
-	// Check if project exists
-	if err := s.validateProjectExistence(ctx, projectID); err != nil {
-		return err
-	}
-
-	// Check if user exists
-	if err := s.validateUserExistence(ctx, userID); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// validateUserAssignedToProject validates that a user is assigned to a project
-func (s *Service) validateUserAssignedToProject(ctx context.Context, projectID, userID string) error {
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
-	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
-	}
-	if !isAssigned {
-		return errors.New(types.ErrMsgUserNotAssignedToProject)
-	}
-	return nil
-}
-
-// validateProjectAndUserAndAssignment validates project existence, user existence, and user assignment
-func (s *Service) validateProjectAndUserAndAssignment(ctx context.Context, projectID, userID string) error {
-	// Validate project and user existence
-	if err := s.validateProjectAndUserExistence(ctx, projectID, userID); err != nil {
-		return err
-	}
-
-	// Validate user assignment to project
-	if err := s.validateUserAssignedToProject(ctx, projectID, userID); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// validateProjectUpdateAuthorization validates user can update/delete project (existence, assignment, and not locked by other)
-func (s *Service) validateProjectUpdateAuthorization(ctx context.Context, projectID, userID string) error {
-	// Validate project, user existence and assignment
-	if err := s.validateProjectAndUserAndAssignment(ctx, projectID, userID); err != nil {
-		return err
-	}
-
-	// Check if project is locked by another user
-	if err := s.ValidateProjectNotLockedByOther(ctx, projectID, userID); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// ValidateProjectNotLockedByOther validates that a project is not locked by another user.
-// Returns an error with the locking user's email if the project is locked by someone else.
-func (s *Service) ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error {
-	isLocked, lockedByUserID, err := s.dbService.GetProjectLockUserID(ctx, projectID)
-	if err != nil {
-		return err
-	}
-
-	if !isLocked {
-		return nil // Project is not locked, operation can proceed
-	}
-
-	// Check if the project is locked by the same user trying to perform the operation
-	if lockedByUserID == userID {
-		return nil // Project is locked by the same user, operation can proceed
-	}
-
-	// Get the email of the user who locked the project
-	lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, lockedByUserID)
-	if err != nil {
-		return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
-	}
-
-	// Project is locked by a different user
-	return fmt.Errorf("project is locked by user: %s", lockedByEmail)
-}
-
-func (s *Service) GetValidProjectForUpdate(ctx context.Context, projectID, userID string) (*models.Project, error) {
-	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if projectRow.IsArchived {
-		return nil, errors.New(types.ErrMsgProjectArchived)
-	}
-
-	if projectRow.IsDeleted {
-		return nil, errors.New(types.ErrMsgProjectNotFound)
-	}
-
-	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
-		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
-		if err != nil {
-			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
-		}
-		return nil, fmt.Errorf("project is locked by user: %s", lockedByEmail)
-	}
-
-	// Check if user is assigned to the project
-	isAssigned, err := s.dbService.IsUserAssigned(ctx, projectID, userID)
-	if err != nil {
-		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedUserAssignmentCheck, err)
-	}
-
-	if !isAssigned {
-		return nil, errors.New(types.ErrMsgUserNotAssignedToProject)
-	}
-
-	return projectRow, nil
-}
-
 // generateProjectFileURL generates a presigned URL for project file operations
-func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, ttl time.Duration, operation string) (string, error) {
-	key := fmt.Sprintf(projectFilePathFormat, projectID, projectID)
+func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, fileType types.ProjectFileType, ttl time.Duration, operation string) (string, error) {
+	key := fmt.Sprintf(projectFilePathFormat, projectID, fileType, projectID)
 
 	switch operation {
 	case "get":
@@ -195,11 +62,19 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	if project.IsProjectFileCreated {
-		presignURL, err := s.generateProjectFileURL(ctx, id, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectFile, time.Minute*15, "put")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
 		response.ProjectUploadURL = presignURL
+	}
+
+	if project.IsProjectThumbnailCreated {
+		presignURL, err := s.generateProjectFileURL(ctx, id, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put")
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
+		}
+		response.ThumbnailUploadURL = presignURL
 	}
 
 	return response, nil
@@ -213,23 +88,23 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 	}
 
 	// Generate presigned URLs for all projects
-	for _, project := range projects {
-		presignURL, err := s.generateProjectFileURL(ctx, project.ID, time.Minute*5, "get")
+	for i := range projects {
+		presignURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectFile, time.Minute*5, "get")
 		if err != nil {
-			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", project.ID, err)
+			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", projects[i].ID, err)
 		}
-		project.ProjectFileURL = presignURL
-	}
+		projects[i].ProjectFileURL = presignURL
 
-	// Convert []*types.Project to []types.Project for the response
-	projectList := make([]types.Project, len(projects))
-	for i, project := range projects {
-		projectList[i] = *project
+		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get")
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate thumbnail URL for project %s: %v", projects[i].ID, err)
+		}
+		projects[i].ThumbnailURL = thumbnailURL
 	}
 
 	return &types.GetAllProjectsResponse{
-		Data:       projectList,
-		TotalCount: len(projectList),
+		Data:       projects,
+		TotalCount: len(projects),
 		Page:       1,
 		TotalPages: 1,
 	}, nil
@@ -278,11 +153,19 @@ func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, p
 	response := &types.ProjectUpdateResponse{}
 
 	if project.IsProjectFileDirty {
-		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, time.Minute*15, "put")
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectFile, time.Minute*15, "put")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
 		response.ProjectUploadURL = presignURL
+	}
+
+	if project.IsProjectThumbnailDirty {
+		presignURL, err := s.generateProjectFileURL(ctx, projectRow.ID, types.ProjectFileTypeProjectThumbnail, time.Minute*15, "put")
+		if err != nil {
+			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
+		}
+		response.ThumbnailUploadURL = presignURL
 	}
 
 	return response, nil

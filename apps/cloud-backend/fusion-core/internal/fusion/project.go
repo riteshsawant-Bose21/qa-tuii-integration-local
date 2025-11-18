@@ -21,7 +21,6 @@ type Project interface {
 	UnarchiveProject(ctx context.Context, projectID string, userID string) error
 	LockProject(ctx context.Context, projectID, userID string) error
 	UnlockProject(ctx context.Context, projectID, userID string) error
-	ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error
 	GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error)
 	GetUserEmailByID(ctx context.Context, userID string) (string, error)
 	ProjectExists(ctx context.Context, projectID string) (bool, error)
