@@ -170,6 +170,38 @@ extension SourceSetService on ProjectService {
     return true;
   }
 
+  void linkSourceSet({required String sourceSetId}) {
+    final sourceSet = getSourceSetById(sourceSetId);
+    if (sourceSet == null) {
+      throw Exception('SourceSet $sourceSetId not found');
+    }
+
+    List<Source> sourcesInSet = getSourcesInSourceSet(sourceSetId);
+    if (sourcesInSet.length >= 2) {
+      final processingBlocks = getProcessingBlockFor(sourcesInSet.first.id);
+      for (var source in sourcesInSet) {
+        if (source.id == sourcesInSet.first.id) continue;
+        //copy processing block properties form first source
+        final sourceBlocks = getProcessingBlockFor(sourcesInSet.first.id);
+        for (var i = 0; i < sourceBlocks.length; i++) {
+          final updatedBlock = sourceBlocks[i].copyProperties(model: processingBlocks[i]);
+          updateProcessingBlock(updatedBlock);
+        }
+      }
+    }
+
+    sourceSets.add(sourceSetId, sourceSet.copyWith(isLinked: true));
+  }
+
+  void unlinkSourceSet({required String sourceSetId}) {
+    final sourceSet = getSourceSetById(sourceSetId);
+    if (sourceSet == null) {
+      throw Exception('SourceSet $sourceSetId not found');
+    }
+
+    sourceSets.add(sourceSetId, sourceSet.copyWith(isLinked: false));
+  }
+
   //add Processing block to source,
   // if source in source set and source set is linked then add processing block to all the sources in that source set
   void addProcessingBlockToSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
