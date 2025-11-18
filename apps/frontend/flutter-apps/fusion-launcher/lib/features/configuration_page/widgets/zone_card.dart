@@ -1088,7 +1088,7 @@ class _ZoneCardState extends State<ZoneCard> {
     );
   }
 
-  /// Subzone panel (now uses filtered list)
+  /// Subzone panel (now scrollable)
   Widget _buildSubZonePanel(List<SubZone> subZonesForZone) {
     final List<CircuitModel> zoneCircuit = _projectViewModel.getCircuitsInZone(widget.zoneId);
 
@@ -1098,68 +1098,74 @@ class _ZoneCardState extends State<ZoneCard> {
           bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
         ),
       ),
-      child: Column(
-        children: <Widget>[
-          if (zoneCircuit.isNotEmpty)
-            ListView.builder(
-              shrinkWrap: true,
-              physics: const ClampingScrollPhysics(),
-              itemCount: zoneCircuit.length,
-              itemBuilder: (BuildContext context, int index) {
-                final CircuitModel circuitData = zoneCircuit[index];
-                final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                return MouseRegion(
-                  onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
-                  onExit: (_) => setState(() => _hoveredCircuitIndex = null),
-                  child: _buildCircuitCard(
-                    index: index,
-                    circuitData: circuitData,
-                    speakersList: speakersList,
-                  ),
-                );
-              },
-            ),
-          subZonesForZone.isEmpty
-              ? Center(
-                child: FusionAppText(
-                  text: 'No sub zones added yet',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              )
-              : SingleChildScrollView(
-                child: ReorderableListView.builder(
+      child: Scrollbar(
+        thumbVisibility: true,
+        child: SingleChildScrollView(
+          physics: const ClampingScrollPhysics(),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              if (zoneCircuit.isNotEmpty)
+                ListView.builder(
+                  scrollDirection: Axis.vertical,
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  buildDefaultDragHandles: false,
-                  itemCount: subZonesForZone.length,
-                  onReorder: (int oldIndex, int newIndex) {
-                    if (oldIndex < newIndex) newIndex -= 1;
-                    _projectViewModel.reOrderSubZoneInZone(
-                      parentId: widget.zoneId,
-                      oldIndex: oldIndex,
-                      newIndex: newIndex,
-                    );
-                  },
+                  physics: const NeverScrollableScrollPhysics(), // parent handles scroll
+                  itemCount: zoneCircuit.length,
                   itemBuilder: (BuildContext context, int index) {
-                    final SubZone subZone = subZonesForZone[index];
-                    return ReorderableDragStartListener(
-                      key: ValueKey<String>(subZone.id),
-                      index: index,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: SubZoneCard(
-                          subZoneId: subZone.id,
-                          subZoneName: subZone.name,
-                        ),
+                    final CircuitModel circuitData = zoneCircuit[index];
+                    final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                    return MouseRegion(
+                      onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                      onExit: (_) => setState(() => _hoveredCircuitIndex = null),
+                      child: _buildCircuitCard(
+                        index: index,
+                        circuitData: circuitData,
+                        speakersList: speakersList,
                       ),
                     );
                   },
                 ),
-              ),
-        ],
+              subZonesForZone.isEmpty
+                  ? Center(
+                    child: FusionAppText(
+                      text: 'No sub zones added yet',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  )
+                  : ReorderableListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(), // parent scroll
+                    buildDefaultDragHandles: false,
+                    itemCount: subZonesForZone.length,
+                    onReorder: (int oldIndex, int newIndex) {
+                      if (oldIndex < newIndex) newIndex -= 1;
+                      _projectViewModel.reOrderSubZoneInZone(
+                        parentId: widget.zoneId,
+                        oldIndex: oldIndex,
+                        newIndex: newIndex,
+                      );
+                    },
+                    itemBuilder: (BuildContext context, int index) {
+                      final SubZone subZone = subZonesForZone[index];
+                      return ReorderableDragStartListener(
+                        key: ValueKey<String>(subZone.id),
+                        index: index,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: SubZoneCard(
+                            subZoneId: subZone.id,
+                            subZoneName: subZone.name,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            ],
+          ),
+        ),
       ),
     );
   }
