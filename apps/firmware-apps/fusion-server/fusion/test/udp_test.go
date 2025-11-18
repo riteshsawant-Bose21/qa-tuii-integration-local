@@ -153,12 +153,12 @@ func TestFusionUDP_StaleBroadcastBug(t *testing.T) {
 		readDeadline = 200 * time.Millisecond
 	)
 
-	laddr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
+	laddr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:0")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
 
-	recvConn, err := net.ListenUDP("udp", laddr)
+	recvConn, err := net.ListenUDP("udp4", laddr)
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestFusionUDP_StaleBroadcastBug(t *testing.T) {
 
 	drainUDP(recvConn, drainTime)
 
-	saddr, _ := net.ResolveUDPAddr("udp", fusionUDPAddr)
+	saddr, _ := net.ResolveUDPAddr("udp4", fusionUDPAddr)
 
 	initMsg := []byte(`{"action":"get"}`)
 	if _, err := recvConn.WriteToUDP(initMsg, saddr); err != nil {

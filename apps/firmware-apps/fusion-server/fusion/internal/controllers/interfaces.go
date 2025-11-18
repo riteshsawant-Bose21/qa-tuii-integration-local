@@ -9,9 +9,8 @@ type ControllerManagerInterface interface {
 	// HTTP API support
 	GetActiveControllers() []*api.ControllerInfo
 	GetControllerByID(id string) (*api.ControllerInfo, error)
-	IsControllerOnline(controllerID string) bool
 
-	// Wink command execution
+	// Wink command execution - TODO
 	StartWinkCommand(controllerID string) error
 
 	// Lifecycle

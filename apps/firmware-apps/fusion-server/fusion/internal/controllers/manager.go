@@ -69,11 +69,9 @@ func (cm *ControllerManager) OnControllerConnected(connectionID string, conn net
 	logger.Debug("Active connections: %d", currentCount)
 
 	// Send identification request
-	identifyMessage := map[string]interface{}{
-		"action": "identify",
-		"payload": map[string]interface{}{
-			"timestamp": time.Now().Unix(),
-		},
+	identifyMessage := api.ControllerTCPMessage{
+		Action:  "identify",
+		Payload: json.RawMessage(`{}`),
 	}
 
 	messageBytes, err := json.Marshal(identifyMessage)
@@ -105,11 +103,11 @@ func (cm *ControllerManager) OnControllerDisconnected(connectionID string) {
 	cm.mutex.Unlock()
 
 	if exists && controller.IsIdentified {
-		logger.Debug("Controller disconnected: %s (ID: %s)", connectionID, controller.Info.ID)
+		logger.Info("Controller disconnected: %s (ID: %s)", connectionID, controller.Info.ID)
 
 		// TODO: Broadcast controller disconnection event here if/when needed.
 	} else {
-		logger.Info("🔌 Unidentified controller disconnected: %s", connectionID)
+		logger.Info("Unidentified controller disconnected: %s", connectionID)
 	}
 
 	logger.Debug("Active connections: %d", currentCount)
@@ -121,7 +119,7 @@ func (cm *ControllerManager) OnControllerMessage(connectionID string, message []
 	logger.Debug("Received message from %s: %s", connectionID, string(message))
 
 	// Parse JSON message
-	var msg map[string]interface{}
+	var msg api.ControllerTCPMessage
 	err := json.Unmarshal(message, &msg)
 	if err != nil {
 		logger.Error("Invalid JSON from controller %s: %v", connectionID, err)
@@ -129,14 +127,9 @@ func (cm *ControllerManager) OnControllerMessage(connectionID string, message []
 		return
 	}
 
-	action, ok := msg["action"].(string)
-	if !ok {
-		logger.Error("❌ Missing action in message from controller %s", connectionID)
-		logger.Error("❌ Message content: %+v", msg)
-		return
-	}
+	action := msg.Action
 
-	logger.Debug("🎯 Processing action '%s' from controller %s", action, connectionID)
+	logger.Debug("Processing action '%s' from controller %s", action, connectionID)
 
 	switch action {
 	case "identity":
@@ -151,25 +144,20 @@ func (cm *ControllerManager) OnControllerMessage(connectionID string, message []
 // =================== Message Handlers ===================
 
 // handleIdentityResponse processes controller identification
-func (cm *ControllerManager) handleIdentityResponse(connectionID string, message map[string]interface{}) {
+func (cm *ControllerManager) handleIdentityResponse(connectionID string, message api.ControllerTCPMessage) {
 	logger := logging.GetLogger()
 	logger.Debug("Processing identity response from %s", connectionID)
 
-	payload, ok := message["payload"].(map[string]interface{})
-	if !ok {
-		logger.Error("Invalid identity payload from controller %s", connectionID)
+	var payload api.ControllerIdentifyResponse
+	if err := json.Unmarshal(message.Payload, &payload); err != nil {
+		logger.Error("Invalid identity payload from controller %s: %v", connectionID, err)
 		logger.Error("Message structure: %+v", message)
 		return
 	}
 
-	// Extract controller info
-	controllerID, _ := payload["id"].(string)
-	deviceType, _ := payload["deviceType"].(string)
-	firmwareVersion, _ := payload["firmwareVersion"].(string)
+	logger.Debug("Identity details - ID: %s, Type: %s, Version: %s", payload.ID, payload.DeviceType, payload.FirmwareVersion)
 
-	logger.Debug("Identity details - ID: %s, Type: %s, Version: %s", controllerID, deviceType, firmwareVersion)
-
-	if controllerID == "" {
+	if payload.ID == "" {
 		logger.Error("Missing controller ID in identity from %s", connectionID)
 		logger.Error("Payload content: %+v", payload)
 		return
@@ -179,14 +167,14 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 	controller, exists := cm.controllers[connectionID]
 	if exists {
 		controller.Info = &api.ControllerInfo{
-			ID:      controllerID,
-			Name:    deviceType,
-			Version: firmwareVersion,
+			ID:      payload.ID,
+			Name:    payload.DeviceType,
+			Version: payload.FirmwareVersion,
 			Address: controller.Connection.RemoteAddr().String(),
 		}
 		controller.IsIdentified = true
 		controller.LastActivity = time.Now()
-		logger.Debug("Controller %s identified successfully (Connection: %s)", controllerID, connectionID)
+		logger.Debug("Controller %s identified successfully (Connection: %s)", payload.ID, connectionID)
 	}
 	cm.mutex.Unlock()
 
@@ -210,16 +198,15 @@ func (cm *ControllerManager) handleIdentityResponse(connectionID string, message
 }
 
 // handleWinkResponse processes wink command responses
-func (cm *ControllerManager) handleWinkResponse(connectionID string, message map[string]interface{}) {
+func (cm *ControllerManager) handleWinkResponse(connectionID string, message api.ControllerTCPMessage) {
 	logger := logging.GetLogger()
 
-	payload, ok := message["payload"].(map[string]interface{})
-	if !ok {
+	var payload api.ControllerWinkResponse
+	if err := json.Unmarshal(message.Payload, &payload); err != nil {
 		logger.Error("Invalid winkResponse payload from controller %s", connectionID)
+		logger.Error("Message structure: %+v", message)
 		return
 	}
-
-	status, _ := payload["status"].(string)
 
 	cm.mutex.RLock()
 	controller, exists := cm.controllers[connectionID]
@@ -230,7 +217,7 @@ func (cm *ControllerManager) handleWinkResponse(connectionID string, message map
 		return
 	}
 
-	logger.Debug("Wink response from controller %s: %s", controller.Info.ID, status)
+	logger.Debug("Wink response from controller %s: %s", controller.Info.ID, payload.Status)
 
 	// // Broadcast wink event
 	// eventType := "controller_winking"
@@ -252,13 +239,13 @@ func (cm *ControllerManager) handleWinkResponse(connectionID string, message map
 
 // =================== HTTP API Implementation ===================
 
-// GetControllers returns all identified controllers
-func (cm *ControllerManager) GetControllers() ([]*api.ControllerInfo, error) {
+// GetActiveControllers returns all identified controllers
+func (cm *ControllerManager) GetActiveControllers() []*api.ControllerInfo {
 	logger := logging.GetLogger()
 	cm.mutex.RLock()
 	defer cm.mutex.RUnlock()
 
-	logger.Debug("🔍 GetControllers called - checking %d total connections", len(cm.controllers))
+	logger.Debug("GetControllers called - checking %d total connections", len(cm.controllers))
 
 	var controllers []*api.ControllerInfo
 	for connectionID, conn := range cm.controllers {
@@ -269,27 +256,8 @@ func (cm *ControllerManager) GetControllers() ([]*api.ControllerInfo, error) {
 		}
 	}
 
-	logger.Debug("🎯 Returning %d identified controllers", len(controllers))
-	return controllers, nil
-}
-
-// GetActiveControllers returns all identified controllers (alias for interface compatibility)
-func (cm *ControllerManager) GetActiveControllers() []*api.ControllerInfo {
-	controllers, _ := cm.GetControllers()
+	logger.Debug("Returning %d identified controllers", len(controllers))
 	return controllers
-}
-
-// IsControllerOnline checks if a controller is currently connected and identified
-func (cm *ControllerManager) IsControllerOnline(controllerID string) bool {
-	cm.mutex.RLock()
-	defer cm.mutex.RUnlock()
-
-	for _, conn := range cm.controllers {
-		if conn.IsIdentified && conn.Info != nil && conn.Info.ID == controllerID {
-			return true
-		}
-	}
-	return false
 }
 
 // GetControllerByID returns a specific controller by ID
