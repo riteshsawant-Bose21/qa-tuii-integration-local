@@ -549,6 +549,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ],
               title: const SizedBox(),
             ),
+
             body: Column(
               children: <Widget>[
                 /// Tab Bar Section
