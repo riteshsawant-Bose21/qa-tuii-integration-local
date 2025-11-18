@@ -6,10 +6,23 @@ class AlgorithmCustomizationVm extends ChangeNotifier {
   final FusionAlgorithmsConfig config;
 
   AlgorithmCustomizationVm({required this.config}) {
-    selectedAlgorithm = config.algorithms.isNotEmpty ? config.algorithms.first : null;
+    selectedAlgorithm = availableAlgorithms.isNotEmpty ? availableAlgorithms.first : null;
   }
 
-  List<Algorithm> get availableAlgorithms => config.algorithms;
+  final List<String> _allowedAlgorithms = <String>[
+    "delay",
+    "compressor",
+    "limiter",
+    "agc",
+    "feedback_suppression",
+    "graphic_eq",
+    "tone_control",
+    "peq",
+    "gain",
+    "gate",
+  ];
+
+  List<Algorithm> get availableAlgorithms => config.algorithms.where((Algorithm e) => _allowedAlgorithms.contains(e.name)).toList();
 
   Algorithm? selectedAlgorithm;
 

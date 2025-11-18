@@ -18,9 +18,9 @@ import '../item_widget_builder.dart';
 
 part './widgets/active_control.dart';
 part './widgets/bg_grid.dart';
-part 'widgets/pb_canvas_view.dart';
 part './widgets/fields_list.dart';
 part './widgets/properties_panel.dart';
+part 'widgets/pb_canvas_view.dart';
 
 class ProcessingBlockCustomizer extends StatelessWidget {
   const ProcessingBlockCustomizer({super.key});
@@ -31,7 +31,7 @@ class ProcessingBlockCustomizer extends StatelessWidget {
       builder: (BuildContext context, Algorithm algorithm) {
         return ChangeNotifierProxyProvider<AlgorithmCustomizationVm, PbcViewmodel>(
           create: (BuildContext context) => PbcViewmodel(algorithm: algorithm),
-          update: (BuildContext context, AlgorithmCustomizationVm a, PbcViewmodel? b) => PbcViewmodel(algorithm: algorithm),
+          update: (BuildContext context, AlgorithmCustomizationVm a, PbcViewmodel? b) => b!.algorithm != algorithm ? PbcViewmodel(algorithm: algorithm) : b,
           child: Container(
             decoration: BoxDecoration(
               border: Border(top: BorderSide(color: Colors.grey.shade400)),

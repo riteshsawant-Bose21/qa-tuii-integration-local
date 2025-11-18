@@ -1,3 +1,4 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/processing_block/state/processing_chain_methods.dart';
@@ -5,15 +6,17 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../state/processing_chain_state.dart';
 
+enum ProcessingChainDeviceType { source, sourceSet, zone, subzone, circuit }
+
 class ProcessingChainCubit extends Cubit<ProcessingChainState> {
-  final String parentId;
+  final ProcessingChainParams param;
   final ProjectViewModel viewModel;
-  ProcessingChainCubit({required this.parentId, required this.viewModel}) : super(EmptyProcessingChainState()) {
+  ProcessingChainCubit({required this.param, required this.viewModel}) : super(EmptyProcessingChainState()) {
     load();
   }
 
   void load() {
-    final List<ProcessingBlockModel> blocks = viewModel.getProcessingBlockFor(parentId: parentId);
+    final List<ProcessingBlockModel> blocks = viewModel.getProcessingBlockFor(parentId: param.id);
     if (blocks.isNotEmpty) {
       emit(
         UpdatedProcessingChainState(
@@ -30,7 +33,7 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
     );
     viewModel.addProcessingBlockToParent(
       processingBlock: newBlock,
-      parentId: parentId,
+      parentId: param.id,
     );
     emit(
       state.add(newBlock).select(newBlock),
@@ -45,7 +48,7 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
 
   void reorderProcessingBlocks(int oldIndex, int newIndex) {
     viewModel.reOrderProcessingBlocks(
-      parentId: parentId,
+      parentId: param.id,
       oldIndex: oldIndex,
       newIndex: newIndex,
     );
@@ -64,4 +67,22 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
       load();
     }
   }
+}
+
+class ProcessingChainParams {
+  final String id;
+  final ProcessingChainDeviceType type;
+  final String name;
+
+  ProcessingChainParams({required this.id, required this.type, required this.name});
+
+  @override
+  bool operator ==(covariant ProcessingChainParams other) {
+    if (identical(this, other)) return true;
+
+    return other.id == id && other.type == type && other.name == name;
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ type.hashCode ^ name.hashCode;
 }

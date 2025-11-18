@@ -11,12 +11,15 @@ import '../dto/pb_layout.dart';
 
 class PbcViewmodel extends ChangeNotifier {
   final Algorithm algorithm;
+
+  final ScrollController scrollController = ScrollController();
   PbcViewmodel({required this.algorithm}) {
     final PBLayout? layout = AlgorithmLayoutData.getForAlgorithm(algorithm.name);
     if (layout == null) return;
     for (final PBItem item in layout.children) {
       items.add(item);
     }
+    width = layout.width.toDouble();
   }
   List<PBItem> items = <PBItem>[];
 
@@ -62,7 +65,7 @@ class PbcViewmodel extends ChangeNotifier {
     items.add(selected!);
   }
 
-  void addItem(PbWidgets type, Offset position, Parameter data) {
+  void addParameter(PbWidgets type, Offset position, Parameter data) {
     final PBItemParam param = type.fromParameter(data);
     final ({num height, num width}) size = switch (param) {
       PBIndicatorParam() => (width: 20, height: 15),
@@ -91,7 +94,47 @@ class PbcViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, dynamic> get currentJson => <String, dynamic>{"width": 100, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};
+  void addTelemetry(PbWidgets type, Offset position, Telemetry data) {
+    final PBItemParam param = type.fromTelemetry(data);
+    final ({num height, num width}) size = switch (param) {
+      PBIndicatorParam() => (width: 20, height: 15),
+      PBSliderParam() => (width: 10, height: 25),
+      PBSwitchParam() => (width: 20, height: 5),
+      PBTextParam() => (width: 20, height: 20),
+      PBGraphParam() => (width: 50, height: 50),
+
+      _ => (width: 20, height: 20),
+    };
+
+    items.add(
+      PBItem(
+        id: Random().nextInt(999999).toString(),
+        x: roundTo2Digit(position.dx),
+        y: roundTo2Digit(position.dy),
+        width: roundTo2Digit(size.width),
+        height: roundTo2Digit(size.height),
+        field: data.name,
+        type: type.type,
+        param: param,
+        value: data.defaultValue,
+      ),
+    );
+    selected = items.last;
+    notifyListeners();
+  }
+
+  double width = 200;
+  void addExtraWidth() {
+    width += 20;
+    notifyListeners();
+  }
+
+  void reduceWidth() {
+    width -= 20;
+    notifyListeners();
+  }
+
+  Map<String, dynamic> get currentJson => <String, dynamic>{"width": width, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};
 
   void delete() {
     items.remove(selected);

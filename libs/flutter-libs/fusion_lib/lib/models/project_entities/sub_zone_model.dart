@@ -45,7 +45,7 @@ class SubZone {
     id: json['id'] as String,
     name: json['name'] as String,
     wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
-    gain: (json['gain'] as num).toDouble(),
-    muted: json['muted'] as bool,
+    gain: (json['gain'] as num?)?.toDouble() ?? -24.0,
+    muted: json['muted'] as bool? ?? false,
   );
 }

@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -6,13 +5,13 @@ import 'package:flutter/foundation.dart';
 import 'pb_item.dart';
 
 class PBLayout {
-  final int width;
-  final int height;
+  final num width;
+  final num height;
 
   final List<PBItem> children;
   PBLayout({required this.width, required this.height, required this.children});
 
-  PBLayout copyWith({int? width, int? height, List<PBItem>? children}) {
+  PBLayout copyWith({num? width, num? height, List<PBItem>? children}) {
     return PBLayout(width: width ?? this.width, height: height ?? this.height, children: children ?? this.children);
   }
 
@@ -22,8 +21,8 @@ class PBLayout {
 
   factory PBLayout.fromMap(Map<String, dynamic> map) {
     return PBLayout(
-      width: (map['width'] ?? 0) as int,
-      height: (map['height'] ?? 0) as int,
+      width: (map['width'] ?? 0) as num,
+      height: (map['height'] ?? 0) as num,
       children: List<PBItem>.from(
         (map['children'] as List<Map<dynamic, dynamic>>).map<PBItem>((Map<dynamic, dynamic> x) => PBItem.fromMap(x as Map<String, dynamic>)),
       ),

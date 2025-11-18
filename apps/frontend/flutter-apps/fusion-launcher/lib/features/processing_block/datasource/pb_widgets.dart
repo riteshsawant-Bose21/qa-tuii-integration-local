@@ -12,8 +12,9 @@ class PbWidgets {
   final Widget Function(BuildContext context, PBItem item) builder;
   final PBItemParam Function(Map<dynamic, dynamic> map) paramFactory;
   final PBItemParam Function(Parameter data) fromParameter;
+  final PBItemParam Function(Telemetry data) fromTelemetry;
 
-  PbWidgets({required this.type, required this.builder, required this.paramFactory, required this.fromParameter});
+  PbWidgets({required this.type, required this.builder, required this.paramFactory, required this.fromParameter,required this.fromTelemetry,});
 
   static List<PbWidgets> floatWidgets = <PbWidgets>[
     PbWidgets(
@@ -21,12 +22,14 @@ class PbWidgets {
       builder: (BuildContext context, PBItem item) => PBSlider(item: item),
       paramFactory: PBSliderParam.fromMap,
       fromParameter: (Parameter data) => PBSliderParam(label: data.name, min: 0, max: 100),
+      fromTelemetry: (Telemetry data) => PBSliderParam(label: data.name, min: 0, max: 100),
     ),
     PbWidgets(
       type: 'meter',
       builder: (BuildContext context, PBItem item) => PBMeter(item: item),
       paramFactory: PBMeterParam.fromMap,
       fromParameter: (Parameter data) => PBMeterParam(label: data.name, max: 100, min: 0),
+      fromTelemetry: (Telemetry data) => PBMeterParam(label: data.name, max: 100, min: 0),
     ),
   ];
 
@@ -36,12 +39,14 @@ class PbWidgets {
       builder: (BuildContext context, PBItem item) => PBIndicator(item: item),
       paramFactory: PBIndicatorParam.fromMap,
       fromParameter: (Parameter data) => PBIndicatorParam(label: data.name),
+      fromTelemetry: (Telemetry data) => PBIndicatorParam(label: data.name),
     ),
     PbWidgets(
       type: 'switch',
       builder: (BuildContext context, PBItem item) => PBSwitch(item: item),
       paramFactory: PBSwitchParam.fromMap,
       fromParameter: (Parameter data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
+      fromTelemetry: (Telemetry data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
     ),
   ];
 
@@ -57,6 +62,7 @@ class PbWidgets {
       builder: (BuildContext context, PBItem item) => PBText(item: item),
       paramFactory: PBTextParam.fromMap,
       fromParameter: (Parameter data) => PBTextParam(label: data.name),
+      fromTelemetry: (Telemetry data) => PBTextParam(label: data.name),
     ),
     // PbWidgets(
     //   type: 'graph',
@@ -78,6 +84,10 @@ class PbWidgets {
       paramFactory: PBDropdownParam.fromMap,
       fromParameter:
           (Parameter data) => PBDropdownParam(
+            label: data.name,
+          ),
+      fromTelemetry:
+          (Telemetry data) => PBDropdownParam(
             label: data.name,
           ),
     ),

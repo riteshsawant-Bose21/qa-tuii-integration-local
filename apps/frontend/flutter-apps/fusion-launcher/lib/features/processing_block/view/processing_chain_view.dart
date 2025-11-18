@@ -64,7 +64,7 @@ class ProcessingChainView extends StatelessWidget {
           child: Provider<ProcessingChainCubit>(
             create:
                 (_) => ProcessingChainCubit(
-                  parentId: params.id,
+                  param: params,
                   viewModel: serviceLocator<ProjectViewModel>(),
                 ),
             child: Consumer<ProcessingChainCubit>(
@@ -134,9 +134,12 @@ class ProcessingChainView extends StatelessWidget {
                                               onTap: () {
                                                 viewModel.selectProcessingBlock(block);
                                               },
-                                              child: _PBIcon(
-                                                icon: block.iconAsset,
-                                                isActive: block.id == state.selectedBlock.id,
+                                              child: Tooltip(
+                                                message: block.name,
+                                                child: _PBIcon(
+                                                  icon: block.iconAsset,
+                                                  isActive: block.id == state.selectedBlock.id,
+                                                ),
                                               ),
                                             ),
                                       ),
@@ -339,13 +342,3 @@ class AddProcessingBlockButton extends StatelessWidget {
     );
   }
 }
-
-class ProcessingChainParams {
-  final String id;
-  final ProcessingChainDeviceType type;
-  final String name;
-
-  ProcessingChainParams({required this.id, required this.type, required this.name});
-}
-
-enum ProcessingChainDeviceType { source, sourceSet, zone, subzone, circuit }
