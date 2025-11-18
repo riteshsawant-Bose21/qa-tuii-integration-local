@@ -51,7 +51,7 @@ extension ProcessingBlockManager on ProjectManager {
     return projectService!.getAllProcessingBlocks();
   }
 
-  ProcessingBlockModel? getProcessingBlockById(String processingBlockId) {
+  ProcessingBlockModel? getProcessingBlockById({required String processingBlockId}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
