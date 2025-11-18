@@ -543,7 +543,7 @@
             "params": [
               {
                 "name": "vip",
-                "value": "192.168.64.100",
+                "value": "192.168.2.100",
                 "type": "path",
                 "enabled": true
               }

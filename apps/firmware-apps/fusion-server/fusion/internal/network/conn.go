@@ -9,11 +9,11 @@ import (
 
 // ResolveListenUDP binds a UDP socket on the given address.
 func ResolveListenUDP(bind string) (*net.UDPConn, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", bind)
+	udpAddr, err := net.ResolveUDPAddr("udp4", bind)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %q: %w", bind, err)
 	}
-	conn, err := net.ListenUDP("udp", udpAddr)
+	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		return nil, fmt.Errorf("listen %q: %w", bind, err)
 	}
