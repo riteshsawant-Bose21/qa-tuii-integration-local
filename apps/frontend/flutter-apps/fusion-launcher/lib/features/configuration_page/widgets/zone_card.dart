@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/models/project_entities/zone_functions.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
@@ -35,15 +34,12 @@ class _ZoneCardState extends State<ZoneCard> {
   String? selectedPrioritySource1;
   String? selectedPrioritySource2;
 
-  // Add these to store the actual hardware IDs for radio button groupValue
+  /// Add these to store the actual hardware IDs for radio button groupValue
   String? selectedPrioritySourceId1;
   String? selectedPrioritySourceId2;
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
   int? _hoveredCircuitIndex;
-
-  // Add list to track priority order
-  List<int> priorityOrder = [1, 2];
 
   @override
   void initState() {
