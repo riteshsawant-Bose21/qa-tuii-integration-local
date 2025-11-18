@@ -269,7 +269,7 @@ class _ZoneCardState extends State<ZoneCard> {
           entries.add(
             PopupMenuItem<String>(
               enabled: false,
-              height: 28,
+              height: 20,
               child: FusionAppText(
                 text: 'SOURCES',
                 maxLine: 1,
@@ -300,14 +300,16 @@ class _ZoneCardState extends State<ZoneCard> {
           } else {
             for (final Source src in availableSources) {
               final String value = src.id;
+              final String assetPath = src.assetImagePath;
+
               entries.add(
                 PopupMenuItem<String>(
                   value: value,
-                  height: 32,
+                  height: 20,
                   child: Row(
                     children: <Widget>[
                       Transform.scale(
-                        scale: 0.8,
+                        scale: 0.7,
                         child: Radio<String>(
                           value: value,
                           groupValue: selectedSource,
@@ -320,6 +322,12 @@ class _ZoneCardState extends State<ZoneCard> {
                         ),
                       ),
 
+                      FusionImage.asset(
+                        assetPath,
+                        width: 14,
+                        height: 14,
+                        fit: BoxFit.contain,
+                      ),
                       const SizedBox(width: 4),
                       Expanded(
                         child: FusionAppText(
@@ -343,7 +351,7 @@ class _ZoneCardState extends State<ZoneCard> {
           entries.add(
             PopupMenuItem<String>(
               enabled: false,
-              height: 28,
+              height: 20,
               child: FusionAppText(
                 text: 'SOURCE SETS',
                 maxLine: 1,
@@ -377,15 +385,16 @@ class _ZoneCardState extends State<ZoneCard> {
               for (final Source src in sources) {
                 final String name = '${src.name} (${sourceSet.name})';
                 final String value = src.id;
+                final String assetPath = src.assetImagePath;
 
                 entries.add(
                   PopupMenuItem<String>(
                     value: value,
-                    height: 32,
+                    height: 20,
                     child: Row(
                       children: <Widget>[
                         Transform.scale(
-                          scale: 0.8,
+                          scale: 0.7,
                           child: Radio<String>(
                             value: value,
                             groupValue: selectedSource,
@@ -398,7 +407,14 @@ class _ZoneCardState extends State<ZoneCard> {
                           ),
                         ),
 
+                        FusionImage.asset(
+                          assetPath,
+                          width: 14,
+                          height: 14,
+                          fit: BoxFit.contain,
+                        ),
                         const SizedBox(width: 4),
+
                         Expanded(
                           child: FusionAppText(
                             text: name,
