@@ -36,6 +36,7 @@ class _ZoneCardState extends State<ZoneCard> {
   String? selectedPrioritySource2;
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
+  int? _hoveredCircuitIndex;
 
   @override
   void initState() {
@@ -913,13 +914,35 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Subzone panel (now uses filtered list)
   Widget _buildSubZonePanel(List<SubZone> subZonesForZone) {
+    final List<CircuitModel> zoneCircuit = _projectViewModel.getCircuitsInZone(widget.zoneId);
+
     return Container(
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
         ),
       ),
-      child:
+      child: Column(
+        children: <Widget>[
+          if (zoneCircuit.isNotEmpty)
+            ListView.builder(
+              shrinkWrap: true,
+              physics: const ClampingScrollPhysics(),
+              itemCount: zoneCircuit.length,
+              itemBuilder: (BuildContext context, int index) {
+                final CircuitModel circuitData = zoneCircuit[index];
+                final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                return MouseRegion(
+                  onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                  onExit: (_) => setState(() => _hoveredCircuitIndex = null),
+                  child: _buildCircuitCard(
+                    index: index,
+                    circuitData: circuitData,
+                    speakersList: speakersList,
+                  ),
+                );
+              },
+            ),
           subZonesForZone.isEmpty
               ? Center(
                 child: FusionAppText(
@@ -960,6 +983,45 @@ class _ZoneCardState extends State<ZoneCard> {
                   },
                 ),
               ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCircuitCard({required int index, required CircuitModel circuitData, required List<Speaker> speakersList}) {
+    final bool isThisCircuitHovered = _hoveredCircuitIndex == index;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isThisCircuitHovered ? Colors.grey[200] : null,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),
+      margin: const EdgeInsets.only(bottom: 4, top: 4, left: 10),
+      child: Row(
+        children: <Widget>[
+          FusionImage.asset(
+            speakersList.isNotEmpty ? speakersList.first.assetImagePath : "",
+            width: 24,
+            height: 24,
+            fit: BoxFit.contain,
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: FusionAppText(
+              text: circuitData.name,
+              maxLine: 1,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+            ),
+          ),
+          const FusionImage.asset(
+            Assets.processingBlocksFilledIcon,
+            width: 24,
+            height: 24,
+            fit: BoxFit.contain,
+          ),
+        ],
+      ),
     );
   }
 }
