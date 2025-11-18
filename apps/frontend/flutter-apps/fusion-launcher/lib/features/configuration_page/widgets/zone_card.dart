@@ -32,7 +32,8 @@ class _ZoneCardState extends State<ZoneCard> {
   bool get _hasSelectedFunction => (selectedFunction != null && selectedFunction!.isNotEmpty);
   String? selectedPrioritySource1;
   String? selectedPrioritySource2;
-  List<String> selectedZoneSources = <String>[];
+  List<String> selectedZoneSourceIds = <String>[];
+  List<String> selectedZoneSourceSetIds = <String>[];
 
   final List<String> functions = <String>[
     'Source Select',
@@ -60,9 +61,6 @@ class _ZoneCardState extends State<ZoneCard> {
       builder: (BuildContext context, bool zoneExpanded, Widget? child) {
         return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            final SelectedItem? selectedDevice = _projectViewModel.selectedDevice;
-            // final bool isSelected = selectedDevice?.id == widget.zoneId && selectedDevice?.type == SelectedItemType.zone;
-
             return Column(
               children: <Widget>[
                 MouseRegion(
@@ -146,8 +144,6 @@ class _ZoneCardState extends State<ZoneCard> {
             final int subZoneCount = subZonesForZone.length;
             final double calculatedHeight = subZoneCount * 100.0;
             final double constrainedHeight = calculatedHeight.clamp(200.0, 400.0);
-            // Debug
-            print('Zone ${widget.zoneId} (${widget.zoneName}) -> subZones: $subZoneCount');
 
             return SizedBox(
               height: constrainedHeight,
@@ -214,11 +210,11 @@ class _ZoneCardState extends State<ZoneCard> {
 
         const Spacer(),
 
-        buildPriorityFunctionWidget(priorityIndex: 1), // fixed invalid 'd'
+        buildPriorityFunctionWidget(priorityIndex: 1),
         const SizedBox(height: 8),
         buildPriorityFunctionWidget(priorityIndex: 2),
         const SizedBox(height: 8),
-        buildSourceSelectionForZone(), // new multi-select source widget
+        buildSourceSelectionForZone(),
       ],
     );
   }
@@ -558,20 +554,12 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Multi-select source selection for zone (checkboxes)
   Widget buildSourceSelectionForZone() {
-    final bool hasSelection = selectedZoneSources.isNotEmpty;
-    final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
+    // Get current selections from the zone
+    final List<Source> currentZoneSources = _projectViewModel.getSourcesInZone(zoneId: widget.zoneId);
+    final List<SourceSet> currentZoneSourceSets = _projectViewModel.getSourceSetsInZone(zoneId: widget.zoneId);
 
-    /// Calculate total source count including sources in selected source sets
-    int totalSourceCount = 0;
-    for (final String selectedId in selectedZoneSources) {
-      if (selectedId.startsWith('sourceset_')) {
-        final String sourceSetId = selectedId.substring(10);
-        final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSetId);
-        totalSourceCount += sourcesInSet.length;
-      } else {
-        totalSourceCount += 1;
-      }
-    }
+    final bool hasSelection = currentZoneSources.isNotEmpty || currentZoneSourceSets.isNotEmpty;
+    final List<Source> availableSources = _projectViewModel.getSourcesWithoutSourceSet();
 
     return PopupMenuButton<String>(
       onSelected: (String? value) {
@@ -584,8 +572,9 @@ class _ZoneCardState extends State<ZoneCard> {
       padding: EdgeInsets.zero,
       color: Theme.of(context).colorScheme.white,
       itemBuilder: (BuildContext context) {
-        /// Use a temporary list for selection inside the popup
-        final List<String> tempSelectedSources = List<String>.from(selectedZoneSources);
+        /// Initialize temporary lists with current zone selections
+        final List<String> tempSelectedSources = currentZoneSources.map((Source src) => src.id).toList();
+        final List<String> tempSelectedSourceSets = currentZoneSourceSets.map((SourceSet ss) => ss.id).toList();
 
         final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
@@ -717,7 +706,7 @@ class _ZoneCardState extends State<ZoneCard> {
         } else {
           for (final SourceSet sourceSet in sourceSetList) {
             final List<Source> sourcesInSet = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
-            final String value = 'sourceset_${sourceSet.id}';
+            final String value = sourceSet.id;
             entries.add(
               PopupMenuItem<String>(
                 enabled: false,
@@ -726,10 +715,10 @@ class _ZoneCardState extends State<ZoneCard> {
                   builder: (BuildContext context, StateSetter setStatePopup) {
                     return GestureDetector(
                       onTap: () {
-                        if (tempSelectedSources.contains(value)) {
-                          tempSelectedSources.remove(value);
+                        if (tempSelectedSourceSets.contains(value)) {
+                          tempSelectedSourceSets.remove(value);
                         } else {
-                          tempSelectedSources.add(value);
+                          tempSelectedSourceSets.add(value);
                         }
                         setStatePopup(() {});
                       },
@@ -738,13 +727,13 @@ class _ZoneCardState extends State<ZoneCard> {
                           Transform.scale(
                             scale: 0.7,
                             child: Checkbox(
-                              value: tempSelectedSources.contains(value),
+                              value: tempSelectedSourceSets.contains(value),
                               activeColor: Theme.of(context).colorScheme.greyDark,
                               onChanged: (bool? checked) {
-                                if (tempSelectedSources.contains(value)) {
-                                  tempSelectedSources.remove(value);
+                                if (tempSelectedSourceSets.contains(value)) {
+                                  tempSelectedSourceSets.remove(value);
                                 } else {
-                                  tempSelectedSources.add(value);
+                                  tempSelectedSourceSets.add(value);
                                 }
                                 setStatePopup(() {});
                               },
@@ -794,9 +783,52 @@ class _ZoneCardState extends State<ZoneCard> {
                 height: 28,
                 width: double.infinity,
                 onTap: () {
-                  setState(() {
-                    selectedZoneSources = List<String>.from(tempSelectedSources);
-                  });
+                  /// Remove sources that were deselected
+                  final List<String> currentSourceIds = currentZoneSources.map((Source src) => src.id).toList();
+                  final List<String> sourcesToRemove = currentSourceIds.where((String id) => !tempSelectedSources.contains(id)).toList();
+
+                  /// Remove source sets that were deselected
+                  final List<String> currentSourceSetIds = currentZoneSourceSets.map((SourceSet ss) => ss.id).toList();
+                  final List<String> sourceSetsToRemove = currentSourceSetIds.where((String id) => !tempSelectedSourceSets.contains(id)).toList();
+
+                  /// Add newly selected sources
+                  final List<String> sourcesToAdd = tempSelectedSources.where((String id) => !currentSourceIds.contains(id)).toList();
+
+                  /// Add newly selected source sets
+                  final List<String> sourceSetsToAdd = tempSelectedSourceSets.where((String id) => !currentSourceSetIds.contains(id)).toList();
+
+                  /// Remove deselected sources from zone
+                  for (final String sourceId in sourcesToRemove) {
+                    _projectViewModel.removeSourceFromZone(
+                      zoneId: widget.zoneId,
+                      sourceId: sourceId,
+                    );
+                  }
+
+                  /// Remove deselected source sets from zone
+                  for (final String sourceSetId in sourceSetsToRemove) {
+                    _projectViewModel.removeSourceSetFromZone(
+                      sourceSetId: sourceSetId,
+                      zoneId: widget.zoneId,
+                    );
+                  }
+
+                  /// Add newly selected sources to zone
+                  for (final String sourceId in sourcesToAdd) {
+                    _projectViewModel.addSourceToZone(
+                      zoneId: widget.zoneId,
+                      sourceId: sourceId,
+                    );
+                  }
+
+                  /// Add newly selected source sets to zone
+                  for (final String sourceSetId in sourceSetsToAdd) {
+                    _projectViewModel.addSourceSetToZone(
+                      sourceSetId: sourceSetId,
+                      zoneId: widget.zoneId,
+                    );
+                  }
+
                   Navigator.pop(context, 'add');
                 },
               ),
@@ -839,7 +871,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: FusionAppText(
-                    text: '$totalSourceCount',
+                    text: (currentZoneSources.length + currentZoneSourceSets.length).toString(),
                     maxLine: 1,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 8,

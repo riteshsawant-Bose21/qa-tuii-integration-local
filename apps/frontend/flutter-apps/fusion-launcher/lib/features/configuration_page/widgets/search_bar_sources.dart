@@ -59,26 +59,29 @@ class SearchBarSources extends StatelessWidget {
                   ),
                 ),
 
-                /// Filter Dropdown
-                _buildDropdownButton(
-                  context: context,
-                  image: "assets/images/filter.png",
-                  tooltip: 'Filter',
-                  hasActiveFilters: false,
-                  dropdownBuilder: (BuildContext context) => const SizedBox(),
-                ),
-
-                const SizedBox(width: 8),
-
-                /// Sort Dropdown
-                _buildDropdownButton(
-                  context: context,
-                  image: "assets/images/sort_descending.png",
-                  tooltip: 'Sort',
-                  hasActiveFilters: false, // Show active state when sort is selected
-                  dropdownBuilder: (BuildContext context) => const SizedBox(),
-                ),
-                const SizedBox(width: 8),
+                // /// Filter Dropdown
+                // _buildDropdownButton(
+                //   context: context,
+                //   image: "assets/images/filter.png",
+                //   tooltip: 'Filter',
+                //   hasActiveFilters: false,
+                //   dropdownBuilder: (BuildContext context) => const SizedBox(),
+                // ),
+                // const SizedBox(width: 8),
+                //
+                // /// Sort Dropdown
+                // _buildDropdownButton(
+                //   context: context,
+                //   image: "assets/images/sort_descending.png",
+                //   tooltip: 'Sort',
+                //   hasActiveFilters: false, // Show active state when sort is selected
+                //   dropdownBuilder:
+                //       (BuildContext context) => SortDropdownContent(
+                //         selectedSortOption: selectedSortOption,
+                //         onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {},
+                //       ),
+                // ),
+                // const SizedBox(width: 8),
               ],
             ),
           ),

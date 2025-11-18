@@ -40,6 +40,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
   /// Map to store GlobalKeys for each SourceSetItem
   final Map<String, GlobalKey> _sourceSetKeys = <String, GlobalKey<State<StatefulWidget>>>{};
 
+  /// Filtered sources list for search functionality
+  List<Source> _filteredSources = <Source>[];
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -63,6 +66,17 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
     _sourceSetNameController.dispose();
     _sourceSetKeys.clear();
     super.dispose();
+  }
+
+  /// Filter sources based on search query
+  void _filterSources(String query) {
+    final List<Source> allSources = _projectViewModel.getSourcesWithoutSourceSet();
+
+    if (query.isEmpty) {
+      _filteredSources = allSources;
+    } else {
+      _filteredSources = allSources.where((Source source) => source.name.toLowerCase().contains(query.toLowerCase())).toList();
+    }
   }
 
   @override
@@ -115,9 +129,11 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
             hasActiveFilters: () => false,
             onClearSearch: () {
               searchController.clear();
+              _filterSources('');
               setState(() {});
             },
             onSearchChanged: (String value) {
+              _filterSources(value);
               setState(() {});
             },
           ),
@@ -158,10 +174,19 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   builder: (BuildContext context, ProjectViewModelState state) {
                     final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
 
-                    if (sourcesWithoutSourceSet.isEmpty) {
+                    // Initialize filtered sources if empty or if sources list changed
+                    if (_filteredSources.isEmpty && sourcesWithoutSourceSet.isNotEmpty) {
+                      _filteredSources = sourcesWithoutSourceSet;
+                    } else if (searchController.text.isNotEmpty) {
+                      _filterSources(searchController.text);
+                    } else if (searchController.text.isEmpty) {
+                      _filteredSources = sourcesWithoutSourceSet;
+                    }
+
+                    if (_filteredSources.isEmpty) {
                       return Center(
                         child: FusionAppText(
-                          text: 'No sources added yet',
+                          text: searchController.text.isNotEmpty ? 'No sources found matching "${searchController.text}"' : 'No sources added yet',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -170,9 +195,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                       );
                     }
                     return ListView.builder(
-                      itemCount: sourcesWithoutSourceSet.length,
+                      itemCount: _filteredSources.length,
                       itemBuilder: (BuildContext context, int index) {
-                        final Source source = sourcesWithoutSourceSet[index];
+                        final Source source = _filteredSources[index];
                         return Draggable<Source>(
                           data: source,
                           dragAnchorStrategy: pointerDragAnchorStrategy,
