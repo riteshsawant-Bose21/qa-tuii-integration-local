@@ -140,7 +140,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
 
                 // Hardware name input field
                 SemanticHelper.formControl(
-                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_name_input"),
+                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_name_edit"),
                   child: TextFormField(
                     initialValue: widget.selectedHardware.name,
                     maxLength: 24,
@@ -372,7 +372,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       const SizedBox(width: 8),
                       IntrinsicWidth(
                         child: SemanticHelper.formControl(
-                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "roll_input"),
+                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "roll"),
                           child: TextFormField(
                             controller: rollController,
                             decoration: const InputDecoration(
@@ -425,7 +425,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       const SizedBox(width: 8),
                       IntrinsicWidth(
                         child: SemanticHelper.formControl(
-                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "pitch_input"),
+                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "pitch"),
                           child: TextFormField(
                             controller: pitchController,
                             decoration: const InputDecoration(
@@ -477,7 +477,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                       const SizedBox(width: 8),
                       IntrinsicWidth(
                         child: SemanticHelper.formControl(
-                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "yaw_input"),
+                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "yaw"),
                           child: TextFormField(
                             controller: yawController,
                             decoration: const InputDecoration(
@@ -532,7 +532,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           children: <Widget>[
                             IntrinsicWidth(
                               child: SemanticHelper.formControl(
-                                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "gain_input"),
+                                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "gain"),
                                 child: TextFormField(
                                   controller: gainController,
                                   decoration: const InputDecoration(
@@ -684,25 +684,29 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                 ),
                               );
                             },
-                            child: Container(
-                              padding: const EdgeInsets.all(6),
-                              decoration: BoxDecoration(
-                                color:
-                                    widget.selectedHardware.lockListeningArea
-                                        ? Theme.of(
-                                          context,
-                                        ).colorScheme.primary.withOpacity(0.1)
-                                        : Colors.transparent,
-                                borderRadius: BorderRadius.circular(4),
-                                border: Border.all(
-                                  color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
-                                  width: 1,
+                            child: SemanticHelper.toggle(
+                              value: widget.selectedHardware.lockListeningArea,
+                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "lock_listening_area_toggle"),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color:
+                                      widget.selectedHardware.lockListeningArea
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.primary.withOpacity(0.1)
+                                          : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey.withOpacity(0.3),
+                                    width: 1,
+                                  ),
                                 ),
-                              ),
-                              child: Icon(
-                                widget.selectedHardware.lockListeningArea ? Icons.lock : Icons.lock_open,
-                                size: 16,
-                                color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey,
+                                child: Icon(
+                                  widget.selectedHardware.lockListeningArea ? Icons.lock : Icons.lock_open,
+                                  size: 16,
+                                  color: widget.selectedHardware.lockListeningArea ? Theme.of(context).colorScheme.primary : Colors.grey,
+                                ),
                               ),
                             ),
                           ),
@@ -746,82 +750,91 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
     List<String>? options,
     required Function(int selectedIndex) onOptionSelected,
   }) {
-    return PopupMenuButton<String>(
-      onSelected: (String newValue) {
-        final int selectedIndex = options?.indexOf(newValue) ?? -1;
-        if (selectedIndex != -1) {
-          onOptionSelected(selectedIndex);
-        }
-      },
-      constraints: const BoxConstraints(maxHeight: 600, minWidth: 200),
-      padding: EdgeInsets.zero,
-      offset: const Offset(50, 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
-      ),
-      color: Theme.of(context).colorScheme.white,
-      elevation: 1,
-      itemBuilder: (BuildContext context) {
-        if (options == null || options.isEmpty) {
-          return <PopupMenuEntry<String>>[];
-        }
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "hardware_property_area"),
+      child: PopupMenuButton<String>(
+        onSelected: (String newValue) {
+          final int selectedIndex = options?.indexOf(newValue) ?? -1;
+          if (selectedIndex != -1) {
+            onOptionSelected(selectedIndex);
+          }
+        },
+        constraints: const BoxConstraints(maxHeight: 600, minWidth: 200),
+        padding: EdgeInsets.zero,
+        offset: const Offset(50, 8),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(6),
+          side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        ),
+        color: Theme.of(context).colorScheme.white,
+        elevation: 1,
+        itemBuilder: (BuildContext context) {
+          if (options == null || options.isEmpty) {
+            return <PopupMenuEntry<String>>[];
+          }
 
-        return options.map((String option) {
-          final int index = options.indexOf(option);
+          return options.map((String option) {
+            final int index = options.indexOf(option);
 
-          return PopupMenuItem<String>(
-            value: option,
-            child: SemanticHelper.formControl(
-              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_option_index_$index"),
-              child: FusionAppText(
-                text: option,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 11,
+            return PopupMenuItem<String>(
+              value: option,
+              child: SemanticHelper.formControl(
+                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_option_index_$index"),
+                child: FusionAppText(
+                  text: option,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 11,
+                  ),
                 ),
               ),
-            ),
-          );
-        }).toList();
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            // Left: Label
-            FusionAppText(
-              text: label,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 11,
-                color: Theme.of(
-                  context,
-                ).colorScheme.fusionTextViewColor.withOpacity(0.5),
+            );
+          }).toList();
+        },
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              // Left: Label
+              FusionAppText(
+                text: label,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 11,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                ),
               ),
-            ),
-            // Right: Value + Arrow
-            Container(
-              alignment: Alignment.centerLeft,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  FusionAppText(
-                    text: value,
-                    textAlign: TextAlign.left,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                    ),
+              // Right: Value + Arrow
+              SemanticHelper.formControl(
+                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_dropdown"),
+                child: Container(
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      FusionAppText(
+                        text: value,
+                        textAlign: TextAlign.left,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 11,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "hardware_property_area_dropdown_arrow"),
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 6),
-                  Icon(
-                    Icons.keyboard_arrow_down,
-                    size: 16,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
-                  ),
-                ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
