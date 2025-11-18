@@ -42,6 +42,9 @@ class _ZoneCardState extends State<ZoneCard> {
   List<String> selectedZoneSourceSetIds = <String>[];
   int? _hoveredCircuitIndex;
 
+  // Add list to track priority order
+  List<int> priorityOrder = [1, 2];
+
   @override
   void initState() {
     super.initState();
@@ -246,12 +249,77 @@ class _ZoneCardState extends State<ZoneCard> {
 
         const Spacer(),
 
-        buildPriorityFunctionWidget(priorityIndex: 1),
-        const SizedBox(height: 8),
-        buildPriorityFunctionWidget(priorityIndex: 2),
+        _buildReorderablePriorityWidgets(),
         const SizedBox(height: 8),
         buildSourceSelectionForZone(),
       ],
+    );
+  }
+
+  /// Build reorderable priority function widgets
+  Widget _buildReorderablePriorityWidgets() {
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+
+    if (!(existingFunction?.hasPriority ?? false)) {
+      return const SizedBox.shrink();
+    }
+
+    return SizedBox(
+      height: 60,
+      child: ReorderableListView.builder(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        itemCount: 2,
+        onReorder: (int oldIndex, int newIndex) {
+          if (oldIndex < newIndex) newIndex -= 1;
+
+          /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
+          if (oldIndex != newIndex) {
+            /// Get current source IDs
+            final String? source1 = selectedPrioritySourceId1;
+            final String? source2 = selectedPrioritySourceId2;
+
+            /// Create new order list with swapped sources
+            final List<String> newOrder = <String>[];
+            if (oldIndex == 0 && newIndex == 1) {
+              /// P1 moved to P2 position
+              newOrder.add(source2 ?? '');
+              newOrder.add(source1 ?? '');
+            } else if (oldIndex == 1 && newIndex == 0) {
+              /// P2 moved to P1 position
+              newOrder.add(source2 ?? '');
+              newOrder.add(source1 ?? '');
+            }
+
+            /// Use the new reOrderPrioritySourcesInZone method
+            _projectViewModel.reOrderPrioritySourcesInZone(
+              zoneId: widget.zoneId,
+              newOrder: newOrder,
+            );
+
+            /// Update local state - swap the sources
+            setState(() {
+              selectedPrioritySourceId1 = source2;
+              selectedPrioritySource1 = source2 != null ? _projectViewModel.getHardware(hardwareId: source2)?.name : null;
+
+              selectedPrioritySourceId2 = source1;
+              selectedPrioritySource2 = source1 != null ? _projectViewModel.getHardware(hardwareId: source1)?.name : null;
+            });
+          }
+        },
+        itemBuilder: (BuildContext context, int index) {
+          final int priorityIndex = index + 1;
+          return ReorderableDragStartListener(
+            key: ValueKey<String>('priority_widget_$index'),
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
+            ),
+          );
+        },
+      ),
     );
   }
 
@@ -273,7 +341,7 @@ class _ZoneCardState extends State<ZoneCard> {
           setState(() {
             if (priorityIndex == 1) {
               selectedPrioritySource1 = _projectViewModel.getHardware(hardwareId: value)?.name;
-              selectedPrioritySourceId1 = value; // Store the ID
+              selectedPrioritySourceId1 = value;
               _projectViewModel.addPrioritySourceToZone(
                 zoneId: widget.zoneId,
                 sourceId: value,
