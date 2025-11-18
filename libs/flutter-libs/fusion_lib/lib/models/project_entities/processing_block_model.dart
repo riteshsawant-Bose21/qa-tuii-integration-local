@@ -21,46 +21,36 @@ class ProcessingBlockModel {
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
     ),
     ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'ducker',
       name: 'Ducker',
       algorithmId: "ducker",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'agc',
       name: 'AGC',
       algorithmId: "agc",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
   ];
 
@@ -69,25 +59,21 @@ class ProcessingBlockModel {
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'graphic_eq',
       name: 'Graphic EQ',
       algorithmId: "graphic_eq",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     // ProcessingBlockEntity(
     //   id: 'feedback_elimination',
@@ -102,25 +88,16 @@ class ProcessingBlockModel {
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
     ),
     ProcessingBlockModel(
       id: 'delay',
       name: 'Delay',
       algorithmId: "delay",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'max_delay', value: 4800),
-      ],
     ),
     ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
   ];
 
@@ -129,46 +106,36 @@ class ProcessingBlockModel {
       id: 'agc',
       name: 'AGC',
       algorithmId: "agc",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'ducker',
       name: 'Ducker',
       algorithmId: "ducker",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
     ),
     ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
   ];
 
@@ -177,34 +144,21 @@ class ProcessingBlockModel {
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
     ),
     ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'delay',
       name: 'Delay',
       algorithmId: "delay",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'max_delay', value: 4800),
-      ],
     ),
     ProcessingBlockModel(
       id: 'limiter',
       name: 'Limiter',
       algorithmId: "limiter",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'max_delay', value: 4800),
-      ],
     ),
   ];
 
@@ -213,11 +167,6 @@ class ProcessingBlockModel {
   final String algorithmId;
   List<PropertySetting> properties;
 
-  //todo add all bellow parameter in Algorithm
-  // final List<Property>? properties;
-  // final List<Terminal>? terminals;
-  // final List<Parameter>? parameters;
-  // final List<Telemetry>? telemetry;
   ProcessingBlockModel({
     required this.name,
     String? id,
@@ -243,8 +192,22 @@ class ProcessingBlockModel {
     );
   }
 
+  ProcessingBlockModel updateProperties(List<PropertySetting> newProperties) {
+    properties = newProperties;
+    return this;
+  }
+
+  ProcessingBlockModel updateProperty(PropertySetting newProperty) {
+    final int index = properties.indexWhere((PropertySetting p) => p.name == newProperty.name && p.dimension == newProperty.dimension);
+    if (index != -1) {
+      properties[index] = newProperty;
+    } else {
+      properties.add(newProperty);
+    }
+    return this;
+  }
+
   ProcessingBlockModel clone() {
-    //todo clone all parameter in future
     return ProcessingBlockModel(
       name: name,
       algorithmId: algorithmId,
@@ -258,7 +221,6 @@ class ProcessingBlockModel {
       name: name,
       algorithmId: algorithmId,
       properties: model.properties,
-      //todo: copy all other properties in future
     );
   }
 

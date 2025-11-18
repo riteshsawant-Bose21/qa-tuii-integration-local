@@ -11,6 +11,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add function to zone : $ex");
       throwError("Failed to add function to zone : $ex");
@@ -28,6 +29,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove function  : $ex");
       throwError("Failed to remove function : $ex");
@@ -70,6 +72,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update zone gain : $ex");
       throwError("Failed to update zone gain : $ex");
@@ -88,6 +91,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to mute/unmute zone : $ex");
       throwError("Failed to mute/unmute zone : $ex");
@@ -106,6 +110,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update source gain : $ex");
       throwError("Failed to update source gain : $ex");
@@ -124,6 +129,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to mute/unmute source : $ex");
       throwError("Failed to mute/unmute source : $ex");
@@ -143,6 +149,7 @@ extension FucntionsViewModel on ProjectViewModel {
       if (autoSave) {
         saveProject();
       }
+      updateProject();
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update source mix : $ex");
       throwError("Failed to update source mix : $ex");

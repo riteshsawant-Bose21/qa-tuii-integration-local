@@ -123,14 +123,14 @@ extension ZoneManager on ProjectManager {
     );
   }
 
-  void addSourceToZone(String sourceId, String zoneId) {
+  void addSourceToZone({required String sourceId, required String zoneId}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     projectService!.addSourceToZone(sourceId, zoneId);
   }
 
-  void removeSourceFromZone(String sourceId, String zoneId) {
+  void removeSourceFromZone({required String sourceId, required String zoneId}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
