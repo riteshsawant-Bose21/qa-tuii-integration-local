@@ -9,6 +9,25 @@ enum ZoneFunctionsType {
   miniMatrixWithPriority,
 }
 
+extension ZoneFunctionsTypeList on ZoneFunctionsType {
+  String get displayName {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+        return 'Source Select';
+      case ZoneFunctionsType.sourceSelectWithPriority:
+        return 'Source Select + Priority Override';
+      case ZoneFunctionsType.sourceMix:
+        return 'Source Mix';
+      case ZoneFunctionsType.sourceMixWithPriority:
+        return 'Source Mix + Priority Override';
+      case ZoneFunctionsType.miniMatrix:
+        return 'Mini Matrix';
+      case ZoneFunctionsType.miniMatrixWithPriority:
+        return 'Mini Matrix With Priority';
+    }
+  }
+}
+
 class ZoneFunctions {
   final String id;
   final String name;

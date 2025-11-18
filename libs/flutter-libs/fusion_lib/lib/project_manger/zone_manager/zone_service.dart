@@ -193,6 +193,10 @@ extension ZoneService on ProjectService {
       }
     }
 
+    for (final childId in priorityOrder) {
+      relationships.link(RelationshipType.prioritySources, zoneId, childId);
+    }
+
     relationships.reOrder(RelationshipType.prioritySources, zoneId, priorityOrder);
   }
 
@@ -204,6 +208,10 @@ extension ZoneService on ProjectService {
     if (!prioritySources.contains(sourceId)) return;
 
     final updatedPrioritySources = prioritySources.map((id) => id == sourceId ? "" : id).toList();
+
+    for (final childId in updatedPrioritySources) {
+      relationships.link(RelationshipType.prioritySources, zoneId, childId);
+    }
 
     relationships.reOrder(RelationshipType.prioritySources, zoneId, updatedPrioritySources);
   }
