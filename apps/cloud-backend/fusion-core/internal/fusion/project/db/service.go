@@ -10,7 +10,6 @@ import (
 
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
-	"github.com/google/uuid"
 	"go.uber.org/zap"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
@@ -72,17 +71,24 @@ func isDuplicateKeyError(err error) bool {
 		strings.Contains(errorStr, "violates unique constraint")
 }
 
+// GetProjectByID retrieves a project by its ID.
+func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.Project, error) {
+	row, err := model.Projects(model.ProjectWhere.ID.EQ(projectID)).One(ctx, s.db)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New(types.ErrMsgProjectNotFound)
+		}
+		s.logger.Error("Failed to fetch project",
+			zap.Error(err),
+			zap.String("project_id", projectID))
+		return nil, fmt.Errorf("%s: %v", types.ErrMsgFailedToGetProject, err)
+	}
+
+	return row, nil
+}
+
 // Insert inserts a new project into the database.
 func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error) {
-	if project == nil {
-		return "", errors.New(types.ErrMsgProjectCannotBeNil)
-	}
-
-	// Generate ID if not provided (fallback for direct DB usage)
-	if project.ID == "" {
-		project.ID = uuid.New().String()
-	}
-
 	// Begin transaction
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -160,40 +166,11 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 // SelectAll retrieves all projects from the database.
 func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]*types.Project, error) {
-	// Set default sort order and field if not provided
-	order := "DESC"
-	if queryParams.SortOrder != "" {
-		upperOrder := strings.ToUpper(queryParams.SortOrder)
-		if upperOrder == "DESC" {
-			order = "DESC"
-		} else if upperOrder == "ASC" {
-			order = "ASC"
-		} else {
-			s.logger.Error("Invalid sort order provided, using default ASC",
-				zap.String("invalid_order", queryParams.SortOrder))
-			order = "ASC"
-		}
-	}
 
-	// Set default sort field if not provided and validate
-	sortBy := "updated_at"
-	if queryParams.SortBy != "" {
-		// Validate the sort field to prevent SQL injection
-		validSortFields := map[string]bool{
-			"created_at": true,
-			"updated_at": true,
-		}
-		if validSortFields[queryParams.SortBy] {
-			sortBy = queryParams.SortBy
-		} else {
-			s.logger.Error("Invalid sort field provided, using default",
-				zap.String("invalid_field", queryParams.SortBy),
-				zap.String("default_field", sortBy))
-		}
-	}
+	order := strings.ToUpper(queryParams.SortOrder)
 
 	// Use raw SQL query to get project data, is_starred, and locked user email in one query
-	// Explicitly list all columns to match our scanning order
+	// Explicitly listing all columns to match our scanning order
 	query := fmt.Sprintf(`
 		SELECT p.id, p.name, p.description, p.venue, 
 		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
@@ -204,14 +181,14 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 		LEFT JOIN "user" u ON p.locked_by_user_id = u.id
 		WHERE pu.user_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
 		ORDER BY p.%s %s
-	`, sortBy, order)
+	`, queryParams.SortBy, order)
 	rows, err := s.db.QueryContext(ctx, query, queryParams.UserID, queryParams.IsArchived, false)
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToGetProjects,
 			zap.Error(err),
 			zap.String("user_id", queryParams.UserID),
 			zap.Bool("is_archived", queryParams.IsArchived),
-			zap.String("sort_by", sortBy),
+			zap.String("sort_by", queryParams.SortBy),
 			zap.String("sort_order", order))
 		return nil, errors.New(types.ErrMsgFailedToGetProjects)
 	}
@@ -272,198 +249,71 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 }
 
 // Update updates an existing project in the database.
-func (s *Service) Update(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*model.Project, error) {
-	if id == "" {
-		return nil, errors.New(types.ErrMsgIdCannotBeEmpty)
-	}
+func (s *Service) Update(ctx context.Context, projectRow *model.Project, project *types.ProjectUpdateRequest) error {
 
-	row, err := model.Projects(model.ProjectWhere.ID.EQ(id)).One(ctx, s.db)
-	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New(types.ErrMsgProjectNotFound)
-		}
-		s.logger.Error("Failed to fetch project for update",
-			zap.Error(err),
-			zap.String("project_id", id))
-		return nil, fmt.Errorf("%s: %v", types.ErrMsgFailedToGetProject, err)
-	}
-
-	if row.IsArchived {
-		return nil, errors.New(types.ErrMsgProjectArchived)
+	if projectRow.IsArchived {
+		return errors.New(types.ErrMsgProjectArchived)
 	}
 
 	if project.AccountID != "" {
-		row.PrimaryOwnerUserID = null.NewString(project.AccountID, project.AccountID != "")
+		projectRow.PrimaryOwnerUserID = null.NewString(project.AccountID, project.AccountID != "")
 	}
 
 	if project.Name != "" {
-		row.Name = null.NewString(project.Name, project.Name != "")
+		projectRow.Name = null.NewString(project.Name, project.Name != "")
 	}
 
 	if project.Description != "" {
-		row.Description = null.NewString(project.Description, project.Description != "")
+		projectRow.Description = null.NewString(project.Description, project.Description != "")
 	}
 
 	if project.Venue != "" {
-		row.Venue = null.NewString(project.Venue, project.Venue != "")
+		projectRow.Venue = null.NewString(project.Venue, project.Venue != "")
 	}
 
 	if project.EnvironmentType != "" {
-		row.EnvironmentType = null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != "")
+		projectRow.EnvironmentType = null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != "")
 	}
 
 	if project.ProjectPhase != "" {
-		row.ProjectPhase = null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != "")
+		projectRow.ProjectPhase = null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != "")
 	}
 
 	if project.Application != "" {
-		row.Application = null.NewString(project.Application, project.Application != "")
+		projectRow.Application = null.NewString(project.Application, project.Application != "")
 	}
 
 	if project.Budget.Currency != "" {
-		row.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
+		projectRow.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
 	}
 
-	// Fix: Allow setting budget to zero - check if budget was explicitly provided
-	// Note: In a PATCH request, we should ideally use pointers to distinguish between
-	// zero value and not provided, but for now we allow zero values
 	if project.Budget.Amount >= 0 {
-		row.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
+		projectRow.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
 	}
 
-	row.UpdatedAt = time.Now()
+	projectRow.UpdatedAt = time.Now()
 
-	_, err = row.Update(ctx, s.db, boil.Infer())
+	_, err := projectRow.Update(ctx, s.db, boil.Infer())
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToUpdateProject,
 			zap.Error(err),
-			zap.String("project_id", id))
-		return nil, fmt.Errorf("%s: %v", types.ErrMsgFailedToUpdateProject, err)
+			zap.String("project_id", projectRow.ID))
+		return fmt.Errorf("%s: %v", types.ErrMsgFailedToUpdateProject, err)
 	}
-	return row, nil
+
+	return nil
 }
 
 // Delete removes a project by its ID.
-func (s *Service) Delete(ctx context.Context, id string) error {
-	if strings.TrimSpace(id) == "" {
-		return errors.New(types.ErrMsgProjectIdCannotBeEmpty)
-	}
-	return nil
-}
-
-// AssignUser assigns a user to a project.
-func (s *Service) AssignUser(ctx context.Context, projectID, userID string) error {
-
-	projectUser := &model.ProjectUser{
-		ProjectID: projectID,
-		UserID:    userID,
-		IsStarred: false,
-	}
-
-	if err := projectUser.Insert(ctx, s.db, boil.Infer()); err != nil {
-		// Check if this is a duplicate key error (user already assigned)
-		if isDuplicateKeyError(err) {
-			// User already assigned, return success (idempotent behavior)
-			s.logger.Info("User already assigned to project",
-				zap.String("project_id", projectID),
-				zap.String("user_id", userID))
-			return nil
-		}
-		s.logger.Error(types.ErrMsgFailedToAssignUser,
-			zap.Error(err),
-			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
-		return errors.New(types.ErrMsgFailedToAssignUser)
-	}
-	return nil
-}
-
-// RemoveUser removes a user from a project.
-func (s *Service) RemoveUser(ctx context.Context, projectID, userID string) error {
-	_, err := model.ProjectUsers(
-		model.ProjectUserWhere.ProjectID.EQ(projectID),
-		model.ProjectUserWhere.UserID.EQ(userID),
-	).DeleteAll(ctx, s.db)
-
-	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToRemoveUser,
-			zap.Error(err),
-			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
-		return errors.New(types.ErrMsgFailedToRemoveUser)
-	}
-	return nil
-}
-
-// IsUserAssigned checks if a user is assigned to a project.
-func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error) {
-	exists, err := model.ProjectUsers(
-		model.ProjectUserWhere.ProjectID.EQ(projectID),
-		model.ProjectUserWhere.UserID.EQ(userID),
-	).Exists(ctx, s.db)
-
-	if err != nil {
-		s.logger.Error(types.ErrMsgFailedUserAssignmentCheck,
-			zap.Error(err),
-			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
-		return false, errors.New(types.ErrMsgFailedUserAssignmentCheck)
-	}
-	return exists, nil
-}
-
-// ProjectExists checks if a project exists.
-func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, error) {
-	exists, err := model.Projects(
-		model.ProjectWhere.ID.EQ(projectID),
-		model.ProjectWhere.IsDeleted.EQ(false),
-	).Exists(ctx, s.db)
-
-	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToCheckProjectExistence,
-			zap.Error(err),
-			zap.String("project_id", projectID))
-		return false, errors.New(types.ErrMsgFailedToCheckProjectExistence)
-	}
-	return exists, nil
-}
-
-// UserExists checks if a user exists.
-func (s *Service) UserExists(ctx context.Context, userID string) (bool, error) {
-	exists, err := model.Users(
-		model.UserWhere.ID.EQ(userID),
-	).Exists(ctx, s.db)
-
-	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToCheckUserExistence,
-			zap.Error(err),
-			zap.String("user_id", userID))
-		return false, errors.New(types.ErrMsgFailedToCheckUserExistence)
-	}
-	return exists, nil
-}
-
-// GetUserIDByEmail gets user ID by email address.
-func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
-	user, err := model.Users(
-		model.UserWhere.Email.EQ(email),
-	).One(ctx, s.db)
-
-	if err != nil {
-		return errors.New(types.ErrMsgProjectNotFound)
-	}
-
-	if row.IsDeleted {
-		return nil // Already deleted, idempotent behavior
-	}
-
-	row.IsDeleted = true
-	row.UpdatedAt = time.Now()
-	_, err = row.Update(ctx, s.db, boil.Infer())
+func (s *Service) Delete(ctx context.Context, projectRow *model.Project) error {
+	
+	projectRow.IsDeleted = true
+	projectRow.UpdatedAt = time.Now()
+	_, err := projectRow.Update(ctx, s.db, boil.Infer())
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToDeleteProject,
 			zap.Error(err),
-			zap.String("project_id", id))
+			zap.String("project_id", projectRow.ID))
 		return errors.New(types.ErrMsgFailedToDeleteProject)
 	}
 

@@ -9,20 +9,16 @@ import (
 type Project interface {
 	CreateProject(ctx context.Context, project *types.ProjectCreateRequest) (*types.ProjectCreateResponse, error)
 	GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) (*types.GetAllProjectsResponse, error)
-	UpdateProject(ctx context.Context, id string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error)
-	UpdateProjectWithAuth(ctx context.Context, id string, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error)
-	DeleteProject(ctx context.Context, id string) error
-	DeleteProjectWithAuth(ctx context.Context, id string, userID string) error
+	UpdateProject(ctx context.Context, projectID, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error)
+	DeleteProject(ctx context.Context, projectID string, userID string) error
 	AssignUserToProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error)
 	RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error)
 	AssignUserToProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error)
 	RemoveUserFromProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error)
 	StarProject(ctx context.Context, projectID, userID string) error
 	UnstarProject(ctx context.Context, projectID, userID string) error
-	ArchiveProject(ctx context.Context, projectID string) error
-	ArchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error
-	UnarchiveProject(ctx context.Context, projectID string) error
-	UnarchiveProjectWithAuth(ctx context.Context, projectID string, userID string) error
+	ArchiveProject(ctx context.Context, projectID string, userID string) error
+	UnarchiveProject(ctx context.Context, projectID string, userID string) error
 	LockProject(ctx context.Context, projectID, userID string) error
 	UnlockProject(ctx context.Context, projectID, userID string) error
 	ValidateProjectNotLockedByOther(ctx context.Context, projectID, userID string) error

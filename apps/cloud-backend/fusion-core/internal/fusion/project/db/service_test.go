@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/DATA-DOG/go-sqlmock"
+	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -23,6 +25,8 @@ const (
 	testProjectApp         = "Test App"
 	testProjectAccountID   = "123"
 	testSelectProjectsStmt = "SELECT .*"
+	testUpdateProjectStmt  = "UPDATE \"project\""
+	testNonExistentID      = "non-existent"
 )
 
 func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
@@ -108,9 +112,10 @@ func TestServiceInsert(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("successfully inserts project with generated ID", func(t *testing.T) {
+	t.Run("successfully inserts project with provided ID", func(t *testing.T) {
+		projectID := "generated-uuid-123"
 		project := &types.ProjectCreateRequest{
-			// ID is empty, should be generated
+			ID:              projectID, // ID should be provided by business layer
 			UserID:          testProjectAccountID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
@@ -139,18 +144,16 @@ func TestServiceInsert(t *testing.T) {
 
 		id, err := service.Insert(ctx, project)
 		assert.NoError(t, err)
-		assert.NotEmpty(t, id)
-		assert.NotEqual(t, "", id)
+		assert.Equal(t, projectID, id)
 
 		// Verify all expectations were met
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("returns error when project is nil", func(t *testing.T) {
-		id, err := service.Insert(ctx, nil)
-		assert.Error(t, err)
-		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "project cannot be nil")
+	t.Run("panics when project is nil", func(t *testing.T) {
+		assert.Panics(t, func() {
+			service.Insert(ctx, nil)
+		})
 	})
 
 	t.Run("rolls back transaction on project insert failure", func(t *testing.T) {
@@ -345,6 +348,50 @@ func TestServiceSelectAll(t *testing.T) {
 	})
 }
 
+func TestServiceGetProjectByID(t *testing.T) {
+	db, mock, service := setupTestDB(t)
+	defer db.Close()
+
+	ctx := context.Background()
+
+	t.Run("successfully retrieves project by ID", func(t *testing.T) {
+		rows := sqlmock.NewRows([]string{
+			"id", "primary_owner_user_id", "name", "description",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
+			"currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at",
+		}).AddRow(
+			testProjectID, testProjectAccountID, testProjectName, testProjectDesc,
+			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
+			"USD", false, false, nil, time.Now(), time.Now(),
+		)
+
+		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).WillReturnRows(rows)
+
+		project, err := service.GetProjectByID(ctx, testProjectID)
+		assert.NoError(t, err)
+		assert.NotNil(t, project)
+		assert.Equal(t, testProjectID, project.ID)
+	})
+
+	t.Run("returns error when project not found", func(t *testing.T) {
+		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).WillReturnError(sql.ErrNoRows)
+
+		project, err := service.GetProjectByID(ctx, testNonExistentID)
+		assert.Error(t, err)
+		assert.Nil(t, project)
+		assert.Contains(t, err.Error(), "project not found")
+	})
+
+	t.Run("returns error on database error", func(t *testing.T) {
+		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).WillReturnError(assert.AnError)
+
+		project, err := service.GetProjectByID(ctx, testProjectID)
+		assert.Error(t, err)
+		assert.Nil(t, project)
+		assert.Contains(t, err.Error(), "failed to get project")
+	})
+}
+
 func TestServiceUpdate(t *testing.T) {
 	db, mock, service := setupTestDB(t)
 	defer db.Close()
@@ -365,31 +412,35 @@ func TestServiceUpdate(t *testing.T) {
 			},
 		}
 
-		rows := sqlmock.NewRows([]string{
-			"id", "primary_owner_account_id", "name", "description",
-			"venue", "environment_type", "project_phase", "application", "budget_amount",
-			"currency", "created_at", "updated_at", "is_archived", "is_deleted",
-		}).AddRow(
-			testProjectID, 123, testProjectName, testProjectDesc,
-			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
-			"USD", time.Now(), time.Now(), false, false,
-		)
+		// Create a project model to pass to Update
+		projectRow := &models.Project{
+			ID:          testProjectID,
+			Name:        null.NewString(testProjectName, true),
+			Description: null.NewString(testProjectDesc, true),
+			Venue:       null.NewString(testProjectVenue, true),
+			IsArchived:  false,
+			IsDeleted:   false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
 
-		mock.ExpectQuery(testSelectProjectsStmt).WillReturnRows(rows)
-		mock.ExpectExec("UPDATE \"project\"").WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec(testUpdateProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
 
-		project, err := service.Update(ctx, testProjectID, updateReq)
+		err := service.Update(ctx, projectRow, updateReq)
 		assert.NoError(t, err)
-		assert.NotNil(t, project)
-		assert.Equal(t, testProjectID, project.ID)
 	})
 
-	t.Run("returns error when project not found", func(t *testing.T) {
-		mock.ExpectQuery(testSelectProjectsStmt).WillReturnError(sql.ErrNoRows)
+	t.Run("returns error when update fails", func(t *testing.T) {
+		projectRow := &models.Project{
+			ID:         testNonExistentID,
+			IsArchived: false,
+			IsDeleted:  false,
+		}
 
-		project, err := service.Update(ctx, "non-existent", &types.ProjectUpdateRequest{})
+		mock.ExpectExec(testUpdateProjectStmt).WillReturnError(sql.ErrNoRows)
+
+		err := service.Update(ctx, projectRow, &types.ProjectUpdateRequest{})
 		assert.Error(t, err)
-		assert.Nil(t, project)
 	})
 }
 
@@ -400,32 +451,41 @@ func TestServiceDelete(t *testing.T) {
 	ctx := context.Background()
 
 	t.Run("successfully deletes project", func(t *testing.T) {
-		rows := sqlmock.NewRows([]string{
-			"id", "primary_owner_account_id", "name", "description",
-			"venue", "environment_type", "project_phase", "application", "budget_amount",
-			"currency", "created_at", "updated_at", "is_archived", "is_deleted",
-		}).AddRow(
-			testProjectID, 123, testProjectName, testProjectDesc,
-			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
-			"USD", time.Now(), time.Now(), false, false,
-		)
+		projectRow := &models.Project{
+			ID:        testProjectID,
+			IsDeleted: false,
+			CreatedAt: time.Now(),
+			UpdatedAt: time.Now(),
+		}
 
-		mock.ExpectQuery(testSelectProjectsStmt).WillReturnRows(rows)
-		mock.ExpectExec("UPDATE \"project\"").WillReturnResult(sqlmock.NewResult(1, 1))
+		mock.ExpectExec(testUpdateProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.Delete(ctx, testProjectID)
+		err := service.Delete(ctx, projectRow)
 		assert.NoError(t, err)
 	})
 
-	t.Run("returns error when project ID is empty", func(t *testing.T) {
-		err := service.Delete(ctx, "")
+	t.Run("returns error when delete fails", func(t *testing.T) {
+		projectRow := &models.Project{
+			ID:        testProjectID,
+			IsDeleted: false,
+		}
+
+		mock.ExpectExec(testUpdateProjectStmt).WillReturnError(sql.ErrNoRows)
+
+		err := service.Delete(ctx, projectRow)
 		assert.Error(t, err)
 	})
 
-	t.Run("returns error when project not found", func(t *testing.T) {
-		mock.ExpectQuery(testSelectProjectsStmt).WillReturnError(sql.ErrNoRows)
+	t.Run("returns error when project update fails", func(t *testing.T) {
+		projectRow := &models.Project{
+			ID:        testNonExistentID,
+			IsDeleted: false,
+		}
 
-		err := service.Delete(ctx, "non-existent")
+		mock.ExpectExec(testUpdateProjectStmt).WillReturnError(assert.AnError)
+
+		err := service.Delete(ctx, projectRow)
 		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete project")
 	})
 }

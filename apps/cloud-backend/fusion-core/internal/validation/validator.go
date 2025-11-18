@@ -3,10 +3,10 @@ package validation
 import (
 	"errors"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
@@ -22,7 +22,7 @@ func init() {
 	validate.RegisterValidation("currency", validateCurrency)
 	validate.RegisterValidation("sort_order", validateSortOrder)
 	validate.RegisterValidation("project_sort_field", validateProjectSortField)
-	validate.RegisterValidation("uuid", validateUUID)
+	validate.RegisterValidation("uuid", ValidateUUID)
 }
 
 // ValidateProjectCreateRequest validates a project create request
@@ -171,9 +171,16 @@ func isValidProjectSortField(field string) bool {
 	return false
 }
 
-func validateUUID(fl validator.FieldLevel) bool {
-	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
-	return uuidRegex.MatchString(fl.Field().String())
+// ValidateUUID checks if a string is a valid UUID format.
+func ValidateUUID(fl validator.FieldLevel) bool {
+	_, err := uuid.Parse(fl.Field().String())
+	return err == nil
+}
+
+// IsValidUUID checks if a string is a valid UUID format.
+func IsValidUUID(id string) bool {
+	_, err := uuid.Parse(id)
+	return err == nil
 }
 
 // formatValidationError formats validator errors into user-friendly messages

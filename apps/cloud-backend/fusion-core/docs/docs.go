@@ -121,13 +121,6 @@ const docTemplate = `{
                 "summary": "Get all projects",
                 "parameters": [
                     {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "user_id",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
                         "type": "boolean",
                         "description": "Filter projects by archived status",
                         "name": "is_archived",
@@ -158,7 +151,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid query parameters or user ID",
+                        "description": "Bad request - Invalid query parameters",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -542,6 +535,12 @@ const docTemplate = `{
                 "responses": {
                     "204": {
                         "description": "Successfully starred project"
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
                     },
                     "404": {
                         "description": "Project or User not found, or user not assigned to the project",
