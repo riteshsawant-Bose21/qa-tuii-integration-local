@@ -84,7 +84,7 @@ class _ZoneCardState extends State<ZoneCard> {
     return FadeTransition(
       opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
       child: Material(
-        color: Colors.blue.shade100,
+        color: Colors.transparent,
         child: buildPriorityFunctionWidget(priorityIndex: index + 1),
       ),
     );
