@@ -3,10 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/processing_block/view/customization/processing_block_customizer.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -479,7 +477,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       FusionDockableArea(
         tabKey: "configuration_tab",
         showLeft: true,
-        showRight: true,
+        showRight: false,
         mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing

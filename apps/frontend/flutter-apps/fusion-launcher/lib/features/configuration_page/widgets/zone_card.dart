@@ -7,16 +7,19 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../processing_block/view/processing_chain_view.dart';
 
 class ZoneCard extends StatefulWidget {
   final String zoneId;
   final String zoneName;
   final Color bgColor;
+  final Zone zoneData;
   const ZoneCard({
     super.key,
     required this.zoneId,
     required this.zoneName,
     required this.bgColor,
+    required this.zoneData,
   });
 
   @override
@@ -101,7 +104,7 @@ class _ZoneCardState extends State<ZoneCard> {
         padding: const EdgeInsets.only(left: 14, right: 14),
         height: 32,
         decoration: BoxDecoration(
-          color: isHovered ? widget.bgColor.withAlpha(100) : widget.bgColor.withAlpha(120),
+          color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
           border: Border.all(
             color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
           ),
@@ -126,11 +129,16 @@ class _ZoneCardState extends State<ZoneCard> {
                 ),
               ),
             ),
-            const FusionImage.asset(
-              Assets.processingBlocksFilledWhiteIcon,
-              width: 24,
-              height: 24,
-              fit: BoxFit.contain,
+            InkWell(
+              onTap: () {
+                ProcessingChainView.showForZone(context, widget.zoneData);
+              },
+              child: const FusionImage.asset(
+                Assets.processingBlocksFilledWhiteIcon,
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
             ),
           ],
         ),
@@ -1104,33 +1112,11 @@ class _ZoneCardState extends State<ZoneCard> {
           bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
         ),
       ),
-      child: SingleChildScrollView(
-        physics: const ClampingScrollPhysics(),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            if (zoneCircuit.isNotEmpty)
-              ListView.builder(
-                scrollDirection: Axis.vertical,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(), // parent handles scroll
-                itemCount: zoneCircuit.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final CircuitModel circuitData = zoneCircuit[index];
-                  final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                  return MouseRegion(
-                    onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
-                    onExit: (_) => setState(() => _hoveredCircuitIndex = null),
-                    child: _buildCircuitCard(
-                      index: index,
-                      circuitData: circuitData,
-                      speakersList: speakersList,
-                    ),
-                  );
-                },
-              ),
-            (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
-                ? Center(
+      child:
+          (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
+              ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 50.0),
                   child: FusionAppText(
                     text: 'No sub zones / circuits added yet',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -1138,38 +1124,65 @@ class _ZoneCardState extends State<ZoneCard> {
                       fontWeight: FontWeight.w500,
                     ),
                   ),
-                )
-                : ReorderableListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(), // parent scroll
-                  buildDefaultDragHandles: false,
-                  itemCount: subZonesForZone.length,
-                  onReorder: (int oldIndex, int newIndex) {
-                    if (oldIndex < newIndex) newIndex -= 1;
-                    _projectViewModel.reOrderSubZoneInZone(
-                      parentId: widget.zoneId,
-                      oldIndex: oldIndex,
-                      newIndex: newIndex,
-                    );
-                  },
-                  itemBuilder: (BuildContext context, int index) {
-                    final SubZone subZone = subZonesForZone[index];
-                    return ReorderableDragStartListener(
-                      key: ValueKey<String>(subZone.id),
-                      index: index,
-                      child: Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: SubZoneCard(
-                          subZoneId: subZone.id,
-                          subZoneName: subZone.name,
-                        ),
-                      ),
-                    );
-                  },
                 ),
-          ],
-        ),
-      ),
+              )
+              : SingleChildScrollView(
+                physics: const ClampingScrollPhysics(),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (zoneCircuit.isNotEmpty)
+                      ListView.builder(
+                        scrollDirection: Axis.vertical,
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: zoneCircuit.length,
+                        itemBuilder: (BuildContext context, int index) {
+                          final CircuitModel circuitData = zoneCircuit[index];
+                          final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                          return MouseRegion(
+                            onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                            onExit: (_) => setState(() => _hoveredCircuitIndex = null),
+                            child: _buildCircuitCard(
+                              index: index,
+                              circuitData: circuitData,
+                              speakersList: speakersList,
+                            ),
+                          );
+                        },
+                      ),
+                    ReorderableListView.builder(
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(), // parent scroll
+                      buildDefaultDragHandles: false,
+                      itemCount: subZonesForZone.length,
+                      onReorder: (int oldIndex, int newIndex) {
+                        if (oldIndex < newIndex) newIndex -= 1;
+                        _projectViewModel.reOrderSubZoneInZone(
+                          parentId: widget.zoneId,
+                          oldIndex: oldIndex,
+                          newIndex: newIndex,
+                        );
+                      },
+                      itemBuilder: (BuildContext context, int index) {
+                        final SubZone subZone = subZonesForZone[index];
+                        return ReorderableDragStartListener(
+                          key: ValueKey<String>(subZone.id),
+                          index: index,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: SubZoneCard(
+                              subZoneId: subZone.id,
+                              subZoneName: subZone.name,
+                              subZoneData: subZone,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ),
     );
   }
 
@@ -1199,11 +1212,16 @@ class _ZoneCardState extends State<ZoneCard> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
             ),
           ),
-          const FusionImage.asset(
-            Assets.processingBlocksFilledIcon,
-            width: 24,
-            height: 24,
-            fit: BoxFit.contain,
+          InkWell(
+            onTap: () {
+              ProcessingChainView.showForCircuit(context, circuitData);
+            },
+            child: const FusionImage.asset(
+              Assets.processingBlocksFilledIcon,
+              width: 24,
+              height: 24,
+              fit: BoxFit.contain,
+            ),
           ),
         ],
       ),

@@ -2,19 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:flutter/foundation.dart'; // added for kDebugMode
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../processing_block/view/processing_chain_view.dart';
 
 class SubZoneCard extends StatefulWidget {
   final String subZoneId;
   final String subZoneName;
+  final SubZone subZoneData;
   const SubZoneCard({
     super.key,
     required this.subZoneId,
     required this.subZoneName,
+    required this.subZoneData,
   });
 
   @override
@@ -119,11 +121,16 @@ class _SubZoneCardState extends State<SubZoneCard> {
               ),
             ),
 
-            const FusionImage.asset(
-              Assets.processingBlocksFilledIcon,
-              width: 24,
-              height: 24,
-              fit: BoxFit.contain,
+            InkWell(
+              onTap: () {
+                ProcessingChainView.showForSubzone(context, widget.subZoneData);
+              },
+              child: const FusionImage.asset(
+                Assets.processingBlocksFilledIcon,
+                width: 24,
+                height: 24,
+                fit: BoxFit.contain,
+              ),
             ),
           ],
         ),
@@ -208,11 +215,16 @@ class _SubZoneCardState extends State<SubZoneCard> {
               style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
             ),
           ),
-          const FusionImage.asset(
-            Assets.processingBlocksFilledIcon,
-            width: 24,
-            height: 24,
-            fit: BoxFit.contain,
+          InkWell(
+            onTap: () {
+              ProcessingChainView.showForCircuit(context, circuitData);
+            },
+            child: const FusionImage.asset(
+              Assets.processingBlocksFilledIcon,
+              width: 24,
+              height: 24,
+              fit: BoxFit.contain,
+            ),
           ),
         ],
       ),

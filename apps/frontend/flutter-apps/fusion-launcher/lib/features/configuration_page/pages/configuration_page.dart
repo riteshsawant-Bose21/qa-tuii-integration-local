@@ -523,6 +523,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                           zoneId: zoneData.id,
                           zoneName: zoneData.name,
                           bgColor: zoneData.color,
+                          zoneData: zoneData,
                         ),
                       );
                     },
