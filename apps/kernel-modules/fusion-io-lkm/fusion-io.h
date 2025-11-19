@@ -91,8 +91,7 @@ struct endpoint_gpio {
 enum endpoint_cmd_type {
     EP_CMD_TYPE_CFG         = 0,
 
-    /* adc */
-    EP_CMD_TYPE_ADC_REGOP   = 1
+    EP_CMD_TYPE_REGOP   = 1
 };
 
 struct endpoint_cmd {

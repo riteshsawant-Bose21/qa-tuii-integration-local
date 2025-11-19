@@ -56,7 +56,7 @@ const (
 	clusterTimout = 10 * time.Second
 	instancePort  = "7947"
 	requiredNodes = 3 // Number of nodes required for cluster tests
-	serverAddr    = "http://192.168.64.100:8080"
+	serverAddr    = "http://192.168.2.100:8080"
 	testTimeout   = 5 * time.Second
 )
 
@@ -1313,7 +1313,7 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 	for i := 0; time.Now().Before(deadline); i++ {
 		// note the "2>&1" so we capture nc's stderr (where -v prints)
 		cmd := fmt.Sprintf(
-			`(echo '{"action":"get"}' | nc -u -vv -w1 localhost %s) 2>&1 || true`,
+			`(echo '{"action":"get"}' | nc -u -w1 localhost %s) 2>/dev/null || true`,
 			instancePort,
 		)
 
@@ -1324,6 +1324,11 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 		//t.Logf("iter %02d, nc err: %v, raw UDP payload: %q", i, errRun, raw)
 
 		if raw != "" {
+
+			if idx := strings.Index(raw, "{"); idx > 0 {
+				raw = raw[idx:]
+			}
+
 			var result UDPResult
 			if err := json.Unmarshal([]byte(raw), &result); err == nil {
 				// check status
@@ -1584,7 +1589,7 @@ func discoverMultipassNodes(baseName string) ([]MultipassNode, error) {
 func getClusterConfig() (*ClusterConfig, error) {
 	var (
 		nodesFlag    = flag.String("nodes", "", "Comma-separated list of node addresses (e.g., 192.168.64.229:8080,192.168.64.230:8080)")
-		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.64.100:8080)")
+		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.2.100:8080)")
 		baseNameFlag = flag.String("base-name", "fusion", "Base name for multipass instances")
 		portFlag     = flag.String("port", "8080", "Port for node services")
 		autoFlag     = flag.Bool("auto", false, "Automatically discover nodes using multipass")

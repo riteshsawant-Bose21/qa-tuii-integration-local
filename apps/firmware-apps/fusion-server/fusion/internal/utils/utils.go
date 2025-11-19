@@ -3,10 +3,12 @@ package utils
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"fusion/internal/logging"
 	"io"
 	"mime/multipart"
+	"net"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -126,8 +128,8 @@ func ApplyPatch(data map[string]any, changes map[string]any) error {
 	return nil
 }
 
-// CalculateChecksum returns a SHA-256 hash of JSON data.
-func CalculateChecksum(v any) (string, error) {
+// JSONChecksum returns a SHA-256 hash of JSON data.
+func JSONChecksum(v any) (string, error) {
 
 	// canonicaljson is used to ensure deterministic ordering
 	b, err := canonicaljson.Marshal(v)
@@ -136,6 +138,20 @@ func CalculateChecksum(v any) (string, error) {
 	}
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// FileChecksum returns a SHA-256 hash of the file at path.
+func FileChecksum(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // VerifyChecksum validates the checksum.
@@ -392,7 +408,7 @@ func ExtractId(r *http.Request) (string, error) {
 	return ExtractValue(r, "id")
 }
 
-// ExtractName pulls the “name” var from mux and returns aan error if it’s missing.
+// ExtractName pulls the “name” var from mux and returns an error if it’s missing.
 func ExtractName(r *http.Request) (string, error) {
 	return ExtractValue(r, "name")
 
@@ -459,4 +475,23 @@ func DeepCopy(src any) any {
 	default:
 		return v
 	}
+}
+
+// SendUDPMessage marshals the payload as JSON and sends it to the given address.
+func SendUDPMessage(addr *net.UDPAddr, payload any) error {
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("failed to marshal UDP payload: %w", err)
+	}
+
+	conn, err := net.ListenPacket("udp4", "")
+	if err != nil {
+		return fmt.Errorf("failed to open UDP socket: %w", err)
+	}
+	defer conn.Close()
+
+	if _, err := conn.WriteTo(data, addr); err != nil {
+		return fmt.Errorf("failed to send UDP packet: %w", err)
+	}
+	return nil
 }

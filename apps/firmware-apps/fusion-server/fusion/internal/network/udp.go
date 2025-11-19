@@ -6,6 +6,7 @@ import (
 	"net"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -38,7 +39,8 @@ type UDPServer struct {
 	numWorkers int
 
 	// ACK handling
-	pending sync.Map
+	pending              sync.Map
+	lastBroadcastVersion atomic.Int64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -138,13 +140,23 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	if !msg.IsPublic() {
 		return nil
 	}
+	logger := logging.GetLogger()
+
+	if msg.Operation == api.NotifyOpConfigUpdate && msg.ConfigUpdate != nil &&
+		msg.ConfigUpdate.Version.Counter < s.lastBroadcastVersion.Load() {
+		logger.Debug(
+			"UDP broadcast: skipping stale config_update version=%d (last=%d)",
+			msg.ConfigUpdate.Version.Counter,
+			s.lastBroadcastVersion.Load(),
+		)
+		return nil
+	}
+	s.lastBroadcastVersion.Store(msg.ConfigUpdate.Version.Counter)
 
 	data, err := json.Marshal(msg.ConfigUpdate.Data)
 	if err != nil {
 		return fmt.Errorf("marshal update: %w", err)
 	}
-
-	logger := logging.GetLogger()
 
 	// Limit the number of concurrent writes
 	sem := make(chan struct{}, maxConcurrent)

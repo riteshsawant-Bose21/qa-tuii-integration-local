@@ -16,7 +16,7 @@ import (
 )
 
 const (
-	tasksServerURL = "http://192.168.64.100:8080"
+	tasksServerURL = "http://192.168.2.100:8080"
 	snapshotID     = "test-snapshot"
 )
 
@@ -50,7 +50,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 			CronExpr:    "*/5 * * * *",
 			Description: "Test task description",
 			Type:        api.TaskTypeSnapshot,
-			Params:      map[string]string{api.SnapshotIDKey: "001"},
+			Params:      map[string]any{api.SnapshotIDKey: "001"},
 		}
 
 		taskJSON, err := json.Marshal(task)
@@ -84,7 +84,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 			CronExpr:    "*/10 * * * *",
 			Description: "Updated task description",
 			Type:        api.TaskTypeSnapshot,
-			Params:      map[string]string{api.SnapshotIDKey: "001"},
+			Params:      map[string]any{api.SnapshotIDKey: "001"},
 		}
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)

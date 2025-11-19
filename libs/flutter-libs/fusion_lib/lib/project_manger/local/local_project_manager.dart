@@ -20,7 +20,7 @@ class LocalProjectManager {
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
     final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
-    final Directory appDocDir = await getApplicationDocumentsDirectory();
+    Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
 
     if (!await fusionDir.exists()) {
@@ -72,6 +72,12 @@ class LocalProjectManager {
     }
   }
 
+  Future<Directory> getProjectDirectoryById(String projectId) async {
+    final Directory fusionDir = await fusionProjectDirectory;
+    final Directory projectDir = Directory('${fusionDir.path}/$projectId');
+    return projectDir;
+  }
+
   /// Creates a new project folder
   /// with the given name.
   /// inside the Fusion project directory.
@@ -83,6 +89,8 @@ class LocalProjectManager {
     try {
       final Directory fusionDir = await fusionProjectDirectory;
       final Directory projectDir = Directory('${fusionDir.path}/$projectId');
+
+      print('Creating new project directory at: ${projectDir.path}');
 
       /// Check if folder already exists
       if (await projectDir.exists()) {
@@ -103,11 +111,17 @@ class LocalProjectManager {
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
         "floors": [
-          {"id": FusionUtils.shortStringUUID(), 'name': "Floor 1", 'floorPlan': FloorPlanModel.defaultFloorPlan, 'listeningAreas': []},
+          {
+            "id": "FLOOR${FusionUtils.shortStringUUID()}",
+            'name': "Floor 1",
+            'floorPlan': FloorPlanModel.defaultFloorPlan,
+          },
         ],
         "listeningAreas": [],
         "zones": [],
         "sourceSet": [],
+        "circuits": [],
+        "wiringConnection": [],
         "hardwareComponents": [],
         "fusionDevices": [],
         "suggestedFusionDevices": [],

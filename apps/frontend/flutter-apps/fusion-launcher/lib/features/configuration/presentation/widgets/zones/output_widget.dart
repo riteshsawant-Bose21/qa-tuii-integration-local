@@ -87,7 +87,7 @@ class OutputWidgetState extends State<OutputWidget> {
                   Offset? center;
 
                   if (location.listeningAreaId != null) {
-                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+                    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
 
                     //find the center of area.vertices
                     center = Offset(
@@ -136,78 +136,80 @@ class OutputWidgetState extends State<OutputWidget> {
 
             Builder(
               builder: (BuildContext context) {
-                final List<FusionDevice> devices = serviceLocator<ProjectViewModel>().fusionDevices;
-                FusionDevice? device;
-                try {
-                  device =
-                      widget.speaker.fusionDeviceId != null
-                          ? devices.firstWhere((FusionDevice d) {
-                            return d.id == widget.speaker.fusionDeviceId;
-                          })
-                          : null;
-                } catch (e) {
-                  return const SizedBox.shrink();
-                }
+                // final List<FusionDsp> devices = serviceLocator<ProjectViewModel>().fusionDevices;
+                // FusionDsp? device;
+                // try {
+                //   device =
+                //       widget.speaker.fusionDeviceId != null
+                //           ? devices.firstWhere((FusionDsp d) {
+                //             return d.id == widget.speaker.fusionDeviceId;
+                //           })
+                //           : null;
+                // } catch (e) {
+                //   return const SizedBox.shrink();
+                // }
 
-                if (device == null && widget.speaker.portNumbers.isEmpty) {
-                  return const SizedBox.shrink();
-                }
+                return const SizedBox.shrink();
 
-                return Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).primaryColor,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: <Widget>[
-                      const Icon(Icons.memory, size: 14, color: Colors.white),
-                      const SizedBox(width: 8),
-
-                      // only show the name if we actually found the device
-                      if (device != null) ...<Widget>[
-                        Flexible(
-                          child: Text(
-                            device.name,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-
-                        if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
-                          Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 8),
-                            width: 1,
-                            height: 12,
-                            color: Colors.white,
-                          ),
-                        ],
-                      ],
-
-                      // port numbers (if any)
-                      if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
-                        const Icon(Icons.electrical_services, size: 14, color: Colors.white),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Port ${widget.speaker.portNumbers.join(', ')}',
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                );
+                //    if (device == null && widget.speaker.portNumbers.isEmpty) {
+                //      return const SizedBox.shrink();
+                //    }
+                //
+                //    return Container(
+                //      margin: const EdgeInsets.symmetric(horizontal: 8),
+                //      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                //      decoration: BoxDecoration(
+                //        color: Theme.of(context).primaryColor,
+                //        borderRadius: BorderRadius.circular(8),
+                //        border: Border.all(color: Colors.grey.shade200),
+                //      ),
+                //      child: Row(
+                //        mainAxisAlignment: MainAxisAlignment.start,
+                //        crossAxisAlignment: CrossAxisAlignment.center,
+                //        children: <Widget>[
+                //          const Icon(Icons.memory, size: 14, color: Colors.white),
+                //          const SizedBox(width: 8),
+                //
+                //          // only show the name if we actually found the device
+                //          if (device != null) ...<Widget>[
+                //            Flexible(
+                //              child: Text(
+                //                device.name,
+                //                style: const TextStyle(
+                //                  fontSize: 12,
+                //                  fontWeight: FontWeight.w600,
+                //                  color: Colors.white,
+                //                ),
+                //                overflow: TextOverflow.ellipsis,
+                //              ),
+                //            ),
+                //
+                //            // if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
+                //            //   Container(
+                //            //     margin: const EdgeInsets.symmetric(horizontal: 8),
+                //            //     width: 1,
+                //            //     height: 12,
+                //            //     color: Colors.white,
+                //            //   ),
+                //            // ],
+                //          ],
+                //
+                //          // port numbers (if any)
+                // /*         if (widget.speaker.portNumbers.isNotEmpty) ...<Widget>[
+                //            const Icon(Icons.electrical_services, size: 14, color: Colors.white),
+                //            const SizedBox(width: 4),
+                //            Text(
+                //              'Port ${widget.speaker.portNumbers.join(', ')}',
+                //              style: const TextStyle(
+                //                fontSize: 12,
+                //                color: Colors.white,
+                //                fontWeight: FontWeight.w500,
+                //              ),
+                //            ),
+                //          ],*/
+                //        ],
+                //      ),
+                // );
               },
             ),
 
@@ -269,27 +271,15 @@ class OutputWidgetState extends State<OutputWidget> {
             ProcessingBlockView(
               processingType: ProcessingType.output,
               isControlMode: widget.isControlMode,
-              selectedBlocks: widget.speaker.blocks ?? <ProcessingBlockModel>[],
-              onBlocksUpdated: (List<ProcessingBlockModel> chain) {
-                widget.onOutputChanged(
-                  widget.speaker.copyWith(
-                    blocks: chain,
-                  ),
-                );
+              selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.speaker.id) ?? <ProcessingBlockModel>[],
+              onBlocksUpdated: (int oldIndex, int newIndex) {
+                serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(parentId: widget.speaker.id, oldIndex: oldIndex, newIndex: newIndex);
               },
-              onBlockRemoved: (int index) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.speaker.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.removeAt(index);
-                widget.onOutputChanged(widget.speaker.copyWith(blocks: updatedBlocks));
+              onBlockRemoved: (String blockId) {
+                serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
               },
               onBlockSelected: (ProcessingBlockModel block) {
-                final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(
-                  widget.speaker.blocks ?? <ProcessingBlockModel>[],
-                );
-                updatedBlocks.add(block);
-                widget.onOutputChanged(widget.speaker.copyWith(blocks: updatedBlocks));
+                serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: block, parentId: widget.speaker.id);
               },
             ),
           ],
@@ -351,11 +341,11 @@ class OutputWidgetState extends State<OutputWidget> {
 
   String getLocation(LocationModel location) {
     if (location.floorId != null && location.listeningAreaId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
-      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(location.listeningAreaId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
+      final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: location.listeningAreaId!);
       return "${floor.name}/${area.name}"; // Display floor and listening area names
     } else if (location.floorId != null) {
-      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(location.floorId!);
+      final FloorModel floor = serviceLocator<ProjectViewModel>().getFloorById(floorId: location.floorId!);
       return floor.name; // Display floor number
     } else if (location.listeningAreaId != null) {
       return "Listening Area ${location.listeningAreaId}"; // Display listening area number

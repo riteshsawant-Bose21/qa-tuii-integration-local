@@ -52,9 +52,9 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
       listener: (BuildContext context, AuthState state) {
         if (state is AuthInProgress) {
           log("AuthLoading");
-          FusionUtils.showLoader(context);
+          FusionUiUtils.showLoader(context);
         } else {
-          FusionUtils.hideLoader(context);
+          FusionUiUtils.hideLoader(context);
         }
         if (state is AuthFailure) {
           log("AuthFailure: ${state.message}");

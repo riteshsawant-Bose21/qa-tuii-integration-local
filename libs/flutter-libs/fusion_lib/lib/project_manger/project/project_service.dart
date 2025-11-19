@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
+import 'package:fusion_lib/models/project_entities/endpoints.dart';
 
 import '../../fusion_lib.dart';
 
@@ -29,6 +31,10 @@ class ProjectService {
   final FusionDeviceRepository fusionDevices;
   final FusionDeviceRepository suggestedFusionDevices;
   final AmplifierRepository amplifiers;
+  final CircuitRepository circuits;
+  final SubZoneRepository subZones;
+  final WiringConnectionRepository wiringConnection;
+  final ProcessingBlockRepository processingBlocks;
 
   final RelationshipManager relationships;
 
@@ -37,7 +43,8 @@ class ProjectService {
   // -----------------
   List<Map<String, dynamic>> undoStack = [];
   List<Map<String, dynamic>> redoStack = [];
-  int get maxHistory => 10; // cap history to avoid unbounded memory growth
+
+  int get maxHistory => 25; // cap history to avoid unbounded memory growth
 
   ProjectService({
     required this.id,
@@ -57,20 +64,28 @@ class ProjectService {
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
+    SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
     HardwareRepository? hardware,
     FusionDeviceRepository? fusionDevices,
     FusionDeviceRepository? suggestedFusionDevices,
     AmplifierRepository? amplifiers,
+    CircuitRepository? circuits,
+    WiringConnectionRepository? wiringConnection,
+    ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
+       subZones = subZones ?? SubZoneRepository(),
        sourceSets = sourceSets ?? SourceSetRepository(),
        hardware = hardware ?? HardwareRepository(),
        fusionDevices = fusionDevices ?? FusionDeviceRepository(),
        suggestedFusionDevices = suggestedFusionDevices ?? FusionDeviceRepository(),
        amplifiers = amplifiers ?? AmplifierRepository(),
+       circuits = circuits ?? CircuitRepository(),
+       wiringConnection = wiringConnection ?? WiringConnectionRepository(),
+       processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        relationships = relationships ?? RelationshipManager();
 
   ProjectService copyWith({
@@ -90,11 +105,15 @@ class ProjectService {
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
+    SubZoneRepository? subZones,
     SourceSetRepository? sourceSets,
     HardwareRepository? hardware,
     FusionDeviceRepository? fusionDevices,
     FusionDeviceRepository? suggestedFusionDevices,
     AmplifierRepository? amplifiers,
+    CircuitRepository? circuits,
+    WiringConnectionRepository? wiringConnection,
+    ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
     bool? isInHardwareMode,
   }) {
@@ -115,11 +134,15 @@ class ProjectService {
       floors: floors ?? this.floors,
       listeningAreas: listeningAreas ?? this.listeningAreas,
       zones: zones ?? this.zones,
+      subZones: subZones ?? this.subZones,
       sourceSets: sourceSets ?? this.sourceSets,
       hardware: hardware ?? this.hardware,
       fusionDevices: fusionDevices ?? this.fusionDevices,
       suggestedFusionDevices: suggestedFusionDevices ?? this.suggestedFusionDevices,
       amplifiers: amplifiers ?? this.amplifiers,
+      circuits: circuits ?? this.circuits,
+      wiringConnection: wiringConnection ?? this.wiringConnection,
+      processingBlocks: processingBlocks ?? this.processingBlocks,
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
     );
@@ -157,11 +180,24 @@ class ProjectService {
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
+      "subZones": subZones.toJson((sz) => sz.toJson()),
       "sourceSet": sourceSets.toJson((m) => m.toJson()),
       "hardware": hardware.toJson((HardwareComponent c) {
         if (c is Source) {
           return c.toJson();
         } else if (c is Speaker) {
+          return c.toJson();
+        } else if (c is FusionDsp) {
+          return c.toJson();
+        } else if (c is FusionController) {
+          return c.toJson();
+        } else if (c is Amplifier) {
+          return c.toJson();
+        } else if (c is FusionEndpoints) {
+          return c.toJson();
+        } else if (c is HardwareRack) {
+          return c.toJson();
+        } else if (c is NetworkSwitch) {
           return c.toJson();
         } else {
           return (c as GenericHardwareComponent).toJson();
@@ -170,6 +206,9 @@ class ProjectService {
       "fusionDevices": fusionDevices.toJson((f) => f.toJson()),
       "suggestedFusionDevices": suggestedFusionDevices.toJson((f) => f.toJson()),
       "amplifiers": amplifiers.toJson((a) => a.toJson()),
+      "circuits": circuits.toJson((c) => c.toJson()),
+      "wiringConnection": wiringConnection.toJson((wc) => wc.toJson()),
+      "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
     };
   }
@@ -195,6 +234,7 @@ class ProjectService {
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
     service.listeningAreas.fromJsonList(json["listeningAreas"], (m) => ListeningArea.fromJson(m), "id");
     service.zones.fromJsonList(json["zones"], (m) => Zone.fromJson(m), "id");
+    service.subZones.fromJsonList(json["subZones"], (m) => SubZone.fromJson(m), "id");
     service.sourceSets.fromJsonList(json["sourceSet"], (m) => SourceSet.fromJson(m), "id");
     service.hardware.fromJsonList(json["hardware"], (dynamic e) {
       final Map<String, dynamic> m = e as Map<String, dynamic>;
@@ -202,14 +242,28 @@ class ProjectService {
         return Source.fromJson(m);
       } else if (m.containsKey('componentType') && m['componentType'] == 'speaker') {
         return Speaker.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'fusionDsp') {
+        return FusionDsp.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'controller') {
+        return FusionController.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'fusionEndpoint') {
+        return FusionEndpoints.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'amplifier') {
+        return Amplifier.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'hardwareRack') {
+        return HardwareRack.fromJson(m);
+      } else if (m.containsKey('componentType') && m['componentType'] == 'networkSwitch') {
+        return NetworkSwitch.fromJson(m);
       } else {
         return GenericHardwareComponent.fromJson(m);
       }
     }, "id");
-    service.fusionDevices.fromJsonList(json["fusionDevices"], (m) => FusionDevice.fromJson(m), "id");
-    service.suggestedFusionDevices.fromJsonList(json["suggestedFusionDevices"], (m) => FusionDevice.fromJson(m), "id");
+    service.fusionDevices.fromJsonList(json["fusionDevices"], (m) => FusionDsp.fromJson(m), "id");
+    service.suggestedFusionDevices.fromJsonList(json["suggestedFusionDevices"], (m) => FusionDsp.fromJson(m), "id");
     service.amplifiers.fromJsonList(json["amplifiers"], (m) => Amplifier.fromJson(m), "id");
-
+    service.circuits.fromJsonList(json["circuits"], (m) => CircuitModel.fromJson(m), "id");
+    service.wiringConnection.fromJsonList(json["wiringConnection"], (m) => WiringConnectionModel.fromJson(m), "id");
+    service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.relationships.fromJson(json["relationships"]);
 
     return service;

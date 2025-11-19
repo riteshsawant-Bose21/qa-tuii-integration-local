@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
+import '../../../../../core/service_locator.dart';
+import '../../viewmodel/project_view_model.dart';
 import '../common/processing_block_view.dart';
 
 void openDeviceConfig(
@@ -181,23 +183,20 @@ class _DevicePropertiesWidgetState extends State<DevicePropertiesWidget> {
           // ),
           ProcessingBlockView(
             processingType: ProcessingType.input,
-            selectedBlocks: widget.device.blocks,
+            selectedBlocks: serviceLocator<ProjectViewModel>().getProcessingBlockFor(parentId: widget.device.id),
             isControlMode: false,
             onBlockSelected: (ProcessingBlockModel selected) {
-              final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(widget.device.blocks);
-              updatedBlocks.add(selected);
-              final Source updatedDevice = widget.device.copyWith(blocks: updatedBlocks);
-              widget.onDeviceUpdated(updatedDevice);
+              serviceLocator<ProjectViewModel>().addProcessingBlockToParent(processingBlock: selected, parentId: widget.device.id);
             },
-            onBlockRemoved: (int index) {
-              final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(widget.device.blocks);
-              updatedBlocks.removeAt(index);
-              final Source updatedDevice = widget.device.copyWith(blocks: updatedBlocks);
-              widget.onDeviceUpdated(updatedDevice);
+            onBlockRemoved: (String blockId) {
+              serviceLocator<ProjectViewModel>().removeProcessingBlock(processingBlockId: blockId);
             },
-            onBlocksUpdated: (List<ProcessingBlockModel> updatedBlocksList) {
-              final Source updatedDevice = widget.device.copyWith(blocks: updatedBlocksList);
-              widget.onDeviceUpdated(updatedDevice);
+            onBlocksUpdated: (int oldIndex, int newIndex) {
+              serviceLocator<ProjectViewModel>().reOrderProcessingBlocks(
+                parentId: widget.device.id,
+                oldIndex: oldIndex,
+                newIndex: newIndex,
+              );
             },
           ),
           const SizedBox(
