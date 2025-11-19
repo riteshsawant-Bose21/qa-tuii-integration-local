@@ -40,7 +40,6 @@ class _ZoneCardState extends State<ZoneCard> {
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
   int? _hoveredCircuitIndex;
-  String? _draggingSourceId; // Added to track dragging source
 
   @override
   void initState() {
@@ -85,7 +84,7 @@ class _ZoneCardState extends State<ZoneCard> {
       opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
       child: Material(
         color: Colors.transparent,
-        child: buildPriorityFunctionWidget(priorityIndex: index + 1),
+        child: child,
       ),
     );
   }
@@ -311,13 +310,11 @@ class _ZoneCardState extends State<ZoneCard> {
               );
 
               /// Update local state - swap the sources
-              setState(() {
-                selectedPrioritySourceId1 = source2;
-                selectedPrioritySource1 = source2 != null ? _projectViewModel.getHardware(hardwareId: source2)?.name : null;
+              selectedPrioritySourceId1 = source2;
+              selectedPrioritySource1 = source2 != null ? _projectViewModel.getHardware(hardwareId: source2)?.name : null;
 
-                selectedPrioritySourceId2 = source1;
-                selectedPrioritySource2 = source1 != null ? _projectViewModel.getHardware(hardwareId: source1)?.name : null;
-              });
+              selectedPrioritySourceId2 = source1;
+              selectedPrioritySource2 = source1 != null ? _projectViewModel.getHardware(hardwareId: source1)?.name : null;
             }
           },
           itemBuilder: (BuildContext context, int index) {
@@ -343,7 +340,6 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
-    print('Building Priority Function Widget for P$priorityIndex');
     final String? selectedSource = priorityIndex == 1 ? selectedPrioritySource1 : selectedPrioritySource2;
     final String? selectedSourceId = priorityIndex == 1 ? selectedPrioritySourceId1 : selectedPrioritySourceId2;
     final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
@@ -385,7 +381,6 @@ class _ZoneCardState extends State<ZoneCard> {
                     priority: 2,
                   );
                 }
-                _draggingSourceId = null;
               });
             },
             builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
@@ -1096,8 +1091,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     borderRadius: BorderRadius.circular(3),
                   ),
                   child: FusionAppText(
-                    text: (currentZoneSources.length + currentZoneSourceSets.length).toString(),
-                    maxLine: 1,
+                    text: _projectViewModel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       fontSize: 8,
                       color: Theme.of(context).colorScheme.white,
