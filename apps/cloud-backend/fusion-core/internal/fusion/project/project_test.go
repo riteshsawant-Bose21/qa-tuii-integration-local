@@ -1116,3 +1116,303 @@ func TestUnarchiveProject(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateProject(t *testing.T) {
+	const testUserID2 = "user-2"
+	const lockedByUserEmail = "locked@example.com"
+
+	tests := []struct {
+		name        string
+		projectID   string
+		opts        ValidationOptions
+		mockSetup   func(*mockDBService)
+		expectedErr string
+	}{
+		{
+			name:      "successful validation - all checks pass",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckDeleted:              true,
+				CheckArchived:             true,
+				CheckUserAssigned:         true,
+				CheckNotLockedByOtherUser: true,
+				UserID:                    testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				project := &models.Project{
+					ID:             testProjectID1,
+					IsDeleted:      false,
+					IsArchived:     false,
+					LockedByUserID: null.String{},
+				}
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(true, nil)
+			},
+		},
+		{
+			name:      "project not found",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckDeleted: true,
+				UserID:       testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return((*models.Project)(nil), errors.New(projectNotFoundMsg))
+			},
+			expectedErr: projectNotFoundMsg,
+		},
+		{
+			name:      "project is deleted",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckDeleted: true,
+				UserID:       testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				project := &models.Project{
+					ID:        testProjectID1,
+					IsDeleted: true,
+				}
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+			},
+			expectedErr: "project not found",
+		},
+		{
+			name:      "project is archived",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckArchived: true,
+				UserID:        testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				project := &models.Project{
+					ID:         testProjectID1,
+					IsDeleted:  false,
+					IsArchived: true,
+				}
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+			},
+			expectedErr: "project is archived",
+		},
+		{
+			name:      "user not assigned to project",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckUserAssigned: true,
+				UserID:            testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				project := &models.Project{
+					ID:         testProjectID1,
+					IsDeleted:  false,
+					IsArchived: false,
+				}
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(false, nil)
+			},
+			expectedErr: "user not assigned to project",
+		},
+		{
+			name:      "project locked by other user",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckNotLockedByOtherUser: true,
+				UserID:                    testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				project := &models.Project{
+					ID:             testProjectID1,
+					IsDeleted:      false,
+					IsArchived:     false,
+					LockedByUserID: null.NewString(testUserID2, true),
+				}
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+				m.On("GetUserEmailByID", mock.Anything, testUserID2).Return(lockedByUserEmail, nil)
+			},
+			expectedErr: "project is locked by user",
+		},
+		{
+			name:      "project locked by same user - should pass",
+			projectID: testProjectID1,
+			opts: ValidationOptions{
+				CheckNotLockedByOtherUser: true,
+				UserID:                    testUserID1,
+			},
+			mockSetup: func(m *mockDBService) {
+				project := &models.Project{
+					ID:             testProjectID1,
+					IsDeleted:      false,
+					IsArchived:     false,
+					LockedByUserID: null.NewString(testUserID1, true),
+				}
+				m.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			service := &Service{
+				dbService: mockDB,
+			}
+
+			tt.mockSetup(mockDB)
+
+			project, err := service.validateProject(context.Background(), tt.projectID, tt.opts)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, project)
+			} else {
+				assert.NoError(t, err)
+				assert.NotNil(t, project)
+				assert.Equal(t, tt.projectID, project.ID)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestValidateUserAssignment(t *testing.T) {
+	tests := []struct {
+		name        string
+		projectID   string
+		userID      string
+		mockSetup   func(*mockDBService)
+		expectedErr string
+	}{
+		{
+			name:      "user is assigned",
+			projectID: testProjectID1,
+			userID:    testUserID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(true, nil)
+			},
+		},
+		{
+			name:      "user not assigned",
+			projectID: testProjectID1,
+			userID:    testUserID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(false, nil)
+			},
+			expectedErr: "user not assigned to project",
+		},
+		{
+			name:      "database error",
+			projectID: testProjectID1,
+			userID:    testUserID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(false, errDatabaseMsg)
+			},
+			expectedErr: "failed to check user assignment",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			service := &Service{
+				dbService: mockDB,
+			}
+
+			tt.mockSetup(mockDB)
+
+			err := service.validateUserAssignment(context.Background(), tt.projectID, tt.userID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestValidateProjectNotLockedByOtherUser(t *testing.T) {
+	const testUserID2 = "user-2"
+	const lockedByUserEmail = "locked@example.com"
+
+	tests := []struct {
+		name        string
+		project     *models.Project
+		userID      string
+		mockSetup   func(*mockDBService)
+		expectedErr string
+	}{
+		{
+			name: "project not locked",
+			project: &models.Project{
+				ID:             testProjectID1,
+				LockedByUserID: null.String{},
+			},
+			userID: testUserID1,
+			mockSetup: func(m *mockDBService) {
+				// No mocks needed for unlocked project
+			},
+		},
+		{
+			name: "project locked by same user",
+			project: &models.Project{
+				ID:             testProjectID1,
+				LockedByUserID: null.NewString(testUserID1, true),
+			},
+			userID: testUserID1,
+			mockSetup: func(m *mockDBService) {
+				// No mocks needed when locked by same user
+			},
+		},
+		{
+			name: "project locked by different user",
+			project: &models.Project{
+				ID:             testProjectID1,
+				LockedByUserID: null.NewString(testUserID2, true),
+			},
+			userID: testUserID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("GetUserEmailByID", mock.Anything, testUserID2).Return(lockedByUserEmail, nil)
+			},
+			expectedErr: "project is locked by user",
+		},
+		{
+			name: "error getting locked user email",
+			project: &models.Project{
+				ID:             testProjectID1,
+				LockedByUserID: null.NewString(testUserID2, true),
+			},
+			userID: testUserID1,
+			mockSetup: func(m *mockDBService) {
+				m.On("GetUserEmailByID", mock.Anything, testUserID2).Return("", errDatabaseMsg)
+			},
+			expectedErr: "failed to get user by email",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			service := &Service{
+				dbService: mockDB,
+			}
+
+			tt.mockSetup(mockDB)
+
+			err := service.validateProjectNotLockedByOtherUser(context.Background(), tt.project, tt.userID)
+
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
