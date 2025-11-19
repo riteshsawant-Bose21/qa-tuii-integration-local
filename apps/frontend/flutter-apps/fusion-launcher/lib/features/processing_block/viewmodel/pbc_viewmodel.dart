@@ -1,15 +1,26 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
+import 'package:fusion_launcher/features/processing_block/datasource/pb_widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
-import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
-import 'package:fusion_launcher/features/processing_block/sample_data/layout_data.dart';
 
+import '../data/algorithm_layout_data.dart';
 import '../dto/pb_item_param.dart';
+import '../dto/pb_layout.dart';
 
 class PbcViewmodel extends ChangeNotifier {
-  PbcViewmodel() {
-    items.addAll(PBLayout.fromMap(SampleData.sampleData).children);
+  final Algorithm algorithm;
+
+  final ScrollController scrollController = ScrollController();
+  PbcViewmodel({required this.algorithm}) {
+    final PBLayout? layout = AlgorithmLayoutData.getForAlgorithm(algorithm.name);
+    if (layout == null) return;
+    for (final PBItem item in layout.children) {
+      items.add(item);
+    }
+    width = layout.width.toDouble();
   }
   List<PBItem> items = <PBItem>[];
 
@@ -55,22 +66,55 @@ class PbcViewmodel extends ChangeNotifier {
     items.add(selected!);
   }
 
-  void addItem(String type, Offset position) {
-    final PBItemParam param = switch (type) {
-      'indicator' => PBIndicatorParam(label: "Indicator"),
-      'slider' => PBSliderParam(max: 100, min: 0, label: "Slider"),
-      'switch' => PBSwitchParam(label: "", enableValueLabel: "Yes", disabledValueLabel: "No"),
-      'text' => PBTextParam(label: "Text Goes Here"),
-      'graph' => PBGraphParam(label: "Graph goes here"),
+  void addParameter(PbWidgets type, Offset position, Parameter data) {
+    final dynamic dimension = data.dimensions?.isNotEmpty == true ? getValue(data.dimensions!.first) : null;
+    final PBItemParam param = type.fromParameter(data);
+    final ({num height, num width}) size = switch (param) {
+      PBIndicatorParam() => (width: 20, height: 15),
+      PBSliderParam() => (width: 10, height: 25),
+      PBSwitchParam() => (width: 20, height: 5),
+      PBTextParam() => (width: 20, height: 20),
+      PBGraphParam() => (width: 50, height: 50),
 
-      _ => PBEmptyParam(),
+      _ => (width: 20, height: 20),
     };
-    final ({num height, num width}) size = switch (type) {
-      'indicator' => (width: 20, height: 5),
-      'slider' => (width: 10, height: 25),
-      'switch' => (width: 20, height: 5),
-      'text' => (width: 20, height: 20),
-      'graph' => (width: 50, height: 50),
+    final num noOfItems = dimension is num && dimension > 1 ? dimension : 1;
+    final num paramWidth = roundTo2Digit(size.width);
+    num currentDx = roundTo2Digit(position.dx) - paramWidth;
+    num currentY = roundTo2Digit(position.dy);
+    for (int i = 0; i < noOfItems; i++) {
+      currentDx += paramWidth;
+      if (currentDx + paramWidth > width) {
+        currentDx = roundTo2Digit(position.dx);
+        currentY += roundTo2Digit(size.height) + 5;
+      }
+      items.add(
+        PBItem(
+          id: Random().nextInt(999999).toString(),
+          x: currentDx,
+          y: currentY,
+          width: roundTo2Digit(size.width),
+          height: roundTo2Digit(size.height),
+          field: data.name,
+          type: type.type,
+          param: param,
+          dimension: noOfItems > 1 ? i : null,
+          value: data.defaultValue,
+        ),
+      );
+    }
+    selected = items.last;
+    notifyListeners();
+  }
+
+  void addTelemetry(PbWidgets type, Offset position, Telemetry data) {
+    final PBItemParam param = type.fromTelemetry(data);
+    final ({num height, num width}) size = switch (param) {
+      PBIndicatorParam() => (width: 20, height: 15),
+      PBSliderParam() => (width: 10, height: 25),
+      PBSwitchParam() => (width: 20, height: 5),
+      PBTextParam() => (width: 20, height: 20),
+      PBGraphParam() => (width: 50, height: 50),
 
       _ => (width: 20, height: 20),
     };
@@ -78,18 +122,32 @@ class PbcViewmodel extends ChangeNotifier {
     items.add(
       PBItem(
         id: Random().nextInt(999999).toString(),
-        x: position.dx,
-        y: position.dy,
-        width: size.width,
-        height: size.height,
-        field: "",
-        type: type,
+        x: roundTo2Digit(position.dx),
+        y: roundTo2Digit(position.dy),
+        width: roundTo2Digit(size.width),
+        height: roundTo2Digit(size.height),
+        field: data.name,
+        type: type.type,
         param: param,
+        value: data.defaultValue,
       ),
     );
+    selected = items.last;
+    notifyListeners();
   }
 
-  Map<String, dynamic> get currentJson => <String, dynamic>{"width": 100, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};
+  double width = 200;
+  void addExtraWidth() {
+    width += 20;
+    notifyListeners();
+  }
+
+  void reduceWidth() {
+    width -= 20;
+    notifyListeners();
+  }
+
+  Map<String, dynamic> get currentJson => <String, dynamic>{"width": width, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};
 
   void delete() {
     items.remove(selected);
@@ -98,5 +156,12 @@ class PbcViewmodel extends ChangeNotifier {
 
   num roundTo2Digit(num val) {
     return (val * 100).round() / 100;
+  }
+
+  dynamic getValue(dynamic val) {
+    if (val is String) {
+      return algorithm.properties?.firstWhereOrNull((Property element) => element.name == val)?.defaultValue ?? val;
+    }
+    return val;
   }
 }

@@ -35,6 +35,7 @@ class ProjectService {
   final SubZoneRepository subZones;
   final WiringConnectionRepository wiringConnection;
   final ProcessingBlockRepository processingBlocks;
+  final ZoneFunctionRepository zoneFunctions;
 
   final RelationshipManager relationships;
 
@@ -74,6 +75,7 @@ class ProjectService {
     WiringConnectionRepository? wiringConnection,
     ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
+    ZoneFunctionRepository? zoneFunctions,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -86,6 +88,7 @@ class ProjectService {
        circuits = circuits ?? CircuitRepository(),
        wiringConnection = wiringConnection ?? WiringConnectionRepository(),
        processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
+       zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
        relationships = relationships ?? RelationshipManager();
 
   ProjectService copyWith({
@@ -115,6 +118,7 @@ class ProjectService {
     WiringConnectionRepository? wiringConnection,
     ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
+    ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
   }) {
     ProjectService projectService = ProjectService(
@@ -145,6 +149,7 @@ class ProjectService {
       processingBlocks: processingBlocks ?? this.processingBlocks,
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
+      zoneFunctions: zoneFunctions ?? this.zoneFunctions,
     );
 
     // Preserve undo/redo stacks
@@ -210,6 +215,7 @@ class ProjectService {
       "wiringConnection": wiringConnection.toJson((wc) => wc.toJson()),
       "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
+      "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
     };
   }
 
@@ -265,6 +271,7 @@ class ProjectService {
     service.wiringConnection.fromJsonList(json["wiringConnection"], (m) => WiringConnectionModel.fromJson(m), "id");
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.relationships.fromJson(json["relationships"]);
+    service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
 
     return service;
   }

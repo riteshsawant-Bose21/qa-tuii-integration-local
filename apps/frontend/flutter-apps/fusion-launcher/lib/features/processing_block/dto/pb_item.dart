@@ -14,6 +14,8 @@ class PBItem {
   final String field;
   final String type;
   final PBItemParam param;
+  final int? dimension;
+  final dynamic value;
   PBItem({
     required this.id,
     required this.x,
@@ -23,6 +25,8 @@ class PBItem {
     required this.field,
     required this.type,
     required this.param,
+    this.dimension,
+    this.value,
   });
 
   PBItem copyWith({
@@ -34,6 +38,8 @@ class PBItem {
     String? field,
     String? type,
     PBItemParam? param,
+    int? dimension,
+    dynamic value,
   }) {
     return PBItem(
       id: id ?? this.id,
@@ -44,6 +50,8 @@ class PBItem {
       field: field ?? this.field,
       type: type ?? this.type,
       param: param ?? this.param,
+      value: value ?? this.value,
+      dimension: dimension ?? this.dimension,
     );
   }
 
@@ -57,6 +65,8 @@ class PBItem {
       'field': field,
       'type': type,
       'param': param.toMap(),
+      'value': value,
+      'dimension': dimension,
     };
   }
 
@@ -70,6 +80,8 @@ class PBItem {
       field: (map['field'] ?? '') as String,
       type: (map['type'] ?? '') as String,
       param: PBParamFactory.build(map['param'] as Map<dynamic, dynamic>, (map['type'] ?? '') as String),
+      value: map['value'],
+      dimension: map['dimension'] as int?,
     );
   }
 
@@ -93,11 +105,12 @@ class PBItem {
         other.height == height &&
         other.field == field &&
         other.type == type &&
+        other.dimension == dimension &&
         other.param == param;
   }
 
   @override
   int get hashCode {
-    return id.hashCode ^ x.hashCode ^ y.hashCode ^ width.hashCode ^ height.hashCode ^ field.hashCode ^ type.hashCode ^ param.hashCode;
+    return id.hashCode ^ x.hashCode ^ y.hashCode ^ width.hashCode ^ height.hashCode ^ field.hashCode ^ type.hashCode ^ dimension.hashCode ^ param.hashCode;
   }
 }

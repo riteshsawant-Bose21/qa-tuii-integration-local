@@ -82,7 +82,8 @@ extension HardwareService on ProjectService {
     }
 
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);
-    for (final connId in wireConnections) {
+    final wireConnectionsCopy = List<String>.from(wireConnections);
+    for (final connId in wireConnectionsCopy) {
       removeWiringConnection(connId);
     }
 

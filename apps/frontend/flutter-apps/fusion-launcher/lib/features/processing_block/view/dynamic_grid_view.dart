@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 import '../dto/pb_item.dart';
@@ -5,19 +7,25 @@ import '../dto/pb_layout.dart';
 import 'item_widget_builder.dart';
 
 class DynamicGridView extends StatelessWidget {
-  const DynamicGridView({super.key, required this.layout});
+  const DynamicGridView({super.key, required this.layout, this.handler});
   final PBLayout layout;
+  final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
-    return AspectRatio(
-      aspectRatio: 840 / 368,
-      child: Container(
-        // color: Colors.grey,
-        child: LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            final double widthPerCell = constraints.maxHeight / layout.height;
-
-            return Stack(
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final double widthPerCell = constraints.maxHeight / layout.height;
+        final int maxRowNum = layout.children.fold<int>(
+          0,
+          (int previousValue, PBItem element) => max(previousValue, element.x.toInt() + element.width.toInt()),
+        );
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          physics: const AlwaysScrollableScrollPhysics(),
+          child: SizedBox(
+            width: max(widthPerCell * maxRowNum, constraints.maxWidth),
+            height: widthPerCell * layout.height,
+            child: Stack(
               children: <Widget>[
                 for (final PBItem child in layout.children)
                   Positioned(
@@ -26,14 +34,14 @@ class DynamicGridView extends StatelessWidget {
                     child: SizedBox(
                       width: widthPerCell * child.width,
                       height: widthPerCell * child.height,
-                      child: ItemWidgetBuilder(item: child),
+                      child: ItemWidgetBuilder(item: child, valueHandler: handler),
                     ),
                   ),
               ],
-            );
-          },
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

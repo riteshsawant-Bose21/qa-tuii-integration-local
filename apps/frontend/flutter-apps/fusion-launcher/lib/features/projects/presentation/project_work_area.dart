@@ -24,7 +24,6 @@ import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_page.dart';
-import '../../processing_block/view/processing_block_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -456,13 +455,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         },
       ),
 
-      const FusionDockableArea(
-        tabKey: "zone_config_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: ProcessingBlockPage(),
-        dockItemList: <DockItemConfig>[],
-      ),
+      // if (kDebugMode)
+      //   const FusionDockableArea(
+      //     tabKey: "zone_config_tab",
+      //     showLeft: false,
+      //     showRight: false,
+      //     mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
+      //     dockItemList: <DockItemConfig>[],
+      //   ),
 
       /// budget tab with docking area
       const FusionDockableArea(
@@ -477,7 +477,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       FusionDockableArea(
         tabKey: "configuration_tab",
         showLeft: true,
-        showRight: true,
+        showRight: false,
         mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing

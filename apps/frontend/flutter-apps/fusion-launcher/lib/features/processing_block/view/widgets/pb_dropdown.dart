@@ -1,10 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../dto/pb_item.dart';
+import '../../dto/pb_item_param.dart';
+import '../../view/item_widget_builder.dart';
+
 const double _bRadius = 12;
 const double _blurRadius = 10;
 
-class PBDropdown<T> extends StatelessWidget {
+class PBDropdown extends StatelessWidget {
+  const PBDropdown({super.key, required this.item, this.handler});
+  final PBItem item;
+  final PBWidgetValueHandler? handler;
+
+  @override
+  Widget build(BuildContext context) {
+    final PBDropdownParam data = (handler?.resolveForItem(item) ?? item.param) as PBDropdownParam;
+    return _Dropdown<String>(
+      value: handler?.getValue(item) ?? item.value ?? data.label,
+      hintText: data.label,
+      onChanged: (String? value) {
+        handler?.onValueChanged(item, value);
+      },
+      itemBuilder: (BuildContext context) {
+        return data.options
+            .map<PopupMenuEntry<String>>(
+              (String option) => PopupMenuItem<String>(
+                value: option,
+                child: Text(option),
+              ),
+            )
+            .toList();
+      },
+    );
+  }
+}
+
+class _Dropdown<T> extends StatelessWidget {
   final String? value;
   final String hintText;
   final PopupMenuItemBuilder<T> itemBuilder;
@@ -12,7 +44,7 @@ class PBDropdown<T> extends StatelessWidget {
   final double? height;
   final double? width;
 
-  const PBDropdown({
+  const _Dropdown({
     super.key,
     this.value,
     required this.hintText,

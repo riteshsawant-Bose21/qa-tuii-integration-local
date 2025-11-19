@@ -15,4 +15,9 @@ class PBEmptyParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBEmptyParam();
   }
+
+  @override
+  PBItemParam clone() {
+    return PBEmptyParam();
+  }
 }

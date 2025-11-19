@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/source_item.dart';
+import 'package:fusion_launcher/features/processing_block/view/processing_chain_view.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -153,19 +154,48 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             ),
                           ),
 
-                          const FusionImage.asset(
-                            Assets.linkIcon,
-                            width: 22,
-                            height: 22,
-                            fit: BoxFit.contain,
+                          Visibility(
+                            visible: _projectViewModel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
+                            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                              builder: (BuildContext context, ProjectViewModelState state) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    if (widget.sourceSet.isLinked) {
+                                      _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                      FusionToast.success(
+                                        context,
+                                        message: "Source set unlinked successfully",
+                                      );
+                                    } else {
+                                      _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                      FusionToast.success(
+                                        context,
+                                        message: "Source set linked successfully",
+                                      );
+                                    }
+                                  },
+                                  child: FusionImage.asset(
+                                    widget.sourceSet.isLinked ? Assets.linkIcon : Assets.unLinkIcon,
+                                    width: 22,
+                                    height: 22,
+                                    fit: BoxFit.contain,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
 
                           const SizedBox(width: 8),
-                          const FusionImage.asset(
-                            Assets.processingBlocksIcon,
-                            width: 18,
-                            height: 12,
-                            fit: BoxFit.contain,
+                          InkWell(
+                            onTap: () {
+                              ProcessingChainView.showForSourceSet(context, widget.sourceSet);
+                            },
+                            child: const FusionImage.asset(
+                              Assets.processingBlocksIcon,
+                              width: 18,
+                              height: 12,
+                              fit: BoxFit.contain,
+                            ),
                           ),
                           const SizedBox(width: 8),
                           GestureDetector(

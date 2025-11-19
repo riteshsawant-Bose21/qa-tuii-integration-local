@@ -47,4 +47,8 @@ class PBSwitchParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBSwitchParam.fromMap(map);
   }
+    @override
+  PBItemParam clone() {
+    return copyWith();
+  }
 }

@@ -37,4 +37,8 @@ class PBIndicatorParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBIndicatorParam.fromMap(map);
   }
+    @override
+  PBItemParam clone() {
+    return copyWith();
+  }
 }

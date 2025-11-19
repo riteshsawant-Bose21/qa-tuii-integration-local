@@ -12,7 +12,9 @@ class PBMeterParam extends PBItemParam {
 
   @override
   Map<String, dynamic> toMap() {
-    return <String, dynamic>{'label': label, 'min': min, 'max': max};
+    return <String, dynamic>{
+      'label': label, //'min': min, 'max': max
+    };
   }
 
   factory PBMeterParam.fromMap(Map<dynamic, dynamic> map) {
@@ -39,5 +41,9 @@ class PBMeterParam extends PBItemParam {
   @override
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBMeterParam.fromMap(map);
+  }
+    @override
+  PBItemParam clone() {
+    return copyWith();
   }
 }

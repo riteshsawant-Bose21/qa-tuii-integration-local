@@ -82,7 +82,13 @@ class ZoneRepository extends Repository<Zone> {
 
 class SubZoneRepository extends Repository<SubZone> {}
 
-class SourceSetRepository extends Repository<SourceSet> {}
+class SourceSetRepository extends Repository<SourceSet> {
+  SourceSetRepository copyWith(Map<String, SourceSet> items) {
+    final newRepo = SourceSetRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
 class HardwareRepository extends Repository<HardwareComponent> {
   HardwareRepository copyWith(Map<String, HardwareComponent> items) {
@@ -101,3 +107,5 @@ class CircuitRepository extends Repository<CircuitModel> {}
 class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
+
+class ZoneFunctionRepository extends Repository<ZoneFunctions> {}

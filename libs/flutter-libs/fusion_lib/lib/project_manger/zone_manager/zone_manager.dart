@@ -122,4 +122,60 @@ extension ZoneManager on ProjectManager {
       zones: projectService!.zones.copyWith(reorderedList),
     );
   }
+
+  void addSourceToZone({required String sourceId, required String zoneId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addSourceToZone(sourceId, zoneId);
+  }
+
+  void removeSourceFromZone({required String sourceId, required String zoneId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removeSourceFromZone(sourceId, zoneId);
+  }
+
+  List<Source> getSourcesInZone(String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSourcesInZone(zoneId);
+  }
+
+  List<Source> getSourcesAndSourceSetSourcesInZone(String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+  }
+
+  void addPrioritySourceToZone({required String sourceId, required String zoneId, required int priority}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.addPrioritySourceToZone(sourceId: sourceId, zoneId: zoneId, priority: priority);
+  }
+
+  void removePrioritySourceFromZone({required String sourceId, required String zoneId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.removePrioritySourceFromZone(sourceId: sourceId, zoneId: zoneId);
+  }
+
+  List<String> getPrioritySourcesInZone(String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getPrioritySourcesInZone(zoneId);
+  }
+
+  void reOrderPrioritySourcesInZone({required String zoneId, required List<String> newOrder}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
+  }
 }

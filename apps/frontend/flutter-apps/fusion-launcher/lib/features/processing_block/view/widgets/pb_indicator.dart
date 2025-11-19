@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
+import '../../view/item_widget_builder.dart';
 
 class PBIndicator extends StatelessWidget {
-  const PBIndicator({super.key, required this.item});
+  const PBIndicator({super.key, required this.item, this.handler});
   final PBItem item;
+  final PBWidgetValueHandler? handler;
 
   @override
   Widget build(BuildContext context) {
