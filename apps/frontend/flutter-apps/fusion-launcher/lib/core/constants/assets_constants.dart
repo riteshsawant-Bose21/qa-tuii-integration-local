@@ -16,6 +16,7 @@ class Assets {
   static const String processingBlocksFilledWhiteIcon = 'assets/icons/processing_blocks_filled_white_icon.png';
   static const String processingBlocksIcon = 'assets/icons/processing_blocks_icon.png';
   static const String linkIcon = 'assets/icons/link_icon.png';
+  static const String unLinkIcon = 'assets/icons/unlink_icon.png';
   static const String addSourceIcon = 'assets/icons/add_source.png';
   static const String subZoneIcon = 'assets/icons/sub_zone_icon.png';
   static const String deleteIcon = 'assets/icons/delete_icon.png';

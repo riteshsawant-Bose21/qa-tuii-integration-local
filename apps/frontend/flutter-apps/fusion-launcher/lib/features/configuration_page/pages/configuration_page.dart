@@ -357,10 +357,26 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   clipBehavior: Clip.none,
                   child: ReorderableListView.builder(
                     shrinkWrap: true,
+                    proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: SizedBox(
+                          width: 220,
+                          child: child,
+                        ),
+                      );
+                    },
                     physics: const ClampingScrollPhysics(),
                     buildDefaultDragHandles: false,
                     itemCount: _projectViewModel.sourceSets.length,
-                    onReorder: (int oldIndex, int newIndex) {},
+                    onReorder: (int oldIndex, int newIndex) {
+                      if (oldIndex < newIndex) {
+                        newIndex -= 1;
+                      }
+                      final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
+                      final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
+                      _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+                    },
                     itemBuilder: (BuildContext context, int index) {
                       final SourceSet sourceSet = _projectViewModel.sourceSets[index];
 
