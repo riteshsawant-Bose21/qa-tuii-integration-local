@@ -56,6 +56,11 @@ class ProcessingBlockModel {
       algorithmId: "tone_control",
     ),
     ProcessingBlockModel(
+      id: 'feedback_suppression',
+      name: 'Feedback Suppression',
+      algorithmId: "feedback_suppression",
+    ),
+    ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
@@ -97,6 +102,11 @@ class ProcessingBlockModel {
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
+    ),
+    ProcessingBlockModel(
+      id: 'feedback_suppression',
+      name: 'Feedback Suppression',
+      algorithmId: "feedback_suppression",
     ),
     ProcessingBlockModel(
       id: 'gain',

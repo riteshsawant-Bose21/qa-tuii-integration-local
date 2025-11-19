@@ -59,6 +59,20 @@ extension ZoneViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addZone(zone);
+
+      for (final String algo in <String>[
+        "delay",
+        "peq",
+      ]) {
+        addProcessingBlockToParent(
+          processingBlock: ProcessingBlockModel.zoneBlocks.firstWhere(
+            (ProcessingBlockModel element) => element.algorithmId == algo,
+          ),
+          parentId: zone.id,
+          autoSave: false,
+        );
+      }
+
       if (autoSave) {
         saveProject();
       }
