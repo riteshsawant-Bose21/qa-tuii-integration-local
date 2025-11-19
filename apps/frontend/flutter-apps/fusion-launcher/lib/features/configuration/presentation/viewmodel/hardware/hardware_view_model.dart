@@ -65,6 +65,23 @@ extension HardwareViewModel on ProjectViewModel {
           projectManager.addHardware(hardware.getClone());
         }
       }
+      if (hardware is Source) {
+        final SourceType spurceType = (hardware).type;
+        final List<String> chain = switch (spurceType) {
+          SourceType.mic => <String>['peq', 'gate', 'compressor', 'agc'],
+          SourceType.media => <String>['peq', 'compressor', 'agc'],
+          SourceType.generic => <String>['peq', 'compressor'],
+        };
+        for (final String algo in chain) {
+          addProcessingBlockToSource(
+            processingBlock: ProcessingBlockModel.sourceBlocks.firstWhere(
+              (ProcessingBlockModel element) => element.algorithmId == algo,
+            ),
+            sourceId: hardware.id,
+            autoSave: false,
+          );
+        }
+      }
       if (autoSave) {
         saveProject();
       }
