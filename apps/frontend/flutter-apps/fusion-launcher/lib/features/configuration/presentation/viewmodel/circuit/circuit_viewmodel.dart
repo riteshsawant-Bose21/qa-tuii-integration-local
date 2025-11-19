@@ -26,7 +26,7 @@ extension CircuitViewmodel on ProjectViewModel {
         name: "${hardware.hardwareName} ${count == 0 ? "" : count + 1}",
         speakerSKU: (hardware as Speaker).speakerSKU,
       );
-      projectManager.addCircuit(newCircuit);
+      addCircuit(circuit: newCircuit, autoSave: false);
       projectManager.addHardwareToCircuit(hardware.id, newCircuit.id);
 
       if (subzone != null) {
@@ -61,6 +61,19 @@ extension CircuitViewmodel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addCircuit(circuit);
+      for (final String algo in <String>[
+        "peq",
+        'limiter',
+        "delay",
+      ]) {
+        addProcessingBlockToParent(
+          processingBlock: ProcessingBlockModel.circuitBlocks.firstWhere(
+            (ProcessingBlockModel element) => element.algorithmId == algo,
+          ),
+          parentId: circuit.id,
+          autoSave: false,
+        );
+      }
       if (autoSave) {
         saveProject();
       }
