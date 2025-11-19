@@ -276,6 +276,10 @@ class ProcessingChainView extends StatelessWidget {
       context: context,
       builder:
           (BuildContext context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(0),
+            ),
+            backgroundColor: Colors.white,
             insetPadding: const EdgeInsets.symmetric(horizontal: 200, vertical: 100),
             child: ProcessingChainView(
               params: params,
