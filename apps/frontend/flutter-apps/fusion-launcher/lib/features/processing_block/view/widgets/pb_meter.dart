@@ -2,16 +2,19 @@ import 'package:flutter/material.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
+import '../../view/item_widget_builder.dart';
 
 class PBMeter extends StatelessWidget {
   const PBMeter({
     super.key,
     required this.item,
     this.showIntervals = true,
+    this.handler,
   });
 
   final PBItem item;
   final bool showIntervals;
+  final PBWidgetValueHandler? handler;
 
   @override
   Widget build(BuildContext context) {

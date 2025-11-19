@@ -192,7 +192,8 @@ class ProcessingChainView extends StatelessWidget {
                         const Divider(),
                         Flexible(
                           child: ProcessingBlockPage(
-                            algorithm: state.selectedBlock.algorithmId,
+                            processingBlock: state.selectedBlock,
+                            
                           ),
                         ),
                       ],

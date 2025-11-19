@@ -16,11 +16,11 @@ import '../../viewmodel/pbc_viewmodel.dart';
 import '../algorithm_selection_wrapper.dart';
 import '../item_widget_builder.dart';
 
-part './widgets/active_control.dart';
-part './widgets/bg_grid.dart';
-part './widgets/fields_list.dart';
-part './widgets/properties_panel.dart';
+part 'widgets/active_control.dart';
+part 'widgets/bg_grid.dart';
+part 'widgets/fields_list.dart';
 part 'widgets/pb_canvas_view.dart';
+part 'widgets/properties_panel.dart';
 
 class ProcessingBlockCustomizer extends StatelessWidget {
   const ProcessingBlockCustomizer({super.key});

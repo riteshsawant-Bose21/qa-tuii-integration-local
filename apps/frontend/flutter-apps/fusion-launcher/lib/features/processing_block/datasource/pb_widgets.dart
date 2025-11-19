@@ -5,28 +5,35 @@ import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 
 import '../dto/pb_item_param.dart';
+import '../view/item_widget_builder.dart';
 import '../view/widgets/widgets.dart';
 
 class PbWidgets {
   final String type;
-  final Widget Function(BuildContext context, PBItem item) builder;
+  final Widget Function(BuildContext context, PBItem item, PBWidgetValueHandler? handler) builder;
   final PBItemParam Function(Map<dynamic, dynamic> map) paramFactory;
   final PBItemParam Function(Parameter data) fromParameter;
   final PBItemParam Function(Telemetry data) fromTelemetry;
 
-  PbWidgets({required this.type, required this.builder, required this.paramFactory, required this.fromParameter,required this.fromTelemetry,});
+  PbWidgets({
+    required this.type,
+    required this.builder,
+    required this.paramFactory,
+    required this.fromParameter,
+    required this.fromTelemetry,
+  });
 
   static List<PbWidgets> floatWidgets = <PbWidgets>[
     PbWidgets(
       type: 'slider',
-      builder: (BuildContext context, PBItem item) => PBSlider(item: item),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBSlider(item: item, handler: handler),
       paramFactory: PBSliderParam.fromMap,
       fromParameter: (Parameter data) => PBSliderParam(label: data.name, min: 0, max: 100),
       fromTelemetry: (Telemetry data) => PBSliderParam(label: data.name, min: 0, max: 100),
     ),
     PbWidgets(
       type: 'meter',
-      builder: (BuildContext context, PBItem item) => PBMeter(item: item),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBMeter(item: item, handler: handler),
       paramFactory: PBMeterParam.fromMap,
       fromParameter: (Parameter data) => PBMeterParam(label: data.name, max: 100, min: 0),
       fromTelemetry: (Telemetry data) => PBMeterParam(label: data.name, max: 100, min: 0),
@@ -36,14 +43,14 @@ class PbWidgets {
   static List<PbWidgets> boolWidgets = <PbWidgets>[
     PbWidgets(
       type: 'indicator',
-      builder: (BuildContext context, PBItem item) => PBIndicator(item: item),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBIndicator(item: item, handler: handler),
       paramFactory: PBIndicatorParam.fromMap,
       fromParameter: (Parameter data) => PBIndicatorParam(label: data.name),
       fromTelemetry: (Telemetry data) => PBIndicatorParam(label: data.name),
     ),
     PbWidgets(
       type: 'switch',
-      builder: (BuildContext context, PBItem item) => PBSwitch(item: item),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBSwitch(item: item, handler: handler),
       paramFactory: PBSwitchParam.fromMap,
       fromParameter: (Parameter data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
       fromTelemetry: (Telemetry data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
@@ -59,7 +66,7 @@ class PbWidgets {
     // ),
     PbWidgets(
       type: 'text',
-      builder: (BuildContext context, PBItem item) => PBText(item: item),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBText(item: item, handler: handler),
       paramFactory: PBTextParam.fromMap,
       fromParameter: (Parameter data) => PBTextParam(label: data.name),
       fromTelemetry: (Telemetry data) => PBTextParam(label: data.name),
@@ -80,15 +87,13 @@ class PbWidgets {
   static List<PbWidgets> selectWidgets = <PbWidgets>[
     PbWidgets(
       type: 'dropdown',
-      builder: (BuildContext context, PBItem item) => PBDropdown(item: item),
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBDropdown(item: item, handler: handler),
       paramFactory: PBDropdownParam.fromMap,
-      fromParameter:
-          (Parameter data) => PBDropdownParam(
-            label: data.name,
-          ),
+      fromParameter: (Parameter data) => PBDropdownParam(label: data.name, options: <String>[]),
       fromTelemetry:
           (Telemetry data) => PBDropdownParam(
             label: data.name,
+            options: <String>[],
           ),
     ),
   ];

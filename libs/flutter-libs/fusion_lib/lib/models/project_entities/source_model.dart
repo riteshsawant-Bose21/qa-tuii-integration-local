@@ -104,11 +104,13 @@ class Source extends HardwareComponent {
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       type: SourceType.values.firstWhere(
         (SourceType e) => e.name.toLowerCase() == (json['type'] as String).toLowerCase(),
-        orElse: () => throw FormatException('Unknown SourceType in JSON: ${json['type']}'),
+        orElse: () => SourceType.generic, //throw FormatException('Unknown SourceType in JSON: ${json['type']}'),
       ),
       connectionType: SourceConnectionType.values.firstWhere(
-        (SourceConnectionType e) => e.name.toLowerCase() == (json['connectionType'] as String).toLowerCase(),
-        orElse: () => throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
+        (SourceConnectionType e) => e.name.toLowerCase() == (json['connectionType'] as String?)?.toLowerCase(),
+        orElse: () => SourceConnectionType.values.firstWhere(
+          (e) => e.name == json['type'],
+        ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
