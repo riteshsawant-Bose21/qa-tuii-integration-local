@@ -17,7 +17,7 @@ class PBDropdown extends StatelessWidget {
   Widget build(BuildContext context) {
     final PBDropdownParam data = (handler?.resolveForItem(item) ?? item.param) as PBDropdownParam;
     return _Dropdown<String>(
-      value: handler?.getValue(item.field) ?? data.label,
+      value: handler?.getValue(item) ?? item.value ?? data.label,
       hintText: data.label,
       onChanged: (String? value) {
         handler?.onValueChanged(item, value);

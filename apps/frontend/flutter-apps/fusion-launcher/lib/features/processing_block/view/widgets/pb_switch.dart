@@ -10,7 +10,7 @@ class PBSwitch extends StatelessWidget {
   final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
-    final PBSwitchParam data = item.param as PBSwitchParam;
+    final PBSwitchParam data = (handler?.resolveForItem(item) ?? item.param) as PBSwitchParam;
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double mw = constraints.maxWidth;
@@ -28,7 +28,7 @@ class PBSwitch extends StatelessWidget {
                 false: Text(data.disabledValueLabel ?? "No", style: style),
               },
               onValueChanged: (_) {},
-              groupValue: true,
+              groupValue: handler?.getValue(item) ?? true,
             ),
           ],
         );

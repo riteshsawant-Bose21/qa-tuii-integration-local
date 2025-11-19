@@ -34,7 +34,7 @@ class PBSlider extends StatelessWidget {
         ),
         Expanded(
           child: VerticalSlider(
-            value: handler?.getValue(item.field) ?? 100,
+            value: handler?.getValue(item) ?? item.value ?? 10,
             min: data.min,
             max: data.max,
             showIntervals: showIntervals,

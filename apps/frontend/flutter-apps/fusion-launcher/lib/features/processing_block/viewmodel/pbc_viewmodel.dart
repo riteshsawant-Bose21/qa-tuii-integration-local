@@ -98,6 +98,7 @@ class PbcViewmodel extends ChangeNotifier {
           field: data.name,
           type: type.type,
           param: param,
+          dimension: noOfItems > 1 ? i : null,
           value: data.defaultValue,
         ),
       );

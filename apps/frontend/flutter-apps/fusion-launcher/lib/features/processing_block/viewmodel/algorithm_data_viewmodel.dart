@@ -26,15 +26,19 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   PBLayout? layout;
 
   @override
-  dynamic getValue(String param) {
-    return processingBlock.properties.firstWhereOrNull((PropertySetting element) => element.name == param)?.value ??
-        algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == param)?.defaultValue ??
-        algorithm?.telemetry?.firstWhereOrNull((Telemetry e) => e.name == param)?.defaultValue;
+  dynamic getValue(PBItem param) {
+    return processingBlock.properties
+            .firstWhereOrNull((PropertySetting element) => element.name == param.field && element.dimension == param.dimension)
+            ?.value ??
+        resolveValue(
+          algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == param.field)?.defaultValue ??
+              algorithm?.telemetry?.firstWhereOrNull((Telemetry e) => e.name == param.field)?.defaultValue,
+        );
   }
 
   @override
   void onValueChanged(PBItem item, dynamic value) {
-    processingBlock.updateProperty(PropertySetting(name: item.field, value: value));
+    processingBlock.updateProperty(PropertySetting(name: item.field, value: value, dimension: item.dimension));
     serviceLocator<ProjectViewModel>().updateProcessingBlock(
       processingBlock: processingBlock,
     );

@@ -185,6 +185,15 @@ class ProcessingChainView extends StatelessWidget {
                               state.selectedBlock.name,
                             ),
                             const Spacer(),
+                            InkWell(
+                              onTap: () {
+                                viewModel.deleteSelectedProcessingBlock();
+                              },
+                              child: const Icon(
+                                Icons.delete_outline_rounded,
+                                color: Colors.red,
+                              ),
+                            ),
                             const Icon(Icons.more_vert),
                             const SizedBox(),
                           ],
@@ -193,7 +202,6 @@ class ProcessingChainView extends StatelessWidget {
                         Flexible(
                           child: ProcessingBlockPage(
                             processingBlock: state.selectedBlock,
-                            
                           ),
                         ),
                       ],

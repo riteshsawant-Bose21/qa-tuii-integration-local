@@ -67,6 +67,20 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
       load();
     }
   }
+
+  void deleteSelectedProcessingBlock() {
+    if (state is! UpdatedProcessingChainState) {
+      return;
+    }
+    final UpdatedProcessingChainState currentState = state as UpdatedProcessingChainState;
+    final String processingBlockId = currentState.selectedBlock.id;
+    if (param.type == ProcessingChainDeviceType.source) {
+      viewModel.removeProcessingBlockFromSource(processingBlockId: processingBlockId, sourceId: param.id);
+    } else {
+      viewModel.removeProcessingBlock(processingBlockId: processingBlockId);
+    }
+    load();
+  }
 }
 
 class ProcessingChainParams {

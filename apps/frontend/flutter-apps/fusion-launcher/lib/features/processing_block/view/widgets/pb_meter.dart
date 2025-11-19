@@ -18,10 +18,10 @@ class PBMeter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final PBMeterParam data = item.param as PBMeterParam;
+    final PBMeterParam data = (handler?.resolveForItem(item) ?? item.param) as PBMeterParam;
 
     return VerticalMeter(
-      value: 40,
+      value: handler?.getValue(item) ?? item.value ?? 40,
       min: data.min,
       max: data.max,
       showIntervals: showIntervals,
