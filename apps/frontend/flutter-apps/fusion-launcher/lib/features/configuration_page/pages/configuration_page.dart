@@ -359,7 +359,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                     shrinkWrap: true,
                     proxyDecorator: (Widget child, int index, Animation<double> animation) {
                       return Material(
-                        color: Colors.transparent,
+                        color: Colors.white,
                         child: SizedBox(
                           width: 220,
                           child: child,
@@ -523,6 +523,7 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                           zoneId: zoneData.id,
                           zoneName: zoneData.name,
                           bgColor: zoneData.color,
+                          zoneData: zoneData,
                         ),
                       );
                     },
