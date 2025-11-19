@@ -1051,7 +1051,7 @@ class _ZoneCardState extends State<ZoneCard> {
         padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
         decoration: BoxDecoration(
           border: Border.all(
-            color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+            color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.greyDark.withAlpha(150),
           ),
           borderRadius: BorderRadius.circular(3),
         ),
@@ -1063,30 +1063,31 @@ class _ZoneCardState extends State<ZoneCard> {
                 maxLine: 1,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontSize: 11,
-                  color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                  color: hasSelection ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.greyDark.withAlpha(150),
                 ),
               ),
             ),
-            if (hasSelection)
-              IntrinsicWidth(
-                child: Container(
-                  height: 14,
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
-                  alignment: Alignment.center,
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.greyDark,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                  child: FusionAppText(
-                    text: _projectViewModel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 8,
-                      color: Theme.of(context).colorScheme.white,
-                      fontWeight: FontWeight.w600,
+            hasSelection
+                ? IntrinsicWidth(
+                  child: Container(
+                    height: 14,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.greyDark,
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: FusionAppText(
+                      text: _projectViewModel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 8,
+                        color: Theme.of(context).colorScheme.white,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
-              ),
+                )
+                : Icon(Icons.add, color: Theme.of(context).colorScheme.greyDark.withAlpha(150), size: 16),
           ],
         ),
       ),
