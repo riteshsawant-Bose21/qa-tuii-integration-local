@@ -144,7 +144,7 @@
             ]
         },
         {
-            "name": "fusion_bdif_client",
+            "name": "bdif_client",
             "properties": [
                 {
                     "name": "num_gain_chs",

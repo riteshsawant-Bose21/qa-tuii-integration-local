@@ -115,6 +115,7 @@ void HWControl::change_php_post_func(int index)
 }
 
 // gpio_ctrl pin/state mapping
+// C1+ -- 3 pin circuit
 // enum gpio_dir_state {
 //     GPIO_CTRL_OUTPUT_HI = 0x1,
 //     GPIO_CTRL_OUTPUT_LO = 0x7,
@@ -122,6 +123,7 @@ void HWControl::change_php_post_func(int index)
 //     GPIO_CTRL_HI_Z      = 0x6
 // };
 
+// C0 -- 2 pin circuit
 enum gpio_dir_state {
     GPIO_CTRL_OUTPUT_HI = 0x0,
     GPIO_CTRL_OUTPUT_LO = 0x3,
