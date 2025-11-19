@@ -395,7 +395,8 @@ func (s *RoleManagementService) CheckAdminPermission(ctx context.Context, userEm
 		JOIN access_level al ON fp.access_level_id = al.id
 		WHERE u.email = $1 
 		  AND u.account_id = $2 
-		  AND f.name = 'User Management'
+		  AND (f.name IN ('launcher.role.manage', 'launcher.user.create', 'launcher.user.update', 'launcher.user.delete', 'admin', '*')
+		       OR (f.name LIKE 'launcher.user.%' AND al.key IN ('admin', 'full')))
 		  AND al.key IN ('admin', 'full')
 	`
 

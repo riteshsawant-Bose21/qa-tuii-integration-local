@@ -6,7 +6,19 @@ package models
 import "testing"
 
 func TestUpsert(t *testing.T) {
-	t.Run("Products", testProductsUpsert)
+	t.Run("AccessLevels", testAccessLevelsUpsert)
 
-	t.Run("Projects", testProjectsUpsert)
+	t.Run("Accounts", testAccountsUpsert)
+
+	t.Run("AccountTypes", testAccountTypesUpsert)
+
+	t.Run("AccountTypeRoles", testAccountTypeRolesUpsert)
+
+	t.Run("AppUsers", testAppUsersUpsert)
+
+	t.Run("Features", testFeaturesUpsert)
+
+	t.Run("FeaturePermissions", testFeaturePermissionsUpsert)
+
+	t.Run("Roles", testRolesUpsert)
 }

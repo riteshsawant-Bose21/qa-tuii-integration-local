@@ -44,6 +44,38 @@ const UserAuthorizationCard: React.FC = () => {
   }
 
   if (error) {
+    // Check if it's a "User Not Found" error (404)
+    if (error.includes('User Not Found') || error.includes('USER_NOT_FOUND') || error.includes('404')) {
+      return (
+        <Card elevation={2}>
+          <CardContent>
+            <Alert 
+              severity="warning" 
+              icon={<SecurityIcon />}
+              action={
+                <Button 
+                  color="inherit" 
+                  size="small" 
+                  onClick={refetch}
+                  startIcon={<RefreshIcon />}
+                >
+                  Check Again
+                </Button>
+              }
+            >
+              <Typography variant="body2" gutterBottom>
+                <strong>Account Setup Required</strong>
+              </Typography>
+              <Typography variant="body2">
+                Your account is not yet set up in the system. Please contact your administrator to create your user account and assign appropriate roles and permissions.
+              </Typography>
+            </Alert>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    // Handle other errors
     return (
       <Card elevation={2}>
         <CardContent>
@@ -115,7 +147,7 @@ const UserAuthorizationCard: React.FC = () => {
             <ListItem disablePadding>
               <ListItemText
                 primary="User ID"
-                secondary={authorization.user_id}
+                secondary={authorization.user.id}
                 primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
                 secondaryTypographyProps={{ 
                   variant: 'caption', 
@@ -126,7 +158,7 @@ const UserAuthorizationCard: React.FC = () => {
             <ListItem disablePadding>
               <ListItemText
                 primary="Email"
-                secondary={authorization.email}
+                secondary={authorization.user.email}
                 primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
               />
             </ListItem>
@@ -135,7 +167,7 @@ const UserAuthorizationCard: React.FC = () => {
 
         <Divider sx={{ my: 2 }} />
 
-        {/* Roles Section */}
+        {/* Role Section */}
         <Box mb={3}>
           <Typography 
             variant="subtitle2" 
@@ -144,27 +176,60 @@ const UserAuthorizationCard: React.FC = () => {
             sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
             <GroupIcon fontSize="small" />
-            Roles ({authorization.roles?.length || 0})
+            Role
           </Typography>
           
-          {authorization.roles && authorization.roles.length > 0 ? (
+          {authorization.role ? (
             <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-              {authorization.roles.map((role, index) => (
-                <Chip
-                  key={index}
-                  label={role}
-                  size="small"
-                  color="primary"
-                  variant="outlined"
-                  icon={<GroupIcon />}
-                />
-              ))}
+              <Chip
+                label={authorization.role.role_name}
+                size="small"
+                color="primary"
+                variant="outlined"
+                icon={<GroupIcon />}
+              />
             </Box>
           ) : (
             <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
-              No roles assigned
+              No role assigned
             </Typography>
           )}
+        </Box>
+
+        {/* Account Section */}
+        <Box mb={3}>
+          <Typography 
+            variant="subtitle2" 
+            color="text.secondary" 
+            gutterBottom
+          >
+            Account Information
+          </Typography>
+          <List dense>
+            <ListItem disablePadding>
+              <ListItemText
+                primary="Account Name"
+                secondary={authorization.account.name}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+              />
+            </ListItem>
+            <ListItem disablePadding>
+              <ListItemText
+                primary="Account Type"
+                secondary={authorization.account.type}
+                primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+              />
+            </ListItem>
+            {authorization.account.description && (
+              <ListItem disablePadding>
+                <ListItemText
+                  primary="Description"
+                  secondary={authorization.account.description}
+                  primaryTypographyProps={{ variant: 'body2', fontWeight: 500 }}
+                />
+              </ListItem>
+            )}
+          </List>
         </Box>
 
         {/* Permissions Section */}
@@ -176,15 +241,15 @@ const UserAuthorizationCard: React.FC = () => {
             sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
           >
             <VpnKeyIcon fontSize="small" />
-            Permissions ({authorization.permissions?.length || 0})
+            Permissions
           </Typography>
           
-          {authorization.permissions && authorization.permissions.length > 0 ? (
+          {authorization.permissions && Object.keys(authorization.permissions).length > 0 ? (
             <Box display="flex" flexWrap="wrap" gap={1} mt={1}>
-              {authorization.permissions.map((permission, index) => (
+              {Object.entries(authorization.permissions).map(([key, value]) => (
                 <Chip
-                  key={index}
-                  label={permission}
+                  key={key}
+                  label={`${key}: ${value}`}
                   size="small"
                   color="secondary"
                   variant="outlined"
@@ -199,29 +264,7 @@ const UserAuthorizationCard: React.FC = () => {
           )}
         </Box>
 
-        {/* Metadata Section (if available) */}
-        {authorization.metadata && Object.keys(authorization.metadata).length > 0 && (
-          <Box mt={3}>
-            <Divider sx={{ my: 2 }} />
-            <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-              Additional Metadata
-            </Typography>
-            <Box 
-              component="pre" 
-              sx={{ 
-                fontSize: '0.75rem',
-                fontFamily: 'monospace',
-                backgroundColor: 'grey.50',
-                p: 2,
-                borderRadius: 1,
-                overflow: 'auto',
-                maxHeight: 200,
-              }}
-            >
-              {JSON.stringify(authorization.metadata, null, 2)}
-            </Box>
-          </Box>
-        )}
+
       </CardContent>
     </Card>
   );

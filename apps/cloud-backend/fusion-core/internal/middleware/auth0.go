@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -22,9 +23,7 @@ func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
 			})
 			c.Abort()
 			return
-		}
-
-		// Extract token from header
+		} // Extract token from header
 		token, err := auth.ExtractTokenFromHeader(authHeader)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{
@@ -38,9 +37,30 @@ func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
 		// Validate the token
 		claims, err := validator.ValidateToken(token)
 		if err != nil {
+			// Provide specific error codes for different token validation failures
+			errorCode := "INVALID_TOKEN"
+			message := "Invalid or expired token"
+
+			// Check for specific error types in the error message
+			errStr := err.Error()
+			if strings.Contains(errStr, "token is expired") || strings.Contains(errStr, "expired") {
+				errorCode = "TOKEN_EXPIRED"
+				message = "Token has expired"
+			} else if strings.Contains(errStr, "malformed") || strings.Contains(errStr, "not a valid JWT") {
+				errorCode = "TOKEN_MALFORMED"
+				message = "Malformed token"
+			} else if strings.Contains(errStr, "signature") {
+				errorCode = "INVALID_SIGNATURE"
+				message = "Invalid token signature"
+			} else if strings.Contains(errStr, "JWE token") {
+				errorCode = "UNSUPPORTED_TOKEN_FORMAT"
+				message = "Received JWE token but JWT expected"
+			}
+
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"error":   "Unauthorized",
-				"message": "Invalid or expired token",
+				"message": message,
+				"code":    errorCode,
 				"details": err.Error(),
 			})
 			c.Abort()
@@ -69,55 +89,6 @@ func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
 			c.Set("user_email", email) // Set the key expected by access control middleware
 			// Set the email in the context for the role management handlers
 			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), "user_email", email))
-		}
-
-		// Continue with the request
-		c.Next()
-	}
-}
-
-// OptionalAuth0Middleware creates a middleware that doesn't require authentication but validates tokens if present
-func OptionalAuth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		// Get the Authorization header
-		authHeader := c.GetHeader("Authorization")
-		if authHeader == "" {
-			// No token provided, continue without authentication
-			c.Next()
-			return
-		}
-
-		// Extract token from header
-		token, err := auth.ExtractTokenFromHeader(authHeader)
-		if err != nil {
-			// Invalid header format, continue without authentication
-			c.Next()
-			return
-		}
-
-		// Validate the token
-		claims, err := validator.ValidateToken(token)
-		if err != nil {
-			// Invalid token, continue without authentication
-			c.Next()
-			return
-		}
-
-		// Extract user information from claims
-		userID, err := auth.ExtractUserID(claims)
-		if err != nil {
-			// Invalid claims, continue without authentication
-			c.Next()
-			return
-		}
-
-		// Store user information in context
-		c.Set("userID", userID)
-		c.Set("claims", claims)
-
-		// Extract email if available
-		if email, err := auth.ExtractUserEmail(claims); err == nil {
-			c.Set("email", email)
 		}
 
 		// Continue with the request

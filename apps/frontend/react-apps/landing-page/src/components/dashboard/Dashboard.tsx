@@ -3,7 +3,7 @@
  * Clean black and white design
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Drawer,
@@ -35,41 +35,20 @@ import {
   Logout as LogoutIcon,
   Dashboard as DashboardIcon,
   AccountCircle as AccountCircleIcon,
-  Settings as SettingsIcon,
-  Help as HelpIcon,
 } from '@mui/icons-material';
 import { useAuth0 } from '@auth0/auth0-react';
+import { useUserAuthorization } from '../../hooks/useApi';
 import TokenDebug from '../debug/TokenDebug';
 import RoleManagement from '../role-management/RoleManagement';
 import BoseProLogo from '../../assets/bose_pro_logo_lines_black.png';
 
 const DRAWER_WIDTH = 300;
 
-interface UserAuthData {
-  user: {
-    id: string;
-    email: string;
-  };
-  account: {
-    id: string;
-    name: string;
-    description: string;
-    type: string;
-  };
-  role: {
-    id: number;
-    role_name: string;
-  };
-  permissions?: string[] | Record<string, string> | null;
-}
-
 const Dashboard: React.FC = () => {
-  const { user, logout, getIdTokenClaims } = useAuth0();
+  const { user, logout } = useAuth0();
+  const { authorization: userAuthData, isLoading: isLoadingAuth, error: authError } = useUserAuthorization();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedTab, setSelectedTab] = useState('profile');
-  const [userAuthData, setUserAuthData] = useState<UserAuthData | null>(null);
-  const [isLoadingAuth, setIsLoadingAuth] = useState(true);
-  const [authError, setAuthError] = useState<string | null>(null);
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
 
   const handleDrawerToggle = () => {
@@ -88,48 +67,7 @@ const Dashboard: React.FC = () => {
     setProfileMenuAnchor(null);
   };
 
-  useEffect(() => {
-    const fetchUserAuth = async () => {
-      try {
-        setIsLoadingAuth(true);
-        setAuthError(null);
-        
-        // Use getIdTokenClaims to get the ID token (JWT) instead of access token (JWE)
-        const idTokenClaims = await getIdTokenClaims();
-        const idToken = idTokenClaims?.__raw;
-        
-        if (!idToken) {
-          setAuthError('No ID token available');
-          setIsLoadingAuth(false);
-          return;
-        }
 
-        const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-        const response = await fetch(`${apiBaseUrl}/api/v1/user/me/authorization`, {
-          headers: {
-            'Authorization': `Bearer ${idToken}`
-          }
-        });
-        
-        if (response.ok) {
-          const data = await response.json();
-          
-          // Keep permissions as they are - backend sends map[string]string, frontend handles both array and object
-          setUserAuthData(data);
-          setAuthError(null);
-        } else {
-          setAuthError(`Failed to fetch user authorization: ${response.status} ${response.statusText}`);
-        }
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        setAuthError(`Failed to fetch user authorization: ${errorMessage}`);
-      } finally {
-        setIsLoadingAuth(false);
-      }
-    };
-
-    fetchUserAuth();
-  }, [getIdTokenClaims]);
 
   // Helper function to check if user has admin permissions
   const hasAdminPermissions = () => {
@@ -331,7 +269,7 @@ const Dashboard: React.FC = () => {
         </Card>
       )}
 
-      <TokenDebug />
+      <TokenDebug authorizationData={userAuthData} />
     </Stack>
   );
 

@@ -12,88 +12,196 @@ import "testing"
 // It does NOT run each operation group in parallel.
 // Separating the tests thusly grants avoidance of Postgres deadlocks.
 func TestParent(t *testing.T) {
-	t.Run("Products", testProducts)
-	t.Run("Projects", testProjects)
+	t.Run("AccessLevels", testAccessLevels)
+	t.Run("Accounts", testAccounts)
+	t.Run("AccountTypes", testAccountTypes)
+	t.Run("AccountTypeRoles", testAccountTypeRoles)
+	t.Run("AppUsers", testAppUsers)
+	t.Run("Features", testFeatures)
+	t.Run("FeaturePermissions", testFeaturePermissions)
+	t.Run("Roles", testRoles)
 }
 
 func TestDelete(t *testing.T) {
-	t.Run("Products", testProductsDelete)
-	t.Run("Projects", testProjectsDelete)
+	t.Run("AccessLevels", testAccessLevelsDelete)
+	t.Run("Accounts", testAccountsDelete)
+	t.Run("AccountTypes", testAccountTypesDelete)
+	t.Run("AccountTypeRoles", testAccountTypeRolesDelete)
+	t.Run("AppUsers", testAppUsersDelete)
+	t.Run("Features", testFeaturesDelete)
+	t.Run("FeaturePermissions", testFeaturePermissionsDelete)
+	t.Run("Roles", testRolesDelete)
 }
 
 func TestQueryDeleteAll(t *testing.T) {
-	t.Run("Products", testProductsQueryDeleteAll)
-	t.Run("Projects", testProjectsQueryDeleteAll)
+	t.Run("AccessLevels", testAccessLevelsQueryDeleteAll)
+	t.Run("Accounts", testAccountsQueryDeleteAll)
+	t.Run("AccountTypes", testAccountTypesQueryDeleteAll)
+	t.Run("AccountTypeRoles", testAccountTypeRolesQueryDeleteAll)
+	t.Run("AppUsers", testAppUsersQueryDeleteAll)
+	t.Run("Features", testFeaturesQueryDeleteAll)
+	t.Run("FeaturePermissions", testFeaturePermissionsQueryDeleteAll)
+	t.Run("Roles", testRolesQueryDeleteAll)
 }
 
 func TestSliceDeleteAll(t *testing.T) {
-	t.Run("Products", testProductsSliceDeleteAll)
-	t.Run("Projects", testProjectsSliceDeleteAll)
+	t.Run("AccessLevels", testAccessLevelsSliceDeleteAll)
+	t.Run("Accounts", testAccountsSliceDeleteAll)
+	t.Run("AccountTypes", testAccountTypesSliceDeleteAll)
+	t.Run("AccountTypeRoles", testAccountTypeRolesSliceDeleteAll)
+	t.Run("AppUsers", testAppUsersSliceDeleteAll)
+	t.Run("Features", testFeaturesSliceDeleteAll)
+	t.Run("FeaturePermissions", testFeaturePermissionsSliceDeleteAll)
+	t.Run("Roles", testRolesSliceDeleteAll)
 }
 
 func TestExists(t *testing.T) {
-	t.Run("Products", testProductsExists)
-	t.Run("Projects", testProjectsExists)
+	t.Run("AccessLevels", testAccessLevelsExists)
+	t.Run("Accounts", testAccountsExists)
+	t.Run("AccountTypes", testAccountTypesExists)
+	t.Run("AccountTypeRoles", testAccountTypeRolesExists)
+	t.Run("AppUsers", testAppUsersExists)
+	t.Run("Features", testFeaturesExists)
+	t.Run("FeaturePermissions", testFeaturePermissionsExists)
+	t.Run("Roles", testRolesExists)
 }
 
 func TestFind(t *testing.T) {
-	t.Run("Products", testProductsFind)
-	t.Run("Projects", testProjectsFind)
+	t.Run("AccessLevels", testAccessLevelsFind)
+	t.Run("Accounts", testAccountsFind)
+	t.Run("AccountTypes", testAccountTypesFind)
+	t.Run("AccountTypeRoles", testAccountTypeRolesFind)
+	t.Run("AppUsers", testAppUsersFind)
+	t.Run("Features", testFeaturesFind)
+	t.Run("FeaturePermissions", testFeaturePermissionsFind)
+	t.Run("Roles", testRolesFind)
 }
 
 func TestBind(t *testing.T) {
-	t.Run("Products", testProductsBind)
-	t.Run("Projects", testProjectsBind)
+	t.Run("AccessLevels", testAccessLevelsBind)
+	t.Run("Accounts", testAccountsBind)
+	t.Run("AccountTypes", testAccountTypesBind)
+	t.Run("AccountTypeRoles", testAccountTypeRolesBind)
+	t.Run("AppUsers", testAppUsersBind)
+	t.Run("Features", testFeaturesBind)
+	t.Run("FeaturePermissions", testFeaturePermissionsBind)
+	t.Run("Roles", testRolesBind)
 }
 
 func TestOne(t *testing.T) {
-	t.Run("Products", testProductsOne)
-	t.Run("Projects", testProjectsOne)
+	t.Run("AccessLevels", testAccessLevelsOne)
+	t.Run("Accounts", testAccountsOne)
+	t.Run("AccountTypes", testAccountTypesOne)
+	t.Run("AccountTypeRoles", testAccountTypeRolesOne)
+	t.Run("AppUsers", testAppUsersOne)
+	t.Run("Features", testFeaturesOne)
+	t.Run("FeaturePermissions", testFeaturePermissionsOne)
+	t.Run("Roles", testRolesOne)
 }
 
 func TestAll(t *testing.T) {
-	t.Run("Products", testProductsAll)
-	t.Run("Projects", testProjectsAll)
+	t.Run("AccessLevels", testAccessLevelsAll)
+	t.Run("Accounts", testAccountsAll)
+	t.Run("AccountTypes", testAccountTypesAll)
+	t.Run("AccountTypeRoles", testAccountTypeRolesAll)
+	t.Run("AppUsers", testAppUsersAll)
+	t.Run("Features", testFeaturesAll)
+	t.Run("FeaturePermissions", testFeaturePermissionsAll)
+	t.Run("Roles", testRolesAll)
 }
 
 func TestCount(t *testing.T) {
-	t.Run("Products", testProductsCount)
-	t.Run("Projects", testProjectsCount)
+	t.Run("AccessLevels", testAccessLevelsCount)
+	t.Run("Accounts", testAccountsCount)
+	t.Run("AccountTypes", testAccountTypesCount)
+	t.Run("AccountTypeRoles", testAccountTypeRolesCount)
+	t.Run("AppUsers", testAppUsersCount)
+	t.Run("Features", testFeaturesCount)
+	t.Run("FeaturePermissions", testFeaturePermissionsCount)
+	t.Run("Roles", testRolesCount)
 }
 
 func TestHooks(t *testing.T) {
-	t.Run("Products", testProductsHooks)
-	t.Run("Projects", testProjectsHooks)
+	t.Run("AccessLevels", testAccessLevelsHooks)
+	t.Run("Accounts", testAccountsHooks)
+	t.Run("AccountTypes", testAccountTypesHooks)
+	t.Run("AccountTypeRoles", testAccountTypeRolesHooks)
+	t.Run("AppUsers", testAppUsersHooks)
+	t.Run("Features", testFeaturesHooks)
+	t.Run("FeaturePermissions", testFeaturePermissionsHooks)
+	t.Run("Roles", testRolesHooks)
 }
 
 func TestInsert(t *testing.T) {
-	t.Run("Products", testProductsInsert)
-	t.Run("Products", testProductsInsertWhitelist)
-	t.Run("Projects", testProjectsInsert)
-	t.Run("Projects", testProjectsInsertWhitelist)
+	t.Run("AccessLevels", testAccessLevelsInsert)
+	t.Run("AccessLevels", testAccessLevelsInsertWhitelist)
+	t.Run("Accounts", testAccountsInsert)
+	t.Run("Accounts", testAccountsInsertWhitelist)
+	t.Run("AccountTypes", testAccountTypesInsert)
+	t.Run("AccountTypes", testAccountTypesInsertWhitelist)
+	t.Run("AccountTypeRoles", testAccountTypeRolesInsert)
+	t.Run("AccountTypeRoles", testAccountTypeRolesInsertWhitelist)
+	t.Run("AppUsers", testAppUsersInsert)
+	t.Run("AppUsers", testAppUsersInsertWhitelist)
+	t.Run("Features", testFeaturesInsert)
+	t.Run("Features", testFeaturesInsertWhitelist)
+	t.Run("FeaturePermissions", testFeaturePermissionsInsert)
+	t.Run("FeaturePermissions", testFeaturePermissionsInsertWhitelist)
+	t.Run("Roles", testRolesInsert)
+	t.Run("Roles", testRolesInsertWhitelist)
 }
 
 func TestReload(t *testing.T) {
-	t.Run("Products", testProductsReload)
-	t.Run("Projects", testProjectsReload)
+	t.Run("AccessLevels", testAccessLevelsReload)
+	t.Run("Accounts", testAccountsReload)
+	t.Run("AccountTypes", testAccountTypesReload)
+	t.Run("AccountTypeRoles", testAccountTypeRolesReload)
+	t.Run("AppUsers", testAppUsersReload)
+	t.Run("Features", testFeaturesReload)
+	t.Run("FeaturePermissions", testFeaturePermissionsReload)
+	t.Run("Roles", testRolesReload)
 }
 
 func TestReloadAll(t *testing.T) {
-	t.Run("Products", testProductsReloadAll)
-	t.Run("Projects", testProjectsReloadAll)
+	t.Run("AccessLevels", testAccessLevelsReloadAll)
+	t.Run("Accounts", testAccountsReloadAll)
+	t.Run("AccountTypes", testAccountTypesReloadAll)
+	t.Run("AccountTypeRoles", testAccountTypeRolesReloadAll)
+	t.Run("AppUsers", testAppUsersReloadAll)
+	t.Run("Features", testFeaturesReloadAll)
+	t.Run("FeaturePermissions", testFeaturePermissionsReloadAll)
+	t.Run("Roles", testRolesReloadAll)
 }
 
 func TestSelect(t *testing.T) {
-	t.Run("Products", testProductsSelect)
-	t.Run("Projects", testProjectsSelect)
+	t.Run("AccessLevels", testAccessLevelsSelect)
+	t.Run("Accounts", testAccountsSelect)
+	t.Run("AccountTypes", testAccountTypesSelect)
+	t.Run("AccountTypeRoles", testAccountTypeRolesSelect)
+	t.Run("AppUsers", testAppUsersSelect)
+	t.Run("Features", testFeaturesSelect)
+	t.Run("FeaturePermissions", testFeaturePermissionsSelect)
+	t.Run("Roles", testRolesSelect)
 }
 
 func TestUpdate(t *testing.T) {
-	t.Run("Products", testProductsUpdate)
-	t.Run("Projects", testProjectsUpdate)
+	t.Run("AccessLevels", testAccessLevelsUpdate)
+	t.Run("Accounts", testAccountsUpdate)
+	t.Run("AccountTypes", testAccountTypesUpdate)
+	t.Run("AccountTypeRoles", testAccountTypeRolesUpdate)
+	t.Run("AppUsers", testAppUsersUpdate)
+	t.Run("Features", testFeaturesUpdate)
+	t.Run("FeaturePermissions", testFeaturePermissionsUpdate)
+	t.Run("Roles", testRolesUpdate)
 }
 
 func TestSliceUpdateAll(t *testing.T) {
-	t.Run("Products", testProductsSliceUpdateAll)
-	t.Run("Projects", testProjectsSliceUpdateAll)
+	t.Run("AccessLevels", testAccessLevelsSliceUpdateAll)
+	t.Run("Accounts", testAccountsSliceUpdateAll)
+	t.Run("AccountTypes", testAccountTypesSliceUpdateAll)
+	t.Run("AccountTypeRoles", testAccountTypeRolesSliceUpdateAll)
+	t.Run("AppUsers", testAppUsersSliceUpdateAll)
+	t.Run("Features", testFeaturesSliceUpdateAll)
+	t.Run("FeaturePermissions", testFeaturePermissionsSliceUpdateAll)
+	t.Run("Roles", testRolesSliceUpdateAll)
 }

@@ -7,7 +7,16 @@ import "testing"
 
 // TestToOne tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToOne(t *testing.T) {}
+func TestToOne(t *testing.T) {
+	t.Run("AccountToAccountTypeUsingAccountType", testAccountToOneAccountTypeUsingAccountType)
+	t.Run("AccountTypeRoleToAccountTypeUsingAccountType", testAccountTypeRoleToOneAccountTypeUsingAccountType)
+	t.Run("AccountTypeRoleToRoleUsingRole", testAccountTypeRoleToOneRoleUsingRole)
+	t.Run("AppUserToAccountUsingAccount", testAppUserToOneAccountUsingAccount)
+	t.Run("AppUserToAccountTypeRoleUsingAccountTypeRole", testAppUserToOneAccountTypeRoleUsingAccountTypeRole)
+	t.Run("FeaturePermissionToAccessLevelUsingAccessLevel", testFeaturePermissionToOneAccessLevelUsingAccessLevel)
+	t.Run("FeaturePermissionToAccountTypeRoleUsingAccountTypeRole", testFeaturePermissionToOneAccountTypeRoleUsingAccountTypeRole)
+	t.Run("FeaturePermissionToFeatureUsingFeature", testFeaturePermissionToOneFeatureUsingFeature)
+}
 
 // TestOneToOne tests cannot be run in parallel
 // or deadlocks can occur.
@@ -15,15 +24,35 @@ func TestOneToOne(t *testing.T) {}
 
 // TestToMany tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToMany(t *testing.T) {}
+func TestToMany(t *testing.T) {
+	t.Run("AccessLevelToFeaturePermissions", testAccessLevelToManyFeaturePermissions)
+	t.Run("AccountToAppUsers", testAccountToManyAppUsers)
+	t.Run("AccountTypeToAccounts", testAccountTypeToManyAccounts)
+	t.Run("AccountTypeToAccountTypeRoles", testAccountTypeToManyAccountTypeRoles)
+	t.Run("AccountTypeRoleToAppUsers", testAccountTypeRoleToManyAppUsers)
+	t.Run("AccountTypeRoleToFeaturePermissions", testAccountTypeRoleToManyFeaturePermissions)
+	t.Run("FeatureToFeaturePermissions", testFeatureToManyFeaturePermissions)
+	t.Run("RoleToAccountTypeRoles", testRoleToManyAccountTypeRoles)
+}
 
 // TestToOneSet tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToOneSet(t *testing.T) {}
+func TestToOneSet(t *testing.T) {
+	t.Run("AccountToAccountTypeUsingAccounts", testAccountToOneSetOpAccountTypeUsingAccountType)
+	t.Run("AccountTypeRoleToAccountTypeUsingAccountTypeRoles", testAccountTypeRoleToOneSetOpAccountTypeUsingAccountType)
+	t.Run("AccountTypeRoleToRoleUsingAccountTypeRoles", testAccountTypeRoleToOneSetOpRoleUsingRole)
+	t.Run("AppUserToAccountUsingAppUsers", testAppUserToOneSetOpAccountUsingAccount)
+	t.Run("AppUserToAccountTypeRoleUsingAppUsers", testAppUserToOneSetOpAccountTypeRoleUsingAccountTypeRole)
+	t.Run("FeaturePermissionToAccessLevelUsingFeaturePermissions", testFeaturePermissionToOneSetOpAccessLevelUsingAccessLevel)
+	t.Run("FeaturePermissionToAccountTypeRoleUsingFeaturePermissions", testFeaturePermissionToOneSetOpAccountTypeRoleUsingAccountTypeRole)
+	t.Run("FeaturePermissionToFeatureUsingFeaturePermissions", testFeaturePermissionToOneSetOpFeatureUsingFeature)
+}
 
 // TestToOneRemove tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToOneRemove(t *testing.T) {}
+func TestToOneRemove(t *testing.T) {
+	t.Run("AccountTypeRoleToAccountTypeUsingAccountTypeRoles", testAccountTypeRoleToOneRemoveOpAccountTypeUsingAccountType)
+}
 
 // TestOneToOneSet tests cannot be run in parallel
 // or deadlocks can occur.
@@ -35,12 +64,25 @@ func TestOneToOneRemove(t *testing.T) {}
 
 // TestToManyAdd tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManyAdd(t *testing.T) {}
+func TestToManyAdd(t *testing.T) {
+	t.Run("AccessLevelToFeaturePermissions", testAccessLevelToManyAddOpFeaturePermissions)
+	t.Run("AccountToAppUsers", testAccountToManyAddOpAppUsers)
+	t.Run("AccountTypeToAccounts", testAccountTypeToManyAddOpAccounts)
+	t.Run("AccountTypeToAccountTypeRoles", testAccountTypeToManyAddOpAccountTypeRoles)
+	t.Run("AccountTypeRoleToAppUsers", testAccountTypeRoleToManyAddOpAppUsers)
+	t.Run("AccountTypeRoleToFeaturePermissions", testAccountTypeRoleToManyAddOpFeaturePermissions)
+	t.Run("FeatureToFeaturePermissions", testFeatureToManyAddOpFeaturePermissions)
+	t.Run("RoleToAccountTypeRoles", testRoleToManyAddOpAccountTypeRoles)
+}
 
 // TestToManySet tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManySet(t *testing.T) {}
+func TestToManySet(t *testing.T) {
+	t.Run("AccountTypeToAccountTypeRoles", testAccountTypeToManySetOpAccountTypeRoles)
+}
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
-func TestToManyRemove(t *testing.T) {}
+func TestToManyRemove(t *testing.T) {
+	t.Run("AccountTypeToAccountTypeRoles", testAccountTypeToManyRemoveOpAccountTypeRoles)
+}

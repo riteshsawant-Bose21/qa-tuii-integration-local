@@ -86,8 +86,24 @@ func (acc *AccessControlConfig) RequirePermission(feature string, level Permissi
 			return
 		}
 
-		// Check if user has the required permission
-		if !acc.hasPermission(userAuth.Permissions, feature, level) {
+		// Check if user has the required permissions using database-driven approach
+		hasPermission, err := acc.UserService.CheckUserPermission(context.Background(), email, feature, string(level))
+		if err != nil {
+			// If database check fails, fallback to the old method
+			if !acc.hasPermission(userAuth.Permissions, feature, level) {
+				c.JSON(http.StatusForbidden, gin.H{
+					"error":   "Access Denied",
+					"message": fmt.Sprintf("Insufficient permissions. Required: %s.%s", feature, level),
+					"required_permission": gin.H{
+						"feature": feature,
+						"level":   level,
+					},
+					"user_permissions": userAuth.Permissions,
+				})
+				c.Abort()
+				return
+			}
+		} else if !hasPermission {
 			c.JSON(http.StatusForbidden, gin.H{
 				"error":   "Access Denied",
 				"message": fmt.Sprintf("Insufficient permissions. Required: %s.%s", feature, level),

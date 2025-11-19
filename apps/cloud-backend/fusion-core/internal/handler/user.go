@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,6 +29,7 @@ func NewUserHandler(userSvc fusion.User) *UserHandler {
 // @Security BearerAuth
 // @Success 200 {object} types.UserAuthorizationResponse "Successfully retrieved user authorization details"
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
+// @Failure 404 {object} map[string]string "User not found in the system"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /user/me/authorization [get]
 func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
@@ -56,6 +58,16 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 	// Get authorization details from service using email
 	authDetails, err := h.user.GetUserAuthorization(ctx, emailStr)
 	if err != nil {
+		// Check if it's a "user not found" error
+		if strings.Contains(err.Error(), "user not found") {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"error":   "User Not Found",
+				"message": "User account not found in the system. Please contact your administrator to set up your account.",
+				"code":    "USER_NOT_FOUND",
+			})
+			return
+		}
+		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
 			"message": err.Error(),
@@ -75,6 +87,7 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 // @Security BearerAuth
 // @Success 200 {object} types.User "Successfully retrieved user profile"
 // @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
+// @Failure 404 {object} map[string]string "User not found in the system"
 // @Failure 500 {object} map[string]string "Internal server error"
 // @Router /user/me/profile [get]
 func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
@@ -103,6 +116,16 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 	// Get user details from service
 	user, err := h.user.GetUserByEmail(ctx, emailStr)
 	if err != nil {
+		// Check if it's a "user not found" error
+		if strings.Contains(err.Error(), "user not found") {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"error":   "User Not Found",
+				"message": "User account not found in the system. Please contact your administrator to set up your account.",
+				"code":    "USER_NOT_FOUND",
+			})
+			return
+		}
+		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, gin.H{
 			"error":   "Internal Server Error",
 			"message": err.Error(),
@@ -172,8 +195,12 @@ func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	user, err := h.user.GetUserByEmail(ctx, email)
 	if err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == "user not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		if strings.Contains(err.Error(), "user not found") {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"error":   "User Not Found",
+				"message": "User account not found in the system",
+				"code":    "USER_NOT_FOUND",
+			})
 			return
 		}
 		// All other errors are internal server errors
@@ -223,8 +250,12 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 	user, err := h.user.UpdateUser(ctx, userID, &req)
 	if err != nil {
 		// Check if it's a "not found" error
-		if err.Error() == "user not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
+		if strings.Contains(err.Error(), "user not found") {
+			ctx.JSON(http.StatusNotFound, gin.H{
+				"error":   "User Not Found",
+				"message": "User account not found in the system",
+				"code":    "USER_NOT_FOUND",
+			})
 			return
 		}
 		// All other errors are internal server errors

@@ -5,8 +5,13 @@ import (
 	"database/sql"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/aarondl/null/v8"
+	"github.com/aarondl/sqlboiler/v4/boil"
+	"github.com/aarondl/sqlboiler/v4/queries/qm"
 )
 
 type Service struct {
@@ -21,18 +26,9 @@ func NewService(db *sql.DB) *Service {
 
 // GetUserByEmail retrieves a user by email from the database
 func (s *Service) GetUserByEmail(ctx context.Context, email string) (*types.User, error) {
-	query := `
-		SELECT id, email, full_name, account_type_role_id, account_id, created_at, updated_at
-		FROM app_user 
-		WHERE email = $1
-	`
-
-	var user types.User
-	err := s.db.QueryRowContext(ctx, query, email).Scan(
-		&user.ID, &user.Email, &user.FullName,
-		&user.AccountTypeRoleID, &user.AccountID,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	appUser, err := models.AppUsers(
+		models.AppUserWhere.Email.EQ(email),
+	).One(ctx, s.db)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -41,7 +37,23 @@ func (s *Service) GetUserByEmail(ctx context.Context, email string) (*types.User
 		return nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
-	return &user, nil
+	// Convert SQLBoiler model to API type
+	user := &types.User{
+		ID:                appUser.ID,
+		Email:             appUser.Email,
+		FullName:          appUser.FullName.String, // Convert null.String to string
+		AccountTypeRoleID: appUser.AccountTypeRoleID,
+		AccountID:         appUser.AccountID,
+		CreatedAt:         appUser.CreatedAt.Time, // Convert null.Time to time.Time
+		UpdatedAt:         nil,                    // Convert null.Time to *time.Time
+	}
+
+	// Handle nullable UpdatedAt field
+	if appUser.UpdatedAt.Valid {
+		user.UpdatedAt = &appUser.UpdatedAt.Time
+	}
+
+	return user, nil
 }
 
 // GetUserAuthorization retrieves complete user authorization information
@@ -58,36 +70,42 @@ func (s *Service) GetUserAuthorization(ctx context.Context, email string) (*type
 		return nil, fmt.Errorf("failed to get user permissions: %w", err)
 	}
 
-	// Get account information
-	accountQuery := `
-		SELECT a.id, a.name, a.description, at.name as account_type
-		FROM account a
-		JOIN account_type at ON a.account_type_id = at.id
-		WHERE a.id = $1
-	`
-
-	var accountInfo types.AccountInfo
-	err = s.db.QueryRowContext(ctx, accountQuery, user.AccountID).Scan(
-		&accountInfo.ID, &accountInfo.Name, &accountInfo.Description, &accountInfo.Type,
-	)
+	// Get account information using SQLBoiler
+	account, err := models.Accounts(
+		models.AccountWhere.ID.EQ(user.AccountID),
+		qm.Load(models.AccountRels.AccountType),
+	).One(ctx, s.db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get account: %w", err)
 	}
 
-	// Get role information
-	roleQuery := `
-		SELECT r.id, r.name, r.description
-		FROM role r
-		JOIN account_type_role atr ON r.id = atr.role_id
-		WHERE atr.id = $1
-	`
+	accountInfo := types.AccountInfo{
+		ID:          account.ID,
+		Name:        account.Name,
+		Description: account.Description.String, // Convert null.String to string
+		Type:        "",                         // Will be set below
+	}
 
-	var role types.Role
-	err = s.db.QueryRowContext(ctx, roleQuery, user.AccountTypeRoleID).Scan(
-		&role.ID, &role.Name, &role.Description,
-	)
+	if account.R != nil && account.R.AccountType != nil {
+		accountInfo.Type = account.R.AccountType.Name
+	}
+
+	// Get role information using SQLBoiler
+	accountTypeRole, err := models.AccountTypeRoles(
+		models.AccountTypeRoleWhere.ID.EQ(user.AccountTypeRoleID),
+		qm.Load(models.AccountTypeRoleRels.Role),
+	).One(ctx, s.db)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role: %w", err)
+	}
+
+	var role types.Role
+	if accountTypeRole.R != nil && accountTypeRole.R.Role != nil {
+		role = types.Role{
+			ID:          accountTypeRole.R.Role.ID,
+			Name:        accountTypeRole.R.Role.Name,
+			Description: accountTypeRole.R.Role.Description.String, // Convert null.String to string
+		}
 	}
 
 	return &types.UserAuthorizationResponse{
@@ -106,29 +124,22 @@ func (s *Service) GetUserAuthorization(ctx context.Context, email string) (*type
 
 // getUserPermissions retrieves all permissions for a user based on their account type role
 func (s *Service) getUserPermissions(ctx context.Context, accountTypeRoleID int) (map[string]string, error) {
-	query := `
-		SELECT f.name, al.key
-		FROM feature_permission fp
-		JOIN feature f ON fp.feature_id = f.id
-		JOIN access_level al ON fp.access_level_id = al.id
-		WHERE fp.account_type_role_id = $1
-		ORDER BY f.name
-	`
+	// Use SQLBoiler to query feature permissions with joins
+	featurePermissions, err := models.FeaturePermissions(
+		models.FeaturePermissionWhere.AccountTypeRoleID.EQ(accountTypeRoleID),
+		qm.Load(models.FeaturePermissionRels.Feature),
+		qm.Load(models.FeaturePermissionRels.AccessLevel),
+	).All(ctx, s.db)
 
-	rows, err := s.db.QueryContext(ctx, query, accountTypeRoleID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to query permissions: %w", err)
 	}
-	defer rows.Close()
 
 	permissions := make(map[string]string)
-	for rows.Next() {
-		var featureName, accessLevel string
-		err := rows.Scan(&featureName, &accessLevel)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan permission: %w", err)
+	for _, fp := range featurePermissions {
+		if fp.R.Feature != nil && fp.R.AccessLevel != nil {
+			permissions[fp.R.Feature.Name] = fp.R.AccessLevel.Key
 		}
-		permissions[featureName] = accessLevel
 	}
 
 	// Add fallback permissions based on role patterns
@@ -143,6 +154,67 @@ func (s *Service) getUserPermissions(ctx context.Context, accountTypeRoleID int)
 	}
 
 	return permissions, nil
+}
+
+// CheckUserPermission checks if a user has the required permission level for a specific feature
+func (s *Service) CheckUserPermission(ctx context.Context, userEmail, featureName string, requiredLevel string) (bool, error) {
+	// First try to get permission directly from database using SQLBoiler
+	appUser, err := models.AppUsers(
+		models.AppUserWhere.Email.EQ(userEmail),
+		qm.Load(models.AppUserRels.AccountTypeRole,
+			qm.Load(models.AccountTypeRoleRels.FeaturePermissions,
+				qm.Load(models.FeaturePermissionRels.Feature,
+					models.FeatureWhere.Name.EQ(featureName),
+				),
+				qm.Load(models.FeaturePermissionRels.AccessLevel),
+			),
+		),
+	).One(ctx, s.db)
+
+	if err == nil && appUser.R != nil && appUser.R.AccountTypeRole != nil && appUser.R.AccountTypeRole.R != nil {
+		for _, fp := range appUser.R.AccountTypeRole.R.FeaturePermissions {
+			if fp.R.Feature != nil && fp.R.Feature.Name == featureName && fp.R.AccessLevel != nil {
+				return s.isPermissionSufficient(fp.R.AccessLevel.Key, requiredLevel), nil
+			}
+		}
+	}
+
+	// If not found in database, check fallback permissions
+	user, err := s.GetUserByEmail(ctx, userEmail)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user: %w", err)
+	}
+
+	permissions, err := s.getUserPermissions(ctx, user.AccountTypeRoleID)
+	if err != nil {
+		return false, fmt.Errorf("failed to get user permissions: %w", err)
+	}
+
+	if level, exists := permissions[featureName]; exists {
+		return s.isPermissionSufficient(level, requiredLevel), nil
+	}
+
+	return false, nil // No permission found
+}
+
+// isPermissionSufficient checks if the user's permission level meets the required level
+func (s *Service) isPermissionSufficient(userLevel, requiredLevel string) bool {
+	levelHierarchy := map[string]int{
+		"none":  0,
+		"read":  1,
+		"write": 2,
+		"admin": 4,
+		"full":  4,
+	}
+
+	userLevelInt, userExists := levelHierarchy[strings.ToLower(userLevel)]
+	requiredLevelInt, requiredExists := levelHierarchy[strings.ToLower(requiredLevel)]
+
+	if !userExists || !requiredExists {
+		return false
+	}
+
+	return userLevelInt >= requiredLevelInt
 }
 
 // getRoleByAccountTypeRoleID gets role information by account type role ID
@@ -213,83 +285,90 @@ func (s *Service) getFallbackPermissions(roleName string) map[string]string {
 
 // CreateUser creates a new user in the database
 func (s *Service) CreateUser(ctx context.Context, req *types.CreateUserRequest) (*types.User, error) {
-	query := `
-		INSERT INTO app_user (email, full_name, account_type_role_id, account_id, created_at)
-		VALUES ($1, $2, $3, $4, NOW())
-		RETURNING id, email, full_name, account_type_role_id, account_id, created_at, updated_at
-	`
+	// Create new AppUser using SQLBoiler
+	appUser := &models.AppUser{
+		Email:             req.Email,
+		FullName:          null.StringFrom(req.FullName), // Convert string to null.String
+		AccountTypeRoleID: req.AccountTypeRoleID,
+		AccountID:         req.AccountID,
+		CreatedAt:         null.TimeFrom(time.Now()), // Set current time
+	}
 
-	var user types.User
-	err := s.db.QueryRowContext(ctx, query,
-		req.Email, req.FullName, req.AccountTypeRoleID, req.AccountID,
-	).Scan(
-		&user.ID, &user.Email, &user.FullName,
-		&user.AccountTypeRoleID, &user.AccountID,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
-
+	err := appUser.Insert(ctx, s.db, boil.Infer())
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
 
-	return &user, nil
+	// Convert SQLBoiler model to API type
+	user := &types.User{
+		ID:                appUser.ID,
+		Email:             appUser.Email,
+		FullName:          appUser.FullName.String,
+		AccountTypeRoleID: appUser.AccountTypeRoleID,
+		AccountID:         appUser.AccountID,
+		CreatedAt:         appUser.CreatedAt.Time,
+		UpdatedAt:         nil,
+	}
+
+	// Handle nullable UpdatedAt field
+	if appUser.UpdatedAt.Valid {
+		user.UpdatedAt = &appUser.UpdatedAt.Time
+	}
+
+	return user, nil
 }
 
 // UpdateUser updates an existing user in the database
 func (s *Service) UpdateUser(ctx context.Context, userID string, req *types.UpdateUserRequest) (*types.User, error) {
-	// Build dynamic query based on provided fields
-	setParts := []string{}
-	args := []interface{}{}
-	argIndex := 1
-
-	if req.FullName != nil {
-		setParts = append(setParts, fmt.Sprintf("full_name = $%d", argIndex))
-		args = append(args, *req.FullName)
-		argIndex++
-	}
-
-	if req.AccountTypeRoleID != nil {
-		setParts = append(setParts, fmt.Sprintf("account_type_role_id = $%d", argIndex))
-		args = append(args, *req.AccountTypeRoleID)
-		argIndex++
-	}
-
-	if req.AccountID != nil {
-		setParts = append(setParts, fmt.Sprintf("account_id = $%d", argIndex))
-		args = append(args, *req.AccountID)
-		argIndex++
-	}
-
-	if len(setParts) == 0 {
-		return nil, fmt.Errorf("no fields to update")
-	}
-
-	// Add updated_at
-	setParts = append(setParts, "updated_at = NOW()")
-
-	// Add userID to args
-	args = append(args, userID)
-
-	query := fmt.Sprintf(`
-		UPDATE app_user 
-		SET %s
-		WHERE id = $%d
-		RETURNING id, email, full_name, account_type_role_id, account_id, created_at, updated_at
-	`, strings.Join(setParts, ", "), argIndex)
-
-	var user types.User
-	err := s.db.QueryRowContext(ctx, query, args...).Scan(
-		&user.ID, &user.Email, &user.FullName,
-		&user.AccountTypeRoleID, &user.AccountID,
-		&user.CreatedAt, &user.UpdatedAt,
-	)
+	// First, get the existing user
+	appUser, err := models.AppUsers(
+		models.AppUserWhere.ID.EQ(userID),
+	).One(ctx, s.db)
 
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return nil, fmt.Errorf("user not found with ID: %s", userID)
 		}
+		return nil, fmt.Errorf("failed to get user for update: %w", err)
+	}
+
+	// Update fields that are provided
+	if req.FullName != nil {
+		appUser.FullName = null.StringFrom(*req.FullName)
+	}
+
+	if req.AccountTypeRoleID != nil {
+		appUser.AccountTypeRoleID = *req.AccountTypeRoleID
+	}
+
+	if req.AccountID != nil {
+		appUser.AccountID = *req.AccountID
+	}
+
+	// Set updated_at
+	appUser.UpdatedAt = null.TimeFrom(time.Now())
+
+	// Update the user in database
+	_, err = appUser.Update(ctx, s.db, boil.Infer())
+	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
 
-	return &user, nil
+	// Convert SQLBoiler model to API type
+	user := &types.User{
+		ID:                appUser.ID,
+		Email:             appUser.Email,
+		FullName:          appUser.FullName.String,
+		AccountTypeRoleID: appUser.AccountTypeRoleID,
+		AccountID:         appUser.AccountID,
+		CreatedAt:         appUser.CreatedAt.Time,
+		UpdatedAt:         nil,
+	}
+
+	// Handle nullable UpdatedAt field
+	if appUser.UpdatedAt.Valid {
+		user.UpdatedAt = &appUser.UpdatedAt.Time
+	}
+
+	return user, nil
 }

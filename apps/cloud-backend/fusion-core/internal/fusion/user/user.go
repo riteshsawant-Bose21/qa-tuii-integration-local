@@ -17,6 +17,11 @@ func (s *Service) GetUserAuthorization(ctx context.Context, email string) (*type
 	return s.dbService.GetUserAuthorization(ctx, email)
 }
 
+// CheckUserPermission checks if a user has the required permission level for a specific feature
+func (s *Service) CheckUserPermission(ctx context.Context, userEmail, featureName string, requiredLevel string) (bool, error) {
+	return s.dbService.CheckUserPermission(ctx, userEmail, featureName, requiredLevel)
+}
+
 // CreateUser creates a new user
 func (s *Service) CreateUser(ctx context.Context, req *types.CreateUserRequest) (*types.User, error) {
 	// Add any business logic validation here

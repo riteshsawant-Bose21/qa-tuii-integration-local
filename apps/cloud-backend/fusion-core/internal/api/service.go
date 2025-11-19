@@ -35,8 +35,8 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	productSvc fusion.Product,
-	projectSvc fusion.Project,
+	// productSvc fusion.Product,
+	// projectSvc fusion.Project,
 	userSvc fusion.User,
 	userDBSvc *userdb.Service,
 	roleManagementSvc *userdb.RoleManagementService,
@@ -54,13 +54,13 @@ func New(cfg *Config,
 	// engine.Use(ginLogger(logger)) // Custom logging middleware
 	engine.Use(corsMiddleware()) // CORS if needed
 
-	if productSvc == nil {
-		return nil, errors.New("missing product service")
-	}
+	// if productSvc == nil {
+	// 	return nil, errors.New("missing product service")
+	// }
 
-	if projectSvc == nil {
-		return nil, errors.New("missing project service")
-	}
+	// if projectSvc == nil {
+	// 	return nil, errors.New("missing project service")
+	// }
 
 	if userSvc == nil {
 		return nil, errors.New("missing user service")
@@ -77,8 +77,8 @@ func New(cfg *Config,
 
 	api := &API{
 		engine:                engine,
-		product:               productSvc,
-		project:               projectSvc,
+		// product:               productSvc,
+		// project:               projectSvc,
 		user:                  userSvc,
 		userDBService:         userDBSvc,
 		roleManagementService: roleManagementSvc,

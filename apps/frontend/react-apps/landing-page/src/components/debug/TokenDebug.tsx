@@ -14,8 +14,13 @@ import {
   Stack,
   Divider,
 } from '@mui/material';
+import type { UserAuthorizationResponse } from '../../services/apiClient';
 
-const TokenDebug: React.FC = () => {
+interface TokenDebugProps {
+  authorizationData?: UserAuthorizationResponse | null;
+}
+
+const TokenDebug: React.FC<TokenDebugProps> = ({ authorizationData }) => {
   const { getIdTokenClaims, getAccessTokenSilently, isAuthenticated } = useAuth0();
   const [tokenInfo, setTokenInfo] = useState<{
     idToken?: string;
@@ -38,26 +43,8 @@ const TokenDebug: React.FC = () => {
         // Get Access Token (might be JWE - 5 segments)
         const accessToken = await getAccessTokenSilently();
 
-        // Test API call to see what data we get
-        let apiResponse = null;
-        if (idToken) {
-          try {
-            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-            const response = await fetch(`${apiBaseUrl}/api/v1/user/me/authorization`, {
-              headers: {
-                'Authorization': `Bearer ${idToken}`
-              }
-            });
-            
-            if (response.ok) {
-              apiResponse = await response.json();
-            } else {
-              apiResponse = { error: `${response.status}: ${response.statusText}` };
-            }
-          } catch (err) {
-            apiResponse = { error: err instanceof Error ? err.message : 'API call failed' };
-          }
-        }
+        // Use authorization data passed as props instead of making API call
+        const apiResponse = authorizationData || null;
 
         setTokenInfo({
           idToken: idToken ? `${idToken.substring(0, 50)}...` : 'Not available',

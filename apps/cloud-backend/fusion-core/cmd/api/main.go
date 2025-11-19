@@ -33,13 +33,13 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
-	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
+	// productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
+	// projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 
@@ -85,17 +85,17 @@ func main() {
 	}
 	logger.Info("Initialized ID Service.")
 	//Initialize Product DB Service
-	productDBSvc := productdb.NewService(pgs)
-	if productDBSvc == nil {
-		logger.Fatal("Failed to initialize product database service")
-	}
-	logger.Info("Initialized Product DB Service.")
+	// productDBSvc := productdb.NewService(pgs)
+	// if productDBSvc == nil {
+	// 	logger.Fatal("Failed to initialize product database service")
+	// }
+	// logger.Info("Initialized Product DB Service.")
 
 	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs)
-	if projectDBSvc == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
+	// projectDBSvc := projectdb.NewService(pgs)
+	// if projectDBSvc == nil {
+	// 	logger.Fatal("Failed to initialize project service")
+	// }
 
 	// Initialize User DB Service
 	userDBSvc := userdb.NewService(pgs)
@@ -112,18 +112,18 @@ func main() {
 	logger.Info("Initialized Role Management Service.")
 
 	//Initialize Product Service
-	productSVC := product.NewService(productDBSvc, idSVC)
-	if productSVC == nil {
-		logger.Fatal("Failed to initialize product service")
-	}
-	logger.Info("Initialized Product Service.")
+	// productSVC := product.NewService(productDBSvc, idSVC)
+	// if productSVC == nil {
+	// 	logger.Fatal("Failed to initialize product service")
+	// }
+	// logger.Info("Initialized Product Service.")
 
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc)
-	if projectSVC == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
-	logger.Info("Initialized Project Service.")
+	// projectSVC := project.NewService(projectDBSvc)
+	// if projectSVC == nil {
+	// 	logger.Fatal("Failed to initialize project service")
+	// }
+	// logger.Info("Initialized Project Service.")
 
 	// Initialize User Service
 	userSVC := user.NewService(userDBSvc)
@@ -136,8 +136,8 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host:        "localhost",
 		Port:        "8080",
-		Auth0Domain: "id-dev.boseprofessional.com", // Your Auth0 domain
-	}, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
+		Auth0Domain: "id-dev.boseprofessional.com", // Auth0 domain
+	}, userSVC, userDBSvc, roleManagementSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

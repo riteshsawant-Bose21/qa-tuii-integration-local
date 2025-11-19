@@ -98,7 +98,7 @@ export const apiRequest = async <T = any>(
 
     return {
       success: response.ok,
-      data: response.ok ? responseData : undefined,
+      data: response.ok ? responseData : responseData, // Include responseData even for errors
       message: responseData.message,
       error: !response.ok ? responseData.error || responseData.message || `HTTP ${response.status}` : undefined,
       status: response.status,
@@ -114,10 +114,18 @@ export const apiRequest = async <T = any>(
 };
 
 /**
- * API Client class with common methods
+ * Token refresh handler type
+ */
+export type TokenRefreshHandler = () => Promise<string | null>;
+
+/**
+ * API Client class with token refresh support
  */
 export class ApiClient {
   private token?: string;
+  private tokenRefreshHandler?: TokenRefreshHandler;
+  private isRefreshing = false;
+  private refreshPromise?: Promise<string | null>;
 
   constructor(token?: string) {
     this.token = token;
@@ -145,45 +153,158 @@ export class ApiClient {
   }
 
   /**
-   * Make authenticated GET request
+   * Set token refresh handler
+   */
+  setTokenRefreshHandler(handler: TokenRefreshHandler) {
+    this.tokenRefreshHandler = handler;
+  }
+
+  /**
+   * Refresh token if needed
+   */
+  private async refreshTokenIfNeeded(): Promise<string | null> {
+    if (!this.tokenRefreshHandler) {
+      console.log('No token refresh handler available');
+      return this.token || null;
+    }
+
+    // If already refreshing, wait for the existing refresh
+    if (this.isRefreshing && this.refreshPromise) {
+      console.log('Token refresh already in progress, waiting...');
+      return this.refreshPromise;
+    }
+
+    // Start refresh process
+    console.log('Starting token refresh process...');
+    this.isRefreshing = true;
+    this.refreshPromise = this.tokenRefreshHandler();
+
+    try {
+      const newToken = await this.refreshPromise;
+      if (newToken) {
+        console.log('Token refresh successful, updating stored token');
+        this.token = newToken;
+      } else {
+        console.log('Token refresh returned null');
+      }
+      return newToken;
+    } catch (error) {
+      console.error('Token refresh failed:', error);
+      return null;
+    } finally {
+      this.isRefreshing = false;
+      this.refreshPromise = undefined;
+    }
+  }
+
+  /**
+   * Check if error indicates token expiration
+   */
+  private isTokenExpiredError(response: ApiResponse<any>): boolean {
+    if (response.status !== 401) return false;
+    
+    // Check if the response data indicates token expiration
+    const data = response.data || {};
+    const errorCode = data.code || '';
+    const errorMessage = (response.error || '').toLowerCase();
+    const details = (data.details || '').toLowerCase();
+    
+    const isExpired = (
+      errorCode === 'TOKEN_EXPIRED' ||
+      errorMessage.includes('expired') ||
+      errorMessage.includes('session expired') ||
+      details.includes('expired') ||
+      details.includes('token is expired')
+    );
+    
+    console.log('Checking if token expired:', {
+      status: response.status,
+      errorCode,
+      errorMessage,
+      details,
+      isExpired
+    });
+    
+    return isExpired;
+  }
+
+  /**
+   * Make request with automatic token refresh on 401
+   */
+  private async makeRequestWithRefresh<T>(
+    requestFn: () => Promise<ApiResponse<T>>
+  ): Promise<ApiResponse<T>> {
+    // First attempt
+    let response = await requestFn();
+
+    // If we get a token expiration error and have a refresh handler, try to refresh
+    if (this.isTokenExpiredError(response) && this.tokenRefreshHandler) {
+      console.log('Token expired, attempting refresh...');
+      
+      const newToken = await this.refreshTokenIfNeeded();
+      
+      if (newToken) {
+        console.log('Token refreshed successfully, retrying request...');
+        // Retry the request with the new token
+        response = await requestFn();
+      } else {
+        console.warn('Token refresh failed');
+      }
+    } else if (response.status === 401) {
+      console.log('Received 401 but not a token expiration error:', response.error);
+    }
+
+    return response;
+  }
+
+  /**
+   * Make authenticated GET request with token refresh
    */
   async get<T = any>(endpoint: string): Promise<ApiResponse<T>> {
-    return apiRequest<T>(endpoint, {
-      method: 'GET',
-      token: this.token,
-    });
+    return this.makeRequestWithRefresh(() =>
+      apiRequest<T>(endpoint, {
+        method: 'GET',
+        token: this.token,
+      })
+    );
   }
 
   /**
-   * Make authenticated POST request
+   * Make authenticated POST request with token refresh
    */
   async post<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-    return apiRequest<T>(endpoint, {
-      method: 'POST',
-      body: data,
-      token: this.token,
-    });
+    return this.makeRequestWithRefresh(() =>
+      apiRequest<T>(endpoint, {
+        method: 'POST',
+        body: data,
+        token: this.token,
+      })
+    );
   }
 
   /**
-   * Make authenticated PUT request
+   * Make authenticated PUT request with token refresh
    */
   async put<T = any>(endpoint: string, data?: any): Promise<ApiResponse<T>> {
-    return apiRequest<T>(endpoint, {
-      method: 'PUT',
-      body: data,
-      token: this.token,
-    });
+    return this.makeRequestWithRefresh(() =>
+      apiRequest<T>(endpoint, {
+        method: 'PUT',
+        body: data,
+        token: this.token,
+      })
+    );
   }
 
   /**
-   * Make authenticated DELETE request
+   * Make authenticated DELETE request with token refresh
    */
   async delete<T = any>(endpoint: string): Promise<ApiResponse<T>> {
-    return apiRequest<T>(endpoint, {
-      method: 'DELETE',
-      token: this.token,
-    });
+    return this.makeRequestWithRefresh(() =>
+      apiRequest<T>(endpoint, {
+        method: 'DELETE',
+        token: this.token,
+      })
+    );
   }
 
   /**

@@ -13,6 +13,9 @@ type User interface {
 	// GetUserAuthorization retrieves complete user authorization information by email
 	GetUserAuthorization(ctx context.Context, email string) (*types.UserAuthorizationResponse, error)
 
+	// CheckUserPermission checks if a user has the required permission level for a specific feature
+	CheckUserPermission(ctx context.Context, userEmail, featureName string, requiredLevel string) (bool, error)
+
 	// CreateUser creates a new user
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) (*types.User, error)
 

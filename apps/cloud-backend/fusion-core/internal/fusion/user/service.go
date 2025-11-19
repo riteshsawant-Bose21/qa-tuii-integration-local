@@ -13,6 +13,7 @@ type Service struct {
 type DatabaseService interface {
 	GetUserByEmail(ctx context.Context, email string) (*types.User, error)
 	GetUserAuthorization(ctx context.Context, email string) (*types.UserAuthorizationResponse, error)
+	CheckUserPermission(ctx context.Context, userEmail, featureName string, requiredLevel string) (bool, error)
 	CreateUser(ctx context.Context, req *types.CreateUserRequest) (*types.User, error)
 	UpdateUser(ctx context.Context, userID string, req *types.UpdateUserRequest) (*types.User, error)
 }
