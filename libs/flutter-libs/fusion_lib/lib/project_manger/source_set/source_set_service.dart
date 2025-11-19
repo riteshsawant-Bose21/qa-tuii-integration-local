@@ -296,4 +296,27 @@ extension SourceSetService on ProjectService {
       }
     }
   }
+
+  Map<String, SourceSet> reOrderSourceSet({
+    required String sourceSetToMoveId,
+    required String sourceSetAtNewIndexId,
+  }) {
+    List<SourceSet> items = sourceSets.getAll();
+
+    // Find indices
+    int fromIndex = items.indexWhere((ss) => ss.id == sourceSetToMoveId);
+    int toIndex = items.indexWhere((ss) => ss.id == sourceSetAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid hardware IDs');
+    }
+
+    // Reorder using List operations
+    SourceSet item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var ss in items) ss.id: ss};
+  }
 }
