@@ -31,12 +31,6 @@ class _ZoneCardState extends State<ZoneCard> {
   ZoneFunctionsType? selectedFunction;
   bool get _hasSelectedFunction => selectedFunction != null;
 
-  String? selectedPrioritySource1;
-  String? selectedPrioritySource2;
-
-  /// Add these to store the actual hardware IDs for radio button groupValue
-  String? selectedPrioritySourceId1;
-  String? selectedPrioritySourceId2;
   List<String> selectedZoneSourceIds = <String>[];
   List<String> selectedZoneSourceSetIds = <String>[];
   int? _hoveredCircuitIndex;
@@ -45,37 +39,12 @@ class _ZoneCardState extends State<ZoneCard> {
   void initState() {
     super.initState();
     _isZoneExpanded = ValueNotifier<bool>(false);
-    _loadPrioritySources();
   }
 
   @override
   void dispose() {
     _isZoneExpanded.dispose();
     super.dispose();
-  }
-
-  void _loadPrioritySources() {
-    final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
-
-    /// priority 1
-    if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
-      final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
-      if (sourceData != null) {
-        selectedPrioritySource1 = sourceData.name;
-        selectedPrioritySourceId1 = prioritySources[0];
-      }
-    }
-
-    /// priority 2
-    if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
-      final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
-      if (sourceData != null) {
-        selectedPrioritySource2 = sourceData.name;
-        selectedPrioritySourceId2 = prioritySources[1];
-      }
-    }
-
-    setState(() {});
   }
 
   /// Default proxy decorator for reorderable list view
@@ -277,7 +246,6 @@ class _ZoneCardState extends State<ZoneCard> {
         color: Colors.transparent,
         child: ReorderableListView.builder(
           proxyDecorator: _defaultProxyDecorator,
-
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           buildDefaultDragHandles: false,
@@ -287,9 +255,10 @@ class _ZoneCardState extends State<ZoneCard> {
 
             /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
             if (oldIndex != newIndex) {
-              /// Get current source IDs
-              final String? source1 = selectedPrioritySourceId1;
-              final String? source2 = selectedPrioritySourceId2;
+              /// Get current source IDs directly from view model
+              final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+              final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
+              final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
 
               /// Create new order list with swapped sources
               final List<String> newOrder = <String>[];
@@ -308,13 +277,6 @@ class _ZoneCardState extends State<ZoneCard> {
                 zoneId: widget.zoneId,
                 newOrder: newOrder,
               );
-
-              /// Update local state - swap the sources
-              selectedPrioritySourceId1 = source2;
-              selectedPrioritySource1 = source2 != null ? _projectViewModel.getHardware(hardwareId: source2)?.name : null;
-
-              selectedPrioritySourceId2 = source1;
-              selectedPrioritySource2 = source1 != null ? _projectViewModel.getHardware(hardwareId: source1)?.name : null;
             }
           },
           itemBuilder: (BuildContext context, int index) {
@@ -340,8 +302,30 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
-    final String? selectedSource = priorityIndex == 1 ? selectedPrioritySource1 : selectedPrioritySource2;
-    final String? selectedSourceId = priorityIndex == 1 ? selectedPrioritySourceId1 : selectedPrioritySourceId2;
+    String? selectedSourceId;
+    String? selectedSource;
+    final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+
+    /// priority 1
+    if (priorityIndex == 1) {
+      if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
+        final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
+        if (sourceData != null) {
+          selectedSource = sourceData.name;
+          selectedSourceId = prioritySources[0];
+        }
+      }
+    } else {
+      /// priority 2
+      if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
+        final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
+        if (sourceData != null) {
+          selectedSource = sourceData.name;
+          selectedSourceId = prioritySources[1];
+        }
+      }
+    }
+
     final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
 
     return Visibility(
@@ -354,8 +338,11 @@ class _ZoneCardState extends State<ZoneCard> {
               final String incomingId = details.data.id;
 
               /// Reject if already selected for this slot
-              if (priorityIndex == 1 && incomingId == selectedPrioritySourceId1) return false;
-              if (priorityIndex == 2 && incomingId == selectedPrioritySourceId2) return false;
+              if (priorityIndex == 1 && incomingId == selectedSourceId) return false;
+              if (priorityIndex == 2 && incomingId == selectedSourceId) return false;
+
+              /// incomingId should not be in both the priority slots
+              if (prioritySources.contains(incomingId)) return false;
 
               return true;
             },
@@ -364,53 +351,35 @@ class _ZoneCardState extends State<ZoneCard> {
               final Source source = details.data;
               final String sourceId = source.id;
               setState(() {
-                if (priorityIndex == 1) {
-                  selectedPrioritySource1 = source.name;
-                  selectedPrioritySourceId1 = sourceId;
-                  _projectViewModel.addPrioritySourceToZone(
-                    zoneId: widget.zoneId,
-                    sourceId: sourceId,
-                    priority: 1,
-                  );
-                } else {
-                  selectedPrioritySource2 = source.name;
-                  selectedPrioritySourceId2 = sourceId;
-                  _projectViewModel.addPrioritySourceToZone(
-                    zoneId: widget.zoneId,
-                    sourceId: sourceId,
-                    priority: 2,
-                  );
-                }
+                _projectViewModel.addPrioritySourceToZone(
+                  zoneId: widget.zoneId,
+                  sourceId: sourceId,
+                  priority: priorityIndex,
+                );
               });
             },
             builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
-              final bool isHovered = candidateData.isNotEmpty;
+              final bool canAccept = candidateData.isNotEmpty;
+              final bool cannotAccept = rejectedData.isNotEmpty;
               return PopupMenuButton<String>(
                 onSelected: (String value) {
                   setState(() {
-                    if (priorityIndex == 1) {
-                      selectedPrioritySource1 = _projectViewModel.getHardware(hardwareId: value)?.name;
-                      selectedPrioritySourceId1 = value;
-                      _projectViewModel.addPrioritySourceToZone(
-                        zoneId: widget.zoneId,
-                        sourceId: value,
-                        priority: 1,
-                      );
-                    } else {
-                      selectedPrioritySource2 = _projectViewModel.getHardware(hardwareId: value)?.name;
-                      selectedPrioritySourceId2 = value; // Store the ID
-                      _projectViewModel.addPrioritySourceToZone(
-                        zoneId: widget.zoneId,
-                        sourceId: value,
-                        priority: 2,
-                      );
-                    }
+                    _projectViewModel.addPrioritySourceToZone(
+                      zoneId: widget.zoneId,
+                      sourceId: value,
+                      priority: priorityIndex,
+                    );
                   });
                 },
                 offset: const Offset(0, 25),
                 tooltip: "Select Priority Source P$priorityIndex",
                 padding: EdgeInsets.zero,
-                color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Theme.of(context).colorScheme.white,
+                color:
+                    canAccept
+                        ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                        : cannotAccept
+                        ? Colors.redAccent
+                        : Theme.of(context).colorScheme.white,
                 itemBuilder: (BuildContext context) {
                   final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
@@ -450,44 +419,55 @@ class _ZoneCardState extends State<ZoneCard> {
                     for (final Source src in availableSources) {
                       final String value = src.id;
                       final String assetPath = src.assetImagePath;
+                      final bool isAlreadyInPriority = prioritySources.contains(value);
+                      final bool isCurrentSelection = selectedSourceId == value;
 
                       entries.add(
                         PopupMenuItem<String>(
-                          value: value,
+                          value: isAlreadyInPriority && !isCurrentSelection ? null : value,
+                          enabled: !isAlreadyInPriority || isCurrentSelection,
                           height: 20,
-                          child: Row(
-                            children: <Widget>[
-                              Transform.scale(
-                                scale: 0.7,
-                                child: Radio<String>(
-                                  value: value,
-                                  groupValue: selectedSourceId,
-                                  // Use the stored ID instead of name
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                  activeColor: Theme.of(context).colorScheme.greyDark,
-                                  onChanged: (String? v) {
-                                    if (v != null) Navigator.pop(context, v);
-                                  },
+                          child: Opacity(
+                            opacity: isAlreadyInPriority && !isCurrentSelection ? 0.9 : 1.0,
+                            child: Row(
+                              children: <Widget>[
+                                Transform.scale(
+                                  scale: 0.7,
+                                  child: Radio<String>(
+                                    value: value,
+                                    groupValue: isAlreadyInPriority && !isCurrentSelection ? value : selectedSourceId,
+                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                    activeColor: Theme.of(context).colorScheme.greyDark,
+                                    onChanged:
+                                        isAlreadyInPriority && !isCurrentSelection
+                                            ? null
+                                            : (String? v) {
+                                              if (v != null) Navigator.pop(context, v);
+                                            },
+                                  ),
                                 ),
-                              ),
 
-                              FusionImage.asset(
-                                assetPath,
-                                width: 14,
-                                height: 14,
-                                fit: BoxFit.contain,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: FusionAppText(
-                                  text: src.name,
-                                  capitalize: true,
-                                  maxLine: 1,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                                FusionImage.asset(
+                                  assetPath,
+                                  width: 14,
+                                  height: 14,
+                                  fit: BoxFit.contain,
                                 ),
-                              ),
-                            ],
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: isAlreadyInPriority && !isCurrentSelection ? '${src.name} (already selected)' : src.name,
+                                    capitalize: true,
+                                    maxLine: 1,
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      fontSize: 10,
+                                      color: isAlreadyInPriority && !isCurrentSelection ? Theme.of(context).colorScheme.grey : null,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -536,45 +516,56 @@ class _ZoneCardState extends State<ZoneCard> {
                         final String name = '${src.name} (${sourceSet.name})';
                         final String value = src.id;
                         final String assetPath = src.assetImagePath;
+                        final bool isAlreadyInPriority = prioritySources.contains(value);
+                        final bool isCurrentSelection = selectedSourceId == value;
 
                         entries.add(
                           PopupMenuItem<String>(
-                            value: value,
+                            value: isAlreadyInPriority && !isCurrentSelection ? null : value,
+                            enabled: !isAlreadyInPriority || isCurrentSelection,
                             height: 20,
-                            child: Row(
-                              children: <Widget>[
-                                Transform.scale(
-                                  scale: 0.7,
-                                  child: Radio<String>(
-                                    value: value,
-                                    groupValue: selectedSourceId,
-                                    // Use the stored ID instead of name
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
-                                    activeColor: Theme.of(context).colorScheme.greyDark,
-                                    onChanged: (String? v) {
-                                      if (v != null) Navigator.pop(context, v);
-                                    },
+                            child: Opacity(
+                              opacity: isAlreadyInPriority && !isCurrentSelection ? 0.9 : 1.0,
+                              child: Row(
+                                children: <Widget>[
+                                  Transform.scale(
+                                    scale: 0.7,
+                                    child: Radio<String>(
+                                      value: value,
+                                      groupValue: isAlreadyInPriority && !isCurrentSelection ? value : selectedSourceId,
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      visualDensity: const VisualDensity(horizontal: -4, vertical: -4),
+                                      activeColor: Theme.of(context).colorScheme.greyDark,
+                                      onChanged:
+                                          isAlreadyInPriority && !isCurrentSelection
+                                              ? null
+                                              : (String? v) {
+                                                if (v != null) Navigator.pop(context, v);
+                                              },
+                                    ),
                                   ),
-                                ),
 
-                                FusionImage.asset(
-                                  assetPath,
-                                  width: 14,
-                                  height: 14,
-                                  fit: BoxFit.contain,
-                                ),
-                                const SizedBox(width: 4),
-
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: name,
-                                    capitalize: true,
-                                    maxLine: 1,
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10),
+                                  FusionImage.asset(
+                                    assetPath,
+                                    width: 14,
+                                    height: 14,
+                                    fit: BoxFit.contain,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 4),
+
+                                  Expanded(
+                                    child: FusionAppText(
+                                      text: isAlreadyInPriority && !isCurrentSelection ? '$name (already selected)' : name,
+                                      capitalize: true,
+                                      maxLine: 1,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        fontSize: 10,
+                                        color: isAlreadyInPriority && !isCurrentSelection ? Theme.of(context).colorScheme.grey : null,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         );
@@ -589,11 +580,10 @@ class _ZoneCardState extends State<ZoneCard> {
                   width: 170,
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Theme.of(context).colorScheme.white,
-
+                    color: canAccept ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Theme.of(context).colorScheme.white,
                     border: Border.all(
                       color:
-                          isHovered
+                          canAccept
                               ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
                               : selectedSource == null
                               ? Theme.of(context).colorScheme.grey
@@ -647,22 +637,12 @@ class _ZoneCardState extends State<ZoneCard> {
           if (selectedSourceId != null)
             GestureDetector(
               onTap: () {
-                /// Remove priority source from zone
-                if (priorityIndex == 1) {
-                  _projectViewModel.removePrioritySourceFromZone(
-                    zoneId: widget.zoneId,
-                    sourceId: selectedPrioritySourceId1 ?? "",
-                  );
-                  selectedPrioritySource1 = null;
-                  selectedPrioritySourceId1 = null;
-                } else {
-                  _projectViewModel.removePrioritySourceFromZone(
-                    zoneId: widget.zoneId,
-                    sourceId: selectedPrioritySourceId2 ?? "",
-                  );
-                  selectedPrioritySource2 = null;
-                  selectedPrioritySourceId2 = null;
-                }
+                /// Remove priority source from zone using the actual ID from view model
+                _projectViewModel.removePrioritySourceFromZone(
+                  zoneId: widget.zoneId,
+                  sourceId: selectedSourceId!,
+                );
+                setState(() {});
               },
               child: const FusionImage.asset(
                 Assets.deleteIcon,

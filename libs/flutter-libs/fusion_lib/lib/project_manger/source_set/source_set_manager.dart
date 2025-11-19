@@ -26,7 +26,7 @@ extension SourceSetManager on ProjectManager {
       throw Exception('No project is currently open');
     }
 
-    projectService!.addSourceSet(sourceSet);
+    projectService!.updateSourceSet(sourceSet);
   }
 
   List<SourceSet> getAllSourceSets() {

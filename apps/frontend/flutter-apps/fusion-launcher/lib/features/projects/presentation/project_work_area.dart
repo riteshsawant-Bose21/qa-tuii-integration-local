@@ -457,14 +457,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         },
       ),
 
-      if (kDebugMode)
-        const FusionDockableArea(
-          tabKey: "zone_config_tab",
-          showLeft: false,
-          showRight: false,
-          mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
-          dockItemList: <DockItemConfig>[],
-        ),
+      // if (kDebugMode)
+      //   const FusionDockableArea(
+      //     tabKey: "zone_config_tab",
+      //     showLeft: false,
+      //     showRight: false,
+      //     mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
+      //     dockItemList: <DockItemConfig>[],
+      //   ),
 
       /// budget tab with docking area
       const FusionDockableArea(
