@@ -20,6 +20,8 @@ final DynamicLibrary _mace = () {
     return DynamicLibrary.open(p.join(frameworksDir, 'libMaceAPI.dylib'));
   } else if (Platform.isIOS) {
     return DynamicLibrary.process();
+  } else if (Platform.isWindows) {
+    return DynamicLibrary.open('MaceAPI.dll');
   } else {
     throw UnsupportedError('This platform is not supported');
   }
