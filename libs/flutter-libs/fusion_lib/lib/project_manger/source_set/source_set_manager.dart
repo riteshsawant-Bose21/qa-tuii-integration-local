@@ -37,11 +37,17 @@ extension SourceSetManager on ProjectManager {
   }
 
   //Add Source to SourceSet
-  void addSourceToSourceSet(String sourceId, String sourceSetId, {double? initialMixLevel}) {
+  void addSourceToSourceSet(
+    String sourceId,
+    String sourceSetId,
+  ) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.addSourceToSourceSet(sourceId, sourceSetId, initialMixLevel: initialMixLevel);
+    projectService!.addSourceToSourceSet(
+      sourceId,
+      sourceSetId,
+    );
   }
 
   // Remove Source from SourceSet

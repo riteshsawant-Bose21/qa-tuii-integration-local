@@ -72,10 +72,19 @@ extension SourceSetService on ProjectService {
   /// - Sets an initial mix level in sourceMixLevels if not present.
   ///
   /// Optionally call onChangeCallback?.call() or persist after this method.
-  void addSourceToSourceSet(String sourceId, String sourceSetId, {double? initialMixLevel}) {
+  void addSourceToSourceSet(
+    String sourceId,
+    String sourceSetId,
+  ) {
     // Adjust repo name if yours is `mixes` instead of `sourceSets`.
     if (!sourceSets.exists(sourceSetId)) {
       throw Exception('SourceSet $sourceSetId not found');
+    }
+
+    //remove current parent
+    final currentParent = relationships.getParent(RelationshipType.sourceSetSources, sourceId);
+    if (currentParent != null && currentParent != sourceSetId) {
+      relationships.unlink(RelationshipType.sourceSetSources, currentParent, sourceId);
     }
 
     // Add to id list idempotently
