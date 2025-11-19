@@ -10,6 +10,8 @@
 #include "fft.h"
 #include "denoise.h"
 
+// Temporary implementation for RNNoise demo
+
 namespace {
 
 
@@ -107,8 +109,9 @@ namespace {
             // bool initialized;
             // int count;
             DenoiseState *st;
-            RNNModel *model;
-
+            #ifdef USE_WEIGHTS_FILE
+                RNNModel *model;
+            #endif
             
             int out_buffer_index;
 
@@ -214,16 +217,21 @@ namespace {
                 SPDLOG_ERROR("Error: could not load weights_blob.bin");
                 
             st = rnnoise_create(model);
-            std::cout << "Yes"<< std::endl;
+            SPDLOG_INFO("RNNoise model loaded from weights_blob.bin");
         #else
             st = rnnoise_create(NULL);
-            std::cout << "No" << std::endl;
+            SPDLOG_INFO("RNNoise model loaded with default weights");
         #endif
         
         // right now only works when frame_size = FRAME_SIZE = 480,
         // print error if frame_size is different
         if (frame_size_rnnoise != 480)
             SPDLOG_ERROR("Frame size for the RNNoise model can only be 480");
+
+        // For AudioSubtask requirement: task frame size must be multiple of base frame size
+        if (frame_size_rnnoise > get_frame_size() && frame_size_rnnoise % get_frame_size() != 0) {
+            SPDLOG_ERROR("Frame size for VadAgc must be a multiple of base frame size for RNNoise processing.");
+        }
 
         out_buffer_index = 0;
         
@@ -247,24 +255,6 @@ namespace {
         
         // Copy data from the processing buffer
         memcpy(frame, pbuff, sizeof(float) * frame_size_rnnoise);
-        
-        // // Validate input data to prevent PFFFT corruption
-        // bool data_valid = true;
-        // for (int i = 0; i < frame_size_rnnoise; i++) {
-        //     if (!std::isfinite(frame[i])) {
-        //         data_valid = false;
-        //         SPDLOG_ERROR("Invalid input data at index {}: {}", i, frame[i]);
-        //         break;
-        //     }
-        // }
-        // if (!data_valid) {
-        //     // Fill with zeros if data is corrupted
-        //     memset(frame, 0, sizeof(float) * frame_size_rnnoise);
-        //     memset(frame_out, 0, sizeof(float) * frame_size_rnnoise);
-        //     smoothed_vad = (1.0f - alpha) * smoothed_vad; // decay without new input
-        //     vad_activity = (smoothed_vad >= vad_threshold);
-        //     return;
-        // }
         
         // SPDLOG_DEBUG("RNNoise processing: using buffer {}, current fill buffer: {}", 
         //             (in_buff_ping_pong == 0) ? 1 : 0, in_buff_ping_pong);
@@ -296,7 +286,6 @@ namespace {
         // Store data (first channel) to input buffer
         float *pbuff = in_buffer[in_buff_ping_pong].get();
         memcpy(&pbuff[in_buff_ptr], in[0], sizeof(float)*get_frame_size());
-        // SPDLOG_DEBUG("Storing {} samples to input buffer {} at index {}", get_frame_size(), in_buff_ping_pong, in_buff_ptr);
         in_buff_ptr += get_frame_size();
         
         // When input buffer is filled, mark ready and trigger processing
@@ -311,10 +300,8 @@ namespace {
             
             // Switch to other buffer
             in_buff_ping_pong = (in_buff_ping_pong == 0) ? 1 : 0;
-            // SPDLOG_DEBUG("Buffer full, switched to buffer {}, remaining samples: {}", in_buff_ping_pong, buff_remain_len);
         }
         
-        // Trigger RNNoise processing
         rnnoise_task.tick();
 
         for (int_fast32_t channel = 0; channel < channels; channel++)
@@ -455,127 +442,6 @@ namespace {
             }
         }
     }
-
-    //         in_meter[channel] = 0.0;
-    //         for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
-    //         {
-    //             float energy = in[channel][sample] * in[channel][sample];
-    //             smoothed_level[channel] += (energy - smoothed_level[channel]) *
-    //                 ((energy > smoothed_level[channel])
-    //                 ? level_attack_coeff : level_release_coeff);
-    //             fast_level[channel] += (energy - fast_level[channel]) *
-    //                 ((energy > fast_level[channel])
-    //                 ? level_attack_coeff : fast_release_coeff);
-    //             in_meter[channel] = std::max(in_meter[channel],
-    //                                         std::fabs(in[channel][sample]));
-    //         }
-
-    //         float log_level = 10.0f * log10(smoothed_level[channel]) + 20.0f;
-    //         float log_fast_level = 10.0f * log10(fast_level[channel]) + 20.0f;
-
-    //         if (vad_activity) {
-                
-    //             vad_hangover_counter[channel] = vad_hangover_frames;
-    //         } else if (vad_hangover_counter[channel] > 0) {
-                
-    //             vad_hangover_counter[channel] -= 1;
-    //         }
-
-    //         if ((log_fast_level > activity_threshold[channel]) || (hold_counter[channel] <= 0))
-    //         {
-    //             if (log_level > target_maximum[channel])
-    //             {
-    //                 target_gain[channel] =
-    //                     std::max(target_maximum[channel] - log_level,
-    //                             -cut_range[channel]);
-    //                 hold_counter[channel] = cut_hold_count[channel];
-    //             }
-    //             else if (vad_activity && (log_level < target_minimum[channel]))
-    //             {
-    //                 target_gain[channel] =
-    //                     std::min(target_minimum[channel] - log_level,
-    //                             boost_range[channel]);
-    //                 hold_counter[channel] = boost_hold_count[channel];
-    //             }
-    //             else if (vad_hangover_counter[channel] > 0) 
-    //             {
-
-    //             }
-    //             else if (!vad_activity && (log_level < target_minimum[channel])) 
-    //             {    
-    //                 target_gain[channel] *= 0.995f;
-    //             }
-    //             else
-    //             {
-    //                 target_gain[channel] = 0.0f;
-    //                 hold_counter[channel] = 0;
-    //             }
-
-    //             hold_meter[channel] = false;
-    //         }
-    //         else
-    //         {
-    //             hold_counter[channel]--;
-    //             hold_meter[channel] = true;
-    //         }
-
-    //         if ((target_gain[channel] > 0.0f) && !channel_bypass[channel])
-    //         {
-    //             total_boost += target_gain[channel];
-    //         }
-    //     }
-
-    //     float boost_limit_adjustment = 1.0f;
-
-    //     if (total_boost > max_total_boost)
-    //     {
-    //         boost_limit_adjustment = max_total_boost / total_boost;
-    //     }
-
-    //     current_total_boost = std::min(total_boost, max_total_boost);
-
-    //     for (int_fast32_t channel = 0; channel < channels; channel++)
-    //     {
-    //         float target = target_gain[channel];
-
-    //         if (target > 0.0f)
-    //         {
-    //             target *= boost_limit_adjustment;
-    //         }
-
-    //         if (channel_bypass[channel])
-    //         {
-    //             target = 0.0f;
-    //         }
-
-    //         float g = current_gain[channel];
-    //         float g_step = (target > 0.0f) ? boost_step[channel] : cut_step[channel];
-
-    //         if (target < g)
-    //         {
-    //             g_step *= -1.0f;
-    //         }
-
-    //         if (std::abs(target - g) < (g_step * get_frame_size()))
-    //         {
-    //             g = target;
-    //             g_step = 0.0f;
-    //         }
-
-    //         g = powf(10.0f, g / 20.0f);
-    //         g_step = powf(10.0f, g_step / 20.0f);
-
-    //         for (int_fast32_t sample = 0; sample < get_frame_size(); sample++)
-    //         {
-    //             out[channel][sample] = in[channel][sample] * g;
-    //             g *= g_step;
-    //         }
-
-    //         current_gain[channel] = 20.0f * log10f(g);
-            
-    //     }
-
-    // }
 
 
     void VadAgc::update_cut_rate(int row)

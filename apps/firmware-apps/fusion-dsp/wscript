@@ -78,8 +78,8 @@ def configure(conf):
     conf.env.append_value('CXXFLAGS',
                           ['-DSPDLOG_ACTIVE_LEVEL=SPDLOG_LEVEL_DEBUG'])
     
-    #to define USE_WEIGHTS_FILE
-    conf.env.append_value('CXXFLAGS', ['-DUSE_WEIGHTS_FILE'])
+    # #to define USE_WEIGHTS_FILE
+    # conf.env.append_value('CXXFLAGS', ['-DUSE_WEIGHTS_FILE'])
 
     if conf.env['IS_MACOS']:
         conf.env.append_value('INCLUDES', ['/opt/homebrew/include'])
