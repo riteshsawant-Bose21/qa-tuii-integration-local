@@ -23,6 +23,11 @@ class PBDropdownParam extends PBItemParam {
     return PBDropdownParam.fromMap(map);
   }
 
+  @override
+  PBDropdownParam clone() {
+    return copyWith();
+  }
+
   PBDropdownParam copyWith({
     String? label,
   }) {
