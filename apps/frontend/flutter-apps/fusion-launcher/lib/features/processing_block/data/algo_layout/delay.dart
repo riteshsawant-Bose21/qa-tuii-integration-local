@@ -1,0 +1,52 @@
+part of '../algorithm_layout_data.dart';
+
+final Map<String, Object> _delay = <String, Object>{
+  "width": 200.0,
+  "height": 100,
+  "children": <Map<String, Object>>[
+    <String, Object>{
+      "id": "200685",
+      "x": 4.81,
+      "y": 1.97,
+      "width": 25.37,
+      "height": 88.98,
+      "field": "delay",
+      "type": "slider",
+      "param": <String, String>{"label": "delay"},
+      "value": 0,
+    },
+    <String, Object>{
+      "id": "775650",
+      "x": 40.52,
+      "y": 23.06,
+      "width": 39.42,
+      "height": 10.68,
+      "field": "bypass",
+      "type": "switch",
+      "param": <String, String>{"label": "bypass", "enable_value_label": "YES", "disabled_value_label": "NO"},
+      "value": false,
+    },
+    <String, Object>{
+      "id": "875077",
+      "x": 40.26,
+      "y": 5.23,
+      "width": 36.16,
+      "height": 11.97,
+      "field": "channel_bypass",
+      "type": "switch",
+      "param": <String, String>{"label": "channel_bypass", "enable_value_label": "YES", "disabled_value_label": "NO"},
+      "value": false,
+    },
+    <String, Object>{
+      "id": "648970",
+      "x": 99.61,
+      "y": 3.67,
+      "width": 18.52,
+      "height": 90.77,
+      "field": "out_meter",
+      "type": "meter",
+      "param": <String, String>{"label": "out_meter"},
+      "value": -60.0,
+    },
+  ],
+};

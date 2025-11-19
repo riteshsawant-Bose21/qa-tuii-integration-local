@@ -7,8 +7,9 @@ import '../dto/pb_layout.dart';
 import 'item_widget_builder.dart';
 
 class DynamicGridView extends StatelessWidget {
-  const DynamicGridView({super.key, required this.layout});
+  const DynamicGridView({super.key, required this.layout, this.handler});
   final PBLayout layout;
+  final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -18,7 +19,6 @@ class DynamicGridView extends StatelessWidget {
           0,
           (int previousValue, PBItem element) => max(previousValue, element.x.toInt() + element.width.toInt()),
         );
-        // aspectRatio: 840 / 368,
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           physics: const AlwaysScrollableScrollPhysics(),
@@ -34,7 +34,7 @@ class DynamicGridView extends StatelessWidget {
                     child: SizedBox(
                       width: widthPerCell * child.width,
                       height: widthPerCell * child.height,
-                      child: ItemWidgetBuilder(item: child),
+                      child: ItemWidgetBuilder(item: child, valueHandler: handler),
                     ),
                   ),
               ],

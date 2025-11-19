@@ -228,10 +228,10 @@ extension SourceSetService on ProjectService {
   void addProcessingBlockToSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
     final source = getHardwareById(sourceId) as Source?;
     if (source == null) return;
+    addProcessingBlockToParent(processingBlock, sourceId);
 
     final sourceSet = getSourceSetForSource(sourceId);
     if (sourceSet == null) return;
-    addProcessingBlockToParent(processingBlock, sourceId);
 
     if (sourceSet.isLinked) {
       final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);
@@ -250,14 +250,14 @@ extension SourceSetService on ProjectService {
     final source = getHardwareById(sourceId) as Source?;
     if (source == null) return;
 
-    final sourceSet = getSourceSetForSource(sourceId);
-    if (sourceSet == null) return;
-
     //get the index
     final allBlocksInSource = relationships.getChildren(RelationshipType.processingBlock, sourceId).toList();
     final indexOfProcessingBlock = allBlocksInSource.indexOf(processingBlockId);
 
     removeProcessingBlockFromParent(processingBlockId, sourceId);
+
+    final sourceSet = getSourceSetForSource(sourceId);
+    if (sourceSet == null) return;
 
     if (sourceSet.isLinked) {
       final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);
@@ -283,12 +283,11 @@ extension SourceSetService on ProjectService {
   void updateProcessingBlockInSource({required String sourceId, required ProcessingBlockModel processingBlock}) {
     final source = getHardwareById(sourceId) as Source?;
     if (source == null) return;
+    //update
+    updateProcessingBlock(processingBlock);
 
     final sourceSet = getSourceSetForSource(sourceId);
     if (sourceSet == null) return;
-
-    //update
-    updateProcessingBlock(processingBlock);
 
     if (sourceSet.isLinked) {
       final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);

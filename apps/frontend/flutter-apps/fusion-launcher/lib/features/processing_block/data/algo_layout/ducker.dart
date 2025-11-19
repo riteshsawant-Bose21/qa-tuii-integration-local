@@ -1,6 +1,6 @@
 part of '../algorithm_layout_data.dart';
 
-final Map<String, dynamic> _duckerLayout = <String, dynamic>{
+final Map<String, dynamic> _ducker = <String, dynamic>{
   "width": 100,
   "height": 100,
   "children": <Map<String, Object?>>[

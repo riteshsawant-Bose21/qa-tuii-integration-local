@@ -3,26 +3,34 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
+import '../../view/item_widget_builder.dart';
 
 const double _bRadius = 12;
 const double _blurRadius = 10;
 
 class PBDropdown extends StatelessWidget {
-  const PBDropdown({super.key, required this.item});
+  const PBDropdown({super.key, required this.item, this.handler});
   final PBItem item;
+  final PBWidgetValueHandler? handler;
 
   @override
   Widget build(BuildContext context) {
-    //TODO: Implement dropdown logic
-    final PBDropdownParam data = item.param as PBDropdownParam;
+    final PBDropdownParam data = (handler?.resolveForItem(item) ?? item.param) as PBDropdownParam;
     return _Dropdown<String>(
-      value: data.label,
+      value: handler?.getValue(item) ?? item.value ?? data.label,
       hintText: data.label,
       onChanged: (String? value) {
-        // Handle selection change
+        handler?.onValueChanged(item, value);
       },
       itemBuilder: (BuildContext context) {
-        return <PopupMenuEntry<String>>[];
+        return data.options
+            .map<PopupMenuEntry<String>>(
+              (String option) => PopupMenuItem<String>(
+                value: option,
+                child: Text(option),
+              ),
+            )
+            .toList();
       },
     );
   }

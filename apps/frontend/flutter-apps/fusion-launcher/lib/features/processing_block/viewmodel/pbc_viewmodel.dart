@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import 'package:collection/collection.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/features/processing_block/datasource/pb_widgets.dart';
@@ -66,6 +67,7 @@ class PbcViewmodel extends ChangeNotifier {
   }
 
   void addParameter(PbWidgets type, Offset position, Parameter data) {
+    final dynamic dimension = data.dimensions?.isNotEmpty == true ? getValue(data.dimensions!.first) : null;
     final PBItemParam param = type.fromParameter(data);
     final ({num height, num width}) size = switch (param) {
       PBIndicatorParam() => (width: 20, height: 15),
@@ -76,20 +78,31 @@ class PbcViewmodel extends ChangeNotifier {
 
       _ => (width: 20, height: 20),
     };
-
-    items.add(
-      PBItem(
-        id: Random().nextInt(999999).toString(),
-        x: roundTo2Digit(position.dx),
-        y: roundTo2Digit(position.dy),
-        width: roundTo2Digit(size.width),
-        height: roundTo2Digit(size.height),
-        field: data.name,
-        type: type.type,
-        param: param,
-        value: data.defaultValue,
-      ),
-    );
+    final num noOfItems = dimension is num && dimension > 1 ? dimension : 1;
+    final num paramWidth = roundTo2Digit(size.width);
+    num currentDx = roundTo2Digit(position.dx) - paramWidth;
+    num currentY = roundTo2Digit(position.dy);
+    for (int i = 0; i < noOfItems; i++) {
+      currentDx += paramWidth;
+      if (currentDx + paramWidth > width) {
+        currentDx = roundTo2Digit(position.dx);
+        currentY += roundTo2Digit(size.height) + 5;
+      }
+      items.add(
+        PBItem(
+          id: Random().nextInt(999999).toString(),
+          x: currentDx,
+          y: currentY,
+          width: roundTo2Digit(size.width),
+          height: roundTo2Digit(size.height),
+          field: data.name,
+          type: type.type,
+          param: param,
+          dimension: noOfItems > 1 ? i : null,
+          value: data.defaultValue,
+        ),
+      );
+    }
     selected = items.last;
     notifyListeners();
   }
@@ -143,5 +156,12 @@ class PbcViewmodel extends ChangeNotifier {
 
   num roundTo2Digit(num val) {
     return (val * 100).round() / 100;
+  }
+
+  dynamic getValue(dynamic val) {
+    if (val is String) {
+      return algorithm.properties?.firstWhereOrNull((Property element) => element.name == val)?.defaultValue ?? val;
+    }
+    return val;
   }
 }

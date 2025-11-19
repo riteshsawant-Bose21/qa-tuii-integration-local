@@ -38,4 +38,9 @@ class PBTextParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBTextParam.fromMap(map);
   }
+
+  @override
+  PBItemParam clone() {
+    return copyWith();
+  }
 }

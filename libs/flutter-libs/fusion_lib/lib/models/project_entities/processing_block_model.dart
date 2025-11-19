@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../algorithm/property_settings.dart';
-
 class ProcessingBlockModel {
   /// Input processing blocks
   /// "agc","gate","compressor","ducker", "tone_control","peq","gain"
@@ -18,24 +16,9 @@ class ProcessingBlockModel {
 
   static final List<ProcessingBlockModel> sourceBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
-      id: 'gain',
-      name: 'Gain',
-      algorithmId: "gain",
-    ),
-    ProcessingBlockModel(
-      id: 'peq',
-      name: 'PEQ',
-      algorithmId: "peq",
-    ),
-    ProcessingBlockModel(
-      id: 'compressor',
-      name: 'Compressor',
-      algorithmId: "compressor",
-    ),
-    ProcessingBlockModel(
-      id: 'ducker',
-      name: 'Ducker',
-      algorithmId: "ducker",
+      id: 'delay',
+      name: 'Delay',
+      algorithmId: "delay",
     ),
     ProcessingBlockModel(
       id: 'agc',
@@ -43,22 +26,52 @@ class ProcessingBlockModel {
       algorithmId: "agc",
     ),
     ProcessingBlockModel(
+      id: 'compressor',
+      name: 'Compressor',
+      algorithmId: "compressor",
+    ),
+    ProcessingBlockModel(
+      id: 'limiter',
+      name: 'Limiter',
+      algorithmId: "limiter",
+    ),
+    ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
+    ),
+    ProcessingBlockModel(
+      id: 'graphic_eq',
+      name: 'Graphic EQ',
+      algorithmId: "graphic_eq",
+    ),
+    ProcessingBlockModel(
+      id: 'peq',
+      name: 'PEQ',
+      algorithmId: "peq",
     ),
     ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
     ),
+    ProcessingBlockModel(
+      id: 'gain',
+      name: 'Gain',
+      algorithmId: "gain",
+    ),
   ];
 
   static final List<ProcessingBlockModel> zoneBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
-      id: 'gate',
-      name: 'Gate',
-      algorithmId: "gate",
+      id: 'delay',
+      name: 'Delay',
+      algorithmId: "delay",
+    ),
+    ProcessingBlockModel(
+      id: 'agc',
+      name: 'AGC',
+      algorithmId: "agc",
     ),
     ProcessingBlockModel(
       id: 'compressor',
@@ -66,33 +79,24 @@ class ProcessingBlockModel {
       algorithmId: "compressor",
     ),
     ProcessingBlockModel(
-      id: 'tone_control',
-      name: 'Tone Control',
-      algorithmId: "tone_control",
+      id: 'limiter',
+      name: 'Limiter',
+      algorithmId: "limiter",
     ),
     ProcessingBlockModel(
       id: 'graphic_eq',
       name: 'Graphic EQ',
       algorithmId: "graphic_eq",
     ),
-    // ProcessingBlockEntity(
-    //   id: 'feedback_elimination',
-    //   name: 'Feedback Elimination',
-    //   icon: Icons.hearing,
-    //   algorithmId: "feedback_elimination",
-    //   properties: <PropertySetting>[
-    //     PropertySetting(name: 'channels', value: 1),
-    //   ],
-    // ),
     ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
     ),
     ProcessingBlockModel(
-      id: 'delay',
-      name: 'Delay',
-      algorithmId: "delay",
+      id: 'tone_control',
+      name: 'Tone Control',
+      algorithmId: "tone_control",
     ),
     ProcessingBlockModel(
       id: 'gain',
@@ -141,24 +145,44 @@ class ProcessingBlockModel {
 
   static final List<ProcessingBlockModel> circuitBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
-      id: 'peq',
-      name: 'PEQ',
-      algorithmId: "peq",
-    ),
-    ProcessingBlockModel(
-      id: 'gain',
-      name: 'Gain',
-      algorithmId: "gain",
-    ),
-    ProcessingBlockModel(
       id: 'delay',
       name: 'Delay',
       algorithmId: "delay",
     ),
     ProcessingBlockModel(
+      id: 'compressor',
+      name: 'Compressor',
+      algorithmId: "compressor",
+    ),
+    ProcessingBlockModel(
       id: 'limiter',
       name: 'Limiter',
       algorithmId: "limiter",
+    ),
+    ProcessingBlockModel(
+      id: 'graphic_eq',
+      name: 'Graphic EQ',
+      algorithmId: "graphic_eq",
+    ),
+    ProcessingBlockModel(
+      id: 'peq',
+      name: 'PEQ',
+      algorithmId: "peq",
+    ),
+    ProcessingBlockModel(
+      id: 'tone_control',
+      name: 'Tone Control',
+      algorithmId: "tone_control",
+    ),
+    ProcessingBlockModel(
+      id: 'feedback_suppression',
+      name: 'Feedback Suppression',
+      algorithmId: "feedback_suppression",
+    ),
+    ProcessingBlockModel(
+      id: 'gain',
+      name: 'Gain',
+      algorithmId: "gain",
     ),
   ];
 

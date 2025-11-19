@@ -2,19 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:provider/provider.dart';
 
 import '../viewmodel/algorithm_data_viewmodel.dart';
 import 'dynamic_grid_view.dart';
 
 class ProcessingBlockPage extends StatelessWidget {
-  const ProcessingBlockPage({super.key, required this.algorithm});
-  final String algorithm;
+  const ProcessingBlockPage({super.key, required this.processingBlock});
+  final ProcessingBlockModel processingBlock;
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AlgorithmDataViewmodel>(
-      key: ValueKey<String>(algorithm),
-      create: (BuildContext context) => AlgorithmDataViewmodel(algorithmId: algorithm, config: serviceLocator.get<FusionAlgorithmsConfig>()),
+      key: ValueKey<ProcessingBlockModel>(processingBlock),
+      create: (BuildContext context) => AlgorithmDataViewmodel(processingBlock: processingBlock, config: serviceLocator.get<FusionAlgorithmsConfig>()),
 
       child: Padding(
         padding: const EdgeInsets.all(8.0),
@@ -28,9 +29,9 @@ class ProcessingBlockPage extends StatelessWidget {
                     child: Text(""),
                   );
                 }
-                // return Text("${constraints.maxWidth} x ${constraints.maxHeight}");
                 return DynamicGridView(
                   layout: data,
+                  handler: viewModel,
                 );
               },
             );

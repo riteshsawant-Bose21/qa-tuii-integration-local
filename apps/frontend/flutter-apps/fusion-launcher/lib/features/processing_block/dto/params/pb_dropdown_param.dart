@@ -2,12 +2,15 @@ part of '../pb_item_param.dart';
 
 class PBDropdownParam extends PBItemParam {
   final String label;
+  final List<String> options;
   PBDropdownParam({
     required this.label,
+    required this.options,
   });
   factory PBDropdownParam.fromMap(Map<dynamic, dynamic> map) {
     return PBDropdownParam(
       label: (map['label'] ?? '') as String,
+      options: (map['options'] ?? <String>[]) as List<String>,
     );
   }
 
@@ -15,6 +18,7 @@ class PBDropdownParam extends PBItemParam {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'label': label,
+      'options': options,
     };
   }
 
@@ -23,11 +27,18 @@ class PBDropdownParam extends PBItemParam {
     return PBDropdownParam.fromMap(map);
   }
 
+  @override
+  PBDropdownParam clone() {
+    return copyWith();
+  }
+
   PBDropdownParam copyWith({
     String? label,
+    List<String>? options,
   }) {
     return PBDropdownParam(
       label: label ?? this.label,
+      options: options ?? this.options,
     );
   }
 

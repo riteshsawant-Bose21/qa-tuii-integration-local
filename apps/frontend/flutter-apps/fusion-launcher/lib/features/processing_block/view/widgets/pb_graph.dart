@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
+import '../../view/item_widget_builder.dart';
 
 class PBGraph extends StatelessWidget {
-  const PBGraph({super.key, required this.item});
+  const PBGraph({super.key, required this.item, this.handler});
   final PBItem item;
+  final PBWidgetValueHandler? handler;
   @override
   Widget build(BuildContext context) {
     final PBGraphParam data = item.param as PBGraphParam;

@@ -38,4 +38,8 @@ class PBGraphParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBGraphParam.fromMap(map);
   }
+  @override
+  PBItemParam clone() {
+    return copyWith();
+  }
 }

@@ -14,4 +14,6 @@ abstract class PBItemParam {
   Map<String, dynamic> toMap();
 
   PBItemParam loadMap(Map<String, dynamic> map);
+
+  PBItemParam clone();
 }

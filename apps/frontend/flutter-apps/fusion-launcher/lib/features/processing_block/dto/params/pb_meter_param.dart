@@ -42,4 +42,8 @@ class PBMeterParam extends PBItemParam {
   PBItemParam loadMap(Map<String, dynamic> map) {
     return PBMeterParam.fromMap(map);
   }
+    @override
+  PBItemParam clone() {
+    return copyWith();
+  }
 }
