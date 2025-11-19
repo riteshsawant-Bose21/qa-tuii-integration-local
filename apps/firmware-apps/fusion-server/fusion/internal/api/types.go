@@ -165,3 +165,17 @@ type VersionUpdate struct {
 	Type    string          `json:"type"`
 	Payload json.RawMessage `json:"payload"`
 }
+type ControllerTCPMessage struct {
+	Action  string          `json:"action"`
+	Payload json.RawMessage `json:"payload"`
+}
+
+type ControllerIdentifyResponse struct {
+	ID              string `json:"id"`
+	DeviceType      string `json:"deviceType"`
+	FirmwareVersion string `json:"firmwareVersion"`
+}
+
+type ControllerWinkResponse struct {
+	Status string `json:"status"`
+}

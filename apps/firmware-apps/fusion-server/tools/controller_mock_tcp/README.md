@@ -55,7 +55,7 @@ make -f Makefile.wall_controller
 ### Basic Usage
 ```bash
 # Run with parameters (ID, VIP, 7950)
-./wall_controller_simulator WC004 192.168.64.100 7950
+./wall_controller_simulator WC004 192.168.2.100 7950
 ```
 
 ### Command Line Parameters
@@ -73,13 +73,13 @@ make -f Makefile.wall_controller
 **Multiple Controllers (separate terminals):**
 ```bash
 # Terminal 1
-./wall_controller_simulator WC001 192.168.64.100 7950
+./wall_controller_simulator WC001 192.168.2.100 7950
 
 # Terminal 2  
-./wall_controller_simulator WC002 192.168.64.100 7950
+./wall_controller_simulator WC002 192.168.2.100 7950
 
 # Terminal 3
-./wall_controller_simulator WC003 192.168.64.100 7950
+./wall_controller_simulator WC003 192.168.2.100 7950
 ```
 
 
