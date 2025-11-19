@@ -1,6 +1,7 @@
 {
     "session": {
-        "name": "fusion_system_monitor"
+        "name": "fusion_system_monitor",
+        "device": "fusion_c0"
     },
     "periodic_tasks": [
         {
@@ -32,16 +33,52 @@
             ]
         },
         {
-            "name": "fusion_connect",
-            "property_settings": [
-                { "name": "period_ms", "value": 1000 }
-            ],
+            "name": "hw_control",
             "blocks": [
                 {
-                    "name": "fusion_connect_client",
-                    "module": "fusion_connect_client",
-                    "parameters": [
-                        { "name": "audio_streams_update" }
+                    "name": "hw_control",
+                    "module": "hw_control",
+                    "property_settings": [
+                        { 
+                            "name": "num_gain_chs",
+                            "value": 4
+                        },
+                        { 
+                            "name": "gain_paths",
+                            "value": [
+                                "fusion_c0/block_ana/ep_aud_in_chs-34/gpio_gain_ch3_0",
+                                "fusion_c0/block_ana/ep_aud_in_chs-34/gpio_gain_ch4_0",
+                                "fusion_c0/block_ana/ep_aud_in_chs-56/gpio_gain_ch5_0",
+                                "fusion_c0/block_ana/ep_aud_in_chs-56/gpio_gain_ch6_0"
+                            ]
+                        },
+                        { 
+                            "name": "num_php_chs",
+                            "value": 4
+                        },
+                        { 
+                            "name": "php_paths",
+                            "value": [
+                                "fusion_c0/block_ana/ep_aud_in_chs-34/gpio_php_en_ch3",
+                                "fusion_c0/block_ana/ep_aud_in_chs-34/gpio_php_en_ch4",
+                                "fusion_c0/block_ana/ep_aud_in_chs-56/gpio_php_en_ch5",
+                                "fusion_c0/block_ana/ep_aud_in_chs-56/gpio_php_en_ch6"
+                            ]
+                        },
+                        { 
+                            "name": "num_user_gpio",
+                            "value": 5
+                        },
+                        { 
+                            "name": "user_gpio_ctrl_paths",
+                            "value": [
+                                "fusion_c0/block_gpio/gpio_ctrl0_gpio0",
+                                "fusion_c0/block_gpio/gpio_ctrl0_gpio1",
+                                "fusion_c0/block_gpio/gpio_ctrl0_gpio2",
+                                "fusion_c0/block_gpio/gpio_ctrl0_gpio3",
+                                "fusion_c0/block_gpio/gpio_ctrl0_gpio4"
+                            ]
+                        }
                     ]
                 }
             ]

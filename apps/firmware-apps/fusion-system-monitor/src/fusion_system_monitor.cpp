@@ -150,8 +150,8 @@ int main(int argc, char *argv[])
     // Path for networked audio streams
     target_paths.push_back("audio_streams");
     // Path for dynamic parameter setttings
-    target_paths.push_back("settings.fw.*.*");
     target_paths.push_back("settings.fw.*.*[*]");
+    target_paths.push_back("settings.fw.*.*");
 
     if (vm.count("serverip"))
     {
