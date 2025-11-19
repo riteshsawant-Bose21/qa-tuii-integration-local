@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -160,19 +161,35 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               builder: (BuildContext context, ProjectViewModelState state) {
                                 return GestureDetector(
                                   onTap: () {
-                                    if (widget.sourceSet.isLinked) {
-                                      _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                      FusionToast.success(
-                                        context,
-                                        message: "Source set unlinked successfully",
-                                      );
-                                    } else {
-                                      _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
-                                      FusionToast.success(
-                                        context,
-                                        message: "Source set linked successfully",
-                                      );
-                                    }
+                                    showDialog(
+                                      context: context,
+
+                                      builder:
+                                          (_) => FusionDialog(
+                                            title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                            description:
+                                                'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
+                                            primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                            secondaryButtonLabel: 'Cancel',
+                                            onPrimaryPressed: () {
+                                              if (widget.sourceSet.isLinked) {
+                                                _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                FusionToast.success(
+                                                  context,
+                                                  message: "Source set unlinked successfully",
+                                                );
+                                              } else {
+                                                _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                FusionToast.success(
+                                                  context,
+                                                  message: "Source set linked successfully",
+                                                );
+                                              }
+                                              Navigator.pop(context);
+                                            },
+                                            onSecondaryPressed: () => Navigator.pop(context),
+                                          ),
+                                    );
                                   },
                                   child: FusionImage.asset(
                                     widget.sourceSet.isLinked ? Assets.linkIcon : Assets.unLinkIcon,
