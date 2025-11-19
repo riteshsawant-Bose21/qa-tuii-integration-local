@@ -375,10 +375,10 @@ class _ZoneCardState extends State<ZoneCard> {
                 tooltip: "Select Priority Source P$priorityIndex",
                 padding: EdgeInsets.zero,
                 color:
-                    canAccept
+                    cannotAccept
+                        ? Colors.red.withOpacity(0.9)
+                        : canAccept
                         ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                        : cannotAccept
-                        ? Colors.redAccent
                         : Theme.of(context).colorScheme.white,
                 itemBuilder: (BuildContext context) {
                   final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
@@ -462,7 +462,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                     maxLine: 1,
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                       fontSize: 10,
-                                      color: isAlreadyInPriority && !isCurrentSelection ? Theme.of(context).colorScheme.grey : null,
+                                      color: isAlreadyInPriority && !isCurrentSelection ? Theme.of(context).colorScheme.greyDark.withAlpha(150) : null,
                                     ),
                                   ),
                                 ),
@@ -560,7 +560,7 @@ class _ZoneCardState extends State<ZoneCard> {
                                       maxLine: 1,
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         fontSize: 10,
-                                        color: isAlreadyInPriority && !isCurrentSelection ? Theme.of(context).colorScheme.grey : null,
+                                        color: isAlreadyInPriority && !isCurrentSelection ? Theme.of(context).colorScheme.greyDark.withAlpha(150) : null,
                                       ),
                                     ),
                                   ),
@@ -580,13 +580,20 @@ class _ZoneCardState extends State<ZoneCard> {
                   width: 170,
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   decoration: BoxDecoration(
-                    color: canAccept ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Theme.of(context).colorScheme.white,
+                    color:
+                        cannotAccept
+                            ? Colors.red.withOpacity(0.1)
+                            : canAccept
+                            ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
+                            : Theme.of(context).colorScheme.white,
                     border: Border.all(
                       color:
-                          canAccept
+                          cannotAccept
+                              ? Colors.red
+                              : canAccept
                               ? Theme.of(context).colorScheme.primary.withOpacity(0.3)
                               : selectedSource == null
-                              ? Theme.of(context).colorScheme.grey
+                              ? Theme.of(context).colorScheme.greyDark.withAlpha(150)
                               : Theme.of(context).colorScheme.greyDark,
                     ),
                     borderRadius: BorderRadius.circular(3),
@@ -601,7 +608,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           maxLine: 1,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 11,
-                            color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                            color: selectedSource == null ? Theme.of(context).colorScheme.greyDark.withAlpha(150) : Theme.of(context).colorScheme.greyDark,
                           ),
                         ),
                       ),
@@ -612,7 +619,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
-                          color: selectedSource == null ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                          color: selectedSource == null ? Theme.of(context).colorScheme.greyDark.withAlpha(150) : Theme.of(context).colorScheme.greyDark,
                           borderRadius: BorderRadius.circular(3),
                         ),
                         child: FusionAppText(
@@ -1121,10 +1128,10 @@ class _ZoneCardState extends State<ZoneCard> {
                   );
                 },
               ),
-            subZonesForZone.isEmpty
+            (subZonesForZone.isEmpty && zoneCircuit.isEmpty)
                 ? Center(
                   child: FusionAppText(
-                    text: 'No sub zones added yet',
+                    text: 'No sub zones / circuits added yet',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
