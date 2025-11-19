@@ -38,6 +38,12 @@ extension SourceSetService on ProjectService {
     //to  add
     for (var source in sourcesToAdd) {
       relationships.link(RelationshipType.sourceSetSources, sourceSetId, source);
+
+      //also unlink from any zones since its added to source set
+      final parentZone = relationships.getParent(RelationshipType.zoneSources, source);
+      if (parentZone != null) {
+        relationships.unlink(RelationshipType.zoneSources, parentZone, source);
+      }
     }
 
     final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
@@ -74,6 +80,12 @@ extension SourceSetService on ProjectService {
 
     // Add to id list idempotently
     relationships.link(RelationshipType.sourceSetSources, sourceSetId, sourceId);
+
+    //also unlink from any zones since its added to source set
+    final parentZone = relationships.getParent(RelationshipType.zoneSources, sourceId);
+    if (parentZone != null) {
+      relationships.unlink(RelationshipType.zoneSources, parentZone, sourceId);
+    }
   }
 
   /// Remove a source id from a SourceSet (idempotent).
