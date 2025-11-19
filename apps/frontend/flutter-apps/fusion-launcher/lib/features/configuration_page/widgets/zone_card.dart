@@ -343,6 +343,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
   /// Priority Override function button (Popup Menu) - supports independent P1 / P2
   Widget buildPriorityFunctionWidget({required int priorityIndex}) {
+    print('Building Priority Function Widget for P$priorityIndex');
     final String? selectedSource = priorityIndex == 1 ? selectedPrioritySource1 : selectedPrioritySource2;
     final String? selectedSourceId = priorityIndex == 1 ? selectedPrioritySourceId1 : selectedPrioritySourceId2;
     final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
@@ -351,12 +352,15 @@ class _ZoneCardState extends State<ZoneCard> {
       visible: existingFunction?.hasPriority ?? false,
       child: Row(
         children: <Widget>[
+          /// Priority Source Selection
           DragTarget<Source>(
             onWillAcceptWithDetails: (DragTargetDetails<Source> details) {
               final String incomingId = details.data.id;
-              // Reject if already selected for this slot
+
+              /// Reject if already selected for this slot
               if (priorityIndex == 1 && incomingId == selectedPrioritySourceId1) return false;
               if (priorityIndex == 2 && incomingId == selectedPrioritySourceId2) return false;
+
               return true;
             },
             onLeave: (Source? data) {},
@@ -643,15 +647,35 @@ class _ZoneCardState extends State<ZoneCard> {
             },
           ),
           const SizedBox(width: 8),
-          GestureDetector(
-            onTap: () {},
-            child: const FusionImage.asset(
-              Assets.deleteIcon,
-              width: 17,
-              height: 17,
-              fit: BoxFit.contain,
+
+          /// Delete priority source button (now active)
+          if (selectedSourceId != null)
+            GestureDetector(
+              onTap: () {
+                /// Remove priority source from zone
+                if (priorityIndex == 1) {
+                  _projectViewModel.removePrioritySourceFromZone(
+                    zoneId: widget.zoneId,
+                    sourceId: selectedPrioritySourceId1 ?? "",
+                  );
+                  selectedPrioritySource1 = null;
+                  selectedPrioritySourceId1 = null;
+                } else {
+                  _projectViewModel.removePrioritySourceFromZone(
+                    zoneId: widget.zoneId,
+                    sourceId: selectedPrioritySourceId2 ?? "",
+                  );
+                  selectedPrioritySource2 = null;
+                  selectedPrioritySourceId2 = null;
+                }
+              },
+              child: const FusionImage.asset(
+                Assets.deleteIcon,
+                width: 17,
+                height: 17,
+                fit: BoxFit.contain,
+              ),
             ),
-          ),
         ],
       ),
     );
@@ -1098,73 +1122,70 @@ class _ZoneCardState extends State<ZoneCard> {
           bottom: BorderSide(color: Theme.of(context).colorScheme.grey),
         ),
       ),
-      child: Scrollbar(
-        thumbVisibility: true,
-        child: SingleChildScrollView(
-          physics: const ClampingScrollPhysics(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              if (zoneCircuit.isNotEmpty)
-                ListView.builder(
-                  scrollDirection: Axis.vertical,
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            if (zoneCircuit.isNotEmpty)
+              ListView.builder(
+                scrollDirection: Axis.vertical,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(), // parent handles scroll
+                itemCount: zoneCircuit.length,
+                itemBuilder: (BuildContext context, int index) {
+                  final CircuitModel circuitData = zoneCircuit[index];
+                  final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
+                  return MouseRegion(
+                    onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
+                    onExit: (_) => setState(() => _hoveredCircuitIndex = null),
+                    child: _buildCircuitCard(
+                      index: index,
+                      circuitData: circuitData,
+                      speakersList: speakersList,
+                    ),
+                  );
+                },
+              ),
+            subZonesForZone.isEmpty
+                ? Center(
+                  child: FusionAppText(
+                    text: 'No sub zones added yet',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                )
+                : ReorderableListView.builder(
                   shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(), // parent handles scroll
-                  itemCount: zoneCircuit.length,
+                  physics: const NeverScrollableScrollPhysics(), // parent scroll
+                  buildDefaultDragHandles: false,
+                  itemCount: subZonesForZone.length,
+                  onReorder: (int oldIndex, int newIndex) {
+                    if (oldIndex < newIndex) newIndex -= 1;
+                    _projectViewModel.reOrderSubZoneInZone(
+                      parentId: widget.zoneId,
+                      oldIndex: oldIndex,
+                      newIndex: newIndex,
+                    );
+                  },
                   itemBuilder: (BuildContext context, int index) {
-                    final CircuitModel circuitData = zoneCircuit[index];
-                    final List<Speaker> speakersList = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                    return MouseRegion(
-                      onEnter: (_) => setState(() => _hoveredCircuitIndex = index),
-                      onExit: (_) => setState(() => _hoveredCircuitIndex = null),
-                      child: _buildCircuitCard(
-                        index: index,
-                        circuitData: circuitData,
-                        speakersList: speakersList,
+                    final SubZone subZone = subZonesForZone[index];
+                    return ReorderableDragStartListener(
+                      key: ValueKey<String>(subZone.id),
+                      index: index,
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: SubZoneCard(
+                          subZoneId: subZone.id,
+                          subZoneName: subZone.name,
+                        ),
                       ),
                     );
                   },
                 ),
-              subZonesForZone.isEmpty
-                  ? Center(
-                    child: FusionAppText(
-                      text: 'No sub zones added yet',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )
-                  : ReorderableListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(), // parent scroll
-                    buildDefaultDragHandles: false,
-                    itemCount: subZonesForZone.length,
-                    onReorder: (int oldIndex, int newIndex) {
-                      if (oldIndex < newIndex) newIndex -= 1;
-                      _projectViewModel.reOrderSubZoneInZone(
-                        parentId: widget.zoneId,
-                        oldIndex: oldIndex,
-                        newIndex: newIndex,
-                      );
-                    },
-                    itemBuilder: (BuildContext context, int index) {
-                      final SubZone subZone = subZonesForZone[index];
-                      return ReorderableDragStartListener(
-                        key: ValueKey<String>(subZone.id),
-                        index: index,
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: SubZoneCard(
-                            subZoneId: subZone.id,
-                            subZoneName: subZone.name,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-            ],
-          ),
+          ],
         ),
       ),
     );
