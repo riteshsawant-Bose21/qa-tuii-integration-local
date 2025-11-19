@@ -19,7 +19,7 @@
 
 namespace {
 
-constexpr char kUartDevice[] = "/dev/ttymxc3";
+constexpr char kUartDevice[] = "/dev/ttymxc2";
 constexpr uint8_t kPreambleMsb = 0xB0;
 constexpr uint8_t kPreambleLsb = 0x5E;
 constexpr uint8_t kProtocolTypeBscp = 0x10;
