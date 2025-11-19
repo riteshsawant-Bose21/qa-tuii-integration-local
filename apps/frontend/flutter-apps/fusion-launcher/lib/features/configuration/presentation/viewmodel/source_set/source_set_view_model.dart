@@ -103,6 +103,16 @@ extension SourceSetViewModel on ProjectViewModel {
     }
   }
 
+  /// get sources and source set count
+  int getSourceCountInZone({required String zoneId}) {
+    try {
+      return projectManager.getSourcesInZone(zoneId).length + projectManager.getSourceSetsInZone(zoneId).length;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get source count in zone: $e");
+      return 0;
+    }
+  }
+
   List<Source> getSourcesWithoutSourceSet() {
     try {
       return projectManager.getSourcesWithoutSourceSet();

@@ -182,12 +182,16 @@ extension ZoneService on ProjectService {
     final priorityOrder = <String>[...prioritySources];
 
     if (priority == 1) {
-      priorityOrder.insert(0, sourceId);
+      if (priorityOrder.isEmpty) {
+        priorityOrder.add(sourceId);
+      } else {
+        priorityOrder[0] = sourceId;
+      }
     } else {
       if (priorityOrder.isEmpty) priorityOrder.add("");
 
       if (priorityOrder.length == 2) {
-        priorityOrder.insert(1, sourceId);
+        priorityOrder[1] = sourceId;
       } else {
         priorityOrder.add(sourceId);
       }

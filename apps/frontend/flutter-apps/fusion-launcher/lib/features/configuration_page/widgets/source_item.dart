@@ -57,12 +57,12 @@ class _SourceItemState extends State<SourceItem> {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
               ),
             ),
-            const FusionImage.asset(
-              Assets.configurationFilledIcon,
-              width: 24,
-              height: 24,
-              fit: BoxFit.contain,
-            ),
+            // const FusionImage.asset(
+            //   Assets.configurationFilledIcon,
+            //   width: 24,
+            //   height: 24,
+            //   fit: BoxFit.contain,
+            // ),
             const SizedBox(width: 8),
             InkWell(
               onTap: () {
