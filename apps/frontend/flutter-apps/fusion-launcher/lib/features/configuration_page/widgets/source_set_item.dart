@@ -153,11 +153,35 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             ),
                           ),
 
-                          const FusionImage.asset(
-                            Assets.linkIcon,
-                            width: 22,
-                            height: 22,
-                            fit: BoxFit.contain,
+                          Visibility(
+                            visible: _projectViewModel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
+                            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                              builder: (BuildContext context, ProjectViewModelState state) {
+                                return GestureDetector(
+                                  onTap: () {
+                                    if (widget.sourceSet.isLinked) {
+                                      _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                      FusionToast.success(
+                                        context,
+                                        message: "Source set unlinked successfully",
+                                      );
+                                    } else {
+                                      _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                      FusionToast.success(
+                                        context,
+                                        message: "Source set linked successfully",
+                                      );
+                                    }
+                                  },
+                                  child: FusionImage.asset(
+                                    widget.sourceSet.isLinked ? Assets.linkIcon : Assets.unLinkIcon,
+                                    width: 22,
+                                    height: 22,
+                                    fit: BoxFit.contain,
+                                  ),
+                                );
+                              },
+                            ),
                           ),
 
                           const SizedBox(width: 8),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/processing_block/view/customization/processing_block_customizer.dart';
@@ -456,13 +457,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         },
       ),
 
-      const FusionDockableArea(
-        tabKey: "zone_config_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
-        dockItemList: <DockItemConfig>[],
-      ),
+      if (kDebugMode)
+        const FusionDockableArea(
+          tabKey: "zone_config_tab",
+          showLeft: false,
+          showRight: false,
+          mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
+          dockItemList: <DockItemConfig>[],
+        ),
 
       /// budget tab with docking area
       const FusionDockableArea(

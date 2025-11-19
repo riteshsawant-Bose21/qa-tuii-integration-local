@@ -365,11 +365,12 @@ extension HardwareViewModel on ProjectViewModel {
           outputPortsData: <PortData>[],
         );
       case ProductType.sources:
+        final SourceConnectionType connectionType = SourceData.getSourceConnectionType(product.sku);
         final SourceType type = SourceData.getSourceType(product.sku);
-        final PortType portType = switch (type) {
-          SourceType.analogInput || SourceType.aes67input => PortType.analogOutput,
-          SourceType.bluetooth => PortType.bleOut,
-          SourceType.usb => PortType.usbOut,
+        final PortType portType = switch (connectionType) {
+          SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+          SourceConnectionType.bluetooth => PortType.bleOut,
+          SourceConnectionType.usb => PortType.usbOut,
         };
         return Source(
           locationEntity: locationEntity,
@@ -379,6 +380,7 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
+          connectionType: connectionType,
           type: type,
           inputPortsData: <PortData>[],
           outputPortsData: <PortData>[
@@ -386,15 +388,15 @@ extension HardwareViewModel on ProjectViewModel {
               name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: switch (type) {
-                SourceType.analogInput || SourceType.aes67input => <PortType>[
+              compatibleTypes: switch (connectionType) {
+                SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
                   PortType.dspAnalogInput,
                   PortType.endpointInput,
                 ],
-                SourceType.bluetooth => <PortType>[
+                SourceConnectionType.bluetooth => <PortType>[
                   PortType.bleIn,
                 ],
-                SourceType.usb => <PortType>[PortType.usbIn],
+                SourceConnectionType.usb => <PortType>[PortType.usbIn],
               },
               type: portType,
               description: portType.description,

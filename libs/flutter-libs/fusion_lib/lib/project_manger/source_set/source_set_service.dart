@@ -38,6 +38,12 @@ extension SourceSetService on ProjectService {
     //to  add
     for (var source in sourcesToAdd) {
       relationships.link(RelationshipType.sourceSetSources, sourceSetId, source);
+
+      //also unlink from any zones since its added to source set
+      final parentZone = relationships.getParent(RelationshipType.zoneSources, source);
+      if (parentZone != null) {
+        relationships.unlink(RelationshipType.zoneSources, parentZone, source);
+      }
     }
 
     final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
@@ -66,14 +72,29 @@ extension SourceSetService on ProjectService {
   /// - Sets an initial mix level in sourceMixLevels if not present.
   ///
   /// Optionally call onChangeCallback?.call() or persist after this method.
-  void addSourceToSourceSet(String sourceId, String sourceSetId, {double? initialMixLevel}) {
+  void addSourceToSourceSet(
+    String sourceId,
+    String sourceSetId,
+  ) {
     // Adjust repo name if yours is `mixes` instead of `sourceSets`.
     if (!sourceSets.exists(sourceSetId)) {
       throw Exception('SourceSet $sourceSetId not found');
     }
 
+    //remove current parent
+    final currentParent = relationships.getParent(RelationshipType.sourceSetSources, sourceId);
+    if (currentParent != null && currentParent != sourceSetId) {
+      relationships.unlink(RelationshipType.sourceSetSources, currentParent, sourceId);
+    }
+
     // Add to id list idempotently
     relationships.link(RelationshipType.sourceSetSources, sourceSetId, sourceId);
+
+    //also unlink from any zones since its added to source set
+    final parentZone = relationships.getParent(RelationshipType.zoneSources, sourceId);
+    if (parentZone != null) {
+      relationships.unlink(RelationshipType.zoneSources, parentZone, sourceId);
+    }
   }
 
   /// Remove a source id from a SourceSet (idempotent).

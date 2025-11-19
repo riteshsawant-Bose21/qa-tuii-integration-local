@@ -174,19 +174,16 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   builder: (BuildContext context, ProjectViewModelState state) {
                     final List<Source> sourcesWithoutSourceSet = _projectViewModel.getSourcesWithoutSourceSet();
 
-                    // Initialize filtered sources if empty or if sources list changed
-                    if (_filteredSources.isEmpty && sourcesWithoutSourceSet.isNotEmpty) {
+                    if (searchController.text.isEmpty) {
                       _filteredSources = sourcesWithoutSourceSet;
-                    } else if (searchController.text.isNotEmpty) {
+                    } else {
                       _filterSources(searchController.text);
-                    } else if (searchController.text.isEmpty) {
-                      _filteredSources = sourcesWithoutSourceSet;
                     }
 
                     if (_filteredSources.isEmpty) {
                       return Center(
                         child: FusionAppText(
-                          text: searchController.text.isNotEmpty ? 'No sources found matching "${searchController.text}"' : 'No sources added yet',
+                          text: searchController.text.isNotEmpty ? 'No search data for "${searchController.text}"' : 'No sources added yet',
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
@@ -360,10 +357,26 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
                   clipBehavior: Clip.none,
                   child: ReorderableListView.builder(
                     shrinkWrap: true,
+                    proxyDecorator: (Widget child, int index, Animation<double> animation) {
+                      return Material(
+                        color: Colors.transparent,
+                        child: SizedBox(
+                          width: 220,
+                          child: child,
+                        ),
+                      );
+                    },
                     physics: const ClampingScrollPhysics(),
                     buildDefaultDragHandles: false,
                     itemCount: _projectViewModel.sourceSets.length,
-                    onReorder: (int oldIndex, int newIndex) {},
+                    onReorder: (int oldIndex, int newIndex) {
+                      if (oldIndex < newIndex) {
+                        newIndex -= 1;
+                      }
+                      final String sourceSetToMove = _projectViewModel.sourceSets[oldIndex].id;
+                      final String sourceSetAtNewIndex = _projectViewModel.sourceSets[newIndex].id;
+                      _projectViewModel.reOrderSourceSet(sourceSetIdToMove: sourceSetToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+                    },
                     itemBuilder: (BuildContext context, int index) {
                       final SourceSet sourceSet = _projectViewModel.sourceSets[index];
 
