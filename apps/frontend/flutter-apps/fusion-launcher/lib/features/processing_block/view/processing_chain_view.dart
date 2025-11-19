@@ -350,7 +350,11 @@ class AddProcessingBlockButton extends StatelessWidget {
                   )
                   .toList(),
       onSelected: (ProcessingBlockModel block) {
-        viewModel.addProcessingBlock(block);
+        if (params.type == ProcessingChainDeviceType.source) {
+          viewModel.addProcessingBlockToSource(block);
+        } else {
+          viewModel.addProcessingBlock(block);
+        }
       },
     );
   }

@@ -6,10 +6,12 @@ import '../../../core/constants/assets_constants.dart';
 
 class SourceItem extends StatefulWidget {
   final Source source;
+  final SourceSet? sourceSet;
   final bool isDragging;
 
   const SourceItem({
     required this.source,
+    this.sourceSet,
     this.isDragging = false,
     super.key,
   });
@@ -43,6 +45,17 @@ class _SourceItemState extends State<SourceItem> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         child: Row(
           children: <Widget>[
+            if (widget.sourceSet != null)
+              Opacity(
+                opacity: 0.4,
+                child: FusionImage.asset(
+                  widget.sourceSet!.isLinked ? Assets.linkIcon : null,
+                  width: 18,
+                  height: 18,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            if (widget.sourceSet != null) const SizedBox(width: 8),
             FusionImage.asset(
               widget.source.assetImagePath,
               width: 24,
@@ -64,17 +77,18 @@ class _SourceItemState extends State<SourceItem> {
             //   fit: BoxFit.contain,
             // ),
             const SizedBox(width: 8),
-            InkWell(
-              onTap: () {
-                ProcessingChainView.showForSource(context, widget.source);
-              },
-              child: const FusionImage.asset(
-                Assets.processingBlocksFilledIcon,
-                width: 24,
-                height: 24,
-                fit: BoxFit.contain,
+            if (!widget.isDragging)
+              InkWell(
+                onTap: () {
+                  ProcessingChainView.showForSource(context, widget.source);
+                },
+                child: const FusionImage.asset(
+                  Assets.processingBlocksFilledIcon,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.contain,
+                ),
               ),
-            ),
           ],
         ),
       ),
