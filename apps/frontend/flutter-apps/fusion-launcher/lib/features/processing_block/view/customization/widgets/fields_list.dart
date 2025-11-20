@@ -31,7 +31,7 @@ class _PBCItemList extends StatelessWidget {
 
               return InkWell(
                 onTap: () {
-                  viewModel.selected = where.first;
+                  viewModel.setSelected(where.first);
                 },
                 child: Draggable<_PBItemWrapper>(
                   data: _PBItemWrapper(telemetry: null, parameter: e),
@@ -98,7 +98,7 @@ class _PBCItemList extends StatelessWidget {
                     isAdded
                         ? InkWell(
                           onTap: () {
-                            viewModel.selected = where.first;
+                            viewModel.setSelected(where.first);
                           },
                           child: Container(
                             margin: const EdgeInsets.symmetric(vertical: 4),

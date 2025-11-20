@@ -32,6 +32,12 @@ class _CanvasView extends StatelessWidget {
                             onDelete: () {
                               viewModel.delete();
                             },
+                            onShiftDown: () {
+                              viewModel.isShiftPressed = true;
+                            },
+                            onShiftUp: () {
+                              viewModel.isShiftPressed = false;
+                            },
                             onDown: () {
                               viewModel.move(const Offset(0, 1));
                             },
@@ -200,16 +206,17 @@ class _CanvasView extends StatelessWidget {
                                           height: wpc * child.height,
                                           child: InkWell(
                                             onTap: () {
-                                              viewModel.selected = child;
+                                              viewModel.setSelected(child);
                                             },
                                             child: AbsorbPointer(absorbing: true, child: ItemWidgetBuilder(item: child)),
                                           ),
                                         ),
                                       ),
 
-                                    if (viewModel.selected != null)
+                                    // if (viewModel.selected != null)
+                                    for (final PBItem selected in viewModel.selectedItems)
                                       _ActiveControlWidget(
-                                        active: viewModel.selected!,
+                                        active: selected,
                                         widthPerCell: wpc,
                                       ),
                                   ],

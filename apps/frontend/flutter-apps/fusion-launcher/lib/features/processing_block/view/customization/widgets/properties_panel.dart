@@ -86,7 +86,7 @@ class _PropertiesPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: selected.width.toString(),
                       onFieldSubmitted: (String? newValue) {
-                        viewModel.resize(num.tryParse(newValue ?? "") ?? selected.width, selected.height);
+                        viewModel.resize(num.tryParse(newValue ?? ""), null);
                       },
                     ),
                   ),
@@ -100,7 +100,7 @@ class _PropertiesPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: selected.height.toString(),
                       onFieldSubmitted: (String? newValue) {
-                        viewModel.resize(selected.width, num.tryParse(newValue ?? "") ?? selected.height);
+                        viewModel.resize(null, num.tryParse(newValue ?? ""));
                       },
                     ),
                   ),
