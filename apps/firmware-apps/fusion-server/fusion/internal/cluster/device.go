@@ -210,6 +210,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 			"local": local.String(),
 			"vip":   vip.String(),
 		})
+		return
 	}
 
 	w.WriteHeader(http.StatusNotFound)

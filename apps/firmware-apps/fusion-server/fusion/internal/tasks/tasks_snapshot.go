@@ -125,7 +125,13 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		task.Params[api.SnapshotIDKey] = *patch.Snapshot
 	}
 
-	if err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task)); err != nil {
+	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
+	if err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -23,6 +24,8 @@ const (
 	HistoryPath = "history.json"
 	MaxHistory  = 100
 )
+
+var ErrTaskNotFound = errors.New("task not found")
 
 // ExecutionRecord represents a log entry for a task execution.
 type ExecutionRecord struct {
@@ -105,7 +108,7 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 
 	_, exists := tm.tasks[task.ID]
 	if !exists {
-		return fmt.Errorf("no task found with ID '%s'", task.ID)
+		return ErrTaskNotFound
 	}
 
 	tm.cron.Remove(task.CronEntryID)
