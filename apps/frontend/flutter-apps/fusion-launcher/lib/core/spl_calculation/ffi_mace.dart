@@ -21,7 +21,14 @@ final DynamicLibrary _mace = () {
   } else if (Platform.isIOS) {
     return DynamicLibrary.process();
   } else if (Platform.isWindows) {
-    return DynamicLibrary.open('MaceAPI.dll');
+    final String exe = Platform.resolvedExecutable;
+    final String exeDir = File(exe).parent.path;
+    final String dllPath = p.join(exeDir, 'MaceAPI.dll');
+
+    print('DLL path: $dllPath');
+    print('DLL exists: ${File(dllPath).existsSync()}');
+
+    return DynamicLibrary.open(dllPath);
   } else {
     throw UnsupportedError('This platform is not supported');
   }

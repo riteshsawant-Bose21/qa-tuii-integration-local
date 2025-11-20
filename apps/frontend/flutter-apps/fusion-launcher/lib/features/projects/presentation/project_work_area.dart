@@ -104,7 +104,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   Future<void> _initMace() async {
-    if (Platform.isMacOS || Platform.isIOS) {
+    if (Platform.isMacOS || Platform.isIOS || Platform.isWindows) {
       WidgetsFlutterBinding.ensureInitialized();
       _engine = await MaceEngine.create();
 
