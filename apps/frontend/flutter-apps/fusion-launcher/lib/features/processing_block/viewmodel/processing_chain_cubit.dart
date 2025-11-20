@@ -27,6 +27,18 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
     }
   }
 
+  /// add processing block to source
+  void addProcessingBlockToSource(ProcessingBlockModel block) {
+    final ProcessingBlockModel newBlock = block.copyWith(
+      id: block.algorithmId.toUpperCase() + FusionUtils.shortStringUUID(),
+    );
+    viewModel.addProcessingBlockToSource(processingBlock: block, sourceId: param.id);
+
+    emit(
+      state.add(newBlock).select(newBlock),
+    );
+  }
+
   void addProcessingBlock(ProcessingBlockModel block) {
     final ProcessingBlockModel newBlock = block.copyWith(
       id: block.algorithmId.toUpperCase() + FusionUtils.shortStringUUID(),
