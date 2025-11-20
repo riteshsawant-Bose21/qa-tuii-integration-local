@@ -327,6 +327,34 @@ extension ZoneService on ProjectService {
     }
   }
 
+  List<PrioritySourceData> getPrioritySourcesDataInZone(String zoneId) {
+    final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zoneId).toList();
+
+    final priorityData = prioritySources.map((id) => prioritySourceData.get(id)).where((data) => data != null).cast<PrioritySourceData>().toList();
+
+    // Sort by priority
+    priorityData.sort((a, b) => a.priority.compareTo(b.priority));
+
+    return priorityData;
+  }
+
+  void updatePrioritySourceGain({
+    required String priorityDataId,
+    required double newGain,
+  }) {
+    final existingData = prioritySourceData.get(priorityDataId);
+    if (existingData == null) {
+      throw Exception('PrioritySourceData $priorityDataId not found');
+    }
+
+    final updatedData = existingData.copyWith(gain: newGain);
+    prioritySourceData.add(updatedData.id, updatedData);
+  }
+
+  PrioritySourceData? getPrioritySourceDataById({required String priorityDataId}) {
+    return prioritySourceData.get(priorityDataId);
+  }
+
   void removeAllPrioritySourcesFromZone(String zoneId) {
     if (!zones.exists(zoneId)) return;
 
