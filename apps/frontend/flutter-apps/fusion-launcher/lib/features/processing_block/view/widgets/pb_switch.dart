@@ -27,7 +27,9 @@ class PBSwitch extends StatelessWidget {
                 true: Text(data.enableValueLabel ?? "Yes", style: style),
                 false: Text(data.disabledValueLabel ?? "No", style: style),
               },
-              onValueChanged: (_) {},
+              onValueChanged: (_) {
+                handler?.onValueChanged(item, !((handler?.getValue(item) ?? true) as bool));
+              },
               groupValue: handler?.getValue(item) ?? true,
             ),
           ],

@@ -27,26 +27,21 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
     }
   }
 
-  /// add processing block to source
-  void addProcessingBlockToSource(ProcessingBlockModel block) {
-    final ProcessingBlockModel newBlock = block.copyWith(
-      id: block.algorithmId.toUpperCase() + FusionUtils.shortStringUUID(),
-    );
-    viewModel.addProcessingBlockToSource(processingBlock: block, sourceId: param.id);
-
-    emit(
-      state.add(newBlock).select(newBlock),
-    );
-  }
-
   void addProcessingBlock(ProcessingBlockModel block) {
     final ProcessingBlockModel newBlock = block.copyWith(
       id: block.algorithmId.toUpperCase() + FusionUtils.shortStringUUID(),
     );
-    viewModel.addProcessingBlockToParent(
-      processingBlock: newBlock,
-      parentId: param.id,
-    );
+    if (param.type == ProcessingChainDeviceType.source) {
+      viewModel.addProcessingBlockToSource(
+        processingBlock: newBlock,
+        sourceId: param.id,
+      );
+    } else {
+      viewModel.addProcessingBlockToParent(
+        processingBlock: newBlock,
+        parentId: param.id,
+      );
+    }
     emit(
       state.add(newBlock).select(newBlock),
     );
