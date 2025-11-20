@@ -988,6 +988,7 @@ private:
         if (verbose_)
             log("Processing incoming JSON update: " + update.toStyledString());
 
+#if 0
         static long long lastSeenFusionVersion = -1;
 
         if (update.isMember("_fusion_version"))
@@ -1016,6 +1017,7 @@ private:
             }
             return;
         }
+#endif
 
         for (const auto &path : targetPaths_)
         {
