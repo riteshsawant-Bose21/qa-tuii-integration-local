@@ -177,6 +177,8 @@ inline std::unique_ptr<ZoneGroup> MakeZoneGroupFromControlSystemConfig(const Con
                 maxGain,
                 zone->gain.gainID);
 
+            gainActuator->handleFusionGainMessage(::OcaDB(std::stod(zone->gain.default_gain_value)));
+
             if (gainActuator)
             {
                 if (zoneGroupRaw->AddObject(*gainActuator))
@@ -194,6 +196,8 @@ inline std::unique_ptr<ZoneGroup> MakeZoneGroupFromControlSystemConfig(const Con
                 ::OcaLiteString((zone->name + " Mute").c_str()),
                 mutePorts,
                 zone->gain.gainID);
+
+            muteActuator->handleFusionMuteMessage(zone->gain.default_mute_value == "true" ? true : false);
 
             if (muteActuator)
             {
