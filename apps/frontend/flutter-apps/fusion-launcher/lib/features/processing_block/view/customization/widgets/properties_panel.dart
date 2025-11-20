@@ -184,6 +184,17 @@ class _PropertiesPanel extends StatelessWidget {
                                         });
                                   },
                                 ),
+                                FusionButton(
+                                  label: "Save In App",
+                                  width: 250,
+                                  onTap: () async {
+                                    ///
+                                    /// Save the configuration JSON to a file
+                                    ///
+                                    await viewModel.saveLayout();
+                                    Navigator.of(context).pop();
+                                  },
+                                ),
                               ],
                             ),
                           ),

@@ -19,11 +19,11 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   AlgorithmDataViewmodel({required this.processingBlock, required this.config}) {
     final String algorithmId = processingBlock.algorithmId;
     algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
-    layout = AlgorithmLayoutData.getForAlgorithm(algorithmId);
+    // layout = AlgorithmLayoutData.getForAlgorithm(algorithmId);
   }
 
   Algorithm? algorithm;
-  PBLayout? layout;
+  PBLayout? get layout => AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");
 
   @override
   dynamic getValue(PBItem param) {

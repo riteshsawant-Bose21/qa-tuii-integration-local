@@ -165,4 +165,13 @@ class PbcViewmodel extends ChangeNotifier {
     }
     return val;
   }
+
+  Future<void> saveLayout() async {
+    final PBLayout layout = PBLayout(
+      width: width,
+      height: 100,
+      children: items,
+    );
+    await AlgorithmLayoutData.saveLayout(algorithm.name, layout);
+  }
 }
