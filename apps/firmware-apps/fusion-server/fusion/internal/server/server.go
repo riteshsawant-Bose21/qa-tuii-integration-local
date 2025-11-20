@@ -4,9 +4,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"reflect"
 	"regexp"
-	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -170,7 +168,7 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the full current configuration state.
 	configData := s.handler.StateManager.GetStateMap()
 
-	// get another copy of a deep copy of configData to preserve the original configuration.
+	// Get another copy of a deep copy of configData to preserve the original configuration.
 	originalConfig := s.handler.StateManager.GetStateMap()
 
 	var updatedData any
@@ -189,12 +187,21 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Calculate the difference between the original and updated configuration.
-	diffData := calculateDiff(originalConfig, updatedData)
+	diffData := utils.CalculateDiff(originalConfig, updatedData)
 
-	// Prepare the response with the update diff.
-	response := map[string]any{
-		"status":  "success",
-		"updates": diffData,
+	// Prepare the response with the update diff
+	var response map[string]any
+
+	if diffData == nil {
+		response = map[string]any{
+			"status":  "noop",
+			"updates": nil,
+		}
+	} else {
+		response = map[string]any{
+			"status":  "success",
+			"updates": diffData,
+		}
 	}
 
 	// Write the JSON response.
@@ -689,77 +696,6 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 		return "", fmt.Errorf("invalid characters in parameter %q", param)
 	}
 	return params[0], nil
-}
-
-// calculateDiff recursively compares two data structures (maps or slices) and returns the differences.
-// If the data is not equal, it returns the updated data.
-func calculateDiff(oldData, newData any) any {
-	// If both values are slices, delegate to calculateSliceDiff.
-	if oldSlice, ok := oldData.([]any); ok {
-		if newSlice, ok2 := newData.([]any); ok2 {
-			return calculateSliceDiff(oldSlice, newSlice)
-		}
-	}
-
-	// If both values are maps, compare them key by key.
-	if oldMap, ok := oldData.(map[string]any); ok {
-		if newMap, ok2 := newData.(map[string]any); ok2 {
-			diff := make(map[string]any)
-
-			// Check keys present in the new map.
-			for key, newVal := range newMap {
-				if oldVal, exists := oldMap[key]; exists {
-					subDiff := calculateDiff(oldVal, newVal)
-					if subDiff != nil {
-						diff[key] = subDiff
-					}
-				} else {
-					// New key added.
-					diff[key] = newVal
-				}
-			}
-
-			// Check for keys that were removed.
-			for key := range oldMap {
-				if _, exists := newMap[key]; !exists {
-					diff[key] = nil
-				}
-			}
-			if len(diff) > 0 {
-				return diff
-			}
-			return nil
-		}
-	}
-
-	// For atomic types, if they differ, return the new value.
-	if !reflect.DeepEqual(oldData, newData) {
-		return newData
-	}
-	return nil
-}
-
-// calculateSliceDiff compares two slices element by element.
-// If the slices have different lengths, it returns the new slice entirely.
-// Otherwise, it returns a map with indices (as strings) where differences are found.
-func calculateSliceDiff(oldSlice, newSlice []any) any {
-	if len(oldSlice) != len(newSlice) {
-		return newSlice
-	}
-
-	diffMap := make(map[string]any)
-	for i, newVal := range newSlice {
-		subDiff := calculateDiff(oldSlice[i], newVal)
-		if subDiff != nil {
-			// Use the index (converted to string) as the key.
-			diffMap[strconv.Itoa(i)] = subDiff
-		}
-	}
-
-	if len(diffMap) > 0 {
-		return diffMap
-	}
-	return nil
 }
 
 // handleWebSocketMessage processes a message received over the WebSocket connection.
