@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/processing_chain_state.dart';
 import '../viewmodel/processing_chain_cubit.dart';
+import 'customization/processing_block_customizer.dart';
 import 'processing_block_page.dart';
 import 'widgets/dotted_line.dart';
 
@@ -194,7 +195,16 @@ class ProcessingChainView extends StatelessWidget {
                                 color: Colors.red,
                               ),
                             ),
-                            const Icon(Icons.more_vert),
+                            InkWell(
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute<void>(
+                                    builder: (BuildContext context) => Scaffold(appBar: AppBar(), body: const ProcessingBlockCustomizer()),
+                                  ),
+                                );
+                              },
+                              child: const Icon(Icons.more_vert),
+                            ),
                             const SizedBox(),
                           ],
                         ),
@@ -350,11 +360,11 @@ class AddProcessingBlockButton extends StatelessWidget {
                   )
                   .toList(),
       onSelected: (ProcessingBlockModel block) {
-        if (params.type == ProcessingChainDeviceType.source) {
-          viewModel.addProcessingBlockToSource(block);
-        } else {
-          viewModel.addProcessingBlock(block);
-        }
+        // if (params.type == ProcessingChainDeviceType.source) {
+        //   viewModel.addProcessingBlockToSource(block);
+        // } else {
+        viewModel.addProcessingBlock(block);
+        // }
       },
     );
   }

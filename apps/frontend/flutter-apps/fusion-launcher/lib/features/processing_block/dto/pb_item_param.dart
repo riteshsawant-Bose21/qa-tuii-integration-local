@@ -10,6 +10,8 @@ part 'params/pb_switch_param.dart';
 part 'params/pb_text_param.dart';
 part 'params/pb_meter_param.dart';
 part 'params/pb_dropdown_param.dart';
+part 'params/pb_button_param.dart';
+part 'params/pb_textfield_param.dart';
 abstract class PBItemParam {
   Map<String, dynamic> toMap();
 

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_button.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_text_field.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_radio.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
-import '../widgets/pb_button.dart';
 import '../widgets/pb_meter.dart';
 import '../widgets/pb_slider.dart';
 import 'widgets.dart';
@@ -159,7 +159,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                                               height: 16,
                                             ),
                                           ),
-                                          const PBTextField(
+                                          const NeumorphicTextField(
                                             hintText: "0.0",
                                             borderRadius: 8,
                                             width: 54,
@@ -224,7 +224,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                                           bottom: BorderSide(color: Color(0xFFE5E5E5), width: 1),
                                         ),
                                       ),
-                                      child: const PBTextField(
+                                      child: const NeumorphicTextField(
                                         hintText: "0.0",
                                         borderRadius: 8,
                                         height: 24,
@@ -285,7 +285,7 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
                                           bottom: BorderSide(color: Color(0xFFE5E5E5), width: 1),
                                         ),
                                       ),
-                                      child: const PBTextField(
+                                      child: const NeumorphicTextField(
                                         hintText: "0.0",
                                         borderRadius: 8,
                                         height: 24,
@@ -343,7 +343,7 @@ class MiniMatrixMixScenes extends StatelessWidget {
         ),
 
         const SizedBox(height: 10),
-        PBButton(
+        NeumorphicButton(
           text: "STORE",
           width: 72,
           height: 24,
@@ -353,7 +353,7 @@ class MiniMatrixMixScenes extends StatelessWidget {
           },
         ),
         const SizedBox(height: 10),
-        PBButton(
+        NeumorphicButton(
           text: "DELETE",
           width: 72,
           height: 24,
@@ -388,7 +388,7 @@ class MiniMatrixVolumneControl extends StatelessWidget {
         ),
 
         const SizedBox(height: 10),
-        const PBTextField(
+        const NeumorphicTextField(
           hintText: "0.0",
           borderRadius: 8,
           height: 28,
