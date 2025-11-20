@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0
-// GPT2 shim: DT compatible "bosepro,fusion-gpt"
-// - binds to GPT2 (10 MHz on GPT2_CLK), runs compare at 1/3 ms
+// GPT1 shim: DT compatible "bosepro,fusion-gpt"
+// - binds to GPT1 (10 MHz on GPT1_CLK), runs compare at 1/3 ms
 // - exports a client API (non-GPL symbols) to deliver ticks in softirq
 
 #include <linux/module.h>
@@ -228,7 +228,7 @@ static int gpt_probe(struct platform_device *pdev)
     ret = gpt_start(g);
     if (ret) return ret;
 
-    dev_info(&pdev->dev, "GPT2 shim running (EXT 10MHz, 1/3ms compares)\n");
+    dev_info(&pdev->dev, "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
     return 0;
 }
 
@@ -257,4 +257,4 @@ module_platform_driver(drv);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Pro");
-MODULE_DESCRIPTION("GPT2 shim exporting 1/3ms ticks");
+MODULE_DESCRIPTION("GPT1 shim exporting 1/3ms ticks");
