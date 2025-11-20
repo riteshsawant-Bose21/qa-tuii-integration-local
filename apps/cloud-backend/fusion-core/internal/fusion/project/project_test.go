@@ -26,9 +26,6 @@ const (
 	testProjectID1         = "project-1"
 	testUserID1            = "user-1"
 	projectNotFoundMsg     = "project not found"
-	userNotFoundMsg        = "user not found"
-	userAlreadyAssignedMsg = "user is already assigned to the project"
-	userNotAssignedMsg     = "user not assigned to the project"
 )
 
 const (
@@ -325,7 +322,7 @@ func TestGetAllProjects(t *testing.T) {
 func TestUpdateProject(t *testing.T) {
 	mockProjectRow := &models.Project{
 		ID:                 "1",
-		PrimaryOwnerUserID: null.NewString("123", true),
+		PrimaryOwnerAccountID: null.NewInt(123, true),
 		Name:               null.NewString(updatedProjectName, true),
 		IsArchived:         false,
 		IsDeleted:          false,

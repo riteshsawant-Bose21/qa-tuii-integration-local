@@ -14,7 +14,7 @@ func TestToOne(t *testing.T) {
 	t.Run("FeaturePermissionToFeatureUsingFeature", testFeaturePermissionToOneFeatureUsingFeature)
 	t.Run("FeaturePermissionToRoleUsingRole", testFeaturePermissionToOneRoleUsingRole)
 	t.Run("ProjectToUserUsingLockedByUser", testProjectToOneUserUsingLockedByUser)
-	t.Run("ProjectToUserUsingPrimaryOwnerUser", testProjectToOneUserUsingPrimaryOwnerUser)
+	t.Run("ProjectToAccountUsingPrimaryOwnerAccount", testProjectToOneAccountUsingPrimaryOwnerAccount)
 	t.Run("ProjectUserToProjectUsingProject", testProjectUserToOneProjectUsingProject)
 	t.Run("ProjectUserToUserUsingUser", testProjectUserToOneUserUsingUser)
 	t.Run("UserToAccountUsingAccount", testUserToOneAccountUsingAccount)
@@ -30,6 +30,7 @@ func TestOneToOne(t *testing.T) {}
 func TestToMany(t *testing.T) {
 	t.Run("AccessLevelToFeaturePermissions", testAccessLevelToManyFeaturePermissions)
 	t.Run("AccountToAccountTypeRoles", testAccountToManyAccountTypeRoles)
+	t.Run("AccountToPrimaryOwnerAccountProjects", testAccountToManyPrimaryOwnerAccountProjects)
 	t.Run("AccountToUsers", testAccountToManyUsers)
 	t.Run("AccountTypeRoleToRoleUsers", testAccountTypeRoleToManyRoleUsers)
 	t.Run("FeatureToFeaturePermissions", testFeatureToManyFeaturePermissions)
@@ -37,7 +38,6 @@ func TestToMany(t *testing.T) {
 	t.Run("RoleToAccountTypeRoles", testRoleToManyAccountTypeRoles)
 	t.Run("RoleToFeaturePermissions", testRoleToManyFeaturePermissions)
 	t.Run("UserToLockedByUserProjects", testUserToManyLockedByUserProjects)
-	t.Run("UserToPrimaryOwnerUserProjects", testUserToManyPrimaryOwnerUserProjects)
 	t.Run("UserToProjectUsers", testUserToManyProjectUsers)
 }
 
@@ -50,7 +50,7 @@ func TestToOneSet(t *testing.T) {
 	t.Run("FeaturePermissionToFeatureUsingFeaturePermissions", testFeaturePermissionToOneSetOpFeatureUsingFeature)
 	t.Run("FeaturePermissionToRoleUsingFeaturePermissions", testFeaturePermissionToOneSetOpRoleUsingRole)
 	t.Run("ProjectToUserUsingLockedByUserProjects", testProjectToOneSetOpUserUsingLockedByUser)
-	t.Run("ProjectToUserUsingPrimaryOwnerUserProjects", testProjectToOneSetOpUserUsingPrimaryOwnerUser)
+	t.Run("ProjectToAccountUsingPrimaryOwnerAccountProjects", testProjectToOneSetOpAccountUsingPrimaryOwnerAccount)
 	t.Run("ProjectUserToProjectUsingProjectUsers", testProjectUserToOneSetOpProjectUsingProject)
 	t.Run("ProjectUserToUserUsingProjectUsers", testProjectUserToOneSetOpUserUsingUser)
 	t.Run("UserToAccountUsingUsers", testUserToOneSetOpAccountUsingAccount)
@@ -61,7 +61,7 @@ func TestToOneSet(t *testing.T) {
 // or deadlocks can occur.
 func TestToOneRemove(t *testing.T) {
 	t.Run("ProjectToUserUsingLockedByUserProjects", testProjectToOneRemoveOpUserUsingLockedByUser)
-	t.Run("ProjectToUserUsingPrimaryOwnerUserProjects", testProjectToOneRemoveOpUserUsingPrimaryOwnerUser)
+	t.Run("ProjectToAccountUsingPrimaryOwnerAccountProjects", testProjectToOneRemoveOpAccountUsingPrimaryOwnerAccount)
 }
 
 // TestOneToOneSet tests cannot be run in parallel
@@ -77,6 +77,7 @@ func TestOneToOneRemove(t *testing.T) {}
 func TestToManyAdd(t *testing.T) {
 	t.Run("AccessLevelToFeaturePermissions", testAccessLevelToManyAddOpFeaturePermissions)
 	t.Run("AccountToAccountTypeRoles", testAccountToManyAddOpAccountTypeRoles)
+	t.Run("AccountToPrimaryOwnerAccountProjects", testAccountToManyAddOpPrimaryOwnerAccountProjects)
 	t.Run("AccountToUsers", testAccountToManyAddOpUsers)
 	t.Run("AccountTypeRoleToRoleUsers", testAccountTypeRoleToManyAddOpRoleUsers)
 	t.Run("FeatureToFeaturePermissions", testFeatureToManyAddOpFeaturePermissions)
@@ -84,20 +85,19 @@ func TestToManyAdd(t *testing.T) {
 	t.Run("RoleToAccountTypeRoles", testRoleToManyAddOpAccountTypeRoles)
 	t.Run("RoleToFeaturePermissions", testRoleToManyAddOpFeaturePermissions)
 	t.Run("UserToLockedByUserProjects", testUserToManyAddOpLockedByUserProjects)
-	t.Run("UserToPrimaryOwnerUserProjects", testUserToManyAddOpPrimaryOwnerUserProjects)
 	t.Run("UserToProjectUsers", testUserToManyAddOpProjectUsers)
 }
 
 // TestToManySet tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManySet(t *testing.T) {
+	t.Run("AccountToPrimaryOwnerAccountProjects", testAccountToManySetOpPrimaryOwnerAccountProjects)
 	t.Run("UserToLockedByUserProjects", testUserToManySetOpLockedByUserProjects)
-	t.Run("UserToPrimaryOwnerUserProjects", testUserToManySetOpPrimaryOwnerUserProjects)
 }
 
 // TestToManyRemove tests cannot be run in parallel
 // or deadlocks can occur.
 func TestToManyRemove(t *testing.T) {
+	t.Run("AccountToPrimaryOwnerAccountProjects", testAccountToManyRemoveOpPrimaryOwnerAccountProjects)
 	t.Run("UserToLockedByUserProjects", testUserToManyRemoveOpLockedByUserProjects)
-	t.Run("UserToPrimaryOwnerUserProjects", testUserToManyRemoveOpPrimaryOwnerUserProjects)
 }

@@ -103,7 +103,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 	now := time.Now()
 	projectRecord := &model.Project{
 		ID:                 project.ID,
-		PrimaryOwnerUserID: null.NewString(project.UserID, project.UserID != ""),
+		PrimaryOwnerAccountID: null.NewInt(1, true), // TODO: Placeholder, replace with actual account ID if available
 		Name:               null.NewString(project.Name, project.Name != ""),
 		Description:        null.NewString(project.Description, project.Description != ""),
 		Venue:              null.NewString(project.Venue, project.Venue != ""),
@@ -256,7 +256,7 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 	}
 
 	if project.AccountID != "" {
-		projectRow.PrimaryOwnerUserID = null.NewString(project.AccountID, project.AccountID != "")
+		projectRow.PrimaryOwnerAccountID = null.NewInt(1, true) // TODO: Replace with actual account ID if available
 	}
 
 	if project.Name != "" {

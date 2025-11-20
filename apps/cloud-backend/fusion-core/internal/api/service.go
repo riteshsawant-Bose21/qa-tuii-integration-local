@@ -99,6 +99,11 @@ func (s *API) shutdown() error {
 	return s.server.Shutdown(ctx)
 }
 
+// Engine returns the underlying Gin engine for testing purposes
+func (s *API) Engine() *gin.Engine {
+	return s.engine
+}
+
 // corsMiddleware adds CORS headers
 func corsMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
