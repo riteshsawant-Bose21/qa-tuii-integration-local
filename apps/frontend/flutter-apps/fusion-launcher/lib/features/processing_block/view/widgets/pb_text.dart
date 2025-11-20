@@ -17,7 +17,7 @@ class PBText extends StatelessWidget {
           child: Text(
             data.label,
             style: TextStyle(
-              fontSize: (constraints.maxWidth * 0.1).clamp(15, 25),
+              fontSize: (constraints.maxHeight * 0.1).clamp(15, 25),
             ),
           ),
         );
