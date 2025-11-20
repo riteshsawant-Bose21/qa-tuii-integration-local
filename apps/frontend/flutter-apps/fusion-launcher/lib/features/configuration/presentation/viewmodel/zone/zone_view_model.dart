@@ -433,6 +433,15 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  int getSourceCountInZone({required String zoneId}) {
+    try {
+      return projectManager.getSourcesAndSourceSetSourcesInZone(zoneId).length;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources and source set sources in zone: $e");
+      return 0;
+    }
+  }
+
   void addPrioritySourceToZone({required String zoneId, required String sourceId, required int priority, bool autoSave = true}) {
     try {
       if (autoSave) {
