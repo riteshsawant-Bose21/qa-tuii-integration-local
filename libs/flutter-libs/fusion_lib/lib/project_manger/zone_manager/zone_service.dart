@@ -22,6 +22,13 @@ extension ZoneService on ProjectService {
       removeSubZone(subZoneId);
     }
 
+    //remove functions associated with this zone
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId).toList();
+    final functionIdsCopy = List<String>.from(functionIds);
+    for (final functionId in functionIdsCopy) {
+      removeFunction(functionId: functionId);
+    }
+
     //remove all the circuits in zone
     // final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId).toList();
     // final circuitIdsCopy = List<String>.from(circuitIds);
@@ -67,6 +74,13 @@ extension ZoneService on ProjectService {
 
     // Update relationship graph (idempotent)
     relationships.link(RelationshipType.zoneSourceSet, zoneId, sourceSetId);
+
+    //check if zone has functions
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+    if (functionIds.isEmpty) return;
+    //if zone has functions, we need to add missing source settings to all scenes
+
+    addMissingSourceSettingsToAllScenes(functionIds.first);
   }
 
   /// Unlink a SourceSet from a Zone.
@@ -74,6 +88,17 @@ extension ZoneService on ProjectService {
     if (!zones.exists(zoneId)) return;
 
     relationships.unlink(RelationshipType.zoneSourceSet, zoneId, sourceSetId);
+
+    //check if zone has functions
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+    if (functionIds.isEmpty) return;
+
+    //remove all sources in source set from all scenes
+    final sourcesInSourceSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+    final sourcesInSourceSetCopy = List<String>.from(sourcesInSourceSet);
+    for (final source in sourcesInSourceSetCopy) {
+      removeSourceFromAllScenes(source);
+    }
   }
 
   /// returns all the SourceSets linked to the given zoneId
@@ -139,12 +164,21 @@ extension ZoneService on ProjectService {
     if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
 
     relationships.link(RelationshipType.zoneSources, zoneId, sourceId);
+
+    //check if zone has functions
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+    if (functionIds.isEmpty) return;
+    //if zone has functions, we need to add missing source settings to all scenes
+
+    addMissingSourceSettingsToAllScenes(functionIds.first);
   }
 
   void removeSourceFromZone(String sourceId, String zoneId) {
     if (!zones.exists(zoneId)) return;
 
     relationships.unlink(RelationshipType.zoneSources, zoneId, sourceId);
+
+    removeSourceFromAllScenes(sourceId);
   }
 
   List<Source> getSourcesInZone(String zoneId) {

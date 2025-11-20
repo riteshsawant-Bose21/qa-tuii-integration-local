@@ -17,6 +17,10 @@ enum RelationshipType {
   prioritySources,
   priorityIndex,
   zoneFunctions,
+  functionScenes,
+  selectedFunctionScenes,
+  selectedSourceForFunction,
+  sourcePriorityData,
 }
 
 class RelationshipManager {

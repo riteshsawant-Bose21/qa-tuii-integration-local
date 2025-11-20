@@ -30,3 +30,5 @@ export 'project_entities/connections_model.dart';
 export 'project_entities/network_switch.dart';
 export 'project_entities/hardware_rack.dart';
 export 'project_entities/zone_functions.dart';
+export 'project_entities/mix_scenes.dart';
+export 'project_entities/priority_source_data.dart';

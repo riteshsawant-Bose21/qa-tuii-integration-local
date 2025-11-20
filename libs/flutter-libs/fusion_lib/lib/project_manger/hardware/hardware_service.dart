@@ -81,6 +81,18 @@ extension HardwareService on ProjectService {
       }
     }
 
+    final hwToRemove = hardware.get(hardwareId);
+    if (hwToRemove is Source) {
+      // Remove source set relationship if any
+      final sourceSetIds = relationships.getParent(RelationshipType.sourceSetSources, hardwareId);
+      if (sourceSetIds != null) {
+        removeSourceFromSourceSet(hardwareId, sourceSetIds);
+      }
+
+      // Remove from all scenes if source is added to any
+      removeSourceFromAllScenes(hardwareId);
+    }
+
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);
     final wireConnectionsCopy = List<String>.from(wireConnections);
     for (final connId in wireConnectionsCopy) {
