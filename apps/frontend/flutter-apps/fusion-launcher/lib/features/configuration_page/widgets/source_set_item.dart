@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -158,27 +159,46 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             visible: _projectViewModel.canLinkSourceSet(sourceSetId: widget.sourceSet.id),
                             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                               builder: (BuildContext context, ProjectViewModelState state) {
-                                return GestureDetector(
-                                  onTap: () {
-                                    if (widget.sourceSet.isLinked) {
-                                      _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
-                                      FusionToast.success(
-                                        context,
-                                        message: "Source set unlinked successfully",
+                                return Tooltip(
+                                  message: widget.sourceSet.isLinked ? 'Unlink Source Set' : 'Link Source Set',
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      showDialog(
+                                        context: context,
+
+                                        builder:
+                                            (_) => FusionDialog(
+                                              title: "Confirm ${widget.sourceSet.isLinked ? "Unlink" : 'Link'}",
+                                              description:
+                                                  'Are you sure you want to ${widget.sourceSet.isLinked ? 'unlink' : 'link'} this source set? All associated processing blocks will be affected.',
+                                              primaryButtonLabel: widget.sourceSet.isLinked ? "Unlink" : 'Link',
+                                              secondaryButtonLabel: 'Cancel',
+                                              onPrimaryPressed: () {
+                                                if (widget.sourceSet.isLinked) {
+                                                  _projectViewModel.unlinkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                  FusionToast.success(
+                                                    context,
+                                                    message: "Source set unlinked successfully",
+                                                  );
+                                                } else {
+                                                  _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
+                                                  FusionToast.success(
+                                                    context,
+                                                    message: "Source set linked successfully",
+                                                  );
+                                                }
+                                                Navigator.pop(context);
+                                              },
+                                              onSecondaryPressed: () => Navigator.pop(context),
+                                            ),
                                       );
-                                    } else {
-                                      _projectViewModel.linkSourceSet(sourceSetId: widget.sourceSet.id);
-                                      FusionToast.success(
-                                        context,
-                                        message: "Source set linked successfully",
-                                      );
-                                    }
-                                  },
-                                  child: FusionImage.asset(
-                                    widget.sourceSet.isLinked ? Assets.linkIcon : Assets.unLinkIcon,
-                                    width: 22,
-                                    height: 22,
-                                    fit: BoxFit.contain,
+                                    },
+                                    child: FusionImage.asset(
+                                      widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
+                                      width: 22,
+                                      height: 22,
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
                                 );
                               },
@@ -186,35 +206,44 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           ),
 
                           const SizedBox(width: 8),
-                          InkWell(
-                            onTap: () {
-                              ProcessingChainView.showForSourceSet(context, widget.sourceSet);
-                            },
-                            child: const FusionImage.asset(
-                              Assets.processingBlocksIcon,
-                              width: 18,
-                              height: 12,
-                              fit: BoxFit.contain,
+                          Tooltip(
+                            message: 'Processing Blocks',
+                            child: InkWell(
+                              onTap: () {
+                                ProcessingChainView.showForSourceSet(context, widget.sourceSet);
+                              },
+                              child: const FusionImage.asset(
+                                Assets.processingBlocksIcon,
+                                width: 18,
+                                height: 12,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                           const SizedBox(width: 8),
-                          GestureDetector(
-                            key: _addSourceIconKey,
-                            onTap: _showEditSourceSetPopup,
-                            child: const FusionImage.asset(
-                              Assets.addSourceIcon,
-                              width: 22,
-                              height: 22,
-                              fit: BoxFit.contain,
+                          Tooltip(
+                            message: 'Edit Source Set',
+                            child: GestureDetector(
+                              key: _addSourceIconKey,
+                              onTap: _showEditSourceSetPopup,
+                              child: const FusionImage.asset(
+                                Assets.addSourceIcon,
+                                width: 22,
+                                height: 22,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
-                          GestureDetector(
-                            onTap: _confirmDeleteSourceSet,
-                            child: const FusionImage.asset(
-                              Assets.deleteIcon,
-                              width: 17,
-                              height: 17,
-                              fit: BoxFit.contain,
+                          Tooltip(
+                            message: 'Delete Source Set',
+                            child: GestureDetector(
+                              onTap: _confirmDeleteSourceSet,
+                              child: const FusionImage.asset(
+                                Assets.deleteIcon,
+                                width: 17,
+                                height: 17,
+                                fit: BoxFit.contain,
+                              ),
                             ),
                           ),
                         ],
@@ -347,7 +376,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   opacity: 0.5,
                   child: SourceItem(source: sourceData, isDragging: true),
                 ),
-                child: SourceItem(source: sourceData, isDragging: _draggingSourceId == sourceData.id),
+                child: SourceItem(sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
               );
             },
           ),
