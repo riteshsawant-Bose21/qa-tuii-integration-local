@@ -988,6 +988,35 @@ private:
         if (verbose_)
             log("Processing incoming JSON update: " + update.toStyledString());
 
+        static long long lastSeenFusionVersion = -1;
+
+        if (update.isMember("_fusion_version"))
+        {
+            long long incoming = update["_fusion_version"].asInt64();
+
+            if (incoming <= lastSeenFusionVersion)
+            {
+                if (verbose_)
+                {
+                    log("Ignoring stale broadcast: version=" + std::to_string(incoming) +
+                        ", lastSeen=" + std::to_string(lastSeenFusionVersion));
+                }
+                return;
+            }
+
+            // Accept and update our version tracker
+            lastSeenFusionVersion = incoming;
+        }
+        else
+        {
+            // No version: ignore to avoid regressing state.
+            if (verbose_)
+            {
+                log("Ignoring update with no _fusion_version");
+            }
+            return;
+        }
+
         for (const auto &path : targetPaths_)
         {
             if (path.find('*') != std::string::npos)
