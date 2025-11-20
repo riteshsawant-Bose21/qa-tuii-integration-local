@@ -234,6 +234,7 @@ extension SourceSetService on ProjectService {
     if (sourceSet == null) return;
 
     if (sourceSet.isLinked) {
+      print('Source set is linked, adding processing block to all sources in set');
       final sourcesInSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSet.id);
 
       for (var source in sourcesInSet) {
