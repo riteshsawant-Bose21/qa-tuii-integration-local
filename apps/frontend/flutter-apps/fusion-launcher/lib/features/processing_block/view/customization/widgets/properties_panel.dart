@@ -86,7 +86,7 @@ class _PropertiesPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: selected.width.toString(),
                       onFieldSubmitted: (String? newValue) {
-                        viewModel.resize(num.tryParse(newValue ?? "") ?? selected.width, selected.height);
+                        viewModel.resize(num.tryParse(newValue ?? ""), null);
                       },
                     ),
                   ),
@@ -100,7 +100,7 @@ class _PropertiesPanel extends StatelessWidget {
                     child: TextFormField(
                       initialValue: selected.height.toString(),
                       onFieldSubmitted: (String? newValue) {
-                        viewModel.resize(selected.width, num.tryParse(newValue ?? "") ?? selected.height);
+                        viewModel.resize(null, num.tryParse(newValue ?? ""));
                       },
                     ),
                   ),
@@ -182,6 +182,17 @@ class _PropertiesPanel extends StatelessWidget {
                                             Navigator.of(context).pop();
                                           }
                                         });
+                                  },
+                                ),
+                                FusionButton(
+                                  label: "Save In App",
+                                  width: 250,
+                                  onTap: () async {
+                                    ///
+                                    /// Save the configuration JSON to a file
+                                    ///
+                                    await viewModel.saveLayout();
+                                    Navigator.of(context).pop();
                                   },
                                 ),
                               ],

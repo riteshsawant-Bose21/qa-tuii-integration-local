@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_text_field.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_radio.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'widgets.dart';
@@ -225,7 +225,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
 
                         const SizedBox(height: 10),
 
-                        const PBTextField(
+                        const NeumorphicTextField(
                           width: 72,
                           height: 28,
                           hintText: "-20db ",

@@ -19,11 +19,11 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   AlgorithmDataViewmodel({required this.processingBlock, required this.config}) {
     final String algorithmId = processingBlock.algorithmId;
     algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
-    layout = AlgorithmLayoutData.getForAlgorithm(algorithmId);
+    // layout = AlgorithmLayoutData.getForAlgorithm(algorithmId);
   }
-
+  final ScrollController scrollController = ScrollController();
   Algorithm? algorithm;
-  PBLayout? layout;
+  PBLayout? get layout => AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");
 
   @override
   dynamic getValue(PBItem param) {
@@ -49,6 +49,9 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   PBItemParam resolveForItem(PBItem item) {
     if (item.param is PBSliderParam) {
       return resolveSliderParam(item);
+    }
+    if (item.param is PBTextfieldParam) {
+      return resolveTextfieldParam(item);
     }
     if (item.param is PBMeterParam) {
       return resolveMeterParam(item);
@@ -76,6 +79,24 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
       );
     }
     return item.param as PBSliderParam;
+  }
+
+  PBTextfieldParam resolveTextfieldParam(PBItem item) {
+    final Parameter? parameter = algorithm?.parameters?.firstWhereOrNull((Parameter element) => element.name == item.field);
+    if (parameter != null) {
+      return (item.param as PBTextfieldParam).copyWith(
+        min: resolveValue(parameter.minimumValue) ?? 0,
+        max: resolveValue(parameter.maximumValue) ?? 100,
+      );
+    }
+    final Telemetry? telemetry = algorithm?.telemetry?.firstWhereOrNull((Telemetry element) => element.name == item.field);
+    if (telemetry != null) {
+      return (item.param as PBTextfieldParam).copyWith(
+        min: resolveValue(telemetry.minimumValue) ?? 0,
+        max: resolveValue(telemetry.maximumValue) ?? 100,
+      );
+    }
+    return item.param as PBTextfieldParam;
   }
 
   PBDropdownParam resolveDropdownParam(PBItem item) {

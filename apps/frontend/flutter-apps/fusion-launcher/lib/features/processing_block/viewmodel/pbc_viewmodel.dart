@@ -26,44 +26,84 @@ class PbcViewmodel extends ChangeNotifier {
 
   PBItem? _selected;
 
-  PBItem? get selected => _selected;
-
-  set selected(PBItem? value) {
-    _selected = value;
+  List<PBItem> _selectedItems = <PBItem>[];
+  List<PBItem> get selectedItems => _selectedItems;
+  bool isShiftPressed = false;
+  void setSelected(
+    PBItem item,
+  ) {
+    if (!isShiftPressed) {
+      _selectedItems.clear();
+    }
+    if (_selectedItems.contains(item)) {
+      _selectedItems.remove(item);
+    } else {
+      _selectedItems.add(item);
+    }
+    _selected = _selectedItems.lastOrNull;
     notifyListeners();
   }
 
-  void move(Offset delta) {
-    final num x = selected?.x ?? 0;
-    final num y = selected?.y ?? 0;
-    final PBItem? oldValue = selected;
-    if (oldValue == null) return;
-    selected = selected?.copyWith(
-      x: roundTo2Digit(x + delta.dx),
-      y: roundTo2Digit(y + delta.dy),
-    );
-
-    items.remove(oldValue);
-    items.add(selected!);
+  void clearSelection() {
+    _selectedItems.clear();
+    _selected = null;
+    notifyListeners();
   }
 
-  void resize(num width, num height) {
-    final PBItem? oldValue = selected;
-    if (oldValue == null) return;
-    selected = selected?.copyWith(width: roundTo2Digit(width), height: roundTo2Digit(height));
+  PBItem? get selected => _selected;
 
-    items.remove(oldValue);
-    items.add(selected!);
+  void move(Offset delta) {
+    if (_selectedItems.isEmpty) return;
+
+    for (final PBItem item in _selectedItems) {
+      final num x = item.x;
+      final num y = item.y;
+      final PBItem oldValue = item;
+      final PBItem newValue = item.copyWith(
+        x: roundTo2Digit(x + delta.dx),
+        y: roundTo2Digit(y + delta.dy),
+      );
+      items.remove(oldValue);
+      items.add(newValue);
+      _selectedItems.remove(oldValue);
+      _selectedItems.add(newValue);
+    }
+    // update selected items with new values
+    final List<PBItem> newSelection = <PBItem>[];
+    for (final PBItem oldItem in _selectedItems) {
+      final PBItem? newItem = items.firstWhereOrNull((PBItem e) => e.id == oldItem.id);
+      if (newItem != null) {
+        newSelection.add(newItem);
+      }
+    }
+    _selectedItems = newSelection;
+    _selected = _selectedItems.lastOrNull;
+    notifyListeners();
+  }
+
+  void resize(num? width, num? height) {
+    for (final PBItem oldValue in _selectedItems) {
+      final PBItem selected = oldValue.copyWith(width: width != null ? roundTo2Digit(width) : null, height: height != null ? roundTo2Digit(height) : null);
+
+      items.remove(oldValue);
+      items.add(selected);
+      _selectedItems.remove(oldValue);
+      _selectedItems.add(selected);
+    }
+    notifyListeners();
   }
 
   void updateProperty(String key, String value) {
-    final PBItem? oldValue = selected;
-    if (oldValue == null) return;
-    final Map<String, dynamic> current = oldValue.param.toMap();
-    current[key] = value;
-    selected = oldValue.copyWith(param: oldValue.param.loadMap(current));
-    items.remove(oldValue);
-    items.add(selected!);
+    for (final PBItem oldValue in _selectedItems) {
+      final Map<String, dynamic> current = oldValue.param.toMap();
+      current[key] = value;
+      final PBItem selected = oldValue.copyWith(param: oldValue.param.loadMap(current));
+      items.remove(oldValue);
+      items.add(selected);
+      _selectedItems.remove(oldValue);
+      _selectedItems.add(selected);
+    }
+    notifyListeners();
   }
 
   void addParameter(PbWidgets type, Offset position, Parameter data) {
@@ -72,6 +112,7 @@ class PbcViewmodel extends ChangeNotifier {
     final ({num height, num width}) size = switch (param) {
       PBIndicatorParam() => (width: 20, height: 15),
       PBSliderParam() => (width: 10, height: 25),
+      PBTextfieldParam() => (width: 10, height: 5),
       PBSwitchParam() => (width: 20, height: 5),
       PBTextParam() => (width: 20, height: 20),
       PBGraphParam() => (width: 50, height: 50),
@@ -103,7 +144,7 @@ class PbcViewmodel extends ChangeNotifier {
         ),
       );
     }
-    selected = items.last;
+    setSelected(items.last);
     notifyListeners();
   }
 
@@ -112,6 +153,7 @@ class PbcViewmodel extends ChangeNotifier {
     final ({num height, num width}) size = switch (param) {
       PBIndicatorParam() => (width: 20, height: 15),
       PBSliderParam() => (width: 10, height: 25),
+      PBTextfieldParam() => (width: 15, height: 5),
       PBSwitchParam() => (width: 20, height: 5),
       PBTextParam() => (width: 20, height: 20),
       PBGraphParam() => (width: 50, height: 50),
@@ -132,7 +174,7 @@ class PbcViewmodel extends ChangeNotifier {
         value: data.defaultValue,
       ),
     );
-    selected = items.last;
+    setSelected(items.last);
     notifyListeners();
   }
 
@@ -150,8 +192,11 @@ class PbcViewmodel extends ChangeNotifier {
   Map<String, dynamic> get currentJson => <String, dynamic>{"width": width, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};
 
   void delete() {
-    items.remove(selected);
-    selected = null;
+    for (final PBItem item in _selectedItems) {
+      items.remove(item);
+    }
+    clearSelection();
+    notifyListeners();
   }
 
   num roundTo2Digit(num val) {
@@ -163,5 +208,14 @@ class PbcViewmodel extends ChangeNotifier {
       return algorithm.properties?.firstWhereOrNull((Property element) => element.name == val)?.defaultValue ?? val;
     }
     return val;
+  }
+
+  Future<void> saveLayout() async {
+    final PBLayout layout = PBLayout(
+      width: width,
+      height: 100,
+      children: items,
+    );
+    await AlgorithmLayoutData.saveLayout(algorithm.name, layout);
   }
 }
