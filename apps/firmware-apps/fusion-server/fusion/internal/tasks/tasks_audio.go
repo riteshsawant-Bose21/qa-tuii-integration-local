@@ -93,7 +93,7 @@ func (tm *TaskManager) TriggerMessage(w http.ResponseWriter, r *http.Request) {
 	task := api.Task{
 		ID:          "message_trigger",
 		Description: "Trigger audio message",
-		Type:        api.TaskTypeSnapshot,
+		Type:        api.TaskTypeMessage,
 		Params:      params,
 	}
 

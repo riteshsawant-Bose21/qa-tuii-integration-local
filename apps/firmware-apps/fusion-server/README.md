@@ -230,22 +230,14 @@ curl "http://192.168.2.100:8080/value?key=current"
 Response if value exists:
 ```json
 {
-  "exists": true,
-  "value": {
-    "current": 0.5,
-    "max": 1,
-    "min": "0.0"
-  }
+  "current": 0.5,
+  "max": 1,
+  "min": "0.0"
 }
 ```
 
 Response if value does not exist:
-```json
-{
-  "error": "key not found",
-  "exists": false
-}
-```
+HTTP 404
 
 ### Get all configuration values
 ```bash

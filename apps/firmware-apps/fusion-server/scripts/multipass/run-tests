@@ -13,6 +13,7 @@ function show_help() {
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
     echo "  --sap         Run only SAP tests"     
+    echo "  --scheduler   Run only scheduler tests"     
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
@@ -60,6 +61,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --sap)
             test_type="sap"
+            shift
+            ;;
+        --scheduler)
+            test_type="scheduler"
             shift
             ;;
         --snapshot)
@@ -144,6 +149,9 @@ case "$test_type" in
     "sap")
         go test -v --race ./sap_test.go
         ;;        
+    "scheduler")
+        go test -v --race ./scheduler_test.go
+        ;;
     "snapshot")
         go test -v --race ./snapshot_test.go
         ;;

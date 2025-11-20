@@ -79,6 +79,8 @@ const (
 
 	SnapshotsEndpoint         = "/snapshots"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
+	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
+	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
 
 	TasksEndpoint          = "/tasks"

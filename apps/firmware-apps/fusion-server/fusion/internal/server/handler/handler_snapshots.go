@@ -61,6 +61,11 @@ func (h *Handler) HandleGetSnapshot(name string) (any, error) {
 	return h.persistence.GetSnapshot(name)
 }
 
+// HandleGetActiveSnapshotName returns the name of the active snapshot
+func (h *Handler) HandleGetActiveSnapshotName() string {
+	return h.persistence.GetActiveSnapshotName()
+}
+
 // HandleIsDefaultSnapshot returns true is the name is the default snapshot
 func (h *Handler) IsDefaultSnapshot(name string) bool {
 	return h.persistence.IsDefaultSnapshot(name)
