@@ -4,7 +4,9 @@ import 'package:fusion_launcher/features/processing_block/view/functions/source_
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../widgets/pb_button.dart';
-import 'widgets.dart';
+import 'widgets/neumorphic_audio_toggle_button.dart';
+import 'widgets/neumorphic_popup_button.dart';
+import 'widgets/neumorphic_text_with_popup_slider_button.dart';
 
 class MiniMatrixZoneControlPanel extends StatefulWidget {
   final String zoneID;
@@ -175,7 +177,7 @@ class MiniMatrixControls extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0).copyWith(top: 4.0),
-                  child: const NeumorphicWithPopupSliderButton(
+                  child: const NeumorphicTextWithPopupSliderButton(
                     isActive: false,
                     height: 30,
                   ),
@@ -255,7 +257,7 @@ class MiniMatrixControls extends StatelessWidget {
                               ),
                               const Expanded(
                                 flex: 3,
-                                child: NeumorphicWithPopupSliderButton(
+                                child: NeumorphicTextWithPopupSliderButton(
                                   isActive: false,
                                   height: 30,
                                 ),
@@ -281,7 +283,7 @@ class MiniMatrixControls extends StatelessWidget {
                                     bottom: isLast ? borderSide : BorderSide.none,
                                   ),
                                 ),
-                                child: const NeumorphicWithPopupSliderButton(
+                                child: const NeumorphicTextWithPopupSliderButton(
                                   isActive: false,
                                   height: 30,
                                 ),

@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
-import 'package:fusion_launcher/features/processing_block/view/functions/widgets.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../widgets/pb_radio.dart';
+import 'widgets/priority_selection_widget.dart';
 
 class SourceSelectZoneControlPanel extends StatefulWidget {
   final String zoneID;

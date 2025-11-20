@@ -5,7 +5,10 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/pb_button.dart';
-import 'widgets.dart';
+import 'widgets/neumorphic_audio_toggle_button.dart';
+import 'widgets/neumorphic_gain_text_field.dart';
+import 'widgets/neumorphic_popup_button.dart';
+import 'widgets/slider_and_meter_widget.dart';
 
 class SourceMixZoneControlPanel extends StatelessWidget {
   final String zoneID;
