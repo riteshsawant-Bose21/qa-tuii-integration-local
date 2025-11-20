@@ -22,7 +22,7 @@ func TestNewProject(t *testing.T) {
 		projectModel := &customModel.GetProjectModel{
 			Project: model.Project{
 				ID:                 testID,
-				PrimaryOwnerUserID: null.NewString("123", true),
+				PrimaryOwnerAccountID: null.NewInt(123, true),
 				Name:               null.NewString(testProjectName, true),
 				Description:        null.NewString("Test Description", true),
 				Venue:              null.NewString("Test Venue", true),
@@ -56,7 +56,7 @@ func TestNewProject(t *testing.T) {
 		projectModel := &customModel.GetProjectModel{
 			Project: model.Project{
 				ID:                 testID,
-				PrimaryOwnerUserID: null.NewString("123", true),
+				PrimaryOwnerAccountID: null.NewInt(123, true),
 				Name:               null.NewString(testProjectName, true),
 				Description:        null.NewString("", false),
 				Venue:              null.NewString("", false),

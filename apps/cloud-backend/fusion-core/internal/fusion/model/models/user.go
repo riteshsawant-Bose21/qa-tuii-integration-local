@@ -101,26 +101,23 @@ var UserWhere = struct {
 
 // UserRels is where relationship names are stored.
 var UserRels = struct {
-	Account                  string
-	Role                     string
-	LockedByUserProjects     string
-	PrimaryOwnerUserProjects string
-	ProjectUsers             string
+	Account              string
+	Role                 string
+	LockedByUserProjects string
+	ProjectUsers         string
 }{
-	Account:                  "Account",
-	Role:                     "Role",
-	LockedByUserProjects:     "LockedByUserProjects",
-	PrimaryOwnerUserProjects: "PrimaryOwnerUserProjects",
-	ProjectUsers:             "ProjectUsers",
+	Account:              "Account",
+	Role:                 "Role",
+	LockedByUserProjects: "LockedByUserProjects",
+	ProjectUsers:         "ProjectUsers",
 }
 
 // userR is where relationships are stored.
 type userR struct {
-	Account                  *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	Role                     *AccountTypeRole `boil:"Role" json:"Role" toml:"Role" yaml:"Role"`
-	LockedByUserProjects     ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
-	PrimaryOwnerUserProjects ProjectSlice     `boil:"PrimaryOwnerUserProjects" json:"PrimaryOwnerUserProjects" toml:"PrimaryOwnerUserProjects" yaml:"PrimaryOwnerUserProjects"`
-	ProjectUsers             ProjectUserSlice `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
+	Account              *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
+	Role                 *AccountTypeRole `boil:"Role" json:"Role" toml:"Role" yaml:"Role"`
+	LockedByUserProjects ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
+	ProjectUsers         ProjectUserSlice `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -174,22 +171,6 @@ func (r *userR) GetLockedByUserProjects() ProjectSlice {
 	}
 
 	return r.LockedByUserProjects
-}
-
-func (o *User) GetPrimaryOwnerUserProjects() ProjectSlice {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetPrimaryOwnerUserProjects()
-}
-
-func (r *userR) GetPrimaryOwnerUserProjects() ProjectSlice {
-	if r == nil {
-		return nil
-	}
-
-	return r.PrimaryOwnerUserProjects
 }
 
 func (o *User) GetProjectUsers() ProjectUserSlice {
@@ -555,20 +536,6 @@ func (o *User) LockedByUserProjects(mods ...qm.QueryMod) projectQuery {
 
 	queryMods = append(queryMods,
 		qm.Where("\"project\".\"locked_by_user_id\"=?", o.ID),
-	)
-
-	return Projects(queryMods...)
-}
-
-// PrimaryOwnerUserProjects retrieves all the project's Projects with an executor via primary_owner_user_id column.
-func (o *User) PrimaryOwnerUserProjects(mods ...qm.QueryMod) projectQuery {
-	var queryMods []qm.QueryMod
-	if len(mods) != 0 {
-		queryMods = append(queryMods, mods...)
-	}
-
-	queryMods = append(queryMods,
-		qm.Where("\"project\".\"primary_owner_user_id\"=?", o.ID),
 	)
 
 	return Projects(queryMods...)
@@ -941,119 +908,6 @@ func (userL) LoadLockedByUserProjects(ctx context.Context, e boil.ContextExecuto
 	return nil
 }
 
-// LoadPrimaryOwnerUserProjects allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (userL) LoadPrimaryOwnerUserProjects(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
-	var slice []*User
-	var object *User
-
-	if singular {
-		var ok bool
-		object, ok = maybeUser.(*User)
-		if !ok {
-			object = new(User)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeUser))
-			}
-		}
-	} else {
-		s, ok := maybeUser.(*[]*User)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeUser)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeUser))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &userR{}
-		}
-		args[object.ID] = struct{}{}
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &userR{}
-			}
-			args[obj.ID] = struct{}{}
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`project`),
-		qm.WhereIn(`project.primary_owner_user_id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load project")
-	}
-
-	var resultSlice []*Project
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice project")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on project")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for project")
-	}
-
-	if len(projectAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-	if singular {
-		object.R.PrimaryOwnerUserProjects = resultSlice
-		for _, foreign := range resultSlice {
-			if foreign.R == nil {
-				foreign.R = &projectR{}
-			}
-			foreign.R.PrimaryOwnerUser = object
-		}
-		return nil
-	}
-
-	for _, foreign := range resultSlice {
-		for _, local := range slice {
-			if queries.Equal(local.ID, foreign.PrimaryOwnerUserID) {
-				local.R.PrimaryOwnerUserProjects = append(local.R.PrimaryOwnerUserProjects, foreign)
-				if foreign.R == nil {
-					foreign.R = &projectR{}
-				}
-				foreign.R.PrimaryOwnerUser = local
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // LoadProjectUsers allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
 func (userL) LoadProjectUsers(ctx context.Context, e boil.ContextExecutor, singular bool, maybeUser interface{}, mods queries.Applicator) error {
@@ -1381,133 +1235,6 @@ func (o *User) RemoveLockedByUserProjects(ctx context.Context, exec boil.Context
 				o.R.LockedByUserProjects[i] = o.R.LockedByUserProjects[ln-1]
 			}
 			o.R.LockedByUserProjects = o.R.LockedByUserProjects[:ln-1]
-			break
-		}
-	}
-
-	return nil
-}
-
-// AddPrimaryOwnerUserProjects adds the given related objects to the existing relationships
-// of the user, optionally inserting them as new records.
-// Appends related to o.R.PrimaryOwnerUserProjects.
-// Sets related.R.PrimaryOwnerUser appropriately.
-func (o *User) AddPrimaryOwnerUserProjects(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Project) error {
-	var err error
-	for _, rel := range related {
-		if insert {
-			queries.Assign(&rel.PrimaryOwnerUserID, o.ID)
-			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
-				return errors.Wrap(err, "failed to insert into foreign table")
-			}
-		} else {
-			updateQuery := fmt.Sprintf(
-				"UPDATE \"project\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 1, []string{"primary_owner_user_id"}),
-				strmangle.WhereClause("\"", "\"", 2, projectPrimaryKeyColumns),
-			)
-			values := []interface{}{o.ID, rel.ID}
-
-			if boil.IsDebug(ctx) {
-				writer := boil.DebugWriterFrom(ctx)
-				fmt.Fprintln(writer, updateQuery)
-				fmt.Fprintln(writer, values)
-			}
-			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-				return errors.Wrap(err, "failed to update foreign table")
-			}
-
-			queries.Assign(&rel.PrimaryOwnerUserID, o.ID)
-		}
-	}
-
-	if o.R == nil {
-		o.R = &userR{
-			PrimaryOwnerUserProjects: related,
-		}
-	} else {
-		o.R.PrimaryOwnerUserProjects = append(o.R.PrimaryOwnerUserProjects, related...)
-	}
-
-	for _, rel := range related {
-		if rel.R == nil {
-			rel.R = &projectR{
-				PrimaryOwnerUser: o,
-			}
-		} else {
-			rel.R.PrimaryOwnerUser = o
-		}
-	}
-	return nil
-}
-
-// SetPrimaryOwnerUserProjects removes all previously related items of the
-// user replacing them completely with the passed
-// in related items, optionally inserting them as new records.
-// Sets o.R.PrimaryOwnerUser's PrimaryOwnerUserProjects accordingly.
-// Replaces o.R.PrimaryOwnerUserProjects with related.
-// Sets related.R.PrimaryOwnerUser's PrimaryOwnerUserProjects accordingly.
-func (o *User) SetPrimaryOwnerUserProjects(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Project) error {
-	query := "update \"project\" set \"primary_owner_user_id\" = null where \"primary_owner_user_id\" = $1"
-	values := []interface{}{o.ID}
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, query)
-		fmt.Fprintln(writer, values)
-	}
-	_, err := exec.ExecContext(ctx, query, values...)
-	if err != nil {
-		return errors.Wrap(err, "failed to remove relationships before set")
-	}
-
-	if o.R != nil {
-		for _, rel := range o.R.PrimaryOwnerUserProjects {
-			queries.SetScanner(&rel.PrimaryOwnerUserID, nil)
-			if rel.R == nil {
-				continue
-			}
-
-			rel.R.PrimaryOwnerUser = nil
-		}
-		o.R.PrimaryOwnerUserProjects = nil
-	}
-
-	return o.AddPrimaryOwnerUserProjects(ctx, exec, insert, related...)
-}
-
-// RemovePrimaryOwnerUserProjects relationships from objects passed in.
-// Removes related items from R.PrimaryOwnerUserProjects (uses pointer comparison, removal does not keep order)
-// Sets related.R.PrimaryOwnerUser.
-func (o *User) RemovePrimaryOwnerUserProjects(ctx context.Context, exec boil.ContextExecutor, related ...*Project) error {
-	if len(related) == 0 {
-		return nil
-	}
-
-	var err error
-	for _, rel := range related {
-		queries.SetScanner(&rel.PrimaryOwnerUserID, nil)
-		if rel.R != nil {
-			rel.R.PrimaryOwnerUser = nil
-		}
-		if _, err = rel.Update(ctx, exec, boil.Whitelist("primary_owner_user_id")); err != nil {
-			return err
-		}
-	}
-	if o.R == nil {
-		return nil
-	}
-
-	for _, rel := range related {
-		for i, ri := range o.R.PrimaryOwnerUserProjects {
-			if rel != ri {
-				continue
-			}
-
-			ln := len(o.R.PrimaryOwnerUserProjects)
-			if ln > 1 && i < ln-1 {
-				o.R.PrimaryOwnerUserProjects[i] = o.R.PrimaryOwnerUserProjects[ln-1]
-			}
-			o.R.PrimaryOwnerUserProjects = o.R.PrimaryOwnerUserProjects[:ln-1]
 			break
 		}
 	}

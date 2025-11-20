@@ -572,6 +572,83 @@ func testAccountToManyAccountTypeRoles(t *testing.T) {
 	}
 }
 
+func testAccountToManyPrimaryOwnerAccountProjects(t *testing.T) {
+	var err error
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Account
+	var b, c Project
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, accountDBTypes, true, accountColumnsWithDefault...); err != nil {
+		t.Errorf("Unable to randomize Account struct: %s", err)
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	if err = randomize.Struct(seed, &b, projectDBTypes, false, projectColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+	if err = randomize.Struct(seed, &c, projectDBTypes, false, projectColumnsWithDefault...); err != nil {
+		t.Fatal(err)
+	}
+
+	queries.Assign(&b.PrimaryOwnerAccountID, a.ID)
+	queries.Assign(&c.PrimaryOwnerAccountID, a.ID)
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	check, err := a.PrimaryOwnerAccountProjects().All(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	bFound, cFound := false, false
+	for _, v := range check {
+		if queries.Equal(v.PrimaryOwnerAccountID, b.PrimaryOwnerAccountID) {
+			bFound = true
+		}
+		if queries.Equal(v.PrimaryOwnerAccountID, c.PrimaryOwnerAccountID) {
+			cFound = true
+		}
+	}
+
+	if !bFound {
+		t.Error("expected to find b")
+	}
+	if !cFound {
+		t.Error("expected to find c")
+	}
+
+	slice := AccountSlice{&a}
+	if err = a.L.LoadPrimaryOwnerAccountProjects(ctx, tx, false, (*[]*Account)(&slice), nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.PrimaryOwnerAccountProjects); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	a.R.PrimaryOwnerAccountProjects = nil
+	if err = a.L.LoadPrimaryOwnerAccountProjects(ctx, tx, true, &a, nil); err != nil {
+		t.Fatal(err)
+	}
+	if got := len(a.R.PrimaryOwnerAccountProjects); got != 2 {
+		t.Error("number of eager loaded records wrong, got:", got)
+	}
+
+	if t.Failed() {
+		t.Logf("%#v", check)
+	}
+}
+
 func testAccountToManyUsers(t *testing.T) {
 	var err error
 	ctx := context.Background()
@@ -725,6 +802,257 @@ func testAccountToManyAddOpAccountTypeRoles(t *testing.T) {
 		}
 	}
 }
+func testAccountToManyAddOpPrimaryOwnerAccountProjects(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Account
+	var b, c, d, e Project
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, accountDBTypes, false, strmangle.SetComplement(accountPrimaryKeyColumns, accountColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Project{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, projectDBTypes, false, strmangle.SetComplement(projectPrimaryKeyColumns, projectColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	foreignersSplitByInsertion := [][]*Project{
+		{&b, &c},
+		{&d, &e},
+	}
+
+	for i, x := range foreignersSplitByInsertion {
+		err = a.AddPrimaryOwnerAccountProjects(ctx, tx, i != 0, x...)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		first := x[0]
+		second := x[1]
+
+		if !queries.Equal(a.ID, first.PrimaryOwnerAccountID) {
+			t.Error("foreign key was wrong value", a.ID, first.PrimaryOwnerAccountID)
+		}
+		if !queries.Equal(a.ID, second.PrimaryOwnerAccountID) {
+			t.Error("foreign key was wrong value", a.ID, second.PrimaryOwnerAccountID)
+		}
+
+		if first.R.PrimaryOwnerAccount != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+		if second.R.PrimaryOwnerAccount != &a {
+			t.Error("relationship was not added properly to the foreign slice")
+		}
+
+		if a.R.PrimaryOwnerAccountProjects[i*2] != first {
+			t.Error("relationship struct slice not set to correct value")
+		}
+		if a.R.PrimaryOwnerAccountProjects[i*2+1] != second {
+			t.Error("relationship struct slice not set to correct value")
+		}
+
+		count, err := a.PrimaryOwnerAccountProjects().Count(ctx, tx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if want := int64((i + 1) * 2); count != want {
+			t.Error("want", want, "got", count)
+		}
+	}
+}
+
+func testAccountToManySetOpPrimaryOwnerAccountProjects(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Account
+	var b, c, d, e Project
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, accountDBTypes, false, strmangle.SetComplement(accountPrimaryKeyColumns, accountColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Project{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, projectDBTypes, false, strmangle.SetComplement(projectPrimaryKeyColumns, projectColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err = a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+	if err = c.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.SetPrimaryOwnerAccountProjects(ctx, tx, false, &b, &c)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := a.PrimaryOwnerAccountProjects().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	err = a.SetPrimaryOwnerAccountProjects(ctx, tx, true, &d, &e)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = a.PrimaryOwnerAccountProjects().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	if !queries.IsValuerNil(b.PrimaryOwnerAccountID) {
+		t.Error("want b's foreign key value to be nil")
+	}
+	if !queries.IsValuerNil(c.PrimaryOwnerAccountID) {
+		t.Error("want c's foreign key value to be nil")
+	}
+	if !queries.Equal(a.ID, d.PrimaryOwnerAccountID) {
+		t.Error("foreign key was wrong value", a.ID, d.PrimaryOwnerAccountID)
+	}
+	if !queries.Equal(a.ID, e.PrimaryOwnerAccountID) {
+		t.Error("foreign key was wrong value", a.ID, e.PrimaryOwnerAccountID)
+	}
+
+	if b.R.PrimaryOwnerAccount != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if c.R.PrimaryOwnerAccount != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if d.R.PrimaryOwnerAccount != &a {
+		t.Error("relationship was not added properly to the foreign struct")
+	}
+	if e.R.PrimaryOwnerAccount != &a {
+		t.Error("relationship was not added properly to the foreign struct")
+	}
+
+	if a.R.PrimaryOwnerAccountProjects[0] != &d {
+		t.Error("relationship struct slice not set to correct value")
+	}
+	if a.R.PrimaryOwnerAccountProjects[1] != &e {
+		t.Error("relationship struct slice not set to correct value")
+	}
+}
+
+func testAccountToManyRemoveOpPrimaryOwnerAccountProjects(t *testing.T) {
+	var err error
+
+	ctx := context.Background()
+	tx := MustTx(boil.BeginTx(ctx, nil))
+	defer func() { _ = tx.Rollback() }()
+
+	var a Account
+	var b, c, d, e Project
+
+	seed := randomize.NewSeed()
+	if err = randomize.Struct(seed, &a, accountDBTypes, false, strmangle.SetComplement(accountPrimaryKeyColumns, accountColumnsWithoutDefault)...); err != nil {
+		t.Fatal(err)
+	}
+	foreigners := []*Project{&b, &c, &d, &e}
+	for _, x := range foreigners {
+		if err = randomize.Struct(seed, x, projectDBTypes, false, strmangle.SetComplement(projectPrimaryKeyColumns, projectColumnsWithoutDefault)...); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := a.Insert(ctx, tx, boil.Infer()); err != nil {
+		t.Fatal(err)
+	}
+
+	err = a.AddPrimaryOwnerAccountProjects(ctx, tx, true, foreigners...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err := a.PrimaryOwnerAccountProjects().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 4 {
+		t.Error("count was wrong:", count)
+	}
+
+	err = a.RemovePrimaryOwnerAccountProjects(ctx, tx, foreigners[:2]...)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	count, err = a.PrimaryOwnerAccountProjects().Count(ctx, tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if count != 2 {
+		t.Error("count was wrong:", count)
+	}
+
+	if !queries.IsValuerNil(b.PrimaryOwnerAccountID) {
+		t.Error("want b's foreign key value to be nil")
+	}
+	if !queries.IsValuerNil(c.PrimaryOwnerAccountID) {
+		t.Error("want c's foreign key value to be nil")
+	}
+
+	if b.R.PrimaryOwnerAccount != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if c.R.PrimaryOwnerAccount != nil {
+		t.Error("relationship was not removed properly from the foreign struct")
+	}
+	if d.R.PrimaryOwnerAccount != &a {
+		t.Error("relationship to a should have been preserved")
+	}
+	if e.R.PrimaryOwnerAccount != &a {
+		t.Error("relationship to a should have been preserved")
+	}
+
+	if len(a.R.PrimaryOwnerAccountProjects) != 2 {
+		t.Error("should have preserved two relationships")
+	}
+
+	// Removal doesn't do a stable deletion for performance so we have to flip the order
+	if a.R.PrimaryOwnerAccountProjects[1] != &d {
+		t.Error("relationship to d should have been preserved")
+	}
+	if a.R.PrimaryOwnerAccountProjects[0] != &e {
+		t.Error("relationship to e should have been preserved")
+	}
+}
+
 func testAccountToManyAddOpUsers(t *testing.T) {
 	var err error
 

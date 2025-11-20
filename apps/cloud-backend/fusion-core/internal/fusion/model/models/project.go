@@ -25,92 +25,92 @@ import (
 
 // Project is an object representing the database table.
 type Project struct {
-	ID                 string            `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Application        null.String       `boil:"application" json:"application,omitempty" toml:"application" yaml:"application,omitempty"`
-	BudgetAmount       types.NullDecimal `boil:"budget_amount" json:"budget_amount,omitempty" toml:"budget_amount" yaml:"budget_amount,omitempty"`
-	Currency           null.String       `boil:"currency" json:"currency,omitempty" toml:"currency" yaml:"currency,omitempty"`
-	Description        null.String       `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
-	Name               null.String       `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
-	ProjectPhase       null.String       `boil:"project_phase" json:"project_phase,omitempty" toml:"project_phase" yaml:"project_phase,omitempty"`
-	Venue              null.String       `boil:"venue" json:"venue,omitempty" toml:"venue" yaml:"venue,omitempty"`
-	EnvironmentType    null.String       `boil:"environment_type" json:"environment_type,omitempty" toml:"environment_type" yaml:"environment_type,omitempty"`
-	IsArchived         bool              `boil:"is_archived" json:"is_archived" toml:"is_archived" yaml:"is_archived"`
-	IsDeleted          bool              `boil:"is_deleted" json:"is_deleted" toml:"is_deleted" yaml:"is_deleted"`
-	LockedByUserID     null.String       `boil:"locked_by_user_id" json:"locked_by_user_id,omitempty" toml:"locked_by_user_id" yaml:"locked_by_user_id,omitempty"`
-	CreatedAt          time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt          time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	PrimaryOwnerUserID null.String       `boil:"primary_owner_user_id" json:"primary_owner_user_id,omitempty" toml:"primary_owner_user_id" yaml:"primary_owner_user_id,omitempty"`
+	ID                    string            `boil:"id" json:"id" toml:"id" yaml:"id"`
+	Application           null.String       `boil:"application" json:"application,omitempty" toml:"application" yaml:"application,omitempty"`
+	BudgetAmount          types.NullDecimal `boil:"budget_amount" json:"budget_amount,omitempty" toml:"budget_amount" yaml:"budget_amount,omitempty"`
+	Currency              null.String       `boil:"currency" json:"currency,omitempty" toml:"currency" yaml:"currency,omitempty"`
+	Description           null.String       `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
+	Name                  null.String       `boil:"name" json:"name,omitempty" toml:"name" yaml:"name,omitempty"`
+	ProjectPhase          null.String       `boil:"project_phase" json:"project_phase,omitempty" toml:"project_phase" yaml:"project_phase,omitempty"`
+	Venue                 null.String       `boil:"venue" json:"venue,omitempty" toml:"venue" yaml:"venue,omitempty"`
+	EnvironmentType       null.String       `boil:"environment_type" json:"environment_type,omitempty" toml:"environment_type" yaml:"environment_type,omitempty"`
+	IsArchived            bool              `boil:"is_archived" json:"is_archived" toml:"is_archived" yaml:"is_archived"`
+	IsDeleted             bool              `boil:"is_deleted" json:"is_deleted" toml:"is_deleted" yaml:"is_deleted"`
+	LockedByUserID        null.String       `boil:"locked_by_user_id" json:"locked_by_user_id,omitempty" toml:"locked_by_user_id" yaml:"locked_by_user_id,omitempty"`
+	CreatedAt             time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
+	UpdatedAt             time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	PrimaryOwnerAccountID null.Int          `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
 
 	R *projectR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L projectL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ProjectColumns = struct {
-	ID                 string
-	Application        string
-	BudgetAmount       string
-	Currency           string
-	Description        string
-	Name               string
-	ProjectPhase       string
-	Venue              string
-	EnvironmentType    string
-	IsArchived         string
-	IsDeleted          string
-	LockedByUserID     string
-	CreatedAt          string
-	UpdatedAt          string
-	PrimaryOwnerUserID string
+	ID                    string
+	Application           string
+	BudgetAmount          string
+	Currency              string
+	Description           string
+	Name                  string
+	ProjectPhase          string
+	Venue                 string
+	EnvironmentType       string
+	IsArchived            string
+	IsDeleted             string
+	LockedByUserID        string
+	CreatedAt             string
+	UpdatedAt             string
+	PrimaryOwnerAccountID string
 }{
-	ID:                 "id",
-	Application:        "application",
-	BudgetAmount:       "budget_amount",
-	Currency:           "currency",
-	Description:        "description",
-	Name:               "name",
-	ProjectPhase:       "project_phase",
-	Venue:              "venue",
-	EnvironmentType:    "environment_type",
-	IsArchived:         "is_archived",
-	IsDeleted:          "is_deleted",
-	LockedByUserID:     "locked_by_user_id",
-	CreatedAt:          "created_at",
-	UpdatedAt:          "updated_at",
-	PrimaryOwnerUserID: "primary_owner_user_id",
+	ID:                    "id",
+	Application:           "application",
+	BudgetAmount:          "budget_amount",
+	Currency:              "currency",
+	Description:           "description",
+	Name:                  "name",
+	ProjectPhase:          "project_phase",
+	Venue:                 "venue",
+	EnvironmentType:       "environment_type",
+	IsArchived:            "is_archived",
+	IsDeleted:             "is_deleted",
+	LockedByUserID:        "locked_by_user_id",
+	CreatedAt:             "created_at",
+	UpdatedAt:             "updated_at",
+	PrimaryOwnerAccountID: "primary_owner_account_id",
 }
 
 var ProjectTableColumns = struct {
-	ID                 string
-	Application        string
-	BudgetAmount       string
-	Currency           string
-	Description        string
-	Name               string
-	ProjectPhase       string
-	Venue              string
-	EnvironmentType    string
-	IsArchived         string
-	IsDeleted          string
-	LockedByUserID     string
-	CreatedAt          string
-	UpdatedAt          string
-	PrimaryOwnerUserID string
+	ID                    string
+	Application           string
+	BudgetAmount          string
+	Currency              string
+	Description           string
+	Name                  string
+	ProjectPhase          string
+	Venue                 string
+	EnvironmentType       string
+	IsArchived            string
+	IsDeleted             string
+	LockedByUserID        string
+	CreatedAt             string
+	UpdatedAt             string
+	PrimaryOwnerAccountID string
 }{
-	ID:                 "project.id",
-	Application:        "project.application",
-	BudgetAmount:       "project.budget_amount",
-	Currency:           "project.currency",
-	Description:        "project.description",
-	Name:               "project.name",
-	ProjectPhase:       "project.project_phase",
-	Venue:              "project.venue",
-	EnvironmentType:    "project.environment_type",
-	IsArchived:         "project.is_archived",
-	IsDeleted:          "project.is_deleted",
-	LockedByUserID:     "project.locked_by_user_id",
-	CreatedAt:          "project.created_at",
-	UpdatedAt:          "project.updated_at",
-	PrimaryOwnerUserID: "project.primary_owner_user_id",
+	ID:                    "project.id",
+	Application:           "project.application",
+	BudgetAmount:          "project.budget_amount",
+	Currency:              "project.currency",
+	Description:           "project.description",
+	Name:                  "project.name",
+	ProjectPhase:          "project.project_phase",
+	Venue:                 "project.venue",
+	EnvironmentType:       "project.environment_type",
+	IsArchived:            "project.is_archived",
+	IsDeleted:             "project.is_deleted",
+	LockedByUserID:        "project.locked_by_user_id",
+	CreatedAt:             "project.created_at",
+	UpdatedAt:             "project.updated_at",
+	PrimaryOwnerAccountID: "project.primary_owner_account_id",
 }
 
 // Generated where
@@ -150,56 +150,94 @@ func (w whereHelperbool) LTE(x bool) qm.QueryMod { return qmhelper.Where(w.field
 func (w whereHelperbool) GT(x bool) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
 func (w whereHelperbool) GTE(x bool) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
 
+type whereHelpernull_Int struct{ field string }
+
+func (w whereHelpernull_Int) EQ(x null.Int) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_Int) NEQ(x null.Int) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_Int) LT(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_Int) LTE(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_Int) GT(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_Int) GTE(x null.Int) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_Int) IN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_Int) NIN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_Int) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Int) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
 var ProjectWhere = struct {
-	ID                 whereHelperstring
-	Application        whereHelpernull_String
-	BudgetAmount       whereHelpertypes_NullDecimal
-	Currency           whereHelpernull_String
-	Description        whereHelpernull_String
-	Name               whereHelpernull_String
-	ProjectPhase       whereHelpernull_String
-	Venue              whereHelpernull_String
-	EnvironmentType    whereHelpernull_String
-	IsArchived         whereHelperbool
-	IsDeleted          whereHelperbool
-	LockedByUserID     whereHelpernull_String
-	CreatedAt          whereHelpertime_Time
-	UpdatedAt          whereHelpertime_Time
-	PrimaryOwnerUserID whereHelpernull_String
+	ID                    whereHelperstring
+	Application           whereHelpernull_String
+	BudgetAmount          whereHelpertypes_NullDecimal
+	Currency              whereHelpernull_String
+	Description           whereHelpernull_String
+	Name                  whereHelpernull_String
+	ProjectPhase          whereHelpernull_String
+	Venue                 whereHelpernull_String
+	EnvironmentType       whereHelpernull_String
+	IsArchived            whereHelperbool
+	IsDeleted             whereHelperbool
+	LockedByUserID        whereHelpernull_String
+	CreatedAt             whereHelpertime_Time
+	UpdatedAt             whereHelpertime_Time
+	PrimaryOwnerAccountID whereHelpernull_Int
 }{
-	ID:                 whereHelperstring{field: "\"project\".\"id\""},
-	Application:        whereHelpernull_String{field: "\"project\".\"application\""},
-	BudgetAmount:       whereHelpertypes_NullDecimal{field: "\"project\".\"budget_amount\""},
-	Currency:           whereHelpernull_String{field: "\"project\".\"currency\""},
-	Description:        whereHelpernull_String{field: "\"project\".\"description\""},
-	Name:               whereHelpernull_String{field: "\"project\".\"name\""},
-	ProjectPhase:       whereHelpernull_String{field: "\"project\".\"project_phase\""},
-	Venue:              whereHelpernull_String{field: "\"project\".\"venue\""},
-	EnvironmentType:    whereHelpernull_String{field: "\"project\".\"environment_type\""},
-	IsArchived:         whereHelperbool{field: "\"project\".\"is_archived\""},
-	IsDeleted:          whereHelperbool{field: "\"project\".\"is_deleted\""},
-	LockedByUserID:     whereHelpernull_String{field: "\"project\".\"locked_by_user_id\""},
-	CreatedAt:          whereHelpertime_Time{field: "\"project\".\"created_at\""},
-	UpdatedAt:          whereHelpertime_Time{field: "\"project\".\"updated_at\""},
-	PrimaryOwnerUserID: whereHelpernull_String{field: "\"project\".\"primary_owner_user_id\""},
+	ID:                    whereHelperstring{field: "\"project\".\"id\""},
+	Application:           whereHelpernull_String{field: "\"project\".\"application\""},
+	BudgetAmount:          whereHelpertypes_NullDecimal{field: "\"project\".\"budget_amount\""},
+	Currency:              whereHelpernull_String{field: "\"project\".\"currency\""},
+	Description:           whereHelpernull_String{field: "\"project\".\"description\""},
+	Name:                  whereHelpernull_String{field: "\"project\".\"name\""},
+	ProjectPhase:          whereHelpernull_String{field: "\"project\".\"project_phase\""},
+	Venue:                 whereHelpernull_String{field: "\"project\".\"venue\""},
+	EnvironmentType:       whereHelpernull_String{field: "\"project\".\"environment_type\""},
+	IsArchived:            whereHelperbool{field: "\"project\".\"is_archived\""},
+	IsDeleted:             whereHelperbool{field: "\"project\".\"is_deleted\""},
+	LockedByUserID:        whereHelpernull_String{field: "\"project\".\"locked_by_user_id\""},
+	CreatedAt:             whereHelpertime_Time{field: "\"project\".\"created_at\""},
+	UpdatedAt:             whereHelpertime_Time{field: "\"project\".\"updated_at\""},
+	PrimaryOwnerAccountID: whereHelpernull_Int{field: "\"project\".\"primary_owner_account_id\""},
 }
 
 // ProjectRels is where relationship names are stored.
 var ProjectRels = struct {
-	LockedByUser     string
-	PrimaryOwnerUser string
-	ProjectUsers     string
+	LockedByUser        string
+	PrimaryOwnerAccount string
+	ProjectUsers        string
 }{
-	LockedByUser:     "LockedByUser",
-	PrimaryOwnerUser: "PrimaryOwnerUser",
-	ProjectUsers:     "ProjectUsers",
+	LockedByUser:        "LockedByUser",
+	PrimaryOwnerAccount: "PrimaryOwnerAccount",
+	ProjectUsers:        "ProjectUsers",
 }
 
 // projectR is where relationships are stored.
 type projectR struct {
-	LockedByUser     *User            `boil:"LockedByUser" json:"LockedByUser" toml:"LockedByUser" yaml:"LockedByUser"`
-	PrimaryOwnerUser *User            `boil:"PrimaryOwnerUser" json:"PrimaryOwnerUser" toml:"PrimaryOwnerUser" yaml:"PrimaryOwnerUser"`
-	ProjectUsers     ProjectUserSlice `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
+	LockedByUser        *User            `boil:"LockedByUser" json:"LockedByUser" toml:"LockedByUser" yaml:"LockedByUser"`
+	PrimaryOwnerAccount *Account         `boil:"PrimaryOwnerAccount" json:"PrimaryOwnerAccount" toml:"PrimaryOwnerAccount" yaml:"PrimaryOwnerAccount"`
+	ProjectUsers        ProjectUserSlice `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -223,20 +261,20 @@ func (r *projectR) GetLockedByUser() *User {
 	return r.LockedByUser
 }
 
-func (o *Project) GetPrimaryOwnerUser() *User {
+func (o *Project) GetPrimaryOwnerAccount() *Account {
 	if o == nil {
 		return nil
 	}
 
-	return o.R.GetPrimaryOwnerUser()
+	return o.R.GetPrimaryOwnerAccount()
 }
 
-func (r *projectR) GetPrimaryOwnerUser() *User {
+func (r *projectR) GetPrimaryOwnerAccount() *Account {
 	if r == nil {
 		return nil
 	}
 
-	return r.PrimaryOwnerUser
+	return r.PrimaryOwnerAccount
 }
 
 func (o *Project) GetProjectUsers() ProjectUserSlice {
@@ -259,9 +297,9 @@ func (r *projectR) GetProjectUsers() ProjectUserSlice {
 type projectL struct{}
 
 var (
-	projectAllColumns            = []string{"id", "application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_user_id"}
+	projectAllColumns            = []string{"id", "application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
 	projectColumnsWithoutDefault = []string{"id"}
-	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_user_id"}
+	projectColumnsWithDefault    = []string{"application", "budget_amount", "currency", "description", "name", "project_phase", "venue", "environment_type", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "primary_owner_account_id"}
 	projectPrimaryKeyColumns     = []string{"id"}
 	projectGeneratedColumns      = []string{}
 )
@@ -582,15 +620,15 @@ func (o *Project) LockedByUser(mods ...qm.QueryMod) userQuery {
 	return Users(queryMods...)
 }
 
-// PrimaryOwnerUser pointed to by the foreign key.
-func (o *Project) PrimaryOwnerUser(mods ...qm.QueryMod) userQuery {
+// PrimaryOwnerAccount pointed to by the foreign key.
+func (o *Project) PrimaryOwnerAccount(mods ...qm.QueryMod) accountQuery {
 	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.PrimaryOwnerUserID),
+		qm.Where("\"id\" = ?", o.PrimaryOwnerAccountID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Users(queryMods...)
+	return Accounts(queryMods...)
 }
 
 // ProjectUsers retrieves all the project_user's ProjectUsers with an executor.
@@ -731,9 +769,9 @@ func (projectL) LoadLockedByUser(ctx context.Context, e boil.ContextExecutor, si
 	return nil
 }
 
-// LoadPrimaryOwnerUser allows an eager lookup of values, cached into the
+// LoadPrimaryOwnerAccount allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
-func (projectL) LoadPrimaryOwnerUser(ctx context.Context, e boil.ContextExecutor, singular bool, maybeProject interface{}, mods queries.Applicator) error {
+func (projectL) LoadPrimaryOwnerAccount(ctx context.Context, e boil.ContextExecutor, singular bool, maybeProject interface{}, mods queries.Applicator) error {
 	var slice []*Project
 	var object *Project
 
@@ -764,8 +802,8 @@ func (projectL) LoadPrimaryOwnerUser(ctx context.Context, e boil.ContextExecutor
 		if object.R == nil {
 			object.R = &projectR{}
 		}
-		if !queries.IsNil(object.PrimaryOwnerUserID) {
-			args[object.PrimaryOwnerUserID] = struct{}{}
+		if !queries.IsNil(object.PrimaryOwnerAccountID) {
+			args[object.PrimaryOwnerAccountID] = struct{}{}
 		}
 
 	} else {
@@ -774,8 +812,8 @@ func (projectL) LoadPrimaryOwnerUser(ctx context.Context, e boil.ContextExecutor
 				obj.R = &projectR{}
 			}
 
-			if !queries.IsNil(obj.PrimaryOwnerUserID) {
-				args[obj.PrimaryOwnerUserID] = struct{}{}
+			if !queries.IsNil(obj.PrimaryOwnerAccountID) {
+				args[obj.PrimaryOwnerAccountID] = struct{}{}
 			}
 
 		}
@@ -793,8 +831,8 @@ func (projectL) LoadPrimaryOwnerUser(ctx context.Context, e boil.ContextExecutor
 	}
 
 	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.id in ?`, argsSlice...),
+		qm.From(`account`),
+		qm.WhereIn(`account.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -802,22 +840,22 @@ func (projectL) LoadPrimaryOwnerUser(ctx context.Context, e boil.ContextExecutor
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load User")
+		return errors.Wrap(err, "failed to eager load Account")
 	}
 
-	var resultSlice []*User
+	var resultSlice []*Account
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice User")
+		return errors.Wrap(err, "failed to bind eager loaded slice Account")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user")
+		return errors.Wrap(err, "failed to close results of eager load for account")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for account")
 	}
 
-	if len(userAfterSelectHooks) != 0 {
+	if len(accountAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -831,22 +869,22 @@ func (projectL) LoadPrimaryOwnerUser(ctx context.Context, e boil.ContextExecutor
 
 	if singular {
 		foreign := resultSlice[0]
-		object.R.PrimaryOwnerUser = foreign
+		object.R.PrimaryOwnerAccount = foreign
 		if foreign.R == nil {
-			foreign.R = &userR{}
+			foreign.R = &accountR{}
 		}
-		foreign.R.PrimaryOwnerUserProjects = append(foreign.R.PrimaryOwnerUserProjects, object)
+		foreign.R.PrimaryOwnerAccountProjects = append(foreign.R.PrimaryOwnerAccountProjects, object)
 		return nil
 	}
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if queries.Equal(local.PrimaryOwnerUserID, foreign.ID) {
-				local.R.PrimaryOwnerUser = foreign
+			if queries.Equal(local.PrimaryOwnerAccountID, foreign.ID) {
+				local.R.PrimaryOwnerAccount = foreign
 				if foreign.R == nil {
-					foreign.R = &userR{}
+					foreign.R = &accountR{}
 				}
-				foreign.R.PrimaryOwnerUserProjects = append(foreign.R.PrimaryOwnerUserProjects, local)
+				foreign.R.PrimaryOwnerAccountProjects = append(foreign.R.PrimaryOwnerAccountProjects, local)
 				break
 			}
 		}
@@ -1048,10 +1086,10 @@ func (o *Project) RemoveLockedByUser(ctx context.Context, exec boil.ContextExecu
 	return nil
 }
 
-// SetPrimaryOwnerUser of the project to the related item.
-// Sets o.R.PrimaryOwnerUser to related.
-// Adds o to related.R.PrimaryOwnerUserProjects.
-func (o *Project) SetPrimaryOwnerUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
+// SetPrimaryOwnerAccount of the project to the related item.
+// Sets o.R.PrimaryOwnerAccount to related.
+// Adds o to related.R.PrimaryOwnerAccountProjects.
+func (o *Project) SetPrimaryOwnerAccount(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Account) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -1061,7 +1099,7 @@ func (o *Project) SetPrimaryOwnerUser(ctx context.Context, exec boil.ContextExec
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"project\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"primary_owner_user_id"}),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"primary_owner_account_id"}),
 		strmangle.WhereClause("\"", "\"", 2, projectPrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
@@ -1075,54 +1113,54 @@ func (o *Project) SetPrimaryOwnerUser(ctx context.Context, exec boil.ContextExec
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	queries.Assign(&o.PrimaryOwnerUserID, related.ID)
+	queries.Assign(&o.PrimaryOwnerAccountID, related.ID)
 	if o.R == nil {
 		o.R = &projectR{
-			PrimaryOwnerUser: related,
+			PrimaryOwnerAccount: related,
 		}
 	} else {
-		o.R.PrimaryOwnerUser = related
+		o.R.PrimaryOwnerAccount = related
 	}
 
 	if related.R == nil {
-		related.R = &userR{
-			PrimaryOwnerUserProjects: ProjectSlice{o},
+		related.R = &accountR{
+			PrimaryOwnerAccountProjects: ProjectSlice{o},
 		}
 	} else {
-		related.R.PrimaryOwnerUserProjects = append(related.R.PrimaryOwnerUserProjects, o)
+		related.R.PrimaryOwnerAccountProjects = append(related.R.PrimaryOwnerAccountProjects, o)
 	}
 
 	return nil
 }
 
-// RemovePrimaryOwnerUser relationship.
-// Sets o.R.PrimaryOwnerUser to nil.
+// RemovePrimaryOwnerAccount relationship.
+// Sets o.R.PrimaryOwnerAccount to nil.
 // Removes o from all passed in related items' relationships struct.
-func (o *Project) RemovePrimaryOwnerUser(ctx context.Context, exec boil.ContextExecutor, related *User) error {
+func (o *Project) RemovePrimaryOwnerAccount(ctx context.Context, exec boil.ContextExecutor, related *Account) error {
 	var err error
 
-	queries.SetScanner(&o.PrimaryOwnerUserID, nil)
-	if _, err = o.Update(ctx, exec, boil.Whitelist("primary_owner_user_id")); err != nil {
+	queries.SetScanner(&o.PrimaryOwnerAccountID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("primary_owner_account_id")); err != nil {
 		return errors.Wrap(err, "failed to update local table")
 	}
 
 	if o.R != nil {
-		o.R.PrimaryOwnerUser = nil
+		o.R.PrimaryOwnerAccount = nil
 	}
 	if related == nil || related.R == nil {
 		return nil
 	}
 
-	for i, ri := range related.R.PrimaryOwnerUserProjects {
-		if queries.Equal(o.PrimaryOwnerUserID, ri.PrimaryOwnerUserID) {
+	for i, ri := range related.R.PrimaryOwnerAccountProjects {
+		if queries.Equal(o.PrimaryOwnerAccountID, ri.PrimaryOwnerAccountID) {
 			continue
 		}
 
-		ln := len(related.R.PrimaryOwnerUserProjects)
+		ln := len(related.R.PrimaryOwnerAccountProjects)
 		if ln > 1 && i < ln-1 {
-			related.R.PrimaryOwnerUserProjects[i] = related.R.PrimaryOwnerUserProjects[ln-1]
+			related.R.PrimaryOwnerAccountProjects[i] = related.R.PrimaryOwnerAccountProjects[ln-1]
 		}
-		related.R.PrimaryOwnerUserProjects = related.R.PrimaryOwnerUserProjects[:ln-1]
+		related.R.PrimaryOwnerAccountProjects = related.R.PrimaryOwnerAccountProjects[:ln-1]
 		break
 	}
 	return nil
