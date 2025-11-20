@@ -1,8 +1,79 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show TextInputFormatter, FilteringTextInputFormatter;
 import 'package:flutter_svg/svg.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
+/// Returns neumorphism box shadows
+class NeumorphicActiveBlueButton extends StatelessWidget {
+  final String text;
+  final bool isActive;
+  final VoidCallback? onTap;
+  final double? height;
+  final double? width;
+  final Color? backgroundColor;
+  final double borderRadius;
+
+  const NeumorphicActiveBlueButton({
+    super.key,
+    required this.text,
+    required this.isActive,
+    this.onTap,
+    this.height,
+    this.width,
+    this.backgroundColor,
+    this.borderRadius = 8,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: GestureDetector(
+        onTapUp: (_) {
+          onTap?.call();
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadiusGeometry.circular(borderRadius),
+          clipBehavior: isActive ? Clip.hardEdge : Clip.none,
+          child: Container(
+            height: height ?? 50,
+            width: width ?? double.infinity,
+            clipBehavior: isActive ? Clip.hardEdge : Clip.none,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(borderRadius),
+              boxShadow: getNeumorphismBoxShadows(inner: isActive),
+            ),
+            child: Container(
+              width: width,
+              height: height,
+              alignment: Alignment.center,
+              clipBehavior: Clip.none,
+              decoration: BoxDecoration(
+                color: isActive ? const Color(0xFFE2F2FB) : Colors.transparent,
+                borderRadius: BorderRadius.circular(borderRadius),
+                border: isActive ? Border.all(color: const Color(0xFF4D9BC7), width: 1) : null,
+              ),
+              child: FusionAppText(
+                text: text,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Returns neumorphism box shadows
 class NeumorphicAudioToggleButton extends StatefulWidget {
   final bool isActive;
   final VoidCallback? onTap;
@@ -28,19 +99,14 @@ class NeumorphicAudioToggleButton extends StatefulWidget {
 }
 
 class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButton> {
-  bool _isPressed = false;
-
-  bool get _effectiveIsActive => widget.isActive || _isPressed;
+  bool get _effectiveIsActive => widget.isActive;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(8.0),
       child: GestureDetector(
-        onTapDown: (_) => setState(() => _isPressed = true),
-        onTapCancel: () => setState(() => _isPressed = false),
         onTapUp: (_) {
-          setState(() => _isPressed = false);
           widget.onTap?.call();
         },
         child: ClipRRect(
@@ -73,6 +139,7 @@ class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButto
   }
 }
 
+/// Neumorphic popup button with text field and dropdown options
 class NeumorphicPopupButton extends StatefulWidget {
   final String? hintText;
   final double? height;
@@ -135,19 +202,21 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
         child: Row(
           children: <Widget>[
             Expanded(
-              child: TextField(
-                // controller: widget.controller,
-                textAlign: TextAlign.center,
-                focusNode: _focusNode,
-                style: Theme.of(context).textTheme.labelLarge,
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  hintText: widget.hintText ?? 'preset name',
-                  isDense: true,
-                  hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
-                  contentPadding: const EdgeInsets.all(0),
+              child: Center(
+                child: TextField(
+                  // controller: widget.controller,
+                  textAlign: TextAlign.center,
+                  focusNode: _focusNode,
+                  style: Theme.of(context).textTheme.labelLarge,
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: widget.hintText ?? 'preset name',
+                    isDense: true,
+                    hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+                    contentPadding: const EdgeInsets.all(0),
+                  ),
+                  onChanged: widget.onChanged,
                 ),
-                onChanged: widget.onChanged,
               ),
             ),
             const VerticalDivider(color: Colors.black12, thickness: 1, width: 1),
@@ -229,12 +298,159 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
   }
 }
 
+// Neumorphic button with text field and popup menu slider
+class NeumorphicWithPopupSliderButton extends StatefulWidget {
+  final bool isActive;
+  final VoidCallback? onTap;
+  final double? height;
+  final double? width;
+  final Color? backgroundColor;
+  final double borderRadius;
+  final double? controllerValue;
+  final ValueChanged<double>? onValueChanged;
+
+  const NeumorphicWithPopupSliderButton({
+    super.key,
+    required this.isActive,
+    this.onTap,
+    this.height,
+    this.width,
+    this.backgroundColor,
+    this.borderRadius = 8,
+    this.controllerValue,
+    this.onValueChanged,
+  });
+
+  @override
+  State<NeumorphicWithPopupSliderButton> createState() => _NeumorphicWithPopupSliderButtonState();
+}
+
+class _NeumorphicWithPopupSliderButtonState extends State<NeumorphicWithPopupSliderButton> {
+  late final TextEditingController _textController = TextEditingController();
+  final FocusNode focusNode = FocusNode();
+  final GlobalKey _menuKey = GlobalKey();
+  bool _showTextField = false;
+
+  @override
+  void dispose() {
+    super.dispose();
+    _textController.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadiusGeometry.circular(widget.borderRadius),
+      clipBehavior: Clip.hardEdge,
+      child: Container(
+        height: widget.height ?? 32,
+        width: widget.width ?? double.infinity,
+        clipBehavior: Clip.hardEdge,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          boxShadow: getNeumorphismBoxShadows(inner: true, color: const Color(0xFFF9F7F6)),
+        ),
+        child: GestureDetector(
+          key: _menuKey,
+          onDoubleTapDown: (_) {
+            if (!_showTextField) {
+              setState(() => _showTextField = true);
+
+              WidgetsBinding.instance.addPostFrameCallback((_) => focusNode.requestFocus());
+            }
+          },
+          onTapUp: (_) async {
+            final RenderBox button = _menuKey.currentContext!.findRenderObject() as RenderBox;
+            final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+            final Offset position = button.localToGlobal(Offset.zero, ancestor: overlay);
+
+            await showMenu(
+              context: context,
+              color: const Color(0xFFF5F5F5),
+              position: RelativeRect.fromLTRB(
+                position.dx,
+                position.dy + button.size.height,
+                position.dx + button.size.width,
+                0,
+              ),
+              items: <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  enabled: false,
+                  padding: const EdgeInsets.all(8).copyWith(right: 0),
+                  child: const SizedBox(
+                    width: 80,
+                    height: 300,
+                    child: Center(
+                      child: VerticalSlider(
+                        value: 10,
+                        min: 0,
+                        max: 60,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+
+          behavior: HitTestBehavior.opaque,
+          child: SizedBox(
+            height: widget.height ?? 32,
+            width: widget.width ?? double.infinity,
+            child: Center(
+              child: TextField(
+                focusNode: focusNode,
+                enabled: _showTextField,
+                controller: _textController,
+                style: Theme.of(context).textTheme.labelSmall,
+                textAlign: TextAlign.center,
+                inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
+                decoration: InputDecoration(
+                  isDense: true,
+                  hintText: "0.0",
+                  hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
+                  contentPadding: EdgeInsets.zero,
+                  border: InputBorder.none,
+                ),
+                onTapOutside: (PointerDownEvent event) {
+                  setState(() => _showTextField = false);
+                  if (widget.controllerValue != null) _textController.text = widget.controllerValue.toString();
+                  focusNode.unfocus();
+                },
+                onSubmitted: (String value) {
+                  setState(() => _showTextField = false);
+                  final double? newValue = double.tryParse(value);
+                  if (newValue != null) {
+                    widget.onValueChanged?.call(newValue);
+                    _textController.text = newValue.toString();
+                  } else {
+                    if (widget.controllerValue != null) _textController.text = widget.controllerValue.toString();
+                  }
+                },
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// Slider and meter widget
 class SliderAndMeterWidget extends StatelessWidget {
+  final double sliderValue;
+  final double sliderMin;
+  final double sliderMax;
   final ValueChanged<num>? onSliderChanged;
 
   const SliderAndMeterWidget({
     super.key,
     this.onSliderChanged,
+    this.sliderValue = 0.0,
+    this.sliderMin = 0.0,
+    this.sliderMax = 0.0,
   });
 
   @override
@@ -246,9 +462,9 @@ class SliderAndMeterWidget extends StatelessWidget {
         children: <Widget>[
           VerticalSlider(
             onChanged: onSliderChanged,
-            value: 0,
-            min: 0,
-            max: 100,
+            value: sliderValue,
+            min: sliderMin,
+            max: sliderMax,
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),
@@ -266,6 +482,7 @@ class SliderAndMeterWidget extends StatelessWidget {
   }
 }
 
+/// Vertical slider with intervals
 class VerticalSlider extends StatefulWidget {
   const VerticalSlider({
     super.key,
@@ -542,6 +759,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
   }
 }
 
+// Vertical meter with intervals
 class VerticalMeter extends StatelessWidget {
   const VerticalMeter({
     super.key,
@@ -707,6 +925,358 @@ class VerticalMeter extends StatelessWidget {
           ),
         );
       },
+    );
+  }
+}
+
+// Neumorphic text field with gain slider
+class NeumorphicGainTextField extends StatefulWidget {
+  final String? controllerValue;
+  final ValueChanged<double>? onSubmitted;
+  final double? height;
+  final double? width;
+  final double borderRadius;
+  final double maxGain;
+  final double minGain;
+
+  const NeumorphicGainTextField({
+    super.key,
+    required this.maxGain,
+    required this.minGain,
+    this.onSubmitted,
+    this.height,
+    this.width,
+    this.borderRadius = 10,
+    this.controllerValue,
+  });
+
+  @override
+  State<NeumorphicGainTextField> createState() => _NeumorphicGainTextFieldState();
+}
+
+class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
+  late final TextEditingController controller = TextEditingController();
+
+  bool isFocused = false;
+  late FocusNode _focusNode;
+
+  @override
+  void initState() {
+    super.initState();
+    controller.text = widget.controllerValue ?? '';
+    _focusNode = FocusNode();
+    _focusNode.addListener(() {
+      setState(() {
+        isFocused = _focusNode.hasFocus;
+      });
+    });
+
+    controller.addListener(() {
+      final String trimmedText = controller.text.trim();
+      if (trimmedText.isEmpty || trimmedText.length == 1) {
+        if (mounted) setState(() {});
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(NeumorphicGainTextField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.controllerValue != oldWidget.controllerValue) {
+      controller.text = widget.controllerValue ?? '';
+    }
+  }
+
+  @override
+  void dispose() {
+    controller.dispose();
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  bool get hasValue => controller.text.trim().isNotEmpty;
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(widget.borderRadius),
+      child: Container(
+        width: widget.width,
+        height: widget.height,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: Colors.transparent,
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
+          border: isFocused ? Border.all(color: Colors.black12, width: 2) : null,
+        ),
+        child: TextField(
+          controller: controller,
+          textAlign: TextAlign.center,
+          focusNode: _focusNode,
+          style: Theme.of(context).textTheme.labelLarge,
+          inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^-?\d*\.?\d{0,2}$'))],
+          decoration: InputDecoration(
+            border: InputBorder.none,
+            hintText: "0",
+            suffixText: hasValue ? "db" : null,
+            isDense: true,
+            hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+            contentPadding: const EdgeInsets.all(0).copyWith(right: hasValue ? 6 : 0),
+          ),
+          onSubmitted: (String value) {
+            final double? gain = double.tryParse(value);
+
+            if (gain != null) {
+              if (gain > widget.maxGain) {
+                if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+
+                return FusionToast.error(context, message: "Gain cannot be greater than ${widget.maxGain}db");
+              } else if (gain < widget.minGain) {
+                if (widget.controllerValue != null) controller.text = widget.controllerValue.toString();
+                return FusionToast.error(context, message: "Gain cannot be less than ${widget.minGain}db");
+              } else {
+                widget.onSubmitted?.call(gain);
+              }
+            }
+          },
+        ),
+      ),
+    );
+  }
+}
+
+// Priority selection widget
+class PrioritySelectionWidget extends StatefulWidget {
+  final String zoneId;
+  const PrioritySelectionWidget({super.key, required this.zoneId});
+
+  @override
+  State<PrioritySelectionWidget> createState() => _PrioritySelectionWidgetState();
+}
+
+class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
+  final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
+
+  void onReorder(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) newIndex -= 1;
+
+    /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
+    if (oldIndex != newIndex) {
+      /// Get current source IDs directly from view model
+      final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+      final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
+      final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
+
+      /// Create new order list with swapped sources
+      final List<String> newOrder = <String>[];
+      if (oldIndex == 0 && newIndex == 1) {
+        /// P1 moved to P2 position
+        newOrder.add(source2 ?? '');
+        newOrder.add(source1 ?? '');
+      } else if (oldIndex == 1 && newIndex == 0) {
+        /// P2 moved to P1 position
+        newOrder.add(source2 ?? '');
+        newOrder.add(source1 ?? '');
+      }
+
+      /// Use the new reOrderPrioritySourcesInZone method
+      _projectViewModel.reOrderPrioritySourcesInZone(zoneId: widget.zoneId, newOrder: newOrder);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
+
+    return SizedBox(
+      width: 300,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Container(
+            height: 28,
+            width: double.infinity,
+            alignment: Alignment.center,
+            color: const Color(0xFFF5F5F5),
+            child: FusionAppText(
+              text: "PRIORITY",
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+
+          _buildReorderablePriorityWidgets(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReorderablePriorityWidgets() {
+    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
+
+    return Material(
+      color: Colors.transparent,
+      child: ReorderableListView.builder(
+        proxyDecorator: (Widget child, int index, Animation<double> animation) {
+          return FadeTransition(
+            opacity: animation.drive(Tween<double>(begin: 0.95, end: 1.0)),
+            child: Material(
+              color: Colors.white,
+              child: child,
+            ),
+          );
+        },
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        buildDefaultDragHandles: false,
+        itemCount: 2,
+        onReorder: onReorder,
+        itemBuilder: (BuildContext context, int index) {
+          final int priorityIndex = index + 1;
+
+          String? selectedSourceId;
+          String? selectedSourceName;
+          final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+
+          /// priority 1
+          if (priorityIndex == 1) {
+            if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
+              final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
+              if (sourceData != null) {
+                selectedSourceName = sourceData.name;
+                selectedSourceId = prioritySources[0];
+              }
+            }
+          } else {
+            /// priority 2
+            if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
+              final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
+              if (sourceData != null) {
+                selectedSourceName = sourceData.name;
+                selectedSourceId = prioritySources[1];
+              }
+            }
+          }
+
+          // get zone by id
+          final Color? zoneColor = _projectViewModel.getZone(zoneId: widget.zoneId)?.color;
+
+          return ReorderableDragStartListener(
+            key: ValueKey<String>('priority_widget_$index'),
+            index: index,
+            child: Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              // child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
+              child: Container(
+                padding: const EdgeInsets.all(16.0),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: "Priority $priorityIndex",
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                      ),
+                    ),
+                    Row(
+                      spacing: 8,
+                      children: <Widget>[
+                        Expanded(
+                          child: Container(
+                            height: 24,
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(4),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF4F4F4),
+                              borderRadius: BorderRadius.circular(3),
+                            ),
+                            child: Row(
+                              spacing: 4,
+                              children: <Widget>[
+                                Container(
+                                  height: 16,
+                                  width: 16,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: zoneColor, // TODO: THIS IS ZONE COLOR
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: FusionAppText(
+                                    text: "P1",
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      fontSize: 10,
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: selectedSourceName ?? "No source name",
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      fontSize: 10,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        const Icon(
+                          Icons.circle,
+                          color: Color(0xFFF4F4F4),
+                          size: 16,
+                        ),
+
+                        NeumorphicActiveBlueButton(
+                          text: "Active",
+                          isActive: false,
+                          width: 72,
+                          height: 24,
+                          onTap: () {
+                            //
+                          },
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 8),
+                    Row(
+                      spacing: 8,
+                      children: <Widget>[
+                        const Expanded(child: SizedBox()),
+
+                        FusionAppText(
+                          text: "Volume",
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            fontSize: 10,
+                            color: const Color(0xFF171717),
+                          ),
+                        ),
+
+                        const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 8),
+                          child: NeumorphicWithPopupSliderButton(
+                            isActive: false,
+                            width: 72,
+                            height: 24,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          );
+        },
+      ),
     );
   }
 }

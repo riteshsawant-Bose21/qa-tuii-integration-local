@@ -1,43 +1,55 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
+import 'package:fusion_launcher/features/processing_block/view/functions/widgets.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../widgets/pb_radio.dart';
-import '../widgets/pb_textfield.dart';
-import 'widgets.dart';
 
 class SourceSelectZoneControlPanel extends StatefulWidget {
-  const SourceSelectZoneControlPanel({super.key});
+  final String zoneID;
+  const SourceSelectZoneControlPanel({super.key, required this.zoneID});
+
+  static void showDialog(BuildContext context, {required String zoneID}) {
+    showGeneralDialog(
+      context: context,
+      barrierDismissible: true,
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      barrierColor: Colors.black54,
+      transitionDuration: const Duration(milliseconds: 200),
+      pageBuilder: (BuildContext buildContext, _, __) {
+        return SourceSelectZoneControlPanel(
+          zoneID: zoneID,
+        );
+      },
+    );
+  }
 
   @override
   State<SourceSelectZoneControlPanel> createState() => _SourceSelectZoneControlPanelState();
 }
 
 class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPanel> {
-  late List<String> musicList;
+  late List<Source> sources;
+
+  late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   @override
   void initState() {
     super.initState();
-    // Dummy data
-    musicList = List<String>.generate(20, (int index) => "Music_0$index");
-  }
-
-  void onReorder(int oldIndex, int newIndex) {
-    setState(() {
-      if (newIndex > oldIndex) newIndex -= 1;
-      final String item = musicList.removeAt(oldIndex);
-      musicList.insert(newIndex, item);
-    });
+    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
   }
 
   @override
   Widget build(BuildContext context) {
-    final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.5;
+    final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
+
+    // final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
     return Dialog(
       constraints: BoxConstraints(
-        maxWidth: controlScreenWidth < 500 ? controlScreenWidth : 500,
+        maxWidth: controlScreenWidth,
         maxHeight: MediaQuery.sizeOf(context).height * 0.45,
       ),
       backgroundColor: Colors.white,
@@ -57,164 +69,118 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                     child: Container(
                       color: Colors.white,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           // LEFT COLUMN (Reorderable List)
-                          Expanded(
-                            child: Column(
-                              children: <Widget>[
-                                Container(
-                                  height: 32,
-                                  width: double.infinity,
-                                  alignment: Alignment.center,
-                                  color: const Color(0xFFF5F5F5),
-                                  child: FusionAppText(
-                                    text: "SOURCE SELECT",
-                                    style: Theme.of(context).textTheme.labelSmall,
+                          Flexible(
+                            child: SizedBox(
+                              width: 350,
+                              child: Column(
+                                children: <Widget>[
+                                  Container(
+                                    height: 28,
+                                    width: double.infinity,
+                                    alignment: Alignment.center,
+                                    color: const Color(0xFFF5F5F5),
+                                    child: FusionAppText(
+                                      text: "SOURCE SELECT",
+                                      style: Theme.of(context).textTheme.labelSmall,
+                                    ),
                                   ),
-                                ),
-                                Container(
-                                  margin: const EdgeInsets.symmetric(horizontal: 8),
-                                  padding: const EdgeInsets.all(8.0),
-                                  child: Row(
-                                    spacing: 10,
-                                    children: <Widget>[
-                                      Expanded(
-                                        flex: 2,
-                                        child: Center(
-                                          child: FusionAppText(
-                                            text: "Channels",
-                                            textAlign: TextAlign.center,
-                                            style: Theme.of(context).textTheme.labelSmall,
+                                  Container(
+                                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Row(
+                                      spacing: 10,
+                                      children: <Widget>[
+                                        Expanded(
+                                          flex: 2,
+                                          child: Center(
+                                            child: FusionAppText(
+                                              text: "Channels",
+                                              textAlign: TextAlign.center,
+                                              style: Theme.of(context).textTheme.labelSmall,
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                      Expanded(
-                                        child: Center(
-                                          child: FusionAppText(
-                                            text: "Out",
-                                            style: Theme.of(context).textTheme.labelSmall,
-                                          ),
+                                        FusionAppText(
+                                          text: "Out",
+                                          style: Theme.of(context).textTheme.labelSmall,
                                         ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
                                   ),
-                                ),
 
-                                // 🔥 DRAG-AND-DROP LIST
-                                Expanded(
-                                  child: ReorderableListView.builder(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                                    physics: const ClampingScrollPhysics(),
-                                    itemCount: musicList.length,
-                                    onReorder: onReorder,
-                                    proxyDecorator: (Widget child, int index, Animation<double> animation) {
-                                      return Material(
-                                        color: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        child: child,
-                                      );
-                                    },
-                                    buildDefaultDragHandles: false,
-                                    itemBuilder: (BuildContext context, int index) {
-                                      final String musicName = musicList[index];
-                                      return Container(
-                                        key: ValueKey<String>(musicName),
-                                        margin: const EdgeInsets.symmetric(vertical: 2),
-                                        decoration: BoxDecoration(
-                                          border: Border.all(color: const Color(0xFFE5E5E5)),
-                                          borderRadius: BorderRadius.circular(4),
-                                          color: Colors.white,
-                                        ),
-                                        child: Row(
-                                          spacing: 5,
-                                          children: <Widget>[
-                                            Flexible(
-                                              child: Container(
-                                                height: 24,
-                                                margin: const EdgeInsets.all(4),
-                                                alignment: Alignment.center,
+                                  // 🔥 DRAG-AND-DROP LIST
+                                  Expanded(
+                                    child: ListView.builder(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      physics: const ClampingScrollPhysics(),
+                                      itemCount: sources.length,
+
+                                      itemBuilder: (BuildContext context, int index) {
+                                        final Source source = sources[index];
+
+                                        return Container(
+                                          key: ValueKey<String>(source.id),
+                                          margin: const EdgeInsets.symmetric(vertical: 2),
+                                          decoration: BoxDecoration(
+                                            border: Border.all(color: const Color(0xFFE5E5E5)),
+                                            borderRadius: BorderRadius.circular(4),
+                                            color: Colors.white,
+                                          ),
+                                          child: Row(
+                                            spacing: 5,
+                                            children: <Widget>[
+                                              Flexible(
+                                                child: Container(
+                                                  height: 24,
+                                                  margin: const EdgeInsets.all(4),
+                                                  alignment: Alignment.center,
+                                                  padding: const EdgeInsets.all(2),
+                                                  decoration: BoxDecoration(
+                                                    color: const Color(0xFFF5F5F5),
+                                                    borderRadius: BorderRadius.circular(4),
+                                                  ),
+                                                  child: FusionAppText(
+                                                    text: source.name,
+                                                    maxLine: 1,
+                                                    style: Theme.of(context).textTheme.labelSmall,
+                                                  ),
+                                                ),
+                                              ),
+                                              PBRadio(
+                                                // TODO: How to get source mute state from projectViewModel?
+                                                value: index % 2 == 0,
+                                                size: const Size(24, 24),
                                                 padding: const EdgeInsets.all(2),
-                                                decoration: BoxDecoration(
-                                                  color: const Color(0xFFF5F5F5),
-                                                  borderRadius: BorderRadius.circular(4),
-                                                ),
-                                                child: FusionAppText(
-                                                  text: musicName,
-                                                  maxLine: 1,
-                                                  style: Theme.of(context).textTheme.labelSmall,
-                                                ),
+                                                onChanged: (bool value) {
+                                                  projectViewModel.muteSource(
+                                                    sourceId: source.id,
+                                                    // TODO: Toggle mute state
+                                                    isMuted: true,
+                                                  );
+                                                },
                                               ),
-                                            ),
-                                            PBRadio(
-                                              value: index % 2 == 0,
-                                              size: const Size(24, 24),
-                                              padding: const EdgeInsets.all(2),
-                                              onChanged: (bool value) {},
-                                            ),
-                                            // 👇 Drag handle
-                                            MouseRegion(
-                                              cursor: SystemMouseCursors.grabbing,
-                                              child: ReorderableDragStartListener(
-                                                index: index,
-                                                child: const Icon(
-                                                  Icons.drag_indicator,
-                                                  color: Colors.grey,
-                                                  size: 14,
-                                                ),
-                                              ),
-                                            ),
-                                            const SizedBox(),
-                                          ],
-                                        ),
-                                      );
-                                    },
+
+                                              const SizedBox(),
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-
                           const VerticalDivider(width: 1, color: Colors.black12),
 
+                          PrioritySelectionWidget(zoneId: widget.zoneID),
+
                           // RIGHT COLUMN (Static)
-                          Expanded(
-                            child: Column(
-                              children: <Widget>[
-                                Container(
-                                  height: 32,
-                                  width: double.infinity,
-                                  alignment: Alignment.center,
-                                  color: const Color(0xFFF5F5F5),
-                                  child: FusionAppText(
-                                    text: "ZONE VOLUME",
-                                    style: Theme.of(context).textTheme.labelSmall,
-                                  ),
-                                ),
-                                const SizedBox(height: 10),
-                                PBTextField(
-                                  width: 72,
-                                  height: 32,
-                                  hintText: "0db ",
-                                  borderRadius: 8,
-                                  inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.digitsOnly],
-                                ),
-                                const Expanded(
-                                  child: SizedBox(
-                                    width: 150,
-                                    child: SliderAndMeterWidget(),
-                                  ),
-                                ),
-                                const NeumorphicAudioToggleButton(
-                                  isActive: false,
-                                  width: 100,
-                                  height: 35,
-                                  borderRadius: 8,
-                                  iconSize: 18,
-                                ),
-                              ],
-                            ),
-                          ),
+                          Flexible(child: ZoneControlSliderBuilder(zoneID: widget.zoneID)),
                         ],
                       ),
                     ),
