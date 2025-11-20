@@ -186,24 +186,30 @@ class ProcessingChainView extends StatelessWidget {
                               state.selectedBlock.name,
                             ),
                             const Spacer(),
-                            InkWell(
-                              onTap: () {
-                                viewModel.deleteSelectedProcessingBlock();
-                              },
-                              child: const Icon(
-                                Icons.delete_outline_rounded,
-                                color: Colors.red,
+                            Tooltip(
+                              message: "Delete Selected Processing Block",
+                              child: InkWell(
+                                onTap: () {
+                                  viewModel.deleteSelectedProcessingBlock();
+                                },
+                                child: const Icon(
+                                  Icons.delete_outline_rounded,
+                                  color: Colors.red,
+                                ),
                               ),
                             ),
-                            InkWell(
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute<void>(
-                                    builder: (BuildContext context) => Scaffold(appBar: AppBar(), body: const ProcessingBlockCustomizer()),
-                                  ),
-                                );
-                              },
-                              child: const Icon(Icons.more_vert),
+                            Tooltip(
+                              message: "Customize Processing Block Layout",
+                              child: InkWell(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute<void>(
+                                      builder: (BuildContext context) => Scaffold(appBar: AppBar(), body: const ProcessingBlockCustomizer()),
+                                    ),
+                                  );
+                                },
+                                child: const Icon(Icons.edit_outlined),
+                              ),
                             ),
                             const SizedBox(),
                           ],

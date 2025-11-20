@@ -21,7 +21,7 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
     algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
     // layout = AlgorithmLayoutData.getForAlgorithm(algorithmId);
   }
-
+  final ScrollController scrollController = ScrollController();
   Algorithm? algorithm;
   PBLayout? get layout => AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");
 

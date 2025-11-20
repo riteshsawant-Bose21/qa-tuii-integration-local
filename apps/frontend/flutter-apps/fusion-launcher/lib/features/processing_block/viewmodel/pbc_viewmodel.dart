@@ -72,6 +72,7 @@ class PbcViewmodel extends ChangeNotifier {
     final ({num height, num width}) size = switch (param) {
       PBIndicatorParam() => (width: 20, height: 15),
       PBSliderParam() => (width: 10, height: 25),
+      PBTextfieldParam() => (width: 10, height: 5),
       PBSwitchParam() => (width: 20, height: 5),
       PBTextParam() => (width: 20, height: 20),
       PBGraphParam() => (width: 50, height: 50),
@@ -112,7 +113,7 @@ class PbcViewmodel extends ChangeNotifier {
     final ({num height, num width}) size = switch (param) {
       PBIndicatorParam() => (width: 20, height: 15),
       PBSliderParam() => (width: 10, height: 25),
-      PBTextfieldParam() => (width: 20, height: 15),
+      PBTextfieldParam() => (width: 15, height: 5),
       PBSwitchParam() => (width: 20, height: 5),
       PBTextParam() => (width: 20, height: 20),
       PBGraphParam() => (width: 50, height: 50),

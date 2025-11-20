@@ -17,26 +17,32 @@ class ProcessingBlockPage extends StatelessWidget {
       key: ValueKey<ProcessingBlockModel>(processingBlock),
       create: (BuildContext context) => AlgorithmDataViewmodel(processingBlock: processingBlock, config: serviceLocator.get<FusionAlgorithmsConfig>()),
 
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Consumer<AlgorithmDataViewmodel>(
-          builder: (BuildContext context, AlgorithmDataViewmodel viewModel, Widget? child) {
-            return LayoutBuilder(
-              builder: (BuildContext context, BoxConstraints constraints) {
-                final PBLayout? data = viewModel.layout;
-                if (data == null) {
-                  return const Center(
-                    child: Text(""),
-                  );
-                }
-                return DynamicGridView(
-                  layout: data,
-                  handler: viewModel,
+      child: Consumer<AlgorithmDataViewmodel>(
+        builder: (BuildContext context, AlgorithmDataViewmodel viewModel, Widget? child) {
+          return LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              final PBLayout? data = viewModel.layout;
+              if (data == null) {
+                return const Center(
+                  child: Text(""),
                 );
-              },
-            );
-          },
-        ),
+              }
+              final ScrollController scrollController = viewModel.scrollController;
+              return Scrollbar(
+                controller: scrollController,
+                thumbVisibility: true,
+                child: Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: DynamicGridView(
+                    layout: data,
+                    scrollController: scrollController,
+                    handler: viewModel,
+                  ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
