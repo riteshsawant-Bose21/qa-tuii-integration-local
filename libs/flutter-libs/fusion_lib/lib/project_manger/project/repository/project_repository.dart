@@ -147,7 +147,7 @@ class MixSettingsRepository extends Repository<MixSettings> {
   /// Get setting by the triple (function, scene, source)
   MixSettings? getByContext({
     required String functionId,
-    required String sceneId,
+    required String? sceneId,
     required String sourceId,
   }) {
     return getAll().firstWhere(
@@ -157,7 +157,8 @@ class MixSettingsRepository extends Repository<MixSettings> {
 
   /// Get all settings for a function
   List<MixSettings> getByFunction(String functionId) {
-    return getAll().where((s) => s.functionId == functionId).toList();
+    // Only return settings not associated with a scene (i.e., current function settings)
+    return getAll().where((s) => s.functionId == functionId && s.sceneId == null).toList();
   }
 
   /// Get all settings for a scene
@@ -177,7 +178,7 @@ class MatrixSettingsRepository extends Repository<MatrixSettings> {
   /// Get setting by the triple (function, scene, source)
   MatrixSettings? getByContext({
     required String functionId,
-    required String sceneId,
+    required String? sceneId,
     required String sourceId,
   }) {
     return getAll().firstWhere(
