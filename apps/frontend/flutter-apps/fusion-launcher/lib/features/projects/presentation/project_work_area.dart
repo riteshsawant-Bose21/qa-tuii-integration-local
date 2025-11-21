@@ -524,17 +524,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             side: "left",
             allowUndock: true,
             isCollapsibleSection: false,
-            dockItemWidget:
-                () => BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                  builder: (BuildContext context, ProjectViewModelState state) {
-                    return ConfigurationTabSwitcher(
-                      selectedMode: _projectViewModel.currentConfigurationMenuMode,
-                      onModeChanged: (ConfigurationMenuMode mode) {
-                        _projectViewModel.setConfigurationMenuMode(mode);
-                      },
-                    );
+            dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              builder: (BuildContext context, ProjectViewModelState state) {
+                return ConfigurationTabSwitcher(
+                  selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                  onModeChanged: (ConfigurationMenuMode mode) {
+                    _projectViewModel.setConfigurationMenuMode(mode);
                   },
-                ),
+                );
+              },
+            ),
           ),
         ],
       ),
