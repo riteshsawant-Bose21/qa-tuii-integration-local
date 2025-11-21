@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -11,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -169,12 +170,8 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	// Retrieve the full current configuration state.
 	configData := s.handler.StateManager.GetStateMap()
 
-	// Create a deep copy of configData to preserve the original configuration.
-	originalConfig, err := deepCopy(configData)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error copying original configuration: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// get another copy of a deep copy of configData to preserve the original configuration.
+	originalConfig := s.handler.StateManager.GetStateMap()
 
 	var updatedData any
 	if key != "" {
@@ -644,18 +641,6 @@ func (s *FusionServer) DeleteMessage(w http.ResponseWriter, r *http.Request) {
 	s.handler.HandleAudioRemove(w, r)
 }
 
-func (s *FusionServer) ListScheduledMessages(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequireGet(w, r) {
-		return
-	}
-}
-
-func (s *FusionServer) ScheduleMessage(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-}
-
 func (s *FusionServer) ListZones(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
@@ -728,6 +713,87 @@ func (s *FusionServer) GetSession(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 }
 
+// GetControllers handles HTTP GET requests to list registered controllers.
+func (s *FusionServer) GetControllers(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	result := s.handler.HandleGetControllers()
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(result)
+}
+
+// GetControllerByID handles HTTP GET requests to get a specific controller info.
+func (s *FusionServer) GetControllerByID(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid controller ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	ctrl, err := s.handler.HandleGetControllerByID(id)
+	if err != nil {
+		// If the handler returns a not found error, return 404
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, fmt.Sprintf("Error retrieving controller: %v", err), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	if ctrl == nil {
+		http.Error(w, "Controller not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(ctrl); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+	}
+}
+func (s *FusionServer) TriggerWinkById(w http.ResponseWriter, r *http.Request) {
+	if !utils.RequireGet(w, r) {
+		return
+	}
+
+	id, err := utils.ExtractId(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Invalid controller ID: %v", err), http.StatusBadRequest)
+		return
+	}
+
+	err = s.handler.HandleTriggerWink(id)
+	if err != nil {
+		// If the handler returns a not found error, return 404
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			http.Error(w, err.Error(), http.StatusNotFound)
+		} else {
+			http.Error(w, fmt.Sprintf("Error triggering wink for controller: %v", err), http.StatusInternalServerError)
+		}
+		return
+	}
+
+	// Return success response for wink command
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	w.WriteHeader(http.StatusOK)
+	response := map[string]any{
+		"status":        "success",
+		"message":       "Wink command sent successfully",
+		"controller_id": id,
+	}
+	if err := json.NewEncoder(w).Encode(response); err != nil {
+		http.Error(w, fmt.Sprintf("Failed to encode response: %v", err), http.StatusInternalServerError)
+	}
+}
+
 // getSingleQueryParam retrieves the value of a query parameter if it exists exactly once.
 // It returns an empty string if the parameter is missing and an error if it appears multiple times
 // or contains invalid characters.
@@ -751,20 +817,6 @@ func getSingleQueryParam(r *http.Request, param string) (string, error) {
 		return "", fmt.Errorf("invalid characters in parameter %q", param)
 	}
 	return params[0], nil
-}
-
-// deepCopy creates a deep copy of data using JSON marshalling.
-// It is suitable for data types that can be represented as JSON (e.g., maps and slices).
-func deepCopy(data any) (any, error) {
-	bytes, err := json.Marshal(data)
-	if err != nil {
-		return nil, err
-	}
-	var copy any
-	if err := json.Unmarshal(bytes, &copy); err != nil {
-		return nil, err
-	}
-	return copy, nil
 }
 
 // calculateDiff recursively compares two data structures (maps or slices) and returns the differences.

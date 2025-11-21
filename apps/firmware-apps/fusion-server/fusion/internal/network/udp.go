@@ -1,11 +1,16 @@
 package network
 
 import (
-	"encoding/json"
 	"fmt"
+	"maps"
+	"math/rand"
 	"net"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -13,15 +18,30 @@ import (
 	"fusion/internal/server/handler"
 )
 
+const (
+	maxConcurrent    = 32
+	queueElementSize = 2048
+)
+
+type packet struct {
+	data []byte
+	addr *net.UDPAddr
+}
+
 type UDPServer struct {
 	*Listener
-	clients    map[string]*net.UDPAddr
-	clientsMux sync.RWMutex
-	handler    *handler.Handler
+	handler *handler.Handler
 
-	// Messages waiting for acknowledgement
-	pending    map[string]chan struct{} // messageID -> notify channel
-	pendingMux sync.Mutex
+	clients sync.Map // string:*net.UDPAddr
+
+	// Workers
+	queue      chan packet
+	wg         sync.WaitGroup
+	numWorkers int
+
+	// ACK handling
+	pending              sync.Map
+	lastBroadcastVersion atomic.Int64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -31,74 +51,70 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 	logging.GetLogger().Info("UDP listening on %s", addr)
 
+	queueWorkers := runtime.NumCPU() * 2
+	queueSize := queueWorkers * queueElementSize
+
 	srv := &UDPServer{
-		clients: make(map[string]*net.UDPAddr),
-		handler: handler,
+		handler:    handler,
+		queue:      make(chan packet, queueSize),
+		numWorkers: queueWorkers,
+		clients:    sync.Map{},
+		pending:    sync.Map{},
 	}
 
 	srv.Listener = NewListener(
 		conn,
 		defaultBufferSize,
 		time.Second,
-		srv.packetHandler,
+		srv.enqueuePacket,
 	)
+
+	for i := 0; i < srv.numWorkers; i++ {
+		srv.wg.Add(1)
+		go srv.workerLoop()
+	}
 
 	srv.Start()
 	return srv, nil
 }
 
-func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+// enqueuePacket is called from the I/O goroutine. Keep it very fast.
+func (s *UDPServer) enqueuePacket(data []byte, addr *net.UDPAddr) {
 
-	if !msg.IsPublic() {
-		return nil
-	}
+	// Copy to prevent concurrent buffer reuse corruption
+	buf := make([]byte, len(data))
+	copy(buf, data)
 
-	data, err := json.Marshal(msg.ConfigUpdate.Data)
-	if err != nil {
-		return fmt.Errorf("marshal update: %w", err)
-	}
-
-	logger := logging.GetLogger()
-
-	var dead []string
-	s.clientsMux.RLock()
-	for k, addr := range s.clients {
-		_, err := s.conn.WriteToUDP(data, addr)
-		if err != nil {
-			logger.Error("broadcast to %s failed: %v", k, err)
-			dead = append(dead, k)
+	select {
+	case s.queue <- packet{buf, addr}:
+	default:
+		if rand.Intn(1000) == 0 {
+			logging.GetLogger().Warn("UDP queue full. Dropping packet from %s", addr)
 		}
 	}
-	s.clientsMux.RUnlock()
-
-	for _, k := range dead {
-		s.clientsMux.Lock()
-		delete(s.clients, k)
-		s.clientsMux.Unlock()
-	}
-	return nil
 }
 
-func (s *UDPServer) packetHandler(data []byte, addr *net.UDPAddr) {
+// workerLoop runs concurrently to process packets
+func (s *UDPServer) workerLoop() {
+	defer s.wg.Done()
+	for pkt := range s.queue {
+		s.handlePacket(pkt.data, pkt.addr)
+	}
+}
 
-	// Add caller to client map
-	s.clientsMux.Lock()
-	s.clients[addr.String()] = addr
-	s.clientsMux.Unlock()
+func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
+	s.clients.Store(addr.String(), addr)
 
-	// Handle acknowledgements
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
-		s.pendingMux.Lock()
-		if ch, ok := s.pending[msg.ID]; ok {
+		if chVal, ok := s.pending.Load(msg.ID); ok {
+			ch := chVal.(chan struct{})
 			close(ch)
-			delete(s.pending, msg.ID)
+			s.pending.Delete(msg.ID)
 		}
-		s.pendingMux.Unlock()
 		return
 	}
 
-	// Handle normal messages
 	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
 		s.sendResponse(addr, server.UDPResponse{
@@ -117,9 +133,73 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 		return
 	}
 	if _, err := s.conn.WriteToUDP(b, addr); err != nil {
-		logging.GetLogger().Error("write error: %v", err)
-		s.clientsMux.Lock()
-		delete(s.clients, addr.String())
-		s.clientsMux.Unlock()
+		logging.GetLogger().Error("write error to %s: %v", addr, err)
+		s.clients.Delete(addr.String())
 	}
+}
+
+func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+	if !msg.IsPublic() {
+		return nil
+	}
+	logger := logging.GetLogger()
+
+	if msg.Operation == api.NotifyOpConfigUpdate && msg.ConfigUpdate != nil {
+
+		// msg.ConfigUpdate.Version.Counter MUST be the effective Lamport version
+		// produced by ApplyUpdate. The caller ensures this via:
+		//     cfg.Version = sm.GetVersion()
+
+		// Effective Lamport timestamp
+		v := msg.ConfigUpdate.Version.Counter
+		last := s.lastBroadcastVersion.Load()
+
+		// Skip if effectiveVersion <= lastBroadcastVersion
+		if v <= last {
+			logger.Debug(
+				"UDP broadcast: skipping stale/duplicate config_update version=%d (last=%d)",
+				v, last,
+			)
+			return nil
+		}
+
+		// Store the effective version as last broadcast
+		s.lastBroadcastVersion.Store(v)
+	}
+
+	// Build payload including effective Lamport version
+	payload := make(map[string]any, len(msg.ConfigUpdate.Data)+1)
+
+	// Copy user data
+	maps.Copy(payload, msg.ConfigUpdate.Data)
+
+	// Add authoritative version key
+	payload["_fusion_version"] = msg.ConfigUpdate.Version.Counter
+
+	data, err := json.Marshal(payload)
+	if err != nil {
+		return fmt.Errorf("marshal update: %w", err)
+	}
+
+	// Send to all clients synchronously
+	s.clients.Range(func(k, v any) bool {
+		addr, ok := v.(*net.UDPAddr)
+		if !ok || addr == nil {
+			return true
+		}
+
+		if _, err := s.conn.WriteToUDP(data, addr); err != nil {
+			logger.Warn("Broadcast to %s failed: %v", k, err)
+			s.clients.Delete(k)
+		}
+		return true
+	})
+
+	return nil
+}
+
+func (s *UDPServer) Close() error {
+	close(s.queue)
+	s.wg.Wait()
+	return s.conn.Close()
 }

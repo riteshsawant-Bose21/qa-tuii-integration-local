@@ -1,37 +1,51 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
+
+	json "github.com/goccy/go-json"
+
 	"fusion/internal/api"
+	"fusion/internal/logging"
 )
 
-// UDP Server methods
+// HandleUDPMessage handles and decodes UDP messages
 func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 	var msg struct {
-		Action api.NotifyOp    `json:"action"`
-		Raw    json.RawMessage `json:",omitempty"`
+		Action  api.NotifyOp    `json:"action"`
+		Payload json.RawMessage `json:"payload,omitempty"`
 	}
 
+	logger := logging.GetLogger()
+
 	if err := json.Unmarshal(data, &msg); err != nil {
+		logger.Error("HandleUDPMessage error: %v", err)
 		return nil, fmt.Errorf("invalid JSON: %w", err)
 	}
 
 	switch msg.Action {
+	case api.NotifyOpNoop:
+		// For profiling: no state change, no broadcast, no gossip.
+		return map[string]any{
+			"status": "ok",
+		}, nil
+
 	case api.NotifyOpValueGet:
-		data := h.StateManager.GetStateMap()
+		state := h.StateManager.GetStateMap()
 		return map[string]any{
 			"status": "success",
-			"data":   data,
+			"data":   state,
 		}, nil
 
 	case api.NotifyOpValueSet:
 		var update map[string]any
-		if err := json.Unmarshal(data, &update); err != nil {
-			return nil, fmt.Errorf("invalid JSON: %w", err)
+		if err := json.Unmarshal(msg.Payload, &update); err != nil {
+			logger.Error("HandleUDPMessage NotifyOpValueSet error: %v", err)
+			return nil, fmt.Errorf("invalid payload: %w", err)
 		}
 		delete(update, "action")
 		if err := h.handleConfigUpdate(update, false); err != nil {
+			logger.Error("HandleUDPMessage handleConfigUpdate error: %v", err)
 			return nil, fmt.Errorf("failed to handle update: %w", err)
 		}
 		return map[string]any{
@@ -40,6 +54,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 		}, nil
 
 	default:
+		logger.Warn("HandleUDPMessage unknown action: %s", msg.Action)
 		return nil, fmt.Errorf("unknown action: %s", msg.Action)
 	}
 }

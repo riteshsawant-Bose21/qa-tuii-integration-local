@@ -3,6 +3,8 @@ import 'dart:ui';
 
 import 'package:uuid/uuid.dart';
 
+import '../../fusion_utils/fusion_utilities.dart';
+
 class ListeningArea {
   final String id;
   final List<Offset> vertices;
@@ -26,7 +28,7 @@ class ListeningArea {
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-  }) : id = id ?? const Uuid().v4();
+  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}";
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
     if (vertices.isEmpty) return <Offset>[];

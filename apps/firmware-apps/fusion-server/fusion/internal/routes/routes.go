@@ -1,10 +1,11 @@
 package routes
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"net/http"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/gorilla/mux"
 )
@@ -35,6 +36,10 @@ const (
 	ClusterMembersEndpoint                     = ClusterEndpoint + "/members"
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
+
+	ControllersEndpoint       = "/controllers"
+	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
+	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
 
 	DeviceEndpoint          = "/device"
 	DeviceReloadEndpoint    = DeviceEndpoint + "/reload"

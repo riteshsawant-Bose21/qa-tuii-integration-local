@@ -1,19 +1,3 @@
-/*
- * Copyright (C) 2025 Bose Professional
- * This program is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License as published by the
- * Free Software Foundation; either version 2 of the License, or (at your
- * option) any later version.
- *
- * This program is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
- * more details.
- *
- * You should have received a copy of the GNU General Public License along with
- * this program; if not, see <http://www.gnu.org/licenses/>.
- */
-
 #pragma once
 
 #include <linux/hashtable.h>
@@ -43,22 +27,22 @@ struct fusion_cn_chip {
 struct fusion_cn_substream {
     struct snd_pcm_substream *substream;
     struct snd_pcm          *pcm;
-    uint64_t                stream_handle;
+    u64                stream_handle;
     char                    stream_name[FUSION_CN_NAME_MAX];
     snd_pcm_format_t        format;
-    uint32_t                sample_width;
-    uint32_t                rate;
-    uint32_t                channels;
-    uint32_t                buffer_pos;
-    uint32_t                rtp_frame_size;
-    uint32_t                interrupts_per_period;
-    uint32_t                interrupt_idx;
+    u32                sample_width;
+    u32                rate;
+    u32                channels;
+    u32                buffer_pos;
+    u32                rtp_frame_size;
+    u32                interrupts_per_period;
+    u32                interrupt_idx;
     struct snd_pcm_indirect pcm_indirect;
     atomic_t                dma_offset;
     spinlock_t              lock;
     struct hlist_node       hnode;
     struct kref             ref;
-    uint16_t                stream_index;
+    u16                stream_index;
     atomic_t                open_count;
     bool                    pending_free;
     atomic_t                disconnected;
@@ -66,15 +50,16 @@ struct fusion_cn_substream {
 
 struct fusion_cn_alsa_ops {
     int (*register_alsa_driver)(void *mgr, struct fusion_cn_chip *alsa_chip);
-    int (*start_interrupts)(void *mgr, uint64_t stream_handle, struct fusion_cn_substream *stream);
-    int (*stop_interrupts)(void *mgr, uint64_t stream_handle);
+    int (*start_interrupts)(void *mgr, u64 stream_handle, struct fusion_cn_substream *stream);
+    int (*stop_interrupts)(void *mgr, u64 stream_handle);
 };
 
 inline bool fusion_cn_alsa_stream_disconnected(struct fusion_cn_substream *s);
 int fusion_cn_alsa_pcm_interrupt(struct fusion_cn_chip *alsa_chip, struct fusion_cn_substream *alsa_stream);
-int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, uint64_t stream_handle, 
+inline u32 fusion_cn_alsa_get_buffer_depth(struct fusion_cn_substream *stream);
+int fusion_cn_alsa_open_substream(struct fusion_cn_chip *alsa_chip, u64 stream_handle, 
                                   const char *stream_name, int direction, unsigned int channels, 
-                                  uint32_t rate, snd_pcm_format_t format, uint32_t frames_per_packet,
+                                  u32 rate, snd_pcm_format_t format, u32 frames_per_packet,
                                   struct fusion_cn_substream **alsa_stream);
 int fusion_cn_alsa_remove_substream(struct fusion_cn_substream *stream);
 int fusion_cn_alsa_driver_init(void *mgr, const struct fusion_cn_alsa_ops *callbacks);

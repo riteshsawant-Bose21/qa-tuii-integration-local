@@ -3,7 +3,7 @@ set -euo pipefail
 
 # --- Configuration --------------------------------------------------------
 MIN_MACOS="10.15"
-MIN_IOS="11.0"
+MIN_IOS="14.6"
 CXX=clang++
 STD='-std=c++17'
 SRC="mace_c_api.cpp"

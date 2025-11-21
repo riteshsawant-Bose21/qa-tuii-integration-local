@@ -36,7 +36,7 @@ To set the VIP, the setup application will make a `POST` call to:
     /devices/vip/:vip
 
 This call will be made over the Dart-to-Bluetooth HTTP bridge.  
-The `:vip` parameter will be the desired new VIP, e.g., `192.168.64.100`.
+The `:vip` parameter will be the desired new VIP, e.g., `192.168.2.100`.
 
 - The VIP will be validated and propagated across all Fusion devices.
 - If called over HTTP, the URL would be:
@@ -55,7 +55,7 @@ device that is currently maintaining the VIP.
 
     {
     "local": "192.168.64.3",
-    "vip": "192.168.64.100"
+    "vip": "192.168.2.100"
     }
 
 ## Setting Device ID, Location, and Name

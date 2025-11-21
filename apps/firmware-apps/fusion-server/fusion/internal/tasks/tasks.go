@@ -2,13 +2,15 @@ package tasks
 
 import (
 	"context"
-	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
 	"runtime/debug"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -22,6 +24,8 @@ const (
 	HistoryPath = "history.json"
 	MaxHistory  = 100
 )
+
+var ErrTaskNotFound = errors.New("task not found")
 
 // ExecutionRecord represents a log entry for a task execution.
 type ExecutionRecord struct {
@@ -62,12 +66,10 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 
 	tm.actionFactories = map[api.TaskType]func(*api.Task) func(){
 		api.TaskTypeSnapshot: func(t *api.Task) func() {
-			snapID := t.Params[api.SnapshotIDKey]
-			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(snapID))
+			return tm.wrapTask(t, tm.taskActivateSnapshotFunc(t))
 		},
-		api.TaskTypeAudioPlayback: func(t *api.Task) func() {
-			path := t.Params[api.MessageIDKey]
-			return tm.wrapTask(t, tm.taskPlayAudioFunc(t, path))
+		api.TaskTypeMessage: func(t *api.Task) func() {
+			return tm.wrapTask(t, tm.taskTriggerMessageFunc(t))
 		},
 	}
 	return tm
@@ -106,7 +108,7 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 
 	_, exists := tm.tasks[task.ID]
 	if !exists {
-		return fmt.Errorf("no task found with ID '%s'", task.ID)
+		return ErrTaskNotFound
 	}
 
 	tm.cron.Remove(task.CronEntryID)
@@ -157,12 +159,12 @@ func (tm *TaskManager) ListTasks() []api.Task {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	var taskList []api.Task
+	tasks := make([]api.Task, 0, len(tm.tasks))
 	for _, task := range tm.tasks {
-		taskList = append(taskList, *task)
+		tasks = append(tasks, *task)
 	}
 
-	return taskList
+	return tasks
 }
 
 // RecordExecution records a task execution log entry with rotation.
@@ -239,12 +241,7 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tm.mu.Lock()
-	tasks := make([]api.Task, 0, len(tm.tasks))
-	for _, task := range tm.tasks {
-		tasks = append(tasks, *task)
-	}
-	tm.mu.Unlock()
+	tasks := tm.ListTasks()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(tasks)
@@ -502,19 +499,25 @@ func (tm *TaskManager) getTask(id string) (*api.Task, error) {
 func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	switch task.Type {
 
+	case api.TaskTypeMessage:
+		id := task.Params[api.MessageIDKey]
+		if id == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		}
+
+		path := task.Params[api.MessagePathKey]
+		if path == "" {
+			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
+		}
+
+		return tm.taskTriggerMessageFunc(task), nil
+
 	case api.TaskTypeSnapshot:
 		id := task.Params[api.SnapshotIDKey]
 		if id == "" {
 			return nil, fmt.Errorf("missing '%s'", api.SnapshotIDKey)
 		}
-		return tm.taskActivateSnapshotFunc(id), nil
-
-	case api.TaskTypeAudioPlayback:
-		id := task.Params[api.MessageIDKey]
-		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
-		}
-		return tm.taskPlayAudioFunc(task, id), nil
+		return tm.taskActivateSnapshotFunc(task), nil
 
 	default:
 		return nil, fmt.Errorf("unsupported task type %q", task.Type)

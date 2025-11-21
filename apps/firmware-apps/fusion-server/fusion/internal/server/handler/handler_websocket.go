@@ -1,8 +1,9 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
+
+	json "github.com/goccy/go-json"
 )
 
 // WebSocketMessage represents an incoming websocket message

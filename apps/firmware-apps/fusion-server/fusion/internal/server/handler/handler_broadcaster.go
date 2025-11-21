@@ -1,10 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+
+	json "github.com/goccy/go-json"
 )
 
 // broadcastMessage processes an incoming NotifyMessage by applying configuration or snapshot updates,
@@ -13,11 +14,42 @@ func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 
 	switch message.Operation {
 
+	case api.NotifyOpAudioRemove:
+		if message.AudioRemove == nil {
+			return fmt.Errorf("AudioRemove required for operation")
+		}
+
+	case api.NotifyOpAudioSync:
+		if message.AudioSync == nil {
+			return fmt.Errorf("AudioSync required for operation")
+		}
+
+		err := h.handleAudioSync(message.AudioSync)
+		if err != nil {
+			return fmt.Errorf("audio sync failed: %w", err)
+		}
+
 	case api.NotifyOpConfigUpdate:
 		// Apply the configuration update and mark state as dirty for persistence.
-		if err := h.StateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+		dirty, err := h.StateManager.ApplyUpdate(*message.ConfigUpdate)
+		if err != nil {
 			return fmt.Errorf("failed to apply update: %w", err)
 		}
+
+		if !dirty {
+			logging.GetLogger().Debug(
+				"broadcastMessage: skipping stale ConfigUpdate version=%v from node=%s",
+				message.ConfigUpdate.Version,
+				message.Node,
+			)
+			return nil
+		}
+
+		// Overwrite with effective local Lamport version
+		updated := *message.ConfigUpdate
+		updated.Version = h.StateManager.GetVersion()
+		message.ConfigUpdate = &updated
+
 		h.persistence.MarkDirty()
 
 	case api.NotifyOpSnapActivate:

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../../../core/constants.dart';
@@ -159,10 +161,19 @@ class _SourcesColumnState extends State<SourcesColumn> {
         ),
       );
     }
-    return ListView.builder(
+    return ReorderableListView.builder(
       itemCount: widget.sources.length,
+      onReorder: (int oldIndex, int newIndex) {
+        if (oldIndex < newIndex) {
+          newIndex -= 1;
+        }
+        final String hwToMove = widget.sources[oldIndex].id;
+        final String hwAtNewIndex = widget.sources[newIndex].id;
+        serviceLocator<ProjectViewModel>().reOrderHardware(hardwareIdToMove: hwToMove, hardwareAtNewIndex: hwAtNewIndex);
+      },
       itemBuilder: (BuildContext ctx, int i) {
         return Padding(
+          key: ValueKey<String>(widget.sources[i].id),
           padding: const EdgeInsets.only(bottom: 6),
           child: SourceWidget(
             key: ValueKey<String>(widget.sources[i].id),

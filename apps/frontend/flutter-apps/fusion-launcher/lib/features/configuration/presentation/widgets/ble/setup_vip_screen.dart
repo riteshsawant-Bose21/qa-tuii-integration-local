@@ -53,12 +53,12 @@ class _VipConfigurationState extends State<VipConfiguration> {
       return;
     }
 
-    FusionUtils.showLoader(context);
+    FusionUiUtils.showLoader(context);
     final ResponseCallback<dynamic> response = await serviceLocator<FusionBleCommands>().updateFusionVIP(_vipController.text.trim());
-    FusionUtils.hideLoader(context);
+    FusionUiUtils.hideLoader(context);
     BleConnectionManager().disconnect();
     if (response.success) {
-      serviceLocator<ProjectViewModel>().setVirtualIP(_vipController.text.trim());
+      serviceLocator<ProjectViewModel>().setVirtualIP(ip: _vipController.text.trim());
       if (mounted) Navigator.pop(context, true);
     }
   }

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:controllers/widgets/controller_selector.dart';
 
 void main() {
-  runApp(const ControllerApp(host: '192.168.64.100'));
+  runApp(const ControllerApp(host: '192.168.2.100'));
 }
 
 class ControllerApp extends StatelessWidget {

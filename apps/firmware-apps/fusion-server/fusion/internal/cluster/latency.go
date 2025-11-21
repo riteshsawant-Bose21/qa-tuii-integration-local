@@ -1,7 +1,6 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -15,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"slices"
 
 	"github.com/go-ping/ping"
@@ -24,16 +25,11 @@ import (
 
 const (
 	dialTimeout          = 1 * time.Second
-	httpTimeout          = 2 * time.Second
 	latencyPruneTime     = 5 * time.Minute
 	rttThreshold         = 50.0
 	syncLatencyThreshold = 100.0
 	tickerTime           = 10 * time.Second
 )
-
-var httpClient = &http.Client{
-	Timeout: httpTimeout,
-}
 
 // aggregatedKey is used to group sync latency records by sender and operation.
 type aggregatedKey struct {

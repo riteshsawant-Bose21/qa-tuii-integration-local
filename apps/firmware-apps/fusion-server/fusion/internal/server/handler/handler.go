@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/version"
@@ -13,29 +14,38 @@ import (
 
 // Handler is the container for server implimentations.
 type Handler struct {
+	appConfig    *api.AppConfig
 	memberlist   *memberlist.Memberlist
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
 	updater      *Updater
 	hub          *pubsub.Hub
 	endpoints    []string
+
 	sessions     map[string]*SAPSession
 	sessionsLock sync.RWMutex
+
+	controllerManager controllers.ControllerManagerInterface
 }
 
 func NewHandler(
+	appConfig *api.AppConfig,
 	memberlist *memberlist.Memberlist,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	updater *Updater,
-	hub *pubsub.Hub) *Handler {
+	hub *pubsub.Hub,
+	controllerManager controllers.ControllerManagerInterface,
+) *Handler {
 	return &Handler{
-		memberlist:   memberlist,
-		persistence:  persistence,
-		StateManager: stateManager,
-		updater:      updater,
-		hub:          hub,
-		sessions:     make(map[string]*SAPSession),
+		appConfig:         appConfig,
+		memberlist:        memberlist,
+		persistence:       persistence,
+		StateManager:      stateManager,
+		updater:           updater,
+		hub:               hub,
+		controllerManager: controllerManager,
+		sessions:          make(map[string]*SAPSession),
 	}
 }
 

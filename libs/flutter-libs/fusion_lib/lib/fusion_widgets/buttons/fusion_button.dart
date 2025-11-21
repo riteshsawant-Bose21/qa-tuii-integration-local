@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../semantics/semantic_helper.dart';
+import '../semantics/semantic_type.dart';
+
 /// A customizable and reusable button for the Fusion design system.
 ///
 /// The [FusionButton] supports disabled states, loading indicators,
@@ -98,8 +101,8 @@ class FusionButton extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.gradient,
-    this.height = 55,
-    this.width = 350,
+    this.height = 32,
+    this.width = 100,
     this.topMargin = 0,
     this.bottomMargin = 0,
     this.borderRadius = 4,
@@ -120,11 +123,13 @@ class FusionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: accessLabel ?? label,
-      identifier: accessIdentifier ?? label,
-      enabled: isActive,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, accessLabel ?? label),
+      // Semantics(
+      // button: true,
+      // label: accessLabel ?? label,
+      // identifier: accessIdentifier ?? label,
+      // enabled: isActive,
       child: ExcludeSemantics(
         excluding: true,
         child: Container(

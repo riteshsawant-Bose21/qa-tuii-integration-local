@@ -2,7 +2,6 @@ package persistence
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -15,12 +14,13 @@ import (
 	"sync"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/hashicorp/memberlist"
 )
 
 const (
 	checkInterval = 30 * time.Second
-	httpTimeout   = 5 * time.Second
 )
 
 // StateManagerInterface defines the interface for state management
@@ -57,7 +57,7 @@ func NewStateManager(config *api.AppConfig) *StateManager {
 	return &StateManager{
 		state:      *NewVersionedState(),
 		version:    api.Version{Counter: 0, NodeID: config.NodeName},
-		httpClient: &http.Client{Timeout: httpTimeout},
+		httpClient: &http.Client{Timeout: api.HTTPTimeout},
 		verbose:    config.Verbose,
 	}
 }
@@ -73,7 +73,7 @@ func (sm *StateManager) NewConfigUpdate(data map[string]any) (*api.ConfigUpdate,
 
 // newConfigUpdateUnsafe assumes sm.Lock() is already held.
 func (sm *StateManager) newConfigUpdateUnsafe(data map[string]any) (*api.ConfigUpdate, error) {
-	hash, err := utils.CalculateChecksum(data)
+	hash, err := utils.JSONChecksum(data)
 	if err != nil {
 		return nil, fmt.Errorf("failed to generate hash: %w", err)
 	}
@@ -206,105 +206,145 @@ func (sm *StateManager) Get(key string) (any, bool) {
 
 // Set updates a key in the state with the given value and applies the update.
 func (sm *StateManager) Set(key string, value any) error {
-
 	data := map[string]any{key: value}
-	hash, err := utils.CalculateChecksum(data)
+	hash, err := utils.JSONChecksum(data)
 	if err != nil {
 		return fmt.Errorf("failed to generate hash: %w", err)
 	}
 
 	sm.Lock()
-	defer sm.Unlock()
 
+	// Lamport send rule:
+	// local = local + 1
 	sm.version.Counter++
+	localVersion := sm.version
+
+	sm.Unlock()
+
+	// Build update using the new timestamp (the originating event)
 	update := api.ConfigUpdate{
 		Hash:    hash,
 		Data:    data,
-		Version: sm.version,
+		Version: localVersion,
 		Clear:   false,
 	}
 
-	dirty, err := sm.applyWhileLocked(update)
-	if err != nil {
-		return err
-	}
-
-	if dirty {
-		sm.updateChecksumUnsafe()
-	}
-
-	return nil
+	// Feed through normal update processing
+	_, err = sm.ApplyUpdate(update)
+	return err
 }
 
 // ApplyPatch applies an upated patch to the internal state.
 func (sm *StateManager) ApplyPatch(update map[string]any) (map[string]any, error) {
 	sm.Lock()
-	defer sm.Unlock()
 
+	// Apply patch to full current state snapshot
 	existing := sm.getFullStateUnsafe()
 	if err := utils.ApplyPatch(existing, update); err != nil {
+		sm.Unlock()
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
-	configUpdate, err := sm.newConfigUpdateUnsafe(existing)
-	if err != nil {
-		return nil, err
+	// Lamport SEND rule for local update:
+	// local = local + 1
+	sm.version.Counter++
+	localVersion := sm.version
+
+	sm.Unlock()
+
+	// Build a ConfigUpdate using the updated full state with the new timestamp
+	configUpdate := api.ConfigUpdate{
+		Data:    existing,
+		Version: localVersion,
+		Clear:   false,
 	}
 
-	dirty, err := sm.applyWhileLocked(*configUpdate)
+	// Generate checksum for the new state
+	hash, err := utils.JSONChecksum(existing)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
+	configUpdate.Hash = hash
 
-	if dirty {
-		sm.updateChecksumUnsafe()
+	// Now pass through the normal Lamport ApplyUpdate path
+	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
+		return nil, err
 	}
 
 	return existing, nil
 }
 
-// ApplyUpdate applies a configuration update to the internal state.
-func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
+// ApplyUpdate applies a configuration update using Lamport clock semantics.
+//
+// Lamport Clock Rule #2 (receiving event):
+//
+//	When receiving an update with timestamp T:
+//	    local = max(local, T) + 1
+//	This ensures that:
+//	    - no node's clock ever goes backwards
+//	    - all nodes converge on a globally consistent causal ordering
+//	    - updates are never incorrectly skipped
+func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
-	dirty, err := sm.applyWhileLocked(update)
+	// Preserve incoming version
+	incomingVersion := update.Version
+
+	// Lamport receive rule:
+	// local = max(local, incoming) + 1
+	if sm.version.Counter < incomingVersion.Counter {
+		sm.version.Counter = incomingVersion.Counter
+	}
+	sm.version.Counter++
+
+	// This is the effective timestamp of this apply event
+	effectiveVersion := sm.version
+
+	// Try to apply update
+	dirty, err := sm.applyWhileLocked(update, incomingVersion, effectiveVersion)
 	if err != nil {
-		return err
+		return false, err
 	}
 
+	// Update checksum only if state changed
 	if dirty {
 		sm.updateChecksumUnsafe()
 	}
 
-	return nil
+	return dirty, nil
 }
 
 // updateChecksumUnsafe updates the checksum. Do not lock here.
 func (sm *StateManager) updateChecksumUnsafe() {
 	payload := sm.getFullStateUnsafe()
-	if sum, err := utils.CalculateChecksum(payload); err != nil {
+	if sum, err := utils.JSONChecksum(payload); err != nil {
 		logging.GetLogger().Error("failed to calculate checksum: %v", err)
 	} else {
 		sm.state.Checksum = sum
 	}
 }
 
-// applyLocked applies a configuration update to the internal state,
-// performing a Lamport version check and merging nested maps when needed.
-func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) {
+// applyWhileLocked applies a configuration update to the internal state,
+// performing a Lamport-aware version check and merging nested maps when needed.
+// sm.Lock() must already be held.
+func (sm *StateManager) applyWhileLocked(
+	update api.ConfigUpdate,
+	incomingVersion api.Version,
+	effectiveVersion api.Version,
+) (bool, error) {
 
 	logger := logging.GetLogger()
-
 	dirty := false
 
 	if update.Clear {
+		// Clear the entire versioned state. The Lamport clock has already
+		// been advanced in ApplyUpdate, so do not modify it here.
 		sm.state = *NewVersionedState()
-		sm.version.Counter++
 		dirty = true
 	}
 
-	// Bail out if there is nothing left to
+	// If we are not clearing and there is no data, nothing to do.
 	if !update.Clear && len(update.Data) == 0 {
 		return dirty, nil
 	}
@@ -312,35 +352,40 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 	for key, rawValue := range update.Data {
 		localEntry, exists := sm.state.State[key]
 
-		// Skip if local version is newer or equal
-		if exists && !localEntry.Version.Less(update.Version) {
-			logger.Debug("Skipping: Local is newer or equal")
+		// Skip if the local entry version is newer or equal to the incoming
+		// update's version for this key.
+		//
+		// Important: we compare against incomingVersion (the timestamp of the
+		// originating event), not effectiveVersion (the local receive event).
+		if exists && !localEntry.Version.Less(incomingVersion) {
+			logger.Debug("Skipping key %q: local version is newer or equal", key)
 			continue
 		}
 
-		// Determine new data: merge maps or overwrite
+		// Determine new data: merge maps or overwrite.
 		var newData any
 		if incomingMap, ok := rawValue.(map[string]any); ok {
 			if exists {
 				if existingMap, ok2 := localEntry.Data.(map[string]any); ok2 {
-					newData = mergeMaps(existingMap, incomingMap)
+					existingMapCopy := utils.DeepCopy(existingMap).(map[string]any)
+					newData = mergeMaps(existingMapCopy, incomingMap)
 				} else {
+					// Local value is not a map; replace with incoming map.
 					newData = incomingMap
 				}
 			} else {
+				// No existing entry; just take the incoming map.
 				newData = incomingMap
 			}
 		} else {
+			// Non-map value; overwrite directly.
 			newData = rawValue
 		}
 
+		// Store the new entry with the effective local version (the receive event).
 		sm.state.State[key] = &api.StateEntry{
 			Data:    newData,
-			Version: update.Version,
-		}
-
-		if sm.version.Less(update.Version) {
-			sm.version = update.Version
+			Version: effectiveVersion,
 		}
 
 		dirty = true
@@ -349,24 +394,31 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 	return dirty, nil
 }
 
-// GetFullState returns the internal state
+// GetFullState returns the internal state after deep copy.
 func (sm *StateManager) GetFullState() VersionedState {
 	sm.RLock()
 	defer sm.RUnlock()
-	return sm.state
+
+	return VersionedState{
+		Checksum: sm.state.Checksum,
+		State:    deepCopyState(sm.state.State),
+	}
 }
 
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 
-	result := make(map[string]any)
-
 	state := sm.GetFullState().State
-	for key, entry := range state {
-		result[key] = utils.DeepCopy(entry.Data)
+
+	result := make(map[string]any, len(state))
+	for k, e := range state {
+		if e != nil {
+			result[k] = e.Data // already deep-copied inside GetFullState
+		}
 	}
 	return result
+
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
@@ -380,7 +432,9 @@ func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry)
 
 		// if we don’t have it yet, or the remote version is newer...
 		if !exists || localEntry.Version.Less(remoteEntry.Version) {
-			sm.state.State[key] = remoteEntry
+			copy := *remoteEntry
+			copy.Data = utils.DeepCopy(remoteEntry.Data)
+			sm.state.State[key] = &copy
 
 			// bump our “highest‐seen” version if this remote one is newer
 			if sm.version.Less(remoteEntry.Version) {
@@ -655,4 +709,23 @@ func mergeMaps(existing, update map[string]any) map[string]any {
 
 func buildInternalURL(address, port, endpoint string) string {
 	return fmt.Sprintf("%s%s:%s%s", api.Protocol, address, port, endpoint)
+}
+
+// deepCopyState makes a deep copy of the state map
+func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
+	if src == nil {
+		return nil
+	}
+	dst := make(map[string]*api.StateEntry, len(src))
+	for k, v := range src {
+		if v == nil {
+			dst[k] = nil
+			continue
+		}
+		// Create a copy of the struct, not the pointer
+		c := *v                         // copy the struct
+		c.Data = utils.DeepCopy(v.Data) // deep-copy the payload
+		dst[k] = &c
+	}
+	return dst
 }

@@ -3,7 +3,6 @@ package handler
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -14,6 +13,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"github.com/hashicorp/memberlist"
 )
@@ -293,4 +294,9 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 	}
 
 	return nil
+}
+
+// handleAudioSync syncs an audio file binary between nodes
+func (h *Handler) handleAudioSync(update *api.AudioSyncUpdate) error {
+	return h.persistence.SyncAudioFile(update)
 }

@@ -12,6 +12,7 @@ import (
 	"runtime/debug"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"syscall"
 	"time"
 
@@ -31,10 +32,24 @@ func parseFlags() *api.AppConfig {
 	versionFlag := flag.Bool("version", false, "Show version information")
 	bindAddr := flag.String("bind-addr", "0.0.0.0", "Bind address for cluster communication")
 	bindPort := flag.Int("bind-port", 7946, "Bind port for cluster communication (default 7946)")
+	netIface := flag.String("net-iface", "eth0", "Network interface for VRRP monitoring")
 	local := flag.Bool("local", false, "Run in local-only mode (no clustering)")
 	verbose := flag.Bool("verbose", false, "Enable verbose logging")
 	profile := flag.Bool("profile", false, "Enable profile dump")
 	flag.Parse()
+
+	// Read environment overrides
+	if envVal := os.Getenv("FUSION_NET_IFACE"); envVal != "" {
+		*netIface = envVal
+	}
+
+	if envVal := os.Getenv("FUSION_PROFILE"); envVal != "" {
+		if envVal == "1" || strings.EqualFold(envVal, "true") {
+			*profile = true
+		} else if envVal == "0" || strings.EqualFold(envVal, "false") {
+			*profile = false
+		}
+	}
 
 	if *versionFlag {
 		// This must be a log.Printf. The server logger is not running yet.
@@ -46,6 +61,7 @@ func parseFlags() *api.AppConfig {
 		NodeName: createUniqueNodeName(baseName),
 		BindAddr: *bindAddr,
 		BindPort: *bindPort,
+		NetIface: *netIface,
 		Local:    *local,
 		Verbose:  *verbose,
 		Profile:  *profile,

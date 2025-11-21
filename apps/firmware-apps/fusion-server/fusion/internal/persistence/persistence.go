@@ -3,15 +3,21 @@ package persistence
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/routes"
 	"fusion/internal/utils"
+	"io"
+	"net/http"
 	"os"
+	"path/filepath"
+	"strings"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )
@@ -80,17 +86,16 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 // Close safely closes the database.
 func (p *Persistence) Close() {
 	p.SaveState()
+	close(p.saveCh)
 	p.db.Close()
 }
 
-// MarkDirty triggers a state save with debounce logic.
+// MarkDirty triggers a state save with debounce
 func (p *Persistence) MarkDirty() {
-	if time.Since(p.getLastSave()) < p.saveDebounce {
-		time.Sleep(p.saveDebounce)
-	}
-
-	if err := p.SaveState(); err != nil {
-		logging.GetLogger().Error("Failed to persist state: %v", err)
+	select {
+	case p.saveCh <- struct{}{}:
+	default:
+		// channel already has a pending signal — ignore
 	}
 }
 
@@ -132,7 +137,7 @@ func (p *Persistence) ValidateState() error {
 	payload := p.stateManager.GetStateMap()
 
 	// Recompute checksum over that payload
-	calculated, err := utils.CalculateChecksum(payload)
+	calculated, err := utils.JSONChecksum(payload)
 	if err != nil {
 		return fmt.Errorf("failed to calculate checksum: %w", err)
 	}
@@ -229,7 +234,7 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 		return nil
 	}
 
-	// Update the overall database hash.
+	// Update the overall database hash
 	if err := p.updateHash(); err != nil {
 		return fmt.Errorf("failed to update DB hash after import: %w", err)
 	}
@@ -242,13 +247,21 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
 	state := p.stateManager.GetFullState()
 
-	deepCopy := deepCopyState(state.State)
+	// Ensure we always have a checksum
+	chk := state.Checksum
+	if chk == "" {
+		// Compute over the state payload only
+		payload := state.State
+		if c, err := utils.JSONChecksum(payload); err == nil {
+			chk = c
+		}
+	}
 
 	ps := &PersistentState{
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
-		Checksum:  state.Checksum,
-		State:     deepCopy,
+		Checksum:  chk,
+		State:     deepCopyState(state.State),
 	}
 
 	data, err := json.Marshal(ps)
@@ -263,7 +276,6 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 		}
 		return bucket.Put([]byte(snapshotKey), data)
 	})
-
 	if err != nil {
 		return nil, fmt.Errorf("failed to save state: %w", err)
 	}
@@ -308,13 +320,6 @@ func (p *Persistence) saveMetadata(meta *api.DatabaseMetadata) error {
 		}
 		return bucket.Put([]byte(keyMetadata), data)
 	})
-}
-
-// getLastSave returns the last save time.
-func (p *Persistence) getLastSave() time.Time {
-	p.mutex.RLock()
-	defer p.mutex.RUnlock()
-	return p.lastSave
 }
 
 // updateHash recalculates the overall database hash and updates it in metadata.
@@ -444,7 +449,7 @@ func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
 		Version:   p.stateManager.GetVersion(),
 		Timestamp: time.Now().UTC(),
 		Checksum:  state.Checksum,
-		State:     state.State,
+		State:     deepCopyState(state.State),
 	}
 	data, err := json.Marshal(ps)
 	if err != nil {
@@ -481,44 +486,122 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 	return nil
 }
 
-// deepCopyState makes a deep copy of the state map
-func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
-	if src == nil {
-		return nil
-	}
-	dst := make(map[string]*api.StateEntry, len(src))
-	for k, v := range src {
-		if v == nil {
-			dst[k] = nil
-			continue
-		}
-		// Create a copy of the struct, not the pointer
-		copyVal := *v
-		dst[k] = &copyVal
-	}
-	return dst
-}
-
-// saveWorker saves state with debounce on a channel
+// saveWorker saves state with debounce
 func (p *Persistence) saveWorker() {
-	debounce := p.saveDebounce
+	var (
+		timer *time.Timer
+		mu    sync.Mutex
+	)
 
 	for range p.saveCh {
-
-		time.Sleep(debounce)
-
-		for {
-			select {
-			case <-p.saveCh:
-				time.Sleep(debounce)
-			default:
-				goto save
-			}
+		mu.Lock()
+		if timer != nil {
+			timer.Reset(p.saveDebounce)
+			mu.Unlock()
+			continue
 		}
 
-	save:
-		if err := p.SaveState(); err != nil {
-			logging.GetLogger().Error("Failed to persist state: %v", err)
-		}
+		timer = time.AfterFunc(p.saveDebounce, func() {
+			p.SaveState()
+
+			mu.Lock()
+			timer = nil
+			mu.Unlock()
+		})
+		mu.Unlock()
 	}
+}
+
+// RemoveAudioFile removes an audio file from a node
+func (p *Persistence) RemoveAudioFile(id string) error {
+	meta, err := p.GetAudioMetadata(id)
+	if err != nil {
+		return err
+	}
+	if meta == nil {
+		return nil
+	}
+
+	path := filepath.Join(api.AudioFilesLocation, meta.Filename)
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("remove %s: %w", path, err)
+	}
+
+	return p.DeleteAudioMetadata(id)
+}
+
+// SyncAudioFile retrieves an audio file from another node and stores metadata.
+func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
+	finalPath := filepath.Join(api.AudioFilesLocation, update.Metadata.Filename)
+
+	// Ensure audio directory exists
+	if err := os.MkdirAll(api.AudioFilesLocation, 0755); err != nil {
+		return fmt.Errorf("mkdir %s: %w", api.AudioFilesLocation, err)
+	}
+
+	// Attempt to open a temp file with O_CREATE|O_EXCL
+	// If the final file already exists, return early.
+	tmpPath := finalPath + ".part"
+
+	tmp, err := os.OpenFile(tmpPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0644)
+	if err != nil {
+		// If temp file or final file already exists, another goroutine/node is handling it
+		if os.IsExist(err) {
+			if _, statErr := os.Stat(finalPath); statErr == nil {
+				// File already exists — we're done
+				return nil
+			}
+			// If .part exists but final doesn't, someone else is writing it — treat as in progress
+			return nil
+		}
+		return fmt.Errorf("create %s: %w", tmpPath, err)
+	}
+
+	// Make sure cleanup happens if anything fails after this point
+	cleanup := func(err error) error {
+		tmp.Close()
+		os.Remove(tmpPath)
+		return err
+	}
+
+	// Fetch source data
+	streamEndpoint := strings.Replace(routes.PAVAMessageStreamEndpoint, "{id}", update.Metadata.Id, 1)
+	streamURL := fmt.Sprintf("%s%s", update.URL, streamEndpoint)
+
+	resp, err := http.Get(streamURL)
+	if err != nil {
+		return cleanup(fmt.Errorf("GET %s: %w", streamURL, err))
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return cleanup(fmt.Errorf("unexpected status %d: %s", resp.StatusCode, string(body)))
+	}
+
+	// Copy file body to temp
+	if _, err := io.Copy(tmp, resp.Body); err != nil {
+		return cleanup(fmt.Errorf("copy: %w", err))
+	}
+
+	if err := tmp.Sync(); err != nil {
+		return cleanup(fmt.Errorf("sync: %w", err))
+	}
+
+	if err := tmp.Close(); err != nil {
+		return cleanup(fmt.Errorf("close: %w", err))
+	}
+
+	// Rename atomically
+	if err := os.Rename(tmpPath, finalPath); err != nil {
+		// Attempt cleanup but return rename error
+		os.Remove(tmpPath)
+		return fmt.Errorf("rename %s → %s: %w", tmpPath, finalPath, err)
+	}
+
+	if err := p.SaveAudioMeta(&update.Metadata); err != nil {
+		return fmt.Errorf("SaveAudioMeta: %w", err)
+	}
+
+	return nil
 }

@@ -1,25 +1,33 @@
 package persistence
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )
 
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
 
 	ps, err := p.persistState(snapshotKey)
 	if err != nil {
 		return err
 	}
 
+	checksum := ps.Checksum
+	if len(checksum) > 8 {
+		checksum = checksum[:8]
+	}
+
 	logging.GetLogger().Debug("Snapshot '%s' saved (version: %v, checksum: %s)",
-		snapshotKey, ps.Version, ps.Checksum[:8])
+		snapshotKey, ps.Version, checksum)
 
 	return nil
 }
