@@ -156,11 +156,11 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                 size: const Size(24, 24),
                                                 padding: const EdgeInsets.all(2),
                                                 onChanged: (bool value) {
-                                                  projectViewModel.muteSource(
-                                                    sourceId: source.id,
-                                                    // TODO: Toggle mute state
-                                                    isMuted: true,
-                                                  );
+                                                  // projectViewModel.muteSource(
+                                                  //   sourceId: source.id,
+                                                  //   // TODO: Toggle mute state
+                                                  //   isMuted: true,
+                                                  // );
                                                 },
                                               ),
 

@@ -3,7 +3,6 @@ import 'package:flutter_svg/svg.dart' show SvgPicture;
 import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import '../widgets/pb_button.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_popup_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
@@ -329,10 +328,10 @@ class MiniMatrixMixScenes extends StatelessWidget {
           Expanded(
             child: Container(
               color: Colors.white,
-              child: Column(
+              child: const Column(
                 spacing: 10,
                 children: <Widget>[
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: NeumorphicPopupButton(
                       height: 34,
@@ -340,26 +339,26 @@ class MiniMatrixMixScenes extends StatelessWidget {
                     ),
                   ),
 
-                  PBButton(
-                    text: "STORE",
-                    width: 72,
-                    height: 28,
-                    borderRadius: 9,
-                    onTap: () {
-                      //
-                    },
-                  ),
-                  PBButton(
-                    text: "DELETE",
-                    width: 72,
-                    height: 28,
-                    borderRadius: 9,
-                    textColor: Colors.black12,
-                    onTap: () {
-                      //
-                    },
-                  ),
-                  const SizedBox(height: 10),
+                  // PBButton(
+                  //   text: "STORE",
+                  //   width: 72,
+                  //   height: 28,
+                  //   borderRadius: 9,
+                  //   onTap: () {
+                  //     //
+                  //   },
+                  // ),
+                  // PBButton(
+                  //   text: "DELETE",
+                  //   width: 72,
+                  //   height: 28,
+                  //   borderRadius: 9,
+                  //   textColor: Colors.black12,
+                  //   onTap: () {
+                  //     //
+                  //   },
+                  // ), // TODO: IMPLEMENT STORE AND DELETE BUTTONS
+                  SizedBox(height: 10),
                 ],
               ),
             ),
@@ -395,10 +394,10 @@ class NeumorphicWithPopupSlider extends StatelessWidget {
           Expanded(
             child: Container(
               color: Colors.white,
-              child: Column(
+              child: const Column(
                 spacing: 10,
                 children: <Widget>[
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.symmetric(horizontal: 8.0),
                     child: NeumorphicPopupButton(
                       height: 28,
@@ -406,26 +405,26 @@ class NeumorphicWithPopupSlider extends StatelessWidget {
                     ),
                   ),
 
-                  PBButton(
-                    text: "STORE",
-                    width: 72,
-                    height: 28,
-                    borderRadius: 9,
-                    onTap: () {
-                      //
-                    },
-                  ),
-                  PBButton(
-                    text: "DELETE",
-                    width: 72,
-                    height: 28,
-                    borderRadius: 9,
-                    textColor: Colors.black12,
-                    onTap: () {
-                      //
-                    },
-                  ),
-                  const SizedBox(height: 10),
+                  // PBButton(
+                  //   text: "STORE",
+                  //   width: 72,
+                  //   height: 28,
+                  //   borderRadius: 9,
+                  //   onTap: () {
+                  //     //
+                  //   },
+                  // ),
+                  // PBButton(
+                  //   text: "DELETE",
+                  //   width: 72,
+                  //   height: 28,
+                  //   borderRadius: 9,
+                  //   textColor: Colors.black12,
+                  //   onTap: () {
+                  //     //
+                  //   },
+                  // ), // TODO: IMPLEMENT STORE AND DELETE BUTTONS
+                  SizedBox(height: 10),
                 ],
               ),
             ),

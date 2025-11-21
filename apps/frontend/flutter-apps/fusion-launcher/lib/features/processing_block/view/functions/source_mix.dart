@@ -4,7 +4,6 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../widgets/pb_button.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_gain_text_field.dart';
 import 'widgets/neumorphic_popup_button.dart';
@@ -283,27 +282,27 @@ class SourceMixMixScenes extends StatelessWidget {
           ),
 
           const SizedBox(height: 10),
-          PBButton(
-            text: "STORE",
-            width: 72,
-            height: 24,
-            borderRadius: 9,
-            onTap: () {
-              // projectViewModel.addPreset(preset: preset);
-              // TODO: How to add mix scene to projectViewModel
-            },
-          ),
-          PBButton(
-            text: "DELETE",
-            width: 72,
-            height: 24,
-            borderRadius: 9,
-            textColor: Colors.black12,
-            onTap: () {
-              // projectViewModel.removePreset(presetId: preset.id);
-              // TODO: How to delete mix scene from projectViewModel
-            },
-          ),
+          // NeumorphicButton(
+          //   text: "STORE",
+          //   width: 72,
+          //   height: 24,
+          //   borderRadius: 9,
+          //   onTap: () {
+          //     // projectViewModel.addPreset(preset: preset);
+          //     // TODO: How to add mix scene to projectViewModel
+          //   },
+          // ),
+          // PBButton(
+          //   text: "DELETE",
+          //   width: 72,
+          //   height: 24,
+          //   borderRadius: 9,
+          //   textColor: Colors.black12,
+          //   onTap: () {
+          //     // projectViewModel.removePreset(presetId: preset.id);
+          //     // TODO: How to delete mix scene from projectViewModel
+          //   },
+          // ),
           const SizedBox(height: 10),
         ],
       ),

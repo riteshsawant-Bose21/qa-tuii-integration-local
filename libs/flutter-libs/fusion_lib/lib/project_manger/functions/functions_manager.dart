@@ -44,24 +44,17 @@ extension ZoneFunctionManager on ProjectManager {
     projectService!.muteZone(zoneId: zoneId, isMuted: isMuted);
   }
 
-  void updateSourceGain({required String sourceId, required double gain}) {
+  String? getSelectedSourceForFunction({required String functionId}) {
     if (projectService == null) {
       throw Exception("No project is currently loaded.");
     }
-    projectService!.updateSourceGain(sourceId: sourceId, gain: gain);
+    return projectService!.getSelectedSourceForFunction(functionId: functionId);
   }
 
-  void muteSource({required String sourceId, required bool isMuted}) {
+  void selectSourceForFunction({required String functionId, required String sourceId}) {
     if (projectService == null) {
       throw Exception("No project is currently loaded.");
     }
-    projectService!.muteSource(sourceId: sourceId, isMuted: isMuted);
-  }
-
-  void updateSourceMix({required String sourceId, required double leftMix, required double rightMix}) {
-    if (projectService == null) {
-      throw Exception("No project is currently loaded.");
-    }
-    projectService!.updateSourceMix(sourceId: sourceId, leftMix: leftMix, rightMix: rightMix);
+    projectService!.selectSourceForFunction(functionId: functionId, sourceId: sourceId);
   }
 }

@@ -7,9 +7,10 @@ import '../dto/pb_layout.dart';
 import 'item_widget_builder.dart';
 
 class DynamicGridView extends StatelessWidget {
-  const DynamicGridView({super.key, required this.layout, this.handler});
+  const DynamicGridView({super.key, required this.layout, this.handler,required this.scrollController});
   final PBLayout layout;
   final PBWidgetValueHandler? handler;
+  final ScrollController scrollController;
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -21,7 +22,7 @@ class DynamicGridView extends StatelessWidget {
         );
         return SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          physics: const AlwaysScrollableScrollPhysics(),
+          controller: scrollController,
           child: SizedBox(
             width: max(widthPerCell * maxRowNum, constraints.maxWidth),
             height: widthPerCell * layout.height,

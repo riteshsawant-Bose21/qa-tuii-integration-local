@@ -15,6 +15,13 @@ extension ZoneFunctionService on ProjectService {
   }
 
   void removeFunction({required String functionId}) {
+    //remove all mix scenes associated with this function
+    final mixSceneIds = relationships.getChildren(RelationshipType.functionScenes, functionId);
+    final copyOfMixSceneIds = List<String>.from(mixSceneIds);
+    for (final mixSceneId in copyOfMixSceneIds) {
+      removeScene(mixSceneId);
+    }
+
     zoneFunctions.remove(functionId);
     relationships.removeAllRelationships(functionId);
   }
@@ -55,34 +62,25 @@ extension ZoneFunctionService on ProjectService {
     }
   }
 
-  void updateSourceGain({required String sourceId, required double gain}) {
-    if (hardware.exists(sourceId)) {
-      final source = hardware.get(sourceId)! as Source;
-      final updatedSource = source.copyWith(gain: gain);
-      hardware.add(sourceId, updatedSource);
+  //return selected Source for given function
+  String? getSelectedSourceForFunction({required String functionId}) {
+    final selectedSources = relationships.getChildren(RelationshipType.selectedSourceForFunction, functionId);
+    if (selectedSources.isEmpty) {
+      return null;
+    } else {
+      return selectedSources.first;
     }
   }
 
-  void muteSource({required String sourceId, required bool isMuted}) {
-    if (hardware.exists(sourceId)) {
-      final source = hardware.get(sourceId)! as Source;
-      final updatedSource = source.copyWith(muted: isMuted);
-      hardware.add(sourceId, updatedSource);
+  void selectSourceForFunction({required String functionId, required String sourceId}) {
+    //remove previous selection
+    final currentSelectedSources = relationships.getChildren(RelationshipType.selectedSourceForFunction, functionId);
+    final copyOfCurrentSelectedSources = List<String>.from(currentSelectedSources);
+    for (final selectedSourceId in copyOfCurrentSelectedSources) {
+      relationships.unlink(RelationshipType.selectedSourceForFunction, functionId, selectedSourceId);
     }
-  }
 
-  void updateSourceMix({
-    required String sourceId,
-    required double leftMix,
-    required double rightMix,
-  }) {
-    if (hardware.exists(sourceId)) {
-      final source = hardware.get(sourceId)! as Source;
-      final updatedSource = source.copyWith(
-        leftMix: leftMix,
-        rightMix: rightMix,
-      );
-      hardware.add(sourceId, updatedSource);
-    }
+    //link new selection
+    relationships.link(RelationshipType.selectedSourceForFunction, functionId, sourceId);
   }
 }

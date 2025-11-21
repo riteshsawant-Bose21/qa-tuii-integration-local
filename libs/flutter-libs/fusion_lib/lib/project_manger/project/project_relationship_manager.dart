@@ -14,9 +14,14 @@ enum RelationshipType {
   zoneCircuits,
   wireConnection,
   processingBlock,
-  prioritySources,
+  // prioritySources,
+  zonePriorities,
   priorityIndex,
   zoneFunctions,
+  functionScenes,
+  selectedFunctionScenes,
+  selectedSourceForFunction,
+  sourcePriorityData,
 }
 
 class RelationshipManager {

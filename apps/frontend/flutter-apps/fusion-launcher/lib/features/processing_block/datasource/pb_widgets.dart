@@ -38,6 +38,13 @@ class PbWidgets {
       fromParameter: (Parameter data) => PBMeterParam(label: data.name, max: 100, min: 0),
       fromTelemetry: (Telemetry data) => PBMeterParam(label: data.name, max: 100, min: 0),
     ),
+    PbWidgets(
+      type: 'textfield',
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBTextfield(item: item, handler: handler),
+      paramFactory: PBTextfieldParam.fromMap,
+      fromParameter: (Parameter data) => PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
+      fromTelemetry: (Telemetry data) => PBTextfieldParam(label: data.name, max: 100, min: 0, unit: "db"),
+    ),
   ];
 
   static List<PbWidgets> boolWidgets = <PbWidgets>[
@@ -54,6 +61,13 @@ class PbWidgets {
       paramFactory: PBSwitchParam.fromMap,
       fromParameter: (Parameter data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
       fromTelemetry: (Telemetry data) => PBSwitchParam(label: data.name, enableValueLabel: 'YES', disabledValueLabel: 'NO'),
+    ),
+    PbWidgets(
+      type: 'button',
+      builder: (BuildContext context, PBItem item, PBWidgetValueHandler? handler) => PBButton(item: item, handler: handler),
+      paramFactory: PBButtonParam.fromMap,
+      fromParameter: (Parameter data) => PBButtonParam(label: data.name, enableValueIcon: null, disabledValueIcon: null),
+      fromTelemetry: (Telemetry data) => PBButtonParam(label: data.name, enableValueIcon: null, disabledValueIcon: null),
     ),
   ];
 
