@@ -139,6 +139,7 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 }
 
 func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+
 	if !msg.IsPublic() {
 		return nil
 	}

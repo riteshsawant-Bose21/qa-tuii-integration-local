@@ -30,19 +30,29 @@ func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 		}
 
 	case api.NotifyOpConfigUpdate:
-		// Apply the configuration update and mark state as dirty for persistence.
-		dirty, err := h.StateManager.ApplyUpdate(*message.ConfigUpdate)
-		if err != nil {
-			return fmt.Errorf("failed to apply update: %w", err)
-		}
 
-		if !dirty {
-			logging.GetLogger().Debug(
-				"broadcastMessage: skipping stale ConfigUpdate version=%v from node=%s",
-				message.ConfigUpdate.Version,
-				message.Node,
-			)
-			return nil
+		var dirty bool
+		var err error
+
+		localNode := h.memberlist.LocalNode().Name
+
+		if message.Node != localNode {
+			// Remote update: apply Lamport logic
+			dirty, err = h.StateManager.ApplyUpdate(*message.ConfigUpdate)
+			if err != nil {
+				return fmt.Errorf("failed to apply remote update: %w", err)
+			}
+			if !dirty {
+				logging.GetLogger().Debug(
+					"broadcastMessage: skipping stale ConfigUpdate version=%v from node=%s",
+					message.ConfigUpdate.Version,
+					message.Node,
+				)
+				return nil
+			}
+		} else {
+			// Local update: We already applied it before calling broadcastMessage
+			dirty = true
 		}
 
 		// Overwrite with effective local Lamport version
