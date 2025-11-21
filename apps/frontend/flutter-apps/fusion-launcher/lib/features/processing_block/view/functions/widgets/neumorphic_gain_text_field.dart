@@ -7,8 +7,8 @@ import '../../common/neumorphic_button.dart';
 class NeumorphicGainTextField extends StatefulWidget {
   final String? controllerValue;
   final ValueChanged<double>? onSubmitted;
-  final double? height;
-  final double? width;
+  final double height;
+  final double width;
   final double borderRadius;
   final double maxGain;
   final double minGain;
@@ -18,9 +18,9 @@ class NeumorphicGainTextField extends StatefulWidget {
     required this.maxGain,
     required this.minGain,
     this.onSubmitted,
-    this.height,
-    this.width,
-    this.borderRadius = 10,
+    this.height = 32,
+    this.width = 72,
+    this.borderRadius = 8,
     this.controllerValue,
   });
 
@@ -82,7 +82,7 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(widget.borderRadius),
           boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
-          border: isFocused ? Border.all(color: Colors.black12, width: 2) : null,
+          border: isFocused ? Border.all(color: Colors.black12, width: 1.5) : null,
         ),
         child: TextField(
           controller: controller,

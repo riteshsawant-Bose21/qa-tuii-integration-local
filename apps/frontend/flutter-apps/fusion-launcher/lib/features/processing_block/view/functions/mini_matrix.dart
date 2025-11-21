@@ -162,8 +162,7 @@ class MiniMatrixControls extends StatelessWidget {
                 child: NeumorphicAudioToggleButton(
                   isActive: false,
                   width: 72,
-                  height: 28,
-                  borderRadius: 8,
+                  height: 24,
                   iconSize: 16,
                 ),
               ),

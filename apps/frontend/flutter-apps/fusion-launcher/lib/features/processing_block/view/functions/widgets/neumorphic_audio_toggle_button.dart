@@ -19,8 +19,8 @@ class NeumorphicAudioToggleButton extends StatefulWidget {
     this.height,
     this.width,
     this.backgroundColor,
-    this.borderRadius = 12,
-    this.iconSize = 24,
+    this.borderRadius = 6,
+    this.iconSize = 16,
   });
 
   @override

@@ -31,7 +31,9 @@ class SourceSelectZoneControlPanel extends StatefulWidget {
 }
 
 class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPanel> {
+  late final String? functionId;
   late List<Source> sources;
+  late String? selectedSourceId;
 
   late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
@@ -39,13 +41,13 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
   void initState() {
     super.initState();
     sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
+    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)?.id;
+    selectedSourceId = projectViewModel.getSelectedSourceForFunction(functionId: functionId!);
   }
 
   @override
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
-
-    // final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
     return Dialog(
       constraints: BoxConstraints(
@@ -114,59 +116,77 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
 
                                   // 🔥 DRAG-AND-DROP LIST
                                   Expanded(
-                                    child: ListView.builder(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                                      physics: const ClampingScrollPhysics(),
-                                      itemCount: sources.length,
+                                    child: Builder(
+                                      builder: (BuildContext context) {
+                                        if (sources.isEmpty) {
+                                          return Center(
+                                            child: FusionAppText(
+                                              text: "No sources selected for this function",
+                                              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          );
+                                        }
 
-                                      itemBuilder: (BuildContext context, int index) {
-                                        final Source source = sources[index];
+                                        return ListView.builder(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                          physics: const ClampingScrollPhysics(),
+                                          itemCount: sources.length,
+                                          itemBuilder: (BuildContext context, int index) {
+                                            final Source source = sources[index];
 
-                                        return Container(
-                                          key: ValueKey<String>(source.id),
-                                          margin: const EdgeInsets.symmetric(vertical: 2),
-                                          decoration: BoxDecoration(
-                                            border: Border.all(color: const Color(0xFFE5E5E5)),
-                                            borderRadius: BorderRadius.circular(4),
-                                            color: Colors.white,
-                                          ),
-                                          child: Row(
-                                            spacing: 5,
-                                            children: <Widget>[
-                                              Flexible(
-                                                child: Container(
-                                                  height: 24,
-                                                  margin: const EdgeInsets.all(4),
-                                                  alignment: Alignment.center,
-                                                  padding: const EdgeInsets.all(2),
-                                                  decoration: BoxDecoration(
-                                                    color: const Color(0xFFF5F5F5),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: FusionAppText(
-                                                    text: source.name,
-                                                    maxLine: 1,
-                                                    style: Theme.of(context).textTheme.labelSmall,
-                                                  ),
+                                            final bool isSelected = source.id == selectedSourceId;
+
+                                            return GestureDetector(
+                                              onTap: () {
+                                                setState(() => selectedSourceId = source.id);
+                                                projectViewModel.selectSourceForFunction(
+                                                  functionId: functionId!,
+                                                  sourceId: source.id,
+                                                );
+                                              },
+                                              child: Container(
+                                                key: ValueKey<String>(source.id),
+                                                margin: const EdgeInsets.symmetric(vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(color: isSelected ? Colors.black54 : const Color(0xFFE5E5E5)),
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  color: Colors.white,
+                                                ),
+                                                child: Row(
+                                                  spacing: 5,
+                                                  children: <Widget>[
+                                                    Flexible(
+                                                      child: Container(
+                                                        height: 24,
+                                                        margin: const EdgeInsets.all(4),
+                                                        alignment: Alignment.center,
+                                                        padding: const EdgeInsets.all(2),
+                                                        decoration: BoxDecoration(
+                                                          color: const Color(0xFFF5F5F5),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                        ),
+                                                        child: FusionAppText(
+                                                          text: source.name,
+                                                          maxLine: 1,
+                                                          style: Theme.of(context).textTheme.labelSmall,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                    PBRadio(
+                                                      value: false,
+                                                      size: const Size(24, 24),
+                                                      padding: const EdgeInsets.all(2),
+                                                      onChanged: (bool value) {},
+                                                    ),
+
+                                                    const SizedBox(),
+                                                  ],
                                                 ),
                                               ),
-                                              PBRadio(
-                                                // TODO: How to get source mute state from projectViewModel?
-                                                value: index % 2 == 0,
-                                                size: const Size(24, 24),
-                                                padding: const EdgeInsets.all(2),
-                                                onChanged: (bool value) {
-                                                  // projectViewModel.muteSource(
-                                                  //   sourceId: source.id,
-                                                  //   // TODO: Toggle mute state
-                                                  //   isMuted: true,
-                                                  // );
-                                                },
-                                              ),
-
-                                              const SizedBox(),
-                                            ],
-                                          ),
+                                            );
+                                          },
                                         );
                                       },
                                     ),

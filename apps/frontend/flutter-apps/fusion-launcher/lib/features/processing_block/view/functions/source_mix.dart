@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/processing_block/view/functions/widgets/priority_selection_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
@@ -63,7 +64,19 @@ class SourceMixZoneControlPanel extends StatelessWidget {
                           ),
                         ),
 
-                        const SourceMixMixScenes(),
+                        SourceMixMixScenes(zoneId: zoneID),
+
+                        DecoratedBox(
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFF5F5F5),
+                            border: Border(
+                              left: BorderSide(
+                                color: Colors.black12,
+                              ),
+                            ),
+                          ),
+                          child: PrioritySelectionWidget(zoneId: zoneID),
+                        ),
 
                         // Right side (only one widget)
                         Flexible(
@@ -157,6 +170,26 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
 
   @override
   Widget build(BuildContext context) {
+    if (sources.isEmpty) {
+      return ColoredBox(
+        color: const Color(0xFFF5F5F5),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              FusionAppText(
+                text: "No sources selected for this function",
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Colors.grey,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scrollbar(
       controller: _scrollController,
       child: SingleChildScrollView(
@@ -175,19 +208,23 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                 child: Column(
                   spacing: 10,
                   children: <Widget>[
-                    const SizedBox(height: 5),
-                    FusionAppText(
-                      text: source.name,
-                      textAlign: TextAlign.center,
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.labelMedium,
+                    Container(
+                      height: 28,
+                      color: const Color(0xFFF5F5F5),
+                      child: Center(
+                        child: FusionAppText(
+                          text: source.name,
+                          textAlign: TextAlign.center,
+                          maxLine: 1,
+                          style: Theme.of(context).textTheme.labelMedium,
+                        ),
+                      ),
                     ),
                     NeumorphicGainTextField(
                       controllerValue: null, // TODO: How to get source mix level from projectViewModel?
                       minGain: -60,
                       maxGain: 12,
-                      width: 100,
-                      height: 32,
+
                       onSubmitted: (double value) {
                         // projectViewModel.updateSourceMix(
                         //   sourceId: sources[index].id,
@@ -224,8 +261,8 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                             ),
                             NeumorphicAudioToggleButton(
                               isActive: index % 2 == 0, // TODO: How to get source mix mute state from projectViewModel?
-                              width: 100,
-                              height: 35,
+                              width: 72,
+                              height: 24,
                               onTap: () {
                                 // projectViewModel.muteSource(
                                 //   sourceId: source.id,
@@ -251,20 +288,30 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
 }
 
 class SourceMixMixScenes extends StatelessWidget {
-  const SourceMixMixScenes({super.key});
+  final String zoneId;
+  const SourceMixMixScenes({super.key, required this.zoneId});
 
   @override
   Widget build(BuildContext context) {
+    final List<Source> sources = context.watch<ProjectViewModel>().getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+
+    if (sources.isEmpty) return const SizedBox.shrink();
+
     return Container(
       width: 150,
       color: const Color(0xFFF5F5F5),
       child: Column(
         spacing: 10,
         children: <Widget>[
-          const SizedBox(height: 5),
-          FusionAppText(
-            text: "MIX SCENES",
-            style: Theme.of(context).textTheme.labelMedium,
+          Container(
+            height: 28,
+            color: const Color(0xFFF5F5F5),
+            child: Center(
+              child: FusionAppText(
+                text: "MIX SCENES",
+                style: Theme.of(context).textTheme.labelMedium,
+              ),
+            ),
           ),
 
           Padding(
@@ -429,8 +476,8 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
                             ),
                             NeumorphicAudioToggleButton(
                               isActive: isMuted,
-                              width: 100,
-                              height: 35,
+                              width: 72,
+                              height: 24,
                               onTap: () {
                                 projectViewModel.muteZone(
                                   zoneId: zoneOrSubzoneID,

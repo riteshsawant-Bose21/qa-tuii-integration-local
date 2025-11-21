@@ -8,14 +8,23 @@ import 'neumorphic_text_with_popup_slider_button.dart';
 
 class PrioritySelectionWidget extends StatefulWidget {
   final String zoneId;
-  const PrioritySelectionWidget({super.key, required this.zoneId});
+  final Function(Widget child)? builder;
+  const PrioritySelectionWidget({super.key, required this.zoneId, this.builder});
 
   @override
   State<PrioritySelectionWidget> createState() => _PrioritySelectionWidgetState();
 }
 
 class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
-  final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  late final List<Source> sources;
+
+  @override
+  void initState() {
+    super.initState();
+    sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneId);
+  }
 
   void onReorder(int oldIndex, int newIndex) {
     if (oldIndex < newIndex) newIndex -= 1;
@@ -23,7 +32,7 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
     /// Handle the reordering logic - swap sources using reOrderPrioritySourcesInZone
     if (oldIndex != newIndex) {
       /// Get current source IDs directly from view model
-      final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+      final List<String> prioritySources = projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
       final String? source1 = prioritySources.isNotEmpty ? prioritySources[0] : null;
       final String? source2 = prioritySources.length > 1 ? prioritySources[1] : null;
 
@@ -40,16 +49,16 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
       }
 
       /// Use the new reOrderPrioritySourcesInZone method
-      _projectViewModel.reOrderPrioritySourcesInZone(zoneId: widget.zoneId, newOrder: newOrder);
+      projectViewModel.reOrderPrioritySourcesInZone(zoneId: widget.zoneId, newOrder: newOrder);
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
 
-    return SizedBox(
+    final SizedBox child = SizedBox(
       width: 300,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -69,10 +78,16 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
         ],
       ),
     );
+
+    // Wrap with builder if provided for customizations
+    if (widget.builder != null) return widget.builder!(child);
+
+    // Otherwise, return the child directly
+    return child;
   }
 
   Widget _buildReorderablePriorityWidgets() {
-    final ZoneFunctions? existingFunction = _projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
+    final ZoneFunctions? existingFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneId);
     if (!(existingFunction?.hasPriority ?? false)) return const SizedBox.shrink();
 
     return Material(
@@ -97,12 +112,13 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
 
           // String? selectedSourceId;
           String? selectedSourceName;
-          final List<String> prioritySources = _projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
+
+          final List<String> prioritySources = projectViewModel.getPrioritySourcesInZone(zoneId: widget.zoneId);
 
           /// priority 1
           if (priorityIndex == 1) {
             if (prioritySources.isNotEmpty && prioritySources[0].isNotEmpty) {
-              final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[0]);
+              final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[0]);
               if (sourceData != null) {
                 selectedSourceName = sourceData.name;
                 // selectedSourceId = prioritySources[0];
@@ -111,7 +127,7 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
           } else {
             /// priority 2
             if (prioritySources.length > 1 && prioritySources[1].isNotEmpty) {
-              final HardwareComponent? sourceData = _projectViewModel.getHardware(hardwareId: prioritySources[1]);
+              final HardwareComponent? sourceData = projectViewModel.getHardware(hardwareId: prioritySources[1]);
               if (sourceData != null) {
                 selectedSourceName = sourceData.name;
                 // selectedSourceId = prioritySources[1];
@@ -120,117 +136,132 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
           }
 
           // get zone by id
-          final Color? zoneColor = _projectViewModel.getZone(zoneId: widget.zoneId)?.color;
+          final Color? zoneColor = projectViewModel.getZone(zoneId: widget.zoneId)?.color;
 
           return ReorderableDragStartListener(
             key: ValueKey<String>('priority_widget_$index'),
             index: index,
-            child: Padding(
-              padding: const EdgeInsets.only(bottom: 8.0),
-              // child: buildPriorityFunctionWidget(priorityIndex: priorityIndex),
-              child: Container(
-                padding: const EdgeInsets.all(16.0),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    FusionAppText(
-                      text: "Priority $priorityIndex",
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontSize: 10,
-                      ),
+            child: Container(
+              padding: const EdgeInsets.all(12.0),
+              decoration: BoxDecoration(
+                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  FusionAppText(
+                    text: "Priority $priorityIndex",
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      fontSize: 10,
                     ),
-                    Row(
-                      spacing: 8,
-                      children: <Widget>[
-                        Expanded(
-                          child: Container(
-                            height: 24,
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFF4F4F4),
-                              borderRadius: BorderRadius.circular(3),
-                            ),
-                            child: Row(
-                              spacing: 4,
-                              children: <Widget>[
-                                Container(
-                                  height: 16,
-                                  width: 16,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: zoneColor, // TODO: THIS IS ZONE COLOR
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: FusionAppText(
-                                    text: "P1",
-                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      fontSize: 10,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: selectedSourceName ?? "No source name",
-                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                        const Icon(
-                          Icons.circle,
-                          color: Color(0xFFF4F4F4),
-                          size: 16,
-                        ),
-
-                        NeumorphicActiveBlueButton(
-                          text: "Active",
-                          isActive: false,
-                          width: 72,
-                          height: 24,
-                          onTap: () {
-                            //
-                          },
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 8),
-                    Row(
-                      spacing: 8,
-                      children: <Widget>[
-                        const Expanded(child: SizedBox()),
-
-                        FusionAppText(
-                          text: "Volume",
+                  ),
+                  Builder(
+                    builder: (BuildContext context) {
+                      if (selectedSourceName == null) {
+                        return FusionAppText(
+                          text: "No source selected for priority $priorityIndex",
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             fontSize: 10,
-                            color: const Color(0xFF171717),
+                            color: const Color(0xFF888888),
                           ),
-                        ),
+                        );
+                      }
 
-                        const Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 8),
-                          child: NeumorphicTextWithPopupSliderButton(
-                            isActive: false,
-                            width: 72,
-                            height: 24,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Row(
+                            spacing: 8,
+                            children: <Widget>[
+                              Expanded(
+                                child: Container(
+                                  height: 24,
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF4F4F4),
+                                    borderRadius: BorderRadius.circular(3),
+                                  ),
+                                  child: Row(
+                                    spacing: 4,
+                                    children: <Widget>[
+                                      Container(
+                                        height: 16,
+                                        width: 16,
+                                        alignment: Alignment.center,
+                                        decoration: BoxDecoration(
+                                          color: zoneColor,
+                                          borderRadius: BorderRadius.circular(3),
+                                        ),
+                                        child: FusionAppText(
+                                          text: "P1",
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            fontSize: 10,
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: selectedSourceName,
+                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                            fontSize: 10,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+
+                              const Icon(
+                                Icons.circle,
+                                color: Color(0xFFF4F4F4),
+                                size: 16,
+                              ),
+
+                              NeumorphicActiveBlueButton(
+                                text: "Active",
+                                isActive: false,
+                                width: 72,
+                                height: 24,
+                                onTap: () {
+                                  //
+                                },
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+
+                          Row(
+                            spacing: 8,
+                            children: <Widget>[
+                              const Expanded(child: SizedBox()),
+
+                              FusionAppText(
+                                text: "Volume",
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                  fontSize: 10,
+                                  color: const Color(0xFF171717),
+                                ),
+                              ),
+
+                              const Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: NeumorphicTextWithPopupSliderButton(
+                                  isActive: false,
+                                  width: 72,
+                                  height: 24,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
               ),
             ),
           );

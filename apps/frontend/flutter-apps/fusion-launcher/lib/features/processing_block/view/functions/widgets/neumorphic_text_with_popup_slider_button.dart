@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../common/neumorphic_button.dart';
 import '../../widgets/pb_slider.dart';
 
 class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
