@@ -7,6 +7,7 @@ import (
 )
 
 type Product interface {
-	GetProductByID(ctx context.Context, id string) (*types.ProductResponse, error)
+	GetProductByID(ctx context.Context, id string) (*types.SingleProductResponse, error)
 	GetAllProducts(ctx context.Context) (*types.ProductResponse, error)
+	GetProductPrices(ctx context.Context, id string, currency string, variant string) (*types.PriceResponse, error)
 }

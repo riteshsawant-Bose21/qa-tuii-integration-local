@@ -99,53 +99,57 @@ var ProjectTableColumns = struct {
 
 // Generated where
 
-type whereHelpernull_JSON struct{ field string }
+type whereHelperprojectsNull_JSON struct{ field string }
 
-func (w whereHelpernull_JSON) EQ(x null.JSON) qm.QueryMod {
+func (w whereHelperprojectsNull_JSON) EQ(x null.JSON) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, false, x)
 }
-func (w whereHelpernull_JSON) NEQ(x null.JSON) qm.QueryMod {
+func (w whereHelperprojectsNull_JSON) NEQ(x null.JSON) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, true, x)
 }
-func (w whereHelpernull_JSON) LT(x null.JSON) qm.QueryMod {
+func (w whereHelperprojectsNull_JSON) LT(x null.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelpernull_JSON) LTE(x null.JSON) qm.QueryMod {
+func (w whereHelperprojectsNull_JSON) LTE(x null.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpernull_JSON) GT(x null.JSON) qm.QueryMod {
+func (w whereHelperprojectsNull_JSON) GT(x null.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
-func (w whereHelpernull_JSON) GTE(x null.JSON) qm.QueryMod {
+func (w whereHelperprojectsNull_JSON) GTE(x null.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-func (w whereHelpernull_JSON) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_JSON) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelperprojectsNull_JSON) IsNull() qm.QueryMod { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelperprojectsNull_JSON) IsNotNull() qm.QueryMod {
+	return qmhelper.WhereIsNotNull(w.field)
+}
 
-type whereHelpernull_Time struct{ field string }
+type whereHelperprojectsNull_Time struct{ field string }
 
-func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+func (w whereHelperprojectsNull_Time) EQ(x null.Time) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, false, x)
 }
-func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+func (w whereHelperprojectsNull_Time) NEQ(x null.Time) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, true, x)
 }
-func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
+func (w whereHelperprojectsNull_Time) LT(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
+func (w whereHelperprojectsNull_Time) LTE(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
+func (w whereHelperprojectsNull_Time) GT(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
-func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
+func (w whereHelperprojectsNull_Time) GTE(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
-func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+func (w whereHelperprojectsNull_Time) IsNull() qm.QueryMod { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelperprojectsNull_Time) IsNotNull() qm.QueryMod {
+	return qmhelper.WhereIsNotNull(w.field)
+}
 
 var ProjectWhere = struct {
 	ID             whereHelperstring
@@ -155,11 +159,11 @@ var ProjectWhere = struct {
 	Venue          whereHelpernull_String
 	VenueType      whereHelpernull_String
 	Application    whereHelpernull_String
-	Budget         whereHelpernull_JSON
-	MetaData       whereHelpernull_JSON
+	Budget         whereHelperprojectsNull_JSON
+	MetaData       whereHelperprojectsNull_JSON
 	ProjectFileURL whereHelpernull_String
-	CreatedAt      whereHelpernull_Time
-	UpdatedAt      whereHelpernull_Time
+	CreatedAt      whereHelperprojectsNull_Time
+	UpdatedAt      whereHelperprojectsNull_Time
 }{
 	ID:             whereHelperstring{field: "\"projects\".\"id\""},
 	OrganizationID: whereHelperstring{field: "\"projects\".\"organization_id\""},
@@ -168,11 +172,11 @@ var ProjectWhere = struct {
 	Venue:          whereHelpernull_String{field: "\"projects\".\"venue\""},
 	VenueType:      whereHelpernull_String{field: "\"projects\".\"venue_type\""},
 	Application:    whereHelpernull_String{field: "\"projects\".\"application\""},
-	Budget:         whereHelpernull_JSON{field: "\"projects\".\"budget\""},
-	MetaData:       whereHelpernull_JSON{field: "\"projects\".\"meta_data\""},
+	Budget:         whereHelperprojectsNull_JSON{field: "\"projects\".\"budget\""},
+	MetaData:       whereHelperprojectsNull_JSON{field: "\"projects\".\"meta_data\""},
 	ProjectFileURL: whereHelpernull_String{field: "\"projects\".\"project_file_url\""},
-	CreatedAt:      whereHelpernull_Time{field: "\"projects\".\"created_at\""},
-	UpdatedAt:      whereHelpernull_Time{field: "\"projects\".\"updated_at\""},
+	CreatedAt:      whereHelperprojectsNull_Time{field: "\"projects\".\"created_at\""},
+	UpdatedAt:      whereHelperprojectsNull_Time{field: "\"projects\".\"updated_at\""},
 }
 
 // ProjectRels is where relationship names are stored.

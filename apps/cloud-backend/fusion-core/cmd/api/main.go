@@ -1,10 +1,10 @@
-// @title Fusion Cloud Backend API
-// @version 1.0
-// @description This is the Fusion Cloud Backend API server.
+//	@title			Fusion Cloud Backend API
+//	@version		1.0
+//	@description	This is the Fusion Cloud Backend API server.
 
-// @host localhost:8020
-// @BasePath /api/v1
-// @schemes http https
+// @host		localhost:8080
+// @BasePath	/api/v1
+// @schemes	http https
 package main
 
 import (
@@ -28,8 +28,8 @@ import (
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
+	// projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 )
@@ -68,6 +68,12 @@ func main() {
 		logger.Fatal("Failed to load API config", zap.Error(err))
 	}
 
+	// Load general application configuration
+	appConfig, err := config.Load()
+	if err != nil {
+		logger.Fatal("Failed to load application config", zap.Error(err))
+	}
+
 	// Initialize the database connection.
 	pgs, err := sql.New(
 		sql.PostgresOpener,
@@ -96,11 +102,12 @@ func main() {
 	}
 	logger.Info("Initialized Product DB Service.")
 
-	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs)
-	if projectDBSvc == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
+	// TODO: Uncomment when projects table is added to database schema
+	// // Initialize Project DB Service
+	// projectDBSvc := projectdb.NewService(pgs)
+	// if projectDBSvc == nil {
+	// 	logger.Fatal("Failed to initialize project service")
+	// }
 
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc, idSVC)
@@ -109,22 +116,25 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
-	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc)
-	if projectSVC == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
-	logger.Info("Initialized Project Service.")
+	// TODO: Uncomment when projects table is added to database schema
+	// //Initialize Project Service
+	// projectSVC := project.NewService(projectDBSvc)
+	// if projectSVC == nil {
+	// 	logger.Fatal("Failed to initialize project service")
+	// }
+	// logger.Info("Initialized Project Service.")
 
-	// Initialize API Server
+	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
-		Host: "localhost",
-		Port: "8080",
-	}, productSVC, projectSVC)
+		Host: appConfig.Server.APIHost,
+		Port: appConfig.Server.APIPort,
+	}, productSVC, nil) // TODO: Add projectSVC when projects table exists
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
-	logger.Info("Initialized the API.")
+	logger.Info("Initialized the API.",
+		zap.String("host", appConfig.Server.APIHost),
+		zap.String("port", appConfig.Server.APIPort))
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

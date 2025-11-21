@@ -13,87 +13,105 @@ import "testing"
 // Separating the tests thusly grants avoidance of Postgres deadlocks.
 func TestParent(t *testing.T) {
 	t.Run("Products", testProducts)
-	t.Run("Projects", testProjects)
+	t.Run("ProductPrices", testProductPrices)
+	t.Run("ProductSyncJobs", testProductSyncJobs)
 }
 
 func TestDelete(t *testing.T) {
 	t.Run("Products", testProductsDelete)
-	t.Run("Projects", testProjectsDelete)
+	t.Run("ProductPrices", testProductPricesDelete)
+	t.Run("ProductSyncJobs", testProductSyncJobsDelete)
 }
 
 func TestQueryDeleteAll(t *testing.T) {
 	t.Run("Products", testProductsQueryDeleteAll)
-	t.Run("Projects", testProjectsQueryDeleteAll)
+	t.Run("ProductPrices", testProductPricesQueryDeleteAll)
+	t.Run("ProductSyncJobs", testProductSyncJobsQueryDeleteAll)
 }
 
 func TestSliceDeleteAll(t *testing.T) {
 	t.Run("Products", testProductsSliceDeleteAll)
-	t.Run("Projects", testProjectsSliceDeleteAll)
+	t.Run("ProductPrices", testProductPricesSliceDeleteAll)
+	t.Run("ProductSyncJobs", testProductSyncJobsSliceDeleteAll)
 }
 
 func TestExists(t *testing.T) {
 	t.Run("Products", testProductsExists)
-	t.Run("Projects", testProjectsExists)
+	t.Run("ProductPrices", testProductPricesExists)
+	t.Run("ProductSyncJobs", testProductSyncJobsExists)
 }
 
 func TestFind(t *testing.T) {
 	t.Run("Products", testProductsFind)
-	t.Run("Projects", testProjectsFind)
+	t.Run("ProductPrices", testProductPricesFind)
+	t.Run("ProductSyncJobs", testProductSyncJobsFind)
 }
 
 func TestBind(t *testing.T) {
 	t.Run("Products", testProductsBind)
-	t.Run("Projects", testProjectsBind)
+	t.Run("ProductPrices", testProductPricesBind)
+	t.Run("ProductSyncJobs", testProductSyncJobsBind)
 }
 
 func TestOne(t *testing.T) {
 	t.Run("Products", testProductsOne)
-	t.Run("Projects", testProjectsOne)
+	t.Run("ProductPrices", testProductPricesOne)
+	t.Run("ProductSyncJobs", testProductSyncJobsOne)
 }
 
 func TestAll(t *testing.T) {
 	t.Run("Products", testProductsAll)
-	t.Run("Projects", testProjectsAll)
+	t.Run("ProductPrices", testProductPricesAll)
+	t.Run("ProductSyncJobs", testProductSyncJobsAll)
 }
 
 func TestCount(t *testing.T) {
 	t.Run("Products", testProductsCount)
-	t.Run("Projects", testProjectsCount)
+	t.Run("ProductPrices", testProductPricesCount)
+	t.Run("ProductSyncJobs", testProductSyncJobsCount)
 }
 
 func TestHooks(t *testing.T) {
 	t.Run("Products", testProductsHooks)
-	t.Run("Projects", testProjectsHooks)
+	t.Run("ProductPrices", testProductPricesHooks)
+	t.Run("ProductSyncJobs", testProductSyncJobsHooks)
 }
 
 func TestInsert(t *testing.T) {
 	t.Run("Products", testProductsInsert)
 	t.Run("Products", testProductsInsertWhitelist)
-	t.Run("Projects", testProjectsInsert)
-	t.Run("Projects", testProjectsInsertWhitelist)
+	t.Run("ProductPrices", testProductPricesInsert)
+	t.Run("ProductPrices", testProductPricesInsertWhitelist)
+	t.Run("ProductSyncJobs", testProductSyncJobsInsert)
+	t.Run("ProductSyncJobs", testProductSyncJobsInsertWhitelist)
 }
 
 func TestReload(t *testing.T) {
 	t.Run("Products", testProductsReload)
-	t.Run("Projects", testProjectsReload)
+	t.Run("ProductPrices", testProductPricesReload)
+	t.Run("ProductSyncJobs", testProductSyncJobsReload)
 }
 
 func TestReloadAll(t *testing.T) {
 	t.Run("Products", testProductsReloadAll)
-	t.Run("Projects", testProjectsReloadAll)
+	t.Run("ProductPrices", testProductPricesReloadAll)
+	t.Run("ProductSyncJobs", testProductSyncJobsReloadAll)
 }
 
 func TestSelect(t *testing.T) {
 	t.Run("Products", testProductsSelect)
-	t.Run("Projects", testProjectsSelect)
+	t.Run("ProductPrices", testProductPricesSelect)
+	t.Run("ProductSyncJobs", testProductSyncJobsSelect)
 }
 
 func TestUpdate(t *testing.T) {
 	t.Run("Products", testProductsUpdate)
-	t.Run("Projects", testProjectsUpdate)
+	t.Run("ProductPrices", testProductPricesUpdate)
+	t.Run("ProductSyncJobs", testProductSyncJobsUpdate)
 }
 
 func TestSliceUpdateAll(t *testing.T) {
 	t.Run("Products", testProductsSliceUpdateAll)
-	t.Run("Projects", testProjectsSliceUpdateAll)
+	t.Run("ProductPrices", testProductPricesSliceUpdateAll)
+	t.Run("ProductSyncJobs", testProductSyncJobsSliceUpdateAll)
 }
