@@ -13,6 +13,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.88.4
 	github.com/friendsofgo/errors v0.9.2
 	github.com/gin-gonic/gin v1.10.1
+	github.com/joho/godotenv v1.5.1
 	github.com/kat-co/vala v0.0.0-20170210184112-42e1d8b61f12
 	github.com/lib/pq v1.10.9
 	github.com/spf13/viper v1.20.1
