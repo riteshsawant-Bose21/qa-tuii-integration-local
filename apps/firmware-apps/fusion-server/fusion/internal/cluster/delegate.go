@@ -292,6 +292,25 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 	logger.Debug("Merging remote state from node %s with %d entries (version: %v)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
+
+	localVersion := d.stateManager.GetVersion()
+	remoteVersion := snapshot.Version
+
+	// Reject older epoch outright
+	if remoteVersion.Epoch < localVersion.Epoch {
+		logger.Debug("Ignoring remote state from older epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		return
+	}
+
+	// Adopt newer epoch as authoritative
+	if remoteVersion.Epoch > localVersion.Epoch {
+		logger.Debug("Adopting newer epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		d.stateManager.ReplaceFullState(snapshot.State, remoteVersion)
+		d.persistence.MarkDirty()
+		return
+	}
+
+	// Same epoch, do normal merge
 	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()

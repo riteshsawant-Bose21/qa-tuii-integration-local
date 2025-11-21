@@ -55,7 +55,19 @@ type TaskManager struct {
 // NewTaskManager initializes and returns a new TaskManager with persistence.
 func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *TaskManager {
 	tm := &TaskManager{
-		cron:             cron.New(),
+		cron: cron.New(
+			cron.WithParser(
+				cron.NewParser(
+					cron.SecondOptional |
+						cron.Descriptor |
+						cron.Minute |
+						cron.Hour |
+						cron.Dom |
+						cron.Month |
+						cron.Dow,
+				),
+			),
+		),
 		executionHistory: make([]ExecutionRecord, 0),
 		historyFilePath:  HistoryPath,
 		node:             config.NodeName,
@@ -208,7 +220,7 @@ func (tm *TaskManager) Start() {
 		return
 	}
 
-	if err := tm.loadTasks(); err != nil {
+	if err := tm.LoadTasks(); err != nil {
 		logger.Fatal("%v", err)
 	}
 
@@ -247,8 +259,8 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// GetTask handles HTTP GET requests to get a single task
-func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
+// GetTaskHandler handles HTTP GET requests to get a single task
+func (tm *TaskManager) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -260,7 +272,7 @@ func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -334,7 +346,7 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -377,7 +389,7 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -419,8 +431,8 @@ func (tm *TaskManager) saveTasks() error {
 	return tm.persistence.SaveTasks(tm.tasks)
 }
 
-// loadTasks loads tasks from the persistence file and schedules them.
-func (tm *TaskManager) loadTasks() error {
+// LoadTasks loads tasks from the persistence file and schedules them.
+func (tm *TaskManager) LoadTasks() error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -487,7 +499,7 @@ func (tm *TaskManager) registerEnabledTasks() error {
 }
 
 // fetchTask loads a task by ID from the boltdb and returns it (or an error).
-func (tm *TaskManager) getTask(id string) (*api.Task, error) {
+func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
 
 	task, err := tm.persistence.GetTask(id)
 	if err != nil {

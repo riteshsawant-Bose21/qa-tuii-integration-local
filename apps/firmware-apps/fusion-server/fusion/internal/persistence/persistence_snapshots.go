@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/utils"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -42,27 +43,42 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 		return fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
 
+	// Update metadata
 	metadata, err := p.loadMetadata()
 	if err != nil {
-		return fmt.Errorf("failed to load snapshot metadata: %w", err)
+		return fmt.Errorf("failed to load metadata: %w", err)
 	}
 	metadata.ActiveSnapshot = snapshotKey
 	if err := p.saveMetadata(metadata); err != nil {
-		return fmt.Errorf("failed to update active snapshot metadata: %w", err)
+		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	// Restore state into the state manager.
-	for key, entry := range ps.State {
-		if err := p.stateManager.Set(key, entry.Data); err != nil {
-			logging.GetLogger().Warn("Error restoring key '%s': %v", key, err)
-		}
-	}
+	// Replace state and bump epoch atomically
+	p.stateManager.Lock()
+	defer p.stateManager.Unlock()
 
-	logging.GetLogger().Debug("Activated snapshot '%s' (version: %v)", snapshotKey, ps.Version)
+	// Determine new epoch
+	newEpoch := p.stateManager.version.Epoch + 1
+
+	// Reset counter in new epoch (optional but clean)
+	newVersion := p.stateManager.version
+	newVersion.Epoch = newEpoch
+	newVersion.Counter = 0
+
+	// Replace state
+	p.stateManager.state.State = deepCopyState(ps.State)
+	p.stateManager.version = newVersion
+	p.stateManager.updateChecksumUnsafe()
+
+	logging.GetLogger().Debug(
+		"Activated snapshot '%s' → new epoch=%d",
+		snapshotKey, newEpoch,
+	)
 
 	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
 	p.mutex.Unlock()
+
 	return nil
 }
 
@@ -175,7 +191,12 @@ func (p *Persistence) GetSnapshot(snapshotKey string) (any, error) {
 		return nil, fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
 
-	return ps, nil
+	return utils.FlattenState(ps.State), nil
+}
+
+// GetActiveSnapshotName returns the name of the active snapshot
+func (p *Persistence) GetActiveSnapshotName() string {
+	return p.getActiveSnapshotKey()
 }
 
 // LoadActiveSnapshot ensures default buckets exist, loads the active snapshot, and activates it.

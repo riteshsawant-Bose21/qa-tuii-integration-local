@@ -34,6 +34,17 @@ type VersionedState struct {
 	Checksum string
 }
 
+// Flatten returns a simplified map of key-value data from the state
+func (v *VersionedState) Flatten() map[string]any {
+	result := make(map[string]any, len(v.State))
+	for k, e := range v.State {
+		if e != nil {
+			result[k] = e.Data
+		}
+	}
+	return result
+}
+
 // NewVersionedState creates and initializes a new VersionedState
 func NewVersionedState() *VersionedState {
 	return &VersionedState{
@@ -201,12 +212,16 @@ func (sm *StateManager) Get(key string) (any, bool) {
 			current = value
 		}
 	}
+
 	return current, true
 }
 
 // Set updates a key in the state with the given value and applies the update.
 func (sm *StateManager) Set(key string, value any) error {
-	data := map[string]any{key: value}
+
+	copied := utils.DeepCopy(value)
+	data := map[string]any{key: copied}
+
 	hash, err := utils.JSONChecksum(data)
 	if err != nil {
 		return fmt.Errorf("failed to generate hash: %w", err)
@@ -288,26 +303,39 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
-	// Preserve incoming version
-	incomingVersion := update.Version
+	incoming := update.Version
+	local := sm.version
 
-	// Lamport receive rule:
-	// local = max(local, incoming) + 1
-	if sm.version.Counter < incomingVersion.Counter {
-		sm.version.Counter = incomingVersion.Counter
+	// Reject stale epoch
+	if incoming.Epoch < local.Epoch {
+		return false, nil
+	}
+
+	// Adopt future epoch (snapshot activated on another node)
+	if incoming.Epoch > local.Epoch {
+		// Adopt new epoch and counter
+		sm.version.Epoch = incoming.Epoch
+		sm.version.Counter = incoming.Counter
+		sm.version.NodeID = incoming.NodeID
+		// Continue to apply update
+		goto apply
+	}
+
+	// Same epoch: Do normal Lamport logic
+	if local.Counter < incoming.Counter {
+		sm.version.Counter = incoming.Counter
 	}
 	sm.version.Counter++
 
-	// This is the effective timestamp of this apply event
-	effectiveVersion := sm.version
+apply:
+	// Apply update using effective version
+	effective := sm.version
 
-	// Try to apply update
-	dirty, err := sm.applyWhileLocked(update, incomingVersion, effectiveVersion)
+	dirty, err := sm.applyWhileLocked(update, incoming, effective)
 	if err != nil {
 		return false, err
 	}
 
-	// Update checksum only if state changed
 	if dirty {
 		sm.updateChecksumUnsafe()
 	}
@@ -408,40 +436,38 @@ func (sm *StateManager) GetFullState() VersionedState {
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
-
 	state := sm.GetFullState().State
-
-	result := make(map[string]any, len(state))
-	for k, e := range state {
-		if e != nil {
-			result[k] = e.Data // already deep-copied inside GetFullState
-		}
-	}
-	return result
-
+	return utils.FlattenState(state)
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
-
 	sm.Lock()
 	defer sm.Unlock()
 
 	for key, remoteEntry := range remoteState {
+
 		localEntry, exists := sm.state.State[key]
 
-		// if we don’t have it yet, or the remote version is newer...
 		if !exists || localEntry.Version.Less(remoteEntry.Version) {
-			copy := *remoteEntry
-			copy.Data = utils.DeepCopy(remoteEntry.Data)
-			sm.state.State[key] = &copy
+			sm.state.State[key] = deepCopyEntry(remoteEntry)
 
-			// bump our “highest‐seen” version if this remote one is newer
 			if sm.version.Less(remoteEntry.Version) {
 				sm.version = remoteEntry.Version
 			}
 		}
 	}
+
+	sm.updateChecksumUnsafe()
+}
+
+// ReplaceFullState does a global replacement of all state data
+func (sm *StateManager) ReplaceFullState(newState map[string]*api.StateEntry, newVersion api.Version) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	sm.state.State = deepCopyState(newState)
+	sm.version = newVersion
 	sm.updateChecksumUnsafe()
 }
 
@@ -728,4 +754,15 @@ func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
 		dst[k] = &c
 	}
 	return dst
+}
+
+func deepCopyEntry(src *api.StateEntry) *api.StateEntry {
+	if src == nil {
+		return nil
+	}
+
+	// Shallow copy of struct (copies Version by value)
+	dst := *src
+	dst.Data = utils.DeepCopy(src.Data)
+	return &dst
 }
