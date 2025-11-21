@@ -6,7 +6,7 @@ import (
 	"fmt"
 	inbuiltlog "log"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
@@ -89,7 +89,7 @@ func main() {
 	}
 	defer reader.Close()
 
-	var products *fusion.ProductFetch
+	var products *types.ProductFetch
 	decoder := json.NewDecoder(reader)
 
 	if err := decoder.Decode(&products); err != nil {
@@ -116,7 +116,7 @@ func main() {
 			// }
 
 			// If not, create a new product entry
-			newProduct := &fusion.ProductFetch{}
+			newProduct := &types.ProductFetch{}
 			err = productSVC.UpdateProducts(context.Background(), newProduct)
 			if err != nil {
 				logger.Fatal("Failed to create product in database", zap.Error(err))

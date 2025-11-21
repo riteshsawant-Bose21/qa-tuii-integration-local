@@ -3,7 +3,7 @@ package db
 import (
 	"fmt"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
 
@@ -26,19 +26,19 @@ var (
 )
 
 // newProduct returns a new Product node from the provided Product row
-func (s *Service) newProduct(row *model.ProductSlice) (*fusion.ProductResponse, error) {
+func (s *Service) newProduct(row *model.ProductSlice) (*types.ProductResponse, error) {
 	if row == nil {
 		return nil, nil
 	}
 
-	var node fusion.ProductResponse
+	var node types.ProductResponse
 	for _, r := range *row {
 		if r == nil {
 			continue
 		}
 		switch r.Category {
-		case fusion.ProductCategorySpeaker:
-			speaker := fusion.Speaker{}
+		case types.ProductCategorySpeaker:
+			speaker := types.Speaker{}
 			if r.ID == 0 {
 				return nil, fmt.Errorf("product ID is required for speaker")
 			}
@@ -46,14 +46,14 @@ func (s *Service) newProduct(row *model.ProductSlice) (*fusion.ProductResponse, 
 			if r.MetaInfo == nil {
 				return nil, fmt.Errorf("mesta info is required for speaker")
 			}
-			var meta fusion.Speaker_meta_response
+			var meta types.Speaker_meta_response
 			if err := r.MetaInfo.Unmarshal(&meta); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal meta info for speaker: %w", err)
 			}
 			speaker.MetaInfo = meta
 			node.Speakers = append(node.Speakers, speaker)
-		case fusion.ProductCategoryAmplifier:
-			amplifier := fusion.Amplifier{}
+		case types.ProductCategoryAmplifier:
+			amplifier := types.Amplifier{}
 			if r.ID == 0 {
 				return nil, fmt.Errorf("product ID is required for amplifier")
 			}
@@ -61,14 +61,14 @@ func (s *Service) newProduct(row *model.ProductSlice) (*fusion.ProductResponse, 
 			if r.MetaInfo == nil {
 				return nil, fmt.Errorf("meta info is required for amplifier")
 			}
-			var meta fusion.Amplifier_meta_response
+			var meta types.Amplifier_meta_response
 			if err := r.MetaInfo.Unmarshal(&meta); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal meta info for amplifier: %w", err)
 			}
 			amplifier.MetaInfo = meta
 			node.Amplifiers = append(node.Amplifiers, amplifier)
-		case fusion.ProductCategoryDigitalSignalProcessor:
-			dsp := fusion.DigitalSignalProcessor{}
+		case types.ProductCategoryDigitalSignalProcessor:
+			dsp := types.DigitalSignalProcessor{}
 			if r.ID == 0 {
 				return nil, fmt.Errorf("product ID is required for dsp")
 			}
@@ -80,7 +80,7 @@ func (s *Service) newProduct(row *model.ProductSlice) (*fusion.ProductResponse, 
 			if err := r.MetaInfo.Unmarshal(&meta); err != nil {
 				return nil, fmt.Errorf("failed to unmarshal meta info for dsp: %w", err)
 			}
-			dsp.MetaInfo = fusion.DSP_meta{}
+			dsp.MetaInfo = types.DSP_meta{}
 			node.DigitalSignalProcessors = append(node.DigitalSignalProcessors, dsp)
 		default:
 			return nil, fmt.Errorf("unknown product category: %s", r.Category)
