@@ -220,7 +220,7 @@ extension MixScenesService on ProjectService {
     final zoneFunction = getZoneFunctionById(functionId: functionId);
     if (zoneFunction == null) return;
 
-    if (zoneFunction.type.hasMixScenes) {
+    if (zoneFunction.type.hasMixSettings) {
       final zoneId = relationships.getParent(RelationshipType.zoneFunctions, functionId);
       if (zoneId == null) return;
       final sources = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);

@@ -118,14 +118,22 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
   PrioritySourceDataRepository() : super();
 
   List<PrioritySourceData> getByZone(String zoneId) {
-    List<PrioritySourceData> priorityData = getAll().where((psd) => psd.zoneId == zoneId).toList();
-    //order by priority ascending
-    priorityData.sort((a, b) => a.priority.compareTo(b.priority));
-    return priorityData;
+    try {
+      List<PrioritySourceData> priorityData = getAll().where((psd) => psd.zoneId == zoneId).toList();
+      //order by priority ascending
+      priorityData.sort((a, b) => a.priority.compareTo(b.priority));
+      return priorityData;
+    } catch (e) {
+      return [];
+    }
   }
 
   List<PrioritySourceData> getBySource(String sourceId) {
-    return getAll().where((psd) => psd.sourceId == sourceId).toList();
+    try {
+      return getAll().where((psd) => psd.sourceId == sourceId).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   PrioritySourceData? getByZoneAndSource(String zoneId, String sourceId) {
@@ -150,25 +158,41 @@ class MixSettingsRepository extends Repository<MixSettings> {
     required String? sceneId,
     required String sourceId,
   }) {
-    return getAll().firstWhere(
-      (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
-    );
+    try {
+      return getAll().firstWhere(
+        (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Get all settings for a function
   List<MixSettings> getByFunction(String functionId) {
-    // Only return settings not associated with a scene (i.e., current function settings)
-    return getAll().where((s) => s.functionId == functionId && s.sceneId == null).toList();
+    try {
+      // Only return settings not associated with a scene (i.e., current function settings)
+      return getAll().where((s) => s.functionId == functionId && s.sceneId == null).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   /// Get all settings for a scene
   List<MixSettings> getByScene(String sceneId) {
-    return getAll().where((s) => s.sceneId == sceneId).toList();
+    try {
+      return getAll().where((s) => s.sceneId == sceneId).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   /// Get all settings for a source
   List<MixSettings> getBySource(String sourceId) {
-    return getAll().where((s) => s.sourceId == sourceId).toList();
+    try {
+      return getAll().where((s) => s.sourceId == sourceId).toList();
+    } catch (e) {
+      return [];
+    }
   }
 }
 
@@ -181,23 +205,39 @@ class MatrixSettingsRepository extends Repository<MatrixSettings> {
     required String? sceneId,
     required String sourceId,
   }) {
-    return getAll().firstWhere(
-      (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
-    );
+    try {
+      return getAll().firstWhere(
+        (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Get all settings for a function
   List<MatrixSettings> getByFunction(String functionId) {
-    return getAll().where((s) => s.functionId == functionId).toList();
+    try {
+      return getAll().where((s) => s.functionId == functionId).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   /// Get all settings for a scene
   List<MatrixSettings> getByScene(String sceneId) {
-    return getAll().where((s) => s.sceneId == sceneId).toList();
+    try {
+      return getAll().where((s) => s.sceneId == sceneId).toList();
+    } catch (e) {
+      return [];
+    }
   }
 
   /// Get all settings for a source
   List<MatrixSettings> getBySource(String sourceId) {
-    return getAll().where((s) => s.sourceId == sourceId).toList();
+    try {
+      return getAll().where((s) => s.sourceId == sourceId).toList();
+    } catch (e) {
+      return [];
+    }
   }
 }
