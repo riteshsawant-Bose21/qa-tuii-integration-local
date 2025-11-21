@@ -146,6 +146,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
             areaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId!,
           );
         }
+        widget.onCalculateSpl();
       },
       child: Container(
         decoration: BoxDecoration(
@@ -330,6 +331,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
                                           serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
                                         }
+                                        widget.onCalculateSpl();
                                       },
                                       listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
                                       subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),

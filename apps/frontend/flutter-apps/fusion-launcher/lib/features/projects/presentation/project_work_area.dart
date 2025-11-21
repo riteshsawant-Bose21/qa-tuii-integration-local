@@ -117,7 +117,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   SplPanelData? _lastPanelData;
 
-  _initSplRangeDefaults() {
+  void _initSplRangeDefaults() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     _lastPanelData = currentPanelData;
     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
@@ -292,52 +292,52 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
     return <DockItemConfig>[
-      DockItemConfig(
+      const DockItemConfig(
         id: "1",
         title: "FLOORS",
         side: "left",
         allowUndock: true,
         isCollapsibleSection: false,
-        dockItemWidget: () => const BuildingPlan(),
+        dockItemWidget: BuildingPlan(),
       ),
       DockItemConfig(
         id: "5",
         title: "PROPERTIES",
         side: "right",
         initiallyExpanded: false,
-        dockItemWidget:
-            () => PropertiesPanel(
-              onSpeakerUpdated: () {
-                print("Speaker properties updated, update SPL...");
-                calculateSPL();
-              },
-            ),
+        dockItemWidget: PropertiesPanel(
+          onSpeakerUpdated: () {
+            calculateSPL();
+          },
+          onSpeakerDeleted: () {
+            calculateSPL();
+          },
+        ),
       ),
       DockItemConfig(
         id: "6",
         title: "COST CALCULATOR",
         side: "right",
         allowUndock: true,
-        dockItemWidget:
-            () => CostCalculatorScreen(
-              speakers: serviceLocator<ProjectViewModel>().speakers,
-              sources: serviceLocator<ProjectViewModel>().sources,
-              controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-              racks:
-                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                      .where(
-                        (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                      )
-                      .toList(),
-              amplifiers: <Amplifier>[],
-              fusionDevices: <FusionDsp>[],
-              others:
-                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                      .where(
-                        (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                      )
-                      .toList(),
-            ),
+        dockItemWidget: CostCalculatorScreen(
+          speakers: serviceLocator<ProjectViewModel>().speakers,
+          sources: serviceLocator<ProjectViewModel>().sources,
+          controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+          racks:
+              serviceLocator<ProjectViewModel>().genericHardwareComponents
+                  .where(
+                    (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                  )
+                  .toList(),
+          amplifiers: <Amplifier>[],
+          fusionDevices: <FusionDsp>[],
+          others:
+              serviceLocator<ProjectViewModel>().genericHardwareComponents
+                  .where(
+                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                  )
+                  .toList(),
+        ),
       ),
       DockItemConfig(
         id: "7",
@@ -346,13 +346,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget: () => toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget: toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
       ),
       DockItemConfig(
         id: "8",
         title: "PRODUCT QUERY",
         side: "right",
-        dockItemWidget: () => const ProductQueryView(),
+        dockItemWidget: const ProductQueryView(),
         controller: productsController,
       ),
       DockItemConfig(
@@ -360,17 +360,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         title: "SPL MAPPING",
         side: "right",
         controller: splController,
-        dockItemWidget:
-            () => SplPanel(
-              controller: _splRangeController,
-              initialData: _lastPanelData!,
-              onChanged: (SplPanelData value) {
-                FusionLogger.log(tag: LogTag.panel, message: value.toString());
-                _splRangeController.onMappingDataChanged(value);
-                _updateSPLFromPanelData();
-                setState(() {});
-              },
-            ),
+        dockItemWidget: SplPanel(
+          controller: _splRangeController,
+          initialData: _lastPanelData!,
+          onChanged: (SplPanelData value) {
+            FusionLogger.log(tag: LogTag.panel, message: value.toString());
+            _splRangeController.onMappingDataChanged(value);
+            _updateSPLFromPanelData();
+            setState(() {});
+          },
+        ),
       ),
     ];
   }
@@ -424,39 +423,38 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             showRight: true,
             mainArea: const SchematicsPage(),
             dockItemList: <DockItemConfig>[
-              DockItemConfig(
+              const DockItemConfig(
                 id: "5",
                 title: "PROPERTIES",
                 side: "right",
                 initiallyExpanded: true,
                 allowUndock: false,
-                dockItemWidget: () => const SchematicProperties(),
+                dockItemWidget: SchematicProperties(),
               ),
               DockItemConfig(
                 id: "6",
                 title: "COST CALCULATOR",
                 side: "right",
                 allowUndock: true,
-                dockItemWidget:
-                    () => CostCalculatorScreen(
-                      speakers: serviceLocator<ProjectViewModel>().speakers,
-                      sources: serviceLocator<ProjectViewModel>().sources,
-                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                      racks:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                              )
-                              .toList(),
-                      amplifiers: <Amplifier>[],
-                      fusionDevices: <FusionDsp>[],
-                      others:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                              )
-                              .toList(),
-                    ),
+                dockItemWidget: CostCalculatorScreen(
+                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                  sources: serviceLocator<ProjectViewModel>().sources,
+                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                  racks:
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                          .where(
+                            (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                          )
+                          .toList(),
+                  amplifiers: <Amplifier>[],
+                  fusionDevices: <FusionDsp>[],
+                  others:
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                          .where(
+                            (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                          )
+                          .toList(),
+                ),
               ),
               // DockItemConfig(
               //   id: "8",
@@ -464,12 +462,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               //   side: "right",
               //   dockItemWidget: () => const ProductQueryView(),
               // ),
-              DockItemConfig(
+              const DockItemConfig(
                 id: "10",
                 title: "PRODUCT LIST",
                 side: "left",
                 initiallyExpanded: true,
-                dockItemWidget: () => const WiringDeviceListView(),
+                dockItemWidget: WiringDeviceListView(),
               ),
             ],
           );

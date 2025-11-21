@@ -345,13 +345,12 @@ extension HardwareViewModel on ProjectViewModel {
           name: product.name,
           pos: pos,
           zAxis: 300.0,
-          // 200 cm default height
           speakerSKU: product.sku,
           gain: 0.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
-          pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
+          pitch: product.mountingType == "pendant" || product.mountingType == "ceiling" ? 90.0 : 0.0,
           inputPortsData: <PortData>[
             PortData(
               name: "In",
