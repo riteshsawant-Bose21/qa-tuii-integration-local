@@ -72,7 +72,7 @@ class FusionDockSidebar extends StatelessWidget {
                       onExpansionChanged: onExpansionChanged,
                       controller: config.controller,
                     )
-                  : config.dockItemWidget();
+                  : config.dockItemWidget;
             }).toList(),
           ),
         );

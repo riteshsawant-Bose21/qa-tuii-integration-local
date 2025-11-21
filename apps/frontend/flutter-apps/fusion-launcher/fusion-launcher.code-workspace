@@ -1,0 +1,70 @@
+{
+    "folders": [
+        {
+            "path": "."
+        },
+    ],
+    "launch": {
+        "version": "0.2.0",
+        "configurations": [
+            {
+                "name": "Fusion Launcher (MacOs)",
+                "request": "launch",
+                "type": "dart",
+                "args": [
+                    "-d",
+                    "macos"
+                ]
+            },
+            {
+                "name": "Fusion Launcher (MacOs) (profile mode)",
+                "request": "launch",
+                "type": "dart",
+                "args": [
+                    "-d",
+                    "macos"
+                ],
+                "flutterMode": "profile"
+            },
+            {
+                "name": "Fusion Launcher (MacOs) (release mode)",
+                "request": "launch",
+                "type": "dart",
+                "args": [
+                    "-d",
+                    "macos"
+                ],
+                "flutterMode": "release"
+            },
+            {
+                "name": "Fusion Launcher (iPhone 16 Pro)",
+                "request": "launch",
+                "type": "dart",
+                "args": [
+                    "-d",
+                    "471A57A1-9483-4763-907B-5890EBF49949"
+                ]
+            },
+            {
+                "name": "Fusion Launcher (iPhone 16 Pro) (profile mode)",
+                "request": "launch",
+                "type": "dart",
+                "args": [
+                    "-d",
+                    "471A57A1-9483-4763-907B-5890EBF49949"
+                ],
+                "flutterMode": "profile"
+            },
+            {
+                "name": "Fusion Launcher (iPhone 16 Pro) (release mode)",
+                "request": "launch",
+                "type": "dart",
+                "args": [
+                    "-d",
+                    "471A57A1-9483-4763-907B-5890EBF49949"
+                ],
+                "flutterMode": "release"
+            },
+        ]
+    }
+}

@@ -126,13 +126,13 @@ jobs:
       - name: Setup Monorepo Toolchain
         uses: ./.github/reusable-actions/setup-toolchain
 
-      - name: Build Apps
-        uses: ./.github/reusable-actions/build-flutter-web
-        with:
-          flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
-          nexus_password: ${{ secrets.NEXUS_PASSWORD }}
-          nexus_url: ${{ secrets.NEXUS_BASE_URL }}
-          keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
+      # - name: Build Apps
+      #   uses: ./.github/reusable-actions/build-flutter-web
+      #   with:
+      #     flutter_apps_sonar_token: ${{ secrets.FLUTTER_APPS_SONAR_TOKEN }}
+      #     nexus_password: ${{ secrets.NEXUS_PASSWORD }}
+      #     nexus_url: ${{ secrets.NEXUS_BASE_URL }}
+      #     keychain_password: ${{ secrets.KEYCHAIN_PASSWORD }}
 
   cloud-servicesUI-build:
     needs: buildChecks

@@ -3,10 +3,10 @@
 #define SURFACE_POLYGON_H__
 
 #include <memory>
-#include <Surface.h>
+#include "Surface.h"
 #include <utility>
 #include <algorithm>
-#include "Math/Plane.h"
+#include <bose/Math/Plane.h>
 
 namespace bosepro::model
 {
