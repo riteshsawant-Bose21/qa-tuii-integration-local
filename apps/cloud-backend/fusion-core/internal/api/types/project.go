@@ -97,17 +97,32 @@ type GetAllProjectsResponse struct {
 	TotalPages int       `json:"total_pages" example:"3"`
 }
 
+// Request body for archiving or unarchiving a project.
+type ProjectArchiveRequest struct {
+	Archive bool `json:"archive" example:"true"`
+}
+
+// Request body for locking or unlocking a project.
+type ProjectLockRequest struct {
+	IsLocked bool `json:"is_locked" example:"true"`
+}
+
+// Request body for starring or unstarring a project.
+type ProjectStarRequest struct {
+	IsStarred bool `json:"is_starred" example:"true"`
+}
+
 // Response for creating a project.
 type ProjectCreateResponse struct {
 	ID                 string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
-	ProjectUploadURL   string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
-	ThumbnailUploadURL string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ProjectUploadURL   *string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ThumbnailUploadURL *string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
 // Response for updating a project.
 type ProjectUpdateResponse struct {
-	ProjectUploadURL   string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
-	ThumbnailUploadURL string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ProjectUploadURL   *string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
+	ThumbnailUploadURL *string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }
 
 // Response for user assignment operations.

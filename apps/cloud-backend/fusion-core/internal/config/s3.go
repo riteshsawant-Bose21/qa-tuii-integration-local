@@ -1,5 +1,7 @@
 package config
 
+import "fmt"
+
 // S3 holds the configuration settings for connecting to an S3 service.
 type S3 struct {
 	ProjectBucket string
@@ -9,7 +11,7 @@ type S3 struct {
 func (s *Service) S3() (*S3, error) {
 	projectBucket, err := s.store.ReqString(keyS3ProjectBucket)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get S3 project bucket: %w", err)
 	}
 
 	return &S3{

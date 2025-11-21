@@ -221,7 +221,6 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 		return
 	}
 
-	// Use authenticated delete method which includes all validations
 	if err := h.project.DeleteProject(ctx, projectID, userID); err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
@@ -330,63 +329,22 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, nil)
 }
 
-// StarProject stars a project for a user.
-// @Summary Star a project
-// @Description Star a project for a specific user
+// UpdateProjectStar updates the star status of a project for a user.
+// @Summary Update project star status
+// @Description Star or unstar a project for a specific user based on request body
 // @Tags projects
+// @Accept json
+// @Produce json
 // @Param projectId path string true "Project ID"
 // @Param userId path string true "User ID"
-// @Success 204 "Successfully starred project"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or User not found, or user not assigned to the project"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId}/star/{userId} [put]
-func (h *ProjectHandler) StarProject(ctx *gin.Context) {
-	projectID := ctx.Param("projectId")
-	userID := ctx.Param("userId")
-
-	// Validate UUIDs
-	if !validation.IsValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
-		return
-	}
-	if !validation.IsValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
-		return
-	}
-
-	err := h.project.StarProject(ctx, projectID, userID)
-	if err != nil {
-		errorMsg := err.Error()
-		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		if errorMsg == types.ErrMsgUserNotAssignedToProject {
-			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
-		return
-	}
-
-	ctx.JSON(http.StatusNoContent, nil)
-}
-
-// UnstarProject unstars a project for a user.
-// @Summary Unstar a project
-// @Description Unstar a project for a specific user
-// @Tags projects
-// @Param projectId path string true "Project ID"
-// @Param userId path string true "User ID"
-// @Success 204 "Successfully unstarred project"
+// @Param body body types.ProjectStarRequest true "Star/unstar request"
+// @Success 204 "Successfully updated project star status"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
 // @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project, project archived, or locked by another user"
 // @Failure 404 {object} types.NotFoundError "Project or User not found"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId}/star/{userId} [delete]
-func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
+// @Router /projects/{projectId}/star/{userId} [post]
+func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userID := ctx.Param("userId")
 
@@ -400,18 +358,36 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 		return
 	}
 
-	err := h.project.UnstarProject(ctx, projectID, userID)
+	var req types.ProjectStarRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	// Validate request
+	if err := validation.ValidateProjectStarRequest(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	var err error
+	if req.IsStarred {
+		err = h.project.StarProject(ctx, projectID, userID)
+	} else {
+		err = h.project.UnstarProject(ctx, projectID, userID)
+	}
+
 	if err != nil {
 		errorMsg := err.Error()
-		// Check for specific error types in priority order
+		// Check for specific error types
+		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
+			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
+			return
+		}
 		if errorMsg == types.ErrMsgUserNotAssignedToProject {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return
 		}
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
-			return
-		}
 		// All other errors are internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -420,18 +396,21 @@ func (h *ProjectHandler) UnstarProject(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, nil)
 }
 
-// ArchiveProject godoc
-// @Summary Archive a project
-// @Description Archive a project by project ID
+// UpdateProjectArchive updates the archive status of a project.
+// @Summary Update project archive status
+// @Description Archive or unarchive a project based on request body
 // @Tags projects
+// @Accept json
+// @Produce json
 // @Param projectId path string true "Project ID"
-// @Success 204 "Project archived successfully"
-// @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
+// @Param body body types.ProjectArchiveRequest true "Archive/unarchive request"
+// @Success 204 "Project archive status updated successfully"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
 // @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project or project locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or user not found"
+// @Failure 404 {object} types.NotFoundError "Project not found"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId}/archive [put]
-func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
+// @Router /projects/{projectId}/archive [post]
+func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userID := ctx.Query("user_id")
 
@@ -450,8 +429,25 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 		return
 	}
 
-	// Use authenticated archive method which includes all validations
-	err := h.project.ArchiveProject(ctx, projectID, userID)
+	var req types.ProjectArchiveRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	// Validate request
+	if err := validation.ValidateProjectArchiveRequest(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+		return
+	}
+
+	var err error
+	if req.Archive {
+		err = h.project.ArchiveProject(ctx, projectID, userID)
+	} else {
+		err = h.project.UnarchiveProject(ctx, projectID, userID)
+	}
+
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -473,71 +469,21 @@ func (h *ProjectHandler) ArchiveProject(ctx *gin.Context) {
 	ctx.JSON(http.StatusNoContent, nil)
 }
 
-// UnarchiveProject godoc
-// @Summary Unarchive a project
-// @Description Unarchive a project by project ID
+// UpdateProjectLock updates the lock status of a project for a user.
+// @Summary Update project lock status
+// @Description Lock or unlock a project for a specific user based on request body
 // @Tags projects
+// @Accept json
+// @Produce json
 // @Param projectId path string true "Project ID"
-// @Success 204 "Project unarchived successfully"
-// @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project or project locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or user not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId}/archive [delete]
-func (h *ProjectHandler) UnarchiveProject(ctx *gin.Context) {
-	projectID := ctx.Param("projectId")
-	userID := ctx.Query("user_id")
-
-	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
-		return
-	}
-
-	// Validate UUIDs
-	if !validation.IsValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
-		return
-	}
-	if !validation.IsValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
-		return
-	}
-
-	// Use authenticated unarchive method which includes all validations
-	err := h.project.UnarchiveProject(ctx, projectID, userID)
-	if err != nil {
-		errorMsg := err.Error()
-		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound || errorMsg == types.ErrMsgUserNotFound {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		// Check if it's authorization errors
-		if errorMsg == types.ErrMsgUserNotAssignedToProject ||
-			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
-			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
-		return
-	}
-
-	ctx.JSON(http.StatusNoContent, nil)
-}
-
-// LockProject locks a project for a user.
-// @Summary Lock a project
-// @Description Lock a project for a specific user
-// @Tags projects
-// @Param projectId path string true "Project ID"
-// @Success 204 "Successfully locked project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
+// @Param body body types.ProjectLockRequest true "Lock/unlock request"
+// @Success 204 "Successfully updated project lock status"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
 // @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project or project already locked by another user"
-// @Failure 404 {object} types.NotFoundError "Project or User not found"
+// @Failure 404 {object} types.NotFoundError "Project not found"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId}/lock [put]
-func (h *ProjectHandler) LockProject(ctx *gin.Context) {
+// @Router /projects/{projectId}/lock [post]
+func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userID := ctx.Query("user_id")
 
@@ -556,60 +502,25 @@ func (h *ProjectHandler) LockProject(ctx *gin.Context) {
 		return
 	}
 
-	err := h.project.LockProject(ctx, projectID, userID)
-	if err != nil {
-		errorMsg := err.Error()
-		// Check for specific error types
-		if errorMsg == types.ErrMsgProjectNotFound {
-			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		// Check if it's authorization errors
-		if errorMsg == types.ErrMsgUserNotAssignedToProject || errorMsg == types.ErrMsgUserNotFound ||
-			errorMsg == types.ErrMsgProjectNotLockedByUser ||
-			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
-			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
-			return
-		}
-		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+	var req types.ProjectLockRequest
+	if err := ctx.ShouldBindJSON(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	ctx.JSON(http.StatusNoContent, nil)
-}
-
-// UnlockProject unlocks a project for a user.
-// @Summary Unlock a project
-// @Description Unlock a project for a specific user (only if they locked it)
-// @Tags projects
-// @Param projectId path string true "Project ID"
-// @Success 204 "Successfully unlocked project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
-// @Failure 403 {object} types.ForbiddenError "Forbidden - User not assigned to project or project not locked by this user"
-// @Failure 404 {object} types.NotFoundError "Project or User not found"
-// @Failure 500 {object} types.InternalServerError "Internal server error"
-// @Router /projects/{projectId}/lock [delete]
-func (h *ProjectHandler) UnlockProject(ctx *gin.Context) {
-	projectID := ctx.Param("projectId")
-	userID := ctx.Query("user_id")
-
-	if userID == "" {
-		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: types.ErrMsgUserIdRequired})
+	// Validate request
+	if err := validation.ValidateProjectLockRequest(&req); err != nil {
+		ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 		return
 	}
 
-	// Validate UUIDs
-	if !validation.IsValidUUID(projectID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
-		return
-	}
-	if !validation.IsValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
-		return
+	var err error
+	if req.IsLocked {
+		err = h.project.LockProject(ctx, projectID, userID)
+	} else {
+		err = h.project.UnlockProject(ctx, projectID, userID)
 	}
 
-	err := h.project.UnlockProject(ctx, projectID, userID)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types

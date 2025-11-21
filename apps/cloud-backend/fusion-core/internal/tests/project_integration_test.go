@@ -487,92 +487,80 @@ func (suite *ProjectIntegrationTestSuite) TestRemoveUserFromProject() {
 	})
 }
 
-// Test Star Project endpoint
-func (suite *ProjectIntegrationTestSuite) TestStarProject() {
+// Test UpdateProjectStar endpoint
+func (suite *ProjectIntegrationTestSuite) TestUpdateProjectStar() {
 	// Ensure we have a created project
 	suite.TestCreateProject()
 
 	suite.T().Run("should star project successfully", func(t *testing.T) {
 		projectID := suite.testProjects[0].ID
 		userID := suite.testUsers[0].ID
+		starRequest := types.ProjectStarRequest{IsStarred: true}
 
-		w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, starRequest)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
 	})
-}
-
-// Test Unstar Project endpoint
-func (suite *ProjectIntegrationTestSuite) TestUnstarProject() {
-	// First star the project
-	suite.TestStarProject()
 
 	suite.T().Run("should unstar project successfully", func(t *testing.T) {
 		projectID := suite.testProjects[0].ID
 		userID := suite.testUsers[0].ID
+		starRequest := types.ProjectStarRequest{IsStarred: false}
 
-		w, err := suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, starRequest)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
 	})
 }
 
-// Test Archive Project endpoint
-func (suite *ProjectIntegrationTestSuite) TestArchiveProject() {
+// Test UpdateProjectArchive endpoint
+func (suite *ProjectIntegrationTestSuite) TestUpdateProjectArchive() {
 	// Ensure we have a created project
 	suite.TestCreateProject()
 
 	suite.T().Run("should archive project successfully", func(t *testing.T) {
 		projectID := suite.testProjects[0].ID
+		archiveRequest := types.ProjectArchiveRequest{Archive: true}
 
-		w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, nil)
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, archiveRequest)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
 	})
-}
-
-// Test Unarchive Project endpoint
-func (suite *ProjectIntegrationTestSuite) TestUnarchiveProject() {
-	// First archive the project
-	suite.TestArchiveProject()
 
 	suite.T().Run("should unarchive project successfully", func(t *testing.T) {
 		projectID := suite.testProjects[0].ID
+		archiveRequest := types.ProjectArchiveRequest{Archive: false}
 
-		w, err := suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, nil)
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, archiveRequest)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
 	})
 }
 
-// Test Lock Project endpoint
-func (suite *ProjectIntegrationTestSuite) TestLockProject() {
+// Test UpdateProjectLock endpoint
+func (suite *ProjectIntegrationTestSuite) TestUpdateProjectLock() {
 	// Ensure we have a created project
 	suite.TestCreateProject()
 
 	suite.T().Run("should lock project successfully", func(t *testing.T) {
 		projectID := suite.testProjects[0].ID
+		lockRequest := types.ProjectLockRequest{IsLocked: true}
 
-		w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, nil)
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, lockRequest)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
 	})
-}
-
-// Test Unlock Project endpoint
-func (suite *ProjectIntegrationTestSuite) TestUnlockProject() {
-	// First lock the project
-	suite.TestLockProject()
 
 	suite.T().Run("should unlock project successfully", func(t *testing.T) {
 		projectID := suite.testProjects[0].ID
+		lockRequest := types.ProjectLockRequest{IsLocked: false}
 
-		w, err := suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, nil)
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, lockRequest)
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusNoContent, w.Code)
@@ -616,7 +604,8 @@ func (suite *ProjectIntegrationTestSuite) TestProjectWorkflow() {
 
 		// 3. Star the project
 		userID := suite.testUsers[0].ID
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		starRequest := types.ProjectStarRequest{IsStarred: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, starRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
@@ -629,17 +618,20 @@ func (suite *ProjectIntegrationTestSuite) TestProjectWorkflow() {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		// 5. Lock the project
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, nil)
+		lockRequest := types.ProjectLockRequest{IsLocked: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, lockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
 		// 6. Unlock the project
-		w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, nil)
+		unlockRequest := types.ProjectLockRequest{IsLocked: false}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+suite.testUsers[0].ID, unlockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
 		// 7. Archive the project
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, nil)
+		archiveRequest := types.ProjectArchiveRequest{Archive: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, archiveRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
@@ -692,12 +684,14 @@ func (suite *ProjectIntegrationTestSuite) TestErrorScenarios() {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 
 		// Archive project without user_id
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/archive", nil)
+		archiveRequest := types.ProjectArchiveRequest{Archive: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive", archiveRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 
 		// Lock project without user_id
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/lock", nil)
+		lockRequest := types.ProjectLockRequest{IsLocked: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock", lockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 	})
@@ -757,17 +751,20 @@ func (suite *ProjectIntegrationTestSuite) TestEdgeCases() {
 		assert.Equal(t, http.StatusNotFound, w.Code)
 
 		// Try to star non-existent project
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+nonExistentID+"/star/"+userID, nil)
+		starRequest := types.ProjectStarRequest{IsStarred: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+nonExistentID+"/star/"+userID, starRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, w.Code)
 
 		// Try to archive non-existent project
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+nonExistentID+"/archive?user_id="+userID, nil)
+		archiveRequest := types.ProjectArchiveRequest{Archive: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+nonExistentID+"/archive?user_id="+userID, archiveRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, w.Code)
 
 		// Try to lock non-existent project
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+nonExistentID+"/lock?user_id="+userID, nil)
+		lockRequest := types.ProjectLockRequest{IsLocked: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+nonExistentID+"/lock?user_id="+userID, lockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNotFound, w.Code)
 	})
@@ -807,22 +804,24 @@ func (suite *ProjectIntegrationTestSuite) TestEdgeCases() {
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
 		// Star the project
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		starRequest := types.ProjectStarRequest{IsStarred: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, starRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
 		// Try to star again (should still succeed)
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, starRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
 		// Unstar the project
-		w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		unstarRequest := types.ProjectStarRequest{IsStarred: false}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, unstarRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
 		// Try to unstar again (should still succeed)
-		w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, unstarRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 	})
@@ -868,7 +867,8 @@ func (suite *ProjectIntegrationTestSuite) TestLockConflicts() {
 		user2ID := suite.testUsers[1].ID
 
 		// User 1 locks the project
-		w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/lock?user_id="+user1ID, nil)
+		lockRequest := types.ProjectLockRequest{IsLocked: true}
+		w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+user1ID, lockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
@@ -899,8 +899,11 @@ func (suite *ProjectIntegrationTestSuite) TestLockConflicts() {
 		assert.Equal(t, http.StatusForbidden, w.Code)
 
 		// User 2 tries to unlock project locked by User 1 (should fail)
-		req, err = http.NewRequest("DELETE", "/api/v1/projects/"+projectID+"/lock?user_id="+user2ID, nil)
+		unlockRequest := types.ProjectLockRequest{IsLocked: false}
+		bodyBytes, _ := json.Marshal(unlockRequest)
+		req, err = http.NewRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+user2ID, bytes.NewReader(bodyBytes))
 		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("X-User-ID", user2ID)
 		req.Header.Set("X-Account-ID", "1")
 
@@ -914,7 +917,8 @@ func (suite *ProjectIntegrationTestSuite) TestLockConflicts() {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		// User 1 unlocks the project
-		w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/lock?user_id="+user1ID, nil)
+		user1UnlockRequest := types.ProjectLockRequest{IsLocked: false}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+user1ID, user1UnlockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
@@ -954,7 +958,8 @@ func (suite *ProjectIntegrationTestSuite) TestArchivedProjectRestrictions() {
 	projectID := createResponse.ID
 
 	// Archive the project
-	w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, nil)
+	archiveRequest := types.ProjectArchiveRequest{Archive: true}
+	w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+suite.testUsers[0].ID, archiveRequest)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusNoContent, w.Code)
 
@@ -972,12 +977,14 @@ func (suite *ProjectIntegrationTestSuite) TestArchivedProjectRestrictions() {
 		assert.Equal(t, http.StatusForbidden, w.Code)
 
 		// Try to lock archived project (should fail)
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/lock?user_id="+userID, nil)
+		lockRequest := types.ProjectLockRequest{IsLocked: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+userID, lockRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 
 		// Unarchive should work
-		w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/archive?user_id="+userID, nil)
+		unarchiveRequest := types.ProjectArchiveRequest{Archive: false}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+userID, unarchiveRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusNoContent, w.Code)
 
@@ -1042,7 +1049,8 @@ func (suite *ProjectIntegrationTestSuite) TestUnauthorizedUserOperations() {
 		assert.Equal(t, http.StatusForbidden, w.Code)
 
 		// Try to star as unauthorized user
-		w, err = suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/star/"+unauthorizedUserID, nil)
+		starRequest := types.ProjectStarRequest{IsStarred: true}
+		w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+unauthorizedUserID, starRequest)
 		require.NoError(t, err)
 		assert.Equal(t, http.StatusForbidden, w.Code)
 	})
@@ -1162,12 +1170,14 @@ func (suite *ProjectIntegrationTestSuite) TestConcurrentOperations() {
 		// Perform multiple star/unstar operations
 		for i := 0; i < 3; i++ {
 			// Star
-			w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+			starRequest := types.ProjectStarRequest{IsStarred: true}
+			w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, starRequest)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, w.Code)
 
 			// Unstar
-			w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/star/"+userID, nil)
+			unstarRequest := types.ProjectStarRequest{IsStarred: false}
+			w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+userID, unstarRequest)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, w.Code)
 		}
@@ -1179,12 +1189,14 @@ func (suite *ProjectIntegrationTestSuite) TestConcurrentOperations() {
 		// Perform multiple archive/unarchive operations
 		for i := 0; i < 3; i++ {
 			// Archive
-			w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/archive?user_id="+userID, nil)
+			archiveRequest := types.ProjectArchiveRequest{Archive: true}
+			w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+userID, archiveRequest)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, w.Code)
 
 			// Unarchive
-			w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/archive?user_id="+userID, nil)
+			unarchiveRequest := types.ProjectArchiveRequest{Archive: false}
+			w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/archive?user_id="+userID, unarchiveRequest)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, w.Code)
 		}
@@ -1196,12 +1208,14 @@ func (suite *ProjectIntegrationTestSuite) TestConcurrentOperations() {
 		// Perform multiple lock/unlock operations
 		for i := 0; i < 3; i++ {
 			// Lock
-			w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/lock?user_id="+userID, nil)
+			lockRequest := types.ProjectLockRequest{IsLocked: true}
+			w, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+userID, lockRequest)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, w.Code)
 
 			// Unlock
-			w, err = suite.makeRequest("DELETE", "/api/v1/projects/"+projectID+"/lock?user_id="+userID, nil)
+			unlockRequest := types.ProjectLockRequest{IsLocked: false}
+			w, err = suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/lock?user_id="+userID, unlockRequest)
 			require.NoError(t, err)
 			assert.Equal(t, http.StatusNoContent, w.Code)
 		}

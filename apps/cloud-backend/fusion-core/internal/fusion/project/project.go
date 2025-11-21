@@ -130,7 +130,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
-		response.ProjectUploadURL = presignURL
+		response.ProjectUploadURL = &presignURL
 	}
 
 	if project.IsProjectThumbnailCreated {
@@ -138,7 +138,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
-		response.ThumbnailUploadURL = presignURL
+		response.ThumbnailUploadURL = &presignURL
 	}
 
 	return response, nil
@@ -203,7 +203,7 @@ func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, p
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
-		response.ProjectUploadURL = presignURL
+		response.ProjectUploadURL = &presignURL
 	}
 
 	if project.IsProjectThumbnailDirty {
@@ -211,7 +211,7 @@ func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, p
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL: %v", err)
 		}
-		response.ThumbnailUploadURL = presignURL
+		response.ThumbnailUploadURL = &presignURL
 	}
 
 	return response, nil
