@@ -227,10 +227,10 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                               width: 100,
                               height: 35,
                               onTap: () {
-                                projectViewModel.muteSource(
-                                  sourceId: source.id,
-                                  isMuted: true, // TODO: Toggle mute state
-                                );
+                                // projectViewModel.muteSource(
+                                //   sourceId: source.id,
+                                //   isMuted: true, // TODO: Toggle mute state
+                                // );
                               },
                               backgroundColor: const Color(0xFFF5F5F5),
                             ),
