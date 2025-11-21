@@ -46,8 +46,6 @@ func NewSAPServer(groups []string, port string, handler *handler.Handler) (*SAPS
 		handler: handler,
 	}
 
-	sap.Start()
-
 	return sap, nil
 }
 

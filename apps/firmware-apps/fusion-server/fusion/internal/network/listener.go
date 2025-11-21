@@ -47,6 +47,7 @@ func isConnClosed(err error) bool {
 }
 
 func (l *Listener) Start() {
+
 	// Prevent accidental double-starts
 	if !l.started.CompareAndSwap(false, true) {
 		logging.GetLogger().Error("listener already started")

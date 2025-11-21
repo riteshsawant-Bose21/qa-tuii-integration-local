@@ -48,7 +48,7 @@ func (s *SkewStore) Add(node string, skew time.Duration, detected time.Time) {
 	s.mu.Unlock()
 }
 
-// Prune remomves stale records from the store.
+// Prune removes stale records from the store.
 func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 	for range ticker.C {
 		now := time.Now()
@@ -183,10 +183,23 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 	case api.NotifyOpConfigUpdate:
-		if err := d.stateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+		dirty, err := d.stateManager.ApplyUpdate(*message.ConfigUpdate)
+		if err != nil {
 			logger.Error("Error applying update: %v", err)
 			return
 		}
+
+		if !dirty {
+			logger.Debug("delegate: skipping stale ConfigUpdate version=%v from %s",
+				message.ConfigUpdate.Version, message.Node)
+			return
+		}
+
+		// Overwrite with effective local Lamport version
+		updated := *message.ConfigUpdate
+		updated.Version = d.stateManager.GetVersion()
+		message.ConfigUpdate = &updated
+
 		d.persistence.MarkDirty()
 		d.hub.Broadcast(&message)
 
@@ -279,6 +292,25 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 	logger.Debug("Merging remote state from node %s with %d entries (version: %v)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
+
+	localVersion := d.stateManager.GetVersion()
+	remoteVersion := snapshot.Version
+
+	// Reject older epoch outright
+	if remoteVersion.Epoch < localVersion.Epoch {
+		logger.Debug("Ignoring remote state from older epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		return
+	}
+
+	// Adopt newer epoch as authoritative
+	if remoteVersion.Epoch > localVersion.Epoch {
+		logger.Debug("Adopting newer epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		d.stateManager.ReplaceFullState(snapshot.State, remoteVersion)
+		d.persistence.MarkDirty()
+		return
+	}
+
+	// Same epoch, do normal merge
 	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()

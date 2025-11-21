@@ -3,6 +3,8 @@ package api
 import "time"
 
 const (
+	AudioFilesLocation = "/var/lib/fusion/audio"
+
 	AdminPort          = "9090"
 	HTTPPort           = "8080"
 	MessageTriggerPort = 7949
@@ -14,9 +16,9 @@ const (
 	JsonMIMEType = "application/json"
 	Protocol     = "http://"
 
-	HTTPTimeout = 5 * time.Second
+	FusionVersion = "_fusion_version"
 
-	AudioFilesLocation = "/var/lib/fusion/audio"
+	HTTPTimeout = 5 * time.Second
 
 	MessageIDKey        = "id"
 	MessagePathKey      = "path"

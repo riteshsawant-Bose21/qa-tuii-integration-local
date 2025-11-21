@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
 	"mime/multipart"
@@ -494,4 +495,14 @@ func SendUDPMessage(addr *net.UDPAddr, payload any) error {
 		return fmt.Errorf("failed to send UDP packet: %w", err)
 	}
 	return nil
+}
+
+func FlattenState(state map[string]*api.StateEntry) map[string]any {
+	result := make(map[string]any, len(state))
+	for k, e := range state {
+		if e != nil {
+			result[k] = e.Data
+		}
+	}
+	return result
 }

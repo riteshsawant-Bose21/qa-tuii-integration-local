@@ -34,6 +34,17 @@ type VersionedState struct {
 	Checksum string
 }
 
+// Flatten returns a simplified map of key-value data from the state
+func (v *VersionedState) Flatten() map[string]any {
+	result := make(map[string]any, len(v.State))
+	for k, e := range v.State {
+		if e != nil {
+			result[k] = e.Data
+		}
+	}
+	return result
+}
+
 // NewVersionedState creates and initializes a new VersionedState
 func NewVersionedState() *VersionedState {
 	return &VersionedState{
@@ -201,83 +212,135 @@ func (sm *StateManager) Get(key string) (any, bool) {
 			current = value
 		}
 	}
+
 	return current, true
 }
 
 // Set updates a key in the state with the given value and applies the update.
 func (sm *StateManager) Set(key string, value any) error {
 
-	data := map[string]any{key: value}
+	copied := utils.DeepCopy(value)
+	data := map[string]any{key: copied}
+
 	hash, err := utils.JSONChecksum(data)
 	if err != nil {
 		return fmt.Errorf("failed to generate hash: %w", err)
 	}
 
 	sm.Lock()
-	defer sm.Unlock()
 
+	// Lamport send rule:
+	// local = local + 1
 	sm.version.Counter++
+	localVersion := sm.version
+
+	sm.Unlock()
+
+	// Build update using the new timestamp (the originating event)
 	update := api.ConfigUpdate{
 		Hash:    hash,
 		Data:    data,
-		Version: sm.version,
+		Version: localVersion,
 		Clear:   false,
 	}
 
-	dirty, err := sm.applyWhileLocked(update)
-	if err != nil {
-		return err
-	}
-
-	if dirty {
-		sm.updateChecksumUnsafe()
-	}
-
-	return nil
+	// Feed through normal update processing
+	_, err = sm.ApplyUpdate(update)
+	return err
 }
 
 // ApplyPatch applies an upated patch to the internal state.
 func (sm *StateManager) ApplyPatch(update map[string]any) (map[string]any, error) {
 	sm.Lock()
-	defer sm.Unlock()
 
+	// Apply patch to full current state snapshot
 	existing := sm.getFullStateUnsafe()
 	if err := utils.ApplyPatch(existing, update); err != nil {
+		sm.Unlock()
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
-	configUpdate, err := sm.newConfigUpdateUnsafe(existing)
-	if err != nil {
-		return nil, err
+	// Lamport SEND rule for local update:
+	// local = local + 1
+	sm.version.Counter++
+	localVersion := sm.version
+
+	sm.Unlock()
+
+	// Build a ConfigUpdate using the updated full state with the new timestamp
+	configUpdate := api.ConfigUpdate{
+		Data:    existing,
+		Version: localVersion,
+		Clear:   false,
 	}
 
-	dirty, err := sm.applyWhileLocked(*configUpdate)
+	// Generate checksum for the new state
+	hash, err := utils.JSONChecksum(existing)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
+	configUpdate.Hash = hash
 
-	if dirty {
-		sm.updateChecksumUnsafe()
+	// Now pass through the normal Lamport ApplyUpdate path
+	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
+		return nil, err
 	}
 
 	return existing, nil
 }
 
-// ApplyUpdate applies a configuration update to the internal state.
-func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) error {
+// ApplyUpdate applies a configuration update using Lamport clock semantics.
+//
+// Lamport Clock Rule #2 (receiving event):
+//
+//	When receiving an update with timestamp T:
+//	    local = max(local, T) + 1
+//	This ensures that:
+//	    - no node's clock ever goes backwards
+//	    - all nodes converge on a globally consistent causal ordering
+//	    - updates are never incorrectly skipped
+func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
 	sm.Lock()
 	defer sm.Unlock()
 
-	dirty, err := sm.applyWhileLocked(update)
+	incoming := update.Version
+	local := sm.version
+
+	// Reject stale epoch
+	if incoming.Epoch < local.Epoch {
+		return false, nil
+	}
+
+	// Adopt future epoch (snapshot activated on another node)
+	if incoming.Epoch > local.Epoch {
+		// Adopt new epoch and counter
+		sm.version.Epoch = incoming.Epoch
+		sm.version.Counter = incoming.Counter
+		sm.version.NodeID = incoming.NodeID
+		// Continue to apply update
+		goto apply
+	}
+
+	// Same epoch: Do normal Lamport logic
+	if local.Counter < incoming.Counter {
+		sm.version.Counter = incoming.Counter
+	}
+	sm.version.Counter++
+
+apply:
+	// Apply update using effective version
+	effective := sm.version
+
+	dirty, err := sm.applyWhileLocked(update, incoming, effective)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if dirty {
 		sm.updateChecksumUnsafe()
 	}
 
-	return nil
+	return dirty, nil
 }
 
 // updateChecksumUnsafe updates the checksum. Do not lock here.
@@ -290,21 +353,26 @@ func (sm *StateManager) updateChecksumUnsafe() {
 	}
 }
 
-// applyLocked applies a configuration update to the internal state,
-// performing a Lamport version check and merging nested maps when needed.
-func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) {
+// applyWhileLocked applies a configuration update to the internal state,
+// performing a Lamport-aware version check and merging nested maps when needed.
+// sm.Lock() must already be held.
+func (sm *StateManager) applyWhileLocked(
+	update api.ConfigUpdate,
+	incomingVersion api.Version,
+	effectiveVersion api.Version,
+) (bool, error) {
 
 	logger := logging.GetLogger()
-
 	dirty := false
 
 	if update.Clear {
+		// Clear the entire versioned state. The Lamport clock has already
+		// been advanced in ApplyUpdate, so do not modify it here.
 		sm.state = *NewVersionedState()
-		sm.version.Counter++
 		dirty = true
 	}
 
-	// Bail out if there is nothing left to
+	// If we are not clearing and there is no data, nothing to do.
 	if !update.Clear && len(update.Data) == 0 {
 		return dirty, nil
 	}
@@ -312,13 +380,17 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 	for key, rawValue := range update.Data {
 		localEntry, exists := sm.state.State[key]
 
-		// Skip if local version is newer or equal
-		if exists && !localEntry.Version.Less(update.Version) {
-			logger.Debug("Skipping: Local is newer or equal")
+		// Skip if the local entry version is newer or equal to the incoming
+		// update's version for this key.
+		//
+		// Important: we compare against incomingVersion (the timestamp of the
+		// originating event), not effectiveVersion (the local receive event).
+		if exists && !localEntry.Version.Less(incomingVersion) {
+			logger.Debug("Skipping key %q: local version is newer or equal", key)
 			continue
 		}
 
-		// Determine new data: merge maps or overwrite
+		// Determine new data: merge maps or overwrite.
 		var newData any
 		if incomingMap, ok := rawValue.(map[string]any); ok {
 			if exists {
@@ -326,22 +398,22 @@ func (sm *StateManager) applyWhileLocked(update api.ConfigUpdate) (bool, error) 
 					existingMapCopy := utils.DeepCopy(existingMap).(map[string]any)
 					newData = mergeMaps(existingMapCopy, incomingMap)
 				} else {
+					// Local value is not a map; replace with incoming map.
 					newData = incomingMap
 				}
 			} else {
+				// No existing entry; just take the incoming map.
 				newData = incomingMap
 			}
 		} else {
+			// Non-map value; overwrite directly.
 			newData = rawValue
 		}
 
+		// Store the new entry with the effective local version (the receive event).
 		sm.state.State[key] = &api.StateEntry{
 			Data:    newData,
-			Version: update.Version,
-		}
-
-		if sm.version.Less(update.Version) {
-			sm.version = update.Version
+			Version: effectiveVersion,
 		}
 
 		dirty = true
@@ -364,40 +436,38 @@ func (sm *StateManager) GetFullState() VersionedState {
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
 // Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
-
 	state := sm.GetFullState().State
-
-	result := make(map[string]any, len(state))
-	for k, e := range state {
-		if e != nil {
-			result[k] = e.Data // already deep-copied inside GetFullState
-		}
-	}
-	return result
-
+	return utils.FlattenState(state)
 }
 
 // MergeRemoteState integrates a remote state into the local state if the remote version is newer.
 func (sm *StateManager) MergeRemoteState(remoteState map[string]*api.StateEntry) {
-
 	sm.Lock()
 	defer sm.Unlock()
 
 	for key, remoteEntry := range remoteState {
+
 		localEntry, exists := sm.state.State[key]
 
-		// if we don’t have it yet, or the remote version is newer...
 		if !exists || localEntry.Version.Less(remoteEntry.Version) {
-			copy := *remoteEntry
-			copy.Data = utils.DeepCopy(remoteEntry.Data)
-			sm.state.State[key] = &copy
+			sm.state.State[key] = deepCopyEntry(remoteEntry)
 
-			// bump our “highest‐seen” version if this remote one is newer
 			if sm.version.Less(remoteEntry.Version) {
 				sm.version = remoteEntry.Version
 			}
 		}
 	}
+
+	sm.updateChecksumUnsafe()
+}
+
+// ReplaceFullState does a global replacement of all state data
+func (sm *StateManager) ReplaceFullState(newState map[string]*api.StateEntry, newVersion api.Version) {
+	sm.Lock()
+	defer sm.Unlock()
+
+	sm.state.State = deepCopyState(newState)
+	sm.version = newVersion
 	sm.updateChecksumUnsafe()
 }
 
@@ -684,4 +754,15 @@ func deepCopyState(src map[string]*api.StateEntry) map[string]*api.StateEntry {
 		dst[k] = &c
 	}
 	return dst
+}
+
+func deepCopyEntry(src *api.StateEntry) *api.StateEntry {
+	if src == nil {
+		return nil
+	}
+
+	// Shallow copy of struct (copies Version by value)
+	dst := *src
+	dst.Data = utils.DeepCopy(src.Data)
+	return &dst
 }
