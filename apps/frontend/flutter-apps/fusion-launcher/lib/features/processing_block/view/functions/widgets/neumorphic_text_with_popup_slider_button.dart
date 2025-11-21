@@ -6,7 +6,9 @@ import '../../widgets/pb_slider.dart';
 
 class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   final bool isActive;
+  final double? value;
   final VoidCallback? onTap;
+  final ValueChanged<double>? onChanged;
   final double? height;
   final double? width;
   final Color? backgroundColor;
@@ -16,7 +18,9 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
   const NeumorphicTextWithPopupSliderButton({
     super.key,
     required this.isActive,
+    this.value,
     this.onTap,
+    this.onChanged,
     this.height,
     this.width,
     this.backgroundColor,
@@ -29,24 +33,20 @@ class NeumorphicTextWithPopupSliderButton extends StatefulWidget {
 }
 
 class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWithPopupSliderButton> {
-  bool _isPressed = false;
-
-  bool get _effectiveIsActive => widget.isActive || _isPressed;
-
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
       borderRadius: BorderRadiusGeometry.circular(widget.borderRadius),
-      clipBehavior: _effectiveIsActive ? Clip.hardEdge : Clip.none,
+      clipBehavior: widget.isActive ? Clip.hardEdge : Clip.none,
       child: Container(
         height: widget.height ?? 32,
         width: widget.width ?? double.infinity,
-        clipBehavior: _effectiveIsActive ? Clip.hardEdge : Clip.none,
+        clipBehavior: widget.isActive ? Clip.hardEdge : Clip.none,
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: Colors.transparent,
           borderRadius: BorderRadius.circular(widget.borderRadius),
-          boxShadow: getNeumorphismBoxShadows(inner: _effectiveIsActive, color: const Color(0xFFF9F7F6)),
+          boxShadow: getNeumorphismBoxShadows(inner: widget.isActive, color: const Color(0xFFF9F7F6)),
         ),
         child: Row(
           children: <Widget>[
@@ -54,17 +54,15 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
               child: GestureDetector(
                 // onTapDown: (_) => setState(() => _isPressed = true),
                 // onTapCancel: () => setState(() => _isPressed = false),
-                onTap: () {
-                  setState(() => _isPressed = !_isPressed);
-                  widget.onTap?.call();
-                },
+                onTap: widget.onTap,
                 behavior: HitTestBehavior.opaque,
                 child: SizedBox(
                   height: widget.height ?? 32,
                   width: widget.width ?? double.infinity,
                   child: Center(
                     child: FusionAppText(
-                      text: "0.0db",
+                      text: "${widget.value ?? 0.0}db",
+                      maxLine: 1,
                       style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ),
@@ -108,15 +106,20 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                     PopupMenuItem<String>(
                       enabled: false,
                       padding: const EdgeInsets.all(8).copyWith(right: 0),
-                      child: const SizedBox(
+                      child: SizedBox(
                         width: 60,
                         height: 200,
                         child: Center(
                           child: VerticalSlider(
-                            value: 10,
-                            min: 0,
+                            value: widget.value ?? 0.0,
+                            min: -12,
                             max: 60,
                             intervalGap: 10,
+                            onChanged: (num value) {
+                              widget.onChanged?.call(
+                                value.toDouble(),
+                              );
+                            },
                           ),
                         ),
                       ),

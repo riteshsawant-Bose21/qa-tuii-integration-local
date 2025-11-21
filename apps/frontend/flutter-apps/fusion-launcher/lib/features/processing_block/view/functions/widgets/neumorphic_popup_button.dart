@@ -4,22 +4,24 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../common/neumorphic_button.dart';
 
 class NeumorphicPopupButton extends StatefulWidget {
+  final TextEditingController? controller;
   final String? hintText;
   final double? height;
   final double? width;
   final Color? backgroundColor;
   final List<String> options;
-  final ValueChanged<String>? onChanged;
+  final ValueChanged<String> onSelect;
   final double borderRadius;
 
   const NeumorphicPopupButton({
     super.key,
+    this.controller,
     this.hintText,
     this.height,
     this.width,
     this.backgroundColor,
     this.options = const <String>[],
-    this.onChanged,
+    required this.onSelect,
     this.borderRadius = 8,
   });
 
@@ -67,7 +69,7 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
             Expanded(
               child: Center(
                 child: TextField(
-                  // controller: widget.controller,
+                  controller: widget.controller,
                   textAlign: TextAlign.center,
                   focusNode: _focusNode,
                   style: Theme.of(context).textTheme.labelLarge,
@@ -78,7 +80,6 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                     hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
                     contentPadding: const EdgeInsets.all(0),
                   ),
-                  onChanged: widget.onChanged,
                 ),
               ),
             ),
@@ -112,6 +113,7 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                   return <PopupMenuEntry<String>>[
                     PopupMenuItem<String>(
                       enabled: false,
+                      height: 50,
                       padding: const EdgeInsets.all(8).copyWith(right: 0),
                       child: Builder(
                         builder: (BuildContext context) {
@@ -127,13 +129,21 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
 
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: <Widget>[
                               ...widget.options.map(
-                                (String value) => Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                  child: FusionAppText(
-                                    text: value,
-                                    style: Theme.of(context).textTheme.labelMedium,
+                                (String value) => GestureDetector(
+                                  onTap: () {
+                                    widget.onSelect(value);
+                                    Navigator.of(context).pop();
+                                  },
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                    child: FusionAppText(
+                                      text: value,
+                                      style: Theme.of(context).textTheme.labelMedium,
+                                    ),
                                   ),
                                 ),
                               ),

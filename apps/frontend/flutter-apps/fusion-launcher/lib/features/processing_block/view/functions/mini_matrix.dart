@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart' show SvgPicture;
 import 'package:fusion_launcher/features/processing_block/view/functions/source_mix.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
-import 'widgets/neumorphic_popup_button.dart';
 import 'widgets/neumorphic_text_with_popup_slider_button.dart';
 
 class MiniMatrixZoneControlPanel extends StatefulWidget {
@@ -31,9 +34,26 @@ class MiniMatrixZoneControlPanel extends StatefulWidget {
 }
 
 class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel> {
+  late String functionId;
+
+  @override
+  void initState() {
+    super.initState();
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!.id;
+  }
+
   @override
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
+    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
+    // sources
+
+    final List<MixScene> savedMixScenes = projectViewModel.getAllMixScenesForFunction(functionId: functionId);
+    final MixScene? selectedMixScene = projectViewModel.getSelectedMixSceneForFunction(functionId);
+
+    final List<MatrixSettings> matrixSettings = projectViewModel.getCurrentMatrixSettingsForFunction(functionId: functionId);
 
     return Dialog(
       constraints: BoxConstraints(
@@ -82,11 +102,56 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  const Expanded(flex: 4, child: MiniMatrixControls()),
+                  Expanded(
+                    flex: 4,
+                    child: MiniMatrixControls(
+                      zoneID: widget.zoneID,
+                      functionId: functionId,
+                    ),
+                  ),
 
                   const VerticalDivider(width: 1, color: Colors.black12),
 
-                  const MiniMatrixMixScenes(),
+                  MixScenes(
+                    selectedMixSceneName: selectedMixScene?.name,
+                    zoneId: widget.zoneID,
+                    onStoreTap: (String? value) {
+                      if (value == null || value.isEmpty) {
+                        return FusionToast.error(
+                          context,
+                          message: "Please enter a name for the mix scene",
+                        );
+                      } else {
+                        projectViewModel.saveCurrentSettingsAsMixScene(
+                          functionId: functionId,
+                          sceneName: value,
+                        );
+                      }
+                    },
+                    mixScenes: savedMixScenes.map((MixScene e) => e.name).toList(),
+                    onMixSceneSelect: (String value) {
+                      try {
+                        final MixScene scene = savedMixScenes.firstWhere((MixScene scene) => scene.name == value);
+                        projectViewModel.applyMixSceneToFunction(
+                          functionId: functionId,
+                          sceneId: scene.id,
+                        );
+                      } catch (e) {
+                        // We might get StateError if the scene is not found.
+                      }
+                    },
+                    onDeleteTap: () {
+                      try {
+                        // TODO: Implement delete functionality. Currently, it is not possible to delete a mix scene from the project.
+                        // Because we dont know which one is currently selected.
+
+                        // final MixScene scene = savedMixScenes.firstWhere((MixScene scene) => scene.name == value);
+                        // projectViewModel.removeScene(sceneId: scene.id);
+                      } catch (e) {
+                        // We might get StateError if the scene is not found.
+                      }
+                    },
+                  ),
                   const VerticalDivider(width: 1, color: Colors.black12),
 
                   Expanded(
@@ -106,10 +171,18 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
 }
 
 class MiniMatrixControls extends StatelessWidget {
-  const MiniMatrixControls({super.key});
+  final String zoneID;
+  final String functionId;
+
+  const MiniMatrixControls({super.key, required this.zoneID, required this.functionId});
+
   @override
   Widget build(BuildContext context) {
-    final List<String> miniMatrix = <String>["1", "2", "3", "4", "5"];
+    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
+    final List<Source> sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: zoneID);
+
+    final List<MatrixSettings> miniMatrixSettings = projectViewModel.getCurrentMatrixSettingsForFunction(functionId: functionId);
 
     const BorderSide borderSide = BorderSide(color: Color(0xFFE5E5E5), width: 1);
 
@@ -176,7 +249,7 @@ class MiniMatrixControls extends StatelessWidget {
                 child: Padding(
                   padding: const EdgeInsets.all(8.0).copyWith(top: 4.0),
                   child: const NeumorphicTextWithPopupSliderButton(
-                    isActive: false,
+                    isActive: false, // DONT ALLOW ACTIVE STATE.
                     height: 30,
                   ),
                 ),
@@ -195,8 +268,12 @@ class MiniMatrixControls extends StatelessWidget {
                   2: const FlexColumnWidth(),
                 },
                 children: <TableRow>[
-                  ...List<TableRow>.generate(miniMatrix.length, (int index) {
-                    final bool isLast = index == miniMatrix.length - 1;
+                  ...List<TableRow>.generate(sources.length, (int index) {
+                    final bool isLast = index == sources.length - 1;
+                    final Source source = sources[index];
+
+                    final MonoMatrixSettings matrixSetting =
+                        miniMatrixSettings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
 
                     return TableRow(
                       children: <Widget>[
@@ -220,7 +297,6 @@ class MiniMatrixControls extends StatelessWidget {
                                   padding: const EdgeInsets.all(4),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFFF5F5F5),
-                                    // border: Border.all(color: const Color(0xFFE5E5E5)),
                                     border: Border(
                                       right: borderSide,
                                       left: borderSide,
@@ -231,33 +307,52 @@ class MiniMatrixControls extends StatelessWidget {
                                   ),
                                   child: Center(
                                     child: FusionAppText(
-                                      text: "Music_0$index",
+                                      text: source.name,
                                       maxLine: 1,
                                       style: Theme.of(context).textTheme.labelSmall,
                                     ),
                                   ),
                                 ),
                               ),
-                              Container(
-                                height: 28,
-                                width: 28,
-                                alignment: Alignment.center,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFF5F5F5),
-                                  borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(color: Colors.black12),
-                                ),
-                                child: SvgPicture.asset(
-                                  'assets/svg/volume.svg',
-                                  width: 16,
-                                  height: 16,
+                              GestureDetector(
+                                onTap: () {
+                                  projectViewModel.updateMatrixSettings(
+                                    matrixSettings: matrixSetting.copyWith(
+                                      muted: !matrixSetting.muted,
+                                    ),
+                                  );
+                                },
+                                child: Container(
+                                  height: 28,
+                                  width: 28,
+                                  alignment: Alignment.center,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFF5F5F5),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: Colors.black12),
+                                  ),
+                                  child: SvgPicture.asset(
+                                    'assets/svg/volume.svg',
+                                    width: 16,
+                                    height: 16,
+                                    // ignore: deprecated_member_use
+                                    color: matrixSetting.muted ? Colors.black12 : Colors.black,
+                                  ),
                                 ),
                               ),
-                              const Expanded(
+                              Expanded(
                                 flex: 3,
                                 child: NeumorphicTextWithPopupSliderButton(
-                                  isActive: false,
+                                  isActive: false, // DONT ALLOW ACTIVE STATE.
+                                  value: matrixSetting.gain,
                                   height: 30,
+                                  onChanged: (double value) {
+                                    projectViewModel.updateMatrixSettings(
+                                      matrixSettings: matrixSetting.copyWith(
+                                        gain: value,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ],
@@ -281,9 +376,17 @@ class MiniMatrixControls extends StatelessWidget {
                                     bottom: isLast ? borderSide : BorderSide.none,
                                   ),
                                 ),
-                                child: const NeumorphicTextWithPopupSliderButton(
+                                child: NeumorphicTextWithPopupSliderButton(
                                   isActive: false,
+                                  value: matrixSetting.mixLevel,
                                   height: 30,
+                                  onChanged: (double value) {
+                                    projectViewModel.updateMatrixSettings(
+                                      matrixSettings: matrixSetting.copyWith(
+                                        mixLevel: value,
+                                      ),
+                                    );
+                                  },
                                 ),
                               ),
                             ),
@@ -292,72 +395,6 @@ class MiniMatrixControls extends StatelessWidget {
                       ],
                     );
                   }),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class MiniMatrixMixScenes extends StatelessWidget {
-  const MiniMatrixMixScenes({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 150,
-      child: Column(
-        spacing: 10,
-        children: <Widget>[
-          Container(
-            height: 28,
-            width: double.infinity,
-            alignment: Alignment.center,
-            color: const Color(0xFFF5F5F5),
-            child: FusionAppText(
-              text: "MIX SCENES",
-              style: Theme.of(context).textTheme.labelSmall,
-              maxLine: 1,
-            ),
-          ),
-
-          Expanded(
-            child: Container(
-              color: Colors.white,
-              child: const Column(
-                spacing: 10,
-                children: <Widget>[
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: NeumorphicPopupButton(
-                      height: 34,
-                      borderRadius: 8,
-                    ),
-                  ),
-
-                  // PBButton(
-                  //   text: "STORE",
-                  //   width: 72,
-                  //   height: 28,
-                  //   borderRadius: 9,
-                  //   onTap: () {
-                  //     //
-                  //   },
-                  // ),
-                  // PBButton(
-                  //   text: "DELETE",
-                  //   width: 72,
-                  //   height: 28,
-                  //   borderRadius: 9,
-                  //   textColor: Colors.black12,
-                  //   onTap: () {
-                  //     //
-                  //   },
-                  // ), // TODO: IMPLEMENT STORE AND DELETE BUTTONS
-                  SizedBox(height: 10),
                 ],
               ),
             ),
@@ -396,13 +433,13 @@ class NeumorphicWithPopupSlider extends StatelessWidget {
               child: const Column(
                 spacing: 10,
                 children: <Widget>[
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 8.0),
-                    child: NeumorphicPopupButton(
-                      height: 28,
-                      borderRadius: 8,
-                    ),
-                  ),
+                  // Padding(
+                  //   padding: EdgeInsets.symmetric(horizontal: 8.0),
+                  //   child: NeumorphicPopupButton(
+                  //     height: 28,
+                  //     borderRadius: 8,
+                  //   ),
+                  // ), // TODO: IMPLEMENT STORE AND DELETE BUTTONS
 
                   // PBButton(
                   //   text: "STORE",

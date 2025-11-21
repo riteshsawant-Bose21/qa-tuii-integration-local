@@ -5,7 +5,7 @@ import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import '../../common/neumorphic_button.dart';
 
 class NeumorphicGainTextField extends StatefulWidget {
-  final String? controllerValue;
+  final double? controllerValue;
   final ValueChanged<double>? onSubmitted;
   final double height;
   final double width;
@@ -37,7 +37,7 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
   @override
   void initState() {
     super.initState();
-    controller.text = widget.controllerValue ?? '';
+    if (widget.controllerValue != null) controller.text = widget.controllerValue!.toString();
     _focusNode = FocusNode();
     _focusNode.addListener(() {
       setState(() {
@@ -57,7 +57,9 @@ class _NeumorphicGainTextFieldState extends State<NeumorphicGainTextField> {
   void didUpdateWidget(NeumorphicGainTextField oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.controllerValue != oldWidget.controllerValue) {
-      controller.text = widget.controllerValue ?? '';
+      if (widget.controllerValue != null) {
+        controller.text = widget.controllerValue!.toString();
+      }
     }
   }
 

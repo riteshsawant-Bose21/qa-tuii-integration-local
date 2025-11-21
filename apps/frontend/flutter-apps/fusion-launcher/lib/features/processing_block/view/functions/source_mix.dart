@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/widgets/priority_selection_widget.dart';
@@ -5,12 +7,12 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_gain_text_field.dart';
-import 'widgets/neumorphic_popup_button.dart';
 import 'widgets/slider_and_meter_widget.dart';
 
-class SourceMixZoneControlPanel extends StatelessWidget {
+class SourceMixZoneControlPanel extends StatefulWidget {
   final String zoneID;
   const SourceMixZoneControlPanel({super.key, required this.zoneID});
 
@@ -30,8 +32,26 @@ class SourceMixZoneControlPanel extends StatelessWidget {
   }
 
   @override
+  State<SourceMixZoneControlPanel> createState() => _SourceMixZoneControlPanelState();
+}
+
+class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
+  late String functionId;
+
+  @override
+  void initState() {
+    super.initState();
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!.id;
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.8;
+
+    final List<MixScene> savedMixScenes = projectViewModel.getAllMixScenesForFunction(functionId: functionId);
+    final MixScene? selectedMixScene = projectViewModel.getSelectedMixSceneForFunction(functionId);
 
     return Dialog(
       constraints: BoxConstraints(
@@ -60,11 +80,51 @@ class SourceMixZoneControlPanel extends StatelessWidget {
                         Flexible(
                           fit: FlexFit.loose,
                           child: SourceMixLeftWidget(
-                            zoneID: zoneID,
+                            zoneID: widget.zoneID,
                           ),
                         ),
 
-                        SourceMixMixScenes(zoneId: zoneID),
+                        MixScenes(
+                          selectedMixSceneName: selectedMixScene?.name,
+                          zoneId: widget.zoneID,
+                          onStoreTap: (String? value) {
+                            if (value == null || value.isEmpty) {
+                              return FusionToast.error(
+                                context,
+                                message: "Please enter a name for the mix scene",
+                              );
+                            } else {
+                              projectViewModel.saveCurrentSettingsAsMixScene(
+                                functionId: functionId,
+                                sceneName: value,
+                              );
+                            }
+                          },
+                          mixScenes: savedMixScenes.map((MixScene e) => e.name).toList(),
+                          onMixSceneSelect: (String value) {
+                            try {
+                              final MixScene scene = savedMixScenes.firstWhere((MixScene scene) => scene.name == value);
+                              projectViewModel.applyMixSceneToFunction(
+                                functionId: functionId,
+                                sceneId: scene.id,
+                              );
+                              log("Selected mix scene: ${scene.name}");
+                            } catch (e) {
+                              // We might get StateError if the scene is not found.
+                            }
+                          },
+                          onDeleteTap: () {
+                            try {
+                              // TODO: Implement delete functionality. Currently, it is not possible to delete a mix scene from the project.
+                              // Because we dont know which one is currently selected.
+                              // TWO TASK HERE:
+                              // 1. Get the selected mix scene for the function.
+                              // 2. update the scene if changes are made.
+                            } catch (e) {
+                              // We might get StateError if the scene is not found.
+                            }
+                          },
+                        ),
 
                         DecoratedBox(
                           decoration: const BoxDecoration(
@@ -75,7 +135,7 @@ class SourceMixZoneControlPanel extends StatelessWidget {
                               ),
                             ),
                           ),
-                          child: PrioritySelectionWidget(zoneId: zoneID),
+                          child: PrioritySelectionWidget(zoneId: widget.zoneID),
                         ),
 
                         // Right side (only one widget)
@@ -84,7 +144,7 @@ class SourceMixZoneControlPanel extends StatelessWidget {
                           child: ColoredBox(
                             color: Colors.white,
                             child: ZoneControlSliderBuilder(
-                              zoneID: zoneID,
+                              zoneID: widget.zoneID,
                             ),
                           ),
                         ),
@@ -151,15 +211,16 @@ class SourceMixLeftWidget extends StatefulWidget {
 
 class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
   late final ScrollController _scrollController = ScrollController();
+  late final String functionId;
 
   late List<Source> sources;
-
-  late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   @override
   void initState() {
     super.initState();
+    late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
+    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!.id;
   }
 
   @override
@@ -170,6 +231,8 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
     if (sources.isEmpty) {
       return ColoredBox(
         color: const Color(0xFFF5F5F5),
@@ -189,6 +252,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
         ),
       );
     }
+    final List<MixSettings> mixSettings = projectViewModel.getCurrentMixSettingsForFunction(functionId: functionId);
 
     return Scrollbar(
       controller: _scrollController,
@@ -202,6 +266,11 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
             mainAxisSize: MainAxisSize.min,
             children: List<Widget>.generate(sources.length, (int index) {
               final Source source = sources[index];
+
+              final MixSettings mixSetting = mixSettings.singleWhere(
+                (MixSettings setting) => setting.sourceId == source.id,
+                orElse: () => MixSettings(functionId: functionId, sourceId: source.id, gain: 0, muted: true),
+              );
 
               return SizedBox(
                 width: 150,
@@ -221,16 +290,15 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                       ),
                     ),
                     NeumorphicGainTextField(
-                      controllerValue: null, // TODO: How to get source mix level from projectViewModel?
+                      controllerValue: mixSetting.gain,
                       minGain: -60,
                       maxGain: 12,
-
                       onSubmitted: (double value) {
-                        // projectViewModel.updateSourceMix(
-                        //   sourceId: sources[index].id,
-                        //   leftMix: value,
-                        //   rightMix: widget.rightMix,
-                        // );
+                        projectViewModel.updateMixSettings(
+                          mixSettings: mixSetting.copyWith(
+                            gain: value,
+                          ),
+                        );
                       },
                     ),
                     Expanded(
@@ -246,28 +314,28 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                           children: <Widget>[
                             Expanded(
                               child: SliderAndMeterWidget(
-                                // TODO: How to get source mix level from projectViewModel?
+                                sliderValue: mixSetting.gain,
                                 sliderMax: 12,
                                 sliderMin: -60,
-                                sliderValue: 10,
                                 onSliderChanged: (num value) {
-                                  // projectViewModel.updateSourceMix(
-                                  //   sourceId: sources[index].id,
-                                  //   leftMix: value.toDouble(),
-                                  //   rightMix: widget.rightMix,
-                                  // );
+                                  projectViewModel.updateMixSettings(
+                                    mixSettings: mixSetting.copyWith(
+                                      gain: value.toDouble(),
+                                    ),
+                                  );
                                 },
                               ),
                             ),
                             NeumorphicAudioToggleButton(
-                              isActive: index % 2 == 0, // TODO: How to get source mix mute state from projectViewModel?
+                              isActive: mixSetting.muted,
                               width: 72,
                               height: 24,
                               onTap: () {
-                                // projectViewModel.muteSource(
-                                //   sourceId: source.id,
-                                //   isMuted: true, // TODO: Toggle mute state
-                                // );
+                                projectViewModel.updateMixSettings(
+                                  mixSettings: mixSetting.copyWith(
+                                    muted: !mixSetting.muted,
+                                  ),
+                                );
                               },
                               backgroundColor: const Color(0xFFF5F5F5),
                             ),
@@ -282,76 +350,6 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
             }),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class SourceMixMixScenes extends StatelessWidget {
-  final String zoneId;
-  const SourceMixMixScenes({super.key, required this.zoneId});
-
-  @override
-  Widget build(BuildContext context) {
-    final List<Source> sources = context.watch<ProjectViewModel>().getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
-
-    if (sources.isEmpty) return const SizedBox.shrink();
-
-    return Container(
-      width: 150,
-      color: const Color(0xFFF5F5F5),
-      child: Column(
-        spacing: 10,
-        children: <Widget>[
-          Container(
-            height: 28,
-            color: const Color(0xFFF5F5F5),
-            child: Center(
-              child: FusionAppText(
-                text: "MIX SCENES",
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
-            ),
-          ),
-
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-            child: NeumorphicPopupButton(
-              height: 28,
-              borderRadius: 8,
-              options: <String>[
-                // TODO: Populate mix scenes from projectViewModel
-              ],
-              onChanged: (String? value) {
-                // TODO: How to set mix scene from projectViewModel
-              },
-            ),
-          ),
-
-          const SizedBox(height: 10),
-          // NeumorphicButton(
-          //   text: "STORE",
-          //   width: 72,
-          //   height: 24,
-          //   borderRadius: 9,
-          //   onTap: () {
-          //     // projectViewModel.addPreset(preset: preset);
-          //     // TODO: How to add mix scene to projectViewModel
-          //   },
-          // ),
-          // PBButton(
-          //   text: "DELETE",
-          //   width: 72,
-          //   height: 24,
-          //   borderRadius: 9,
-          //   textColor: Colors.black12,
-          //   onTap: () {
-          //     // projectViewModel.removePreset(presetId: preset.id);
-          //     // TODO: How to delete mix scene from projectViewModel
-          //   },
-          // ),
-          const SizedBox(height: 10),
-        ],
       ),
     );
   }
@@ -440,7 +438,7 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
                       ),
                     ),
                     NeumorphicGainTextField(
-                      controllerValue: zoneOrSubzoneGain.toString(),
+                      controllerValue: zoneOrSubzoneGain,
                       minGain: -60,
                       maxGain: 12,
                       onSubmitted: (double value) {

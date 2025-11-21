@@ -114,7 +114,6 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                     ),
                                   ),
 
-                                  // 🔥 DRAG-AND-DROP LIST
                                   Expanded(
                                     child: Builder(
                                       builder: (BuildContext context) {
