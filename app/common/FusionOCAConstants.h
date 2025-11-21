@@ -71,9 +71,8 @@ const std::string ZONES_JSON_STRING_FOR_DEV = R"(
             "id": "ctrl2",
             "name": "Controller 2",
             "zoneIds": [
-                "zone2",
-                "zone3"
-            ]
+                "zone2"
+                ]
             }
         ],
         "zones": [
