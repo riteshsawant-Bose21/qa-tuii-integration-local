@@ -1,5 +1,6 @@
 basePath: /api/v1
 definitions:
+<<<<<<< HEAD
   types.Amplifier:
     properties:
       category:
@@ -25,11 +26,15 @@ definitions:
         type: number
     type: object
   types.BadRequestError:
+=======
+  types.Budget:
+>>>>>>> e0dddcac9 (product and price sync)
     properties:
       message:
         example: Bad Request
         type: string
     type: object
+<<<<<<< HEAD
   types.Budget:
     properties:
       amount:
@@ -42,71 +47,33 @@ definitions:
     - currency
     type: object
   types.DSP_meta:
+=======
+  types.PriceDetail:
+>>>>>>> e0dddcac9 (product and price sync)
     properties:
-      acoustic_echo_cancellation:
-        properties:
-          channels:
-            type: integer
-        type: object
-      configuration_software:
+      currency:
         type: string
-      dimensions:
-        properties:
-          rack_space:
-            type: string
-          size:
-            items:
-              properties:
-                depth:
-                  type: integer
-                height:
-                  type: integer
-                unit:
-                  type: string
-                width:
-                  type: integer
-              type: object
-            type: array
-        type: object
-      dsp_architecture:
+      price:
+        type: number
+      variant:
         type: string
-      firmware:
-        properties:
-          current_published_version:
-            type: string
-          current_running_version:
-            type: string
-        type: object
-      gpio_logic_ports:
-        properties:
-          inputs:
-            type: integer
-          outputs:
-            type: integer
-        type: object
-      id:
-        type: integer
-      images:
+    type: object
+  types.PriceResponse:
+    properties:
+      prices:
         items:
-          type: string
+          $ref: '#/definitions/types.PriceDetail'
         type: array
-      max_number_of_analog_control:
+      product_id:
         type: integer
-      max_number_of_digital_control:
-        type: integer
-      model:
-        type: string
-      name:
-        type: string
-      net_weight:
+    type: object
+  types.ProductItemResponse:
+    properties:
+      assets:
         items:
-          properties:
-            unit:
-              type: string
-            value:
-              type: string
           type: object
         type: array
+<<<<<<< HEAD
       number_of_inputs_and_outputs:
         properties:
           aes67:
@@ -156,9 +123,17 @@ definitions:
   types.DigitalSignalProcessor:
     properties:
       category:
+=======
+      description:
+>>>>>>> e0dddcac9 (product and price sync)
         type: string
-      id:
+      model_family:
+        type: string
+      model_name:
+        type: string
+      productid:
         type: integer
+<<<<<<< HEAD
       meta_info:
         $ref: '#/definitions/types.DSP_meta'
     type: object
@@ -206,19 +181,48 @@ definitions:
         example: Not Found
         type: string
     type: object
+=======
+      specifications:
+        type: object
+    type: object
+>>>>>>> e0dddcac9 (product and price sync)
   types.ProductResponse:
     properties:
+      accessory:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
       amplifier:
         items:
+<<<<<<< HEAD
           $ref: '#/definitions/types.Amplifier'
+=======
+          $ref: '#/definitions/types.ProductItemResponse'
+>>>>>>> e0dddcac9 (product and price sync)
         type: array
-      digital_signal_processors:
+      controller:
         items:
+<<<<<<< HEAD
           $ref: '#/definitions/types.DigitalSignalProcessor'
         type: array
       speaker:
         items:
           $ref: '#/definitions/types.Speaker'
+=======
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      dsp:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      io_endpoint:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      speaker:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+>>>>>>> e0dddcac9 (product and price sync)
         type: array
     type: object
   types.Project:
@@ -228,9 +232,12 @@ definitions:
         type: string
       budget:
         $ref: '#/definitions/types.Budget'
+<<<<<<< HEAD
       created_at:
         example: "2023-10-15T14:30:00Z"
         type: string
+=======
+>>>>>>> e0dddcac9 (product and price sync)
       description:
         example: Professional audio system for corporate conference room
         type: string
@@ -270,6 +277,7 @@ definitions:
         example: Building A - Conference Room 101
         type: string
     type: object
+<<<<<<< HEAD
   types.ProjectArchiveRequest:
     properties:
       archive:
@@ -423,20 +431,32 @@ definitions:
         $ref: '#/definitions/types.Speaker_meta_response'
     type: object
   types.Speaker_meta_response:
+=======
+  types.SingleProductResponse:
     properties:
-      available_taps:
-        properties:
-          70v:
-            items:
-              type: number
-            type: array
-          100v:
-            items:
-              type: number
-            type: array
+      accessory:
+        $ref: '#/definitions/types.ProductItemResponse'
+      amplifier:
+        $ref: '#/definitions/types.ProductItemResponse'
+      controller:
+        $ref: '#/definitions/types.ProductItemResponse'
+      dsp:
+        $ref: '#/definitions/types.ProductItemResponse'
+      io_endpoint:
+        $ref: '#/definitions/types.ProductItemResponse'
+      speaker:
+        $ref: '#/definitions/types.ProductItemResponse'
+    type: object
+  types.SyncProjectRequest:
+>>>>>>> e0dddcac9 (product and price sync)
+    properties:
+      meta_data:
+        additionalProperties: true
         type: object
-      environment:
+      zip_file_url:
+        example: https://example.com/project.zip
         type: string
+<<<<<<< HEAD
       image_url:
         items:
           type: string
@@ -612,6 +632,13 @@ definitions:
         type: object
     type: object
 host: localhost:8020
+=======
+    required:
+    - meta_data
+    - zip_file_url
+    type: object
+host: localhost:8080
+>>>>>>> e0dddcac9 (product and price sync)
 info:
   contact: {}
   description: This is the Fusion Cloud Backend API server.
@@ -622,8 +649,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all available products including speakers, amplifiers and digital
-        signal processors
+      description: Get all available products including speakers, amplifiers, DSPs,
+        controllers, and endpoints
       produces:
       - application/json
       responses:
@@ -657,7 +684,11 @@ paths:
         "200":
           description: Successful response with product details
           schema:
+<<<<<<< HEAD
             $ref: '#/definitions/types.ProductResponse'
+=======
+            $ref: '#/definitions/types.SingleProductResponse'
+>>>>>>> e0dddcac9 (product and price sync)
         "400":
           description: Bad request - Product ID is required
           schema:
@@ -677,6 +708,50 @@ paths:
               type: string
             type: object
       summary: Get product by ID
+      tags:
+      - products
+  /products/{id}/prices:
+    get:
+      consumes:
+      - application/json
+      description: Get prices for a specific product by its unique identifier, optionally
+        filtered by currency
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Currency code (e.g., USD, EUR) to filter prices
+        in: query
+        name: currency
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with product prices
+          schema:
+            $ref: '#/definitions/types.PriceResponse'
+        "400":
+          description: Bad request - Product ID is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get product prices by ID
       tags:
       - products
   /projects:
@@ -706,11 +781,17 @@ paths:
         "200":
           description: Successfully retrieved all projects
           schema:
+<<<<<<< HEAD
             $ref: '#/definitions/types.GetAllProjectsResponse'
         "400":
           description: Bad request - Invalid query parameters
           schema:
             $ref: '#/definitions/types.BadRequestError'
+=======
+            items:
+              $ref: '#/definitions/types.Project'
+            type: array
+>>>>>>> e0dddcac9 (product and price sync)
         "500":
           description: Internal server error
           schema:
@@ -728,14 +809,22 @@ paths:
         name: body
         required: true
         schema:
+<<<<<<< HEAD
           $ref: '#/definitions/types.ProjectCreateRequest'
+=======
+          $ref: '#/definitions/types.Project'
+>>>>>>> e0dddcac9 (product and price sync)
       produces:
       - application/json
       responses:
         "201":
           description: Successfully created project
           schema:
+<<<<<<< HEAD
             $ref: '#/definitions/types.ProjectCreateResponse'
+=======
+            $ref: '#/definitions/types.Project'
+>>>>>>> e0dddcac9 (product and price sync)
         "400":
           description: Bad request - Invalid payload or user not found
           schema:
@@ -783,6 +872,41 @@ paths:
       summary: Delete project
       tags:
       - projects
+<<<<<<< HEAD
+=======
+    get:
+      consumes:
+      - application/json
+      description: Get a specific project by its unique identifier
+      parameters:
+      - description: Project ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved project
+          schema:
+            $ref: '#/definitions/types.Project'
+        "404":
+          description: Project not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get project by ID
+      tags:
+      - projects
+>>>>>>> e0dddcac9 (product and price sync)
     patch:
       consumes:
       - application/json
@@ -798,14 +922,22 @@ paths:
         name: body
         required: true
         schema:
+<<<<<<< HEAD
           $ref: '#/definitions/types.ProjectUpdateRequest'
+=======
+          $ref: '#/definitions/types.Project'
+>>>>>>> e0dddcac9 (product and price sync)
       produces:
       - application/json
       responses:
         "200":
           description: Successfully updated project
           schema:
+<<<<<<< HEAD
             $ref: '#/definitions/types.ProjectUpdateResponse'
+=======
+            $ref: '#/definitions/types.Project'
+>>>>>>> e0dddcac9 (product and price sync)
         "400":
           description: Bad request - Invalid payload
           schema:
@@ -842,7 +974,11 @@ paths:
         name: body
         required: true
         schema:
+<<<<<<< HEAD
           $ref: '#/definitions/types.ProjectArchiveRequest'
+=======
+          $ref: '#/definitions/types.SyncProjectRequest'
+>>>>>>> e0dddcac9 (product and price sync)
       produces:
       - application/json
       responses:

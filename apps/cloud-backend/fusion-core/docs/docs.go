@@ -17,7 +17,7 @@ const docTemplate = `{
     "paths": {
         "/products": {
             "get": {
-                "description": "Get all available products including speakers, amplifiers and digital signal processors",
+                "description": "Get all available products including speakers, amplifiers, DSPs, controllers, and endpoints",
                 "consumes": [
                     "application/json"
                 ],
@@ -73,7 +73,76 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product details",
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.ProductResponse"
+=======
+                            "$ref": "#/definitions/types.SingleProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Product ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}/prices": {
+            "get": {
+                "description": "Get prices for a specific product by its unique identifier, optionally filtered by currency",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get product prices by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Currency code (e.g., USD, EUR) to filter prices",
+                        "name": "currency",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with product prices",
+                        "schema": {
+                            "$ref": "#/definitions/types.PriceResponse"
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     },
                     "400": {
@@ -147,6 +216,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully retrieved all projects",
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.GetAllProjectsResponse"
                         }
                     },
@@ -154,6 +224,12 @@ const docTemplate = `{
                         "description": "Bad request - Invalid query parameters",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
+=======
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/types.Project"
+                            }
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     },
                     "500": {
@@ -183,7 +259,11 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.ProjectCreateRequest"
+=======
+                            "$ref": "#/definitions/types.Project"
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     }
                 ],
@@ -191,7 +271,11 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created project",
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.ProjectCreateResponse"
+=======
+                            "$ref": "#/definitions/types.Project"
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     },
                     "400": {
@@ -209,7 +293,59 @@ const docTemplate = `{
                 }
             }
         },
+<<<<<<< HEAD
         "/projects/{projectId}": {
+=======
+        "/projects/{id}": {
+            "get": {
+                "description": "Get a specific project by its unique identifier",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Get project by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved project",
+                        "schema": {
+                            "$ref": "#/definitions/types.Project"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+>>>>>>> e0dddcac9 (product and price sync)
             "delete": {
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
@@ -287,7 +423,11 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.ProjectUpdateRequest"
+=======
+                            "$ref": "#/definitions/types.Project"
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     }
                 ],
@@ -295,7 +435,11 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully updated project",
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.ProjectUpdateResponse"
+=======
+                            "$ref": "#/definitions/types.Project"
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     },
                     "400": {
@@ -352,7 +496,11 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
+<<<<<<< HEAD
                             "$ref": "#/definitions/types.ProjectArchiveRequest"
+=======
+                            "$ref": "#/definitions/types.SyncProjectRequest"
+>>>>>>> e0dddcac9 (product and price sync)
                         }
                     }
                 ],
@@ -614,6 +762,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
+<<<<<<< HEAD
         "types.Amplifier": {
             "type": "object",
             "properties": {
@@ -652,6 +801,9 @@ const docTemplate = `{
             }
         },
         "types.BadRequestError": {
+=======
+        "types.Budget": {
+>>>>>>> e0dddcac9 (product and price sync)
             "type": "object",
             "properties": {
                 "message": {
@@ -660,6 +812,7 @@ const docTemplate = `{
                 }
             }
         },
+<<<<<<< HEAD
         "types.Budget": {
             "type": "object",
             "required": [
@@ -677,187 +830,38 @@ const docTemplate = `{
             }
         },
         "types.DSP_meta": {
+=======
+        "types.PriceDetail": {
+>>>>>>> e0dddcac9 (product and price sync)
             "type": "object",
             "properties": {
-                "acoustic_echo_cancellation": {
-                    "type": "object",
-                    "properties": {
-                        "channels": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "configuration_software": {
+                "currency": {
                     "type": "string"
                 },
-                "dimensions": {
-                    "type": "object",
-                    "properties": {
-                        "rack_space": {
-                            "type": "string"
-                        },
-                        "size": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "depth": {
-                                        "type": "integer"
-                                    },
-                                    "height": {
-                                        "type": "integer"
-                                    },
-                                    "unit": {
-                                        "type": "string"
-                                    },
-                                    "width": {
-                                        "type": "integer"
-                                    }
-                                }
-                            }
-                        }
-                    }
+                "price": {
+                    "type": "number"
                 },
-                "dsp_architecture": {
+                "variant": {
                     "type": "string"
-                },
-                "firmware": {
-                    "type": "object",
-                    "properties": {
-                        "current_published_version": {
-                            "type": "string"
-                        },
-                        "current_running_version": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "gpio_logic_ports": {
-                    "type": "object",
-                    "properties": {
-                        "inputs": {
-                            "type": "integer"
-                        },
-                        "outputs": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "images": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "max_number_of_analog_control": {
-                    "type": "integer"
-                },
-                "max_number_of_digital_control": {
-                    "type": "integer"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "net_weight": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "unit": {
-                                "type": "string"
-                            },
-                            "value": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "number_of_inputs_and_outputs": {
-                    "type": "object",
-                    "properties": {
-                        "aes67": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "dante": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "fusion_connect": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    }
-                },
-                "product_codes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "safe_operating_temperature": {
-                    "type": "object",
-                    "properties": {
-                        "max": {
-                            "type": "integer"
-                        },
-                        "min": {
-                            "type": "integer"
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "skus": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "supported_bose_professional_dante_endpoints": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
                 }
             }
         },
+<<<<<<< HEAD
         "types.DigitalSignalProcessor": {
+=======
+        "types.PriceResponse": {
+>>>>>>> e0dddcac9 (product and price sync)
             "type": "object",
             "properties": {
-                "category": {
-                    "type": "string"
+                "prices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PriceDetail"
+                    }
                 },
-                "id": {
+                "product_id": {
                     "type": "integer"
+<<<<<<< HEAD
                 },
                 "meta_info": {
                     "$ref": "#/definitions/types.DSP_meta"
@@ -928,24 +932,86 @@ const docTemplate = `{
             }
         },
         "types.ProductResponse": {
+=======
+                }
+            }
+        },
+        "types.ProductItemResponse": {
+>>>>>>> e0dddcac9 (product and price sync)
             "type": "object",
             "properties": {
+                "assets": {
+                    "type": "array",
+                    "items": {
+                        "type": "object"
+                    }
+                },
+                "description": {
+                    "type": "string"
+                },
+                "model_family": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "productid": {
+                    "type": "integer"
+                },
+                "specifications": {
+                    "type": "object"
+                }
+            }
+        },
+        "types.ProductResponse": {
+            "type": "object",
+            "properties": {
+                "accessory": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
                 "amplifier": {
                     "type": "array",
                     "items": {
+<<<<<<< HEAD
                         "$ref": "#/definitions/types.Amplifier"
+=======
+                        "$ref": "#/definitions/types.ProductItemResponse"
+>>>>>>> e0dddcac9 (product and price sync)
                     }
                 },
-                "digital_signal_processors": {
+                "controller": {
                     "type": "array",
                     "items": {
+<<<<<<< HEAD
                         "$ref": "#/definitions/types.DigitalSignalProcessor"
+=======
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "dsp": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "io_endpoint": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+>>>>>>> e0dddcac9 (product and price sync)
                     }
                 },
                 "speaker": {
                     "type": "array",
                     "items": {
+<<<<<<< HEAD
                         "$ref": "#/definitions/types.Speaker"
+=======
+                        "$ref": "#/definitions/types.ProductItemResponse"
+>>>>>>> e0dddcac9 (product and price sync)
                     }
                 }
             }
@@ -959,10 +1025,13 @@ const docTemplate = `{
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
+<<<<<<< HEAD
                 },
                 "created_at": {
                     "type": "string",
                     "example": "2023-10-15T14:30:00Z"
+=======
+>>>>>>> e0dddcac9 (product and price sync)
                 },
                 "description": {
                     "type": "string",
@@ -1022,6 +1091,7 @@ const docTemplate = `{
                 }
             }
         },
+<<<<<<< HEAD
         "types.ProjectArchiveRequest": {
             "type": "object",
             "properties": {
@@ -1226,39 +1296,52 @@ const docTemplate = `{
             }
         },
         "types.Speaker": {
+=======
+        "types.SingleProductResponse": {
+>>>>>>> e0dddcac9 (product and price sync)
             "type": "object",
             "properties": {
-                "category": {
-                    "type": "string"
+                "accessory": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
-                "id": {
-                    "type": "integer"
+                "amplifier": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
+<<<<<<< HEAD
                 "meta_info": {
                     "$ref": "#/definitions/types.Speaker_meta_response"
                 }
             }
         },
         "types.Speaker_meta_response": {
-            "type": "object",
-            "properties": {
-                "available_taps": {
-                    "type": "object",
-                    "properties": {
-                        "100v": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        },
-                        "70v": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        }
-                    }
+=======
+                "controller": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
                 },
+                "dsp": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "io_endpoint": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "speaker": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                }
+            }
+        },
+        "types.SyncProjectRequest": {
+>>>>>>> e0dddcac9 (product and price sync)
+            "type": "object",
+            "required": [
+                "meta_data",
+                "zip_file_url"
+            ],
+            "properties": {
+                "meta_data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+<<<<<<< HEAD
                 "environment": {
                     "type": "string"
                 },
@@ -1535,6 +1618,13 @@ const docTemplate = `{
                     }
                 }
             }
+=======
+                "zip_file_url": {
+                    "type": "string",
+                    "example": "https://example.com/project.zip"
+                }
+            }
+>>>>>>> e0dddcac9 (product and price sync)
         }
     }
 }`
@@ -1542,7 +1632,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8020",
+	Host:             "localhost:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "Fusion Cloud Backend API",

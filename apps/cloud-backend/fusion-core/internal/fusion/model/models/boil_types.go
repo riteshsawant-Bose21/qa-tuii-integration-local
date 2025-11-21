@@ -51,6 +51,7 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
+<<<<<<< HEAD
 // Enum values for AccountsTypeEnum
 const (
 	AccountsTypeEnumAdmin    string = "admin"
@@ -63,5 +64,57 @@ func AllAccountsTypeEnum() []string {
 		AccountsTypeEnumAdmin,
 		AccountsTypeEnumReseller,
 		AccountsTypeEnumRetail,
+=======
+// Enum values for ProductTypeEnum
+const (
+	ProductTypeEnumSpeaker    string = "speaker"
+	ProductTypeEnumAmplifier  string = "amplifier"
+	ProductTypeEnumDSP        string = "dsp"
+	ProductTypeEnumController string = "controller"
+	ProductTypeEnumIoEndpoint string = "io_endpoint"
+	ProductTypeEnumAccessory  string = "accessory"
+)
+
+func AllProductTypeEnum() []string {
+	return []string{
+		ProductTypeEnumSpeaker,
+		ProductTypeEnumAmplifier,
+		ProductTypeEnumDSP,
+		ProductTypeEnumController,
+		ProductTypeEnumIoEndpoint,
+		ProductTypeEnumAccessory,
+	}
+}
+
+// Enum values for SyncOperationEnum
+const (
+	SyncOperationEnumFullSync      string = "full_sync"
+	SyncOperationEnumManualSync    string = "manual_sync"
+	SyncOperationEnumScheduledSync string = "scheduled_sync"
+)
+
+func AllSyncOperationEnum() []string {
+	return []string{
+		SyncOperationEnumFullSync,
+		SyncOperationEnumManualSync,
+		SyncOperationEnumScheduledSync,
+	}
+}
+
+// Enum values for SyncStatusEnum
+const (
+	SyncStatusEnumPending    string = "pending"
+	SyncStatusEnumInProgress string = "in_progress"
+	SyncStatusEnumCompleted  string = "completed"
+	SyncStatusEnumFailed     string = "failed"
+)
+
+func AllSyncStatusEnum() []string {
+	return []string{
+		SyncStatusEnumPending,
+		SyncStatusEnumInProgress,
+		SyncStatusEnumCompleted,
+		SyncStatusEnumFailed,
+>>>>>>> e0dddcac9 (product and price sync)
 	}
 }
