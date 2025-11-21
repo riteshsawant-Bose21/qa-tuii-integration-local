@@ -90,7 +90,7 @@ func main() {
 		logger.Fatal("Failed to initialize ID service")
 	}
 	logger.Info("Initialized ID Service.")
-
+	
 	//Initialize Product DB Service
 	productDBSvc := productdb.NewService(pgs)
 	if productDBSvc == nil {
@@ -181,5 +181,4 @@ func main() {
 	}
 
 	logger.Info("Application stopped gracefully")
-
 }

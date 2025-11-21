@@ -22,7 +22,6 @@ func New(
 	if err := db.Ping(); err != nil {
 		return nil, fmt.Errorf("failed to ping postgres database: %w", err)
 	}
-
 	return db, nil
 }
 
