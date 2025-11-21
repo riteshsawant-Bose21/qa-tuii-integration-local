@@ -92,6 +92,36 @@ func ValidateGetAllProjectsParams(params *types.GetAllProjectsParams) error {
 	return nil
 }
 
+// ValidateProjectArchiveRequest validates a project archive/unarchive request
+func ValidateProjectArchiveRequest(req *types.ProjectArchiveRequest) error {
+	if req == nil {
+		return errors.New("request cannot be nil")
+	}
+
+	// No additional validation needed for boolean field
+	return nil
+}
+
+// ValidateProjectLockRequest validates a project lock/unlock request
+func ValidateProjectLockRequest(req *types.ProjectLockRequest) error {
+	if req == nil {
+		return errors.New("request cannot be nil")
+	}
+
+	// No additional validation needed for boolean field
+	return nil
+}
+
+// ValidateProjectStarRequest validates a project star/unstar request
+func ValidateProjectStarRequest(req *types.ProjectStarRequest) error {
+	if req == nil {
+		return errors.New("request cannot be nil")
+	}
+
+	// No additional validation needed for boolean field
+	return nil
+}
+
 // Custom validation functions
 
 func validateEnvironmentType(fl validator.FieldLevel) bool {

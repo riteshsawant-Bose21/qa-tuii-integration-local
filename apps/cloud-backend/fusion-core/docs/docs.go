@@ -326,12 +326,18 @@ const docTemplate = `{
             }
         },
         "/projects/{projectId}/archive": {
-            "put": {
-                "description": "Archive a project by project ID",
+            "post": {
+                "description": "Archive or unarchive a project based on request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "projects"
                 ],
-                "summary": "Archive a project",
+                "summary": "Update project archive status",
                 "parameters": [
                     {
                         "type": "string",
@@ -339,14 +345,23 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Archive/unarchive request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ProjectArchiveRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "Project archived successfully"
+                        "description": "Project archive status updated successfully"
                     },
                     "400": {
-                        "description": "Bad request - Missing user ID",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -358,52 +373,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Project or user not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Unarchive a project by project ID",
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Unarchive a project",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Project unarchived successfully"
-                    },
-                    "400": {
-                        "description": "Bad request - Missing user ID",
-                        "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project or project locked by another user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
-                        }
-                    },
-                    "404": {
-                        "description": "Project or user not found",
+                        "description": "Project not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -418,12 +388,18 @@ const docTemplate = `{
             }
         },
         "/projects/{projectId}/lock": {
-            "put": {
-                "description": "Lock a project for a specific user",
+            "post": {
+                "description": "Lock or unlock a project for a specific user based on request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "projects"
                 ],
-                "summary": "Lock a project",
+                "summary": "Update project lock status",
                 "parameters": [
                     {
                         "type": "string",
@@ -431,14 +407,23 @@ const docTemplate = `{
                         "name": "projectId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Lock/unlock request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ProjectLockRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "Successfully locked project"
+                        "description": "Successfully updated project lock status"
                     },
                     "400": {
-                        "description": "Bad request - Missing user ID",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -450,52 +435,7 @@ const docTemplate = `{
                         }
                     },
                     "404": {
-                        "description": "Project or User not found",
-                        "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Unlock a project for a specific user (only if they locked it)",
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Unlock a project",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully unlocked project"
-                    },
-                    "400": {
-                        "description": "Bad request - Missing user ID",
-                        "schema": {
-                            "$ref": "#/definitions/types.BadRequestError"
-                        }
-                    },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project or project not locked by this user",
-                        "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
-                        }
-                    },
-                    "404": {
-                        "description": "Project or User not found",
+                        "description": "Project not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
@@ -510,12 +450,18 @@ const docTemplate = `{
             }
         },
         "/projects/{projectId}/star/{userId}": {
-            "put": {
-                "description": "Star a project for a specific user",
+            "post": {
+                "description": "Star or unstar a project for a specific user based on request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
                 "tags": [
                     "projects"
                 ],
-                "summary": "Star a project",
+                "summary": "Update project star status",
                 "parameters": [
                     {
                         "type": "string",
@@ -530,57 +476,26 @@ const docTemplate = `{
                         "name": "userId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "description": "Star/unstar request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ProjectStarRequest"
+                        }
                     }
                 ],
                 "responses": {
                     "204": {
-                        "description": "Successfully starred project"
+                        "description": "Successfully updated project star status"
                     },
-                    "403": {
-                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                    "400": {
+                        "description": "Bad request - Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/types.ForbiddenError"
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
-                    },
-                    "404": {
-                        "description": "Project or User not found, or user not assigned to the project",
-                        "schema": {
-                            "$ref": "#/definitions/types.NotFoundError"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/types.InternalServerError"
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "description": "Unstar a project for a specific user",
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Unstar a project",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "userId",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "Successfully unstarred project"
                     },
                     "403": {
                         "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
@@ -1107,6 +1022,15 @@ const docTemplate = `{
                 }
             }
         },
+        "types.ProjectArchiveRequest": {
+            "type": "object",
+            "properties": {
+                "archive": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "types.ProjectCreateRequest": {
             "type": "object",
             "required": [
@@ -1194,6 +1118,15 @@ const docTemplate = `{
                 }
             }
         },
+        "types.ProjectLockRequest": {
+            "type": "object",
+            "properties": {
+                "is_locked": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
         "types.ProjectPhase": {
             "type": "string",
             "enum": [
@@ -1206,6 +1139,15 @@ const docTemplate = `{
                 "ProjectPhaseDevelopment",
                 "ProjectPhaseCommissioned"
             ]
+        },
+        "types.ProjectStarRequest": {
+            "type": "object",
+            "properties": {
+                "is_starred": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
         },
         "types.ProjectUpdateRequest": {
             "type": "object",

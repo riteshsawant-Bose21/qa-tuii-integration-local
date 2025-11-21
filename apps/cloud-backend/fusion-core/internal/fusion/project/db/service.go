@@ -73,6 +73,10 @@ func isDuplicateKeyError(err error) bool {
 
 // GetProjectByID retrieves a project by its ID.
 func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.Project, error) {
+	if projectID == "" {
+		return nil, errors.New("project ID cannot be empty")
+	}
+
 	row, err := model.Projects(model.ProjectWhere.ID.EQ(projectID)).One(ctx, s.db)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
