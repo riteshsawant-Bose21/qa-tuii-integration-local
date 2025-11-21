@@ -321,24 +321,6 @@ func (s *Service) Delete(ctx context.Context, projectRow *model.Project) error {
 		return errors.New(types.ErrMsgFailedToDeleteProject)
 	}
 
-	// Check if already starred
-	if projectUser.IsStarred {
-		return nil
-	}
-
-	// Star the project
-	projectUser.IsStarred = true
-	projectUser.UpdatedAt = time.Now()
-
-	// Update the record
-	if _, err := projectUser.Update(ctx, s.db, boil.Infer()); err != nil {
-		s.logger.Error(types.ErrMsgFailedToStarProject,
-			zap.Error(err),
-			zap.String("project_id", projectID),
-			zap.String("user_id", userID))
-		return errors.New(types.ErrMsgFailedToStarProject)
-	}
-
 	return nil
 }
 

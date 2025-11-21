@@ -129,7 +129,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host: "localhost",
 		Port: "8080",
-	}, productSVC)
+	}, productSVC, projectSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

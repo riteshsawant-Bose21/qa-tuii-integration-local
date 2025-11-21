@@ -53,23 +53,3 @@ func NewService(dbService DatabaseService, presigner PresignerService) *Service 
 		presigner: presigner,
 	}
 }
-
-type DatabaseService interface {
-	Insert(ctx context.Context, project *fusion.Project) error
-	GetByID(ctx context.Context, id string) (*fusion.Project, error)
-	GetAll(ctx context.Context) ([]*fusion.Project, error)
-	Update(ctx context.Context, id string, project *fusion.Project) error
-	Delete(ctx context.Context, id string) error
-
-	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
-}
-
-type Project interface {
-	Insert(ctx context.Context, project *fusion.Project) error
-	GetByID(ctx context.Context, id string) (*fusion.Project, error)
-	GetAll(ctx context.Context) ([]*fusion.Project, error)
-	Update(ctx context.Context, id string, project *fusion.Project) error
-	Delete(ctx context.Context, id string) error
-
-	SyncProject(ctx context.Context, projectID string, metaData map[string]interface{}, zipFileURL string) error
-}
