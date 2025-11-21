@@ -83,7 +83,35 @@ extension MixScenesViewModel on ProjectViewModel {
     }
   }
 
-  void updateMixSettingsForScene({
+  List<MixSettings> getCurrentMixSettingsForFunction({
+    required String functionId,
+  }) {
+    try {
+      return projectManager.getCurrentMixSettingsForFunction(
+        functionId: functionId,
+      );
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get current mix settings for function : $ex");
+      throwError("Failed to get current mix settings for function : $ex");
+      return <MixSettings>[];
+    }
+  }
+
+  List<MatrixSettings> getCurrentMatrixSettingsForFunction({
+    required String functionId,
+  }) {
+    try {
+      return projectManager.getCurrentMatrixSettingsForFunction(
+        functionId: functionId,
+      );
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get current matrix settings for function : $ex");
+      throwError("Failed to get current matrix settings for function : $ex");
+      return <MatrixSettings>[];
+    }
+  }
+
+  void updateMixSettings({
     required MixSettings mixSettings,
     bool autoSave = true,
   }) {
@@ -91,7 +119,7 @@ extension MixScenesViewModel on ProjectViewModel {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateMixSettingsForScene(
+      projectManager.updateMixSettings(
         mixSettings: mixSettings,
       );
       if (autoSave) {
@@ -104,7 +132,7 @@ extension MixScenesViewModel on ProjectViewModel {
     }
   }
 
-  void updateMatrixSettingsForScene({
+  void updateMatrixSettings({
     required MatrixSettings matrixSettings,
     bool autoSave = true,
   }) {
@@ -112,7 +140,7 @@ extension MixScenesViewModel on ProjectViewModel {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateMatrixSettingsForScene(
+      projectManager.updateMatrixSettings(
         matrixSettings: matrixSettings,
       );
       if (autoSave) {
@@ -122,6 +150,89 @@ extension MixScenesViewModel on ProjectViewModel {
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update matrix settings for scene : $ex");
       throwError("Failed to update matrix settings for scene : $ex");
+    }
+  }
+
+  void saveCurrentSettingsAsMixScene({
+    required String functionId,
+    required String sceneName,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.saveCurrentSettingsAsMixScene(
+        functionId: functionId,
+        sceneName: sceneName,
+      );
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to save current settings as mix scene : $ex");
+      throwError("Failed to save current settings as mix scene : $ex");
+    }
+  }
+
+  void updateCurrentSettingsForMixScene({
+    required String functionId,
+    required String sceneId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updateCurrentSettingsForMixScene(
+        functionId: functionId,
+        sceneId: sceneId,
+      );
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to save current settings as mix scene : $ex");
+      throwError("Failed to save current settings as mix scene : $ex");
+    }
+  }
+
+  void applyMixSceneToFunction({
+    required String functionId,
+    required String sceneId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.applyMixSceneToFunction(
+        functionId: functionId,
+        sceneId: sceneId,
+      );
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to apply mix scene to function : $ex");
+      throwError("Failed to apply mix scene to function : $ex");
+    }
+  }
+
+  List<MixScene> getAllMixScenesForFunction({
+    required String functionId,
+  }) {
+    try {
+      return projectManager.getAllMixScenesForFunction(
+        functionId: functionId,
+      );
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get all mix scenes for function : $ex");
+      throwError("Failed to get all mix scenes for function : $ex");
+      return <MixScene>[];
     }
   }
 

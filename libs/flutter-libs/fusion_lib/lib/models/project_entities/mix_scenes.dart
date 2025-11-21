@@ -141,7 +141,7 @@ class MatrixMixScene extends MixScene {
 class MixSettings {
   final String id;
   final String functionId; // NEW: Which function this setting belongs to
-  final String sceneId; // NEW: Which scene this setting belongs to
+  final String? sceneId; // NEW: Which scene this setting belongs to
   final String sourceId; // NEW: Which source this setting is for
   final double gain;
   final bool muted;
@@ -149,7 +149,7 @@ class MixSettings {
   MixSettings({
     String? id,
     required this.functionId,
-    required this.sceneId,
+    this.sceneId,
     required this.sourceId,
     required this.gain,
     required this.muted,
@@ -202,7 +202,7 @@ class MixSettings {
 abstract class MatrixSettings {
   final String id;
   final String functionId; // NEW: Which function this setting belongs to
-  final String sceneId; // NEW: Which scene this setting belongs to
+  String? sceneId; // NEW: Which scene this setting belongs to
   final String sourceId; // NEW: Which source this setting is for
   final String type;
   final double gain;
@@ -242,7 +242,7 @@ class MonoMatrixSettings extends MatrixSettings {
   MonoMatrixSettings({
     super.id,
     required super.functionId,
-    required super.sceneId,
+    super.sceneId,
     required super.sourceId,
     super.type = "mono",
     required this.mixLevel,
@@ -325,7 +325,7 @@ class StereoMatrixSettings extends MatrixSettings {
   StereoMatrixSettings({
     super.id,
     required super.functionId,
-    required super.sceneId,
+    super.sceneId,
     required super.sourceId,
     super.type = "stereo",
     required this.leftMixLevel,

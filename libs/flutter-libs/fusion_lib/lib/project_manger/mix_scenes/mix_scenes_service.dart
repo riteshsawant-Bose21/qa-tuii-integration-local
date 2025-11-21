@@ -22,14 +22,141 @@ extension MixScenesService on ProjectService {
       functionId,
       mixScene.id,
     );
-    addMissingSourceSettingsToScene(functionId, mixScene.id);
+  }
 
-    //set as selected scene
-    relationships.link(
-      RelationshipType.selectedFunctionScenes,
-      functionId,
-      mixScene.id,
+  /// save current zones MixSettings and MatrixSettings as a new MixScene
+  void saveCurrentSettingsAsMixScene(String functionId, String sceneName) {
+    final function = getZoneFunctionById(functionId: functionId);
+    if (function == null) {
+      throw Exception('Function with id $functionId does not exist');
+    }
+
+    if (function.type.hasMixScenes) {
+      final newScene = SourceMixScene(
+        name: sceneName,
+      );
+      addMixScene(newScene, functionId);
+
+      final currentMixSettings = mixSettings.getByFunction(functionId);
+      for (final setting in currentMixSettings) {
+        final newSetting = setting.copyWith(
+          id: "MIX${FusionUtils.shortStringUUID()}",
+          sceneId: newScene.id,
+        );
+        mixSettings.add(newSetting.id, newSetting);
+      }
+    } else if (function.type.hasMatrixSettings) {
+      final newScene = SourceMixScene(
+        name: sceneName,
+      );
+      addMixScene(newScene, functionId);
+
+      final currentMatrixSettings = matrixSettings.getByFunction(functionId);
+      for (final setting in currentMatrixSettings) {
+        final newSetting = setting.copyWith(
+          id: "MAT${FusionUtils.shortStringUUID()}",
+          sceneId: newScene.id,
+        );
+        matrixSettings.add(newSetting.id, newSetting);
+      }
+    }
+  }
+
+  List<MixSettings> getCurrentMixSettingsForFunction({
+    required String functionId,
+  }) {
+    return mixSettings.getByFunction(functionId);
+  }
+
+  List<MatrixSettings> getCurrentMatrixSettingsForFunction({
+    required String functionId,
+  }) {
+    return matrixSettings.getByFunction(functionId);
+  }
+
+  void applyMixSceneToFunction({
+    required String functionId,
+    required String sceneId,
+  }) {
+    final sceneMixSettings = getMixSettingsForFunctionScene(
+      functionId: functionId,
+      sceneId: sceneId,
     );
+    for (final setting in sceneMixSettings) {
+      setMixSetting(
+        functionId: setting.functionId,
+        sceneId: null,
+        sourceId: setting.sourceId,
+        gain: setting.gain,
+        muted: setting.muted,
+      );
+    }
+
+    final sceneMatrixSettings = getMatrixSettingsForFunctionScene(
+      functionId: functionId,
+      sceneId: sceneId,
+    );
+    for (final setting in sceneMatrixSettings) {
+      setMatrixSetting(
+        setting: setting.copyWith(sceneId: null),
+      );
+    }
+  }
+
+  void updateCurrentSettingsForMixScene({
+    required String functionId,
+    required String sceneId,
+  }) {
+    final currentMixSettings = getCurrentMixSettingsForFunction(
+      functionId: functionId,
+    );
+    for (final setting in currentMixSettings) {
+      final sceneSetting = getMixSetting(
+        functionId: functionId,
+        sceneId: sceneId,
+        sourceId: setting.sourceId,
+      );
+      if (sceneSetting != null) {
+        final updatedSetting = sceneSetting.copyWith(
+          gain: setting.gain,
+          muted: setting.muted,
+        );
+        mixSettings.add(updatedSetting.id, updatedSetting);
+      } else {
+        final newSetting = MixSettings(
+          functionId: functionId,
+          sceneId: sceneId,
+          sourceId: setting.sourceId,
+          gain: setting.gain,
+          muted: setting.muted,
+        );
+        mixSettings.add(newSetting.id, newSetting);
+      }
+    }
+
+    final currentMatrixSettings = getCurrentMatrixSettingsForFunction(
+      functionId: functionId,
+    );
+    for (final setting in currentMatrixSettings) {
+      final sceneSetting = getMatrixSetting(
+        functionId: functionId,
+        sceneId: sceneId,
+        sourceId: setting.sourceId,
+      );
+      if (sceneSetting != null) {
+        final updatedSetting = sceneSetting.copyWith(
+          gain: setting.gain,
+          muted: setting.muted,
+        );
+        matrixSettings.add(updatedSetting.id, updatedSetting);
+      } else {
+        final newSetting = setting.copyWith(
+          id: "MAT${FusionUtils.shortStringUUID()}",
+          sceneId: sceneId,
+        );
+        matrixSettings.add(newSetting.id, newSetting);
+      }
+    }
   }
 
   /// add MixSettings to MixScene for all missing sources in the scene
@@ -88,6 +215,66 @@ extension MixScenesService on ProjectService {
     }
   }
 
+  ///Add missing source setting to all MixSetting and MatrixSetting for all scenes in a function
+  void addMissingSourceSettingsToFunction(String functionId) {
+    final zoneFunction = getZoneFunctionById(functionId: functionId);
+    if (zoneFunction == null) return;
+
+    if (zoneFunction.type.hasMixSettings) {
+      final zoneId = relationships.getParent(RelationshipType.zoneFunctions, functionId);
+      if (zoneId == null) return;
+      final sources = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+      for (final source in sources) {
+        final existingSetting = getMixSetting(
+          functionId: functionId,
+          sceneId: null,
+          sourceId: source.id,
+        );
+        if (existingSetting == null) {
+          // Add default MixSettings for the missing source
+          setMixSetting(
+            functionId: functionId,
+            sceneId: null,
+            sourceId: source.id,
+            gain: -24.0,
+            muted: false,
+          );
+        }
+      }
+    }
+
+    if (zoneFunction.type.hasMatrixSettings) {
+      final zoneId = relationships.getParent(RelationshipType.zoneFunctions, functionId);
+      if (zoneId == null) return;
+      final sources = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
+      for (final source in sources) {
+        final existingSetting = getMatrixSetting(
+          functionId: functionId,
+          sceneId: null,
+          sourceId: source.id,
+        );
+        if (existingSetting == null) {
+          //todo: need to identity mono or stereo default matrix settings in future based on zone
+          // Add default MatrixSettings for the missing source
+          final newSetting = MonoMatrixSettings(
+            functionId: functionId,
+            sceneId: null,
+            sourceId: source.id,
+            gain: -24.0,
+            muted: false,
+            mixLevel: 0.0,
+            outGain: -24.0,
+            outMuted: false,
+          );
+
+          setMatrixSetting(
+            setting: newSetting,
+          );
+        }
+      }
+    }
+  }
+
   /// Add missing source settings to all scenes for a specific function when sources are added to the zone
   void addMissingSourceSettingsToAllScenes(String functionId) {
     final scenes = getScenesForFunction(functionId);
@@ -115,7 +302,7 @@ extension MixScenesService on ProjectService {
   /// Get mix setting for a specific function, scene, and source
   MixSettings? getMixSetting({
     required String functionId,
-    required String sceneId,
+    required String? sceneId,
     required String sourceId,
   }) {
     return mixSettings.getByContext(
@@ -128,7 +315,7 @@ extension MixScenesService on ProjectService {
   /// Get matrix setting for a specific function, scene, and source
   MatrixSettings? getMatrixSetting({
     required String functionId,
-    required String sceneId,
+    required String? sceneId,
     required String sourceId,
   }) {
     return matrixSettings.getByContext(
@@ -141,7 +328,7 @@ extension MixScenesService on ProjectService {
   /// Set or update mix setting for a function, scene, and source
   void setMixSetting({
     required String functionId,
-    required String sceneId,
+    required String? sceneId,
     required String sourceId,
     required double gain,
     required bool muted,
@@ -168,6 +355,9 @@ extension MixScenesService on ProjectService {
       );
       mixSettings.add(newSetting.id, newSetting);
 
+      if (sceneId == null) {
+        return;
+      }
       // Add relationships
       relationships.link(
         RelationshipType.functionScenes,
@@ -195,12 +385,14 @@ extension MixScenesService on ProjectService {
       // Create new setting
       matrixSettings.add(setting.id, setting);
 
-      // Add relationships
-      relationships.link(
-        RelationshipType.functionScenes,
-        setting.functionId,
-        setting.sceneId,
-      );
+      if (setting.sceneId != null) {
+        // Add relationships
+        relationships.link(
+          RelationshipType.functionScenes,
+          setting.functionId,
+          setting.sceneId!,
+        );
+      }
     }
   }
 

@@ -83,6 +83,8 @@ extension ZoneService on ProjectService {
     //if zone has functions, we need to add missing source settings to all scenes
 
     addMissingSourceSettingsToAllScenes(functionIds.first);
+
+    addMissingSourceSettingsToFunction(functionIds.first);
   }
 
   /// Unlink a SourceSet from a Zone.
@@ -173,6 +175,8 @@ extension ZoneService on ProjectService {
     //if zone has functions, we need to add missing source settings to all scenes
 
     addMissingSourceSettingsToAllScenes(functionIds.first);
+
+    addMissingSourceSettingsToFunction(functionIds.first);
   }
 
   void removeSourceFromZone(String sourceId, String zoneId) {

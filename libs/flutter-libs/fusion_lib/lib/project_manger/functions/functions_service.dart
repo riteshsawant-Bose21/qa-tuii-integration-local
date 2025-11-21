@@ -12,6 +12,8 @@ extension ZoneFunctionService on ProjectService {
     }
 
     relationships.link(RelationshipType.zoneFunctions, zoneId, function.id);
+
+    addMissingSourceSettingsToFunction(function.id);
   }
 
   void removeFunction({required String functionId}) {
@@ -20,6 +22,20 @@ extension ZoneFunctionService on ProjectService {
     final copyOfMixSceneIds = List<String>.from(mixSceneIds);
     for (final mixSceneId in copyOfMixSceneIds) {
       removeScene(mixSceneId);
+    }
+
+    //remove all mix settings for this scene
+    final mixSettingsToRemove = mixSettings.getByFunction(functionId);
+    final copyOfMixSettings = List<MixSettings>.from(mixSettingsToRemove);
+    for (final setting in copyOfMixSettings) {
+      mixSettings.remove(setting.id);
+    }
+
+    // Remove all matrix settings for this scene
+    final matrixSettingsToRemove = matrixSettings.getByFunction(functionId);
+    final copyOfMatrixSettings = List<MatrixSettings>.from(matrixSettingsToRemove);
+    for (final setting in copyOfMatrixSettings) {
+      matrixSettings.remove(setting.id);
     }
 
     zoneFunctions.remove(functionId);

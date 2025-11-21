@@ -34,6 +34,78 @@ extension MixScenesManager on ProjectManager {
     );
   }
 
+  void saveCurrentSettingsAsMixScene({
+    required String sceneName,
+    required String functionId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.saveCurrentSettingsAsMixScene(
+      functionId,
+      sceneName,
+    );
+  }
+
+  List<MixSettings> getCurrentMixSettingsForFunction({
+    required String functionId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getCurrentMixSettingsForFunction(
+      functionId: functionId,
+    );
+  }
+
+  List<MatrixSettings> getCurrentMatrixSettingsForFunction({
+    required String functionId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getCurrentMatrixSettingsForFunction(
+      functionId: functionId,
+    );
+  }
+
+  void applyMixSceneToFunction({
+    required String functionId,
+    required String sceneId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.applyMixSceneToFunction(
+      functionId: functionId,
+      sceneId: sceneId,
+    );
+  }
+
+  void updateCurrentSettingsForMixScene({
+    required String functionId,
+    required String sceneId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateCurrentSettingsForMixScene(
+      functionId: functionId,
+      sceneId: sceneId,
+    );
+  }
+
+  List<MixScene> getAllMixScenesForFunction({
+    required String functionId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getScenesForFunction(
+      functionId,
+    );
+  }
+
   void addNewMixScene({required MixScene mixScene, required String functionId}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
@@ -54,7 +126,7 @@ extension MixScenesManager on ProjectManager {
     );
   }
 
-  void updateMixSettingsForScene({
+  void updateMixSettings({
     required MixSettings mixSettings,
   }) {
     if (projectService == null) {
@@ -69,7 +141,7 @@ extension MixScenesManager on ProjectManager {
     );
   }
 
-  void updateMatrixSettingsForScene({
+  void updateMatrixSettings({
     required MatrixSettings matrixSettings,
   }) {
     if (projectService == null) {
