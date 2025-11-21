@@ -22,6 +22,15 @@ extension ZoneService on ProjectService {
       removeSubZone(subZoneId);
     }
 
+    //remove functions associated with this zone
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId).toList();
+    final functionIdsCopy = List<String>.from(functionIds);
+    for (final functionId in functionIdsCopy) {
+      removeFunction(functionId: functionId);
+    }
+
+    removeAllPrioritySourcesFromZone(zoneId);
+
     //remove all the circuits in zone
     // final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId).toList();
     // final circuitIdsCopy = List<String>.from(circuitIds);
@@ -67,6 +76,15 @@ extension ZoneService on ProjectService {
 
     // Update relationship graph (idempotent)
     relationships.link(RelationshipType.zoneSourceSet, zoneId, sourceSetId);
+
+    //check if zone has functions
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+    if (functionIds.isEmpty) return;
+    //if zone has functions, we need to add missing source settings to all scenes
+
+    addMissingSourceSettingsToAllScenes(functionIds.first);
+
+    addMissingSourceSettingsToFunction(functionIds.first);
   }
 
   /// Unlink a SourceSet from a Zone.
@@ -74,6 +92,17 @@ extension ZoneService on ProjectService {
     if (!zones.exists(zoneId)) return;
 
     relationships.unlink(RelationshipType.zoneSourceSet, zoneId, sourceSetId);
+
+    //check if zone has functions
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+    if (functionIds.isEmpty) return;
+
+    //remove all sources in source set from all scenes
+    final sourcesInSourceSet = relationships.getChildren(RelationshipType.sourceSetSources, sourceSetId);
+    final sourcesInSourceSetCopy = List<String>.from(sourcesInSourceSet);
+    for (final source in sourcesInSourceSetCopy) {
+      removeSourceFromAllScenes(source);
+    }
   }
 
   /// returns all the SourceSets linked to the given zoneId
@@ -131,5 +160,231 @@ extension ZoneService on ProjectService {
 
     // Convert back to Map
     return {for (var zone in items) zone.id: zone};
+  }
+
+  //Zone Sources
+  void addSourceToZone(String sourceId, String zoneId) {
+    if (!hardware.exists(sourceId)) throw Exception('Source $sourceId not found');
+    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+
+    relationships.link(RelationshipType.zoneSources, zoneId, sourceId);
+
+    //check if zone has functions
+    final functionIds = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+    if (functionIds.isEmpty) return;
+    //if zone has functions, we need to add missing source settings to all scenes
+
+    addMissingSourceSettingsToAllScenes(functionIds.first);
+
+    addMissingSourceSettingsToFunction(functionIds.first);
+  }
+
+  void removeSourceFromZone(String sourceId, String zoneId) {
+    if (!zones.exists(zoneId)) return;
+
+    relationships.unlink(RelationshipType.zoneSources, zoneId, sourceId);
+
+    removeSourceFromAllScenes(sourceId);
+  }
+
+  List<Source> getSourcesInZone(String zoneId) {
+    final sourceIds = relationships.getChildren(RelationshipType.zoneSources, zoneId);
+    return sourceIds.map((id) => hardware.get(id)).where((m) => m != null).whereType<Source>().toList();
+  }
+
+  ///This method returns all the sources linked directly to the zone
+  /// as well as all the sources that are part of the source sets linked to the zone
+  List<Source> getSourcesAndSourceSetSourcesInZone({required String zoneId}) {
+    final sourcesInZone = getSourcesInZone(zoneId);
+    final sourceSetsInZone = relationships.getChildren(RelationshipType.zoneSourceSet, zoneId);
+
+    final sourceSetSources = <Source>[];
+    sourceSetSources.addAll(sourcesInZone);
+    for (final sourceSet in sourceSetsInZone) {
+      List<Source> sourcesInSourceSet = getSourcesInSourceSet(sourceSet);
+      sourceSetSources.addAll(sourcesInSourceSet);
+    }
+    return sourceSetSources;
+  }
+
+  //Add Priority sources
+  void addPrioritySourceToZone({required String sourceId, required String zoneId, required int priority}) {
+    if (!hardware.exists(sourceId)) throw Exception('Source $sourceId not found');
+    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+    if (priority < 1 || priority > 2) throw Exception('Priority should be [1,2]');
+    final zonePriorities = relationships.getChildren(RelationshipType.zonePriorities, zoneId).toList();
+    if (zonePriorities.isNotEmpty) {
+      for (final priorityId in zonePriorities) {
+        final existingPriority = prioritySourceData.get(priorityId)!;
+        if (existingPriority.sourceId == sourceId) {
+          throw Exception('Source $sourceId already exists as priority ${existingPriority.priority} in zone $zoneId ');
+        }
+      }
+    }
+
+    //update existing priority source or add new one
+    final existingPriorityWithSamePriority = zonePriorities.map((id) => prioritySourceData.get(id)!).where((p) => p.priority == priority).firstOrNull;
+
+    if (existingPriorityWithSamePriority != null) {
+      // Update existing priority source with same priority level
+      final updatedPriority = existingPriorityWithSamePriority.copyWith(sourceId: sourceId);
+      prioritySourceData.add(updatedPriority.id, updatedPriority);
+    } else {
+      // Add new priority source
+      final newPriority = PrioritySourceData(priority: priority, sourceId: sourceId, zoneId: zoneId);
+      prioritySourceData.add(newPriority.id, newPriority);
+      relationships.link(RelationshipType.zonePriorities, zoneId, newPriority.id);
+    }
+
+    // final prioritySources = relationships.getChildren(RelationshipType.prioritySources, zoneId).toList();
+    //
+    // if (prioritySources.contains(sourceId)) {
+    //   throw Exception('Source $sourceId already exists in zone $zoneId ');
+    // }
+    //
+    // final priorityOrder = <String>[...prioritySources];
+    //
+    // if (priority == 1) {
+    //   if (priorityOrder.isEmpty) {
+    //     priorityOrder.add(sourceId);
+    //   } else {
+    //     priorityOrder[0] = sourceId;
+    //   }
+    // } else {
+    //   if (priorityOrder.isEmpty) priorityOrder.add("");
+    //
+    //   if (priorityOrder.length == 2) {
+    //     priorityOrder[1] = sourceId;
+    //   } else {
+    //     priorityOrder.add(sourceId);
+    //   }
+    // }
+    //
+    // for (final childId in priorityOrder) {
+    //   relationships.link(RelationshipType.prioritySources, zoneId, childId);
+    // }
+    //
+    // relationships.reOrder(RelationshipType.prioritySources, zoneId, priorityOrder);
+  }
+
+  void reOrderPrioritySourcesInZone({
+    required String zoneId,
+    required List<String> newOrder,
+  }) {
+    if (!zones.exists(zoneId)) return;
+
+    final currentOrder = prioritySourceData.getByZone(zoneId);
+
+    final String? newFirst = newOrder.isNotEmpty ? newOrder[0] : null;
+    final String? newSecond = newOrder.length > 1 ? newOrder[1] : null;
+
+    final Map<int, PrioritySourceData> oldMap = {for (var p in currentOrder) p.priority: p};
+
+    final Map<int, PrioritySourceData> newMap = {};
+
+    // Update priority=1
+    if (newFirst != null && newFirst.trim().isNotEmpty) {
+      final existing = currentOrder.firstWhere(
+        (p) => p.sourceId == newFirst,
+        orElse: () => PrioritySourceData(
+          sourceId: newFirst,
+          zoneId: zoneId,
+          priority: 1,
+        ),
+      );
+
+      newMap[1] = existing.copyWith(priority: 1);
+    }
+
+    // Update priority=2
+    if (newSecond != null && newSecond.trim().isNotEmpty) {
+      final existing = currentOrder.firstWhere(
+        (p) => p.sourceId == newSecond,
+        orElse: () => PrioritySourceData(
+          sourceId: newSecond,
+          zoneId: zoneId,
+          priority: 2,
+        ),
+      );
+
+      newMap[2] = existing.copyWith(priority: 2);
+    }
+
+    // Write priorities in one pass so no conflicts
+    for (var p in newMap.values) {
+      prioritySourceData.add(p.id, p);
+    }
+  }
+
+  void removePrioritySourceFromZone({required String sourceId, required String zoneId}) {
+    if (!zones.exists(zoneId)) return;
+
+    final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zoneId);
+
+    for (final priorityId in prioritySources) {
+      final priorityData = prioritySourceData.get(priorityId);
+      if (priorityData?.sourceId == sourceId) {
+        relationships.unlink(RelationshipType.zonePriorities, zoneId, priorityId);
+        prioritySourceData.remove(priorityId);
+        break;
+      }
+    }
+  }
+
+  List<PrioritySourceData> getPrioritySourcesDataInZone(String zoneId) {
+    final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zoneId).toList();
+
+    final priorityData = prioritySources.map((id) => prioritySourceData.get(id)).where((data) => data != null).cast<PrioritySourceData>().toList();
+
+    // Sort by priority
+    priorityData.sort((a, b) => a.priority.compareTo(b.priority));
+
+    return priorityData;
+  }
+
+  void updatePrioritySourceGain({
+    required String priorityDataId,
+    required double newGain,
+  }) {
+    final existingData = prioritySourceData.get(priorityDataId);
+    if (existingData == null) {
+      throw Exception('PrioritySourceData $priorityDataId not found');
+    }
+
+    final updatedData = existingData.copyWith(gain: newGain);
+    prioritySourceData.add(updatedData.id, updatedData);
+  }
+
+  PrioritySourceData? getPrioritySourceDataById({required String priorityDataId}) {
+    return prioritySourceData.get(priorityDataId);
+  }
+
+  void removeAllPrioritySourcesFromZone(String zoneId) {
+    if (!zones.exists(zoneId)) return;
+
+    final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zoneId).toList();
+    final prioritySourcesCopy = List<String>.from(prioritySources);
+    for (final priorityId in prioritySourcesCopy) {
+      relationships.unlink(RelationshipType.zonePriorities, zoneId, priorityId);
+      prioritySourceData.remove(priorityId);
+    }
+  }
+
+  List<String> getPrioritySourcesInZone(String zoneId) {
+    final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zoneId).toList();
+
+    //get sourceIds from priority source data ordered by priority
+    final priorityData = prioritySources.map((id) => prioritySourceData.get(id)).where((data) => data != null).cast<PrioritySourceData>().toList();
+
+    // Sort by priority and return source IDs
+    priorityData.sort((a, b) => a.priority.compareTo(b.priority));
+
+    final result = <String>[];
+    for (int i = 1; i <= 2; i++) {
+      final data = priorityData.where((d) => d.priority == i).firstOrNull;
+      result.add(data?.sourceId ?? "");
+    }
+
+    return result;
   }
 }

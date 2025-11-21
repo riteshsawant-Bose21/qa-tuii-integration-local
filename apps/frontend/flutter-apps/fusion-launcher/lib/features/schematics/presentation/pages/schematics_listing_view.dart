@@ -255,15 +255,17 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   /// Sources [onTapAddDevice]
                   if (item is SourceData) {
                     final SourceType type = SourceData.getSourceType(item.id);
-                    final PortType portType = switch (type) {
-                      SourceType.analogInput || SourceType.aes67input => PortType.analogOutput,
-                      SourceType.bluetooth => PortType.bleOut,
-                      SourceType.usb => PortType.usbOut,
+                    final SourceConnectionType connectType = SourceData.getSourceConnectionType(item.id);
+                    final PortType portType = switch (connectType) {
+                      SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+                      SourceConnectionType.bluetooth => PortType.bleOut,
+                      SourceConnectionType.usb => PortType.usbOut,
                     };
                     final Source source = Source(
                       name: item.name,
                       pos: null,
                       type: item.type,
+                      connectionType: connectType,
                       assetImagePath: item.assetPath,
                       locationEntity: LocationModel(
                         listeningAreaId: areaId,
@@ -277,15 +279,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         inputPortType: PortType.analogInput,
                         outputPortType: portType,
                         compatibleInputTypes: <PortType>[],
-                        compatibleOutputTypes: switch (type) {
-                          SourceType.analogInput || SourceType.aes67input => <PortType>[
+                        compatibleOutputTypes: switch (connectType) {
+                          SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
                             PortType.dspAnalogInput,
                             PortType.endpointInput,
                           ],
-                          SourceType.bluetooth => <PortType>[
+                          SourceConnectionType.bluetooth => <PortType>[
                             PortType.bleIn,
                           ],
-                          SourceType.usb => <PortType>[PortType.usbIn],
+                          SourceConnectionType.usb => <PortType>[PortType.usbIn],
                         },
                         portPosition: PortPosition.topLeft,
                       ),

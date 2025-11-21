@@ -9,9 +9,13 @@ abstract class Repository<T> {
   final Map<String, T> _items = {};
 
   T? get(String id) => _items[id];
+
   void add(String id, T item) => _items[id] = item;
+
   void remove(String id) => _items.remove(id);
+
   List<T> getAll() => _items.values.toList();
+
   bool exists(String id) => _items.containsKey(id);
 
   Map<String, dynamic> toJson(Map<String, dynamic> Function(T) toJsonFn) {
@@ -82,7 +86,13 @@ class ZoneRepository extends Repository<Zone> {
 
 class SubZoneRepository extends Repository<SubZone> {}
 
-class SourceSetRepository extends Repository<SourceSet> {}
+class SourceSetRepository extends Repository<SourceSet> {
+  SourceSetRepository copyWith(Map<String, SourceSet> items) {
+    final newRepo = SourceSetRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
 class HardwareRepository extends Repository<HardwareComponent> {
   HardwareRepository copyWith(Map<String, HardwareComponent> items) {
@@ -101,3 +111,133 @@ class CircuitRepository extends Repository<CircuitModel> {}
 class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
+
+class ZoneFunctionRepository extends Repository<ZoneFunctions> {}
+
+class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
+  PrioritySourceDataRepository() : super();
+
+  List<PrioritySourceData> getByZone(String zoneId) {
+    try {
+      List<PrioritySourceData> priorityData = getAll().where((psd) => psd.zoneId == zoneId).toList();
+      //order by priority ascending
+      priorityData.sort((a, b) => a.priority.compareTo(b.priority));
+      return priorityData;
+    } catch (e) {
+      return [];
+    }
+  }
+
+  List<PrioritySourceData> getBySource(String sourceId) {
+    try {
+      return getAll().where((psd) => psd.sourceId == sourceId).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  PrioritySourceData? getByZoneAndSource(String zoneId, String sourceId) {
+    try {
+      return getAll().firstWhere((psd) => psd.zoneId == zoneId && psd.sourceId == sourceId);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+class MixSceneRepository extends Repository<MixScene> {
+  MixSceneRepository() : super();
+}
+
+class MixSettingsRepository extends Repository<MixSettings> {
+  MixSettingsRepository() : super();
+
+  /// Get setting by the triple (function, scene, source)
+  MixSettings? getByContext({
+    required String functionId,
+    required String? sceneId,
+    required String sourceId,
+  }) {
+    try {
+      return getAll().firstWhere(
+        (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get all settings for a function
+  List<MixSettings> getByFunction(String functionId) {
+    try {
+      // Only return settings not associated with a scene (i.e., current function settings)
+      return getAll().where((s) => s.functionId == functionId && s.sceneId == null).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all settings for a scene
+  List<MixSettings> getByScene(String sceneId) {
+    try {
+      return getAll().where((s) => s.sceneId == sceneId).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all settings for a source
+  List<MixSettings> getBySource(String sourceId) {
+    try {
+      return getAll().where((s) => s.sourceId == sourceId).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+}
+
+class MatrixSettingsRepository extends Repository<MatrixSettings> {
+  MatrixSettingsRepository() : super();
+
+  /// Get setting by the triple (function, scene, source)
+  MatrixSettings? getByContext({
+    required String functionId,
+    required String? sceneId,
+    required String sourceId,
+  }) {
+    try {
+      return getAll().firstWhere(
+        (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
+      );
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /// Get all settings for a function
+  List<MatrixSettings> getByFunction(String functionId) {
+    try {
+      return getAll().where((s) => s.functionId == functionId).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all settings for a scene
+  List<MatrixSettings> getByScene(String sceneId) {
+    try {
+      return getAll().where((s) => s.sceneId == sceneId).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  /// Get all settings for a source
+  List<MatrixSettings> getBySource(String sourceId) {
+    try {
+      return getAll().where((s) => s.sourceId == sourceId).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+}

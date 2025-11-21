@@ -3,9 +3,9 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -24,6 +24,8 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_page/pages/configuration_page.dart';
+import '../../processing_block/view/customization/processing_block_customizer.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -32,6 +34,7 @@ import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
+import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -474,6 +477,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         },
       ),
 
+      if (kDebugMode)
+        const FusionDockableArea(
+          tabKey: "zone_config_tab",
+          showLeft: false,
+          showRight: false,
+          mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
+          dockItemList: <DockItemConfig>[],
+        ),
+
       /// budget tab with docking area
       const FusionDockableArea(
         tabKey: "budget_tab",
@@ -484,12 +496,47 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       ),
 
       /// Config tab without docking area
-      const FusionDockableArea(
+      FusionDockableArea(
         tabKey: "configuration_tab",
-        showLeft: false,
+        showLeft: true,
         showRight: false,
-        mainArea: AudioSystemDesignPage(),
-        dockItemList: <DockItemConfig>[],
+        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
+                ? const ConfigurationPage()
+                : Center(
+                  child: FusionAppText(
+                    text:
+                        _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
+                            ? "Sources Configuration Page"
+                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
+                            ? "Presets Configuration Page"
+                            : "Scheduling Configuration Page",
+                  ),
+                );
+          },
+        ),
+
+        dockItemList: <DockItemConfig>[
+          DockItemConfig(
+            id: "1",
+            title: "FLOORS",
+            side: "left",
+            allowUndock: true,
+            isCollapsibleSection: false,
+            dockItemWidget:
+                () => BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                  builder: (BuildContext context, ProjectViewModelState state) {
+                    return ConfigurationTabSwitcher(
+                      selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                      onModeChanged: (ConfigurationMenuMode mode) {
+                        _projectViewModel.setConfigurationMenuMode(mode);
+                      },
+                    );
+                  },
+                ),
+          ),
+        ],
       ),
 
       /// Cloud tab without docking area

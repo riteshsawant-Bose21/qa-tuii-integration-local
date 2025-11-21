@@ -8,6 +8,10 @@ class FusionKeyboardWrapper extends StatefulWidget {
   final VoidCallback? onDown;
   final VoidCallback? onLeft;
   final VoidCallback? onRight;
+  final VoidCallback? onShiftUp;
+  final VoidCallback? onShiftDown;
+  final VoidCallback? onControlUp;
+  final VoidCallback? onControlDown;
 
   final VoidCallback? onUndo;
   final VoidCallback? onRedo;
@@ -23,6 +27,10 @@ class FusionKeyboardWrapper extends StatefulWidget {
     this.onUndo,
     this.onRedo,
     this.onDelete,
+    this.onShiftUp,
+    this.onShiftDown,
+    this.onControlUp,
+    this.onControlDown,
   });
 
   @override
@@ -39,13 +47,26 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
   }
 
   void _handleKey(KeyEvent event) {
-    if (event is! KeyDownEvent) return; // handle only key down once
-
-    final bool isMeta =
-        HardwareKeyboard.instance.isMetaPressed ||
-        HardwareKeyboard.instance.isControlPressed;
+    final bool isMeta = HardwareKeyboard.instance.isMetaPressed || HardwareKeyboard.instance.isControlPressed;
 
     final LogicalKeyboardKey logicalKey = event.logicalKey;
+    if (logicalKey == LogicalKeyboardKey.shiftLeft || logicalKey == LogicalKeyboardKey.shiftRight) {
+      if (event is KeyDownEvent) {
+        widget.onShiftDown?.call();
+      } else if (event is KeyUpEvent) {
+        widget.onShiftUp?.call();
+      }
+      return;
+    }
+    if (logicalKey == LogicalKeyboardKey.controlLeft || logicalKey == LogicalKeyboardKey.controlRight) {
+      if (event is KeyDownEvent) {
+        widget.onControlDown?.call();
+      } else if (event is KeyUpEvent) {
+        widget.onControlUp?.call();
+      }
+      return;
+    }
+    if (event is! KeyDownEvent) return; // handle only key down once
 
     if (logicalKey == LogicalKeyboardKey.arrowUp) {
       widget.onUp?.call();
@@ -55,8 +76,7 @@ class _FusionKeyboardWrapperState extends State<FusionKeyboardWrapper> {
       widget.onLeft?.call();
     } else if (logicalKey == LogicalKeyboardKey.arrowRight) {
       widget.onRight?.call();
-    } else if (logicalKey == LogicalKeyboardKey.delete ||
-        logicalKey == LogicalKeyboardKey.backspace) {
+    } else if (logicalKey == LogicalKeyboardKey.delete || logicalKey == LogicalKeyboardKey.backspace) {
       widget.onDelete?.call();
     }
 

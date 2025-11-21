@@ -2,11 +2,14 @@ import 'dart:ui';
 
 import 'package:fusion_lib/fusion_lib.dart';
 
-enum SourceType { analogInput, aes67input, bluetooth, usb }
+enum SourceType { mic, media, generic }
+
+enum SourceConnectionType { analogInput, aes67input, bluetooth, usb }
 
 class Source extends HardwareComponent {
   /// Type of the source
   final SourceType type;
+  final SourceConnectionType connectionType;
   String? ipAddress; //for AES67 sources
   final String sku;
 
@@ -19,6 +22,7 @@ class Source extends HardwareComponent {
     super.wiringPos,
     super.zAxis,
     required this.type,
+    required this.connectionType,
     required super.assetImagePath,
     this.ipAddress,
     List<int>? portNumbers,
@@ -43,6 +47,7 @@ class Source extends HardwareComponent {
     Offset? wiringPos,
     double? zAxis,
     SourceType? type,
+    SourceConnectionType? connectionType,
     String? assetImagePath,
     LocationModel? locationEntity,
     String? ipAddress,
@@ -61,6 +66,7 @@ class Source extends HardwareComponent {
       wiringPos: wiringPos ?? this.wiringPos,
       zAxis: zAxis ?? this.zAxis,
       type: type ?? this.type,
+      connectionType: connectionType ?? this.connectionType,
       assetImagePath: assetImagePath ?? this.assetImagePath,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
@@ -82,7 +88,13 @@ class Source extends HardwareComponent {
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       type: SourceType.values.firstWhere(
         (SourceType e) => e.name.toLowerCase() == (json['type'] as String).toLowerCase(),
-        orElse: () => throw FormatException('Unknown SourceType in JSON: ${json['type']}'),
+        orElse: () => SourceType.generic, //throw FormatException('Unknown SourceType in JSON: ${json['type']}'),
+      ),
+      connectionType: SourceConnectionType.values.firstWhere(
+        (SourceConnectionType e) => e.name.toLowerCase() == (json['connectionType'] as String?)?.toLowerCase(),
+        orElse: () => SourceConnectionType.values.firstWhere(
+          (e) => e.name == json['type'],
+        ), //throw FormatException('Unknown SourceConnectionType in JSON: ${json['connectionType']}'),
       ),
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
@@ -106,6 +118,7 @@ class Source extends HardwareComponent {
       'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'type': type.name,
+      'connectionType': connectionType.name,
       'assetImagePath': assetImagePath,
       'componentType': 'source',
       'locationEntity': locationEntity.toJson(),

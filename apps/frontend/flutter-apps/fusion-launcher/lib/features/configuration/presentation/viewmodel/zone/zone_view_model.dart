@@ -59,6 +59,20 @@ extension ZoneViewModel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addZone(zone);
+
+      for (final String algo in <String>[
+        "delay",
+        "peq",
+      ]) {
+        addProcessingBlockToParent(
+          processingBlock: ProcessingBlockModel.zoneBlocks.firstWhere(
+            (ProcessingBlockModel element) => element.algorithmId == algo,
+          ),
+          parentId: zone.id,
+          autoSave: false,
+        );
+      }
+
       if (autoSave) {
         saveProject();
       }
@@ -341,6 +355,172 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder zones: $e");
       throwError("Failed to reorder zones: $e");
+    }
+  }
+
+  void updateSourcesInZone({required String zoneId, required List<String> sourceIds, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      final List<Source> currentSources = getSourcesInZone(zoneId: zoneId);
+      final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
+      final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
+      final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
+      for (final String id in toRemove) {
+        projectManager.removeSourceFromZone(zoneId: zoneId, sourceId: id);
+      }
+      for (final String id in toAdd) {
+        projectManager.addSourceToZone(zoneId: zoneId, sourceId: id);
+      }
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for zone: $e");
+      throwError("Failed to update sources for zone: $e");
+    }
+  }
+
+  void addSourceToZone({required String zoneId, required String sourceId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.addSourceToZone(zoneId: zoneId, sourceId: sourceId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add source to zone: $e");
+      throwError("Failed to add source to zone: $e");
+    }
+  }
+
+  void removeSourceFromZone({required String zoneId, required String sourceId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.removeSourceFromZone(zoneId: zoneId, sourceId: sourceId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove source from zone: $e");
+      throwError("Failed to remove source from zone: $e");
+    }
+  }
+
+  List<Source> getSourcesInZone({required String zoneId}) {
+    try {
+      return projectManager.getSourcesInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources in zone: $e");
+      return <Source>[];
+    }
+  }
+
+  List<Source> getSourcesAndSourceSetSourcesInZone({required String zoneId}) {
+    try {
+      return projectManager.getSourcesAndSourceSetSourcesInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources and source set sources in zone: $e");
+      return <Source>[];
+    }
+  }
+
+  void addPrioritySourceToZone({required String zoneId, required String sourceId, required int priority, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.addPrioritySourceToZone(zoneId: zoneId, sourceId: sourceId, priority: priority);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add priority source to zone: $e");
+      throwError("Failed to add priority source to zone: $e");
+    }
+  }
+
+  void removePrioritySourceFromZone({required String zoneId, required String sourceId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.removePrioritySourceFromZone(zoneId: zoneId, sourceId: sourceId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove priority source from zone: $e");
+      throwError("Failed to remove priority source from zone: $e");
+    }
+  }
+
+  List<String> getPrioritySourcesInZone({required String zoneId}) {
+    try {
+      return projectManager.getPrioritySourcesInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get priority sources in zone: $e");
+      return <String>[];
+    }
+  }
+
+  void reOrderPrioritySourcesInZone({required String zoneId, required List<String> newOrder, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder priority sources in zone: $e");
+      throwError("Failed to reorder priority sources in zone: $e");
+    }
+  }
+
+  List<PrioritySourceData> getPrioritySourcesDataInZone({required String zoneId}) {
+    try {
+      return projectManager.getPrioritySourcesDataInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get priority sources data in zone: $e");
+      return <PrioritySourceData>[];
+    }
+  }
+
+  PrioritySourceData? getPrioritySourceDataById({required String priorityDataId}) {
+    try {
+      return projectManager.getPrioritySourceDataById(priorityDataId: priorityDataId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get priority source data by id: $e");
+      return null;
+    }
+  }
+
+  void updatePrioritySourceGain({required String priorityDataId, required double newGain, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updatePrioritySourceGain(priorityDataId: priorityDataId, newGain: newGain);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update priority source gain: $e");
+      throwError("Failed to update priority source gain: $e");
     }
   }
 }

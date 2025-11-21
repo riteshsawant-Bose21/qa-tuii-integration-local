@@ -7,40 +7,37 @@ import '../../fusion_utils/fusion_utilities.dart';
 class SourceSet {
   final String id;
   final String name;
-  final Map<String, double> sourceMixLevels;
+  final bool isLinked;
 
   SourceSet({
     String? id,
     required this.name,
-    Map<String, double>? sourceMixLevels,
-  }) : id = id ?? "SET${FusionUtils.shortStringUUID()}",
-       sourceMixLevels = sourceMixLevels ?? <String, double>{};
+    this.isLinked = false,
+  }) : id = id ?? "SET${FusionUtils.shortStringUUID()}";
 
   SourceSet copyWith({
     String? id,
     String? name,
-    Map<String, double>? sourceMixLevels,
+    bool? isLinked,
   }) {
     return SourceSet(
       id: id ?? this.id,
       name: name ?? this.name,
-      sourceMixLevels: sourceMixLevels ?? this.sourceMixLevels,
+      isLinked: isLinked ?? this.isLinked,
     );
   }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
-    'sourceMixLevels': sourceMixLevels.map((String key, double value) => MapEntry<String, dynamic>(key, value)),
+    'isLinked': isLinked,
   };
 
   factory SourceSet.fromJson(Map<String, dynamic> json) {
     return SourceSet(
       id: json['id'] as String,
       name: json['name'] as String,
-      sourceMixLevels:
-          (json['sourceMixLevels'] as Map<String, dynamic>?)?.map((String key, dynamic value) => MapEntry<String, double>(key, (value as num).toDouble())) ??
-          <String, double>{},
+      isLinked: json['isLinked'] as bool? ?? false,
     );
   }
 }

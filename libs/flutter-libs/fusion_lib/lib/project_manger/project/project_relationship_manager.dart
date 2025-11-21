@@ -5,6 +5,7 @@ enum RelationshipType {
   floorAreas,
   zoneAreas,
   zoneSourceSet,
+  zoneSources,
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,
@@ -13,6 +14,14 @@ enum RelationshipType {
   zoneCircuits,
   wireConnection,
   processingBlock,
+  // prioritySources,
+  zonePriorities,
+  priorityIndex,
+  zoneFunctions,
+  functionScenes,
+  selectedFunctionScenes,
+  selectedSourceForFunction,
+  sourcePriorityData,
 }
 
 class RelationshipManager {
