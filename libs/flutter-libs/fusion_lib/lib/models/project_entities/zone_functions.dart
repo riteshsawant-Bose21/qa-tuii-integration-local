@@ -26,6 +26,45 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
         return 'Mini Matrix With Priority';
     }
   }
+
+  bool get hasMixScenes {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceSelectWithPriority:
+        return false;
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.sourceMixWithPriority:
+      case ZoneFunctionsType.miniMatrix:
+      case ZoneFunctionsType.miniMatrixWithPriority:
+        return true;
+    }
+  }
+
+  bool get hasMixSettings {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceSelectWithPriority:
+      case ZoneFunctionsType.miniMatrix:
+      case ZoneFunctionsType.miniMatrixWithPriority:
+        return false;
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.sourceMixWithPriority:
+        return true;
+    }
+  }
+
+  bool get hasMatrixSettings {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceSelectWithPriority:
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.sourceMixWithPriority:
+        return false;
+      case ZoneFunctionsType.miniMatrix:
+      case ZoneFunctionsType.miniMatrixWithPriority:
+        return true;
+    }
+  }
 }
 
 class ZoneFunctions {

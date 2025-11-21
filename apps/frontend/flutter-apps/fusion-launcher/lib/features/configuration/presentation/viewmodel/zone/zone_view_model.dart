@@ -498,4 +498,38 @@ extension ZoneViewModel on ProjectViewModel {
       throwError("Failed to reorder priority sources in zone: $e");
     }
   }
+
+  List<PrioritySourceData> getPrioritySourcesDataInZone({required String zoneId}) {
+    try {
+      return projectManager.getPrioritySourcesDataInZone(zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get priority sources data in zone: $e");
+      return <PrioritySourceData>[];
+    }
+  }
+
+  PrioritySourceData? getPrioritySourceDataById({required String priorityDataId}) {
+    try {
+      return projectManager.getPrioritySourceDataById(priorityDataId: priorityDataId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get priority source data by id: $e");
+      return null;
+    }
+  }
+
+  void updatePrioritySourceGain({required String priorityDataId, required double newGain, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updatePrioritySourceGain(priorityDataId: priorityDataId, newGain: newGain);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update priority source gain: $e");
+      throwError("Failed to update priority source gain: $e");
+    }
+  }
 }

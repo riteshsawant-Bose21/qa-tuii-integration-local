@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item_param.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_button.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_text_field.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_meter.dart';
 import 'package:fusion_launcher/features/processing_block/view/widgets/pb_slider.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+
+import '../common/neumorphic_button.dart';
 
 class NeumorphicAudioToggleButton extends StatelessWidget {
   final bool isActive;
@@ -256,7 +257,7 @@ class SliderAndMeterWithNameAndValueWidget extends StatelessWidget {
         SizedBox(
           width: 100,
           height: 32,
-          child: PBTextField(
+          child: NeumorphicTextField(
             hintText: dbValue,
             borderRadius: 8,
             height: 32,

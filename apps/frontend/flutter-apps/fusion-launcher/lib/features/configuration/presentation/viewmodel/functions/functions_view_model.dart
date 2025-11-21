@@ -98,61 +98,29 @@ extension FucntionsViewModel on ProjectViewModel {
     }
   }
 
-  void updateSourceGain({required String sourceId, required double gain, bool autoSave = true}) {
+  void selectSourceForFunction({required String functionId, required String sourceId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateSourceGain(
-        sourceId: sourceId,
-        gain: gain,
-      );
+      projectManager.selectSourceForFunction(functionId: functionId, sourceId: sourceId);
       if (autoSave) {
         saveProject();
       }
       updateProject();
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to update source gain : $ex");
-      throwError("Failed to update source gain : $ex");
+      FusionLogger.log(tag: LogTag.project, message: "Failed to select source for function : $ex");
+      throwError("Failed to select source for function : $ex");
     }
   }
 
-  void muteSource({required String sourceId, required bool isMuted, bool autoSave = true}) {
+  String? getSelectedSourceForFunction({required String functionId}) {
     try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      projectManager.muteSource(
-        sourceId: sourceId,
-        isMuted: isMuted,
-      );
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
+      return projectManager.getSelectedSourceForFunction(functionId: functionId);
     } catch (ex) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to mute/unmute source : $ex");
-      throwError("Failed to mute/unmute source : $ex");
-    }
-  }
-
-  void updateSourceMix({required String sourceId, required double leftMix, required double rightMix, bool autoSave = true}) {
-    try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      projectManager.updateSourceMix(
-        sourceId: sourceId,
-        leftMix: leftMix,
-        rightMix: rightMix,
-      );
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
-    } catch (ex) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to update source mix : $ex");
-      throwError("Failed to update source mix : $ex");
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get selected source for function : $ex");
+      throwError("Failed to get selected source for function : $ex");
+      return null;
     }
   }
 }

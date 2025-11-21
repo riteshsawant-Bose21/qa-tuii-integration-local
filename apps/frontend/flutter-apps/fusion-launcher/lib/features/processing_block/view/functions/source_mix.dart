@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/processing_block/view/widgets/pb_textfield.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_button.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
-import '../widgets/pb_button.dart';
 import '../widgets/pb_meter.dart';
 import '../widgets/pb_slider.dart';
 import 'widgets.dart';
@@ -90,7 +90,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                       style: Theme.of(context).textTheme.labelMedium,
                                     ),
 
-                                    const PBTextField(
+                                    const NeumorphicTextField(
                                       hintText: "-20db ",
                                       width: 100,
                                       height: 24,
@@ -109,7 +109,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                       text: "Lectern Mic",
                                       style: Theme.of(context).textTheme.labelMedium,
                                     ),
-                                    const PBTextField(
+                                    const NeumorphicTextField(
                                       hintText: "-20db ",
                                       width: 100,
                                       height: 24,
@@ -129,7 +129,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                       style: Theme.of(context).textTheme.labelMedium,
                                     ),
 
-                                    const PBTextField(
+                                    const NeumorphicTextField(
                                       hintText: "-20db ",
                                       width: 100,
                                       height: 24,
@@ -149,7 +149,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                       style: Theme.of(context).textTheme.labelMedium,
                                     ),
 
-                                    const PBTextField(
+                                    const NeumorphicTextField(
                                       hintText: "-20db ",
                                       width: 100,
                                       height: 24,
@@ -315,7 +315,7 @@ class SourceMixMixScenes extends StatelessWidget {
           ),
 
           const SizedBox(height: 10),
-          PBButton(
+          NeumorphicButton(
             text: "STORE",
             width: 72,
             height: 24,
@@ -325,7 +325,7 @@ class SourceMixMixScenes extends StatelessWidget {
             },
           ),
           const SizedBox(height: 10),
-          PBButton(
+          NeumorphicButton(
             text: "DELETE",
             width: 72,
             height: 24,
@@ -370,7 +370,7 @@ class SourceMixFrontRearWidget extends StatelessWidget {
           ),
         ),
 
-        const PBTextField(
+        const NeumorphicTextField(
           borderRadius: 8,
           hintText: "-20db ",
           width: 100,

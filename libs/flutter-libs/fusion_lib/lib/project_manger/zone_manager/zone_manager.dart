@@ -178,4 +178,25 @@ extension ZoneManager on ProjectManager {
     }
     projectService!.reOrderPrioritySourcesInZone(zoneId: zoneId, newOrder: newOrder);
   }
+
+  List<PrioritySourceData> getPrioritySourcesDataInZone(String zoneId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getPrioritySourcesDataInZone(zoneId);
+  }
+
+  void updatePrioritySourceGain({required String priorityDataId, required double newGain}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updatePrioritySourceGain(priorityDataId: priorityDataId, newGain: newGain);
+  }
+
+  PrioritySourceData? getPrioritySourceDataById({required String priorityDataId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getPrioritySourceDataById(priorityDataId: priorityDataId);
+  }
 }

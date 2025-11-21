@@ -1,79 +1,62 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_container.dart';
+import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
 
-import 'pb_button.dart';
+import '../../dto/pb_item.dart';
+import '../../dto/pb_item_param.dart';
+import '../item_widget_builder.dart';
 
-class PBTextField extends StatefulWidget {
-  final String hintText;
-  final TextEditingController? controller;
-  final ValueChanged<String?>? onChanged;
-  final double? height;
-  final double? width;
-  final double borderRadius;
-
-  const PBTextField({
+class PBTextfield extends StatelessWidget {
+  const PBTextfield({
     super.key,
-    required this.hintText,
-    this.controller,
-    this.onChanged,
-    this.height,
-    this.width,
-    this.borderRadius = 10,
+    required this.item,
+    this.showIntervals = true,
+    this.handler,
   });
 
-  @override
-  State<PBTextField> createState() => _PBTextFieldState();
-}
-
-class _PBTextFieldState extends State<PBTextField> {
-  bool isFocused = false;
-  late FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-    _focusNode.addListener(() {
-      setState(() {
-        isFocused = _focusNode.hasFocus;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
+  final PBItem item;
+  final bool showIntervals;
+  final PBWidgetValueHandler? handler;
 
   @override
   Widget build(BuildContext context) {
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(widget.borderRadius),
-      child: Container(
-        width: widget.width,
-        height: widget.height,
-        alignment: Alignment.center,
-        decoration: BoxDecoration(
-          color: Colors.transparent,
-          borderRadius: BorderRadius.circular(widget.borderRadius),
-          boxShadow: isFocused ? null : getNeumorphismBoxShadows(inner: true),
-          border: isFocused ? Border.all(color: Colors.black12, width: 2) : null,
-        ),
-        child: TextField(
-          controller: widget.controller,
-          textAlign: TextAlign.center,
-          focusNode: _focusNode,
-          style: Theme.of(context).textTheme.labelLarge,
-          decoration: InputDecoration(
-            border: InputBorder.none,
-            hintText: widget.hintText,
-            isDense: true,
-            hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
-            contentPadding: const EdgeInsets.all(0),
+    final PBTextfieldParam data = (handler?.resolveForItem(item) ?? item.param) as PBTextfieldParam;
+
+    return LayoutBuilder(
+      builder: (BuildContext context, BoxConstraints constraints) {
+        final num? value = WiringSerializationUtil.numDeserializer.deserialize(handler?.getValue(item) ?? item.value);
+        return NeumorphicContainer(
+          inner: true,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            height: constraints.maxHeight,
+            child: Center(
+              child: TextFormField(
+                key: ValueKey<String>('${item.id}_textfield${value?.toString() ?? ''}'),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+                  hintText: data.label,
+                  suffixText: data.unit ?? '',
+                  isDense: true,
+                  isCollapsed: true,
+                ),
+                textAlign: TextAlign.center,
+                textAlignVertical: TextAlignVertical.top,
+                initialValue: value?.toString() ?? '',
+                keyboardType: TextInputType.number,
+
+                onFieldSubmitted: (String value) {
+                  final num? parsedValue = num.tryParse(value);
+                  if (parsedValue != null) {
+                    handler?.onValueChanged(item, parsedValue.clamp(data.min, data.max));
+                  }
+                },
+              ),
+            ),
           ),
-          onChanged: widget.onChanged,
-        ),
-      ),
+        );
+      },
     );
   }
 }

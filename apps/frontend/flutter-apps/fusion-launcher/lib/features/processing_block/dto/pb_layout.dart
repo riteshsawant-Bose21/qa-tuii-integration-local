@@ -24,7 +24,7 @@ class PBLayout {
       width: (map['width'] ?? 0) as num,
       height: (map['height'] ?? 0) as num,
       children: List<PBItem>.from(
-        (map['children'] as List<Map<dynamic, dynamic>>).map<PBItem>((Map<dynamic, dynamic> x) => PBItem.fromMap(x as Map<String, dynamic>)),
+        (map['children']).map<PBItem>((dynamic x) => PBItem.fromMap(x as Map<String, dynamic>)),
       ),
     );
   }
