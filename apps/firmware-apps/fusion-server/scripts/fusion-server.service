@@ -3,6 +3,7 @@
 Description=Fusion Server
 After=network-online.target
 Wants=network-online.target
+ConditionKernelCommandLine=service_profile=prod
 
 [Service]
 Type=simple
