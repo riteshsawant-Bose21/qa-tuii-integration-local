@@ -87,7 +87,10 @@ func Load() (*Config, error) {
 		config.Processing.MaxWorkers, _ = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
 		config.Processing.BatchSize, _ = strconv.Atoi(getEnv("BATCH_SIZE", "50"))
 		config.Processing.RetryAttempts, _ = strconv.Atoi(getEnv("RETRY_ATTEMPTS", "3"))
-		if delay, err := time.ParseDuration(getEnv("RETRY_DELAY", "2s")); err == nil {
+		retryDelay := getEnv("RETRY_DELAY", "2")
+		if val, err := strconv.Atoi(retryDelay); err == nil {
+			config.Processing.RetryDelay = time.Duration(val) * time.Second
+		} else if delay, err := time.ParseDuration(retryDelay); err == nil {
 			config.Processing.RetryDelay = delay
 		} else {
 			config.Processing.RetryDelay = 2 * time.Second
@@ -129,7 +132,10 @@ func Load() (*Config, error) {
 	config.Processing.MaxWorkers, _ = strconv.Atoi(getEnv("MAX_WORKERS", "5"))
 	config.Processing.BatchSize, _ = strconv.Atoi(getEnv("BATCH_SIZE", "50"))
 	config.Processing.RetryAttempts, _ = strconv.Atoi(getEnv("RETRY_ATTEMPTS", "3"))
-	if delay, err := time.ParseDuration(getEnv("RETRY_DELAY", "2s")); err == nil {
+	retryDelay := getEnv("RETRY_DELAY", "2")
+	if val, err := strconv.Atoi(retryDelay); err == nil {
+		config.Processing.RetryDelay = time.Duration(val) * time.Second
+	} else if delay, err := time.ParseDuration(retryDelay); err == nil {
 		config.Processing.RetryDelay = delay
 	} else {
 		config.Processing.RetryDelay = 2 * time.Second
