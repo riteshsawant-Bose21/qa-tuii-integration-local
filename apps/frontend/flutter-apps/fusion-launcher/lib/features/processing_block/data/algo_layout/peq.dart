@@ -138,7 +138,7 @@ final Map<String, Object> _peq = <String, Object>{
     },
     <String, Object?>{
       "id": "815053",
-      "x": 98.44,
+      "x": 100.03,
       "y": 4.77,
       "width": 13.12,
       "height": 6.0,

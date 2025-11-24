@@ -9,8 +9,9 @@ class _PropertiesPanel extends StatelessWidget {
       decoration: BoxDecoration(border: Border(left: BorderSide(color: Colors.grey.shade400)), color: Colors.white),
       child: Consumer<PbcViewmodel>(
         builder: (BuildContext context, PbcViewmodel viewModel, Widget? child) {
-          final PBItem? selected = viewModel.selected;
-          if (selected == null) {
+          final List<PBItem> selectedItems = viewModel.selectedItems;
+
+          if (selectedItems.isEmpty) {
             return Padding(
               padding: const EdgeInsets.all(8.0),
               child: Column(
@@ -32,7 +33,8 @@ class _PropertiesPanel extends StatelessWidget {
               ),
             );
           }
-          final Map<String, dynamic>? selectedParams = viewModel.selected?.param.toMap();
+          final PBItem selected = selectedItems.first;
+          final Map<String, dynamic> selectedParams = selected.param.toMap();
           return ListView(
             key: ValueKey<PBItem?>(selected),
             padding: const EdgeInsets.all(8),
@@ -107,14 +109,14 @@ class _PropertiesPanel extends StatelessWidget {
                 ],
               ),
 
-              for (final String key in selectedParams?.keys ?? <String>[])
+              for (final String key in selectedParams.keys ?? <String>[])
                 Row(
                   spacing: 10,
                   children: <Widget>[
                     Text(key),
                     Expanded(
                       child: TextFormField(
-                        initialValue: selectedParams?[key]?.toString(),
+                        initialValue: selectedParams[key]?.toString(),
                         onFieldSubmitted: (String? newValue) {
                           viewModel.updateProperty(key, newValue ?? "");
                         },

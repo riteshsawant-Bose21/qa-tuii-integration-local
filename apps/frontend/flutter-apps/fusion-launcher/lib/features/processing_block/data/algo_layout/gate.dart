@@ -162,8 +162,8 @@ final Map<String, Object> _gate = <String, Object>{
     },
     <String, Object?>{
       "id": "575725",
-      "x": 107.57,
-      "y": 4.91,
+      "x": 109.59,
+      "y": 5.07,
       "width": 14.94,
       "height": 4.35,
       "field": "bypass",
