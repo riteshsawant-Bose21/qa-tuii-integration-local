@@ -150,16 +150,23 @@ func TestSnapshotActivateNonExistent(t *testing.T) {
 func TestSnapshotPropagation(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_propagation_%d", time.Now().UnixNano())
 	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+
+	// Create snapshot on origin node
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
 	resp.Body.Close()
+
+	// Wait until all nodes have the snapshot
 	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
 		return snapshotExistsOnAllNodes(t, snapshotName)
 	}) {
+		logPerNodeSnapshotStatus(t, snapshotName)
 		t.Fatalf("Snapshot %q did not propagate to all nodes", snapshotName)
 	}
+
+	// Activate the snapshot
 	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	client := &http.Client{}
@@ -168,6 +175,8 @@ func TestSnapshotPropagation(t *testing.T) {
 		t.Fatalf("Failed to activate snapshot: %v", err)
 	}
 	resp.Body.Close()
+
+	// Delete the snapshot
 	deleteURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
 	req, _ = http.NewRequest(http.MethodDelete, deleteURL, nil)
 	resp, err = client.Do(req)
@@ -175,9 +184,12 @@ func TestSnapshotPropagation(t *testing.T) {
 		t.Fatalf("Failed to delete snapshot: %v", err)
 	}
 	resp.Body.Close()
+
+	// Wait until all nodes remove the snapshot
 	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
 		return snapshotRemovedOnAllNodes(t, snapshotName)
 	}) {
+		logPerNodeSnapshotStatus(t, snapshotName)
 		t.Fatalf("Snapshot %q was not removed from all nodes", snapshotName)
 	}
 }
@@ -781,4 +793,53 @@ func TestSnapshotRestoresNestedState(t *testing.T) {
 	if asInt(valB1) != 20 {
 		t.Fatalf("Path lookup %s.b[1] expected 20, got %v", configKey, valB1)
 	}
+}
+
+// Logs snapshot list for each node to help diagnose propagation failures.
+func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
+	t.Helper()
+
+	nodes, err := getLiveNodeAddresses()
+	if err != nil {
+		t.Logf("Error retrieving node addresses: %v", err)
+		return
+	}
+
+	t.Logf("---- Snapshot propagation debug for %q ----", snapshotName)
+
+	for _, addr := range nodes {
+		url := fmt.Sprintf("%s/snapshots", addr)
+		resp, err := http.Get(url)
+		if err != nil {
+			t.Logf("[%s] ERROR: %v", addr, err)
+			continue
+		}
+
+		var list struct {
+			Snapshots []string `json:"snapshots"`
+		}
+
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			t.Logf("[%s] status=%d body=%s", addr, resp.StatusCode, string(body))
+			continue
+		}
+
+		if err := json.Unmarshal(body, &list); err != nil {
+			t.Logf("[%s] JSON decode error: %v (body=%s)", addr, err, string(body))
+			continue
+		}
+
+		has := slices.Contains(list.Snapshots, snapshotName)
+		mark := "❌"
+		if has {
+			mark = "✔️"
+		}
+
+		t.Logf("[%s] %s snapshots=%v", addr, mark, list.Snapshots)
+	}
+
+	t.Log("-------------------------------------------------")
 }

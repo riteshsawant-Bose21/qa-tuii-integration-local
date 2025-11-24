@@ -9,6 +9,7 @@ import (
 	"fusion/internal/utils"
 	"io"
 	"net/http"
+	"strings"
 
 	json "github.com/goccy/go-json"
 )
@@ -96,21 +97,28 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if patch.CronExpr == nil || patch.Description == nil {
-		http.Error(w, "Cron expression and description are required", http.StatusBadRequest)
+	// At least one must be present
+	hasSnapshot := patch.Snapshot != nil
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
+
+	if !(hasSnapshot || hasCron || hasDesc) {
+		http.Error(w, "At least one field (snapshot, cron_expr, description) must be provided", http.StatusBadRequest)
 		return
 	}
 
-	if patch.Description != nil {
+	// Update description
+	if patch.Description != nil && strings.TrimSpace(*patch.Description) != "" {
 		task.Description = *patch.Description
 	}
 
-	if patch.CronExpr != nil {
+	// Update cron expression
+	if patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != "" {
 		task.CronExpr = *patch.CronExpr
 	}
 
+	// Update snapshot
 	if patch.Snapshot != nil {
-
 		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,13 +126,14 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		}
 
 		if !exists {
-			http.Error(w, fmt.Sprintf("Snapshot %s not found: %v", *patch.Snapshot, err), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Snapshot %s not found", *patch.Snapshot), http.StatusNotFound)
 			return
 		}
 
 		task.Params[api.SnapshotIDKey] = *patch.Snapshot
 	}
 
+	// Run update
 	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {

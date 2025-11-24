@@ -246,7 +246,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
 	})
 
 	t.Run("RemoveTaskHandler wrong method", func(t *testing.T) {
