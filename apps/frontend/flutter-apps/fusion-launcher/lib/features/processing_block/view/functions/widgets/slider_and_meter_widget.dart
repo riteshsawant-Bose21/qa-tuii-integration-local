@@ -29,6 +29,7 @@ class SliderAndMeterWidget extends StatelessWidget {
             value: sliderValue,
             min: sliderMin,
             max: sliderMax,
+            intervalGap: 6,
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),
