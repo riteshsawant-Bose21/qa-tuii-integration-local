@@ -17,7 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
@@ -63,7 +65,7 @@ func main() {
 	}
 
 	// Load API configuration
-	cfg, err := api.NewAPIConfig(configSVC)
+	cfg, err := serverapi.NewAPIConfig(configSVC)
 	if err != nil {
 		logger.Fatal("Failed to load API config", zap.Error(err))
 	}
