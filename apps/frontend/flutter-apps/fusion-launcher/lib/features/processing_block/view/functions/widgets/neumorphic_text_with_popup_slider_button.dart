@@ -39,7 +39,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
       borderRadius: BorderRadiusGeometry.circular(widget.borderRadius),
       clipBehavior: widget.isActive ? Clip.hardEdge : Clip.none,
       child: Container(
-        height: widget.height ?? 32,
+        height: widget.height ?? 28,
         width: widget.width ?? double.infinity,
         clipBehavior: widget.isActive ? Clip.hardEdge : Clip.none,
         alignment: Alignment.center,
@@ -112,9 +112,9 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                         child: Center(
                           child: VerticalSlider(
                             value: widget.value ?? 0.0,
-                            min: -12,
-                            max: 60,
-                            intervalGap: 10,
+                            min: -60,
+                            max: 12,
+                            intervalGap: 12,
                             onChanged: (num value) {
                               widget.onChanged?.call(
                                 value.toDouble(),
@@ -128,7 +128,7 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                 },
                 child: AbsorbPointer(
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
+                    padding: const EdgeInsets.only(right: 2),
                     child: Icon(
                       Icons.keyboard_arrow_down,
                       color: Colors.grey[600],

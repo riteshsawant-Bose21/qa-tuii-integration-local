@@ -19,7 +19,7 @@ class NeumorphicGainTextField extends StatefulWidget {
     required this.minGain,
     this.onSubmitted,
     this.height = 32,
-    this.width = 72,
+    this.width = 84,
     this.borderRadius = 8,
     this.controllerValue,
   });

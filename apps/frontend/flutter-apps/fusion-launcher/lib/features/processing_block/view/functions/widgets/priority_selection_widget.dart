@@ -74,6 +74,8 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
             ),
           ),
 
+          const Divider(color: Colors.black12, height: 0),
+
           _buildReorderablePriorityWidgets(),
         ],
       ),
@@ -226,7 +228,6 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                 text: "Active",
                                 isActive: false,
                                 width: 72,
-                                height: 24,
                                 onTap: () {
                                   //
                                 },
@@ -252,7 +253,6 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
                                 child: NeumorphicTextWithPopupSliderButton(
                                   isActive: false,
                                   width: 72,
-                                  height: 24,
                                 ),
                               ),
                             ],
