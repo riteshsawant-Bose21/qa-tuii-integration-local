@@ -285,6 +285,41 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
+  void moveCircuitsFromZoneToSubZone({
+    required String zoneId,
+    required String subZoneId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      // Get all circuits in the zone before any operations
+      final List<CircuitModel> zoneCircuits = getCircuitsInZone(zoneId);
+
+      FusionLogger.log(tag: LogTag.project, message: "Moving ${zoneCircuits.length} circuits from zone $zoneId to subzone $subZoneId");
+
+      // Move each circuit from zone to subzone
+      // Note: This should typically be handled automatically when listening areas are moved
+      // but we're doing this as a fallback to ensure circuits are properly assigned
+      for (final CircuitModel circuit in zoneCircuits) {
+        // Remove from zone first
+        removeCircuitFromZone(circuitId: circuit.id, zoneId: zoneId, autoSave: false);
+        // Then add to subzone
+        addCircuitToSubZone(circuitId: circuit.id, subZoneId: subZoneId, autoSave: false);
+      }
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to move circuits from zone to subzone: $e");
+      throwError("Failed to move circuits from zone to subzone: $e");
+    }
+  }
+
   List<CircuitModel> getCompatibleCircuits({
     required String hardwareId,
     String? sku,

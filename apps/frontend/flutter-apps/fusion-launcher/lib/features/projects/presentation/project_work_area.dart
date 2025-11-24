@@ -96,7 +96,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+    _projectNameController = TextEditingController(
+      text: serviceLocator<ProjectViewModel>().projectName,
+    );
     _initMace();
     _initSplRangeDefaults();
 
@@ -105,7 +107,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   Future<void> _initMace() async {
-    if (Platform.isMacOS || Platform.isIOS) {
+    if (Platform.isMacOS || Platform.isIOS || Platform.isWindows) {
       WidgetsFlutterBinding.ensureInitialized();
       _engine = await MaceEngine.create();
 
@@ -118,7 +120,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   SplPanelData? _lastPanelData;
 
-  _initSplRangeDefaults() {
+  void _initSplRangeDefaults() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     _lastPanelData = currentPanelData;
     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
@@ -170,8 +172,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   Future<void> calculateSPL() async {
-    if (_engine == null) return;
-    if (!_floorCanvasController.isShowingSpl.value) return;
+    if (_engine == null) {
+      debugPrint('calculateSPL: _engine is null');
+      return;
+    }
+    if (!_floorCanvasController.isShowingSpl.value) {
+      debugPrint('calculateSPL: isShowingSpl is false');
+      return;
+    }
 
     final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
@@ -190,13 +198,25 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       floorId: currentFloor.id,
     );
 
-    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
+    await SPLCalculationManager.calculateSpl(
+      _engine!,
+      speakers,
+      surfaces,
+      _lastPanelData!.getResolutionSpacing(),
+    );
 
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
-    final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final Bandwidth maceBandwidth = _mapToMaceBandwidth(
+      currentPanelData.bandwidth,
+    );
     final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
     final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
-    await updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+    await updateSpl(
+      maceBandwidth,
+      frequency,
+      weighting,
+      currentPanelData.relative,
+    );
   }
 
   Future<void> updateSpl(
@@ -237,7 +257,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     }
 
     for (final SPLCalculation calc in toApply) {
-      final List<ui.Offset> pts = calc.surface.getFieldPoints(_lastPanelData?.getResolutionSpacing() ?? 20.0);
+      final List<ui.Offset> pts = calc.surface.getFieldPoints(
+        _lastPanelData?.getResolutionSpacing() ?? 20.0,
+      );
       calc.surface.setSplData(pts, calc.spl);
     }
   }
@@ -273,52 +295,52 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
     return <DockItemConfig>[
-      DockItemConfig(
+      const DockItemConfig(
         id: "1",
         title: "FLOORS",
         side: "left",
         allowUndock: true,
         isCollapsibleSection: false,
-        dockItemWidget: () => const BuildingPlan(),
+        dockItemWidget: BuildingPlan(),
       ),
       DockItemConfig(
         id: "5",
         title: "PROPERTIES",
         side: "right",
         initiallyExpanded: false,
-        dockItemWidget:
-            () => PropertiesPanel(
-              onSpeakerUpdated: () {
-                print("Speaker properties updated, update SPL...");
-                calculateSPL();
-              },
-            ),
+        dockItemWidget: PropertiesPanel(
+          onSpeakerUpdated: () {
+            calculateSPL();
+          },
+          onSpeakerDeleted: () {
+            calculateSPL();
+          },
+        ),
       ),
       DockItemConfig(
         id: "6",
         title: "COST CALCULATOR",
         side: "right",
         allowUndock: true,
-        dockItemWidget:
-            () => CostCalculatorScreen(
-              speakers: serviceLocator<ProjectViewModel>().speakers,
-              sources: serviceLocator<ProjectViewModel>().sources,
-              controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-              racks:
-                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                      .where(
-                        (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                      )
-                      .toList(),
-              amplifiers: <Amplifier>[],
-              fusionDevices: <FusionDsp>[],
-              others:
-                  serviceLocator<ProjectViewModel>().genericHardwareComponents
-                      .where(
-                        (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                      )
-                      .toList(),
-            ),
+        dockItemWidget: CostCalculatorScreen(
+          speakers: serviceLocator<ProjectViewModel>().speakers,
+          sources: serviceLocator<ProjectViewModel>().sources,
+          controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+          racks:
+              serviceLocator<ProjectViewModel>().genericHardwareComponents
+                  .where(
+                    (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                  )
+                  .toList(),
+          amplifiers: <Amplifier>[],
+          fusionDevices: <FusionDsp>[],
+          others:
+              serviceLocator<ProjectViewModel>().genericHardwareComponents
+                  .where(
+                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                  )
+                  .toList(),
+        ),
       ),
       DockItemConfig(
         id: "7",
@@ -327,13 +349,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget: () => toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget: toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
       ),
       DockItemConfig(
         id: "8",
         title: "PRODUCT QUERY",
         side: "right",
-        dockItemWidget: () => const ProductQueryView(),
+        dockItemWidget: const ProductQueryView(),
         controller: productsController,
       ),
       DockItemConfig(
@@ -341,17 +363,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         title: "SPL MAPPING",
         side: "right",
         controller: splController,
-        dockItemWidget:
-            () => SplPanel(
-              controller: _splRangeController,
-              initialData: _lastPanelData!,
-              onChanged: (SplPanelData value) {
-                FusionLogger.log(tag: LogTag.panel, message: value.toString());
-                _splRangeController.onMappingDataChanged(value);
-                _updateSPLFromPanelData();
-                setState(() {});
-              },
-            ),
+        dockItemWidget: SplPanel(
+          controller: _splRangeController,
+          initialData: _lastPanelData!,
+          onChanged: (SplPanelData value) {
+            FusionLogger.log(tag: LogTag.panel, message: value.toString());
+            _splRangeController.onMappingDataChanged(value);
+            _updateSPLFromPanelData();
+            setState(() {});
+          },
+        ),
       ),
     ];
   }
@@ -405,39 +426,38 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             showRight: true,
             mainArea: const SchematicsPage(),
             dockItemList: <DockItemConfig>[
-              DockItemConfig(
+              const DockItemConfig(
                 id: "5",
                 title: "PROPERTIES",
                 side: "right",
                 initiallyExpanded: true,
                 allowUndock: false,
-                dockItemWidget: () => const SchematicProperties(),
+                dockItemWidget: SchematicProperties(),
               ),
               DockItemConfig(
                 id: "6",
                 title: "COST CALCULATOR",
                 side: "right",
                 allowUndock: true,
-                dockItemWidget:
-                    () => CostCalculatorScreen(
-                      speakers: serviceLocator<ProjectViewModel>().speakers,
-                      sources: serviceLocator<ProjectViewModel>().sources,
-                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                      racks:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                              )
-                              .toList(),
-                      amplifiers: <Amplifier>[],
-                      fusionDevices: <FusionDsp>[],
-                      others:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                              )
-                              .toList(),
-                    ),
+                dockItemWidget: CostCalculatorScreen(
+                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                  sources: serviceLocator<ProjectViewModel>().sources,
+                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                  racks:
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                          .where(
+                            (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                          )
+                          .toList(),
+                  amplifiers: <Amplifier>[],
+                  fusionDevices: <FusionDsp>[],
+                  others:
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                          .where(
+                            (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                          )
+                          .toList(),
+                ),
               ),
               // DockItemConfig(
               //   id: "8",
@@ -445,12 +465,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               //   side: "right",
               //   dockItemWidget: () => const ProductQueryView(),
               // ),
-              DockItemConfig(
+              const DockItemConfig(
                 id: "10",
                 title: "PRODUCT LIST",
                 side: "left",
                 initiallyExpanded: true,
-                dockItemWidget: () => const WiringDeviceListView(),
+                dockItemWidget: WiringDeviceListView(),
               ),
             ],
           );
@@ -504,17 +524,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             side: "left",
             allowUndock: true,
             isCollapsibleSection: false,
-            dockItemWidget:
-                () => BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                  builder: (BuildContext context, ProjectViewModelState state) {
-                    return ConfigurationTabSwitcher(
-                      selectedMode: _projectViewModel.currentConfigurationMenuMode,
-                      onModeChanged: (ConfigurationMenuMode mode) {
-                        _projectViewModel.setConfigurationMenuMode(mode);
-                      },
-                    );
+            dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              builder: (BuildContext context, ProjectViewModelState state) {
+                return ConfigurationTabSwitcher(
+                  selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                  onModeChanged: (ConfigurationMenuMode mode) {
+                    _projectViewModel.setConfigurationMenuMode(mode);
                   },
-                ),
+                );
+              },
+            ),
           ),
         ],
       ),
@@ -755,7 +774,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           color: Theme.of(context).colorScheme.white,
           // border right
           border: Border(
-            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+            right: BorderSide(
+              color: Theme.of(context).colorScheme.dividerColor,
+              width: 1,
+            ),
           ),
         ),
         child: Row(
@@ -768,12 +790,17 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, ProjectViewModelState state) {
+                    builder: (
+                      BuildContext context,
+                      ProjectViewModelState state,
+                    ) {
                       return FusionAppText(
                         text: serviceLocator<ProjectViewModel>().projectName,
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontWeight: FontWeight.w900,
+                        ),
                       );
                     },
                   ),
@@ -806,7 +833,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       const Offset(-100, -20) & overlay.size,
     );
@@ -866,11 +896,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
@@ -878,7 +912,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
                         isDense: true,
                       ),
                       onChanged: (String value) {
@@ -918,7 +955,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           height: 28,
                           width: 64,
                           label: "Cancel",
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          textStyle: Theme.of(
+                            context,
+                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
                             _clearFields();
                             Navigator.of(context).pop();
@@ -976,7 +1015,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   elevation: 0,
                 ),
                 child: const Text(
