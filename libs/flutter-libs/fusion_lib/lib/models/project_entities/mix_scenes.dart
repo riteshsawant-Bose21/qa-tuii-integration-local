@@ -41,7 +41,7 @@ abstract class MixScene {
 // ============================================================================
 class SourceMixScene extends MixScene {
   SourceMixScene({
-    String? id,
+    super.id,
     required super.name,
     super.type = MixSceneType.source,
     super.createdAt,
@@ -90,7 +90,7 @@ class SourceMixScene extends MixScene {
 // ============================================================================
 class MatrixMixScene extends MixScene {
   MatrixMixScene({
-    String? id,
+    super.id,
     required super.name,
     super.type = MixSceneType.matrix,
     super.createdAt,
