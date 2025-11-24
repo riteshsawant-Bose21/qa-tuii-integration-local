@@ -12,11 +12,6 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'toolbar/building_toolbar.dart';

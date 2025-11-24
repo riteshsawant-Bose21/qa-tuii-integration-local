@@ -60,29 +60,6 @@ extension MixScenesViewModel on ProjectViewModel {
     }
   }
 
-  void selectMixSceneForFunction({
-    required String functionId,
-    required String sceneId,
-    bool autoSave = true,
-  }) {
-    try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      projectManager.selectMixSceneForFunction(
-        functionId: functionId,
-        sceneId: sceneId,
-      );
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
-    } catch (ex) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to select mix scene for function : $ex");
-      throwError("Failed to select mix scene for function : $ex");
-    }
-  }
-
   List<MixSettings> getCurrentMixSettingsForFunction({
     required String functionId,
   }) {
@@ -113,6 +90,7 @@ extension MixScenesViewModel on ProjectViewModel {
 
   void updateMixSettings({
     required MixSettings mixSettings,
+    required String functionId,
     bool autoSave = true,
   }) {
     try {
@@ -121,6 +99,7 @@ extension MixScenesViewModel on ProjectViewModel {
       }
       projectManager.updateMixSettings(
         mixSettings: mixSettings,
+        functionId: functionId,
       );
       if (autoSave) {
         saveProject();
@@ -134,6 +113,7 @@ extension MixScenesViewModel on ProjectViewModel {
 
   void updateMatrixSettings({
     required MatrixSettings matrixSettings,
+    required String functionId,
     bool autoSave = true,
   }) {
     try {
@@ -142,6 +122,7 @@ extension MixScenesViewModel on ProjectViewModel {
       }
       projectManager.updateMatrixSettings(
         matrixSettings: matrixSettings,
+        functionId: functionId,
       );
       if (autoSave) {
         saveProject();
@@ -236,8 +217,46 @@ extension MixScenesViewModel on ProjectViewModel {
     }
   }
 
-  void removeScene({
+  MatrixMixer? getMatrixMixerForFunction({
+    required String functionId,
+  }) {
+    try {
+      return projectManager.getMatrixMixerForFunction(
+        functionId: functionId,
+      );
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get matrix mixer for function : $ex");
+      throwError("Failed to get matrix mixer for function : $ex");
+      return null;
+    }
+  }
+
+  void updateMatrixMixer({
+    required MatrixMixer matrixMixer,
+    required String functionId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updateMatrixMixer(
+        matrixMixer: matrixMixer,
+        functionId: functionId,
+      );
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update matrix mixer for function : $ex");
+      throwError("Failed to update matrix mixer for function : $ex");
+    }
+  }
+
+  void removeMixScene({
     required String sceneId,
+    required String functionId,
     bool autoSave = true,
   }) {
     try {
@@ -246,6 +265,7 @@ extension MixScenesViewModel on ProjectViewModel {
       }
       projectManager.removeScene(
         sceneId: sceneId,
+        functionId: functionId,
       );
       if (autoSave) {
         saveProject();

@@ -12,6 +12,7 @@ import 'widgets/neumorphic_text_with_popup_slider_button.dart';
 
 class MiniMatrixZoneControlPanel extends StatefulWidget {
   final String zoneID;
+
   const MiniMatrixZoneControlPanel({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
@@ -34,26 +35,28 @@ class MiniMatrixZoneControlPanel extends StatefulWidget {
 }
 
 class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel> {
-  late String functionId;
-
+  late ZoneFunctions zoneFunction;
   @override
   void initState() {
     super.initState();
-    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!.id;
+    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+  }
+
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  MixScene? selectedMixScene(ZoneFunctions zoneFunction) {
+    final String? selectedId = zoneFunction.selectedMixSceneId;
+    if (selectedId == null) return null;
+    try {
+      return zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.id == selectedId);
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.85;
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-
-    // sources
-
-    final List<MixScene> savedMixScenes = projectViewModel.getAllMixScenesForFunction(functionId: functionId);
-    final MixScene? selectedMixScene = projectViewModel.getSelectedMixSceneForFunction(functionId);
-
-    final List<MatrixSettings> matrixSettings = projectViewModel.getCurrentMatrixSettingsForFunction(functionId: functionId);
 
     return Dialog(
       constraints: BoxConstraints(
@@ -62,109 +65,118 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
       ),
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(6)),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Container(
-              height: 28,
-              width: double.infinity,
-              color: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                spacing: 10,
-                children: <Widget>[
-                  Expanded(
-                    child: FusionAppText(
-                      text: "ZONE CONTROL PANEL - MINI MATRIX",
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
-                        fontSize: 11,
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(6)),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                Container(
+                  height: 28,
+                  width: double.infinity,
+                  color: Colors.black,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    spacing: 10,
+                    children: <Widget>[
+                      Expanded(
+                        child: FusionAppText(
+                          text: "ZONE CONTROL PANEL - MINI MATRIX",
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: Colors.white,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
-                    ),
-                  ),
-                  Material(
-                    color: Colors.transparent,
-                    child: InkWell(
-                      onTap: Navigator.of(context).pop,
-                      borderRadius: BorderRadius.circular(30),
-                      child: const Icon(
-                        Icons.close,
-                        color: Colors.white,
+                      Material(
+                        color: Colors.transparent,
+                        child: InkWell(
+                          onTap: Navigator.of(context).pop,
+                          borderRadius: BorderRadius.circular(30),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
-                    ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+                Flexible(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 4,
+                        child: MiniMatrixControls(
+                          zoneID: widget.zoneID,
+                          zoneFunctions: zoneFunction,
+                        ),
+                      ),
+
+                      const VerticalDivider(width: 1, color: Colors.black12),
+
+                      MixScenes(
+                        selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                        zoneId: widget.zoneID,
+                        onStoreTap: (String? value) {
+                          if (value == null || value.isEmpty) {
+                            return FusionToast.error(
+                              context,
+                              message: "Please enter a name for the mix scene",
+                            );
+                          } else {
+                            projectViewModel.saveCurrentSettingsAsMixScene(
+                              functionId: zoneFunction.id,
+                              sceneName: value,
+                            );
+                          }
+                        },
+                        mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                        onMixSceneSelect: (String value) {
+                          try {
+                            final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                            projectViewModel.applyMixSceneToFunction(
+                              functionId: zoneFunction.id,
+                              sceneId: scene.id,
+                            );
+                          } catch (e) {
+                            // We might get StateError if the scene is not found.
+                          }
+                        },
+                        onDeleteTap: () {
+                          try {
+                            final MixScene? scene = selectedMixScene(zoneFunction);
+                            if (scene != null) {
+                              projectViewModel.removeMixScene(
+                                functionId: zoneFunction.id,
+                                sceneId: scene.id,
+                              );
+                            }
+                          } catch (e) {
+                            // We might get StateError if the scene is not found.
+                          }
+                        },
+                      ),
+                      const VerticalDivider(width: 1, color: Colors.black12),
+
+                      Expanded(
+                        flex: 3,
+                        child: ZoneControlSliderBuilder(
+                          zoneID: widget.zoneID,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            Flexible(
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    flex: 4,
-                    child: MiniMatrixControls(
-                      zoneID: widget.zoneID,
-                      functionId: functionId,
-                    ),
-                  ),
-
-                  const VerticalDivider(width: 1, color: Colors.black12),
-
-                  MixScenes(
-                    selectedMixSceneName: selectedMixScene?.name,
-                    zoneId: widget.zoneID,
-                    onStoreTap: (String? value) {
-                      if (value == null || value.isEmpty) {
-                        return FusionToast.error(
-                          context,
-                          message: "Please enter a name for the mix scene",
-                        );
-                      } else {
-                        projectViewModel.saveCurrentSettingsAsMixScene(
-                          functionId: functionId,
-                          sceneName: value,
-                        );
-                      }
-                    },
-                    mixScenes: savedMixScenes.map((MixScene e) => e.name).toList(),
-                    onMixSceneSelect: (String value) {
-                      try {
-                        final MixScene scene = savedMixScenes.firstWhere((MixScene scene) => scene.name == value);
-                        projectViewModel.applyMixSceneToFunction(
-                          functionId: functionId,
-                          sceneId: scene.id,
-                        );
-                      } catch (e) {
-                        // We might get StateError if the scene is not found.
-                      }
-                    },
-                    onDeleteTap: () {
-                      try {
-                        // TODO: Implement delete functionality. Currently, it is not possible to delete a mix scene from the project.
-                        // Because we dont know which one is currently selected.
-
-                        // final MixScene scene = savedMixScenes.firstWhere((MixScene scene) => scene.name == value);
-                        // projectViewModel.removeScene(sceneId: scene.id);
-                      } catch (e) {
-                        // We might get StateError if the scene is not found.
-                      }
-                    },
-                  ),
-                  const VerticalDivider(width: 1, color: Colors.black12),
-
-                  Expanded(
-                    flex: 3,
-                    child: ZoneControlSliderBuilder(
-                      zoneID: widget.zoneID,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -172,17 +184,18 @@ class _MiniMatrixZoneControlPanelState extends State<MiniMatrixZoneControlPanel>
 
 class MiniMatrixControls extends StatelessWidget {
   final String zoneID;
-  final String functionId;
+  final ZoneFunctions zoneFunctions;
 
-  const MiniMatrixControls({super.key, required this.zoneID, required this.functionId});
+  const MiniMatrixControls({
+    super.key,
+    required this.zoneID,
+    required this.zoneFunctions,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final List<Source> sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: zoneID);
-
-    final List<MatrixSettings> miniMatrixSettings = projectViewModel.getCurrentMatrixSettingsForFunction(functionId: functionId);
 
     const BorderSide borderSide = BorderSide(color: Color(0xFFE5E5E5), width: 1);
 
@@ -228,15 +241,26 @@ class MiniMatrixControls extends StatelessWidget {
           ),
 
           // TOP MUTE TOGGLE BUTTONS
-          const Row(
+          Row(
             children: <Widget>[
-              Expanded(flex: 2, child: SizedBox()),
+              const Expanded(flex: 2, child: SizedBox()),
               Expanded(
                 child: NeumorphicAudioToggleButton(
-                  isActive: false,
+                  isActive: zoneFunctions.matrixMixer! is MonoMatrixMixer ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted : false,
                   width: 72,
                   height: 24,
                   iconSize: 16,
+                  onTap: () {
+                    projectViewModel.updateMatrixMixer(
+                      matrixMixer:
+                          zoneFunctions.matrixMixer! is MonoMatrixMixer
+                              ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
+                                outMuted: !(zoneFunctions.matrixMixer! as MonoMatrixMixer).outMuted,
+                              )
+                              : zoneFunctions.matrixMixer!,
+                      functionId: zoneFunctions.id,
+                    );
+                  },
                 ),
               ),
             ],
@@ -248,9 +272,21 @@ class MiniMatrixControls extends StatelessWidget {
               Expanded(
                 child: Padding(
                   padding: const EdgeInsets.all(8.0).copyWith(top: 4.0),
-                  child: const NeumorphicTextWithPopupSliderButton(
+                  child: NeumorphicTextWithPopupSliderButton(
                     isActive: false, // DONT ALLOW ACTIVE STATE.
                     height: 30,
+                    value: zoneFunctions.matrixMixer! is MonoMatrixMixer ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).outGain : 0.0,
+                    onChanged: (double value) {
+                      projectViewModel.updateMatrixMixer(
+                        matrixMixer:
+                            zoneFunctions.matrixMixer! is MonoMatrixMixer
+                                ? (zoneFunctions.matrixMixer! as MonoMatrixMixer).copyWith(
+                                  outGain: value,
+                                )
+                                : zoneFunctions.matrixMixer!,
+                        functionId: zoneFunctions.id,
+                      );
+                    },
                   ),
                 ),
               ),
@@ -273,7 +309,7 @@ class MiniMatrixControls extends StatelessWidget {
                     final Source source = sources[index];
 
                     final MonoMatrixSettings matrixSetting =
-                        miniMatrixSettings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
+                        zoneFunctions.matrixMixer!.settings.firstWhere((MatrixSettings ms) => ms.sourceId == source.id) as MonoMatrixSettings;
 
                     return TableRow(
                       children: <Widget>[
@@ -320,6 +356,7 @@ class MiniMatrixControls extends StatelessWidget {
                                     matrixSettings: matrixSetting.copyWith(
                                       muted: !matrixSetting.muted,
                                     ),
+                                    functionId: zoneFunctions.id,
                                   );
                                 },
                                 child: Container(
@@ -351,6 +388,7 @@ class MiniMatrixControls extends StatelessWidget {
                                       matrixSettings: matrixSetting.copyWith(
                                         gain: value,
                                       ),
+                                      functionId: zoneFunctions.id,
                                     );
                                   },
                                 ),
@@ -385,6 +423,7 @@ class MiniMatrixControls extends StatelessWidget {
                                       matrixSettings: matrixSetting.copyWith(
                                         mixLevel: value,
                                       ),
+                                      functionId: zoneFunctions.id,
                                     );
                                   },
                                 ),

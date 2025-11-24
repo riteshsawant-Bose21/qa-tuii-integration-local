@@ -14,6 +14,7 @@ import 'widgets/slider_and_meter_widget.dart';
 
 class SourceMixZoneControlPanel extends StatefulWidget {
   final String zoneID;
+
   const SourceMixZoneControlPanel({super.key, required this.zoneID});
 
   static void showDialog(BuildContext context, {required String zoneID}) {
@@ -36,22 +37,28 @@ class SourceMixZoneControlPanel extends StatefulWidget {
 }
 
 class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
-  late String functionId;
-
+  late ZoneFunctions zoneFunction;
   @override
   void initState() {
     super.initState();
-    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!.id;
+    zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+  }
+
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  MixScene? selectedMixScene(ZoneFunctions zoneFunction) {
+    final String? selectedId = zoneFunction.selectedMixSceneId;
+    if (selectedId == null) return null;
+    try {
+      return zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.id == selectedId);
+    } catch (e) {
+      return null;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.8;
-
-    final List<MixScene> savedMixScenes = projectViewModel.getAllMixScenesForFunction(functionId: functionId);
-    final MixScene? selectedMixScene = projectViewModel.getSelectedMixSceneForFunction(functionId);
 
     return Dialog(
       constraints: BoxConstraints(
@@ -60,142 +67,148 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
       ),
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
-      child: ClipRRect(
-        borderRadius: const BorderRadius.all(Radius.circular(6)),
-        child: Stack(
-          children: <Widget>[
-            Container(
-              color: Colors.black,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const SizedBox(height: 35),
-                  Flexible(
-                    fit: FlexFit.loose,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        // Left scrollable section
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: SourceMixLeftWidget(
-                            zoneID: widget.zoneID,
-                          ),
-                        ),
-
-                        MixScenes(
-                          selectedMixSceneName: selectedMixScene?.name,
-                          zoneId: widget.zoneID,
-                          onStoreTap: (String? value) {
-                            if (value == null || value.isEmpty) {
-                              return FusionToast.error(
-                                context,
-                                message: "Please enter a name for the mix scene",
-                              );
-                            } else {
-                              projectViewModel.saveCurrentSettingsAsMixScene(
-                                functionId: functionId,
-                                sceneName: value,
-                              );
-                            }
-                          },
-                          mixScenes: savedMixScenes.map((MixScene e) => e.name).toList(),
-                          onMixSceneSelect: (String value) {
-                            try {
-                              final MixScene scene = savedMixScenes.firstWhere((MixScene scene) => scene.name == value);
-                              projectViewModel.applyMixSceneToFunction(
-                                functionId: functionId,
-                                sceneId: scene.id,
-                              );
-                              log("Selected mix scene: ${scene.name}");
-                            } catch (e) {
-                              // We might get StateError if the scene is not found.
-                            }
-                          },
-                          onDeleteTap: () {
-                            try {
-                              // TODO: Implement delete functionality. Currently, it is not possible to delete a mix scene from the project.
-                              // Because we dont know which one is currently selected.
-                              // TWO TASK HERE:
-                              // 1. Get the selected mix scene for the function.
-                              // 2. update the scene if changes are made.
-                            } catch (e) {
-                              // We might get StateError if the scene is not found.
-                            }
-                          },
-                        ),
-
-                        DecoratedBox(
-                          decoration: const BoxDecoration(
-                            color: Color(0xFFF5F5F5),
-                            border: Border(
-                              left: BorderSide(
-                                color: Colors.black12,
+      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+        listener: (BuildContext context, ProjectViewModelState state) {
+          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+        },
+        builder: (BuildContext context, ProjectViewModelState state) {
+          return ClipRRect(
+            borderRadius: const BorderRadius.all(Radius.circular(6)),
+            child: Stack(
+              children: <Widget>[
+                Container(
+                  color: Colors.black,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const SizedBox(height: 35),
+                      Flexible(
+                        fit: FlexFit.loose,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            // Left scrollable section
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: SourceMixLeftWidget(
+                                zoneID: widget.zoneID,
+                                zoneFunctions: zoneFunction,
                               ),
                             ),
-                          ),
-                          child: PrioritySelectionWidget(zoneId: widget.zoneID),
-                        ),
 
-                        // Right side (only one widget)
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: ColoredBox(
-                            color: Colors.white,
-                            child: ZoneControlSliderBuilder(
-                              zoneID: widget.zoneID,
+                            MixScenes(
+                              selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                              zoneId: widget.zoneID,
+                              onStoreTap: (String? value) {
+                                if (value == null || value.isEmpty) {
+                                  return FusionToast.error(
+                                    context,
+                                    message: "Please enter a name for the mix scene",
+                                  );
+                                } else {
+                                  projectViewModel.saveCurrentSettingsAsMixScene(
+                                    functionId: zoneFunction.id,
+                                    sceneName: value,
+                                  );
+                                }
+                              },
+                              mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                              onMixSceneSelect: (String value) {
+                                try {
+                                  final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                  projectViewModel.applyMixSceneToFunction(
+                                    functionId: zoneFunction.id,
+                                    sceneId: scene.id,
+                                  );
+                                  log("Selected mix scene: ${scene.name}");
+                                } catch (e) {
+                                  // We might get StateError if the scene is not found.
+                                }
+                              },
+                              onDeleteTap: () {
+                                final MixScene? scene = selectedMixScene(zoneFunction);
+                                if (scene != null) {
+                                  projectViewModel.removeMixScene(
+                                    sceneId: scene.id,
+                                    functionId: zoneFunction.id,
+                                  );
+                                }
+                              },
                             ),
-                          ),
+
+                            DecoratedBox(
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF5F5F5),
+                                border: Border(
+                                  left: BorderSide(
+                                    color: Colors.black12,
+                                  ),
+                                ),
+                              ),
+                              child: PrioritySelectionWidget(zoneId: widget.zoneID),
+                            ),
+
+                            // Right side (only one widget)
+                            Flexible(
+                              fit: FlexFit.loose,
+                              child: ColoredBox(
+                                color: Colors.white,
+                                child: ZoneControlSliderBuilder(
+                                  zoneID: widget.zoneID,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Used Stack to fit content according to content size.
-            // HEADERS
-            Positioned(
-              left: 0,
-              child: Container(
-                height: 35,
-                color: Colors.black,
-                alignment: Alignment.centerLeft,
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: Text(
-                  "ZONE CONTROL PANEL - SOURCE MIX",
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: Colors.white,
-                    fontSize: 11,
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ),
 
-            Positioned(
-              right: 0,
-              child: Container(
-                height: 35,
-                color: Colors.black,
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: Navigator.of(context).pop,
-                    child: const Icon(
-                      Icons.close,
-                      color: Colors.white,
-                      size: 16,
+                // Used Stack to fit content according to content size.
+                // HEADERS
+                Positioned(
+                  left: 0,
+                  child: Container(
+                    height: 35,
+                    color: Colors.black,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: Text(
+                      "ZONE CONTROL PANEL - SOURCE MIX",
+                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: Colors.white,
+                        fontSize: 11,
+                      ),
                     ),
                   ),
                 ),
-              ),
+
+                Positioned(
+                  right: 0,
+                  child: Container(
+                    height: 35,
+                    color: Colors.black,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: Navigator.of(context).pop,
+                        child: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                          size: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
@@ -203,7 +216,13 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
 
 class SourceMixLeftWidget extends StatefulWidget {
   final String zoneID;
-  const SourceMixLeftWidget({super.key, required this.zoneID});
+  final ZoneFunctions zoneFunctions;
+
+  const SourceMixLeftWidget({
+    super.key,
+    required this.zoneID,
+    required this.zoneFunctions,
+  });
 
   @override
   State<SourceMixLeftWidget> createState() => _SourceMixLeftWidgetState();
@@ -211,7 +230,6 @@ class SourceMixLeftWidget extends StatefulWidget {
 
 class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
   late final ScrollController _scrollController = ScrollController();
-  late final String functionId;
 
   late List<Source> sources;
 
@@ -220,7 +238,6 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
     super.initState();
     late final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     sources = projectViewModel.getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneID);
-    functionId = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!.id;
   }
 
   @override
@@ -252,7 +269,6 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
         ),
       );
     }
-    final List<MixSettings> mixSettings = projectViewModel.getCurrentMixSettingsForFunction(functionId: functionId);
 
     return Scrollbar(
       controller: _scrollController,
@@ -267,9 +283,9 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
             children: List<Widget>.generate(sources.length, (int index) {
               final Source source = sources[index];
 
-              final MixSettings mixSetting = mixSettings.singleWhere(
+              final MixSettings mixSetting = widget.zoneFunctions.mixSettings!.singleWhere(
                 (MixSettings setting) => setting.sourceId == source.id,
-                orElse: () => MixSettings(functionId: functionId, sourceId: source.id, gain: 0, muted: true),
+                orElse: () => MixSettings(sourceId: source.id, gain: 0, muted: true),
               );
 
               return SizedBox(
@@ -298,6 +314,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                           mixSettings: mixSetting.copyWith(
                             gain: value,
                           ),
+                          functionId: widget.zoneFunctions.id,
                         );
                       },
                     ),
@@ -322,6 +339,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                                     mixSettings: mixSetting.copyWith(
                                       gain: value.toDouble(),
                                     ),
+                                    functionId: widget.zoneFunctions.id,
                                   );
                                 },
                               ),
@@ -335,6 +353,7 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
                                   mixSettings: mixSetting.copyWith(
                                     muted: !mixSetting.muted,
                                   ),
+                                  functionId: widget.zoneFunctions.id,
                                 );
                               },
                               backgroundColor: const Color(0xFFF5F5F5),

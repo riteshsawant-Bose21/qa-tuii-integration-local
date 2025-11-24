@@ -37,11 +37,6 @@ class ProjectService {
   final ZoneFunctionRepository zoneFunctions;
   final PrioritySourceDataRepository prioritySourceData;
 
-  // Repositories for flattened mix scenes
-  final MixSceneRepository mixScenes;
-  final MixSettingsRepository mixSettings;
-  final MatrixSettingsRepository matrixSettings;
-
   final RelationshipManager relationships;
 
   // -----------------
@@ -81,9 +76,6 @@ class ProjectService {
     ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
-    MixSceneRepository? mixScenes,
-    MixSettingsRepository? mixSettings,
-    MatrixSettingsRepository? matrixSettings,
     PrioritySourceDataRepository? prioritySourceData,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
@@ -98,9 +90,6 @@ class ProjectService {
        wiringConnection = wiringConnection ?? WiringConnectionRepository(),
        processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
-       mixScenes = mixScenes ?? MixSceneRepository(),
-       mixSettings = mixSettings ?? MixSettingsRepository(),
-       matrixSettings = matrixSettings ?? MatrixSettingsRepository(),
        relationships = relationships ?? RelationshipManager(),
        prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository();
 
@@ -133,9 +122,6 @@ class ProjectService {
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
-    MixSceneRepository? mixScenes,
-    MixSettingsRepository? mixSettings,
-    MatrixSettingsRepository? matrixSettings,
     PrioritySourceDataRepository? prioritySourceData,
   }) {
     ProjectService projectService = ProjectService(
@@ -167,9 +153,6 @@ class ProjectService {
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
-      mixScenes: mixScenes ?? this.mixScenes,
-      mixSettings: mixSettings ?? this.mixSettings,
-      matrixSettings: matrixSettings ?? this.matrixSettings,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
     );
 
@@ -223,9 +206,6 @@ class ProjectService {
       "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
       "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
-      "mixScenes": mixScenes.toJson((ms) => ms.toJson()),
-      "mixSettings": mixSettings.toJson((ms) => ms.toJson()),
-      "matrixSettings": matrixSettings.toJson((ms) => ms.toJson()),
       "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
     };
   }
@@ -285,39 +265,6 @@ class ProjectService {
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
     service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
-
-    // Load mix scenes
-    if (json["mixScenes"] != null) {
-      service.mixScenes.fromJsonList(json["mixScenes"], (dynamic m) {
-        final Map<String, dynamic> sceneMap = m as Map<String, dynamic>;
-        if (sceneMap['type'] == MixSceneType.source.name) {
-          return SourceMixScene.fromJson(sceneMap);
-        } else if (sceneMap['type'] == MixSceneType.matrix.name) {
-          return MatrixMixScene.fromJson(sceneMap);
-        } else {
-          throw FormatException('Unknown MixScene type: ${sceneMap['type']}');
-        }
-      }, "id");
-    }
-
-    // Load mix settings
-    if (json["mixSettings"] != null) {
-      service.mixSettings.fromJsonList(json["mixSettings"], (m) => MixSettings.fromJson(m), "id");
-    }
-
-    // Load matrix settings
-    if (json["matrixSettings"] != null) {
-      service.matrixSettings.fromJsonList(json["matrixSettings"], (dynamic m) {
-        final Map<String, dynamic> settingMap = m as Map<String, dynamic>;
-        if (settingMap['type'] == 'mono') {
-          return MonoMatrixSettings.fromJson(settingMap);
-        } else if (settingMap['type'] == 'stereo') {
-          return StereoMatrixSettings.fromJson(settingMap);
-        } else {
-          throw FormatException('Unknown MatrixSettings type: ${settingMap['type']}');
-        }
-      }, "id");
-    }
 
     service.relationships.fromJson(json["relationships"]);
 

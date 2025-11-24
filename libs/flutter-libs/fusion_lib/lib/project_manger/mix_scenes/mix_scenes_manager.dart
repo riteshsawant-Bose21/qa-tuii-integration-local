@@ -15,9 +15,22 @@ extension MixScenesManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    return projectService!.getMixSettingsForFunctionScene(
+    final MixScene? mixScene = projectService!.getMixSceneForFunction(
       functionId: functionId,
       sceneId: sceneId,
+    );
+
+    return mixScene is SourceMixScene ? mixScene.mixSettings : [];
+  }
+
+  MatrixMixer? getMatrixMixerForFunction({
+    required String functionId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getCurrentMatrixMixerForFunction(
+      functionId: functionId,
     );
   }
 
@@ -113,54 +126,47 @@ extension MixScenesManager on ProjectManager {
     projectService!.addMixScene(mixScene, functionId);
   }
 
-  void selectMixSceneForFunction({
-    required String functionId,
-    required String sceneId,
-  }) {
-    if (projectService == null) {
-      throw Exception('No project is currently open');
-    }
-    projectService!.selectMixSceneForFunction(
-      functionId: functionId,
-      sceneId: sceneId,
-    );
-  }
-
   void updateMixSettings({
     required MixSettings mixSettings,
+    required String functionId,
   }) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.setMixSetting(
-      functionId: mixSettings.functionId,
-      sceneId: mixSettings.sceneId,
-      sourceId: mixSettings.sourceId,
-      gain: mixSettings.gain,
-      muted: mixSettings.muted,
-    );
+    projectService!.updateMixSettings(mixSettings: mixSettings, functionId: functionId);
   }
 
   void updateMatrixSettings({
     required MatrixSettings matrixSettings,
+    required String functionId,
   }) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.setMatrixSetting(
-      setting: matrixSettings,
-    );
+    projectService!.updateMatrixSettings(setting: matrixSettings, functionId: functionId);
+  }
+
+  void updateMatrixMixer({
+    required MatrixMixer matrixMixer,
+    required String functionId,
+  }) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateMatrixMixer(mixerConfig: matrixMixer, functionId: functionId);
   }
 
   /// Removes either a MixScene or MatrixScene based on the provided sceneId
   void removeScene({
     required String sceneId,
+    required String functionId,
   }) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     projectService!.removeScene(
-      sceneId,
+      sceneId: sceneId,
+      functionId: functionId,
     );
   }
 }

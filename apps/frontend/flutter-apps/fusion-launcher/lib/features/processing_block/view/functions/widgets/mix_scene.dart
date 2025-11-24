@@ -1,7 +1,7 @@
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -36,9 +36,8 @@ class _MixScenesState extends State<MixScenes> {
   @override
   void initState() {
     super.initState();
-    if (widget.selectedMixSceneName != null) {
-      mixSceneNameController.text = widget.selectedMixSceneName!;
-    }
+
+    mixSceneNameController.text = widget.selectedMixSceneName ?? "";
   }
 
   @override
@@ -51,14 +50,14 @@ class _MixScenesState extends State<MixScenes> {
   void didUpdateWidget(covariant MixScenes oldWidget) {
     log("MixScenes didUpdateWidget called with ${oldWidget.selectedMixSceneName}  ===  ${widget.selectedMixSceneName}");
     if (widget.selectedMixSceneName != oldWidget.selectedMixSceneName) {
-      mixSceneNameController.text = widget.selectedMixSceneName!;
+      mixSceneNameController.text = widget.selectedMixSceneName ?? "";
     }
     super.didUpdateWidget(oldWidget);
   }
 
   @override
   Widget build(BuildContext context) {
-    final List<Source> sources = context.watch<ProjectViewModel>().getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneId);
+    final List<Source> sources = serviceLocator<ProjectViewModel>().getSourcesAndSourceSetSourcesInZone(zoneId: widget.zoneId);
 
     if (sources.isEmpty) return const SizedBox.shrink();
 

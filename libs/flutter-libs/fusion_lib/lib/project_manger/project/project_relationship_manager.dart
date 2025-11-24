@@ -14,13 +14,8 @@ enum RelationshipType {
   zoneCircuits,
   wireConnection,
   processingBlock,
-  // prioritySources,
   zonePriorities,
-  priorityIndex,
   zoneFunctions,
-  functionScenes,
-  selectedFunctionScenes,
-  selectedSourceForFunction,
   sourcePriorityData,
 }
 
