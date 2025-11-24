@@ -32,6 +32,7 @@ func (h *Handler) HandleUDPMessage(data []byte) (any, error) {
 
 	case api.NotifyOpValueGet:
 		state := h.StateManager.GetStateMap()
+		state[api.FusionVersion] = h.StateManager.GetVersion().Counter
 		return map[string]any{
 			"status": "success",
 			"data":   state,

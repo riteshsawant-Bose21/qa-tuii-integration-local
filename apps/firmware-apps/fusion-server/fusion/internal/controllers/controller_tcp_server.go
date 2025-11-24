@@ -5,6 +5,13 @@ import (
 	"fusion/internal/logging"
 	"net"
 	"sync"
+	"time"
+)
+
+const (
+	// TCP connection timeouts
+	tcpWriteTimeout = 10 * time.Second
+	tcpKeepAlive    = 30 * time.Second
 )
 
 // WallControllerTCPServer handles TCP connections specifically for wall controllers
@@ -37,7 +44,7 @@ func (s *WallControllerTCPServer) Start() error {
 
 	if s.running {
 		logger := logging.GetLogger()
-		logger.Info("🔄 Wall Controller TCP server already running on %s", s.addr)
+		logger.Info("Wall Controller TCP server already running on %s", s.addr)
 		return nil
 	}
 
@@ -92,6 +99,13 @@ func (s *WallControllerTCPServer) handleConnection(conn net.Conn) {
 	connectionID := conn.RemoteAddr().String()
 	logger := logging.GetLogger()
 	logger.Info("Wall Controller TCP client connected: %s", connectionID)
+
+	if tcpConn, ok := conn.(*net.TCPConn); ok {
+		tcpConn.SetKeepAlive(true)
+		tcpConn.SetKeepAlivePeriod(tcpKeepAlive)
+	}
+
+	conn.SetWriteDeadline(time.Now().Add(tcpWriteTimeout))
 
 	s.clientsLock.Lock()
 	s.clients[connectionID] = conn
