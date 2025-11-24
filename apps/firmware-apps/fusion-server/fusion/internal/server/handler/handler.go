@@ -202,3 +202,7 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 
 	return nil
 }
+
+func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
+	return h.hub.BroadcastToNodes(message)
+}

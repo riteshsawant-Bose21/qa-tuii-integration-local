@@ -51,7 +51,7 @@ func (s *WallControllerTCPServer) Start() error {
 	listener, err := net.Listen("tcp", s.addr)
 	if err != nil {
 		logger := logging.GetLogger()
-		logger.Error("❌ Failed to start Wall Controller TCP server on %s: %v", s.addr, err)
+		logger.Error("Failed to start Wall Controller TCP server on %s: %v", s.addr, err)
 		return err
 	}
 
