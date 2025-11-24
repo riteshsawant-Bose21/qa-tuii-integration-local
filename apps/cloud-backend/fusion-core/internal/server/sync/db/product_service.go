@@ -94,7 +94,8 @@ func (s *ProductService) Insert(ctx context.Context, product *syncTypes.DBProduc
 		}
 		if product.Specifications != "" {
 			existing.Specifications = null.JSONFrom([]byte(product.Specifications))
-		} // Parse and update timestamps
+		}
+		// Parse and update timestamps
 		if product.UpdatedAt != nil {
 			if ts := parseTimestamp(*product.UpdatedAt); ts != nil {
 				existing.UpdatedAt = null.TimeFrom(*ts)

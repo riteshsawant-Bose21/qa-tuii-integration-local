@@ -726,7 +726,8 @@ func (s *Service) parseProductArray(items []interface{}) ([]Product, error) {
 				product.ModelFamily = modelFamily
 			} else {
 				// Provide default model_family for accessories that don't have one
-				product.ModelFamily = "Model Family" // Default family for accessories
+				const DefaultModelFamily = "Model Family"
+				product.ModelFamily = DefaultModelFamily // Default family for accessories
 			}
 			if description, ok := itemMap["description"].(string); ok {
 				product.Description = description
