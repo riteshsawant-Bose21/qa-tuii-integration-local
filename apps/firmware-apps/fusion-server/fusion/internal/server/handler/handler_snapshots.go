@@ -42,7 +42,7 @@ func (h *Handler) HandleActivateSnapshot(name string) error {
 		api.WithConfigUpdate(&update),
 	)
 
-	return h.broadcastMessage(msg)
+	return h.hub.BroadcastToNodes(msg)
 }
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.

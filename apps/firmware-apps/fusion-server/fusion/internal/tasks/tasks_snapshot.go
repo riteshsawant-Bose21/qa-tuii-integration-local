@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -166,15 +167,47 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 			return errors.New("snapshot_id required for snapshot tasks")
 		}
 
-		logger.Debug("Activating snapshot %s on %s", snapID, tm.node)
-
 		// Activate the snapshot only on the instance.
-		if err := tm.persistence.ActivateSnapshot(snapID); err != nil {
-			logger.Error("Snapshot apply task for '%s' failed: %v", snapID, err)
+		restored, err := tm.persistence.ActivateSnapshotAndReturnState(snapID)
+		if err != nil {
 			return err
 		}
 
-		logger.Debug("Snapshot '%s' activated successfully via task", snapID)
-		return nil
+		// Broadcast snapshot-activation (cluster-sync)
+		if err := tm.handleSnapshotOperation(
+			tm.node,
+			snapID,
+			api.NotifyOpSnapActivate,
+			nil); err != nil {
+			return err
+		}
+
+		// Broadcast message containing the entire restored state
+		update := api.ConfigUpdate{
+			Data:         restored,
+			Version:      tm.persistence.GetVersion(),
+			Clear:        false,
+			FromSnapshot: true,
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpConfigUpdate,
+			tm.node,
+			api.WithConfigUpdate(&update),
+		)
+
+		logger.Debug("---------------->>>> Snapshot '%s' activated successfully via task", snapID)
+
+		return tm.hub.BroadcastToNodes(msg)
 	}
+}
+
+// handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
+func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
+
+	msg := api.NewNotifyMessage(update,
+		node,
+		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
+	)
+	return tm.hub.BroadcastToNodes(msg)
 }

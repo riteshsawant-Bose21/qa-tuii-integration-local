@@ -21,6 +21,11 @@ import (
 	"github.com/oklog/ulid/v2"
 )
 
+const (
+	maxFormSize    = 32 << 20  // 32MB
+	maxUploadBytes = 100 << 20 // 100MB
+)
+
 // HandleAudioList returns all audio metadata, optionally filtered by one or more tags.
 //
 // Query params:

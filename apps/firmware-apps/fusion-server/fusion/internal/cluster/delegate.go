@@ -197,7 +197,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		message.ConfigUpdate = &updated
 
 		d.persistence.MarkDirty()
-		d.hub.Broadcast(&message)
+		d.hub.BroadcastToObservers(&message)
 
 	case api.NotifyOpSnapActivate:
 		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {

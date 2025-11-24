@@ -69,12 +69,13 @@ func NewApp(config *api.AppConfig) *App {
 
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
-	taskManager := initTaskManager(config, persistence)
-	hub := pubsub.NewHub()
+	hub := pubsub.NewHub(stateManager, persistence)
+	taskManager := initTaskManager(config, persistence, hub)
 
 	controllerManager := controllers.NewControllerManager(hub, "7950")
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
+	hub.Memberlist = memberlist
 	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
@@ -441,8 +442,8 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence)
+func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub)
 	taskManager.Start()
 	return taskManager
 }
