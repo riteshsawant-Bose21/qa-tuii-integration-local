@@ -7,6 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"database/sql"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 	"github.com/aarondl/null/v8"
@@ -36,8 +40,34 @@ type mockDBService struct {
 	mock.Mock
 }
 
-func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error) {
-	args := m.Called(ctx, project)
+// mockDB implements db.ProjectDBTxContextExecutor and returns nil for BeginTx
+type mockDB struct{}
+
+func (m *mockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) { return nil, nil }
+func (m *mockDB) Exec(query string, args ...interface{}) (sql.Result, error)        { return nil, nil }
+func (m *mockDB) Query(query string, args ...interface{}) (*sql.Rows, error)        { return nil, nil }
+func (m *mockDB) QueryRow(query string, args ...interface{}) *sql.Row               { return nil }
+func (m *mockDB) Commit() error                                                     { return nil }
+func (m *mockDB) Rollback() error                                                   { return nil }
+func (m *mockDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
+	return nil, nil
+}
+func (m *mockDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
+	return nil, nil
+}
+func (m *mockDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
+	return nil
+}
+
+func (m *mockDBService) GetDB(ctx context.Context) db.ProjectDBTxContextExecutor { return &mockDB{} }
+func (m *mockDBService) InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBContextExecutor) error {
+	args := m.Called(ctx, projectID, userID, tx)
+	return args.Error(0)
+}
+
+// Satisfy DatabaseService interface for tests
+func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBContextExecutor) (string, error) {
+	args := m.Called(ctx, project, tx)
 	return args.String(0), args.Error(1)
 }
 
@@ -193,7 +223,11 @@ func TestCreateProject(t *testing.T) {
 
 			// Mock user existence validation
 			mockDB.On("UserExists", mock.Anything, tt.project.UserID).Return(true, nil)
-			mockDB.On("Insert", mock.Anything, tt.project).Return(tt.mockID, tt.mockErr)
+			mockDB.On("Insert", mock.Anything, tt.project, mock.Anything).Return(tt.mockID, tt.mockErr)
+			// Always expect InsertProjectUser to be called if Insert succeeds
+			if tt.mockErr == nil {
+				mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, tt.project.UserID, mock.Anything).Return(nil)
+			}
 
 			service := &Service{
 				dbService: mockDB,

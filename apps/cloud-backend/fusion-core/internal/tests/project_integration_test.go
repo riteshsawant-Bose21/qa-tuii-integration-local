@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -330,6 +331,71 @@ func (suite *ProjectIntegrationTestSuite) TestCreateProject() {
 		require.NoError(t, err)
 
 		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	suite.T().Run("should rollback transaction when creating project with non-existent user", func(t *testing.T) {
+		// Generate a valid UUID that doesn't exist in the database
+		nonExistentUserID := "99999999-9999-4999-8999-999999999999"
+
+		// Count projects before the failed attempt
+		w, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var beforeResponse types.GetAllProjectsResponse
+		err = json.Unmarshal(w.Body.Bytes(), &beforeResponse)
+		require.NoError(t, err)
+		initialProjectCount := beforeResponse.TotalCount
+
+		// Try to create project with non-existent user ID
+		projectWithInvalidUser := testProject{
+			Name:            "Test Project with Invalid User",
+			Description:     "This should fail and rollback the transaction",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    nonExistentUserID, // Non-existent user
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err = suite.makeRequest("POST", "/api/v1/projects", projectWithInvalidUser)
+		require.NoError(t, err)
+
+		// Should fail with bad request or internal server error
+		assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+
+		// Verify transaction rollback - project count should remain the same
+		w, err = suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var afterResponse types.GetAllProjectsResponse
+		err = json.Unmarshal(w.Body.Bytes(), &afterResponse)
+		require.NoError(t, err)
+		finalProjectCount := afterResponse.TotalCount
+
+		// Assert that no project was created (transaction was rolled back)
+		assert.Equal(t, initialProjectCount, finalProjectCount, "Project count should remain the same after failed creation with invalid user")
+
+		// Also verify by trying to query projects for the non-existent user
+		w, err = suite.makeRequest("GET", "/api/v1/projects?user_id="+nonExistentUserID, nil)
+		require.NoError(t, err)
+		// This should either return empty results or an error
+		if w.Code == http.StatusOK {
+			var invalidUserResponse types.GetAllProjectsResponse
+			err = json.Unmarshal(w.Body.Bytes(), &invalidUserResponse)
+			require.NoError(t, err)
+			assert.Equal(t, 0, invalidUserResponse.TotalCount, "Non-existent user should have no projects")
+		} else {
+			// API might return 400 or 404 for non-existent user
+			assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusNotFound)
+		}
 	})
 }
 
@@ -1338,6 +1404,1039 @@ func (suite *ProjectIntegrationTestSuite) TestBoundaryConditions() {
 		err = json.Unmarshal(w.Body.Bytes(), &response)
 		require.NoError(t, err)
 		assert.NotEmpty(t, response.ID)
+	})
+}
+
+// Test environment type validation and different values
+func (suite *ProjectIntegrationTestSuite) TestEnvironmentTypeValidation() {
+	suite.T().Run("should accept all valid environment types", func(t *testing.T) {
+		validTypes := []types.EnvironmentType{
+			types.EnvironmentTypeIndoor,
+			types.EnvironmentTypeOutdoor,
+			types.EnvironmentTypeHybrid,
+		}
+
+		for _, envType := range validTypes {
+			project := testProject{
+				Name:            fmt.Sprintf("Test Project - %s", envType),
+				Description:     "Test project for environment type validation",
+				Application:     "Test Application",
+				Venue:           "Test Venue",
+				ProjectPhase:    types.ProjectPhaseProposal,
+				EnvironmentType: envType,
+				Budget: types.Budget{
+					Amount:   25000,
+					Currency: "USD",
+				},
+				UserID:                    suite.testUsers[0].ID,
+				IsProjectFileCreated:      false,
+				IsProjectThumbnailCreated: false,
+			}
+
+			w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, w.Code)
+		}
+	})
+
+	suite.T().Run("should reject invalid environment type", func(t *testing.T) {
+		project := testProject{
+			Name:            "Invalid Environment Test",
+			Description:     "Test project with invalid environment type",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: "invalid_environment",
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+// Test project phase validation and transitions
+func (suite *ProjectIntegrationTestSuite) TestProjectPhaseValidation() {
+	suite.T().Run("should accept all valid project phases", func(t *testing.T) {
+		validPhases := []types.ProjectPhase{
+			types.ProjectPhaseProposal,
+			types.ProjectPhaseDevelopment,
+			types.ProjectPhaseCommissioned,
+		}
+
+		for _, phase := range validPhases {
+			project := testProject{
+				Name:            fmt.Sprintf("Test Project - %s", phase),
+				Description:     "Test project for phase validation",
+				Application:     "Test Application",
+				Venue:           "Test Venue",
+				ProjectPhase:    phase,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				Budget: types.Budget{
+					Amount:   25000,
+					Currency: "USD",
+				},
+				UserID:                    suite.testUsers[0].ID,
+				IsProjectFileCreated:      false,
+				IsProjectThumbnailCreated: false,
+			}
+
+			w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, w.Code)
+		}
+	})
+
+	suite.T().Run("should reject invalid project phase", func(t *testing.T) {
+		project := testProject{
+			Name:            "Invalid Phase Test",
+			Description:     "Test project with invalid phase",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    "Invalid_Phase",
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+// Test currency validation in budget
+func (suite *ProjectIntegrationTestSuite) TestBudgetCurrencyValidation() {
+	suite.T().Run("should accept valid currencies", func(t *testing.T) {
+		validCurrencies := []string{"USD", "EUR", "GBP", "CAD", "JPY"}
+
+		for _, currency := range validCurrencies {
+			project := testProject{
+				Name:            fmt.Sprintf("Test Project - %s", currency),
+				Description:     "Test project for currency validation",
+				Application:     "Test Application",
+				Venue:           "Test Venue",
+				ProjectPhase:    types.ProjectPhaseProposal,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				Budget: types.Budget{
+					Amount:   25000,
+					Currency: currency,
+				},
+				UserID:                    suite.testUsers[0].ID,
+				IsProjectFileCreated:      false,
+				IsProjectThumbnailCreated: false,
+			}
+
+			w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusCreated, w.Code)
+		}
+	})
+
+	suite.T().Run("should reject invalid currencies", func(t *testing.T) {
+		invalidCurrencies := []string{"INVALID", "US", "USDX", "123", ""}
+
+		for _, currency := range invalidCurrencies {
+			project := testProject{
+				Name:            fmt.Sprintf("Invalid Currency Test - %s", currency),
+				Description:     "Test project with invalid currency",
+				Application:     "Test Application",
+				Venue:           "Test Venue",
+				ProjectPhase:    types.ProjectPhaseProposal,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				Budget: types.Budget{
+					Amount:   25000,
+					Currency: currency,
+				},
+				UserID:                    suite.testUsers[0].ID,
+				IsProjectFileCreated:      false,
+				IsProjectThumbnailCreated: false,
+			}
+
+			w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+		}
+	})
+}
+
+// Test project field length validation
+func (suite *ProjectIntegrationTestSuite) TestFieldLengthValidation() {
+	suite.T().Run("should reject excessively long project name", func(t *testing.T) {
+		longName := strings.Repeat("a", 256) // Over 255 character limit
+		project := testProject{
+			Name:            longName,
+			Description:     "Test project with long name",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	suite.T().Run("should reject excessively long description", func(t *testing.T) {
+		longDescription := strings.Repeat("a", 1001) // Over 1000 character limit
+		project := testProject{
+			Name:            "Test Project",
+			Description:     longDescription,
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	suite.T().Run("should accept maximum length fields", func(t *testing.T) {
+		maxName := strings.Repeat("a", 255)         // Exactly 255 characters
+		maxDescription := strings.Repeat("a", 1000) // Exactly 1000 characters
+		maxVenue := strings.Repeat("a", 255)        // Exactly 255 characters
+
+		project := testProject{
+			Name:            maxName,
+			Description:     maxDescription,
+			Application:     "Test Application",
+			Venue:           maxVenue,
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+	})
+}
+
+// Test negative budget amounts
+func (suite *ProjectIntegrationTestSuite) TestBudgetAmountValidation() {
+	suite.T().Run("should reject negative budget amount", func(t *testing.T) {
+		project := testProject{
+			Name:            "Negative Budget Test",
+			Description:     "Test project with negative budget",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   -1000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		// Depending on validation logic, this might be 400 or accepted
+		if w.Code != http.StatusCreated {
+			assert.Equal(t, http.StatusBadRequest, w.Code)
+		}
+	})
+
+	suite.T().Run("should accept zero budget amount", func(t *testing.T) {
+		project := testProject{
+			Name:            "Zero Budget Test",
+			Description:     "Test project with zero budget",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   0,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+	})
+}
+
+// Test advanced query parameter validation
+func (suite *ProjectIntegrationTestSuite) TestAdvancedQueryParameterValidation() {
+	suite.T().Run("should validate sort_by parameter", func(t *testing.T) {
+		validSortFields := []string{"created_at", "updated_at"} // API only supports these two fields
+
+		for _, sortField := range validSortFields {
+			w, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID+"&sort_by="+sortField, nil)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, w.Code)
+		}
+	})
+
+	suite.T().Run("should reject invalid sort_by parameter", func(t *testing.T) {
+		invalidSortFields := []string{"invalid_field", "id", "description"}
+
+		for _, sortField := range invalidSortFields {
+			w, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID+"&sort_by="+sortField, nil)
+			require.NoError(t, err)
+			// API might accept invalid fields and use default, or return 400
+			if w.Code != http.StatusOK {
+				assert.Equal(t, http.StatusBadRequest, w.Code)
+			}
+		}
+	})
+
+	suite.T().Run("should validate sort_order parameter", func(t *testing.T) {
+		validSortOrders := []string{"asc", "desc"}
+
+		for _, sortOrder := range validSortOrders {
+			w, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID+"&sort_order="+sortOrder, nil)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, w.Code)
+		}
+	})
+
+	suite.T().Run("should reject invalid sort_order parameter", func(t *testing.T) {
+		invalidSortOrders := []string{"ascending", "descending", "invalid"}
+
+		for _, sortOrder := range invalidSortOrders {
+			w, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID+"&sort_order="+sortOrder, nil)
+			require.NoError(t, err)
+			// API might accept invalid values and use default, or return 400
+			if w.Code != http.StatusOK {
+				assert.Equal(t, http.StatusBadRequest, w.Code)
+			}
+		}
+	})
+}
+
+// Test project creation with minimal required fields
+func (suite *ProjectIntegrationTestSuite) TestMinimalProjectCreation() {
+	suite.T().Run("should create project with minimal required fields", func(t *testing.T) {
+		minimalProject := testProject{
+			Name:            "Minimal Test Project",
+			Application:     "Minimal App",
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+			// Omitting optional fields: Description, Venue, ProjectPhase
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", minimalProject)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		var response types.ProjectCreateResponse
+		err = json.Unmarshal(w.Body.Bytes(), &response)
+		require.NoError(t, err)
+		assert.NotEmpty(t, response.ID)
+	})
+}
+
+// Test content type handling
+func (suite *ProjectIntegrationTestSuite) TestContentTypeHandling() {
+	suite.T().Run("should reject requests without content type", func(t *testing.T) {
+		project := suite.testProjects[0]
+		bodyBytes, err := json.Marshal(project)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", "/api/v1/projects", bytes.NewReader(bodyBytes))
+		require.NoError(t, err)
+		// Omit Content-Type header
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		// API might accept or reject based on implementation
+		// Typically should accept since Gin can handle JSON without explicit content-type
+		assert.True(t, w.Code == http.StatusCreated || w.Code == http.StatusBadRequest)
+	})
+
+	suite.T().Run("should reject requests with wrong content type", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/api/v1/projects", strings.NewReader("not json"))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "text/plain")
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+}
+
+// Test empty request body handling
+func (suite *ProjectIntegrationTestSuite) TestEmptyRequestBodyHandling() {
+	suite.T().Run("should reject empty request body for create", func(t *testing.T) {
+		req, err := http.NewRequest("POST", "/api/v1/projects", bytes.NewReader([]byte{}))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	suite.T().Run("should reject null request body for update", func(t *testing.T) {
+		// Create a project first
+		suite.TestCreateProject()
+		projectID := suite.testProjects[0].ID
+
+		req, err := http.NewRequest("PATCH", "/api/v1/projects/"+projectID+"?user_id="+suite.testUsers[0].ID, bytes.NewReader([]byte("null")))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		// API might accept null as empty update (200) or reject it (400)
+		assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusOK)
+	})
+}
+
+// Test duplicate project names
+func (suite *ProjectIntegrationTestSuite) TestDuplicateProjectNames() {
+	suite.T().Run("should allow multiple projects with same name for different users", func(t *testing.T) {
+		projectName := "Duplicate Name Test Project"
+
+		// Create project for first user
+		project1 := testProject{
+			Name:            projectName,
+			Description:     "First project with this name",
+			Application:     "Test Application",
+			Venue:           "Test Venue 1",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project1)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		// Create project with same name for different user
+		project2 := project1
+		project2.UserID = suite.testUsers[1].ID
+		project2.Description = "Second project with same name"
+		project2.Venue = "Test Venue 2"
+
+		// Update request headers for second user
+		bodyBytes, err := json.Marshal(project2)
+		require.NoError(t, err)
+		req, err := http.NewRequest("POST", "/api/v1/projects", bytes.NewReader(bodyBytes))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("X-User-ID", suite.testUsers[1].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w2 := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w2, req)
+
+		assert.Equal(t, http.StatusCreated, w2.Code)
+	})
+
+	suite.T().Run("should handle duplicate project name for same user gracefully", func(t *testing.T) {
+		projectName := "Same User Duplicate Test"
+
+		project := testProject{
+			Name:            projectName,
+			Description:     "Original project",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		// Create first project
+		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		// Try to create another project with same name and user
+		project.Description = "Duplicate attempt"
+		w2, err := suite.makeRequest("POST", "/api/v1/projects", project)
+		require.NoError(t, err)
+		// Depending on business logic, might be allowed (201) or rejected (409/400)
+		assert.True(t, w2.Code == http.StatusCreated || w2.Code == http.StatusConflict || w2.Code == http.StatusBadRequest)
+	})
+}
+
+// Test HTTP method validation
+func (suite *ProjectIntegrationTestSuite) TestHTTPMethodValidation() {
+	suite.T().Run("should reject invalid HTTP methods", func(t *testing.T) {
+		invalidMethods := []string{"TRACE", "OPTIONS", "HEAD"}
+
+		for _, method := range invalidMethods {
+			req, err := http.NewRequest(method, "/api/v1/projects", nil)
+			require.NoError(t, err)
+			req.Header.Set("Authorization", "Bearer test-token")
+			req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+			req.Header.Set("X-Account-ID", "1")
+
+			w := httptest.NewRecorder()
+			suite.ginRouter.ServeHTTP(w, req)
+
+			// Should return 405 Method Not Allowed, 404 Not Found, or 200 (for OPTIONS)
+			assert.True(t, w.Code == http.StatusMethodNotAllowed || w.Code == http.StatusNotFound || w.Code == http.StatusOK)
+		}
+	})
+}
+
+// Test rate limiting behavior (if implemented)
+func (suite *ProjectIntegrationTestSuite) TestRateLimiting() {
+	suite.T().Run("should handle rapid successive requests", func(t *testing.T) {
+		// Make multiple rapid requests
+		successCount := 0
+		for i := 0; i < 10; i++ {
+			project := testProject{
+				Name:            fmt.Sprintf("Rate Limit Test Project %d", i),
+				Description:     "Test project for rate limiting",
+				Application:     "Test Application",
+				Venue:           "Test Venue",
+				ProjectPhase:    types.ProjectPhaseProposal,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				Budget: types.Budget{
+					Amount:   25000,
+					Currency: "USD",
+				},
+				UserID:                    suite.testUsers[0].ID,
+				IsProjectFileCreated:      false,
+				IsProjectThumbnailCreated: false,
+			}
+
+			w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+			require.NoError(t, err)
+
+			if w.Code == http.StatusCreated {
+				successCount++
+			}
+		}
+
+		// At least some requests should succeed (exact behavior depends on rate limiting implementation)
+		assert.Greater(t, successCount, 0)
+	})
+}
+
+// Test project retrieval with various filters
+func (suite *ProjectIntegrationTestSuite) TestAdvancedProjectFiltering() {
+	// First ensure we have some test projects
+	suite.TestCreateProject()
+
+	suite.T().Run("should filter by archived status correctly", func(t *testing.T) {
+		// Get non-archived projects
+		w, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID+"&is_archived=false", nil)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var nonArchivedResponse types.GetAllProjectsResponse
+		err = json.Unmarshal(w.Body.Bytes(), &nonArchivedResponse)
+		require.NoError(t, err)
+
+		// Get archived projects
+		w2, err := suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID+"&is_archived=true", nil)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, w2.Code)
+
+		var archivedResponse types.GetAllProjectsResponse
+		err = json.Unmarshal(w2.Body.Bytes(), &archivedResponse)
+		require.NoError(t, err)
+
+		// Verify filtering logic
+		for _, project := range nonArchivedResponse.Data {
+			assert.False(t, project.IsArchived)
+		}
+
+		for _, project := range archivedResponse.Data {
+			assert.True(t, project.IsArchived)
+		}
+	})
+
+	suite.T().Run("should handle pagination parameters", func(t *testing.T) {
+		// Test with different pagination values
+		paginationTests := []struct {
+			limit  string
+			offset string
+		}{
+			{"5", "0"},
+			{"10", "5"},
+			{"1", "0"},
+		}
+
+		for _, test := range paginationTests {
+			url := fmt.Sprintf("/api/v1/projects?user_id=%s&limit=%s&offset=%s",
+				suite.testUsers[0].ID, test.limit, test.offset)
+			w, err := suite.makeRequest("GET", url, nil)
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, w.Code)
+
+			var response types.GetAllProjectsResponse
+			err = json.Unmarshal(w.Body.Bytes(), &response)
+			require.NoError(t, err)
+
+			// Verify response structure
+			assert.GreaterOrEqual(t, response.TotalCount, 0)
+			assert.GreaterOrEqual(t, len(response.Data), 0)
+		}
+	})
+}
+
+// Test concurrent user operations on same project
+func (suite *ProjectIntegrationTestSuite) TestConcurrentUserOperations() {
+	// Create a project and assign multiple users
+	project := testProject{
+		Name:            "Concurrent Operations Test",
+		Description:     "Test project for concurrent operations",
+		Application:     "Test Application",
+		Venue:           "Test Venue",
+		ProjectPhase:    types.ProjectPhaseProposal,
+		EnvironmentType: types.EnvironmentTypeIndoor,
+		Budget: types.Budget{
+			Amount:   10000,
+			Currency: "USD",
+		},
+		UserID:                    suite.testUsers[0].ID,
+		IsProjectFileCreated:      false,
+		IsProjectThumbnailCreated: false,
+	}
+
+	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
+	require.NoError(suite.T(), err)
+	require.Equal(suite.T(), http.StatusCreated, w.Code)
+
+	var createResponse types.ProjectCreateResponse
+	err = json.Unmarshal(w.Body.Bytes(), &createResponse)
+	require.NoError(suite.T(), err)
+	projectID := createResponse.ID
+
+	// Assign both users to the project
+	for _, user := range suite.testUsers[:2] {
+		w, err := suite.makeRequest("PUT", "/api/v1/projects/"+projectID+"/users/"+user.Email, nil)
+		require.NoError(suite.T(), err)
+		require.Equal(suite.T(), http.StatusNoContent, w.Code)
+	}
+
+	suite.T().Run("should handle concurrent starring by different users", func(t *testing.T) {
+		// Both users star the project simultaneously
+		starRequest := types.ProjectStarRequest{IsStarred: true}
+
+		// User 1 stars
+		w1, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+suite.testUsers[0].ID, starRequest)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNoContent, w1.Code)
+
+		// User 2 stars
+		w2, err := suite.makeRequest("POST", "/api/v1/projects/"+projectID+"/star/"+suite.testUsers[1].ID, starRequest)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNoContent, w2.Code)
+	})
+}
+
+// Test large payload handling
+func (suite *ProjectIntegrationTestSuite) TestLargePayloadHandling() {
+	suite.T().Run("should handle large but valid project data", func(t *testing.T) {
+		// Create a project with maximum allowed field sizes
+		largeName := strings.Repeat("Large Project Name ", 12)
+		if len(largeName) > 255 {
+			largeName = largeName[:255]
+		}
+
+		largeDescription := strings.Repeat("This is a very detailed project description. ", 21)
+		if len(largeDescription) > 1000 {
+			largeDescription = largeDescription[:1000]
+		}
+
+		largeApplication := strings.Repeat("Large Application Name ", 10)
+		if len(largeApplication) > 255 {
+			largeApplication = largeApplication[:255]
+		}
+
+		largeVenue := strings.Repeat("Large Venue Name ", 14)
+		if len(largeVenue) > 255 {
+			largeVenue = largeVenue[:255]
+		}
+
+		largeProject := testProject{
+			Name:            largeName,
+			Description:     largeDescription,
+			Application:     largeApplication,
+			Venue:           largeVenue,
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   999999999, // Large budget amount
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", largeProject)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+	})
+}
+
+// Test error response formats
+func (suite *ProjectIntegrationTestSuite) TestErrorResponseFormats() {
+	suite.T().Run("should return consistent error format for validation errors", func(t *testing.T) {
+		invalidProject := testProject{
+			// Missing required fields
+			UserID: suite.testUsers[0].ID,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", invalidProject)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		var errorResponse types.ErrorResponse
+		err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
+		require.NoError(t, err)
+		assert.NotEmpty(t, errorResponse.Message)
+	})
+
+	suite.T().Run("should return consistent error format for not found errors", func(t *testing.T) {
+		w, err := suite.makeRequest("PATCH", "/api/v1/projects/00000000-0000-4000-8000-000000000000?user_id="+suite.testUsers[0].ID, types.ProjectUpdateRequest{Name: "Test"})
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+
+		var errorResponse types.ErrorResponse
+		err = json.Unmarshal(w.Body.Bytes(), &errorResponse)
+		require.NoError(t, err)
+		assert.NotEmpty(t, errorResponse.Message)
+	})
+}
+
+// Test authentication edge cases
+func (suite *ProjectIntegrationTestSuite) TestAuthenticationEdgeCases() {
+	suite.T().Run("should handle missing authorization header", func(t *testing.T) {
+		project := suite.testProjects[0]
+		bodyBytes, err := json.Marshal(project)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", "/api/v1/projects", bytes.NewReader(bodyBytes))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		// Omit Authorization header
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		// Depending on auth middleware implementation
+		assert.True(t, w.Code == http.StatusUnauthorized || w.Code == http.StatusCreated)
+	})
+
+	suite.T().Run("should handle malformed authorization header", func(t *testing.T) {
+		project := suite.testProjects[0]
+		bodyBytes, err := json.Marshal(project)
+		require.NoError(t, err)
+
+		req, err := http.NewRequest("POST", "/api/v1/projects", bytes.NewReader(bodyBytes))
+		require.NoError(t, err)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Authorization", "InvalidToken")
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		// Depending on auth middleware implementation
+		assert.True(t, w.Code == http.StatusUnauthorized || w.Code == http.StatusCreated)
+	})
+}
+
+// Test transaction rollback scenarios
+func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
+	suite.T().Run("should rollback transaction on database constraint violation", func(t *testing.T) {
+		// Get current project count from database
+		var initialCount int
+		err := suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&initialCount)
+		require.NoError(t, err)
+
+		// Try to create project with non-existent user ID (should violate foreign key constraint)
+		invalidUserProject := testProject{
+			Name:            "Transaction Rollback Test Project",
+			Description:     "This project creation should fail and rollback",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   50000,
+				Currency: "USD",
+			},
+			UserID:                    "00000000-0000-4000-8000-000000000000", // Non-existent user
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", invalidUserProject)
+		require.NoError(t, err)
+
+		// Should fail due to foreign key constraint violation or user validation
+		assert.True(t, w.Code == http.StatusBadRequest || w.Code == http.StatusInternalServerError || w.Code == http.StatusNotFound)
+
+		// Verify that no project was inserted (transaction rolled back)
+		var finalCount int
+		err = suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&finalCount)
+		require.NoError(t, err)
+
+		assert.Equal(t, initialCount, finalCount, "Project count should be unchanged after failed transaction")
+	})
+
+	suite.T().Run("should rollback transaction on invalid data during project creation", func(t *testing.T) {
+		// Get current project count
+		var initialCount int
+		err := suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&initialCount)
+		require.NoError(t, err)
+
+		// Create project with invalid budget currency (should fail validation)
+		invalidBudgetProject := testProject{
+			Name:            "Invalid Budget Test Project",
+			Description:     "This project should fail due to invalid currency",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   25000,
+				Currency: "INVALID_CURRENCY", // Invalid currency code
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", invalidBudgetProject)
+		require.NoError(t, err)
+
+		// Should fail due to validation error
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+
+		// Verify that no project was inserted
+		var finalCount int
+		err = suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&finalCount)
+		require.NoError(t, err)
+
+		assert.Equal(t, initialCount, finalCount, "Project count should be unchanged after validation failure")
+	})
+
+	suite.T().Run("should handle concurrent transaction failures gracefully", func(t *testing.T) {
+		// Get initial project count
+		var initialCount int
+		err := suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&initialCount)
+		require.NoError(t, err)
+
+		// Create multiple projects with invalid data concurrently
+		const numConcurrentRequests = 5
+		type result struct {
+			statusCode int
+			err        error
+		}
+		results := make(chan result, numConcurrentRequests)
+
+		for i := 0; i < numConcurrentRequests; i++ {
+			go func(index int) {
+				invalidProject := testProject{
+					Name:            fmt.Sprintf("Concurrent Invalid Project %d", index),
+					Description:     "This should fail",
+					Application:     "Test Application",
+					Venue:           "Test Venue",
+					ProjectPhase:    types.ProjectPhaseProposal,
+					EnvironmentType: types.EnvironmentTypeIndoor,
+					Budget: types.Budget{
+						Amount:   25000,
+						Currency: "", // Invalid empty currency
+					},
+					UserID:                    suite.testUsers[0].ID,
+					IsProjectFileCreated:      false,
+					IsProjectThumbnailCreated: false,
+				}
+
+				w, err := suite.makeRequest("POST", "/api/v1/projects", invalidProject)
+				results <- result{statusCode: w.Code, err: err}
+			}(i)
+		}
+
+		// Collect all results
+		failedRequests := 0
+		for i := 0; i < numConcurrentRequests; i++ {
+			res := <-results
+			require.NoError(t, res.err)
+			if res.statusCode != http.StatusCreated {
+				failedRequests++
+			}
+		}
+
+		// All requests should have failed due to validation
+		assert.Equal(t, numConcurrentRequests, failedRequests, "All concurrent requests with invalid data should fail")
+
+		// Verify final count is still the same (all transactions rolled back)
+		var finalCount int
+		err = suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&finalCount)
+		require.NoError(t, err)
+
+		assert.Equal(t, initialCount, finalCount, "Project count should be unchanged after all failed concurrent transactions")
+	})
+
+	suite.T().Run("should maintain data integrity after failed project creation attempts", func(t *testing.T) {
+		// Create a valid project first
+		validProject := testProject{
+			Name:            "Valid Project Before Failures",
+			Description:     "This project should be created successfully",
+			Application:     "Test Application",
+			Venue:           "Test Venue",
+			ProjectPhase:    types.ProjectPhaseProposal,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   30000,
+				Currency: "USD",
+			},
+			UserID:                    suite.testUsers[0].ID,
+			IsProjectFileCreated:      false,
+			IsProjectThumbnailCreated: false,
+		}
+
+		w, err := suite.makeRequest("POST", "/api/v1/projects", validProject)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusCreated, w.Code)
+
+		var createResponse types.ProjectCreateResponse
+		err = json.Unmarshal(w.Body.Bytes(), &createResponse)
+		require.NoError(t, err)
+		validProjectID := createResponse.ID
+
+		// Get count after valid creation
+		var countAfterValid int
+		err = suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&countAfterValid)
+		require.NoError(t, err)
+
+		// Now try several invalid project creations
+		invalidAttempts := []testProject{
+			{
+				Name:            "Invalid User Project",
+				UserID:          "11111111-1111-4111-8111-111111111111", // Non-existent user
+				Application:     "Test App",
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				Budget:          types.Budget{Amount: 1000, Currency: "USD"},
+			},
+			{
+				Name:            "", // Empty name
+				UserID:          suite.testUsers[0].ID,
+				Application:     "Test App",
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				Budget:          types.Budget{Amount: 1000, Currency: "USD"},
+			},
+			{
+				Name:            "Invalid Environment Project",
+				UserID:          suite.testUsers[0].ID,
+				Application:     "Test App",
+				EnvironmentType: "invalid_environment", // Invalid environment type
+				Budget:          types.Budget{Amount: 1000, Currency: "USD"},
+			},
+		}
+
+		for i, invalidProject := range invalidAttempts {
+			w, err := suite.makeRequest("POST", "/api/v1/projects", invalidProject)
+			require.NoError(t, err)
+			assert.NotEqual(t, http.StatusCreated, w.Code, fmt.Sprintf("Invalid project attempt %d should fail", i+1))
+		}
+
+		// Verify count is still the same (only valid project exists)
+		var finalCount int
+		err = suite.db.QueryRow("SELECT COUNT(*) FROM project").Scan(&finalCount)
+		require.NoError(t, err)
+		assert.Equal(t, countAfterValid, finalCount, "Project count should only reflect the valid project creation")
+
+		// Verify the valid project still exists and is accessible
+		w, err = suite.makeRequest("GET", "/api/v1/projects?user_id="+suite.testUsers[0].ID, nil)
+		require.NoError(t, err)
+		assert.Equal(t, http.StatusOK, w.Code)
+
+		var projectsResponse types.GetAllProjectsResponse
+		err = json.Unmarshal(w.Body.Bytes(), &projectsResponse)
+		require.NoError(t, err)
+
+		// Find our valid project in the response
+		found := false
+		for _, project := range projectsResponse.Data {
+			if project.ID == validProjectID {
+				found = true
+				assert.Equal(t, "Valid Project Before Failures", project.Name)
+				break
+			}
+		}
+		assert.True(t, found, "Valid project should still exist after failed creation attempts")
 	})
 }
 

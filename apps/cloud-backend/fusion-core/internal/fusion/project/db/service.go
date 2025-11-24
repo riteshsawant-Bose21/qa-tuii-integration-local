@@ -21,31 +21,42 @@ import (
 	ericDecimal "github.com/ericlagergren/decimal"
 )
 
-// ProjectDBExecutor can perform SQL queries.
+// ProjectDBExecutor can perform basic SQL queries (like *sql.Tx)
 type ProjectDBExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+	Commit() error
+	Rollback() error
 }
 
-// ContextExecutor can perform SQL queries with context
+// ProjectDBContextExecutor can perform SQL queries with context (like *sql.Tx)
 type ProjectDBContextExecutor interface {
 	ProjectDBExecutor
-
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
 }
 
+// ProjectDBTxContextExecutor can perform SQL queries with context and begin transactions (like *sql.DB)
+type ProjectDBTxContextExecutor interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
 // Service is a service for managing projects in the database.
 type Service struct {
-	db     ProjectDBContextExecutor
+	db     ProjectDBTxContextExecutor
 	logger *log.Logger
 }
 
 // NewService creates a new database service.
-func NewService(db ProjectDBContextExecutor, logger *log.Logger) *Service {
+func NewService(db ProjectDBTxContextExecutor, logger *log.Logger) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
@@ -71,6 +82,11 @@ func isDuplicateKeyError(err error) bool {
 		strings.Contains(errorStr, "violates unique constraint")
 }
 
+// BeginTransaction starts a new database transaction.
+func (s *Service) GetDB(ctx context.Context) ProjectDBTxContextExecutor {
+	return s.db
+}
+
 // GetProjectByID retrieves a project by its ID.
 func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.Project, error) {
 	if projectID == "" {
@@ -92,16 +108,7 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error) {
-	// Begin transaction
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToBeginTransaction,
-			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToBeginTransaction)
-	}
+func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx ProjectDBContextExecutor) (string, error) {
 
 	// Create project record
 	now := time.Now()
@@ -122,11 +129,6 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 	// Insert project
 	if err := projectRecord.Insert(ctx, tx, boil.Infer()); err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			s.logger.Error("Failed to rollback transaction",
-				zap.Error(rollbackErr),
-				zap.String("project_id", project.ID))
-		}
 		s.logger.Error(types.ErrMsgFailedToInsertProject,
 			zap.Error(err),
 			zap.String("project_id", project.ID),
@@ -134,38 +136,31 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 		return "", errors.New(types.ErrMsgFailedToInsertProject)
 	}
 
+	return project.ID, nil
+}
+
+// Insert inserts a new project into the database.
+func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx ProjectDBContextExecutor) error {
+
+	now := time.Now()
 	// Create project user association
 	projectUser := &model.ProjectUser{
-		ProjectID: project.ID,
-		UserID:    project.UserID,
+		ProjectID: projectID,
+		UserID:    userID,
 		CreatedAt: now,
 		UpdatedAt: now,
 	}
 
 	// Insert project user association
 	if err := projectUser.Insert(ctx, tx, boil.Infer()); err != nil {
-		if rollbackErr := tx.Rollback(); rollbackErr != nil {
-			s.logger.Error("Failed to rollback transaction",
-				zap.Error(rollbackErr),
-				zap.String("project_id", project.ID))
-		}
 		s.logger.Error(types.ErrMsgFailedToInsertProjectUser,
 			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToInsertProjectUser)
+			zap.String("project_id", projectID),
+			zap.String("user_id", userID))
+		return errors.New(types.ErrMsgFailedToInsertProjectUser)
 	}
 
-	// Commit transaction
-	if err := tx.Commit(); err != nil {
-		s.logger.Error(types.ErrMsgFailedToCommitTransaction,
-			zap.Error(err),
-			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
-		return "", errors.New(types.ErrMsgFailedToCommitTransaction)
-	}
-
-	return project.ID, nil
+	return nil
 }
 
 // SelectAll retrieves all projects from the database.

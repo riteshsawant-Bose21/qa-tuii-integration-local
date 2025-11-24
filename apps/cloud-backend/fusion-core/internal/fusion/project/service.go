@@ -6,6 +6,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 )
 
 // Service provides methods to interact with the project database
@@ -17,7 +18,9 @@ type Service struct {
 // DatabaseService defines the interface for database operations related to projects.
 type DatabaseService interface {
 	GetProjectByID(ctx context.Context, id string) (*models.Project, error)
-	Insert(ctx context.Context, project *types.ProjectCreateRequest) (string, error)
+	GetDB(ctx context.Context) db.ProjectDBTxContextExecutor
+	Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBContextExecutor) (string, error)
+	InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBContextExecutor) error
 	SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]types.Project, error)
 	Update(ctx context.Context, projectRow *models.Project, project *types.ProjectUpdateRequest) error
 	Delete(ctx context.Context, projectRow *models.Project) error

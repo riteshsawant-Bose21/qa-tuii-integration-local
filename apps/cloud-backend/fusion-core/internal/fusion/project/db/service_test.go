@@ -91,28 +91,19 @@ func TestServiceInsert(t *testing.T) {
 			},
 		}
 
-		// Mock transaction operations
 		mock.ExpectBegin()
+		tx, err := db.BeginTx(ctx, nil)
+		require.NoError(t, err)
 
-		// Mock project insert with RETURNING clause
 		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
 			AddRow(false, false, nil)
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnRows(returnRows)
 
-		// Mock project user insert with RETURNING clause
-		userReturnRows := sqlmock.NewRows([]string{"id", "is_starred"}).
-			AddRow(1, false)
-		mock.ExpectQuery(`INSERT INTO "project_user"`).
-			WillReturnRows(userReturnRows)
-		// Mock commit
-		mock.ExpectCommit()
-
-		id, err := service.Insert(ctx, project)
+		id, err := service.Insert(ctx, project, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, testProjectID, id)
 
-		// Verify all expectations were met
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
@@ -133,30 +124,28 @@ func TestServiceInsert(t *testing.T) {
 			},
 		}
 
-		// Mock transaction operations
 		mock.ExpectBegin()
-		// Mock project insert with RETURNING clause
+		tx, err := db.BeginTx(ctx, nil)
+		require.NoError(t, err)
+
 		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
 			AddRow(false, false, nil)
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnRows(returnRows)
-		userReturnRows := sqlmock.NewRows([]string{"id", "is_starred"}).
-			AddRow(1, false)
-		mock.ExpectQuery(`INSERT INTO "project_user"`).
-			WillReturnRows(userReturnRows)
-		mock.ExpectCommit()
 
-		id, err := service.Insert(ctx, project)
+		id, err := service.Insert(ctx, project, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, projectID, id)
 
-		// Verify all expectations were met
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
 	t.Run("panics when project is nil", func(t *testing.T) {
+		mock.ExpectBegin()
+		tx, err := db.BeginTx(ctx, nil)
+		require.NoError(t, err)
 		assert.Panics(t, func() {
-			_, _ = service.Insert(ctx, nil)
+			_, _ = service.Insert(ctx, nil, tx)
 		})
 	})
 
@@ -176,119 +165,32 @@ func TestServiceInsert(t *testing.T) {
 			},
 		}
 
-		// Mock transaction operations
 		mock.ExpectBegin()
+		tx, err := db.BeginTx(ctx, nil)
+		require.NoError(t, err)
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnError(assert.AnError)
-		mock.ExpectRollback()
 
-		id, err := service.Insert(ctx, project)
+		id, err := service.Insert(ctx, project, tx)
 		assert.Error(t, err)
 		assert.Empty(t, id)
 		assert.Contains(t, err.Error(), "failed to insert project")
 
-		// Verify all expectations were met
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
-
-	t.Run("rolls back transaction on project user insert failure", func(t *testing.T) {
-		project := &types.ProjectCreateRequest{
-			ID:              testProjectID,
-			UserID:          testProjectAccountID,
-			Name:            testProjectName,
-			Description:     testProjectDesc,
-			Venue:           testProjectVenue,
-			EnvironmentType: testProjectEnvType,
-			ProjectPhase:    testProjectPhase,
-			Application:     testProjectApp,
-			Budget: types.Budget{
-				Amount:   1000,
-				Currency: "USD",
-			},
-		}
-
-		// Mock transaction operations
-		mock.ExpectBegin()
-		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
-			AddRow(false, false, nil)
-		mock.ExpectQuery(`INSERT INTO "project"`).
-			WillReturnRows(returnRows)
-		mock.ExpectQuery(`INSERT INTO "project_user"`).
-			WillReturnError(assert.AnError)
-		mock.ExpectRollback()
-
-		id, err := service.Insert(ctx, project)
-		assert.Error(t, err)
-		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "failed to insert project user")
-
-		// Verify all expectations were met
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
 	t.Run("returns error when begin transaction fails", func(t *testing.T) {
-		project := &types.ProjectCreateRequest{
-			ID:              testProjectID,
-			UserID:          testProjectAccountID,
-			Name:            testProjectName,
-			Description:     testProjectDesc,
-			Venue:           testProjectVenue,
-			EnvironmentType: testProjectEnvType,
-			ProjectPhase:    testProjectPhase,
-			Application:     testProjectApp,
-			Budget: types.Budget{
-				Amount:   1000,
-				Currency: "USD",
-			},
-		}
-
 		mock.ExpectBegin().WillReturnError(assert.AnError)
-
-		id, err := service.Insert(ctx, project)
+		// Try to begin a transaction, which will fail
+		tx, err := db.BeginTx(ctx, nil)
 		assert.Error(t, err)
-		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "failed to begin transaction")
-
-		// Verify all expectations were met
+		assert.Nil(t, tx)
+		// Don't call Insert with nil tx - this would cause panic
+		// Instead, this test should verify the transaction begin failure behavior
+		// at the business logic level, not the db service level
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("returns error when commit fails", func(t *testing.T) {
-		project := &types.ProjectCreateRequest{
-			ID:              testProjectID,
-			UserID:          testProjectAccountID,
-			Name:            testProjectName,
-			Description:     testProjectDesc,
-			Venue:           testProjectVenue,
-			EnvironmentType: testProjectEnvType,
-			ProjectPhase:    testProjectPhase,
-			Application:     testProjectApp,
-			Budget: types.Budget{
-				Amount:   1000,
-				Currency: "USD",
-			},
-		}
-
-		// Mock transaction operations
-		mock.ExpectBegin()
-		returnRows := sqlmock.NewRows([]string{"is_archived", "is_deleted", "locked_by_user_id"}).
-			AddRow(false, false, nil)
-		mock.ExpectQuery(`INSERT INTO "project"`).
-			WillReturnRows(returnRows)
-		userReturnRows := sqlmock.NewRows([]string{"id", "is_starred"}).
-			AddRow(1, false)
-		mock.ExpectQuery(`INSERT INTO "project_user"`).
-			WillReturnRows(userReturnRows)
-		mock.ExpectCommit().WillReturnError(assert.AnError)
-
-		id, err := service.Insert(ctx, project)
-		assert.Error(t, err)
-		assert.Empty(t, id)
-		assert.Contains(t, err.Error(), "failed to commit transaction")
-
-		// Verify all expectations were met
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
 }
 
 func TestServiceSelectAll(t *testing.T) {
