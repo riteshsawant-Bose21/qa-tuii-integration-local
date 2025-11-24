@@ -7,6 +7,7 @@ import (
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
 	"fusion/internal/version"
+	"reflect"
 	"sync"
 
 	"github.com/hashicorp/memberlist"
@@ -87,6 +88,12 @@ func (h *Handler) HandleHTTPGet(key string) (any, error) {
 // HandleHTTPSet replaces the entire configuration state with the new data.
 func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 
+	existing := h.StateManager.GetStateMap()
+
+	if reflect.DeepEqual(existing, update) {
+		return map[string]any{"status": "noop", "updates": nil}, nil
+	}
+
 	if err := h.handleConfigUpdate(update, true); err != nil {
 		return nil, err
 	}
@@ -96,12 +103,17 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 
 // HandleHTTPPatch updates only the specified fields.
 func (h *Handler) HandleHTTPPatch(update map[string]any) (any, error) {
-	patched, err := h.StateManager.ApplyPatch(update)
+
+	patched, err := h.StateManager.Patch(update)
 	if err != nil {
 		return nil, err
 	}
 
-	configUpdate, err := h.StateManager.NewConfigUpdate(patched)
+	if patched == nil {
+		return nil, nil
+	}
+
+	configUpdate, err := h.StateManager.NewConfigUpdate(*patched)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config update: %w", err)
 	}
@@ -167,12 +179,16 @@ func (h *Handler) HandleExportData() (any, error) {
 }
 
 func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
-
+	// Build the config update (Lamport version, hash, etc.)
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}
 	configUpdate.Clear = clear
+
+	if _, err := h.StateManager.ApplyUpdate(*configUpdate); err != nil {
+		return fmt.Errorf("failed to apply local config update: %w", err)
+	}
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
@@ -180,5 +196,9 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 		api.WithConfigUpdate(configUpdate),
 	)
 
-	return h.broadcastMessage(message)
+	if err := h.broadcastMessage(message); err != nil {
+		return fmt.Errorf("failed to broadcast config update: %w", err)
+	}
+
+	return nil
 }

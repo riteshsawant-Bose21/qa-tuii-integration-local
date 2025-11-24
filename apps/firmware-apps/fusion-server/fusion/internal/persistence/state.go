@@ -228,15 +228,10 @@ func (sm *StateManager) Set(key string, value any) error {
 	}
 
 	sm.Lock()
-
-	// Lamport send rule:
-	// local = local + 1
 	sm.version.Counter++
 	localVersion := sm.version
-
 	sm.Unlock()
 
-	// Build update using the new timestamp (the originating event)
 	update := api.ConfigUpdate{
 		Hash:    hash,
 		Data:    data,
@@ -244,49 +239,52 @@ func (sm *StateManager) Set(key string, value any) error {
 		Clear:   false,
 	}
 
-	// Feed through normal update processing
 	_, err = sm.ApplyUpdate(update)
 	return err
 }
 
-// ApplyPatch applies an upated patch to the internal state.
-func (sm *StateManager) ApplyPatch(update map[string]any) (map[string]any, error) {
+// Patch applies an upated patch to the internal state.
+func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	sm.Lock()
 
 	// Apply patch to full current state snapshot
 	existing := sm.getFullStateUnsafe()
+	before := utils.DeepCopy(existing)
+
 	if err := utils.ApplyPatch(existing, update); err != nil {
 		sm.Unlock()
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
-	// Lamport SEND rule for local update:
-	// local = local + 1
+	// Calculate the difference between the original and updated configuration.
+	changed := utils.CalculateDiff(before, existing)
+	if changed == nil {
+		sm.Unlock()
+		return nil, nil
+	}
+
 	sm.version.Counter++
 	localVersion := sm.version
 
 	sm.Unlock()
 
-	// Build a ConfigUpdate using the updated full state with the new timestamp
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
 		Clear:   false,
 	}
 
-	// Generate checksum for the new state
 	hash, err := utils.JSONChecksum(existing)
 	if err != nil {
 		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
 	configUpdate.Hash = hash
 
-	// Now pass through the normal Lamport ApplyUpdate path
 	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
 		return nil, err
 	}
 
-	return existing, nil
+	return &existing, nil
 }
 
 // ApplyUpdate applies a configuration update using Lamport clock semantics.
@@ -393,18 +391,10 @@ func (sm *StateManager) applyWhileLocked(
 		// Determine new data: merge maps or overwrite.
 		var newData any
 		if incomingMap, ok := rawValue.(map[string]any); ok {
-			if exists {
-				if existingMap, ok2 := localEntry.Data.(map[string]any); ok2 {
-					existingMapCopy := utils.DeepCopy(existingMap).(map[string]any)
-					newData = mergeMaps(existingMapCopy, incomingMap)
-				} else {
-					// Local value is not a map; replace with incoming map.
-					newData = incomingMap
-				}
-			} else {
-				// No existing entry; just take the incoming map.
-				newData = incomingMap
-			}
+			// Treat incoming map as the authoritative snapshot for this top-level key.
+			// This ensures that deletions (keys removed in the patched state) are preserved,
+			// instead of being merged with stale keys from the old state.
+			newData = utils.DeepCopy(incomingMap)
 		} else {
 			// Non-map value; overwrite directly.
 			newData = rawValue
@@ -431,6 +421,13 @@ func (sm *StateManager) GetFullState() VersionedState {
 		Checksum: sm.state.Checksum,
 		State:    deepCopyState(sm.state.State),
 	}
+}
+
+// GetFullStateRaw returns the raw
+func (sm *StateManager) GetFullStateRaw() map[string]any {
+	sm.RLock()
+	defer sm.RUnlock()
+	return sm.getFullStateUnsafe()
 }
 
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
@@ -714,23 +711,6 @@ func hashIsConsistent(metadata []api.MemberMetadata) bool {
 		}
 	}
 	return true
-}
-
-// mergeMaps recursively merges two maps.
-// Values from the update map overwrite or are merged into the existing map.
-func mergeMaps(existing, update map[string]any) map[string]any {
-	for key, value := range update {
-		if vMap, ok := value.(map[string]any); ok {
-			if existingMap, exists := existing[key].(map[string]any); exists {
-				existing[key] = mergeMaps(existingMap, vMap)
-			} else {
-				existing[key] = vMap
-			}
-		} else {
-			existing[key] = value
-		}
-	}
-	return existing
 }
 
 func buildInternalURL(address, port, endpoint string) string {
