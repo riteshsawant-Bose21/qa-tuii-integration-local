@@ -16,6 +16,12 @@ final class ProjectLoaded extends ProjectViewModelState {
   ProjectLoaded({required this.projects, this.currentProject});
 }
 
+final class OpenProjectError extends ProjectViewModelState {
+  final String message;
+
+  OpenProjectError({required this.message});
+}
+
 final class ProjectUpdated extends ProjectViewModelState {
   final String projectId;
 
@@ -37,6 +43,11 @@ final class ZoneSelectionMode extends ProjectViewModelState {
   ZoneSelectionMode(this.zone);
 }
 
+final class SubZoneSelectionMode extends ProjectViewModelState {
+  final SubZone subZone;
+  SubZoneSelectionMode(this.subZone);
+}
+
 final class ListeningAreaSelectionMode extends ProjectViewModelState {
   ListeningAreaSelectionMode();
 }
@@ -44,4 +55,26 @@ final class ListeningAreaSelectionMode extends ProjectViewModelState {
 final class DeviceTypeIndexChanged extends ProjectViewModelState {
   final int index;
   DeviceTypeIndexChanged(this.index);
+}
+
+final class DeviceHoverChanged extends ProjectViewModelState {
+  final SelectedItem? hoveredDevice;
+  DeviceHoverChanged(this.hoveredDevice);
+}
+
+final class DeviceSelectionChanged extends ProjectViewModelState {
+  final SelectedItem? selectedDevice;
+  DeviceSelectionChanged(this.selectedDevice);
+}
+
+final class DeviceSelectionsCleared extends ProjectViewModelState {}
+
+final class ToolbarModeChanged extends ProjectViewModelState {
+  final ToolbarMode mode;
+  ToolbarModeChanged(this.mode);
+}
+
+final class ProductToAddChanged extends ProjectViewModelState {
+  final ProductQueryModel? product;
+  ProductToAddChanged(this.product);
 }

@@ -55,7 +55,7 @@ func TestApplyUpdateAndGetNestedValues(t *testing.T) {
 		Version: api.Version{Counter: 1, NodeID: stateConfig.NodeName},
 	}
 
-	if err := sm.ApplyUpdate(update); err != nil {
+	if _, err := sm.ApplyUpdate(update); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
@@ -141,7 +141,7 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 		}},
 		Version: api.Version{Counter: 100, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u1); err != nil {
+	if _, err := sm.ApplyUpdate(u1); err != nil {
 		t.Fatalf("ApplyUpdate u1 failed: %v", err)
 	}
 
@@ -152,7 +152,7 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 		}},
 		Version: api.Version{Counter: 200, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u2); err != nil {
+	if _, err := sm.ApplyUpdate(u2); err != nil {
 		t.Fatalf("ApplyUpdate u2 failed: %v", err)
 	}
 
@@ -173,7 +173,7 @@ func TestArrayIndexErrors(t *testing.T) {
 		Data:    map[string]any{"numbers": []any{1, 2, 3}},
 		Version: api.Version{Counter: 300, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u); err != nil {
+	if _, err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
@@ -198,7 +198,7 @@ func TestArraySliceEdgeCases(t *testing.T) {
 		Data:    map[string]any{"letters": []any{"a", "b", "c", "d"}},
 		Version: api.Version{Counter: 400, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u); err != nil {
+	if _, err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
@@ -231,7 +231,7 @@ func TestGetWithComplexPath(t *testing.T) {
 		}}},
 		Version: api.Version{Counter: 600, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u); err != nil {
+	if _, err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
@@ -274,7 +274,7 @@ func TestApplyUpdateWithClearFlag(t *testing.T) {
 		Version: api.Version{Counter: 2000, NodeID: stateConfig.NodeName},
 		Clear:   true,
 	}
-	if err := sm.ApplyUpdate(clear); err != nil {
+	if _, err := sm.ApplyUpdate(clear); err != nil {
 		t.Fatalf("ApplyUpdate(Clear) failed: %v", err)
 	}
 
@@ -297,7 +297,7 @@ func TestMergeRemoteStateWithEqualVersion(t *testing.T) {
 		Data:    map[string]any{"x": "local"},
 		Version: api.Version{Counter: 5000, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u); err != nil {
+	if _, err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 
@@ -322,7 +322,7 @@ func TestApplyStaleUpdatePropagation(t *testing.T) {
 		Data:    map[string]any{"y": "freshValue"},
 		Version: api.Version{Counter: 1000, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(fresh); err != nil {
+	if _, err := sm.ApplyUpdate(fresh); err != nil {
 		t.Fatalf("ApplyUpdate(fresh) failed: %v", err)
 	}
 
@@ -330,7 +330,7 @@ func TestApplyStaleUpdatePropagation(t *testing.T) {
 		Data:    map[string]any{"y": "staleValue"},
 		Version: api.Version{Counter: 500, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(stale); err != nil {
+	if _, err := sm.ApplyUpdate(stale); err != nil {
 		t.Fatalf("ApplyUpdate(stale) failed: %v", err)
 	}
 
@@ -347,7 +347,7 @@ func TestMergeRemoteStateWithLowerVersion(t *testing.T) {
 		Data:    map[string]any{"x": "local"},
 		Version: api.Version{Counter: 5000, NodeID: stateConfig.NodeName},
 	}
-	if err := sm.ApplyUpdate(u); err != nil {
+	if _, err := sm.ApplyUpdate(u); err != nil {
 		t.Fatalf("ApplyUpdate failed: %v", err)
 	}
 

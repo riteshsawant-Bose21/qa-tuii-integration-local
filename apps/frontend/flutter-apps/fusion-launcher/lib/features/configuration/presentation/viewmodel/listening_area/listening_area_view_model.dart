@@ -4,7 +4,7 @@ import '../project_view_model.dart';
 
 extension ListeningAreaViewModel on ProjectViewModel {
   //get ListeningArea by id
-  ListeningArea getListeningArea(String areaId) {
+  ListeningArea getListeningArea({required String areaId}) {
     try {
       return projectManager.getListeningAreaById(areaId);
     } catch (e) {
@@ -12,9 +12,15 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  void updateListeningArea(ListeningArea area) {
+  void updateListeningArea({required ListeningArea area, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.updateListeningArea(area);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to update listening area: $e");
@@ -22,19 +28,30 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  void addListeningArea(ListeningArea area, String floorId) {
+  void addListeningArea({required ListeningArea area, required String floorId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.addListeningArea(area, floorId);
-
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add listening area: $e");
     }
   }
 
-  void removeListeningArea(String areaId) {
+  void removeListeningArea({required String areaId, bool autoSave = true}) {
     try {
+      if (autoSave) {
+        recordSnapshot();
+      }
       projectManager.removeListeningArea(areaId);
+      if (autoSave) {
+        saveProject();
+      }
       updateProject();
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to remove listening area: $e");
@@ -50,7 +67,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  Zone? getZonesForListeningArea(String areaId) {
+  Zone? getZonesForListeningArea({required String areaId}) {
     try {
       return projectManager.getZoneForListeningArea(areaId);
     } catch (e) {
@@ -59,7 +76,16 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  FloorModel? getFloorForListeningArea(String areaId) {
+  SubZone? getSubZoneForListeningArea({required String areaId}) {
+    try {
+      return projectManager.getSubZoneForListeningArea(areaId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get subzone for listening area: $e");
+      return null;
+    }
+  }
+
+  FloorModel? getFloorForListeningArea({required String areaId}) {
     try {
       return projectManager.getFloorForListeningArea(areaId);
     } catch (e) {
@@ -69,7 +95,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
   }
 
   //get Listening Areas for Floor id
-  List<ListeningArea> getListeningAreasForFloor(String floorId) {
+  List<ListeningArea> getListeningAreasForFloor({required String floorId}) {
     try {
       return projectManager.getAllListeningAreaForFloor(floorId);
     } catch (e) {
@@ -78,7 +104,7 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  ListeningArea? getListeningAreaForHardware(String hardwareId) {
+  ListeningArea? getListeningAreaForHardware({required String hardwareId}) {
     try {
       final HardwareComponent hardwareComponent = projectManager.getHardwareById(hardwareId);
       final String? laId = hardwareComponent.locationEntity.listeningAreaId;
@@ -93,5 +119,73 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
-  //add
+  List<ListeningArea> getAvailableListeningAreasForZone({String? zoneId}) {
+    try {
+      return projectManager.getAvailableListeningAreasForZone(id: zoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get available listening areas for zone: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  List<ListeningArea> getAvailableListeningAreasForSubZone({required String parentZoneId, String? subZoneId}) {
+    try {
+      return projectManager.getAvailableListeningAreasForSubZone(subZoneId: subZoneId, parentZoneId: parentZoneId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get available listening areas for zone: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  Map<String, String> getListeningAreaToZoneMap() {
+    try {
+      final List<ListeningArea> allListeningAreas = getAllListeningAreas();
+      final Map<String, String> laToZoneMap = <String, String>{};
+
+      for (final ListeningArea la in allListeningAreas) {
+        final Zone? zone = getZonesForListeningArea(areaId: la.id);
+        if (zone != null) {
+          laToZoneMap[la.id] = zone.id;
+        }
+      }
+
+      return laToZoneMap;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area to zone map: $e");
+      return <String, String>{};
+    }
+  }
+
+  Map<String, String> getListeningAreaToSubZoneMap() {
+    try {
+      final List<ListeningArea> allListening = getAllListeningAreas();
+      final Map<String, String> laToSubZoneMap = <String, String>{};
+
+      for (final ListeningArea la in allListening) {
+        final SubZone? subZone = getSubZoneForListeningArea(areaId: la.id);
+        if (subZone != null) {
+          laToSubZoneMap[la.id] = subZone.id;
+        }
+      }
+      return laToSubZoneMap;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area to subzone map: $e");
+      return <String, String>{};
+    }
+  }
+
+  String getFullPathForListeningArea({required String areaId}) {
+    final FloorModel? floor = getFloorForListeningArea(areaId: areaId);
+    final ListeningArea listeningArea = getListeningArea(areaId: areaId);
+    return "${floor?.name}/${listeningArea.name}";
+  }
+
+  String getFullPathForHardware({required String hardwareId}) {
+    final ListeningArea? listeningArea = getListeningAreaForHardware(hardwareId: hardwareId);
+    final FloorModel? floor = getFloorForHardware(hardwareId: hardwareId);
+    if (listeningArea == null) {
+      return floor?.name ?? "";
+    }
+    return "${floor?.name}/${listeningArea.name}";
+  }
 }

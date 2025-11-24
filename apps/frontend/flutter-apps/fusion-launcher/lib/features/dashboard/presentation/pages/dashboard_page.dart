@@ -8,6 +8,7 @@ import 'package:fusion_lib/fusion_utils/shared_preference_handler.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../../core/services/user_session_manager.dart';
+import '../../../../core/utils/bug_report_popup.dart';
 import '../widgets/community_tab_content.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/profile_tab_content.dart';
@@ -64,9 +65,23 @@ class _HomePageState extends State<HomePage> {
             backgroundColor: Colors.black87,
             actions: <Widget>[
               IconButton(
+                icon: const Icon(Icons.help, color: Colors.white),
+                tooltip: 'Guide Help',
+                onPressed: () => GuideShowcaseWrapper.askGuideNeededDialog(context),
+              ),
+
+              IconButton(
+                icon: const Icon(Icons.bug_report, color: Colors.white),
+                tooltip: 'Share Logs',
+                onPressed: () {
+                  handleExportLogs(context);
+                },
+              ),
+              IconButton(
                 icon: const Icon(Icons.logout, color: Colors.white),
                 onPressed: () => _logoutDialog(context),
               ),
+              const SizedBox(width: 10),
             ],
           ),
           body: SafeArea(

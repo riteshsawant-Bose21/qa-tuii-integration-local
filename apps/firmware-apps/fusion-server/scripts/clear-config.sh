@@ -2,7 +2,7 @@
 
 # API server address
 API_PORT="8080"
-API_SERVER="192.168.64.100"
+API_SERVER="192.168.2.100"
 
 # Fetch devices from the API server
 device_data=$(curl -s http://$API_SERVER:$API_PORT/devices)

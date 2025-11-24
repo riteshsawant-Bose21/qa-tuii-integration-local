@@ -1,8 +1,9 @@
 #!/bin/bash
 
 function show_help() {
-    echo "Usage: ./run_tests.sh [--all|--controllers|--fusion] [--vip IP:PORT]"
+    echo "Usage: ./run_tests.sh [--all|--cluster|--fusion] [--vip IP:PORT]"
     echo "Options:"
+    echo "  --vip         VIP address and port (default: 192.168.2.100:8080)"
     echo "  --all         Run all tests (default)"
     echo "  --audio       Run only audio tests"
     echo "  --bluetooth   Run only bluetooth tests"
@@ -12,19 +13,16 @@ function show_help() {
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
     echo "  --sap         Run only SAP tests"     
-    echo "  --short       Run short versions of all tests"     
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
-    echo "  --updater     Run only updater tests"     
-    echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
     echo "  --websocket   Run only websocket tests"     
     exit 1
 }
 
-test_type="short"
-vip="192.168.64.100:8080"
+test_type="all"
+vip="192.168.2.100:8080"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -64,11 +62,6 @@ while [[ $# -gt 0 ]]; do
             test_type="sap"
             shift
             ;;
-
-        --short)
-            test_type="short"
-            shift
-            ;;
         --snapshot)
             test_type="snapshot"
             shift
@@ -103,13 +96,29 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-sh scripts/multipass/clear-config.sh
+curl -X DELETE http://$vip/value
+sleep 1 
 
 cd fusion/test || exit 1
 
 case "$test_type" in
     "all")
-        go test -v --race ./... -args --auto --vip "$vip"
+        test_files=$(ls *_test.go)
+
+        for tf in $test_files; do
+            echo "=============================================="
+            echo "Running: $tf"
+            echo "=============================================="
+
+            # Reset cluster before each test file
+            curl -s -X DELETE http://$vip/value > /dev/null
+            sleep 1
+
+            go test -v --race "./$tf" -- -auto --vip "$vip"
+
+            echo " "
+            sleep 2
+        done
         ;;
     "audio")
         go test -v --race ./audio_test.go
@@ -121,7 +130,7 @@ case "$test_type" in
         go test -v --race ./cluster_test.go
         ;;
     "controllers")
-        go test -v --race ./cxa_test.go ./cxd_test.go
+        go test -v --race ./controllers_test.go
         ;;
     "fusion")
         go test -v --race ./fusion_test.go -args --auto --vip "$vip"
@@ -135,9 +144,6 @@ case "$test_type" in
     "sap")
         go test -v --race ./sap_test.go
         ;;        
-    "short")
-        go test -v --race  -short -tags='!exclude' ./... -args --auto --vip "$vip"
-        ;;
     "snapshot")
         go test -v --race ./snapshot_test.go
         ;;
@@ -150,13 +156,11 @@ case "$test_type" in
     "udp")
         go test -v --race ./udp_test.go
         ;;
-    "updater")
-        go test -v --race ./updater_test.go
-        ;;
     "websocket")
         go test -v --race ./websocket_test.go
         ;;
 esac
 
 cd ../../ || exit 1
-sh scripts/multipass/clear-config.sh
+curl -X DELETE http://$vip/value
+

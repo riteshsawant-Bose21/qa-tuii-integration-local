@@ -7,7 +7,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-const websocketURL = "ws://192.168.64.100:8080/ws"
+const websocketURL = "ws://192.168.2.100:8080/ws"
 
 func TestWebsocketConnect(t *testing.T) {
 	// Dial the websocket endpoint.

@@ -22,22 +22,24 @@ import (
 )
 
 const (
-	gossipInterval   = 100 * time.Millisecond
-	probeInterval    = 5 * time.Second
-	probeTimeout     = 2 * time.Second
-	pushPullInterval = 30 * time.Second
-	retryInterval    = 2 * time.Second
-	retryTimes       = 5
-	serialPath       = "/sys/firmware/devicetree/base/serial-number"
-	serialUnknown    = "Unknown"
-	suspicionMult    = 3
-	tcpTimeout       = 10 * time.Second
+	gossipInterval      = 20 * time.Millisecond
+	gossipToTheDeadTime = 30 * time.Second
+	probeInterval       = 100 * time.Millisecond
+	probeTimeout        = 100 * time.Millisecond
+	pushPullInterval    = 1 * time.Second
+	retryInterval       = 2 * time.Second
+	retryTimes          = 5
+	serialPath          = "/sys/firmware/devicetree/base/serial-number"
+	serialUnknown       = "Unknown"
+	suspicionMult       = 3
+	tcpTimeout          = 10 * time.Second
 )
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()
 	config.GossipInterval = gossipInterval
+	config.GossipToTheDeadTime = gossipToTheDeadTime
 	config.Name = appConfig.NodeName
 	config.BindAddr = appConfig.BindAddr
 	config.BindPort = appConfig.BindPort
@@ -70,7 +72,7 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 func (c *Cluster) JoinMemberlist() error {
 
 	// Determine other members to join
-	joinAddrs, err := c.getJoinAddresses(c.bindAddr)
+	joinAddrs, err := c.getJoinAddresses(c.appConfig.BindAddr)
 	if err != nil {
 		return fmt.Errorf("getJoinAddresses: %w", err)
 	}
@@ -79,7 +81,7 @@ func (c *Cluster) JoinMemberlist() error {
 
 	if len(joinAddrs) == 0 {
 		// This is the first node in the cluster
-		logger.Debug("[MEMBERLIST] First member of cluster: %s", c.bindAddr)
+		logger.Debug("[MEMBERLIST] First member of cluster: %s", c.appConfig.BindAddr)
 		return nil
 	}
 
@@ -94,7 +96,7 @@ func (c *Cluster) JoinMemberlist() error {
 
 			c.updateDeviceInfo()
 
-			if c.config.Verbose {
+			if c.appConfig.Verbose {
 				for _, member := range members {
 					logger.Debug("[MEMBERLIST] %s (%s)\n", member.Name, member.Addr)
 				}
@@ -119,7 +121,7 @@ func (c *Cluster) isMember() (bool, error) {
 		return false, err
 	}
 
-	return slices.Contains(liveAddrs, c.bindAddr), nil
+	return slices.Contains(liveAddrs, c.appConfig.BindAddr), nil
 }
 
 // GetLiveNodeAddresses returns a list of live node addresses from the VIP
@@ -150,7 +152,7 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 		return []string{}, nil
 	}
 
-	if c.config.Verbose {
+	if c.appConfig.Verbose {
 		for _, m := range members {
 			logger.Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
 		}
@@ -195,13 +197,13 @@ func (c *Cluster) updateDeviceInfo() {
 		info = *savedInfo
 	}
 
-	info.Address = c.bindAddr
+	info.Address = c.appConfig.BindAddr
 	if info.Id == "" {
-		info.Id = c.nodeName + "_instance"
+		info.Id = c.appConfig.NodeName + "_instance"
 	}
 
 	if info.Name == "" {
-		info.Name = c.nodeName
+		info.Name = c.appConfig.NodeName
 	}
 
 	if info.SerialNumber == "" {

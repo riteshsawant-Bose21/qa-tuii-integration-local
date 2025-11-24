@@ -18,8 +18,8 @@ import (
 const (
 	snapshotDefaultBucketName = "fusion"
 	snapshotDatabaseName      = "fusion_test.db"
-	snapServerAddr            = "http://192.168.64.100:8080"
-	snapAdminServerAddr       = "http://192.168.64.100:9090"
+	snapServerAddr            = "http://192.168.2.100:8080"
+	snapAdminServerAddr       = "http://192.168.2.100:9090"
 	snapServerPort            = "8080"
 	snapshotSyncTime          = 5
 )

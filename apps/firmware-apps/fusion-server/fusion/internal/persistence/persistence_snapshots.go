@@ -21,8 +21,13 @@ func (p *Persistence) CreateSnapshot(snapshotKey string) error {
 		return err
 	}
 
+	checksum := ps.Checksum
+	if len(checksum) > 8 {
+		checksum = checksum[:8]
+	}
+
 	logging.GetLogger().Debug("Snapshot '%s' saved (version: %v, checksum: %s)",
-		snapshotKey, ps.Version, ps.Checksum[:8])
+		snapshotKey, ps.Version, checksum)
 
 	return nil
 }
