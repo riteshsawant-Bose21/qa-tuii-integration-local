@@ -301,7 +301,9 @@ func TestGetAllProjects(t *testing.T) {
 		assert.Equal(t, http.StatusOK, w.Code)
 
 		var response types.GetAllProjectsResponse
-		json.Unmarshal(w.Body.Bytes(), &response)
+		if err := json.Unmarshal(w.Body.Bytes(), &response); err != nil {
+			t.Errorf("failed to unmarshal response: %v", err)
+		}
 		assert.Len(t, response.Data, 2)
 		mockSvc.AssertExpectations(t)
 	})

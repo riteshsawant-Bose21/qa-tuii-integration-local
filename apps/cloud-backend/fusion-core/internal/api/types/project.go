@@ -114,7 +114,7 @@ type ProjectStarRequest struct {
 
 // Response for creating a project.
 type ProjectCreateResponse struct {
-	ID                 string `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ID                 string  `json:"id" example:"123e4567-e89b-12d3-a456-426614174000"`
 	ProjectUploadURL   *string `json:"project_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 	ThumbnailUploadURL *string `json:"thumbnail_upload_url" example:"https://storage.example.com/upload/projects/123e4567"`
 }

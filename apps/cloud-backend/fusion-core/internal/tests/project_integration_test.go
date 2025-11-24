@@ -224,11 +224,9 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	require.NotNil(suite.T(), projectDBSvc, "Failed to initialize project database service")
 
 	// Mock S3 bucket for testing
-	s3Handler, err := cloudfs.NewS3Client(suite.ctx)
-	if err != nil {
-		// For testing, we can use a mock bucket or skip S3 operations
-		// For now, let's create the project service without S3 dependency
-	}
+	s3Handler, _ := cloudfs.NewS3Client(suite.ctx)
+	// For testing, we can use a mock bucket or skip S3 operations
+	// For now, let's create the project service without S3 dependency
 
 	var bucket cloudfs.BucketHandle
 	if s3Handler != nil {

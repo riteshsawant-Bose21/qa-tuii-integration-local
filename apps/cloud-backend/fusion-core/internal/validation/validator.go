@@ -16,13 +16,25 @@ var validate *validator.Validate
 func init() {
 	validate = validator.New()
 
-	// Register custom validators
-	validate.RegisterValidation("environment_type", validateEnvironmentType)
-	validate.RegisterValidation("project_phase", validateProjectPhase)
-	validate.RegisterValidation("currency", validateCurrency)
-	validate.RegisterValidation("sort_order", validateSortOrder)
-	validate.RegisterValidation("project_sort_field", validateProjectSortField)
-	validate.RegisterValidation("uuid", ValidateUUID)
+	// Register custom validators and check errors
+	if err := validate.RegisterValidation("environment_type", validateEnvironmentType); err != nil {
+		panic(err)
+	}
+	if err := validate.RegisterValidation("project_phase", validateProjectPhase); err != nil {
+		panic(err)
+	}
+	if err := validate.RegisterValidation("currency", validateCurrency); err != nil {
+		panic(err)
+	}
+	if err := validate.RegisterValidation("sort_order", validateSortOrder); err != nil {
+		panic(err)
+	}
+	if err := validate.RegisterValidation("project_sort_field", validateProjectSortField); err != nil {
+		panic(err)
+	}
+	if err := validate.RegisterValidation("uuid", ValidateUUID); err != nil {
+		panic(err)
+	}
 }
 
 // ValidateProjectCreateRequest validates a project create request

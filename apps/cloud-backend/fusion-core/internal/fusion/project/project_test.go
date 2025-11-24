@@ -23,9 +23,9 @@ var (
 )
 
 const (
-	testProjectID1         = "project-1"
-	testUserID1            = "user-1"
-	projectNotFoundMsg     = "project not found"
+	testProjectID1     = "project-1"
+	testUserID1        = "user-1"
+	projectNotFoundMsg = "project not found"
 )
 
 const (
@@ -321,11 +321,11 @@ func TestGetAllProjects(t *testing.T) {
 
 func TestUpdateProject(t *testing.T) {
 	mockProjectRow := &models.Project{
-		ID:                 "1",
+		ID:                    "1",
 		PrimaryOwnerAccountID: null.NewInt(123, true),
-		Name:               null.NewString(updatedProjectName, true),
-		IsArchived:         false,
-		IsDeleted:          false,
+		Name:                  null.NewString(updatedProjectName, true),
+		IsArchived:            false,
+		IsDeleted:             false,
 	}
 
 	tests := []struct {

@@ -106,18 +106,18 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 	// Create project record
 	now := time.Now()
 	projectRecord := &model.Project{
-		ID:                 project.ID,
+		ID:                    project.ID,
 		PrimaryOwnerAccountID: null.NewInt(1, true), // TODO: Placeholder, replace with actual account ID if available
-		Name:               null.NewString(project.Name, project.Name != ""),
-		Description:        null.NewString(project.Description, project.Description != ""),
-		Venue:              null.NewString(project.Venue, project.Venue != ""),
-		EnvironmentType:    null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != ""),
-		ProjectPhase:       null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != ""),
-		Application:        null.NewString(project.Application, project.Application != ""),
-		BudgetAmount:       boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0)),
-		Currency:           null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
-		CreatedAt:          now,
-		UpdatedAt:          now,
+		Name:                  null.NewString(project.Name, project.Name != ""),
+		Description:           null.NewString(project.Description, project.Description != ""),
+		Venue:                 null.NewString(project.Venue, project.Venue != ""),
+		EnvironmentType:       null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != ""),
+		ProjectPhase:          null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != ""),
+		Application:           null.NewString(project.Application, project.Application != ""),
+		BudgetAmount:          boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0)),
+		Currency:              null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
+		CreatedAt:             now,
+		UpdatedAt:             now,
 	}
 
 	// Insert project
@@ -196,7 +196,13 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 			zap.String("sort_order", order))
 		return nil, errors.New(types.ErrMsgFailedToGetProjects)
 	}
-	defer rows.Close()
+	defer func() {
+		if err := rows.Close(); err != nil {
+			if s.logger != nil {
+				s.logger.Error("failed to close rows", zap.Error(err))
+			}
+		}
+	}()
 
 	projects := make([]customModel.GetProjectModel, 0)
 
@@ -310,7 +316,7 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 
 // Delete removes a project by its ID.
 func (s *Service) Delete(ctx context.Context, projectRow *model.Project) error {
-	
+
 	projectRow.IsDeleted = true
 	projectRow.UpdatedAt = time.Now()
 	_, err := projectRow.Update(ctx, s.db, boil.Infer())

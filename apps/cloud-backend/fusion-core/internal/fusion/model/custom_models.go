@@ -6,7 +6,7 @@ import (
 
 // GetProjectModel combines a Project model with additional metadata
 type GetProjectModel struct {
-	Project   models.Project
-	IsStarred bool
+	Project           models.Project
+	IsStarred         bool
 	LockedByUserEmail string
 }

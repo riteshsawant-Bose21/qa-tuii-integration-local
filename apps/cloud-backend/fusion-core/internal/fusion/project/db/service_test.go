@@ -67,7 +67,11 @@ func TestNewService(t *testing.T) {
 
 func TestServiceInsert(t *testing.T) {
 	db, mock, service := setupTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close db: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -152,7 +156,7 @@ func TestServiceInsert(t *testing.T) {
 
 	t.Run("panics when project is nil", func(t *testing.T) {
 		assert.Panics(t, func() {
-			service.Insert(ctx, nil)
+			_, _ = service.Insert(ctx, nil)
 		})
 	})
 
@@ -289,7 +293,11 @@ func TestServiceInsert(t *testing.T) {
 
 func TestServiceSelectAll(t *testing.T) {
 	db, mock, service := setupTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close db: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -350,7 +358,11 @@ func TestServiceSelectAll(t *testing.T) {
 
 func TestServiceGetProjectByID(t *testing.T) {
 	db, mock, service := setupTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close db: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -394,7 +406,11 @@ func TestServiceGetProjectByID(t *testing.T) {
 
 func TestServiceUpdate(t *testing.T) {
 	db, mock, service := setupTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close db: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
@@ -446,7 +462,11 @@ func TestServiceUpdate(t *testing.T) {
 
 func TestServiceDelete(t *testing.T) {
 	db, mock, service := setupTestDB(t)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Logf("failed to close db: %v", err)
+		}
+	}()
 
 	ctx := context.Background()
 
