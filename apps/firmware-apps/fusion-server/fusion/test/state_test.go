@@ -135,7 +135,7 @@ func TestMergeRemoteState(t *testing.T) {
 func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 	sm := persistence.NewStateManager(&stateConfig)
 
-	// first make config.param1 & param2
+	// First snapshot
 	u1 := api.ConfigUpdate{
 		Data: map[string]any{"config": map[string]any{
 			"param1": "value1", "param2": "value2",
@@ -146,7 +146,7 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 		t.Fatalf("ApplyUpdate u1 failed: %v", err)
 	}
 
-	// then only overwrite param2
+	// Second snapshot (authoritative replacement for "config")
 	u2 := api.ConfigUpdate{
 		Data: map[string]any{"config": map[string]any{
 			"param2": "updated",
@@ -157,13 +157,15 @@ func TestNestedMergeMapsViaApplyUpdate(t *testing.T) {
 		t.Fatalf("ApplyUpdate u2 failed: %v", err)
 	}
 
-	v, _ := sm.Get("config.param1")
-	if v != "value1" {
-		t.Errorf("Expected config.param1='value1', got %v", v)
+	// Under snapshot semantics, param1 is intentionally dropped.
+	v1, _ := sm.Get("config.param1")
+	if v1 != nil {
+		t.Errorf("Expected config.param1 to be removed, got %v", v1)
 	}
-	v, _ = sm.Get("config.param2")
-	if v != "updated" {
-		t.Errorf("Expected config.param2='updated', got %v", v)
+
+	v2, _ := sm.Get("config.param2")
+	if v2 != "updated" {
+		t.Errorf("Expected config.param2='updated', got %v", v2)
 	}
 }
 

@@ -77,6 +77,22 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	exists, err := s.handler.HandleSnapshotExists(snapshotName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	if !exists {
+		http.Error(w, fmt.Sprintf("Snapshot '%s' not found", snapshotName), http.StatusNotFound)
+		return
+	}
+
+	name := s.handler.HandleGetActiveSnapshotName()
+	if name == snapshotName {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
 		return

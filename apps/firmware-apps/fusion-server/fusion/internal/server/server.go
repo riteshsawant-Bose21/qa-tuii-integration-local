@@ -143,7 +143,7 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Read the request body.
+	// --- Read body ---
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -151,65 +151,49 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 	}
 	defer r.Body.Close()
 
-	// Unmarshal the request body into a map.
 	var update map[string]any
 	if err := json.Unmarshal(body, &update); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the "key" query parameter.
+	// Extract query
 	key, err := getSingleQueryParam(r, "key")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
-	// Retrieve the full current configuration state.
-	configData := s.handler.StateManager.GetStateMap()
-
-	// Get another copy of a deep copy of configData to preserve the original configuration.
-	originalConfig := s.handler.StateManager.GetStateMap()
-
-	var updatedData any
+	// Build minimal patch map
+	var patch map[string]any
 	if key != "" {
-		// If a key is provided, update the nested value.
-		utils.SetNestedValue(configData, key, update["value"])
-		updatedData, err = s.handler.HandleHTTPPatch(configData)
+		patch = map[string]any{
+			key: update["value"],
+		}
 	} else {
-		// If no key is provided, treat the entire body as the update map.
-		updatedData, err = s.handler.HandleHTTPPatch(update)
+		patch = update
 	}
 
+	// Apply patch (diff is computed inside handler)
+	diff, err := s.handler.HandleHTTPPatch(patch)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	// Calculate the difference between the original and updated configuration.
-	diffData := utils.CalculateDiff(originalConfig, updatedData)
-
-	// Prepare the response with the update diff
-	var response map[string]any
-
-	if diffData == nil {
-		response = map[string]any{
-			"status":  "noop",
-			"updates": nil,
-		}
+	// Build response
+	resp := map[string]any{}
+	if diff == nil {
+		resp["status"] = "noop"
+		resp["updates"] = nil
 	} else {
-		response = map[string]any{
-			"status":  "success",
-			"updates": diffData,
-		}
+		resp["status"] = "success"
+		resp["updates"] = diff
 	}
 
-	// Write the JSON response.
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		http.Error(w, fmt.Sprintf("Error encoding response: %v", err), http.StatusInternalServerError)
-		return
-	}
+	// Send
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
+	json.NewEncoder(w).Encode(resp)
 }
 
 // ExportState handles HTTP GET requests to export the entire configuration state.
@@ -353,24 +337,6 @@ func (s *FusionServer) GetVersion(w http.ResponseWriter, r *http.Request) {
 	if !utils.RequireGet(w, r) {
 		return
 	}
-}
-
-// UpdateVersion handles update version HTTP requests.
-func (s *FusionServer) UpdateVersion(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePut(w, r) {
-		return
-	}
-
-	s.handler.HandleVersionRollback(w, r)
-}
-
-// RollbackVersion handles version rollback HTTP requests.
-func (s *FusionServer) RollbackVersion(w http.ResponseWriter, r *http.Request) {
-	if !utils.RequirePost(w, r) {
-		return
-	}
-
-	s.handler.HandleVersionRollback(w, r)
 }
 
 // UploadAudio handles HTTP POST requests for audio file uploads.

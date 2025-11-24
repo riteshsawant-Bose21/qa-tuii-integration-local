@@ -37,7 +37,7 @@ func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 		localNode := h.memberlist.LocalNode().Name
 
 		if message.Node != localNode {
-			// Remote update: apply Lamport logic
+			// Handle remote update
 			dirty, err = h.StateManager.ApplyUpdate(*message.ConfigUpdate)
 			if err != nil {
 				return fmt.Errorf("failed to apply remote update: %w", err)
@@ -63,7 +63,16 @@ func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 		h.persistence.MarkDirty()
 
 	case api.NotifyOpSnapActivate:
-		// Activate the specified snapshot.
+		// For snapshot activation:
+		// - The origin node has already called ActivateSnapshotAndReturnState
+		//   in Handler.HandleActivateSnapshot.
+		// - Remote nodes will activate the snapshot in ClusterDelegate.NotifyMsg.
+		//
+		// Just validate the payload; no local activation.
+		if message.SnapshotUpdate == nil || message.SnapshotUpdate.Name == "" {
+			return fmt.Errorf("SnapshotUpdate with valid name required for snap activate")
+		}
+
 		if err := h.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
 			return fmt.Errorf("error activating snapshot: %v", err)
 		}
@@ -78,12 +87,6 @@ func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
 		// Delete the specified snapshot.
 		if err := h.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)
-		}
-
-	case api.NotifyOpVersionUpdate:
-		// Perform a version update triggered remotely.
-		if err := h.updater.PerformRemoteUpdate(*message.VersionUpdate); err != nil {
-			return fmt.Errorf("performRemoteUpdate error: %v", err)
 		}
 
 	default:

@@ -45,7 +45,6 @@ type App struct {
 	StateManager      *persistence.StateManager
 	Persistence       *persistence.Persistence
 	TaskManager       *tasks.TaskManager
-	Updater           *handler.Updater
 	ConnectionHandler *handler.Handler
 	Cluster           *cluster.Cluster
 	Delegate          *cluster.ClusterDelegate
@@ -71,13 +70,12 @@ func NewApp(config *api.AppConfig) *App {
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	taskManager := initTaskManager(config, persistence)
-	updater := handler.NewUpdater()
 	hub := pubsub.NewHub()
 
 	controllerManager := controllers.NewControllerManager(hub, "7950")
-	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, updater, hub)
+	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, updater, hub, controllerManager)
+	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -99,7 +97,6 @@ func NewApp(config *api.AppConfig) *App {
 		StateManager:      stateManager,
 		Persistence:       persistence,
 		TaskManager:       taskManager,
-		Updater:           updater,
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
 		Delegate:          delegate,
@@ -252,8 +249,6 @@ func (app *App) setupPublicRoutes() {
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
-	app.registerPublicPOST(routes.VersionEndpoint, app.Server.RollbackVersion)
-	app.registerPublicPUT(routes.VersionEndpoint, app.Server.UpdateVersion)
 
 	// WebSocket
 	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))

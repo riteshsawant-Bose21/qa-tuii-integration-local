@@ -28,11 +28,12 @@ func (h *Handler) HandleActivateSnapshot(name string) error {
 		return err
 	}
 
-	// Broadcast ONE config-update message containing the entire restored state:
+	// Broadcast message containing the entire restored state
 	update := api.ConfigUpdate{
-		Data:    restored,
-		Version: h.StateManager.GetVersion(),
-		Clear:   false,
+		Data:         restored,
+		Version:      h.StateManager.GetVersion(),
+		Clear:        false,
+		FromSnapshot: true,
 	}
 
 	msg := api.NewNotifyMessage(
@@ -50,8 +51,7 @@ func (h *Handler) HandleCreateSnapshot(name string) error {
 		return fmt.Errorf("failed to create snapshot: %w", err)
 	}
 
-	data := h.StateManager.GetStateMap()
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate, data); err != nil {
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate, nil); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil

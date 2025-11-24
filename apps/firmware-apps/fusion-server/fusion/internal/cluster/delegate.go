@@ -5,7 +5,6 @@ import (
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
-	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"math"
 	"sync"
@@ -67,7 +66,6 @@ type ClusterDelegate struct {
 	persistence   *persistence.Persistence
 	stateManager  *persistence.StateManager
 	taskManager   *tasks.TaskManager
-	updater       *handler.Updater
 	syncLatencies *SyncLatencyStore
 	skewStore     *SkewStore
 	hub           *pubsub.Hub
@@ -78,14 +76,12 @@ func NewClusterDelegate(
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	taskManager *tasks.TaskManager,
-	updater *handler.Updater,
 	hub *pubsub.Hub) *ClusterDelegate {
 	delegate := &ClusterDelegate{
 		appConfig:     config,
 		persistence:   persistence,
 		stateManager:  stateManager,
 		taskManager:   taskManager,
-		updater:       updater,
 		hub:           hub,
 		syncLatencies: NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
 		skewStore:     NewSkewStore(),
@@ -231,11 +227,6 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpTaskUpdate:
 		if err := d.taskManager.UpdateTaskFromCluster(message.Task); err != nil {
 			logger.Error("Error updating task: %v", err)
-		}
-
-	case api.NotifyOpVersionUpdate:
-		if err := d.updater.PerformRemoteUpdate(*message.VersionUpdate); err != nil {
-			logger.Error("PerformRemoteUpdate error: %v", err)
 		}
 
 	default:
