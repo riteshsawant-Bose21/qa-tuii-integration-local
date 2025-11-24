@@ -165,7 +165,7 @@ func (s *PriceService) GetPriceTimestamps(ctx context.Context, priceKeys []syncT
 
 	for _, key := range priceKeys {
 		// Handle variant: use COALESCE to treat NULL as empty string
-		variantCondition := "COALESCE(variant, '') = $" + fmt.Sprintf("%d", argIndex+2)
+		variantCondition := fmt.Sprintf("COALESCE(variant, '') = $%d", argIndex+2)
 		condition := fmt.Sprintf("(product_id = $%d AND currency = $%d AND %s)", argIndex, argIndex+1, variantCondition)
 		conditions = append(conditions, condition)
 

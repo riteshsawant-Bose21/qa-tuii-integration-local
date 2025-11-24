@@ -40,7 +40,7 @@ func (p *Service) GetProductPrices(ctx context.Context, id string, currency stri
 
 	// Check if no prices found
 	if len(prices.Prices) == 0 {
-		return nil, fmt.Errorf("no prices found")
+		return nil, fmt.Errorf("no prices found for product ID %s", id)
 	}
 
 	return prices, nil
