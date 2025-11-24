@@ -22,7 +22,6 @@ const (
 	HTTPTimeout = 5 * time.Second
 
 	MessageIDKey        = "id"
-	MessagePathKey      = "path"
 	MessagePriorityKey  = "priority"
 	MessageTimestampKey = "timestamp"
 	MessageZonesKey     = "zones"

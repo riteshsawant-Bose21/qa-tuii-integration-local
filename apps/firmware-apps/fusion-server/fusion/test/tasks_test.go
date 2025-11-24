@@ -48,6 +48,7 @@ func createTask(t *testing.T) {
 		CronExpr:    "*/5 * * * *",
 		Description: "Test task description",
 		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
 		Params:      map[string]any{api.SnapshotIDKey: "default"},
 	}
 
@@ -69,6 +70,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 			CronExpr:    "*/5 * * * *",
 			Description: "Test task description",
 			Type:        api.TaskTypeSnapshot,
+			Enabled:     true,
 			Params:      map[string]any{api.SnapshotIDKey: "default"},
 		}
 
@@ -157,6 +159,49 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		err = json.NewDecoder(resp.Body).Decode(&history)
 		require.NoError(t, err, "Expected valid JSON for execution history")
 		// Optionally, add more assertions based on the expected state.
+	})
+
+	t.Run("EnableDisableTask", func(t *testing.T) {
+		clearTasks(t)
+		createTask(t)
+
+		// --- Disable Task ---
+		reqDisable, err := http.NewRequest(http.MethodPost, tasksURL+"/"+testTaskId+"/disable", nil)
+		require.NoError(t, err)
+		respDisable, err := http.DefaultClient.Do(reqDisable)
+		require.NoError(t, err)
+		defer respDisable.Body.Close()
+
+		assert.Equal(t, http.StatusNoContent, respDisable.StatusCode)
+
+		// Verify disabled
+		respGet, err := http.Get(tasksURL + "/" + testTaskId)
+		require.NoError(t, err)
+		defer respGet.Body.Close()
+
+		var disabledTask api.Task
+		err = json.NewDecoder(respGet.Body).Decode(&disabledTask)
+		require.NoError(t, err)
+		assert.False(t, disabledTask.Enabled, "Task should be disabled")
+
+		// --- Enable Task ---
+		reqEnable, err := http.NewRequest(http.MethodPost, tasksURL+"/"+testTaskId+"/enable", nil)
+		require.NoError(t, err)
+		respEnable, err := http.DefaultClient.Do(reqEnable)
+		require.NoError(t, err)
+		defer respEnable.Body.Close()
+
+		assert.Equal(t, http.StatusNoContent, respEnable.StatusCode)
+
+		// Verify enabled
+		respGet2, err := http.Get(tasksURL + "/" + testTaskId)
+		require.NoError(t, err)
+		defer respGet2.Body.Close()
+
+		var enabledTask api.Task
+		err = json.NewDecoder(respGet2.Body).Decode(&enabledTask)
+		require.NoError(t, err)
+		assert.True(t, enabledTask.Enabled, "Task should be enabled")
 	})
 }
 
@@ -271,6 +316,46 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 	t.Run("ExecutionHistoryHandler wrong method", func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodPut, tasksServerURL+routes.TasksHistoryEndpoint, nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	})
+
+	t.Run("EnableTask non-existent", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, tasksURL+"/no-such-task/enable", nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("DisableTask non-existent", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPost, tasksURL+"/nope/disable", nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
+	})
+
+	t.Run("EnableTask wrong method", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodGet, tasksURL+"/"+testTaskId+"/enable", nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
+	})
+
+	t.Run("DisableTask wrong method", func(t *testing.T) {
+		req, err := http.NewRequest(http.MethodPut, tasksURL+"/"+testTaskId+"/disable", nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

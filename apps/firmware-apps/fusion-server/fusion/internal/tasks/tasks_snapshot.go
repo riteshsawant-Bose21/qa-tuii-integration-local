@@ -61,12 +61,11 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "created",
-		"id":     task.ID,
+		"id": task.ID,
 	})
 }
 
-// UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing task.
+// UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing snapshot task.
 func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePatch(w, r) {
@@ -99,7 +98,7 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 
 	// At least one must be present
-	hasSnapshot := patch.Snapshot != nil
+	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.CronExpr) != ""
 	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
 
@@ -109,17 +108,17 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 
 	// Update description
-	if patch.Description != nil && strings.TrimSpace(*patch.Description) != "" {
+	if hasDesc {
 		task.Description = *patch.Description
 	}
 
 	// Update cron expression
-	if patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != "" {
+	if hasCron {
 		task.CronExpr = *patch.CronExpr
 	}
 
 	// Update snapshot
-	if patch.Snapshot != nil {
+	if hasSnapshot {
 		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
