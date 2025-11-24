@@ -179,12 +179,16 @@ func (h *Handler) HandleExportData() (any, error) {
 }
 
 func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
-
+	// Build the config update (Lamport version, hash, etc.)
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
 	}
 	configUpdate.Clear = clear
+
+	if _, err := h.StateManager.ApplyUpdate(*configUpdate); err != nil {
+		return fmt.Errorf("failed to apply local config update: %w", err)
+	}
 
 	message := api.NewNotifyMessage(
 		api.NotifyOpConfigUpdate,
@@ -192,5 +196,9 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 		api.WithConfigUpdate(configUpdate),
 	)
 
-	return h.broadcastMessage(message)
+	if err := h.broadcastMessage(message); err != nil {
+		return fmt.Errorf("failed to broadcast config update: %w", err)
+	}
+
+	return nil
 }
