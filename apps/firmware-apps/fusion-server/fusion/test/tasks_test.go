@@ -16,14 +16,16 @@ import (
 )
 
 const (
-	tasksServerURL = "http://192.168.64.100:8080"
+	tasksServerURL = "http://192.168.2.100:8080"
+	tasksURL       = tasksServerURL + routes.TasksEndpoint
+	testTaskId     = "test-task"
 	snapshotID     = "test-snapshot"
 )
 
 // clearTasks retrieves all tasks from the live server and deletes each one.
 // This ensures tests run against a clean slate.
 func clearTasks(t *testing.T) {
-	resp, err := http.Get(tasksServerURL + routes.TasksEndpoint)
+	resp, err := http.Get(tasksURL)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -32,12 +34,29 @@ func clearTasks(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, task := range tasks {
-		req, err := http.NewRequest(http.MethodDelete, tasksServerURL+routes.TasksEndpoint+"/"+task.ID, nil)
+		req, err := http.NewRequest(http.MethodDelete, tasksURL+"/"+task.ID, nil)
 		require.NoError(t, err)
 		respDel, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		respDel.Body.Close()
 	}
+}
+
+func createTask(t *testing.T) {
+	task := api.Task{
+		ID:          testTaskId,
+		CronExpr:    "*/5 * * * *",
+		Description: "Test task description",
+		Type:        api.TaskTypeSnapshot,
+		Params:      map[string]any{api.SnapshotIDKey: "default"},
+	}
+
+	taskJSON, err := json.Marshal(task)
+	require.NoError(t, err)
+
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(taskJSON))
+	require.NoError(t, err)
+	defer resp.Body.Close()
 }
 
 func TestTaskManagerEndpoints(t *testing.T) {
@@ -46,17 +65,17 @@ func TestTaskManagerEndpoints(t *testing.T) {
 
 	t.Run("AddTaskHandler", func(t *testing.T) {
 		task := api.Task{
-			ID:          "test-task",
+			ID:          testTaskId,
 			CronExpr:    "*/5 * * * *",
 			Description: "Test task description",
 			Type:        api.TaskTypeSnapshot,
-			Params:      map[string]any{api.SnapshotIDKey: "001"},
+			Params:      map[string]any{api.SnapshotIDKey: "default"},
 		}
 
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)
 
-		resp, err := http.Post(tasksServerURL+routes.TasksEndpoint, api.JsonMIMEType, bytes.NewReader(taskJSON))
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(taskJSON))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -74,22 +93,26 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		err = json.NewDecoder(resp.Body).Decode(&tasks)
 		require.NoError(t, err, "Expected valid JSON response")
 		assert.Len(t, tasks, 1, "Expected 1 task in the list")
-		assert.Equal(t, "test-task", tasks[0].ID, "Task ID should match")
+		assert.Equal(t, testTaskId, tasks[0].ID, "Task ID should match")
 	})
 
 	t.Run("UpdateTaskHandler", func(t *testing.T) {
+
 		// Update the test-task with new data.
-		task := api.Task{
-			ID:          "test-task",
-			CronExpr:    "*/10 * * * *",
-			Description: "Updated task description",
-			Type:        api.TaskTypeSnapshot,
-			Params:      map[string]any{api.SnapshotIDKey: "001"},
+		desc := "Updated task description"
+		cron := "*/10 * * * *"
+		snap := "default"
+
+		task := api.TaskSnapshopPatch{
+			Description: &desc,
+			CronExpr:    &cron,
+			Snapshot:    &snap,
 		}
+
 		taskJSON, err := json.Marshal(task)
 		require.NoError(t, err)
 
-		req, err := http.NewRequest(http.MethodPost, tasksServerURL+routes.TasksEndpoint+"/test-task", bytes.NewReader(taskJSON))
+		req, err := http.NewRequest(http.MethodPatch, tasksURL+"/test-task", bytes.NewReader(taskJSON))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 
@@ -102,7 +125,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 
 	t.Run("RemoveTaskHandler", func(t *testing.T) {
 		// Delete the test-task.
-		req, err := http.NewRequest(http.MethodDelete, tasksServerURL+routes.TasksEndpoint+"/test-task", nil)
+		req, err := http.NewRequest(http.MethodDelete, tasksURL+"/test-task", nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -138,12 +161,13 @@ func TestTaskManagerEndpoints(t *testing.T) {
 }
 
 func TestTasksEndpointErrorCases(t *testing.T) {
-	// Clean up any existing tasks before testing error cases.
+
 	clearTasks(t)
+	createTask(t)
 
 	t.Run("ListTasksHandler wrong method", func(t *testing.T) {
 		// Using POST on /tasks when GET is expected.
-		req, err := http.NewRequest(http.MethodPost, tasksServerURL+routes.TasksEndpoint, nil)
+		req, err := http.NewRequest(http.MethodPost, tasksURL, nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -154,7 +178,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("AddTaskHandler wrong method", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPut, tasksServerURL+routes.TasksEndpoint, nil)
+		req, err := http.NewRequest(http.MethodPut, tasksURL, nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -164,7 +188,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("AddTaskHandler malformed JSON", func(t *testing.T) {
-		resp, err := http.Post(tasksServerURL+routes.TasksEndpoint, api.JsonMIMEType, strings.NewReader("not-json"))
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, strings.NewReader("not-json"))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -173,7 +197,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 	t.Run("AddTaskHandler missing required fields", func(t *testing.T) {
 		payload := `{"id": "", "cron_expr": "", "description": ""}`
-		resp, err := http.Post(tasksServerURL+routes.TasksEndpoint, api.JsonMIMEType, strings.NewReader(payload))
+		resp, err := http.Post(tasksURL, api.JsonMIMEType, strings.NewReader(payload))
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
@@ -181,7 +205,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("UpdateTaskHandler wrong method", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, tasksServerURL+routes.TasksEndpoint+"/test", nil)
+		req, err := http.NewRequest(http.MethodGet, tasksURL+"/test", nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -192,7 +216,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 	t.Run("UpdateTaskHandler missing id parameter", func(t *testing.T) {
 		payload := `{"cron_expr": "*/5 * * * *", "description": "updated"}`
-		req, err := http.NewRequest(http.MethodPut, tasksServerURL+routes.TasksEndpoint, strings.NewReader(payload))
+		req, err := http.NewRequest(http.MethodPut, tasksURL, strings.NewReader(payload))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 		resp, err := http.DefaultClient.Do(req)
@@ -203,7 +227,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("UpdateTaskHandler malformed JSON", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodPost, tasksServerURL+routes.TasksEndpoint+"/test", strings.NewReader("not-json"))
+		req, err := http.NewRequest(http.MethodPatch, tasksURL+"/"+testTaskId, strings.NewReader("not-json"))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 		resp, err := http.DefaultClient.Do(req)
@@ -215,18 +239,18 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 	t.Run("UpdateTaskHandler missing required fields", func(t *testing.T) {
 		payload := `{"cron_expr": "", "description": ""}`
-		req, err := http.NewRequest(http.MethodPost, tasksServerURL+routes.TasksEndpoint+"/test", strings.NewReader(payload))
+		req, err := http.NewRequest(http.MethodPatch, tasksURL+"/"+testTaskId, strings.NewReader(payload))
 		require.NoError(t, err)
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		assert.Equal(t, http.StatusBadRequest, resp.StatusCode)
+		assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 	})
 
 	t.Run("RemoveTaskHandler wrong method", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, tasksServerURL+routes.TasksEndpoint+"/test", nil)
+		req, err := http.NewRequest(http.MethodGet, tasksURL+"/test", nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)
@@ -236,7 +260,7 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 	})
 
 	t.Run("RemoveTaskHandler missing task id", func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodDelete, tasksServerURL+routes.TasksEndpoint, nil)
+		req, err := http.NewRequest(http.MethodDelete, tasksURL, nil)
 		require.NoError(t, err)
 		resp, err := http.DefaultClient.Do(req)
 		require.NoError(t, err)

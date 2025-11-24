@@ -295,3 +295,8 @@ func (h *Handler) streamBinaryToNode(node *memberlist.Node, binaryPath string) e
 
 	return nil
 }
+
+// handleAudioSync syncs an audio file binary between nodes
+func (h *Handler) handleAudioSync(update *api.AudioSyncUpdate) error {
+	return h.persistence.SyncAudioFile(update)
+}

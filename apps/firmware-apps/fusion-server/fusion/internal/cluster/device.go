@@ -46,8 +46,7 @@ func (c *Cluster) GetDeviceInfo(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(info); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		logging.GetLogger().Error("Error encoding device info: %v", err)
 	}
 }
 
@@ -135,7 +134,7 @@ func (c *Cluster) UpdateDeviceInfo(w http.ResponseWriter, r *http.Request) {
 		}
 		req.Header.Set(api.ContentType, api.JsonMIMEType)
 
-		resp, err := httpClient.Do(req)
+		resp, err := c.httpClient.Do(req)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("PATCH request failed: %v", err), http.StatusBadGateway)
 			return
@@ -186,7 +185,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if c.config.Local {
+	if c.appConfig.Local {
 		c.getVIPInLocalConfig(w)
 		return
 	}
@@ -211,6 +210,7 @@ func (c *Cluster) GetVIP(w http.ResponseWriter, r *http.Request) {
 			"local": local.String(),
 			"vip":   vip.String(),
 		})
+		return
 	}
 
 	w.WriteHeader(http.StatusNotFound)
@@ -246,7 +246,7 @@ func (c *Cluster) SetVIP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if !c.config.Local {
+	if !c.appConfig.Local {
 		go func() {
 			// Reload keepalived outside of request after updating all the nodes
 			if err := postGenericToAdmin(c, routes.DeviceReloadVIPEndpoint, c.reloadVIP); err != nil {
@@ -447,7 +447,7 @@ func validateNoDuplication(
 func (c *Cluster) setVIPInConfig(newVIP string) error {
 	logger := logging.GetLogger()
 
-	if c.config.Local {
+	if c.appConfig.Local {
 		return setVIPInLocalConfig(newVIP)
 	}
 

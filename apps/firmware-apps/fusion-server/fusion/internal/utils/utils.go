@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"fusion/internal/api"
 	"fusion/internal/logging"
 	"io"
 	"mime/multipart"
@@ -12,6 +13,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -84,52 +86,75 @@ func RequirePut(w http.ResponseWriter, r *http.Request) bool {
 
 func ApplyPatch(data map[string]any, changes map[string]any) error {
 	for key, value := range changes {
-		switch {
-		case value == nil:
+
+		// Delete field ("key": null)
+		if value == nil {
 			removeNestedField(data, key)
-		case isMap(value):
+			continue
+		}
+
+		// Nested object merge
+		if isMap(value) {
 			subChanges := value.(map[string]any)
-			if subData, ok := getNestedValue(data, key).(map[string]any); ok {
-				if err := ApplyPatch(subData, subChanges); err != nil {
-					return err
-				}
-			} else {
-				newSubData := make(map[string]any)
-				SetNestedValue(data, key, newSubData)
-				if err := ApplyPatch(newSubData, subChanges); err != nil {
-					return err
-				}
+
+			// Get the target object
+			subData, _ := getNestedValue(data, key).(map[string]any)
+			if subData == nil {
+				// Create the nested object if missing
+				subData = map[string]any{}
+				SetNestedValue(data, key, subData)
 			}
-		case isArray(value):
-			subArray := value.([]any)
-			existingValue := getNestedValue(data, key)
-			if _, isExistingArray := existingValue.([]any); isExistingArray && !isIndexedKey(key) {
-				SetNestedValue(data, key, subArray)
-			} else {
-				if existingArray, ok := existingValue.([]any); ok {
-					for i, v := range subArray {
-						if i < len(existingArray) {
-							existingArray[i] = v
-						} else {
-							return fmt.Errorf("index %d out of bounds for array %s", i, key)
-						}
-					}
-					SetNestedValue(data, key, existingArray)
-				} else {
-					SetNestedValue(data, key, subArray)
-				}
-			}
-		default:
-			if err := updateNestedField(data, key, value); err != nil {
+
+			// Recursively apply the subpatch
+			if err := ApplyPatch(subData, subChanges); err != nil {
 				return err
 			}
+			continue
+		}
+
+		// Array updates
+		if isArray(value) {
+			subArray := value.([]any)
+			existing := getNestedValue(data, key)
+
+			// Full array replacement:
+			//
+			//    "frequencies": [400, 500]
+			//
+			// NO indexed key → full replace
+			if _, ok := existing.([]any); ok && !isIndexedKey(key) {
+				SetNestedValue(data, key, subArray)
+				continue
+			}
+
+			// Indexed array update:
+			//
+			//    PATCH /value?key=...frequencies[1]
+			//    { "value": 250 }
+			//
+			// In PATCH cases, `subArray` is always len=1
+			if isIndexedKey(key) {
+				// Use SetNestedValue so that your existing ensureArrayCapacity logic runs
+				SetNestedValue(data, key, subArray[0])
+				continue
+			}
+
+			// Otherwise create/replace array
+			SetNestedValue(data, key, subArray)
+			continue
+		}
+
+		// Simple assignment
+		if err := updateNestedField(data, key, value); err != nil {
+			return err
 		}
 	}
+
 	return nil
 }
 
-// CalculateChecksum returns a SHA-256 hash of JSON data.
-func CalculateChecksum(v any) (string, error) {
+// JSONChecksum returns a SHA-256 hash of JSON data.
+func JSONChecksum(v any) (string, error) {
 
 	// canonicaljson is used to ensure deterministic ordering
 	b, err := canonicaljson.Marshal(v)
@@ -138,6 +163,20 @@ func CalculateChecksum(v any) (string, error) {
 	}
 	sum := sha256.Sum256(b)
 	return hex.EncodeToString(sum[:]), nil
+}
+
+// FileChecksum returns a SHA-256 hash of the file at path.
+func FileChecksum(path string) (string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // VerifyChecksum validates the checksum.
@@ -478,6 +517,87 @@ func SendUDPMessage(addr *net.UDPAddr, payload any) error {
 
 	if _, err := conn.WriteTo(data, addr); err != nil {
 		return fmt.Errorf("failed to send UDP packet: %w", err)
+	}
+	return nil
+}
+
+func FlattenState(state map[string]*api.StateEntry) map[string]any {
+	result := make(map[string]any, len(state))
+	for k, e := range state {
+		if e != nil {
+			result[k] = e.Data
+		}
+	}
+	return result
+}
+
+// CalculateDiff recursively compares two data structures (maps or slices) and returns the differences.
+// If the data is not equal, it returns the updated data.
+func CalculateDiff(oldData, newData any) any {
+	// If both values are slices, delegate to calculateSliceDiff.
+	if oldSlice, ok := oldData.([]any); ok {
+		if newSlice, ok2 := newData.([]any); ok2 {
+			return calculateSliceDiff(oldSlice, newSlice)
+		}
+	}
+
+	// If both values are maps, compare them key by key.
+	if oldMap, ok := oldData.(map[string]any); ok {
+		if newMap, ok2 := newData.(map[string]any); ok2 {
+			diff := make(map[string]any)
+
+			// Check keys present in the new map.
+			for key, newVal := range newMap {
+				if oldVal, exists := oldMap[key]; exists {
+					subDiff := CalculateDiff(oldVal, newVal)
+					if subDiff != nil {
+						diff[key] = subDiff
+					}
+				} else {
+					// New key added.
+					diff[key] = newVal
+				}
+			}
+
+			// Check for keys that were removed.
+			for key := range oldMap {
+				if _, exists := newMap[key]; !exists {
+					diff[key] = nil
+				}
+			}
+			if len(diff) > 0 {
+				return diff
+			}
+			return nil
+		}
+	}
+
+	// For atomic types, if they differ, return the new value.
+	if !reflect.DeepEqual(oldData, newData) {
+		return newData
+	}
+	return nil
+}
+
+// calculateSliceDiff compares two slices element by element.
+// If the slices have different lengths, it returns the new slice entirely.
+// Otherwise, it returns a map with indices (as strings) where differences are found.
+func calculateSliceDiff(oldSlice, newSlice []any) any {
+	if len(oldSlice) != len(newSlice) {
+		return newSlice
+	}
+
+	diffMap := make(map[string]any)
+	for i, newVal := range newSlice {
+		subDiff := CalculateDiff(oldSlice[i], newVal)
+		if subDiff != nil {
+			// Use the index (converted to string) as the key.
+			diffMap[strconv.Itoa(i)] = subDiff
+		}
+	}
+
+	if len(diffMap) > 0 {
+		return diffMap
 	}
 	return nil
 }

@@ -794,6 +794,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                     ) {
                       return FusionAppText(
                         text: serviceLocator<ProjectViewModel>().projectName,
+                        semanticId: "Project Name",
                         textOverflow: TextOverflow.ellipsis,
                         maxLine: 1,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
@@ -804,10 +805,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                   ),
                   const SizedBox(height: 2),
                   FusionAppText(
-                    text: "File_Version",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                    text: "1.0.0",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
                   ),
                 ],
               ),

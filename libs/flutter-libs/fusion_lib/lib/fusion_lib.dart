@@ -11,6 +11,8 @@ export 'fusion_utils/fusion_utils.dart';
 export 'fusion_widgets/fusion_widgets.dart';
 export 'fusion_widgets/guide/controller/guide_showcase_controller.dart';
 export 'fusion_widgets/guide/pages/guide_showcase_wrapper.dart';
+export 'fusion_widgets/semantics/semantic_helper.dart';
+export 'fusion_widgets/semantics/semantic_type.dart';
 export 'fusion_widgets/others/fusion_keyboard_wrapper.dart';
 export 'fusion_widgets/others/fusion_reorderable_row.dart';
 export 'models/fusion_models.dart';

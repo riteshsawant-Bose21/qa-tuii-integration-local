@@ -4,6 +4,8 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
@@ -55,24 +57,28 @@ class _FusionSidebarState extends State<FusionSidebar> {
             _HoverNavItem(
               icon: Icons.home_filled,
               title: 'Home',
+              semanticsId: 'home_tab',
               isSelected: widget.selectedTab == 'Home',
               onTap: () => widget.onTabChanged?.call('Home'),
             ),
             _HoverNavItem(
               icon: Icons.person_sharp,
               title: 'Profile',
+              semanticsId: 'profile_tab',
               isSelected: widget.selectedTab == 'Profile',
               onTap: () => widget.onTabChanged?.call('Profile'),
             ),
             _HoverNavItem(
               icon: Icons.settings_sharp,
               title: 'Settings',
+              semanticsId: 'settings_tab',
               isSelected: widget.selectedTab == 'Settings',
               onTap: () => widget.onTabChanged?.call('Settings'),
             ),
             _HoverNavItem(
               icon: Icons.public,
               title: 'Community',
+              semanticsId: 'community_tab',
               isSelected: widget.selectedTab == 'Community',
               onTap: () => widget.onTabChanged?.call('Community'),
             ),
@@ -81,6 +87,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               _HoverNavItem(
                 icon: Icons.library_books_sharp,
                 title: 'Test Library',
+                semanticsId: 'library_tab',
                 isSelected: widget.selectedTab == 'Library',
                 onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
               ),
@@ -95,6 +102,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               child: _HoverNavItem(
                 icon: Icons.folder_sharp,
                 title: 'Add New Project',
+                semanticsId: 'my_projects_section',
                 isBold: true,
                 trailing: Icons.add_sharp,
                 onTap: () => _showNewProjectDialog(context),
@@ -287,13 +295,16 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   ValueListenableBuilder<String?>(
                     valueListenable: projectNameErrorNotifier,
                     builder: (BuildContext context, String? errorText, _) {
-                      return TextFormField(
-                        controller: projectNameController,
-                        autofocus: true,
-                        decoration: _buildInputDecoration(
-                          context,
-                          'Project Name',
-                          errorText,
+                      return SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "Project Name"),
+                        child: TextFormField(
+                          controller: projectNameController,
+                          autofocus: true,
+                          decoration: _buildInputDecoration(
+                            context,
+                            'Project Name',
+                            errorText,
+                          ),
                         ),
                       );
                     },
@@ -306,12 +317,15 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   ValueListenableBuilder<String?>(
                     valueListenable: venueNameErrorNotifier,
                     builder: (BuildContext context, String? errorText, _) {
-                      return TextFormField(
-                        controller: venueNameController,
-                        decoration: _buildInputDecoration(
-                          context,
-                          'Venue Name',
-                          errorText,
+                      return SemanticHelper.formControl(
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "Venue Name"),
+                        child: TextFormField(
+                          controller: venueNameController,
+                          decoration: _buildInputDecoration(
+                            context,
+                            'Venue Name',
+                            errorText,
+                          ),
                         ),
                       );
                     },
@@ -520,18 +534,21 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   // Budget
                   _buildInputLabel("Budget"),
                   const SizedBox(height: 8),
-                  TextFormField(
-                    controller: budgetController,
-                    keyboardType: TextInputType.number,
-                    decoration: _buildInputDecoration(
-                      context,
-                      'Budget',
-                      null,
-                    ).copyWith(
-                      prefixText: '\$ ',
-                      prefixStyle: const TextStyle(
-                        color: Colors.black87,
-                        fontSize: 14,
+                  SemanticHelper.formControl(
+                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, "Budget"),
+                    child: TextFormField(
+                      controller: budgetController,
+                      keyboardType: TextInputType.number,
+                      decoration: _buildInputDecoration(
+                        context,
+                        'Budget',
+                        null,
+                      ).copyWith(
+                        prefixText: '\$ ',
+                        prefixStyle: const TextStyle(
+                          color: Colors.black87,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ),
@@ -541,87 +558,93 @@ class _FusionSidebarState extends State<FusionSidebar> {
             ),
           ),
           actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.grey.shade700,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "Cancel"),
+              child: TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
+                child: const Text("Cancel"),
               ),
-              child: const Text("Cancel"),
             ),
-            ElevatedButton(
-              onPressed: () async {
-                final String projectName = projectNameController.text.trim();
-                final String venueName = venueNameController.text.trim();
-                final String budget = budgetController.text.trim();
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "Create"),
+              child: ElevatedButton(
+                onPressed: () async {
+                  final String projectName = projectNameController.text.trim();
+                  final String venueName = venueNameController.text.trim();
+                  final String budget = budgetController.text.trim();
 
-                // Clear all previous errors
-                projectNameErrorNotifier.value = null;
-                venueNameErrorNotifier.value = null;
-                venueTypeErrorNotifier.value = null;
-                applicationErrorNotifier.value = null;
+                  // Clear all previous errors
+                  projectNameErrorNotifier.value = null;
+                  venueNameErrorNotifier.value = null;
+                  venueTypeErrorNotifier.value = null;
+                  applicationErrorNotifier.value = null;
 
-                // Validation with field-specific errors
-                bool hasError = false;
+                  // Validation with field-specific errors
+                  bool hasError = false;
 
-                if (projectName.isEmpty) {
-                  projectNameErrorNotifier.value = 'Project name cannot be empty';
-                  hasError = true;
-                }
+                  if (projectName.isEmpty) {
+                    projectNameErrorNotifier.value = 'Project name cannot be empty';
+                    hasError = true;
+                  }
 
-                if (venueName.isEmpty) {
-                  venueNameErrorNotifier.value = 'Venue name cannot be empty';
-                  hasError = true;
-                }
+                  if (venueName.isEmpty) {
+                    venueNameErrorNotifier.value = 'Venue name cannot be empty';
+                    hasError = true;
+                  }
 
-                if (selectedVenueTypeNotifier.value == null) {
-                  venueTypeErrorNotifier.value = 'Please select a venue type';
-                  hasError = true;
-                }
+                  if (selectedVenueTypeNotifier.value == null) {
+                    venueTypeErrorNotifier.value = 'Please select a venue type';
+                    hasError = true;
+                  }
 
-                if (selectedApplicationNotifier.value == null) {
-                  applicationErrorNotifier.value = 'Please select an application';
-                  hasError = true;
-                }
+                  if (selectedApplicationNotifier.value == null) {
+                    applicationErrorNotifier.value = 'Please select an application';
+                    hasError = true;
+                  }
 
-                if (hasError) {
-                  return;
-                }
+                  if (hasError) {
+                    return;
+                  }
 
-                FusionUiUtils.showLoader(context);
-                final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(
-                  newProject,
-                );
-                if (context.mounted) {
-                  FusionUiUtils.hideLoader(context);
-                }
+                  FusionUiUtils.showLoader(context);
+                  final NewProjectDetails newProject = NewProjectDetails(name: projectName);
+                  final ProjectData? projectData = await serviceLocator<ProjectViewModel>().createAndSaveNewProject(
+                    newProject,
+                  );
+                  if (context.mounted) {
+                    FusionUiUtils.hideLoader(context);
+                  }
 
-                serviceLocator<ProjectViewModel>().openProject(projectData!.id);
+                  serviceLocator<ProjectViewModel>().openProject(projectData!.id);
 
-                // if (errorMessage != null) {
-                //   projectNameErrorNotifier.value = errorMessage;
-                //   return;
-                // }
+                  // if (errorMessage != null) {
+                  //   projectNameErrorNotifier.value = errorMessage;
+                  //   return;
+                  // }
 
-                if (context.mounted) {
-                  serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
-                  Navigator.of(context).pop();
-                  // Navigator.pushNamed(context, Routes.projectPage);
-                }
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.grey.shade800,
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                  if (context.mounted) {
+                    serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
+                    Navigator.of(context).pop();
+                    // Navigator.pushNamed(context, Routes.projectPage);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade800,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
                 ),
+                child: const Text("Create"),
               ),
-              child: const Text("Create"),
             ),
           ],
         );
@@ -679,38 +702,41 @@ class _FusionSidebarState extends State<FusionSidebar> {
   }
 
   Widget _buildIconTile(String title, IconData icon, bool isSelected, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.blue.shade50 : Colors.grey.shade50,
-          border: Border.all(
-            color: isSelected ? Colors.blue.shade400 : Colors.grey.shade300,
-            width: isSelected ? 1 : 1,
-            strokeAlign: BorderSide.strokeAlignInside,
-          ),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Row(
-          children: <Widget>[
-            Icon(
-              icon,
-              color: isSelected ? Colors.blue.shade600 : Colors.grey.shade600,
-              size: 20,
+    return SemanticHelper.formControl(
+      testId: SemanticHelper.createTestId(SemanticTypes.toggle, title),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.blue.shade50 : Colors.grey.shade50,
+            border: Border.all(
+              color: isSelected ? Colors.blue.shade400 : Colors.grey.shade300,
+              width: isSelected ? 1 : 1,
+              strokeAlign: BorderSide.strokeAlignInside,
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: isSelected ? Colors.blue.shade700 : Colors.black87,
-                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                icon,
+                color: isSelected ? Colors.blue.shade600 : Colors.grey.shade600,
+                size: 20,
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: isSelected ? Colors.blue.shade700 : Colors.black87,
+                    fontWeight: isSelected ? FontWeight.w500 : FontWeight.normal,
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -754,6 +780,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
     return _HoverNavItem(
       icon: icon,
       title: title,
+      semanticsId: '${title.toLowerCase().replaceAll(' ', '_')}_nav_item',
       isSubItem: isSubItem,
       isBold: isBold,
       trailing: trailing,
@@ -772,6 +799,7 @@ class _HoverNavItem extends StatefulWidget {
   final VoidCallback? onTap;
   final Color? textColor;
   final bool isSelected;
+  final String semanticsId;
 
   const _HoverNavItem({
     required this.icon,
@@ -782,6 +810,7 @@ class _HoverNavItem extends StatefulWidget {
     this.onTap,
     this.textColor,
     this.isSelected = false,
+    required this.semanticsId,
     Key? key,
   }) : super(key: key);
 
@@ -802,25 +831,28 @@ class _HoverNavItemState extends State<_HoverNavItem> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: InkWell(
-        onTap: widget.onTap,
-        child: Container(
-          color: widget.isSelected ? Colors.blue.shade100 : (_isHovered ? Colors.grey.shade200 : Colors.transparent),
-          padding: EdgeInsets.only(
-            left: widget.isSubItem ? 32 : 16,
-            right: 16,
-            top: 10,
-            bottom: 10,
-          ),
-          child: Row(
-            children: <Widget>[
-              Icon(widget.icon, size: 16, color: widget.textColor ?? Colors.black),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Text(widget.title, style: style, overflow: TextOverflow.ellipsis),
-              ),
-              if (widget.trailing != null) Icon(widget.trailing, size: 16, color: widget.textColor ?? Colors.black),
-            ],
+      child: SemanticHelper.container(
+        testId: SemanticHelper.createTestId(SemanticTypes.listItem, widget.semanticsId),
+        child: InkWell(
+          onTap: widget.onTap,
+          child: Container(
+            color: widget.isSelected ? Colors.blue.shade100 : (_isHovered ? Colors.grey.shade200 : Colors.transparent),
+            padding: EdgeInsets.only(
+              left: widget.isSubItem ? 32 : 16,
+              right: 16,
+              top: 10,
+              bottom: 10,
+            ),
+            child: Row(
+              children: <Widget>[
+                Icon(widget.icon, size: 16, color: widget.textColor ?? Colors.black),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(widget.title, style: style, overflow: TextOverflow.ellipsis),
+                ),
+                if (widget.trailing != null) Icon(widget.trailing, size: 16, color: widget.textColor ?? Colors.black),
+              ],
+            ),
           ),
         ),
       ),

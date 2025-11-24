@@ -4,14 +4,13 @@ import (
 	"errors"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"fusion/internal/logging"
 )
 
-const (
-	defaultBufferSize = 65535
-)
+const defaultBufferSize = 65535
 
 type PacketHandler func(data []byte, addr *net.UDPAddr)
 
@@ -22,9 +21,10 @@ type Listener struct {
 	BufferSize int
 	Timeout    time.Duration
 	Handler    PacketHandler
+
+	started atomic.Bool
 }
 
-// NewListener creates a Listener configured with your buffer, timeout, and handler.
 func NewListener(
 	conn *net.UDPConn,
 	bufferSize int,
@@ -40,42 +40,73 @@ func NewListener(
 	}
 }
 
-// Start uses the stored BufferSize, Timeout and Handler.
+// IsClosed checks for any "connection closed" condition.
+func isConnClosed(err error) bool {
+	return errors.Is(err, net.ErrClosed) ||
+		err.Error() == "use of closed network connection"
+}
+
 func (l *Listener) Start() {
+
+	// Prevent accidental double-starts
+	if !l.started.CompareAndSwap(false, true) {
+		logging.GetLogger().Error("listener already started")
+		return
+	}
+
+	if l.Handler == nil {
+		panic("Listener.Handler must not be nil")
+	}
+
 	l.wg.Add(1)
 	go func() {
 		defer l.wg.Done()
 
 		buf := make([]byte, l.BufferSize)
+		logger := logging.GetLogger()
 
 		for {
 			select {
 			case <-l.stopChan:
 				return
 			default:
-				l.conn.SetReadDeadline(time.Now().Add(l.Timeout))
-				n, addr, err := l.conn.ReadFromUDP(buf)
-				if err != nil {
-					if ne, ok := err.(net.Error); ok && ne.Timeout() {
-						continue
-					}
-					if errors.Is(err, net.ErrClosed) ||
-						err.Error() == "use of closed network connection" {
-						return
-					}
-					logging.GetLogger().Error("read error from %v: %v", addr, err)
+			}
+
+			// Apply deadline only if configured
+			if l.Timeout > 0 {
+				_ = l.conn.SetReadDeadline(time.Now().Add(l.Timeout))
+			}
+
+			n, addr, err := l.conn.ReadFromUDP(buf)
+			if err != nil {
+				if ne, ok := err.(net.Error); ok && ne.Timeout() {
 					continue
 				}
+				if isConnClosed(err) {
+					return
+				}
 
-				l.Handler(buf[:n], addr)
+				logger.Error("UDP read error (from %v): %v", addr, err)
+				continue
 			}
+
+			// Panic-safe handler
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Error("panic in UDP handler: %v", r)
+					}
+				}()
+				l.Handler(buf[:n], addr)
+			}()
 		}
 	}()
 }
 
-// Stop cleanly shuts down the listener.
 func (l *Listener) Stop() {
-	close(l.stopChan)
-	l.conn.Close()
-	l.wg.Wait()
+	if l.started.CompareAndSwap(true, false) {
+		close(l.stopChan)
+		_ = l.conn.Close()
+		l.wg.Wait()
+	}
 }

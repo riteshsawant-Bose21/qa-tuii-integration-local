@@ -1,5 +1,5 @@
 {
-    "version": "0.1.9",
+    "version": "0.1.10",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -2073,6 +2073,32 @@
                     "dimensions": [1],
                     "value_type": "bool",
                     "default_value": false
+                }
+            ]
+        },
+        {
+            "name": "unshifter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels"
                 }
             ]
         },
