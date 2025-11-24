@@ -517,6 +517,22 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  void updatePrioritySourceData({required PrioritySourceData updatedData, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updatePrioritySourceData(updatedData: updatedData);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update priority source data: $e");
+      throwError("Failed to update priority source data: $e");
+    }
+  }
+
   void updatePrioritySourceGain({required String priorityDataId, required double newGain, bool autoSave = true}) {
     try {
       if (autoSave) {
