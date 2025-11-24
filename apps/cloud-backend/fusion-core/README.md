@@ -424,7 +424,7 @@ go install github.com/aarondl/sqlboiler/v4/drivers/sqlboiler-psql@latest
 
 # Generate models from database schema
 cd internal/fusion/model
-sqlboiler psql --config sqlboiler.toml
+sqlboiler psql --no-tests --config sqlboiler.toml
 ```
 
 ### Regenerating API Documentation
