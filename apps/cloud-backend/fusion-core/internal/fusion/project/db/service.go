@@ -21,42 +21,44 @@ import (
 	ericDecimal "github.com/ericlagergren/decimal"
 )
 
-// ProjectDBExecutor can perform basic SQL queries (like *sql.Tx)
+// ProjectDBExecutor provides basic SQL query operations (compatible with both *sql.DB and *sql.Tx)
 type ProjectDBExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-	Commit() error
-	Rollback() error
+	Prepare(query string) (*sql.Stmt, error)
 }
 
-// ProjectDBContextExecutor can perform SQL queries with context (like *sql.Tx)
+// ProjectDBContextExecutor adds context-aware operations
 type ProjectDBContextExecutor interface {
 	ProjectDBExecutor
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
 }
 
-// ProjectDBTxContextExecutor can perform SQL queries with context and begin transactions (like *sql.DB)
-type ProjectDBTxContextExecutor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+// ProjectDBTxExecutor adds transaction control (only for *sql.Tx)
+type ProjectDBTxExecutor interface {
+	ProjectDBContextExecutor
+	Commit() error
+	Rollback() error
+}
+
+// ProjectDBFullExecutor includes transaction creation (only for *sql.DB)
+type ProjectDBFullExecutor interface {
+	ProjectDBContextExecutor
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
 // Service is a service for managing projects in the database.
 type Service struct {
-	db     ProjectDBTxContextExecutor
+	db     ProjectDBFullExecutor
 	logger *log.Logger
 }
 
 // NewService creates a new database service.
-func NewService(db ProjectDBTxContextExecutor, logger *log.Logger) *Service {
+func NewService(db ProjectDBFullExecutor, logger *log.Logger) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
@@ -82,8 +84,8 @@ func isDuplicateKeyError(err error) bool {
 		strings.Contains(errorStr, "violates unique constraint")
 }
 
-// BeginTransaction starts a new database transaction.
-func (s *Service) GetDB(ctx context.Context) ProjectDBTxContextExecutor {
+// GetDB returns the database instance for transaction management.
+func (s *Service) GetDB(ctx context.Context) ProjectDBFullExecutor {
 	return s.db
 }
 
@@ -108,7 +110,7 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx ProjectDBContextExecutor) (string, error) {
+func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx ProjectDBTxExecutor) (string, error) {
 
 	// Create project record
 	now := time.Now()
@@ -139,8 +141,8 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 	return project.ID, nil
 }
 
-// Insert inserts a new project into the database.
-func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx ProjectDBContextExecutor) error {
+// InsertProjectUser inserts a new project user association into the database.
+func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx ProjectDBTxExecutor) error {
 
 	now := time.Now()
 	// Create project user association

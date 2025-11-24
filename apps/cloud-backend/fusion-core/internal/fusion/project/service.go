@@ -18,9 +18,9 @@ type Service struct {
 // DatabaseService defines the interface for database operations related to projects.
 type DatabaseService interface {
 	GetProjectByID(ctx context.Context, id string) (*models.Project, error)
-	GetDB(ctx context.Context) db.ProjectDBTxContextExecutor
-	Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBContextExecutor) (string, error)
-	InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBContextExecutor) error
+	GetDB(ctx context.Context) db.ProjectDBFullExecutor
+	Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBTxExecutor) (string, error)
+	InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBTxExecutor) error
 	SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]types.Project, error)
 	Update(ctx context.Context, projectRow *models.Project, project *types.ProjectUpdateRequest) error
 	Delete(ctx context.Context, projectRow *models.Project) error

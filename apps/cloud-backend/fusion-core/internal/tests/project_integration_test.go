@@ -1931,7 +1931,7 @@ func (suite *ProjectIntegrationTestSuite) TestDuplicateProjectNames() {
 // Test HTTP method validation
 func (suite *ProjectIntegrationTestSuite) TestHTTPMethodValidation() {
 	suite.T().Run("should reject invalid HTTP methods", func(t *testing.T) {
-		invalidMethods := []string{"TRACE", "OPTIONS", "HEAD"}
+		invalidMethods := []string{"TRACE", "HEAD"}
 
 		for _, method := range invalidMethods {
 			req, err := http.NewRequest(method, "/api/v1/projects", nil)
@@ -1943,9 +1943,24 @@ func (suite *ProjectIntegrationTestSuite) TestHTTPMethodValidation() {
 			w := httptest.NewRecorder()
 			suite.ginRouter.ServeHTTP(w, req)
 
-			// Should return 405 Method Not Allowed, 404 Not Found, or 200 (for OPTIONS)
-			assert.True(t, w.Code == http.StatusMethodNotAllowed || w.Code == http.StatusNotFound || w.Code == http.StatusOK)
+			// Should return 405 Method Not Allowed or 404 Not Found for invalid methods
+			assert.True(t, w.Code == http.StatusMethodNotAllowed || w.Code == http.StatusNotFound,
+				"Expected 405 Method Not Allowed or 404 Not Found for %s method, got %d", method, w.Code)
 		}
+
+		// Test OPTIONS method separately - should be allowed for CORS
+		req, err := http.NewRequest("OPTIONS", "/api/v1/projects", nil)
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer test-token")
+		req.Header.Set("X-User-ID", suite.testUsers[0].ID)
+		req.Header.Set("X-Account-ID", "1")
+
+		w := httptest.NewRecorder()
+		suite.ginRouter.ServeHTTP(w, req)
+
+		// OPTIONS should return 200 OK, 204 No Content for CORS preflight, 405 Method Not Allowed, or 404 Not Found
+		assert.True(t, w.Code == http.StatusOK || w.Code == http.StatusNoContent || w.Code == http.StatusMethodNotAllowed || w.Code == http.StatusNotFound,
+			"Expected 200 OK, 204 No Content, 405 Method Not Allowed, or 404 Not Found for OPTIONS method, got %d", w.Code)
 	})
 }
 

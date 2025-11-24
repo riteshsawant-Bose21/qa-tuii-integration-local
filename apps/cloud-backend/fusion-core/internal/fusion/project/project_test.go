@@ -40,15 +40,14 @@ type mockDBService struct {
 	mock.Mock
 }
 
-// mockDB implements db.ProjectDBTxContextExecutor and returns nil for BeginTx
+// mockDB implements db.ProjectDBFullExecutor
 type mockDB struct{}
 
 func (m *mockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) { return nil, nil }
 func (m *mockDB) Exec(query string, args ...interface{}) (sql.Result, error)        { return nil, nil }
 func (m *mockDB) Query(query string, args ...interface{}) (*sql.Rows, error)        { return nil, nil }
 func (m *mockDB) QueryRow(query string, args ...interface{}) *sql.Row               { return nil }
-func (m *mockDB) Commit() error                                                     { return nil }
-func (m *mockDB) Rollback() error                                                   { return nil }
+func (m *mockDB) Prepare(query string) (*sql.Stmt, error)                           { return nil, nil }
 func (m *mockDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
 	return nil, nil
 }
@@ -58,15 +57,18 @@ func (m *mockDB) QueryContext(ctx context.Context, query string, args ...interfa
 func (m *mockDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
 	return nil
 }
+func (m *mockDB) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
+	return nil, nil
+}
 
-func (m *mockDBService) GetDB(ctx context.Context) db.ProjectDBTxContextExecutor { return &mockDB{} }
-func (m *mockDBService) InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBContextExecutor) error {
+func (m *mockDBService) GetDB(ctx context.Context) db.ProjectDBFullExecutor { return &mockDB{} }
+func (m *mockDBService) InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBTxExecutor) error {
 	args := m.Called(ctx, projectID, userID, tx)
 	return args.Error(0)
 }
 
 // Satisfy DatabaseService interface for tests
-func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBContextExecutor) (string, error) {
+func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBTxExecutor) (string, error) {
 	args := m.Called(ctx, project, tx)
 	return args.String(0), args.Error(1)
 }
