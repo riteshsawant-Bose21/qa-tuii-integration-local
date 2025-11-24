@@ -157,7 +157,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host:        "localhost",
 		Port:        "8080",
-		Auth0Domain: "id-dev.boseprofessional.com", // Auth0 domain
+		Auth0Domain: cfg.Auth0.Domain, // Auth0 domain
 	}, userSVC, userDBSvc, roleManagementSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
