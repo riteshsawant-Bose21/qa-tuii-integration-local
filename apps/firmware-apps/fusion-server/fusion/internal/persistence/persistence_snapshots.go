@@ -82,6 +82,30 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	return nil
 }
 
+// ActivateSnapshotAndReturnState restores snapshot AND returns the restored state map.
+// Used only by handlers that need to broadcast the updated config.
+func (p *Persistence) ActivateSnapshotAndReturnState(name string) (map[string]any, error) {
+	ps, err := p.readSnapshot(name)
+	if err != nil {
+		return nil, err
+	}
+	if ps == nil {
+		return nil, fmt.Errorf("snapshot %s does not exist", name)
+	}
+
+	// Activate normally
+	if err := p.ActivateSnapshot(name); err != nil {
+		return nil, err
+	}
+
+	// Produce normalized full-state map for broadcasting
+	restored := make(map[string]any)
+	for key, entry := range ps.State {
+		restored[key] = entry.Data
+	}
+	return restored, nil
+}
+
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 

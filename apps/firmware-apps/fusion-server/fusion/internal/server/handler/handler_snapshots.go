@@ -13,13 +13,35 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(name string) error {
-	if err := h.persistence.ActivateSnapshot(name); err != nil {
+
+	restored, err := h.persistence.ActivateSnapshotAndReturnState(name)
+	if err != nil {
 		return err
 	}
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapActivate, nil); err != nil {
+
+	// Broadcast snapshot-activation (cluster-sync)
+	if err := h.handleSnapshotOperation(
+		h.StateManager.GetNode(),
+		name,
+		api.NotifyOpSnapActivate,
+		nil); err != nil {
 		return err
 	}
-	return nil
+
+	// Broadcast ONE config-update message containing the entire restored state:
+	update := api.ConfigUpdate{
+		Data:    restored,
+		Version: h.StateManager.GetVersion(),
+		Clear:   false,
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.StateManager.GetNode(),
+		api.WithConfigUpdate(&update),
+	)
+
+	return h.broadcastMessage(msg)
 }
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
