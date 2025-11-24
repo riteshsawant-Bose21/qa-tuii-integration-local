@@ -27,7 +27,7 @@ class _PBCItemList extends StatelessWidget {
             (Parameter e) {
               final Iterable<PBItem> where = viewModel.items.where((PBItem item) => item.field == e.name);
               final bool isAdded = where.isNotEmpty;
-              final bool isSelected = viewModel.selected != null && viewModel.selected!.field == e.name;
+              final bool isSelected = viewModel.selectedItems.any((PBItem item) => item.field == e.name);
 
               return InkWell(
                 onTap: () {
@@ -82,7 +82,7 @@ class _PBCItemList extends StatelessWidget {
             (Telemetry e) {
               final Iterable<PBItem> where = viewModel.items.where((PBItem item) => item.field == e.name);
               final bool isAdded = where.isNotEmpty;
-              final bool isSelected = viewModel.selected != null && viewModel.selected!.field == e.name;
+              final bool isSelected = viewModel.selectedItems.any((PBItem item) => item.field == e.name);
               // if (isAdded) {
               //   return ;
               // }
