@@ -50,6 +50,12 @@ class _CanvasView extends StatelessWidget {
                             onUp: () {
                               viewModel.move(const Offset(0, -1));
                             },
+                            onRedo: () {
+                              viewModel.redo();
+                            },
+                            onUndo: () {
+                              viewModel.undo();
+                            },
                             child: DragTarget<_PBItemWrapper>(
                               onAcceptWithDetails: (DragTargetDetails<_PBItemWrapper> details) {
                                 final String type = details.data.parameter?.valueType ?? details.data.telemetry?.valueType ?? "";

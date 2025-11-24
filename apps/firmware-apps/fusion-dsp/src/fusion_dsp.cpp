@@ -39,7 +39,7 @@ public:
         std::memset(&address, 0, sizeof(address));
         address.sin_family = AF_INET;
         address.sin_addr.s_addr = INADDR_ANY;
-        address.sin_port = htons(3508);
+        address.sin_port = htons(7949);
         if (bind(sockfd, (struct sockaddr *)&address, sizeof(address)) < 0)
         {
             SPDLOG_ERROR("Error binding socket");
@@ -158,8 +158,6 @@ private:
 
                 if (Json::parseFromStream(reader_builder, iss, &response, &errs))
                 {
-                    if (response.isMember("message_type") &&
-                        response["message_type"].asString() == "play_message")
                     {
                         Json::FastWriter fast_writer;
                         std::string response_str = fast_writer.write(response);

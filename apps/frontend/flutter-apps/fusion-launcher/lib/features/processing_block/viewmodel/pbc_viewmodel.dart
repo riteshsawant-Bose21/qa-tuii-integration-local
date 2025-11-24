@@ -1,3 +1,5 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'dart:convert';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -6,6 +8,7 @@ import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/features/processing_block/datasource/pb_widgets.dart';
 import 'package:fusion_launcher/features/processing_block/dto/pb_item.dart';
 
+import '../../wiring_design/controller/state_stack.dart';
 import '../data/algorithm_layout_data.dart';
 import '../dto/pb_item_param.dart';
 import '../dto/pb_layout.dart';
@@ -17,45 +20,59 @@ class PbcViewmodel extends ChangeNotifier {
   PbcViewmodel({required this.algorithm}) {
     final PBLayout? layout = AlgorithmLayoutData.getForAlgorithm(algorithm.name);
     if (layout == null) return;
+    final List<PBItem> items = <PBItem>[];
     for (final PBItem item in layout.children) {
       items.add(item);
     }
+    _setState(PBCState(items: items, selectedItems: <String>[]));
     width = layout.width.toDouble();
   }
-  List<PBItem> items = <PBItem>[];
+  PBCState state = PBCState(items: <PBItem>[], selectedItems: <String>[]);
 
-  PBItem? _selected;
+  List<PBItem> get items => state.items;
+  List<PBItem> get selectedItems => state.items.where((PBItem item) => state.selectedItems.contains(item.id)).toList();
 
-  List<PBItem> _selectedItems = <PBItem>[];
-  List<PBItem> get selectedItems => _selectedItems;
+  StateStack stack = StateStack();
+
   bool isShiftPressed = false;
-  void setSelected(
-    PBItem item,
-  ) {
-    if (!isShiftPressed) {
-      _selectedItems.clear();
-    }
-    if (_selectedItems.contains(item)) {
-      _selectedItems.remove(item);
-    } else {
-      _selectedItems.add(item);
-    }
-    _selected = _selectedItems.lastOrNull;
+
+  void _setState(PBCState newState) {
+    stack.push(state.toMap());
+    state = newState;
+
     notifyListeners();
+  }
+
+  void undo() {
+    final Map<String, dynamic>? previousState = stack.undo();
+    if (previousState != null) {
+      state = PBCState.fromMap(previousState);
+      notifyListeners();
+    }
+  }
+
+  void redo() {
+    final Map<String, dynamic>? nextState = stack.redo();
+    if (nextState != null) {
+      state = PBCState.fromMap(nextState);
+      notifyListeners();
+    }
+  }
+
+  void setSelected(PBItem item) {
+    _setState(state.select(item, isShiftPressed: isShiftPressed));
   }
 
   void clearSelection() {
-    _selectedItems.clear();
-    _selected = null;
-    notifyListeners();
+    _setState(state.clearSelectedItems());
   }
 
-  PBItem? get selected => _selected;
-
   void move(Offset delta) {
-    if (_selectedItems.isEmpty) return;
-
-    for (final PBItem item in _selectedItems) {
+    final List<PBItem> selectedItems = this.selectedItems;
+    if (selectedItems.isEmpty) return;
+    print("Delta: $delta");
+    final List<PBItem> items = <PBItem>[];
+    for (final PBItem item in selectedItems) {
       final num x = item.x;
       final num y = item.y;
       final PBItem oldValue = item;
@@ -63,47 +80,35 @@ class PbcViewmodel extends ChangeNotifier {
         x: roundTo2Digit(x + delta.dx),
         y: roundTo2Digit(y + delta.dy),
       );
-      items.remove(oldValue);
       items.add(newValue);
-      _selectedItems.remove(oldValue);
-      _selectedItems.add(newValue);
     }
-    // update selected items with new values
-    final List<PBItem> newSelection = <PBItem>[];
-    for (final PBItem oldItem in _selectedItems) {
-      final PBItem? newItem = items.firstWhereOrNull((PBItem e) => e.id == oldItem.id);
-      if (newItem != null) {
-        newSelection.add(newItem);
-      }
-    }
-    _selectedItems = newSelection;
-    _selected = _selectedItems.lastOrNull;
-    notifyListeners();
+
+    _setState(state.updateItems(items));
   }
 
   void resize(num? width, num? height) {
-    for (final PBItem oldValue in _selectedItems) {
+    final List<PBItem> selectedItems = this.selectedItems;
+    final List<PBItem> items = <PBItem>[];
+    for (final PBItem oldValue in selectedItems) {
       final PBItem selected = oldValue.copyWith(width: width != null ? roundTo2Digit(width) : null, height: height != null ? roundTo2Digit(height) : null);
 
       items.remove(oldValue);
       items.add(selected);
-      _selectedItems.remove(oldValue);
-      _selectedItems.add(selected);
     }
-    notifyListeners();
+    _setState(state.updateItems(items));
   }
 
   void updateProperty(String key, String value) {
-    for (final PBItem oldValue in _selectedItems) {
+    final List<PBItem> selectedItems = this.selectedItems;
+    final List<PBItem> items = <PBItem>[];
+    for (final PBItem oldValue in selectedItems) {
       final Map<String, dynamic> current = oldValue.param.toMap();
       current[key] = value;
       final PBItem selected = oldValue.copyWith(param: oldValue.param.loadMap(current));
       items.remove(oldValue);
       items.add(selected);
-      _selectedItems.remove(oldValue);
-      _selectedItems.add(selected);
     }
-    notifyListeners();
+    _setState(state.updateItems(items));
   }
 
   void addParameter(PbWidgets type, Offset position, Parameter data) {
@@ -123,13 +128,14 @@ class PbcViewmodel extends ChangeNotifier {
     final num paramWidth = roundTo2Digit(size.width);
     num currentDx = roundTo2Digit(position.dx) - paramWidth;
     num currentY = roundTo2Digit(position.dy);
+    final List<PBItem> pbItems = <PBItem>[];
     for (int i = 0; i < noOfItems; i++) {
       currentDx += paramWidth;
       if (currentDx + paramWidth > width) {
         currentDx = roundTo2Digit(position.dx);
         currentY += roundTo2Digit(size.height) + 5;
       }
-      items.add(
+      pbItems.add(
         PBItem(
           id: Random().nextInt(999999).toString(),
           x: currentDx,
@@ -144,8 +150,13 @@ class PbcViewmodel extends ChangeNotifier {
         ),
       );
     }
-    setSelected(items.last);
-    notifyListeners();
+    _setState(
+      (state
+          .addItem(
+            pbItems,
+          )
+          .select(pbItems.first)),
+    );
   }
 
   void addTelemetry(PbWidgets type, Offset position, Telemetry data) {
@@ -161,21 +172,23 @@ class PbcViewmodel extends ChangeNotifier {
       _ => (width: 20, height: 20),
     };
 
-    items.add(
-      PBItem(
-        id: Random().nextInt(999999).toString(),
-        x: roundTo2Digit(position.dx),
-        y: roundTo2Digit(position.dy),
-        width: roundTo2Digit(size.width),
-        height: roundTo2Digit(size.height),
-        field: data.name,
-        type: type.type,
-        param: param,
-        value: data.defaultValue,
+    final PBItem pbItem = PBItem(
+      id: Random().nextInt(999999).toString(),
+      x: roundTo2Digit(position.dx),
+      y: roundTo2Digit(position.dy),
+      width: roundTo2Digit(size.width),
+      height: roundTo2Digit(size.height),
+      field: data.name,
+      type: type.type,
+      param: param,
+      value: data.defaultValue,
+    );
+
+    _setState(
+      state.addItem(
+        <PBItem>[pbItem],
       ),
     );
-    setSelected(items.last);
-    notifyListeners();
   }
 
   double width = 200;
@@ -189,14 +202,10 @@ class PbcViewmodel extends ChangeNotifier {
     notifyListeners();
   }
 
-  Map<String, dynamic> get currentJson => <String, dynamic>{"width": width, "height": 100, "children": items.map((PBItem e) => e.toMap()).toList()};
+  Map<String, dynamic> get currentJson => <String, dynamic>{"width": width, "height": 100, "children": state.items.map((PBItem e) => e.toMap()).toList()};
 
   void delete() {
-    for (final PBItem item in _selectedItems) {
-      items.remove(item);
-    }
-    clearSelection();
-    notifyListeners();
+    _setState(state.remove(selectedItems).clearSelectedItems());
   }
 
   num roundTo2Digit(num val) {
@@ -214,8 +223,99 @@ class PbcViewmodel extends ChangeNotifier {
     final PBLayout layout = PBLayout(
       width: width,
       height: 100,
-      children: items,
+      children: state.items,
     );
     await AlgorithmLayoutData.saveLayout(algorithm.name, layout);
+  }
+}
+
+class PBCState {
+  final List<PBItem> items;
+  final List<String> selectedItems;
+
+  PBCState({
+    required this.items,
+    required this.selectedItems,
+  });
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'items': items.map((PBItem x) => x.toMap()).toList(),
+      'selectedItems': selectedItems,
+    };
+  }
+
+  factory PBCState.fromMap(Map<String, dynamic> map) {
+    return PBCState(
+      items: List<PBItem>.from(
+        (map['items'] as List<Map<String, dynamic>>).map<PBItem>(
+          (Map<String, dynamic> x) => PBItem.fromMap(x),
+        ),
+      ),
+      selectedItems: List<String>.from((map['selectedItems'] ?? const <String>[]) as List<String>),
+    );
+  }
+
+  String toJson() => json.encode(toMap());
+
+  factory PBCState.fromJson(String source) => PBCState.fromMap(json.decode(source) as Map<String, dynamic>);
+}
+
+extension PBCStateMethods on PBCState {
+  PBCState copyWith({
+    List<PBItem>? items,
+    List<String>? selectedItems,
+  }) {
+    return PBCState(
+      items: items ?? this.items,
+      selectedItems: selectedItems ?? this.selectedItems,
+    );
+  }
+
+  PBCState clearSelection() {
+    return copyWith(selectedItems: <String>[]);
+  }
+
+  PBCState select(PBItem item, {bool isShiftPressed = false}) {
+    final List<String> newSelectedItems = List<String>.from(selectedItems);
+    if (!isShiftPressed) {
+      newSelectedItems.clear();
+    }
+    if (newSelectedItems.contains(item.id)) {
+      newSelectedItems.remove(item.id);
+    } else {
+      newSelectedItems.add(item.id);
+    }
+    return copyWith(selectedItems: newSelectedItems);
+  }
+
+  PBCState clearSelectedItems() {
+    return copyWith(selectedItems: <String>[]);
+  }
+
+  PBCState updateItems(List<PBItem> updatedItems) {
+    final List<PBItem> newItems = <PBItem>[];
+    for (final PBItem element in items) {
+      final PBItem? firstWhereOrNull = updatedItems.firstWhereOrNull((PBItem item) => item.id == element.id);
+      if (firstWhereOrNull != null) {
+        newItems.add(firstWhereOrNull);
+      } else {
+        newItems.add(element);
+      }
+    }
+
+    return copyWith(items: newItems, selectedItems: selectedItems);
+  }
+
+  PBCState addItem(List<PBItem> item) {
+    final List<PBItem> newItems = List<PBItem>.from(items)..addAll(item);
+    return copyWith(items: newItems, selectedItems: item.map((PBItem e) => e.id).toList());
+  }
+
+  PBCState remove(List<PBItem> itemsToRemove) {
+    final List<PBItem> newItems = List<PBItem>.from(items)..removeWhere((PBItem item) => itemsToRemove.contains(item));
+    final List<String> newSelectedItems = List<String>.from(selectedItems)
+      ..removeWhere((String item) => itemsToRemove.any((PBItem removeItem) => removeItem.id == item));
+    return copyWith(items: newItems, selectedItems: newSelectedItems);
   }
 }

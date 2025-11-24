@@ -19,8 +19,8 @@ import (
 )
 
 const (
-	clusterServerURL      = "http://192.168.64.100:8080"
-	clusterServerAdminURL = "http://192.168.64.100:9090"
+	clusterServerURL      = "http://192.168.2.100:8080"
+	clusterServerAdminURL = "http://192.168.2.100:9090"
 )
 
 func helperURL(path string) string {

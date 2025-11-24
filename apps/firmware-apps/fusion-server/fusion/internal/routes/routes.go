@@ -37,6 +37,10 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ControllersEndpoint       = "/controllers"
+	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
+	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
+
 	DeviceEndpoint          = "/device"
 	DeviceReloadEndpoint    = DeviceEndpoint + "/reload"
 	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
@@ -75,6 +79,8 @@ const (
 
 	SnapshotsEndpoint         = "/snapshots"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
+	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
+	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
 
 	TasksEndpoint          = "/tasks"

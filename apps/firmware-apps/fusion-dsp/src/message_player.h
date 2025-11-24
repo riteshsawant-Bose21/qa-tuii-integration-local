@@ -31,7 +31,7 @@ private:
     bosepro::DspTempMemory<float[]> buffer;
     bosepro::DspParamMemory<std::string []> zone_name;
     std::string new_message;
-    SNDFILE *sndfile;
+    SNDFILE *sndfile = nullptr;
     uint64_t channel_mask;
 
     std::unordered_map<std::string, int> zone_map;

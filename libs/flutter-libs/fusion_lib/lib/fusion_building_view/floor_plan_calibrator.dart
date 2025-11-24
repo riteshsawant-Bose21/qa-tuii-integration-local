@@ -686,28 +686,33 @@ class _FloorPlanCalibratorState extends State<FloorPlanCalibrator> {
                       }
                     }
                   },
-                  child: CustomPaint(
-                    key: _customPaintKey, // Add the key here
-                    painter: FloorPlanCalibrationPainter(
-                      image: widget.floorPlanImage,
-                      startPoint: _startPointDisplay,
-                      endPoint: _endPointDisplay,
-                      distanceText: _distanceController.text.trim(),
-                      unit: _selectedUnit,
-                      cropRectNormalized: _cropRectN,
-                      showCropHandles: _mode == _ToolMode.crop,
-                      onImageRectChanged: (ui.Rect r) {
-                        _imageRect = r;
-                        // keep display points in sync if image rect changes
-                        if (_startPointNormalized != null) {
-                          _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
-                        }
-                        if (_endPointNormalized != null) {
-                          _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
-                        }
-                      },
+                  child: Center(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "Floor Plan Calibration"),
+                      child: CustomPaint(
+                        key: _customPaintKey,
+                        painter: FloorPlanCalibrationPainter(
+                          image: widget.floorPlanImage,
+                          startPoint: _startPointDisplay,
+                          endPoint: _endPointDisplay,
+                          distanceText: _distanceController.text.trim(),
+                          unit: _selectedUnit,
+                          cropRectNormalized: _cropRectN,
+                          showCropHandles: _mode == _ToolMode.crop,
+                          onImageRectChanged: (ui.Rect r) {
+                            _imageRect = r;
+                            // keep display points in sync if image rect changes
+                            if (_startPointNormalized != null) {
+                              _startPointDisplay = _normalizedToScreen(_startPointNormalized!);
+                            }
+                            if (_endPointNormalized != null) {
+                              _endPointDisplay = _normalizedToScreen(_endPointNormalized!);
+                            }
+                          },
+                        ),
+                        child: const SizedBox.expand(),
+                      ),
                     ),
-                    child: const SizedBox.expand(),
                   ),
                 ),
               ),
@@ -1058,6 +1063,7 @@ class CalibrationData {
   double get unitsPerPixel => pixelDistance > 0 && realWorldDistance > 0 ? realWorldDistance / pixelDistance : 0;
 
   double pixelsToUnits(double px) => unitsPerPixel > 0 ? px * unitsPerPixel : 0;
+
   double unitsToPixels(double u) => pixelsPerUnit > 0 ? u * pixelsPerUnit : 0;
 
   @override

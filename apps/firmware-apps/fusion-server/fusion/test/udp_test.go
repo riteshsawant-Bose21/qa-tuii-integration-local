@@ -1,7 +1,9 @@
 package main
 
 import (
+	"fusion/internal/api"
 	"net"
+	"os"
 	"runtime"
 	"strings"
 	"sync"
@@ -10,18 +12,22 @@ import (
 	"time"
 
 	json "github.com/goccy/go-json"
-
-	"fusion/internal/api"
 )
 
 const (
-	fusionUDPAddr = "192.168.64.100:7947"
+	fusionUDPAddr = "192.168.2.2:7947"
 )
 
 // contains is helper to check substring
 func contains(s, sub string) bool { return strings.Contains(s, sub) }
 
 func TestFusionUDP_BasicRoundTrip(t *testing.T) {
+
+	if runtime.GOOS == "darwin" {
+		t.Skip("macOS and Multipass networking prevents VM to host UDP responses.")
+		return
+	}
+
 	conn, err := net.Dial("udp", fusionUDPAddr)
 	if err != nil {
 		t.Fatalf("dial: %v", err)
@@ -53,19 +59,19 @@ func TestFusionUDP_BasicRoundTrip(t *testing.T) {
 
 func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 	// Prepare UDP listener to act as a "client"
-	listenerAddr, err := net.ResolveUDPAddr("udp", "0.0.0.0:0")
+	listenerAddr, err := net.ResolveUDPAddr("udp4", "0.0.0.0:0")
 	if err != nil {
 		t.Fatalf("resolve: %v", err)
 	}
-	listenerConn, err := net.ListenUDP("udp", listenerAddr)
+	listenerConn, err := net.ListenUDP("udp4", listenerAddr)
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
 	defer listenerConn.Close()
 
 	// Send an initial registration message to server
-	serverAddr, _ := net.ResolveUDPAddr("udp", fusionUDPAddr)
-	initMsg := []byte(`{"id":"fusion-client","operation":"noop"}`)
+	serverAddr, _ := net.ResolveUDPAddr("udp4", fusionUDPAddr)
+	initMsg := []byte(`{"action":"get"}`)
 	if _, err := listenerConn.WriteToUDP(initMsg, serverAddr); err != nil {
 		t.Fatalf("register: %v", err)
 	}
@@ -86,17 +92,19 @@ func TestFusionUDP_BroadcastPropagation(t *testing.T) {
 
 // High-load UDP stress test for profiling
 func TestFusionUDP_Stress(t *testing.T) {
+	if os.Getenv("FUSION_UDP_STRESS") == "" {
+		t.Skip("Skipping UDP stress test; set FUSION_UDP_STRESS=1 to enable")
+	}
+
 	const (
-		testDuration = 15 * time.Second // sustain load long enough for profiling
-		numWriters   = 8                // parallel senders
-		message      = `{{"action":"set","settings":{{"audio":{{"gainID1":{{"gain":{100}}}}}}}}}`
+		testDuration = 15 * time.Second
+		numWriters   = 8
+		message      = `{"action":"noop"}`
 	)
 
 	var totalWrites uint64
 	var wg sync.WaitGroup
 	stop := time.Now().Add(testDuration)
-
-	t.Logf("Starting %d UDP writers for %v\n", numWriters, testDuration)
 
 	for i := 0; i < numWriters; i++ {
 		wg.Add(1)
@@ -115,16 +123,13 @@ func TestFusionUDP_Stress(t *testing.T) {
 
 			for time.Now().Before(stop) {
 				if _, err := conn.Write(buf); err != nil {
-					// rare, ignore transient errors
 					continue
 				}
 				count++
-				// yield to let other goroutines run
 				runtime.Gosched()
 			}
 
 			atomic.AddUint64(&totalWrites, count)
-			t.Logf("writer %d sent %d packets", id, count)
 		}(i)
 	}
 

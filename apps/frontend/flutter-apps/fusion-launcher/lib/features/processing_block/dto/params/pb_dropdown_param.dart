@@ -9,8 +9,8 @@ class PBDropdownParam extends PBItemParam {
   });
   factory PBDropdownParam.fromMap(Map<dynamic, dynamic> map) {
     return PBDropdownParam(
-      label: (map['label'] ?? '') as String,
-      options: (map['options'] ?? <String>[]) as List<String>,
+      label: (map['label']?.toString() ?? ''),
+      options: (map['options']?.map<String>((dynamic x) => x.toString()).toList() ?? <String>[]),
     );
   }
 

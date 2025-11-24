@@ -13,13 +13,35 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(name string) error {
-	if err := h.persistence.ActivateSnapshot(name); err != nil {
+
+	restored, err := h.persistence.ActivateSnapshotAndReturnState(name)
+	if err != nil {
 		return err
 	}
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapActivate, nil); err != nil {
+
+	// Broadcast snapshot-activation (cluster-sync)
+	if err := h.handleSnapshotOperation(
+		h.StateManager.GetNode(),
+		name,
+		api.NotifyOpSnapActivate,
+		nil); err != nil {
 		return err
 	}
-	return nil
+
+	// Broadcast ONE config-update message containing the entire restored state:
+	update := api.ConfigUpdate{
+		Data:    restored,
+		Version: h.StateManager.GetVersion(),
+		Clear:   false,
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.StateManager.GetNode(),
+		api.WithConfigUpdate(&update),
+	)
+
+	return h.broadcastMessage(msg)
 }
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
@@ -61,6 +83,11 @@ func (h *Handler) HandleGetSnapshot(name string) (any, error) {
 	return h.persistence.GetSnapshot(name)
 }
 
+// HandleGetActiveSnapshotName returns the name of the active snapshot
+func (h *Handler) HandleGetActiveSnapshotName() string {
+	return h.persistence.GetActiveSnapshotName()
+}
+
 // HandleIsDefaultSnapshot returns true is the name is the default snapshot
 func (h *Handler) IsDefaultSnapshot(name string) bool {
 	return h.persistence.IsDefaultSnapshot(name)
@@ -69,7 +96,8 @@ func (h *Handler) IsDefaultSnapshot(name string) bool {
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
 func (h *Handler) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
 
-	msg := api.NewNotifyMessage(update, node,
+	msg := api.NewNotifyMessage(update,
+		node,
 		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
 	)
 	return h.broadcastMessage(msg)

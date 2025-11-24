@@ -142,7 +142,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           ),
 
           initiallyExpanded: widget.config.initiallyExpanded,
-          children: <Widget>[widget.config.dockItemWidget()],
+          children: <Widget>[widget.config.dockItemWidget],
         ),
       ),
     );
