@@ -99,6 +99,7 @@ func NewS3Source(bucket, key, awsRegion string) (*S3Source, error) {
 
 	// Get AWS profile from environment variable, fallback to default
 	awsProfile := os.Getenv("AWS_PROFILE")
+	fmt.Println("AWS_PROFILE: " + awsProfile)
 	if awsProfile == "" {
 		awsProfile = "default"
 	}

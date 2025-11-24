@@ -10,9 +10,10 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/validation"
 	"go.uber.org/zap"
 )
@@ -78,14 +79,14 @@ type RRPEntry struct {
 }
 
 // SyncProducts syncs product data from source to database with advanced features
-func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string) (*fusion.SyncResult, error) {
+func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string) (*types.SyncResult, error) {
 	startTime := time.Now()
 
 	// Create logger for error collection
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	result := &fusion.SyncResult{
+	result := &types.SyncResult{
 		SyncType:           "product",
 		TotalItems:         0,
 		Successful:         0,
@@ -299,14 +300,14 @@ func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string) (
 }
 
 // SyncPrices syncs price data from source to database with timestamp-based optimization
-func (s *Service) SyncPrices(ctx context.Context, data []byte) (*fusion.SyncResult, error) {
+func (s *Service) SyncPrices(ctx context.Context, data []byte) (*types.SyncResult, error) {
 	startTime := time.Now()
 
 	// Create logger for error collection
 	logger, _ := zap.NewProduction()
 	defer logger.Sync()
 
-	result := &fusion.SyncResult{
+	result := &types.SyncResult{
 		SyncType:           "price",
 		TotalItems:         0,
 		Successful:         0,
@@ -833,30 +834,6 @@ func (s *Service) extractSKUFromArray(skus interface{}) int {
 	// Handle array of integers (if unmarshaled as []int)
 	if skusArray, ok := skus.([]int); ok && len(skusArray) > 0 {
 		return skusArray[0]
-	}
-
-	return 0
-}
-
-// extractSKUFromSpecifications extracts the first SKU from the skus array in specifications
-func (s *Service) extractSKUFromSpecifications(specs interface{}) int {
-	if specs == nil {
-		return 0
-	}
-
-	// Handle map[string]interface{} (from JSON unmarshaling)
-	if specMap, ok := specs.(map[string]interface{}); ok {
-		if skusField, exists := specMap["skus"]; exists {
-			return s.extractSKUFromArray(skusField)
-		}
-	}
-
-	// Handle JSON string (if specifications is already a JSON string)
-	if specStr, ok := specs.(string); ok && specStr != "" {
-		var specMap map[string]interface{}
-		if err := json.Unmarshal([]byte(specStr), &specMap); err == nil {
-			return s.extractSKUFromSpecifications(specMap)
-		}
 	}
 
 	return 0

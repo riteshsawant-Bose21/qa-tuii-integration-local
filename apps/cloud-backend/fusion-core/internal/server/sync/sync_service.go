@@ -4,8 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 )
 
 // Service provides methods to interact with sync operations
@@ -43,7 +43,7 @@ type JobDatabaseService interface {
 	Create(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error)
 	UpdateStatus(jobID, status string, startedAt *time.Time, errorMsg *string) error
 	UpdateWithResults(jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
-	GetByID(jobID string) (*fusion.SyncJobResult, error)
+	GetByID(jobID string) (*types.SyncJobResult, error)
 	StoreValidationErrors(jobID string, errorCollector *errors.ErrorCollector) error
 }
 
@@ -103,4 +103,19 @@ type DBPrice struct {
 	Variant   *string `json:"variant,omitempty"`    // Optional variant field
 	UpdatedAt *string `json:"updated_at"`           // RFC3339 timestamp
 	CreatedAt *string `json:"created_at,omitempty"` // Optional creation timestamp
+}
+
+// CreateJob creates a new sync job
+func (s *Service) CreateJob(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error) {
+	return s.jobDBService.Create(syncOperation, sourcePath, s3Bucket, s3Key)
+}
+
+// UpdateJobStatus updates the status of a sync job
+func (s *Service) UpdateJobStatus(jobID, status string, startedAt *time.Time, errorMsg *string) error {
+	return s.jobDBService.UpdateStatus(jobID, status, startedAt, errorMsg)
+}
+
+// UpdateJobWithResults updates a sync job with final results
+func (s *Service) UpdateJobWithResults(jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error {
+	return s.jobDBService.UpdateWithResults(jobID, status, totalItems, successful, failed, validationWarnings, errorMsg)
 }

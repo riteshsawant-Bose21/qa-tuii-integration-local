@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
@@ -86,7 +86,6 @@ func (m *MockPriceDBService) priceKey(price *DBPrice) string {
 type MockJobDBService struct {
 	mock.Mock
 	validationErrors map[string]*errors.ErrorCollector
-	jobResults       map[string]*fusion.SyncJobResult
 }
 
 func (m *MockJobDBService) Create(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error) {
@@ -104,9 +103,9 @@ func (m *MockJobDBService) UpdateWithResults(jobID, status string, totalItems, s
 	return args.Error(0)
 }
 
-func (m *MockJobDBService) GetByID(jobID string) (*fusion.SyncJobResult, error) {
+func (m *MockJobDBService) GetByID(jobID string) (*types.SyncJobResult, error) {
 	args := m.Called(jobID)
-	return args.Get(0).(*fusion.SyncJobResult), args.Error(1)
+	return args.Get(0).(*types.SyncJobResult), args.Error(1)
 }
 
 func (m *MockJobDBService) StoreValidationErrors(jobID string, errorCollector *errors.ErrorCollector) error {

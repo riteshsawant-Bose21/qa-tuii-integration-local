@@ -17,6 +17,7 @@ type API struct {
 	server  *http.Server
 	product fusion.Product
 	project fusion.Project
+	sync    fusion.Sync
 }
 
 type Config struct {

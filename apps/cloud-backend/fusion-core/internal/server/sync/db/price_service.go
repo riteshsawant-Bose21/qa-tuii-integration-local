@@ -8,7 +8,7 @@ import (
 	"time"
 
 	models "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
-	syncTypes "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/sync"
+	syncTypes "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
 
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
@@ -112,12 +112,15 @@ func (s *PriceService) UpsertPrice(ctx context.Context, price *syncTypes.DBPrice
 
 // GetPriceByProductID retrieves a price by product ID
 func (s *PriceService) GetPriceByProductID(ctx context.Context, productID int) (*syncTypes.DBPrice, error) {
-	price, err := models.ProductPrices(qm.Where("product_id = ?", productID)).One(ctx, s.db.DB)
-	if err == sql.ErrNoRows {
-		return nil, fmt.Errorf("price not found for product %d", productID)
-	}
+	price, err := models.ProductPrices(
+		qm.Where("product_id = ?", productID),
+	).One(ctx, s.db.DB)
+
 	if err != nil {
-		return nil, fmt.Errorf("failed to get price for product %d: %w", productID, err)
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get price: %w", err)
 	}
 
 	// Convert decimal to float64

@@ -19,7 +19,7 @@ type ProductItemResponse struct {
 	Specifications interface{} `json:"specifications"`
 }
 
-// New API response structure matching the required schema
+// API response structure
 type ProductResponse struct {
 	Speaker    []ProductItemResponse `json:"speaker,omitempty"`
 	Amplifier  []ProductItemResponse `json:"amplifier,omitempty"`

@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/errors"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	models "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 
 	"github.com/aarondl/null/v8"
@@ -196,7 +196,7 @@ func (s *JobService) UpdateWithResults(jobID, status string, totalItems, success
 }
 
 // GetByID retrieves a sync job by its ID
-func (s *JobService) GetByID(jobID string) (*fusion.SyncJobResult, error) {
+func (s *JobService) GetByID(jobID string) (*types.SyncJobResult, error) {
 	job, err := models.ProductSyncJobs(
 		qm.Where("job_id = ?", jobID),
 	).One(context.Background(), s.db.DB)
@@ -212,12 +212,15 @@ func (s *JobService) GetByID(jobID string) (*fusion.SyncJobResult, error) {
 		return nil, fmt.Errorf("failed to get sync job: %w", err)
 	}
 
-	// Convert to result model
-	result := &fusion.SyncJobResult{
+	return s.mapToSyncJobResult(job), nil
+}
+
+func (s *JobService) mapToSyncJobResult(job *models.ProductSyncJob) *types.SyncJobResult {
+	result := &types.SyncJobResult{
 		ID:            job.ID,
 		JobID:         job.JobID,
-		SyncOperation: fusion.SyncOperation(job.SyncOperation),
-		Status:        fusion.SyncStatus(job.Status),
+		SyncOperation: types.SyncOperation(job.SyncOperation),
+		Status:        types.SyncStatus(job.Status),
 		S3Bucket:      job.S3Bucket,
 		S3Key:         job.S3Key,
 		CreatedAt:     job.CreatedAt.Time,
@@ -259,13 +262,13 @@ func (s *JobService) GetByID(jobID string) (*fusion.SyncJobResult, error) {
 	if job.ValidationErrors.Valid {
 		var validationErrors map[string]interface{}
 		if err := json.Unmarshal(job.ValidationErrors.JSON, &validationErrors); err != nil {
-			s.logger.Warn("Failed to parse validation errors for job", zap.String("job_id", jobID), zap.Error(err))
+			s.logger.Warn("Failed to parse validation errors for job", zap.String("job_id", job.JobID), zap.Error(err))
 		} else {
 			result.ValidationErrors = validationErrors
 		}
 	}
 
-	return result, nil
+	return result
 }
 
 // StoreValidationErrors stores validation errors from the error collector
