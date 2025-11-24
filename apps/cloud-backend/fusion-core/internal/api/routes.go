@@ -33,9 +33,7 @@ func (a *API) registerRoutes() {
 	projects := v1.Group("/projects")
 	{
 		// Apply Auth0 middleware first to establish authentication
-		if a.auth0Validator != nil {
-			projects.Use(middleware.Auth0Middleware(a.auth0Validator))
-		}
+		projects.Use(middleware.Auth0Middleware(a.auth0Validator))
 
 		// Then apply access control middleware
 		projects.Use(accessControl.GlobalAccessControlMiddleware())
@@ -54,9 +52,7 @@ func (a *API) registerRoutes() {
 	user := v1.Group("/user")
 
 	// Apply Auth0 middleware to protected user routes
-	if a.auth0Validator != nil {
-		user.Use(middleware.Auth0Middleware(a.auth0Validator))
-	}
+	user.Use(middleware.Auth0Middleware(a.auth0Validator))
 
 	{
 		user.GET("/me/authorization", userHandler.GetUserAuthorization)
@@ -65,9 +61,7 @@ func (a *API) registerRoutes() {
 
 	// Additional user management routes
 	users := v1.Group("/users")
-	if a.auth0Validator != nil {
-		users.Use(middleware.Auth0Middleware(a.auth0Validator))
-	}
+	users.Use(middleware.Auth0Middleware(a.auth0Validator))
 	{
 		users.POST("", userHandler.CreateUser)
 		users.GET("/:email", userHandler.GetUserByEmail)
@@ -76,9 +70,7 @@ func (a *API) registerRoutes() {
 
 	// Auth status endpoint
 	auth := v1.Group("/auth")
-	if a.auth0Validator != nil {
-		auth.Use(middleware.Auth0Middleware(a.auth0Validator))
-	}
+	auth.Use(middleware.Auth0Middleware(a.auth0Validator))
 	{
 		auth.GET("/status", userHandler.CheckAuthStatus)
 	}
@@ -88,9 +80,7 @@ func (a *API) registerRoutes() {
 	organization := v1.Group("/organization")
 
 	// Apply Auth0 middleware to protected organization routes
-	if a.auth0Validator != nil {
-		organization.Use(middleware.Auth0Middleware(a.auth0Validator))
-	}
+	organization.Use(middleware.Auth0Middleware(a.auth0Validator))
 
 	{
 		organization.GET("/role-management", roleManagementHandler.GetOrganizationRoleManagement)

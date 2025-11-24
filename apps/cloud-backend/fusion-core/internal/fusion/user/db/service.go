@@ -14,11 +14,31 @@ import (
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 )
 
-type Service struct {
-	db *sql.DB
+// UserDBExecutor defines the basic database operations
+type UserDBExecutor interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
-func NewService(db *sql.DB) *Service {
+// UserDBContextExecutor can perform SQL queries with context
+type UserDBContextExecutor interface {
+	UserDBExecutor
+
+	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
+	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
+	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+}
+
+type Service struct {
+	db UserDBContextExecutor
+}
+
+func NewService(db UserDBContextExecutor) *Service {
+	if db == nil {
+		panic("db cannot be nil")
+	}
 	return &Service{
 		db: db,
 	}
@@ -70,7 +90,7 @@ func (s *Service) GetUserAuthorization(ctx context.Context, email string) (*type
 		return nil, fmt.Errorf("failed to get user permissions: %w", err)
 	}
 
-	// Get account information using SQLBoiler
+	// Get account information
 	account, err := models.Accounts(
 		models.AccountWhere.ID.EQ(user.AccountID),
 		qm.Load(models.AccountRels.AccountType),
@@ -90,7 +110,7 @@ func (s *Service) GetUserAuthorization(ctx context.Context, email string) (*type
 		accountInfo.Type = account.R.AccountType.Name
 	}
 
-	// Get role information using SQLBoiler
+	// Get role information
 	accountTypeRole, err := models.AccountTypeRoles(
 		models.AccountTypeRoleWhere.ID.EQ(user.AccountTypeRoleID),
 		qm.Load(models.AccountTypeRoleRels.Role),
@@ -124,7 +144,6 @@ func (s *Service) GetUserAuthorization(ctx context.Context, email string) (*type
 
 // getUserPermissions retrieves all permissions for a user based on their account type role
 func (s *Service) getUserPermissions(ctx context.Context, accountTypeRoleID int) (map[string]string, error) {
-	// Use SQLBoiler to query feature permissions with joins
 	featurePermissions, err := models.FeaturePermissions(
 		models.FeaturePermissionWhere.AccountTypeRoleID.EQ(accountTypeRoleID),
 		qm.Load(models.FeaturePermissionRels.Feature),
@@ -142,23 +161,12 @@ func (s *Service) getUserPermissions(ctx context.Context, accountTypeRoleID int)
 		}
 	}
 
-	// Add fallback permissions based on role patterns
-	role, err := s.getRoleByAccountTypeRoleID(ctx, accountTypeRoleID)
-	if err == nil {
-		fallbackPermissions := s.getFallbackPermissions(role.Name)
-		for key, value := range fallbackPermissions {
-			if _, exists := permissions[key]; !exists {
-				permissions[key] = value
-			}
-		}
-	}
-
 	return permissions, nil
 }
 
 // CheckUserPermission checks if a user has the required permission level for a specific feature
 func (s *Service) CheckUserPermission(ctx context.Context, userEmail, featureName string, requiredLevel string) (bool, error) {
-	// First try to get permission directly from database using SQLBoiler
+	// First try to get permission directly from database
 	appUser, err := models.AppUsers(
 		models.AppUserWhere.Email.EQ(userEmail),
 		qm.Load(models.AppUserRels.AccountTypeRole,
@@ -177,21 +185,6 @@ func (s *Service) CheckUserPermission(ctx context.Context, userEmail, featureNam
 				return s.isPermissionSufficient(fp.R.AccessLevel.Key, requiredLevel), nil
 			}
 		}
-	}
-
-	// If not found in database, check fallback permissions
-	user, err := s.GetUserByEmail(ctx, userEmail)
-	if err != nil {
-		return false, fmt.Errorf("failed to get user: %w", err)
-	}
-
-	permissions, err := s.getUserPermissions(ctx, user.AccountTypeRoleID)
-	if err != nil {
-		return false, fmt.Errorf("failed to get user permissions: %w", err)
-	}
-
-	if level, exists := permissions[featureName]; exists {
-		return s.isPermissionSufficient(level, requiredLevel), nil
 	}
 
 	return false, nil // No permission found
@@ -217,75 +210,9 @@ func (s *Service) isPermissionSufficient(userLevel, requiredLevel string) bool {
 	return userLevelInt >= requiredLevelInt
 }
 
-// getRoleByAccountTypeRoleID gets role information by account type role ID
-func (s *Service) getRoleByAccountTypeRoleID(ctx context.Context, accountTypeRoleID int) (*types.Role, error) {
-	query := `
-		SELECT r.id, r.name, r.description
-		FROM role r
-		JOIN account_type_role atr ON r.id = atr.role_id
-		WHERE atr.id = $1
-	`
-
-	var role types.Role
-	err := s.db.QueryRowContext(ctx, query, accountTypeRoleID).Scan(
-		&role.ID, &role.Name, &role.Description,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get role: %w", err)
-	}
-
-	return &role, nil
-}
-
-// getFallbackPermissions provides fallback permissions based on role name patterns
-func (s *Service) getFallbackPermissions(roleName string) map[string]string {
-	permissions := make(map[string]string)
-
-	// Convert role name to lowercase for comparison
-	lowerRoleName := strings.ToLower(roleName)
-
-	// Define role-based permissions
-	if strings.Contains(lowerRoleName, "admin") || strings.Contains(lowerRoleName, "super") {
-		// Admin roles get full permissions
-		permissions["launcher.project.create"] = "full"
-		permissions["launcher.project.read"] = "full"
-		permissions["launcher.project.update"] = "full"
-		permissions["launcher.project.delete"] = "full"
-		permissions["launcher.user.create"] = "admin"
-		permissions["launcher.user.read"] = "admin"
-		permissions["launcher.user.update"] = "admin"
-		permissions["launcher.user.delete"] = "admin"
-		permissions["launcher.role.manage"] = "admin"
-		permissions["launcher.project_file.create"] = "full"
-		permissions["launcher.project_file.read"] = "full"
-		permissions["launcher.project_file.update"] = "full"
-		permissions["launcher.project_file.delete"] = "full"
-	} else if strings.Contains(lowerRoleName, "manager") || strings.Contains(lowerRoleName, "lead") {
-		// Manager/Lead roles get moderate permissions
-		permissions["launcher.project.create"] = "write"
-		permissions["launcher.project.read"] = "write"
-		permissions["launcher.project.update"] = "write"
-		permissions["launcher.project.delete"] = "write"
-		permissions["launcher.user.create"] = "write"
-		permissions["launcher.user.read"] = "write"
-		permissions["launcher.user.update"] = "write"
-		permissions["launcher.project_file.create"] = "write"
-		permissions["launcher.project_file.read"] = "write"
-		permissions["launcher.project_file.update"] = "write"
-		permissions["launcher.project_file.delete"] = "write"
-	} else {
-		// Regular users get read permissions
-		permissions["launcher.project.read"] = "read"
-		permissions["launcher.user.read"] = "read"
-		permissions["launcher.project_file.read"] = "read"
-	}
-
-	return permissions
-}
-
 // CreateUser creates a new user in the database
 func (s *Service) CreateUser(ctx context.Context, req *types.CreateUserRequest) (*types.User, error) {
-	// Create new AppUser using SQLBoiler
+	// Create new AppUser
 	appUser := &models.AppUser{
 		Email:             req.Email,
 		FullName:          null.StringFrom(req.FullName), // Convert string to null.String

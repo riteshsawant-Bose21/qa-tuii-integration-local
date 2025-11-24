@@ -58,11 +58,10 @@ func (a *Auth0Validator) ValidateToken(tokenString string) (*jwt.MapClaims, erro
 	// Check if token looks like a JWT (should have 3 parts separated by dots)
 	tokenParts := strings.Split(tokenString, ".")
 
-	if len(tokenParts) == 5 {
-		return nil, fmt.Errorf("received JWE token (5 segments) but backend expects JWT token (3 segments). Please configure Auth0 to return JWT tokens instead of JWE tokens, or implement JWE decryption")
-	}
-
 	if len(tokenParts) != 3 {
+		if len(tokenParts) == 5 {
+			return nil, fmt.Errorf("received JWE token (5 segments) but backend expects JWT token (3 segments). Please configure Auth0 to return JWT tokens instead of JWE tokens, or implement JWE decryption")
+		}
 		return nil, fmt.Errorf("token is not a valid JWT: expected 3 segments, got %d. This might be an opaque token or encrypted JWE token", len(tokenParts))
 	}
 

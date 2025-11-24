@@ -73,10 +73,12 @@ func New(cfg *Config,
 			Domain: cfg.Auth0Domain,
 		}
 		auth0Validator = auth.NewAuth0Validator(auth0Config)
+	} else {
+		return nil, errors.New("Auth0Domain is required for authentication")
 	}
 
 	api := &API{
-		engine:                engine,
+		engine: engine,
 		// product:               productSvc,
 		// project:               projectSvc,
 		user:                  userSvc,
