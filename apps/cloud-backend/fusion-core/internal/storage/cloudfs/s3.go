@@ -66,9 +66,6 @@ func NewS3ClientWithProfile(ctx context.Context, profile, region string) (*S3, e
 
 	return &S3{
 		client: client,
-		config: &s3Config{
-			region: cfg.Region,
-		},
 	}, nil
 }
 

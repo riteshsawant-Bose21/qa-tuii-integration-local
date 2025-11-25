@@ -63,6 +63,9 @@ func AllAccountsTypeEnum() []string {
 		AccountsTypeEnumAdmin,
 		AccountsTypeEnumReseller,
 		AccountsTypeEnumRetail,
+	}
+}
+
 // Enum values for ProductTypeEnum
 const (
 	ProductTypeEnumSpeaker    string = "speaker"

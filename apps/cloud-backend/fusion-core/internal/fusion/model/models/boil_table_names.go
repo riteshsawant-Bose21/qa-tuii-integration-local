@@ -10,7 +10,9 @@ var TableNames = struct {
 	AccountsType      string
 	Feature           string
 	FeaturePermission string
-	Products          string
+	Product           string
+	ProductPrice      string
+	ProductSyncJob    string
 	Project           string
 	ProjectUser       string
 	Roles             string
@@ -22,16 +24,11 @@ var TableNames = struct {
 	AccountsType:      "accounts_type",
 	Feature:           "feature",
 	FeaturePermission: "feature_permission",
-	Products:          "products",
+	Product:           "product",
+	ProductPrice:      "product_price",
+	ProductSyncJob:    "product_sync_job",
 	Project:           "project",
 	ProjectUser:       "project_user",
 	Roles:             "roles",
 	User:              "user",
-	Product        string
-	ProductPrice   string
-	ProductSyncJob string
-}{
-	Product:        "product",
-	ProductPrice:   "product_price",
-	ProductSyncJob: "product_sync_job",
 }
