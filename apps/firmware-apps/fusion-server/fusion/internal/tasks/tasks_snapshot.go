@@ -98,7 +98,7 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 
 	// At least one must be present
-	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.CronExpr) != ""
+	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.Snapshot) != ""
 	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
 
