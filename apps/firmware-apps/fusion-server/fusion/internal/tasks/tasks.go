@@ -15,6 +15,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"
@@ -46,6 +47,7 @@ type TaskManager struct {
 	mu               sync.Mutex
 	node             string
 	persistence      *persistence.Persistence
+	hub              *pubsub.Hub
 	running          bool
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
@@ -53,7 +55,7 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *TaskManager {
+func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
 	tm := &TaskManager{
 		cron: cron.New(
 			cron.WithParser(
@@ -72,6 +74,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 		historyFilePath:  HistoryPath,
 		node:             config.NodeName,
 		persistence:      persistence,
+		hub:              hub,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}

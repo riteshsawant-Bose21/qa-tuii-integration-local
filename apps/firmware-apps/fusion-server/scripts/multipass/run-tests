@@ -83,10 +83,6 @@ while [[ $# -gt 0 ]]; do
             test_type="udp"
             shift
             ;;
-        --updater)
-            test_type="updater"
-            shift
-            ;;
         --websocket)
             test_type="websocket"
             shift

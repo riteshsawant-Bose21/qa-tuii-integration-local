@@ -6,6 +6,7 @@ import (
 	"fusion/internal/controllers"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
+	"fusion/internal/utils"
 	"fusion/internal/version"
 	"reflect"
 	"sync"
@@ -19,7 +20,6 @@ type Handler struct {
 	memberlist   *memberlist.Memberlist
 	persistence  *persistence.Persistence
 	StateManager *persistence.StateManager
-	updater      *Updater
 	hub          *pubsub.Hub
 	endpoints    []string
 
@@ -34,7 +34,6 @@ func NewHandler(
 	memberlist *memberlist.Memberlist,
 	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
-	updater *Updater,
 	hub *pubsub.Hub,
 	controllerManager controllers.ControllerManagerInterface,
 ) *Handler {
@@ -43,7 +42,6 @@ func NewHandler(
 		memberlist:        memberlist,
 		persistence:       persistence,
 		StateManager:      stateManager,
-		updater:           updater,
 		hub:               hub,
 		controllerManager: controllerManager,
 		sessions:          make(map[string]*SAPSession),
@@ -102,18 +100,28 @@ func (h *Handler) HandleHTTPSet(update map[string]any) (any, error) {
 }
 
 // HandleHTTPPatch updates only the specified fields.
-func (h *Handler) HandleHTTPPatch(update map[string]any) (any, error) {
+func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) {
 
-	patched, err := h.StateManager.Patch(update)
+	// Get full state before PATCH
+	before := h.StateManager.GetStateMap()
+
+	// Apply internal patch
+	afterPtr, err := h.StateManager.Patch(patch)
 	if err != nil {
 		return nil, err
 	}
 
-	if patched == nil {
+	// No changes
+	if afterPtr == nil {
 		return nil, nil
 	}
 
-	configUpdate, err := h.StateManager.NewConfigUpdate(*patched)
+	after := *afterPtr
+
+	diff := utils.CalculateDiff(before, after)
+
+	// Broadcast change
+	configUpdate, err := h.StateManager.NewConfigUpdate(after)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create config update: %w", err)
 	}
@@ -128,7 +136,7 @@ func (h *Handler) HandleHTTPPatch(update map[string]any) (any, error) {
 		return nil, fmt.Errorf("failed to broadcast patch update: %w", err)
 	}
 
-	return patched, nil
+	return diff, nil
 }
 
 func (h *Handler) HandleClearAllData() error {
@@ -150,18 +158,10 @@ func (h *Handler) GetServerInfo() (map[string]any, error) {
 		"version":    version.Version,
 		"commit":     version.Commit,
 		"build_time": version.BuildTime, "node_id": h.memberlist.LocalNode().Name,
-		"endpoints":          h.endpoints,
-		"cluster_size":       len(h.memberlist.Members()),
-		"update_in_progress": h.updater.currentUpdate != nil,
+		"endpoints":    h.endpoints,
+		"cluster_size": len(h.memberlist.Members()),
 	}
 
-	if h.updater.currentUpdate != nil {
-		info["update_status"] = map[string]any{
-			"source_node": h.updater.currentUpdate.NodeID,
-			"time":        h.updater.currentUpdate.Time,
-			"progress":    float64(h.updater.currentAssembler.received) / float64(h.updater.currentAssembler.size) * 100,
-		}
-	}
 	return info, nil
 }
 
@@ -179,7 +179,7 @@ func (h *Handler) HandleExportData() (any, error) {
 }
 
 func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
-	// Build the config update (Lamport version, hash, etc.)
+
 	configUpdate, err := h.StateManager.NewConfigUpdate(data)
 	if err != nil {
 		return err
@@ -201,4 +201,8 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 	}
 
 	return nil
+}
+
+func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
+	return h.hub.BroadcastToNodes(message)
 }

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
-	"fusion/internal/logging"
 	"io"
 	"mime/multipart"
 	"net"
@@ -15,7 +14,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strconv"
-	"strings"
 
 	"github.com/gibson042/canonicaljson-go"
 	"github.com/gorilla/mux"
@@ -84,75 +82,6 @@ func RequirePut(w http.ResponseWriter, r *http.Request) bool {
 	return RequireMethod(w, r, http.MethodPut)
 }
 
-func ApplyPatch(data map[string]any, changes map[string]any) error {
-	for key, value := range changes {
-
-		// Delete field ("key": null)
-		if value == nil {
-			removeNestedField(data, key)
-			continue
-		}
-
-		// Nested object merge
-		if isMap(value) {
-			subChanges := value.(map[string]any)
-
-			// Get the target object
-			subData, _ := getNestedValue(data, key).(map[string]any)
-			if subData == nil {
-				// Create the nested object if missing
-				subData = map[string]any{}
-				SetNestedValue(data, key, subData)
-			}
-
-			// Recursively apply the subpatch
-			if err := ApplyPatch(subData, subChanges); err != nil {
-				return err
-			}
-			continue
-		}
-
-		// Array updates
-		if isArray(value) {
-			subArray := value.([]any)
-			existing := getNestedValue(data, key)
-
-			// Full array replacement:
-			//
-			//    "frequencies": [400, 500]
-			//
-			// NO indexed key → full replace
-			if _, ok := existing.([]any); ok && !isIndexedKey(key) {
-				SetNestedValue(data, key, subArray)
-				continue
-			}
-
-			// Indexed array update:
-			//
-			//    PATCH /value?key=...frequencies[1]
-			//    { "value": 250 }
-			//
-			// In PATCH cases, `subArray` is always len=1
-			if isIndexedKey(key) {
-				// Use SetNestedValue so that your existing ensureArrayCapacity logic runs
-				SetNestedValue(data, key, subArray[0])
-				continue
-			}
-
-			// Otherwise create/replace array
-			SetNestedValue(data, key, subArray)
-			continue
-		}
-
-		// Simple assignment
-		if err := updateNestedField(data, key, value); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
 // JSONChecksum returns a SHA-256 hash of JSON data.
 func JSONChecksum(v any) (string, error) {
 
@@ -189,210 +118,6 @@ func VerifyChecksum(file multipart.File, expectedChecksum string) bool {
 
 	actualChecksum := hex.EncodeToString(hash.Sum(nil))
 	return actualChecksum == expectedChecksum
-}
-
-// updateNestedField updates a nested field (supporting array indices) in a map.
-func updateNestedField(data map[string]any, key string, value any) error {
-	keys := parseKeyPath(key)
-	for i := 0; i < len(keys)-1; i++ {
-		subKey := keys[i]
-		if index, isIndex := parseArrayIndex(subKey); isIndex {
-			parentKey := keys[i-1]
-			array, ok := data[parentKey].([]any)
-			if !ok || index >= len(array) {
-				return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
-			}
-			nestedMap, ok := array[index].(map[string]any)
-			if !ok {
-				return fmt.Errorf("expected map at index %d in array %s", index, parentKey)
-			}
-			data = nestedMap
-		} else {
-			if _, exists := data[subKey]; !exists {
-				data[subKey] = make(map[string]any)
-			}
-			subData, ok := data[subKey].(map[string]any)
-			if !ok {
-				return fmt.Errorf("intermediate value for key %s is not a map", subKey)
-			}
-			data = subData
-		}
-	}
-
-	finalKey := keys[len(keys)-1]
-	if index, isIndex := parseArrayIndex(finalKey); isIndex {
-		parentKey := keys[len(keys)-2]
-		parentVal, exists := data[parentKey]
-		if !exists {
-			return fmt.Errorf("parent key %s does not exist", parentKey)
-		}
-		array, ok := parentVal.([]any)
-		if !ok || index >= len(array) {
-			return fmt.Errorf("index %d out of bounds for array %s", index, parentKey)
-		}
-		array[index] = value
-	} else {
-		data[finalKey] = value
-	}
-	return nil
-}
-
-func removeNestedField(data map[string]any, key string) {
-	keys := parseKeyPath(key)
-	// Traverse to the parent of the target key.
-	for i := range len(keys) - 1 {
-		subKey := keys[i]
-		if subData, ok := data[subKey].(map[string]any); ok {
-			data = subData
-		} else {
-			return // Key not found or not a map.
-		}
-	}
-	finalKey := keys[len(keys)-1]
-	if index, isIndex := parseArrayIndex(finalKey); isIndex {
-		if array, ok := data[keys[len(keys)-2]].([]any); ok && index >= 0 && index < len(array) {
-			data[keys[len(keys)-2]] = append(array[:index], array[index+1:]...)
-		}
-	} else if start, end, isSlice := parseArraySlice(finalKey); isSlice {
-		if array, ok := data[keys[len(keys)-2]].([]any); ok && start >= 0 && end <= len(array) && start < end {
-			data[keys[len(keys)-2]] = append(array[:start], array[end:]...)
-		}
-	} else {
-		delete(data, finalKey)
-	}
-}
-
-func getNestedValue(data map[string]any, key string) any {
-	keys := parseKeyPath(key)
-	current := any(data)
-	for _, part := range keys {
-		switch c := current.(type) {
-		case map[string]any:
-			val, exists := c[part]
-			if !exists {
-				return nil
-			}
-			current = val
-		case []any:
-			if index, isIndex := parseArrayIndex(part); isIndex {
-				if index < 0 || index >= len(c) {
-					return nil
-				}
-				current = c[index]
-			} else if start, end, isSlice := parseArraySlice(part); isSlice {
-				if start < 0 || end > len(c) || start >= end {
-					return nil
-				}
-				return c[start:end]
-			} else {
-				return nil
-			}
-		default:
-			return nil
-		}
-	}
-	return current
-}
-
-func isIndexedKey(key string) bool {
-	keys := parseKeyPath(key)
-	lastKey := keys[len(keys)-1]
-	_, isIndex := parseArrayIndex(lastKey)
-	return isIndex
-}
-
-func parseArraySlice(key string) (int, int, bool) {
-	if strings.Contains(key, ":") {
-		parts := strings.Split(key, ":")
-		start, err1 := strconv.Atoi(parts[0])
-		end, err2 := strconv.Atoi(parts[1])
-		if err1 == nil && err2 == nil {
-			return start, end, true
-		}
-	}
-	return -1, -1, false
-}
-
-func SetNestedValue(data map[string]any, key string, value any) {
-	logger := logging.GetLogger()
-	keys := parseKeyPath(key)
-	current := data
-	for i := 0; i < len(keys)-1; i++ {
-		subKey := keys[i]
-		if index, isIndex := parseArrayIndex(subKey); isIndex {
-			if i == 0 {
-				logger.Error("Array index cannot be at the root level.")
-				return
-			}
-			parentKey := keys[i-1]
-			parentVal, exists := current[parentKey]
-			if !exists {
-				logger.Warn("Parent key %s does not exist, skipping update.", parentKey)
-				return
-			}
-			if _, ok := parentVal.([]any); !ok {
-				logger.Error("Expected an array at key %s but got %T", parentKey, parentVal)
-				return
-			}
-			ensureArrayCapacity(current, parentKey, index)
-			arrayRef := current[parentKey].([]any)
-			if index >= len(arrayRef) {
-				logger.Error("Index %d out of bounds after ensureArrayCapacity", index)
-				return
-			}
-			arrayRef[index] = value
-			return
-		} else {
-			if _, exists := current[subKey]; !exists {
-				// Create new container based on the next key.
-				nextKey := keys[i+1]
-				if _, isNextIndex := parseArrayIndex(nextKey); isNextIndex {
-					current[subKey] = make([]any, 0)
-				} else {
-					current[subKey] = make(map[string]any)
-				}
-			}
-			if subData, ok := current[subKey].(map[string]any); ok {
-				current = subData
-			} else if _, ok := current[subKey].([]any); ok {
-				break
-			} else {
-				logger.Error("Intermediate value for key %s is not a map", subKey)
-				return
-			}
-		}
-	}
-	finalKey := keys[len(keys)-1]
-	if index, isIndex := parseArrayIndex(finalKey); isIndex {
-		parentKey := keys[len(keys)-2]
-		parentVal, exists := current[parentKey]
-		if !exists {
-			logger.Error("Parent key %s does not exist, skipping update.", parentKey)
-			return
-		}
-		if _, ok := parentVal.([]any); !ok {
-			logger.Error("Expected an array at key %s but got %T", parentKey, parentVal)
-			return
-		}
-		ensureArrayCapacity(current, parentKey, index)
-		arrayRef := current[parentKey].([]any)
-		arrayRef[index] = value
-	} else {
-		current[finalKey] = value
-	}
-}
-
-func parseArrayIndex(key string) (int, bool) {
-	if i, err := strconv.Atoi(key); err == nil {
-		return i, true
-	}
-	return -1, false
-}
-
-func parseKeyPath(key string) []string {
-	return strings.FieldsFunc(key, func(r rune) bool {
-		return r == '.' || r == '[' || r == ']'
-	})
 }
 
 func ensureArrayCapacity(parent map[string]any, parentKey string, index int) {
@@ -533,71 +258,125 @@ func FlattenState(state map[string]*api.StateEntry) map[string]any {
 
 // CalculateDiff recursively compares two data structures (maps or slices) and returns the differences.
 // If the data is not equal, it returns the updated data.
-func CalculateDiff(oldData, newData any) any {
-	// If both values are slices, delegate to calculateSliceDiff.
-	if oldSlice, ok := oldData.([]any); ok {
-		if newSlice, ok2 := newData.([]any); ok2 {
-			return calculateSliceDiff(oldSlice, newSlice)
+func CalculateDiff(before, after any) map[string]any {
+
+	// -----------------------------
+	// MAP CASE
+	// -----------------------------
+	bmap, bIsMap := before.(map[string]any)
+	amap, aIsMap := after.(map[string]any)
+	if bIsMap || aIsMap {
+
+		// before is not map but after is → treat before as empty map
+		if !bIsMap && aIsMap {
+			bmap = map[string]any{}
 		}
-	}
 
-	// If both values are maps, compare them key by key.
-	if oldMap, ok := oldData.(map[string]any); ok {
-		if newMap, ok2 := newData.(map[string]any); ok2 {
-			diff := make(map[string]any)
+		// before is map but after is not → primitive replace
+		if bIsMap && !aIsMap {
+			return map[string]any{"": after}
+		}
 
-			// Check keys present in the new map.
-			for key, newVal := range newMap {
-				if oldVal, exists := oldMap[key]; exists {
-					subDiff := CalculateDiff(oldVal, newVal)
-					if subDiff != nil {
-						diff[key] = subDiff
-					}
-				} else {
-					// New key added.
-					diff[key] = newVal
-				}
+		diff := map[string]any{}
+		keys := make(map[string]bool)
+
+		for k := range bmap {
+			keys[k] = true
+		}
+		for k := range amap {
+			keys[k] = true
+		}
+
+		for k := range keys {
+			sub := CalculateDiff(bmap[k], amap[k])
+			if sub == nil {
+				continue
 			}
 
-			// Check for keys that were removed.
-			for key := range oldMap {
-				if _, exists := newMap[key]; !exists {
-					diff[key] = nil
-				}
+			if val, ok := unwrapPrimitiveDiff(sub); ok {
+				diff[k] = val
+			} else {
+				diff[k] = sub
 			}
-			if len(diff) > 0 {
-				return diff
-			}
+		}
+
+		if len(diff) == 0 {
 			return nil
 		}
+		return diff
 	}
 
-	// For atomic types, if they differ, return the new value.
-	if !reflect.DeepEqual(oldData, newData) {
-		return newData
+	// -----------------------------
+	// ARRAY CASE
+	// -----------------------------
+	barr, bIsArr := before.([]any)
+	aarr, aIsArr := after.([]any)
+	if bIsArr || aIsArr {
+
+		// before not array → treat as empty
+		if !bIsArr && aIsArr {
+			barr = []any{}
+		}
+
+		// after not array → primitive replace
+		if bIsArr && !aIsArr {
+			return map[string]any{"": after}
+		}
+
+		diff := map[string]any{}
+
+		max := len(barr)
+		if len(aarr) < max {
+			max = len(aarr)
+		}
+
+		for i := 0; i < max; i++ {
+			sub := CalculateDiff(barr[i], aarr[i])
+			if sub == nil {
+				continue
+			}
+
+			if val, ok := unwrapPrimitiveDiff(sub); ok {
+				diff[strconv.Itoa(i)] = val
+			} else {
+				diff[strconv.Itoa(i)] = sub
+			}
+		}
+
+		if len(aarr) > len(barr) {
+			for i := len(barr); i < len(aarr); i++ {
+				diff[strconv.Itoa(i)] = aarr[i]
+			}
+		}
+
+		if len(diff) == 0 {
+			return nil
+		}
+		return diff
 	}
-	return nil
+
+	// -----------------------------
+	// PRIMITIVE CASE
+	// -----------------------------
+	if reflect.DeepEqual(before, after) {
+		return nil
+	}
+	return map[string]any{"": after}
 }
 
-// calculateSliceDiff compares two slices element by element.
-// If the slices have different lengths, it returns the new slice entirely.
-// Otherwise, it returns a map with indices (as strings) where differences are found.
-func calculateSliceDiff(oldSlice, newSlice []any) any {
-	if len(oldSlice) != len(newSlice) {
-		return newSlice
+func unwrapPrimitiveDiff(m map[string]any) (any, bool) {
+	if len(m) != 1 {
+		return nil, false
 	}
-
-	diffMap := make(map[string]any)
-	for i, newVal := range newSlice {
-		subDiff := CalculateDiff(oldSlice[i], newVal)
-		if subDiff != nil {
-			// Use the index (converted to string) as the key.
-			diffMap[strconv.Itoa(i)] = subDiff
-		}
+	v, ok := m[""]
+	if !ok {
+		return nil, false
 	}
-
-	if len(diffMap) > 0 {
-		return diffMap
+	// Only unwrap true primitives
+	switch v.(type) {
+	case map[string]any, []any:
+		return nil, false
+	default:
+		return v, true
 	}
-	return nil
 }
