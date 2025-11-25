@@ -31,14 +31,14 @@ import (
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	// projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
+	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 )
 
 func main() {
-	// ctx := context.Background()
+	ctx := context.Background()
 
 	// Load logger
 	logger, err := log.NewProduction() // Move it to cmd parallel
@@ -106,10 +106,10 @@ func main() {
 	logger.Info("Initialized Product DB Service.")
 
 	// Initialize Project DB Service
-	// projectDBSvc := projectdb.NewService(pgs)
-	// if projectDBSvc == nil {
-	// 	logger.Fatal("Failed to initialize project service")
-	// }
+	projectDBSvc := projectdb.NewService(pgs)
+	if projectDBSvc == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
 
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc, idSVC)
@@ -118,8 +118,21 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
+	s3Handler, err := cloudfs.NewS3Client(ctx)
+
+	if err != nil {
+		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
+	}
+	logger.Info("Initialized S3 client")
+
+	// Initialize Project DB Service
+	projectDBSvc := projectdb.NewService(pgs, logger)
+	if projectDBSvc == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
+
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc)
+	projectSVC := project.NewService(projectDBSvc, s3Handler.Bucket(cfg.S3.ProjectBucket))
 	if projectSVC == nil {
 		logger.Fatal("Failed to initialize project service")
 	}
@@ -129,7 +142,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host: appConfig.Server.APIHost,
 		Port: appConfig.Server.APIPort,
-	}, productSVC, nil)
+	}, productSVC, projectSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
@@ -138,19 +151,18 @@ func main() {
 		zap.String("port", appConfig.Server.APIPort))
 
 	// Setup graceful shutdown
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
 	shutdownChan := make(chan os.Signal, 1)
 	signal.Notify(shutdownChan, syscall.SIGINT, syscall.SIGTERM)
 
 	// Start server in goroutine
-	serverErrChan := make(chan error, 1)
+	serverDoneChan := make(chan error, 1)
 	go func() {
 		logger.Info("Starting server...")
-		if err := server.Start(ctx); err != nil {
-			serverErrChan <- err
-		}
+		err := server.Start(ctx)
+		serverDoneChan <- err // Send result regardless of error or nil
 	}()
 
 	// Wait for shutdown signal or server error
@@ -160,19 +172,25 @@ func main() {
 		cancel()
 
 		// Give server time to shutdown gracefully
-		shutdownTimeout := time.NewTimer(2 * time.Second)
+		shutdownTimeout := time.NewTimer(30 * time.Second)
 		defer shutdownTimeout.Stop()
 
 		select {
-		case <-serverErrChan:
-			logger.Info("Server shutdown completed")
+		case err := <-serverDoneChan:
+			if err != nil {
+				logger.Error("Server shutdown with error", zap.Error(err))
+			} else {
+				logger.Info("Server shutdown completed successfully")
+			}
 		case <-shutdownTimeout.C:
-			logger.Info("Server shutdown timeout exceeded")
+			logger.Info("Server shutdown timeout exceeded - forcing exit")
 		}
 
-	case err := <-serverErrChan:
+	case err := <-serverDoneChan:
 		if err != nil {
 			logger.Error("Server error", zap.Error(err))
+		} else {
+			logger.Info("Server exited normally")
 		}
 		cancel()
 	}
