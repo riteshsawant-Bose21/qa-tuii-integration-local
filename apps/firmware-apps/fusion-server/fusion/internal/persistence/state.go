@@ -228,15 +228,10 @@ func (sm *StateManager) Set(key string, value any) error {
 	}
 
 	sm.Lock()
-
-	// Lamport send rule:
-	// local = local + 1
 	sm.version.Counter++
 	localVersion := sm.version
-
 	sm.Unlock()
 
-	// Build update using the new timestamp (the originating event)
 	update := api.ConfigUpdate{
 		Hash:    hash,
 		Data:    data,
@@ -244,61 +239,79 @@ func (sm *StateManager) Set(key string, value any) error {
 		Clear:   false,
 	}
 
-	// Feed through normal update processing
 	_, err = sm.ApplyUpdate(update)
 	return err
 }
 
-// ApplyPatch applies an upated patch to the internal state.
-func (sm *StateManager) ApplyPatch(update map[string]any) (map[string]any, error) {
+// Patch applies an updated patch to the internal state.
+func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	sm.Lock()
 
 	// Apply patch to full current state snapshot
 	existing := sm.getFullStateUnsafe()
+	before := utils.DeepCopy(existing)
+
 	if err := utils.ApplyPatch(existing, update); err != nil {
 		sm.Unlock()
 		return nil, fmt.Errorf("failed to apply patch: %w", err)
 	}
 
-	// Lamport SEND rule for local update:
-	// local = local + 1
+	// Calculate the difference between the original and updated configuration.
+	changed := utils.CalculateDiff(before, existing)
+	if changed == nil {
+		sm.Unlock()
+		return nil, nil
+	}
+
 	sm.version.Counter++
 	localVersion := sm.version
 
 	sm.Unlock()
 
-	// Build a ConfigUpdate using the updated full state with the new timestamp
 	configUpdate := api.ConfigUpdate{
 		Data:    existing,
 		Version: localVersion,
 		Clear:   false,
 	}
 
-	// Generate checksum for the new state
 	hash, err := utils.JSONChecksum(existing)
 	if err != nil {
 		return nil, fmt.Errorf("failed to checksum patched config: %w", err)
 	}
 	configUpdate.Hash = hash
 
-	// Now pass through the normal Lamport ApplyUpdate path
 	if _, err := sm.ApplyUpdate(configUpdate); err != nil {
 		return nil, err
 	}
 
-	return existing, nil
+	return &existing, nil
 }
 
-// ApplyUpdate applies a configuration update using Lamport clock semantics.
+// ApplyUpdate applies a ConfigUpdate received via memberlist replication.
 //
-// Lamport Clock Rule #2 (receiving event):
+//	ConfigUpdate is not a patch. It is not merged deeply.
+//	For each top-level key in update.Data, ApplyUpdate treats the incoming
+//	value as the complete authoritative snapshot for that key.
 //
-//	When receiving an update with timestamp T:
-//	    local = max(local, T) + 1
-//	This ensures that:
-//	    - no node's clock ever goes backwards
-//	    - all nodes converge on a globally consistent causal ordering
-//	    - updates are never incorrectly skipped
+//	That means:
+//	    - Scalar or array values overwrite directly.
+//	    - Map values overwrite the entire existing map for that key.
+//	    - Nested keys that existed locally but not in the incoming update
+//	      are intentionally discarded.
+//
+//	This is correct and intentional for cluster replication. PATCH updates
+//	(via HTTP) apply deep/partial updates locally, and THEN broadcast a
+//	new ConfigUpdate snapshot with a fresh Lamport version so other nodes
+//	accept it.
+//
+//	ApplyUpdate simply converges nodes toward the same snapshot, using
+//	Lamport timestamps to maintain causal ordering.
+//
+// Summary:
+//
+//	PATCH       = local deep/partial edits
+//	ApplyPatch  = merges into existing hierarchical state
+//	ConfigUpdate/ApplyUpdate = replicate authoritative state snapshots
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
 	sm.Lock()
 	defer sm.Unlock()
@@ -393,18 +406,10 @@ func (sm *StateManager) applyWhileLocked(
 		// Determine new data: merge maps or overwrite.
 		var newData any
 		if incomingMap, ok := rawValue.(map[string]any); ok {
-			if exists {
-				if existingMap, ok2 := localEntry.Data.(map[string]any); ok2 {
-					existingMapCopy := utils.DeepCopy(existingMap).(map[string]any)
-					newData = mergeMaps(existingMapCopy, incomingMap)
-				} else {
-					// Local value is not a map; replace with incoming map.
-					newData = incomingMap
-				}
-			} else {
-				// No existing entry; just take the incoming map.
-				newData = incomingMap
-			}
+			// Treat incoming map as the authoritative snapshot for this top-level key.
+			// This ensures that deletions (keys removed in the patched state) are preserved,
+			// instead of being merged with stale keys from the old state.
+			newData = utils.DeepCopy(incomingMap)
 		} else {
 			// Non-map value; overwrite directly.
 			newData = rawValue
@@ -433,8 +438,14 @@ func (sm *StateManager) GetFullState() VersionedState {
 	}
 }
 
+// GetFullStateRaw returns the raw state data with metadata.
+func (sm *StateManager) GetFullStateRaw() map[string]any {
+	sm.RLock()
+	defer sm.RUnlock()
+	return sm.getFullStateUnsafe()
+}
+
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
-// Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 	state := sm.GetFullState().State
 	return utils.FlattenState(state)
@@ -714,23 +725,6 @@ func hashIsConsistent(metadata []api.MemberMetadata) bool {
 		}
 	}
 	return true
-}
-
-// mergeMaps recursively merges two maps.
-// Values from the update map overwrite or are merged into the existing map.
-func mergeMaps(existing, update map[string]any) map[string]any {
-	for key, value := range update {
-		if vMap, ok := value.(map[string]any); ok {
-			if existingMap, exists := existing[key].(map[string]any); exists {
-				existing[key] = mergeMaps(existingMap, vMap)
-			} else {
-				existing[key] = vMap
-			}
-		} else {
-			existing[key] = value
-		}
-	}
-	return existing
 }
 
 func buildInternalURL(address, port, endpoint string) string {

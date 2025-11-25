@@ -298,10 +298,6 @@ echo '{
     }
   }
 }' | nc -u -w1 127.0.0.1 7947
-
-
-
-
 ```
 
 ### Set a value outside of instance
@@ -318,6 +314,16 @@ multipass exec fusion1 -- bash -c 'cat <<EOF | nc -u -w1 127.0.0.1 7947
   }
 }
 EOF'
+```
+
+### Monitor all UDP traffic within an instance
+```bash
+# Create a connection to fusion-server
+echo hi | nc -u 127.0.0.1 7947
+
+# Observer messages to the connection
+sudo tcpdump -l -A -nn -vv -i any udp port 7947 2>/dev/null \
+  | sed -n 's/.*\({.*}\).*/\1/p'
 ```
 
 ## Updates

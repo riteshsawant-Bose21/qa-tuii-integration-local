@@ -605,3 +605,7 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 
 	return nil
 }
+
+func (p *Persistence) GetVersion() api.Version {
+	return p.stateManager.GetVersion()
+}

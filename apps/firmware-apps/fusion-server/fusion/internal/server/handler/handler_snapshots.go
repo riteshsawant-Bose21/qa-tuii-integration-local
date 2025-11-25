@@ -13,13 +13,36 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(name string) error {
-	if err := h.persistence.ActivateSnapshot(name); err != nil {
+
+	restored, err := h.persistence.ActivateSnapshotAndReturnState(name)
+	if err != nil {
 		return err
 	}
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapActivate, nil); err != nil {
+
+	// Broadcast snapshot-activation (cluster-sync)
+	if err := h.handleSnapshotOperation(
+		h.StateManager.GetNode(),
+		name,
+		api.NotifyOpSnapActivate,
+		nil); err != nil {
 		return err
 	}
-	return nil
+
+	// Broadcast message containing the entire restored state
+	update := api.ConfigUpdate{
+		Data:         restored,
+		Version:      h.StateManager.GetVersion(),
+		Clear:        false,
+		FromSnapshot: true,
+	}
+
+	msg := api.NewNotifyMessage(
+		api.NotifyOpConfigUpdate,
+		h.StateManager.GetNode(),
+		api.WithConfigUpdate(&update),
+	)
+
+	return h.hub.BroadcastToNodes(msg)
 }
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
@@ -28,8 +51,7 @@ func (h *Handler) HandleCreateSnapshot(name string) error {
 		return fmt.Errorf("failed to create snapshot: %w", err)
 	}
 
-	data := h.StateManager.GetStateMap()
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate, data); err != nil {
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate, nil); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil

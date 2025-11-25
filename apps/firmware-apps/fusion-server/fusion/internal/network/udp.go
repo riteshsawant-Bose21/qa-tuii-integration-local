@@ -139,49 +139,54 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 }
 
 func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+
 	if !msg.IsPublic() {
 		return nil
 	}
 	logger := logging.GetLogger()
 
-	if msg.Operation == api.NotifyOpConfigUpdate && msg.ConfigUpdate != nil {
+	force := false
 
-		// msg.ConfigUpdate.Version.Counter MUST be the effective Lamport version
-		// produced by ApplyUpdate. The caller ensures this via:
-		//     cfg.Version = sm.GetVersion()
+	// Snapshot full-state updates must bypass version gating.
+	if msg.Operation == api.NotifyOpConfigUpdate &&
+		msg.ConfigUpdate != nil &&
+		msg.ConfigUpdate.FromSnapshot {
 
-		// Effective Lamport timestamp
+		logger.Debug("udp broadcast: forcing snapshot full-state update (FromSnapshot=true)")
+		force = true
+	}
+
+	// Normal config updates: apply Lamport version gating
+	if !force &&
+		msg.Operation == api.NotifyOpConfigUpdate &&
+		msg.ConfigUpdate != nil {
+
 		v := msg.ConfigUpdate.Version.Counter
 		last := s.lastBroadcastVersion.Load()
 
-		// Skip if effectiveVersion <= lastBroadcastVersion
 		if v <= last {
 			logger.Debug(
-				"UDP broadcast: skipping stale/duplicate config_update version=%d (last=%d)",
+				"udp broadcast: skipping stale/duplicate config_update version=%d (last=%d)",
 				v, last,
 			)
 			return nil
 		}
 
-		// Store the effective version as last broadcast
 		s.lastBroadcastVersion.Store(v)
 	}
 
-	// Build payload including effective Lamport version
+	// Build payload including authoritative Lamport version
 	payload := make(map[string]any, len(msg.ConfigUpdate.Data)+1)
-
-	// Copy user data
 	maps.Copy(payload, msg.ConfigUpdate.Data)
-
-	// Add authoritative version key
-	payload["_fusion_version"] = msg.ConfigUpdate.Version.Counter
+	payload[api.FusionVersion] = msg.ConfigUpdate.Version.Counter
+	payload[api.FusionEpoch] = msg.ConfigUpdate.Version.Epoch
 
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal update: %w", err)
 	}
 
-	// Send to all clients synchronously
+	// Send to all UDP clients
 	s.clients.Range(func(k, v any) bool {
 		addr, ok := v.(*net.UDPAddr)
 		if !ok || addr == nil {
@@ -189,9 +194,10 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		}
 
 		if _, err := s.conn.WriteToUDP(data, addr); err != nil {
-			logger.Warn("Broadcast to %s failed: %v", k, err)
+			logger.Warn("udp broadcast to %s failed: %v", k, err)
 			s.clients.Delete(k)
 		}
+
 		return true
 	})
 

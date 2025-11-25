@@ -68,6 +68,7 @@ const (
 	PAVAZonesEndpoint          = PAVAEndpoint + "/zones"
 	PAVAMessagesIDEndpoint     = PAVAMessagesEndpoint + "/{id}"
 	PAVAMessagesTagsEndpoint   = PAVAMessagesEndpoint + "/tags"
+	PAVAScheduleIDEndpoint     = PAVAScheduleEndpoint + "/{id}"
 	PAVAMessageStreamEndpoint  = PAVAMessagesIDEndpoint + "/stream"
 	PAVAMessageTriggerEndpoint = PAVAMessagesIDEndpoint + "/trigger"
 	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
@@ -86,7 +87,7 @@ const (
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
 	TasksIdEndpoint        = TasksEndpoint + "/{id}"
-	TasksIdDisableEndpoint = TasksIdEndpoint + "/enable"
+	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
 	ValueEndpoint = "/value"
