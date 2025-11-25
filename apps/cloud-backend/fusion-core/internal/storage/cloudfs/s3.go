@@ -45,6 +45,36 @@ func NewS3Client(ctx context.Context, accessKey string, secretKey string, region
 	}, nil
 }
 
+func NewS3ClientWithProfile(ctx context.Context, profile, region string) (*S3, error) {
+	var cfg aws.Config
+	var err error
+
+	// Load config with profile if specified, otherwise use default
+	if profile != "" && profile != "default" {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	// Override region if specified
+	if region != "" {
+		cfg.Region = region
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	return &S3{
+		client: client,
+		config: &s3Config{
+			region: cfg.Region,
+		},
+	}, nil
+}
+
 // S3BucketHandle provides methods to operate on a bucket in AWS S3.
 type S3BucketHandle struct {
 	name   string
@@ -70,13 +100,10 @@ func (b *S3BucketHandle) Object(name string) ObjectHandle {
 	return &S3ObjectHandle{
 		handle: b,
 		name:   name,
+		client: b.client,
+		bucket: b.name,
 	}
 }
-
-// func (b *S3BucketHandle) GetSignedURL(ctx context.Context, name string) (string, error) {
-// 	// Implement the logic to generate a signed URL using AWS SDK for Go v2
-// 	return "", nil
-// }
 
 // S3ObjectHandle provides methods to operate on an object in an S3 bucket.
 type S3ObjectHandle struct {
@@ -85,10 +112,6 @@ type S3ObjectHandle struct {
 	client *s3.Client
 	bucket string
 }
-
-// func (o *S3ObjectHandle) Name() string {
-// 	return o.name
-// }
 
 func (o *S3ObjectHandle) NewReader(ctx context.Context) (io.ReadCloser, error) {
 	resp, err := o.client.GetObject(ctx, &s3.GetObjectInput{

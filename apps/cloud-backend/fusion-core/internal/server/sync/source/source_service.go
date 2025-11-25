@@ -6,9 +6,7 @@ import (
 	"io"
 	"os"
 
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	"github.com/joho/godotenv"
 )
 
@@ -84,9 +82,9 @@ func (l *LocalFileSource) Close() error {
 
 // S3Source implements DataSource for AWS S3
 type S3Source struct {
-	bucket   string
-	key      string
-	s3Client *s3.Client
+	bucket     string
+	key        string
+	cloudStore cloudfs.Store
 }
 
 func NewS3Source(bucket, key, awsRegion string) (*S3Source, error) {
@@ -108,30 +106,17 @@ func NewS3Source(bucket, key, awsRegion string) (*S3Source, error) {
 		awsRegion = os.Getenv("AWS_REGION")
 	}
 
-	var cfg aws.Config
-	var err error
-
-	if awsProfile != "default" {
-		cfg, err = config.LoadDefaultConfig(context.TODO(), config.WithSharedConfigProfile(awsProfile))
-	} else {
-		cfg, err = config.LoadDefaultConfig(context.TODO())
-	}
-
+	// Create S3 client using cloudfs abstraction
+	ctx := context.TODO()
+	s3Client, err := cloudfs.NewS3ClientWithProfile(ctx, awsProfile, awsRegion)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+		return nil, fmt.Errorf("failed to create S3 client: %w", err)
 	}
-
-	// Override region if specified
-	if awsRegion != "" {
-		cfg.Region = awsRegion
-	}
-
-	s3Client := s3.NewFromConfig(cfg)
 
 	return &S3Source{
-		bucket:   bucket,
-		key:      key,
-		s3Client: s3Client,
+		bucket:     bucket,
+		key:        key,
+		cloudStore: s3Client,
 	}, nil
 }
 
@@ -150,14 +135,11 @@ func (s *S3Source) ReadAll() ([]byte, error) {
 }
 
 func (s *S3Source) GetSize() (*int64, error) {
-	result, err := s.s3Client.HeadObject(context.TODO(), &s3.HeadObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(s.key),
-	})
+	data, err := s.ReadAll()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get S3 object metadata: %w", err)
+		return nil, err
 	}
-	size := *result.ContentLength
+	size := int64(len(data))
 	return &size, nil
 }
 
@@ -166,17 +148,18 @@ func (s *S3Source) GetPath() string {
 }
 
 func (s *S3Source) Close() error {
-	// S3 client doesn't need explicit closing
+	// cloudfs doesn't require explicit closing
 	return nil
 }
 
 func (s *S3Source) ReadStream() (io.ReadCloser, error) {
-	result, err := s.s3Client.GetObject(context.TODO(), &s3.GetObjectInput{
-		Bucket: aws.String(s.bucket),
-		Key:    aws.String(s.key),
-	})
+	ctx := context.TODO()
+	bucketHandle := s.cloudStore.Bucket(s.bucket)
+	objectHandle := bucketHandle.Object(s.key)
+
+	reader, err := objectHandle.NewReader(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get S3 object: %w", err)
 	}
-	return result.Body, nil
+	return reader, nil
 }

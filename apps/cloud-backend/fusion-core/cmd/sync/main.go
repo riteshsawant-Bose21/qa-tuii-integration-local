@@ -15,19 +15,17 @@ import (
 
 	config "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
-	fusionSync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
 	serversync "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync"
 	syncDB "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync/db"
 	syncSource "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync/source"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 )
 
-// syncHandlerAdapter adapts syncSource.Service to fusionSync.SourceService interface
 type syncHandlerAdapter struct {
 	impl *syncSource.Service
 }
 
-func (s *syncHandlerAdapter) New(sourceType, sourcePath, s3Bucket, s3Key, region string) (fusionSync.DataSource, error) {
+func (s *syncHandlerAdapter) New(sourceType, sourcePath, s3Bucket, s3Key, region string) (serversync.DataSource, error) {
 	ds, err := s.impl.New(sourceType, sourcePath, s3Bucket, s3Key, region)
 	if err != nil {
 		return nil, err
@@ -108,7 +106,6 @@ func main() {
 
 	logger.Info("Database connection established successfully")
 
-	// Wrap in Database wrapper for sync services compatibility
 	db := &syncDB.Database{DB: pgs}
 
 	// HTTP Server Mode
@@ -166,13 +163,12 @@ func main() {
 	sourceService := &syncHandlerAdapter{impl: sourceServiceImpl}
 
 	// Create fusion sync service
-	syncService := fusionSync.NewService(productService, priceService, jobService, sourceService)
+	syncService := serversync.NewService(productService, priceService, jobService, sourceService)
 	if syncService == nil {
 		logger.Fatal("Failed to initialize sync service")
 	}
 	logger.Info("Initialized Sync Service.")
 
-	// Keep jobService reference for direct job operations (like sync_data)
 	jobRepo := jobService
 
 	// Create data source
@@ -249,15 +245,29 @@ func main() {
 	result.Duration = time.Since(startTime)
 	result.JobID = jobID
 
-	// Update job status with results
+	// Update job status with results atomically
 	if jobID != "" {
 		var errMsg *string
 		if result.Failed > 0 {
 			msg := fmt.Sprintf("Completed with %d failures out of %d items", result.Failed, result.TotalItems)
 			errMsg = &msg
 		}
-		if err := jobRepo.UpdateWithResults(jobID, "completed", result.TotalItems, result.Successful, result.Failed, result.ValidationWarnings, errMsg); err != nil {
-			logger.Warn("Failed to update job status to completed", zap.Error(err), zap.String("job_id", jobID))
+
+		// Use atomic update to ensure consistency
+		if err := jobRepo.UpdateStatusAndResults(
+			context.Background(),
+			jobID,
+			"completed",
+			result.TotalItems,
+			result.Successful,
+			result.Failed,
+			result.ValidationWarnings,
+			errMsg,
+		); err != nil {
+			logger.Warn("Failed to update job status and results atomically",
+				zap.Error(err),
+				zap.String("job_id", jobID),
+			)
 		}
 	}
 

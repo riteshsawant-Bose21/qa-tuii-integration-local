@@ -22,8 +22,7 @@ func (a *API) registerRoutes() {
 		products.GET("/:id/prices", productHandler.GetProductPrices)
 	}
 
-	// TODO: Project routes temporarily disabled due to model conflicts
-	// Project routes (only if project service is available)
+	// Project routes
 	// if a.project != nil {
 	// 	projectHandler := handler.NewProjectHandler(a.project)
 	// 	projects := v1.Group("/projects")

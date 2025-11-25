@@ -19,6 +19,7 @@ type Service struct {
 // ProductDatabaseService defines the interface for product database operations
 type ProductDatabaseService interface {
 	Insert(ctx context.Context, product *DBProduct) error
+	InsertBatch(ctx context.Context, products []*DBProduct) error
 	InsertWithRetry(ctx context.Context, product *DBProduct, maxRetries int, retryDelay time.Duration) error
 	LookupProductIDBySKU(ctx context.Context, sku int) (int, bool, error)
 	GetProductTimestamps(ctx context.Context, productIDs []int) (map[int]*int64, error)
@@ -34,6 +35,7 @@ type PriceKey struct {
 // PriceDatabaseService defines the interface for price database operations
 type PriceDatabaseService interface {
 	UpsertPrice(ctx context.Context, price *DBPrice) error
+	UpsertBatch(ctx context.Context, prices []*DBPrice) error
 	GetPriceByProductID(ctx context.Context, productID int) (*DBPrice, error)
 	GetPriceTimestamps(ctx context.Context, priceKeys []PriceKey) (map[PriceKey]*int64, error)
 }
@@ -43,6 +45,7 @@ type JobDatabaseService interface {
 	Create(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error)
 	UpdateStatus(jobID, status string, startedAt *time.Time, errorMsg *string) error
 	UpdateWithResults(jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
+	UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
 	GetByID(jobID string) (*types.SyncJobResult, error)
 	StoreValidationErrors(jobID string, errorCollector *errors.ErrorCollector) error
 }

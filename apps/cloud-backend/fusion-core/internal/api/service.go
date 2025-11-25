@@ -48,7 +48,6 @@ func New(cfg *Config,
 		return nil, errors.New("missing product service")
 	}
 
-	// Project service is optional until projects table is implemented
 	// if projectSvc == nil {
 	// 	return nil, errors.New("missing project service")
 	// }

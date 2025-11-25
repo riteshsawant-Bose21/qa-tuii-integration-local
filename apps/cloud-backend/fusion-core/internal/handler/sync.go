@@ -37,9 +37,19 @@ type dataSourceAdapter struct {
 func (d *dataSourceAdapter) ReadAll() ([]byte, error) { return d.impl.ReadAll() }
 func (d *dataSourceAdapter) Close() error             { return d.impl.Close() }
 
-// Global sync service for HTTP handlers
-var globalSyncService *fusionSync.Service
-var globalLogger *zap.Logger
+// SyncHandler handles sync operations
+type SyncHandler struct {
+	syncService *fusionSync.Service
+	logger      *zap.Logger
+}
+
+// NewSyncHandler creates a new SyncHandler
+func NewSyncHandler(syncService *fusionSync.Service, logger *zap.Logger) *SyncHandler {
+	return &SyncHandler{
+		syncService: syncService,
+		logger:      logger,
+	}
+}
 
 // SetupHTTPServer sets up and starts the HTTP server for sync operations
 func SetupHTTPServer(host, port string, logger *zap.Logger) error {
@@ -89,9 +99,8 @@ func SetupHTTPServer(host, port string, logger *zap.Logger) error {
 	// Create fusion sync service
 	syncService := fusionSync.NewService(productService, priceService, jobService, sourceService)
 
-	// Set global variables for handlers
-	globalSyncService = syncService
-	globalLogger = logger
+	// Create handler
+	h := NewSyncHandler(syncService, logger)
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
@@ -99,8 +108,8 @@ func SetupHTTPServer(host, port string, logger *zap.Logger) error {
 	router.Use(gin.Recovery())
 
 	// Register routes
-	router.POST("/sync", syncHandler)
-	router.GET("/health", healthHandler)
+	router.POST("/sync", h.HandleSync)
+	router.GET("/health", h.HandleHealth)
 
 	addr := host + ":" + port
 	logger.Info("Starting sync HTTP server",
@@ -116,8 +125,8 @@ func SetupHTTPServer(host, port string, logger *zap.Logger) error {
 	return nil
 }
 
-// syncHandler handles sync requests
-func syncHandler(c *gin.Context) {
+// HandleSync handles sync requests
+func (h *SyncHandler) HandleSync(c *gin.Context) {
 	// Parse request body
 	var req struct {
 		SyncType   string `json:"sync_type"`   // "product" or "price"
@@ -149,7 +158,7 @@ func syncHandler(c *gin.Context) {
 		return
 	}
 
-	globalLogger.Info("Received sync request",
+	h.logger.Info("Received sync request",
 		zap.String("sync_type", req.SyncType),
 		zap.String("source_type", req.SourceType),
 	)
@@ -165,16 +174,16 @@ func syncHandler(c *gin.Context) {
 		s3Key = req.S3Key
 	}
 
-	jobID, err := globalSyncService.CreateJob(syncOp, sourcePath, s3Bucket, s3Key)
+	jobID, err := h.syncService.CreateJob(syncOp, sourcePath, s3Bucket, s3Key)
 	if err != nil {
-		globalLogger.Warn("Failed to create sync job", zap.Error(err))
+		h.logger.Warn("Failed to create sync job", zap.Error(err))
 		jobID = ""
 	}
 
 	// Update job status to in_progress
 	if jobID != "" {
-		if err := globalSyncService.UpdateJobStatus(jobID, "in_progress", &startTime, nil); err != nil {
-			globalLogger.Warn("Failed to update job status to in_progress", zap.Error(err), zap.String("job_id", jobID))
+		if err := h.syncService.UpdateJobStatus(jobID, "in_progress", &startTime, nil); err != nil {
+			h.logger.Warn("Failed to update job status to in_progress", zap.Error(err), zap.String("job_id", jobID))
 		}
 	}
 
@@ -186,11 +195,11 @@ func syncHandler(c *gin.Context) {
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to create data source: %v", err)
 		if jobID != "" {
-			if updateErr := globalSyncService.UpdateJobStatus(jobID, "failed", nil, &errMsg); updateErr != nil {
-				globalLogger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
+			if updateErr := h.syncService.UpdateJobStatus(jobID, "failed", nil, &errMsg); updateErr != nil {
+				h.logger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
 			}
 		}
-		globalLogger.Error("Failed to create data source", zap.Error(err))
+		h.logger.Error("Failed to create data source", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create data source: %v", err)})
 		return
 	}
@@ -201,11 +210,11 @@ func syncHandler(c *gin.Context) {
 	if err != nil {
 		errMsg := fmt.Sprintf("failed to read data: %v", err)
 		if jobID != "" {
-			if updateErr := globalSyncService.UpdateJobStatus(jobID, "failed", nil, &errMsg); updateErr != nil {
-				globalLogger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
+			if updateErr := h.syncService.UpdateJobStatus(jobID, "failed", nil, &errMsg); updateErr != nil {
+				h.logger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
 			}
 		}
-		globalLogger.Error("Failed to read data", zap.Error(err))
+		h.logger.Error("Failed to read data", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to read data: %v", err)})
 		return
 	}
@@ -215,14 +224,14 @@ func syncHandler(c *gin.Context) {
 	var result *types.SyncResult
 	switch req.SyncType {
 	case "product":
-		result, err = globalSyncService.SyncProducts(ctx, data, jobID)
+		result, err = h.syncService.SyncProducts(ctx, data, jobID)
 	case "price":
-		result, err = globalSyncService.SyncPrices(ctx, data)
+		result, err = h.syncService.SyncPrices(ctx, data)
 	default:
 		if jobID != "" {
 			errMsg := fmt.Sprintf("invalid sync type: %s", req.SyncType)
-			if updateErr := globalSyncService.UpdateJobStatus(jobID, "failed", nil, &errMsg); updateErr != nil {
-				globalLogger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
+			if updateErr := h.syncService.UpdateJobStatus(jobID, "failed", nil, &errMsg); updateErr != nil {
+				h.logger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
 			}
 		}
 		c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid sync type: %s", req.SyncType)})
@@ -232,11 +241,11 @@ func syncHandler(c *gin.Context) {
 	if err != nil {
 		errMsg := fmt.Sprintf("sync processing failed: %v", err)
 		if jobID != "" {
-			if updateErr := globalSyncService.UpdateJobStatus(jobID, "failed", &startTime, &errMsg); updateErr != nil {
-				globalLogger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
+			if updateErr := h.syncService.UpdateJobStatus(jobID, "failed", &startTime, &errMsg); updateErr != nil {
+				h.logger.Warn("Failed to update job status to failed", zap.Error(updateErr), zap.String("job_id", jobID))
 			}
 		}
-		globalLogger.Error("Sync failed", zap.Error(err))
+		h.logger.Error("Sync failed", zap.Error(err))
 		c.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Sync failed: %v", err)})
 		return
 	}
@@ -252,12 +261,12 @@ func syncHandler(c *gin.Context) {
 			msg := fmt.Sprintf("Completed with %d failures out of %d items", result.Failed, result.TotalItems)
 			errMsg = &msg
 		}
-		if err := globalSyncService.UpdateJobWithResults(jobID, "completed", result.TotalItems, result.Successful, result.Failed, result.ValidationWarnings, errMsg); err != nil {
-			globalLogger.Warn("Failed to update job status to completed", zap.Error(err), zap.String("job_id", jobID))
+		if err := h.syncService.UpdateJobWithResults(jobID, "completed", result.TotalItems, result.Successful, result.Failed, result.ValidationWarnings, errMsg); err != nil {
+			h.logger.Warn("Failed to update job status to completed", zap.Error(err), zap.String("job_id", jobID))
 		}
 	}
 
-	globalLogger.Info("Sync completed successfully",
+	h.logger.Info("Sync completed successfully",
 		zap.String("sync_type", result.SyncType),
 		zap.Int("total_items", result.TotalItems),
 		zap.Int("successful", result.Successful),
@@ -269,8 +278,8 @@ func syncHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
-// healthHandler handles health check requests
-func healthHandler(c *gin.Context) {
+// HandleHealth handles health check requests
+func (h *SyncHandler) HandleHealth(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":  "healthy",
 		"service": "sync",

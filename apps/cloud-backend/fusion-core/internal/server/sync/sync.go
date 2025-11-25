@@ -726,8 +726,7 @@ func (s *Service) parseProductArray(items []interface{}) ([]Product, error) {
 				product.ModelFamily = modelFamily
 			} else {
 				// Provide default model_family for accessories that don't have one
-				const DefaultModelFamily = "Model Family"
-				product.ModelFamily = DefaultModelFamily // Default family for accessories
+				product.ModelFamily = "Model Family" // Default family for accessories
 			}
 			if description, ok := itemMap["description"].(string); ok {
 				product.Description = description
@@ -1556,8 +1555,6 @@ func (s *Service) validateProductJSON(data *ProductData) error {
 		if product.ProductID == 0 {
 			return fmt.Errorf("product at index %d has invalid product_id", i)
 		}
-		// Note: model_name validation moved to individual product validation
-		// to allow concurrent processing to continue even if some products have missing model_name
 	}
 
 	return nil

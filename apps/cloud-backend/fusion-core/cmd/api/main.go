@@ -27,6 +27,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
@@ -104,8 +105,7 @@ func main() {
 	}
 	logger.Info("Initialized Product DB Service.")
 
-	// TODO: Uncomment when projects table is added to database schema
-	// // Initialize Project DB Service
+	// Initialize Project DB Service
 	// projectDBSvc := projectdb.NewService(pgs)
 	// if projectDBSvc == nil {
 	// 	logger.Fatal("Failed to initialize project service")
@@ -118,19 +118,18 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
-	// TODO: Uncomment when projects table is added to database schema
-	// //Initialize Project Service
-	// projectSVC := project.NewService(projectDBSvc)
-	// if projectSVC == nil {
-	// 	logger.Fatal("Failed to initialize project service")
-	// }
-	// logger.Info("Initialized Project Service.")
+	//Initialize Project Service
+	projectSVC := project.NewService(projectDBSvc)
+	if projectSVC == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
+	logger.Info("Initialized Project Service.")
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host: appConfig.Server.APIHost,
 		Port: appConfig.Server.APIPort,
-	}, productSVC, nil) // TODO: Add projectSVC when projects table exists
+	}, productSVC, nil)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
