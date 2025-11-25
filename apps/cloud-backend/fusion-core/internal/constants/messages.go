@@ -1,0 +1,59 @@
+package constants
+
+// Authentication Error Messages
+const (
+	MsgAuthorizationHeaderRequired = "Authorization header is required"
+	MsgInvalidAuthHeaderFormat     = "Invalid authorization header format"
+	MsgInvalidOrExpiredToken       = "Invalid or expired token"
+	MsgTokenExpired                = "Token has expired"
+	MsgMalformedToken              = "Malformed token"
+	MsgInvalidTokenSignature       = "Invalid token signature"
+	MsgUnsupportedTokenFormat      = "Received JWE token but JWT expected"
+	MsgInvalidTokenClaims          = "Invalid token claims"
+	MsgUserEmailNotFoundInToken    = "User email not found in token"
+)
+
+// User Management Messages
+const (
+	MsgUserNotFound            = "User account not found in the system. Please contact your administrator to set up your account."
+	MsgUserNotFoundSimple      = "User account not found in the system"
+	MsgFailedToRetrieveUser    = "Failed to retrieve user"
+	MsgEmailParameterRequired  = "Email parameter is required"
+	MsgUserIDParameterRequired = "User ID parameter is required"
+	MsgFailedToUpdateUser      = "Failed to update user"
+)
+
+// Role Management Messages
+const (
+	MsgUserRoleUpdatedSuccessfully        = "User role updated successfully"
+	MsgRolePermissionsUpdatedSuccessfully = "Role permissions updated successfully"
+	MsgFailedToCheckAdminPermissions      = "Failed to check admin permissions"
+	MsgFailedToGetRoleManagementData      = "Failed to get role management data"
+	MsgFailedToCreateRole                 = "Failed to create role"
+	MsgFailedToUpdateUserRole             = "Failed to update user role"
+	MsgFailedToUpdateRolePermissions      = "Failed to update role permissions"
+	MsgFailedToGetOrganizationUsers       = "Failed to get organization users"
+	MsgRoleIDRequired                     = "Role ID is required"
+	MsgInvalidRoleID                      = "Invalid role ID"
+)
+
+// Permission Messages
+const (
+	MsgInsufficientPermissions                        = "Insufficient permissions"
+	MsgInsufficientPermissionsForRoleManagement       = "Insufficient permissions for role management"
+	MsgInsufficientPermissionsToCreateRoles           = "Insufficient permissions to create roles"
+	MsgInsufficientPermissionsToUpdateUserRoles       = "Insufficient permissions to update user roles"
+	MsgInsufficientPermissionsToUpdateRolePermissions = "Insufficient permissions to update role permissions"
+	MsgInsufficientPermissionsToViewOrgUsers          = "Insufficient permissions to view organization users"
+)
+
+// General Messages
+const (
+	MsgUnauthorized        = "Unauthorized"
+	MsgAccessDenied        = "Access denied"
+	MsgInternalServerError = "Internal Server Error"
+	MsgBadRequest          = "Bad Request"
+	MsgForbidden           = "Forbidden"
+	MsgInvalidRequestBody  = "Invalid request body"
+	MsgInvalidToken        = "Invalid token"
+)

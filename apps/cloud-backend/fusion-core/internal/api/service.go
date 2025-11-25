@@ -7,7 +7,10 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
+	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -18,18 +21,27 @@ type API struct {
 	product fusion.Product
 	project fusion.Project
 	sync    fusion.Sync
+	user                  fusion.User
+	userDBService         *userdb.Service
+	roleManagementService *userdb.RoleManagementService
+	authMiddleware        middleware.AuthMiddleware
 }
 
 type Config struct {
-	Mode string // "debug" or "release"
-	Host string
-	Port string
+	Mode          string // "debug" or "release"
+	Host          string
+	Port          string
+	Auth0Domain   string
+	Auth0Audience string
 }
 
 // New returns a new API from the given services.
 func New(cfg *Config,
 	product fusion.Product,
 	project fusion.Project,
+	userSvc fusion.User,
+	userDBSvc *userdb.Service,
+	roleManagementSvc *userdb.RoleManagementService,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -52,10 +64,31 @@ func New(cfg *Config,
 		return nil, errors.New("missing project service")
 	}
 
+	if userSvc == nil {
+		return nil, errors.New("missing user service")
+	}
+
+	// Initialize Auth0 validator and middleware
+	var authMiddleware middleware.AuthMiddleware
+	if cfg.Auth0Domain != "" {
+		auth0Config := auth.Auth0Config{
+			Domain: cfg.Auth0Domain,
+		}
+		auth0Validator := auth.NewAuth0Validator(auth0Config)
+		authMiddleware = middleware.NewAuth0Middleware(auth0Validator)
+	} else {
+		return nil, errors.New("Auth0Domain is required for authentication")
+	}
+
 	api := &API{
 		engine:  engine,
 		product: product,
 		project: project,
+		user:    userSvc,
+
+		userDBService:         userDBSvc,
+		roleManagementService: roleManagementSvc,
+		authMiddleware:        authMiddleware,
 	}
 
 	api.registerRoutes()

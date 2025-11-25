@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -23,62 +24,65 @@ import (
 
 // AccountTypeRole is an object representing the database table.
 type AccountTypeRole struct {
-	ID        int `boil:"id" json:"id" toml:"id" yaml:"id"`
-	AccountID int `boil:"account_id" json:"account_id" toml:"account_id" yaml:"account_id"`
-	RoleID    int `boil:"role_id" json:"role_id" toml:"role_id" yaml:"role_id"`
+	ID            int         `boil:"id" json:"id" toml:"id" yaml:"id"`
+	RoleID        int         `boil:"role_id" json:"role_id" toml:"role_id" yaml:"role_id"`
+	AccountTypeID null.String `boil:"account_type_id" json:"account_type_id,omitempty" toml:"account_type_id" yaml:"account_type_id,omitempty"`
 
 	R *accountTypeRoleR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L accountTypeRoleL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var AccountTypeRoleColumns = struct {
-	ID        string
-	AccountID string
-	RoleID    string
+	ID            string
+	RoleID        string
+	AccountTypeID string
 }{
-	ID:        "id",
-	AccountID: "account_id",
-	RoleID:    "role_id",
+	ID:            "id",
+	RoleID:        "role_id",
+	AccountTypeID: "account_type_id",
 }
 
 var AccountTypeRoleTableColumns = struct {
-	ID        string
-	AccountID string
-	RoleID    string
+	ID            string
+	RoleID        string
+	AccountTypeID string
 }{
-	ID:        "account_type_role.id",
-	AccountID: "account_type_role.account_id",
-	RoleID:    "account_type_role.role_id",
+	ID:            "account_type_role.id",
+	RoleID:        "account_type_role.role_id",
+	AccountTypeID: "account_type_role.account_type_id",
 }
 
 // Generated where
 
 var AccountTypeRoleWhere = struct {
-	ID        whereHelperint
-	AccountID whereHelperint
-	RoleID    whereHelperint
+	ID            whereHelperint
+	RoleID        whereHelperint
+	AccountTypeID whereHelpernull_String
 }{
-	ID:        whereHelperint{field: "\"account_type_role\".\"id\""},
-	AccountID: whereHelperint{field: "\"account_type_role\".\"account_id\""},
-	RoleID:    whereHelperint{field: "\"account_type_role\".\"role_id\""},
+	ID:            whereHelperint{field: "\"account_type_role\".\"id\""},
+	RoleID:        whereHelperint{field: "\"account_type_role\".\"role_id\""},
+	AccountTypeID: whereHelpernull_String{field: "\"account_type_role\".\"account_type_id\""},
 }
 
 // AccountTypeRoleRels is where relationship names are stored.
 var AccountTypeRoleRels = struct {
-	Account   string
-	Role      string
-	RoleUsers string
+	AccountType        string
+	Role               string
+	AppUsers           string
+	FeaturePermissions string
 }{
-	Account:   "Account",
-	Role:      "Role",
-	RoleUsers: "RoleUsers",
+	AccountType:        "AccountType",
+	Role:               "Role",
+	AppUsers:           "AppUsers",
+	FeaturePermissions: "FeaturePermissions",
 }
 
 // accountTypeRoleR is where relationships are stored.
 type accountTypeRoleR struct {
-	Account   *Account  `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	Role      *Role     `boil:"Role" json:"Role" toml:"Role" yaml:"Role"`
-	RoleUsers UserSlice `boil:"RoleUsers" json:"RoleUsers" toml:"RoleUsers" yaml:"RoleUsers"`
+	AccountType        *AccountType           `boil:"AccountType" json:"AccountType" toml:"AccountType" yaml:"AccountType"`
+	Role               *Role                  `boil:"Role" json:"Role" toml:"Role" yaml:"Role"`
+	AppUsers           AppUserSlice           `boil:"AppUsers" json:"AppUsers" toml:"AppUsers" yaml:"AppUsers"`
+	FeaturePermissions FeaturePermissionSlice `boil:"FeaturePermissions" json:"FeaturePermissions" toml:"FeaturePermissions" yaml:"FeaturePermissions"`
 }
 
 // NewStruct creates a new relationship struct
@@ -86,20 +90,20 @@ func (*accountTypeRoleR) NewStruct() *accountTypeRoleR {
 	return &accountTypeRoleR{}
 }
 
-func (o *AccountTypeRole) GetAccount() *Account {
+func (o *AccountTypeRole) GetAccountType() *AccountType {
 	if o == nil {
 		return nil
 	}
 
-	return o.R.GetAccount()
+	return o.R.GetAccountType()
 }
 
-func (r *accountTypeRoleR) GetAccount() *Account {
+func (r *accountTypeRoleR) GetAccountType() *AccountType {
 	if r == nil {
 		return nil
 	}
 
-	return r.Account
+	return r.AccountType
 }
 
 func (o *AccountTypeRole) GetRole() *Role {
@@ -118,29 +122,45 @@ func (r *accountTypeRoleR) GetRole() *Role {
 	return r.Role
 }
 
-func (o *AccountTypeRole) GetRoleUsers() UserSlice {
+func (o *AccountTypeRole) GetAppUsers() AppUserSlice {
 	if o == nil {
 		return nil
 	}
 
-	return o.R.GetRoleUsers()
+	return o.R.GetAppUsers()
 }
 
-func (r *accountTypeRoleR) GetRoleUsers() UserSlice {
+func (r *accountTypeRoleR) GetAppUsers() AppUserSlice {
 	if r == nil {
 		return nil
 	}
 
-	return r.RoleUsers
+	return r.AppUsers
+}
+
+func (o *AccountTypeRole) GetFeaturePermissions() FeaturePermissionSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetFeaturePermissions()
+}
+
+func (r *accountTypeRoleR) GetFeaturePermissions() FeaturePermissionSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.FeaturePermissions
 }
 
 // accountTypeRoleL is where Load methods for each relationship are stored.
 type accountTypeRoleL struct{}
 
 var (
-	accountTypeRoleAllColumns            = []string{"id", "account_id", "role_id"}
-	accountTypeRoleColumnsWithoutDefault = []string{"account_id", "role_id"}
-	accountTypeRoleColumnsWithDefault    = []string{"id"}
+	accountTypeRoleAllColumns            = []string{"id", "role_id", "account_type_id"}
+	accountTypeRoleColumnsWithoutDefault = []string{"role_id"}
+	accountTypeRoleColumnsWithDefault    = []string{"id", "account_type_id"}
 	accountTypeRolePrimaryKeyColumns     = []string{"id"}
 	accountTypeRoleGeneratedColumns      = []string{}
 )
@@ -450,15 +470,15 @@ func (q accountTypeRoleQuery) Exists(ctx context.Context, exec boil.ContextExecu
 	return count > 0, nil
 }
 
-// Account pointed to by the foreign key.
-func (o *AccountTypeRole) Account(mods ...qm.QueryMod) accountQuery {
+// AccountType pointed to by the foreign key.
+func (o *AccountTypeRole) AccountType(mods ...qm.QueryMod) accountTypeQuery {
 	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.AccountID),
+		qm.Where("\"id\" = ?", o.AccountTypeID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Accounts(queryMods...)
+	return AccountTypes(queryMods...)
 }
 
 // Role pointed to by the foreign key.
@@ -472,23 +492,37 @@ func (o *AccountTypeRole) Role(mods ...qm.QueryMod) roleQuery {
 	return Roles(queryMods...)
 }
 
-// RoleUsers retrieves all the user's Users with an executor via role_id column.
-func (o *AccountTypeRole) RoleUsers(mods ...qm.QueryMod) userQuery {
+// AppUsers retrieves all the app_user's AppUsers with an executor.
+func (o *AccountTypeRole) AppUsers(mods ...qm.QueryMod) appUserQuery {
 	var queryMods []qm.QueryMod
 	if len(mods) != 0 {
 		queryMods = append(queryMods, mods...)
 	}
 
 	queryMods = append(queryMods,
-		qm.Where("\"user\".\"role_id\"=?", o.ID),
+		qm.Where("\"app_user\".\"account_type_role_id\"=?", o.ID),
 	)
 
-	return Users(queryMods...)
+	return AppUsers(queryMods...)
 }
 
-// LoadAccount allows an eager lookup of values, cached into the
+// FeaturePermissions retrieves all the feature_permission's FeaturePermissions with an executor.
+func (o *AccountTypeRole) FeaturePermissions(mods ...qm.QueryMod) featurePermissionQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"feature_permission\".\"account_type_role_id\"=?", o.ID),
+	)
+
+	return FeaturePermissions(queryMods...)
+}
+
+// LoadAccountType allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
-func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAccountTypeRole interface{}, mods queries.Applicator) error {
+func (accountTypeRoleL) LoadAccountType(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAccountTypeRole interface{}, mods queries.Applicator) error {
 	var slice []*AccountTypeRole
 	var object *AccountTypeRole
 
@@ -519,7 +553,9 @@ func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor,
 		if object.R == nil {
 			object.R = &accountTypeRoleR{}
 		}
-		args[object.AccountID] = struct{}{}
+		if !queries.IsNil(object.AccountTypeID) {
+			args[object.AccountTypeID] = struct{}{}
+		}
 
 	} else {
 		for _, obj := range slice {
@@ -527,7 +563,9 @@ func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor,
 				obj.R = &accountTypeRoleR{}
 			}
 
-			args[obj.AccountID] = struct{}{}
+			if !queries.IsNil(obj.AccountTypeID) {
+				args[obj.AccountTypeID] = struct{}{}
+			}
 
 		}
 	}
@@ -544,8 +582,8 @@ func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor,
 	}
 
 	query := NewQuery(
-		qm.From(`account`),
-		qm.WhereIn(`account.id in ?`, argsSlice...),
+		qm.From(`account_type`),
+		qm.WhereIn(`account_type.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -553,22 +591,22 @@ func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor,
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load Account")
+		return errors.Wrap(err, "failed to eager load AccountType")
 	}
 
-	var resultSlice []*Account
+	var resultSlice []*AccountType
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Account")
+		return errors.Wrap(err, "failed to bind eager loaded slice AccountType")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for account")
+		return errors.Wrap(err, "failed to close results of eager load for account_type")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for account")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for account_type")
 	}
 
-	if len(accountAfterSelectHooks) != 0 {
+	if len(accountTypeAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -582,9 +620,9 @@ func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor,
 
 	if singular {
 		foreign := resultSlice[0]
-		object.R.Account = foreign
+		object.R.AccountType = foreign
 		if foreign.R == nil {
-			foreign.R = &accountR{}
+			foreign.R = &accountTypeR{}
 		}
 		foreign.R.AccountTypeRoles = append(foreign.R.AccountTypeRoles, object)
 		return nil
@@ -592,10 +630,10 @@ func (accountTypeRoleL) LoadAccount(ctx context.Context, e boil.ContextExecutor,
 
 	for _, local := range slice {
 		for _, foreign := range resultSlice {
-			if local.AccountID == foreign.ID {
-				local.R.Account = foreign
+			if queries.Equal(local.AccountTypeID, foreign.ID) {
+				local.R.AccountType = foreign
 				if foreign.R == nil {
-					foreign.R = &accountR{}
+					foreign.R = &accountTypeR{}
 				}
 				foreign.R.AccountTypeRoles = append(foreign.R.AccountTypeRoles, local)
 				break
@@ -664,8 +702,8 @@ func (accountTypeRoleL) LoadRole(ctx context.Context, e boil.ContextExecutor, si
 	}
 
 	query := NewQuery(
-		qm.From(`roles`),
-		qm.WhereIn(`roles.id in ?`, argsSlice...),
+		qm.From(`role`),
+		qm.WhereIn(`role.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -682,10 +720,10 @@ func (accountTypeRoleL) LoadRole(ctx context.Context, e boil.ContextExecutor, si
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for roles")
+		return errors.Wrap(err, "failed to close results of eager load for role")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for roles")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for role")
 	}
 
 	if len(roleAfterSelectHooks) != 0 {
@@ -726,9 +764,9 @@ func (accountTypeRoleL) LoadRole(ctx context.Context, e boil.ContextExecutor, si
 	return nil
 }
 
-// LoadRoleUsers allows an eager lookup of values, cached into the
+// LoadAppUsers allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for a 1-M or N-M relationship.
-func (accountTypeRoleL) LoadRoleUsers(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAccountTypeRole interface{}, mods queries.Applicator) error {
+func (accountTypeRoleL) LoadAppUsers(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAccountTypeRole interface{}, mods queries.Applicator) error {
 	var slice []*AccountTypeRole
 	var object *AccountTypeRole
 
@@ -781,8 +819,8 @@ func (accountTypeRoleL) LoadRoleUsers(ctx context.Context, e boil.ContextExecuto
 	}
 
 	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.role_id in ?`, argsSlice...),
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.account_type_role_id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -790,22 +828,22 @@ func (accountTypeRoleL) LoadRoleUsers(ctx context.Context, e boil.ContextExecuto
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load user")
+		return errors.Wrap(err, "failed to eager load app_user")
 	}
 
-	var resultSlice []*User
+	var resultSlice []*AppUser
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice user")
+		return errors.Wrap(err, "failed to bind eager loaded slice app_user")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results in eager load on user")
+		return errors.Wrap(err, "failed to close results in eager load on app_user")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
 	}
 
-	if len(userAfterSelectHooks) != 0 {
+	if len(appUserAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -813,24 +851,24 @@ func (accountTypeRoleL) LoadRoleUsers(ctx context.Context, e boil.ContextExecuto
 		}
 	}
 	if singular {
-		object.R.RoleUsers = resultSlice
+		object.R.AppUsers = resultSlice
 		for _, foreign := range resultSlice {
 			if foreign.R == nil {
-				foreign.R = &userR{}
+				foreign.R = &appUserR{}
 			}
-			foreign.R.Role = object
+			foreign.R.AccountTypeRole = object
 		}
 		return nil
 	}
 
 	for _, foreign := range resultSlice {
 		for _, local := range slice {
-			if local.ID == foreign.RoleID {
-				local.R.RoleUsers = append(local.R.RoleUsers, foreign)
+			if local.ID == foreign.AccountTypeRoleID {
+				local.R.AppUsers = append(local.R.AppUsers, foreign)
 				if foreign.R == nil {
-					foreign.R = &userR{}
+					foreign.R = &appUserR{}
 				}
-				foreign.R.Role = local
+				foreign.R.AccountTypeRole = local
 				break
 			}
 		}
@@ -839,10 +877,123 @@ func (accountTypeRoleL) LoadRoleUsers(ctx context.Context, e boil.ContextExecuto
 	return nil
 }
 
-// SetAccount of the accountTypeRole to the related item.
-// Sets o.R.Account to related.
+// LoadFeaturePermissions allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (accountTypeRoleL) LoadFeaturePermissions(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAccountTypeRole interface{}, mods queries.Applicator) error {
+	var slice []*AccountTypeRole
+	var object *AccountTypeRole
+
+	if singular {
+		var ok bool
+		object, ok = maybeAccountTypeRole.(*AccountTypeRole)
+		if !ok {
+			object = new(AccountTypeRole)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAccountTypeRole)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAccountTypeRole))
+			}
+		}
+	} else {
+		s, ok := maybeAccountTypeRole.(*[]*AccountTypeRole)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAccountTypeRole)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAccountTypeRole))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &accountTypeRoleR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &accountTypeRoleR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`feature_permission`),
+		qm.WhereIn(`feature_permission.account_type_role_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load feature_permission")
+	}
+
+	var resultSlice []*FeaturePermission
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice feature_permission")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on feature_permission")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for feature_permission")
+	}
+
+	if len(featurePermissionAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.FeaturePermissions = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &featurePermissionR{}
+			}
+			foreign.R.AccountTypeRole = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.AccountTypeRoleID {
+				local.R.FeaturePermissions = append(local.R.FeaturePermissions, foreign)
+				if foreign.R == nil {
+					foreign.R = &featurePermissionR{}
+				}
+				foreign.R.AccountTypeRole = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// SetAccountType of the accountTypeRole to the related item.
+// Sets o.R.AccountType to related.
 // Adds o to related.R.AccountTypeRoles.
-func (o *AccountTypeRole) SetAccount(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Account) error {
+func (o *AccountTypeRole) SetAccountType(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AccountType) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -852,7 +1003,7 @@ func (o *AccountTypeRole) SetAccount(ctx context.Context, exec boil.ContextExecu
 
 	updateQuery := fmt.Sprintf(
 		"UPDATE \"account_type_role\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"account_id"}),
+		strmangle.SetParamNames("\"", "\"", 1, []string{"account_type_id"}),
 		strmangle.WhereClause("\"", "\"", 2, accountTypeRolePrimaryKeyColumns),
 	)
 	values := []interface{}{related.ID, o.ID}
@@ -866,23 +1017,56 @@ func (o *AccountTypeRole) SetAccount(ctx context.Context, exec boil.ContextExecu
 		return errors.Wrap(err, "failed to update local table")
 	}
 
-	o.AccountID = related.ID
+	queries.Assign(&o.AccountTypeID, related.ID)
 	if o.R == nil {
 		o.R = &accountTypeRoleR{
-			Account: related,
+			AccountType: related,
 		}
 	} else {
-		o.R.Account = related
+		o.R.AccountType = related
 	}
 
 	if related.R == nil {
-		related.R = &accountR{
+		related.R = &accountTypeR{
 			AccountTypeRoles: AccountTypeRoleSlice{o},
 		}
 	} else {
 		related.R.AccountTypeRoles = append(related.R.AccountTypeRoles, o)
 	}
 
+	return nil
+}
+
+// RemoveAccountType relationship.
+// Sets o.R.AccountType to nil.
+// Removes o from all passed in related items' relationships struct.
+func (o *AccountTypeRole) RemoveAccountType(ctx context.Context, exec boil.ContextExecutor, related *AccountType) error {
+	var err error
+
+	queries.SetScanner(&o.AccountTypeID, nil)
+	if _, err = o.Update(ctx, exec, boil.Whitelist("account_type_id")); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	if o.R != nil {
+		o.R.AccountType = nil
+	}
+	if related == nil || related.R == nil {
+		return nil
+	}
+
+	for i, ri := range related.R.AccountTypeRoles {
+		if queries.Equal(o.AccountTypeID, ri.AccountTypeID) {
+			continue
+		}
+
+		ln := len(related.R.AccountTypeRoles)
+		if ln > 1 && i < ln-1 {
+			related.R.AccountTypeRoles[i] = related.R.AccountTypeRoles[ln-1]
+		}
+		related.R.AccountTypeRoles = related.R.AccountTypeRoles[:ln-1]
+		break
+	}
 	return nil
 }
 
@@ -933,23 +1117,23 @@ func (o *AccountTypeRole) SetRole(ctx context.Context, exec boil.ContextExecutor
 	return nil
 }
 
-// AddRoleUsers adds the given related objects to the existing relationships
+// AddAppUsers adds the given related objects to the existing relationships
 // of the account_type_role, optionally inserting them as new records.
-// Appends related to o.R.RoleUsers.
-// Sets related.R.Role appropriately.
-func (o *AccountTypeRole) AddRoleUsers(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*User) error {
+// Appends related to o.R.AppUsers.
+// Sets related.R.AccountTypeRole appropriately.
+func (o *AccountTypeRole) AddAppUsers(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*AppUser) error {
 	var err error
 	for _, rel := range related {
 		if insert {
-			rel.RoleID = o.ID
+			rel.AccountTypeRoleID = o.ID
 			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
 				return errors.Wrap(err, "failed to insert into foreign table")
 			}
 		} else {
 			updateQuery := fmt.Sprintf(
-				"UPDATE \"user\" SET %s WHERE %s",
-				strmangle.SetParamNames("\"", "\"", 1, []string{"role_id"}),
-				strmangle.WhereClause("\"", "\"", 2, userPrimaryKeyColumns),
+				"UPDATE \"app_user\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"account_type_role_id"}),
+				strmangle.WhereClause("\"", "\"", 2, appUserPrimaryKeyColumns),
 			)
 			values := []interface{}{o.ID, rel.ID}
 
@@ -962,25 +1146,78 @@ func (o *AccountTypeRole) AddRoleUsers(ctx context.Context, exec boil.ContextExe
 				return errors.Wrap(err, "failed to update foreign table")
 			}
 
-			rel.RoleID = o.ID
+			rel.AccountTypeRoleID = o.ID
 		}
 	}
 
 	if o.R == nil {
 		o.R = &accountTypeRoleR{
-			RoleUsers: related,
+			AppUsers: related,
 		}
 	} else {
-		o.R.RoleUsers = append(o.R.RoleUsers, related...)
+		o.R.AppUsers = append(o.R.AppUsers, related...)
 	}
 
 	for _, rel := range related {
 		if rel.R == nil {
-			rel.R = &userR{
-				Role: o,
+			rel.R = &appUserR{
+				AccountTypeRole: o,
 			}
 		} else {
-			rel.R.Role = o
+			rel.R.AccountTypeRole = o
+		}
+	}
+	return nil
+}
+
+// AddFeaturePermissions adds the given related objects to the existing relationships
+// of the account_type_role, optionally inserting them as new records.
+// Appends related to o.R.FeaturePermissions.
+// Sets related.R.AccountTypeRole appropriately.
+func (o *AccountTypeRole) AddFeaturePermissions(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*FeaturePermission) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.AccountTypeRoleID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"feature_permission\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"account_type_role_id"}),
+				strmangle.WhereClause("\"", "\"", 2, featurePermissionPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.AccountTypeRoleID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &accountTypeRoleR{
+			FeaturePermissions: related,
+		}
+	} else {
+		o.R.FeaturePermissions = append(o.R.FeaturePermissions, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &featurePermissionR{
+				AccountTypeRole: o,
+			}
+		} else {
+			rel.R.AccountTypeRole = o
 		}
 	}
 	return nil

@@ -6,10 +6,12 @@ package models
 var TableNames = struct {
 	AccessLevel       string
 	Account           string
+	AccountType       string
 	AccountTypeRole   string
-	AccountsType      string
+	AppUser           string
 	Feature           string
 	FeaturePermission string
+	Role              string
 	Product           string
 	ProductPrice      string
 	ProductSyncJob    string
@@ -20,10 +22,12 @@ var TableNames = struct {
 }{
 	AccessLevel:       "access_level",
 	Account:           "account",
+	AccountType:       "account_type",
 	AccountTypeRole:   "account_type_role",
-	AccountsType:      "accounts_type",
+	AppUser:           "app_user",
 	Feature:           "feature",
 	FeaturePermission: "feature_permission",
+	Role:              "role",
 	Product:           "product",
 	ProductPrice:      "product_price",
 	ProductSyncJob:    "product_sync_job",

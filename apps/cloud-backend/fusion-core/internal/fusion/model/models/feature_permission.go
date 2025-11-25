@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
@@ -23,69 +24,76 @@ import (
 
 // FeaturePermission is an object representing the database table.
 type FeaturePermission struct {
-	ID            int `boil:"id" json:"id" toml:"id" yaml:"id"`
-	FeatureID     int `boil:"feature_id" json:"feature_id" toml:"feature_id" yaml:"feature_id"`
-	RoleID        int `boil:"role_id" json:"role_id" toml:"role_id" yaml:"role_id"`
-	AccessLevelID int `boil:"access_level_id" json:"access_level_id" toml:"access_level_id" yaml:"access_level_id"`
+	ID                int       `boil:"id" json:"id" toml:"id" yaml:"id"`
+	FeatureID         int       `boil:"feature_id" json:"feature_id" toml:"feature_id" yaml:"feature_id"`
+	AccountTypeRoleID int       `boil:"account_type_role_id" json:"account_type_role_id" toml:"account_type_role_id" yaml:"account_type_role_id"`
+	AccessLevelID     int       `boil:"access_level_id" json:"access_level_id" toml:"access_level_id" yaml:"access_level_id"`
+	CreatedAt         null.Time `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
 
 	R *featurePermissionR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L featurePermissionL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var FeaturePermissionColumns = struct {
-	ID            string
-	FeatureID     string
-	RoleID        string
-	AccessLevelID string
+	ID                string
+	FeatureID         string
+	AccountTypeRoleID string
+	AccessLevelID     string
+	CreatedAt         string
 }{
-	ID:            "id",
-	FeatureID:     "feature_id",
-	RoleID:        "role_id",
-	AccessLevelID: "access_level_id",
+	ID:                "id",
+	FeatureID:         "feature_id",
+	AccountTypeRoleID: "account_type_role_id",
+	AccessLevelID:     "access_level_id",
+	CreatedAt:         "created_at",
 }
 
 var FeaturePermissionTableColumns = struct {
-	ID            string
-	FeatureID     string
-	RoleID        string
-	AccessLevelID string
+	ID                string
+	FeatureID         string
+	AccountTypeRoleID string
+	AccessLevelID     string
+	CreatedAt         string
 }{
-	ID:            "feature_permission.id",
-	FeatureID:     "feature_permission.feature_id",
-	RoleID:        "feature_permission.role_id",
-	AccessLevelID: "feature_permission.access_level_id",
+	ID:                "feature_permission.id",
+	FeatureID:         "feature_permission.feature_id",
+	AccountTypeRoleID: "feature_permission.account_type_role_id",
+	AccessLevelID:     "feature_permission.access_level_id",
+	CreatedAt:         "feature_permission.created_at",
 }
 
 // Generated where
 
 var FeaturePermissionWhere = struct {
-	ID            whereHelperint
-	FeatureID     whereHelperint
-	RoleID        whereHelperint
-	AccessLevelID whereHelperint
+	ID                whereHelperint
+	FeatureID         whereHelperint
+	AccountTypeRoleID whereHelperint
+	AccessLevelID     whereHelperint
+	CreatedAt         whereHelpernull_Time
 }{
-	ID:            whereHelperint{field: "\"feature_permission\".\"id\""},
-	FeatureID:     whereHelperint{field: "\"feature_permission\".\"feature_id\""},
-	RoleID:        whereHelperint{field: "\"feature_permission\".\"role_id\""},
-	AccessLevelID: whereHelperint{field: "\"feature_permission\".\"access_level_id\""},
+	ID:                whereHelperint{field: "\"feature_permission\".\"id\""},
+	FeatureID:         whereHelperint{field: "\"feature_permission\".\"feature_id\""},
+	AccountTypeRoleID: whereHelperint{field: "\"feature_permission\".\"account_type_role_id\""},
+	AccessLevelID:     whereHelperint{field: "\"feature_permission\".\"access_level_id\""},
+	CreatedAt:         whereHelpernull_Time{field: "\"feature_permission\".\"created_at\""},
 }
 
 // FeaturePermissionRels is where relationship names are stored.
 var FeaturePermissionRels = struct {
-	AccessLevel string
-	Feature     string
-	Role        string
+	AccessLevel     string
+	AccountTypeRole string
+	Feature         string
 }{
-	AccessLevel: "AccessLevel",
-	Feature:     "Feature",
-	Role:        "Role",
+	AccessLevel:     "AccessLevel",
+	AccountTypeRole: "AccountTypeRole",
+	Feature:         "Feature",
 }
 
 // featurePermissionR is where relationships are stored.
 type featurePermissionR struct {
-	AccessLevel *AccessLevel `boil:"AccessLevel" json:"AccessLevel" toml:"AccessLevel" yaml:"AccessLevel"`
-	Feature     *Feature     `boil:"Feature" json:"Feature" toml:"Feature" yaml:"Feature"`
-	Role        *Role        `boil:"Role" json:"Role" toml:"Role" yaml:"Role"`
+	AccessLevel     *AccessLevel     `boil:"AccessLevel" json:"AccessLevel" toml:"AccessLevel" yaml:"AccessLevel"`
+	AccountTypeRole *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
+	Feature         *Feature         `boil:"Feature" json:"Feature" toml:"Feature" yaml:"Feature"`
 }
 
 // NewStruct creates a new relationship struct
@@ -109,6 +117,22 @@ func (r *featurePermissionR) GetAccessLevel() *AccessLevel {
 	return r.AccessLevel
 }
 
+func (o *FeaturePermission) GetAccountTypeRole() *AccountTypeRole {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetAccountTypeRole()
+}
+
+func (r *featurePermissionR) GetAccountTypeRole() *AccountTypeRole {
+	if r == nil {
+		return nil
+	}
+
+	return r.AccountTypeRole
+}
+
 func (o *FeaturePermission) GetFeature() *Feature {
 	if o == nil {
 		return nil
@@ -125,29 +149,13 @@ func (r *featurePermissionR) GetFeature() *Feature {
 	return r.Feature
 }
 
-func (o *FeaturePermission) GetRole() *Role {
-	if o == nil {
-		return nil
-	}
-
-	return o.R.GetRole()
-}
-
-func (r *featurePermissionR) GetRole() *Role {
-	if r == nil {
-		return nil
-	}
-
-	return r.Role
-}
-
 // featurePermissionL is where Load methods for each relationship are stored.
 type featurePermissionL struct{}
 
 var (
-	featurePermissionAllColumns            = []string{"id", "feature_id", "role_id", "access_level_id"}
-	featurePermissionColumnsWithoutDefault = []string{"feature_id", "role_id", "access_level_id"}
-	featurePermissionColumnsWithDefault    = []string{"id"}
+	featurePermissionAllColumns            = []string{"id", "feature_id", "account_type_role_id", "access_level_id", "created_at"}
+	featurePermissionColumnsWithoutDefault = []string{"feature_id", "account_type_role_id", "access_level_id"}
+	featurePermissionColumnsWithDefault    = []string{"id", "created_at"}
 	featurePermissionPrimaryKeyColumns     = []string{"id"}
 	featurePermissionGeneratedColumns      = []string{}
 )
@@ -468,6 +476,17 @@ func (o *FeaturePermission) AccessLevel(mods ...qm.QueryMod) accessLevelQuery {
 	return AccessLevels(queryMods...)
 }
 
+// AccountTypeRole pointed to by the foreign key.
+func (o *FeaturePermission) AccountTypeRole(mods ...qm.QueryMod) accountTypeRoleQuery {
+	queryMods := []qm.QueryMod{
+		qm.Where("\"id\" = ?", o.AccountTypeRoleID),
+	}
+
+	queryMods = append(queryMods, mods...)
+
+	return AccountTypeRoles(queryMods...)
+}
+
 // Feature pointed to by the foreign key.
 func (o *FeaturePermission) Feature(mods ...qm.QueryMod) featureQuery {
 	queryMods := []qm.QueryMod{
@@ -477,17 +496,6 @@ func (o *FeaturePermission) Feature(mods ...qm.QueryMod) featureQuery {
 	queryMods = append(queryMods, mods...)
 
 	return Features(queryMods...)
-}
-
-// Role pointed to by the foreign key.
-func (o *FeaturePermission) Role(mods ...qm.QueryMod) roleQuery {
-	queryMods := []qm.QueryMod{
-		qm.Where("\"id\" = ?", o.RoleID),
-	}
-
-	queryMods = append(queryMods, mods...)
-
-	return Roles(queryMods...)
 }
 
 // LoadAccessLevel allows an eager lookup of values, cached into the
@@ -600,6 +608,126 @@ func (featurePermissionL) LoadAccessLevel(ctx context.Context, e boil.ContextExe
 				local.R.AccessLevel = foreign
 				if foreign.R == nil {
 					foreign.R = &accessLevelR{}
+				}
+				foreign.R.FeaturePermissions = append(foreign.R.FeaturePermissions, local)
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadAccountTypeRole allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for an N-1 relationship.
+func (featurePermissionL) LoadAccountTypeRole(ctx context.Context, e boil.ContextExecutor, singular bool, maybeFeaturePermission interface{}, mods queries.Applicator) error {
+	var slice []*FeaturePermission
+	var object *FeaturePermission
+
+	if singular {
+		var ok bool
+		object, ok = maybeFeaturePermission.(*FeaturePermission)
+		if !ok {
+			object = new(FeaturePermission)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeFeaturePermission)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeFeaturePermission))
+			}
+		}
+	} else {
+		s, ok := maybeFeaturePermission.(*[]*FeaturePermission)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeFeaturePermission)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeFeaturePermission))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &featurePermissionR{}
+		}
+		args[object.AccountTypeRoleID] = struct{}{}
+
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &featurePermissionR{}
+			}
+
+			args[obj.AccountTypeRoleID] = struct{}{}
+
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`account_type_role`),
+		qm.WhereIn(`account_type_role.id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load AccountTypeRole")
+	}
+
+	var resultSlice []*AccountTypeRole
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice AccountTypeRole")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results of eager load for account_type_role")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for account_type_role")
+	}
+
+	if len(accountTypeRoleAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+
+	if len(resultSlice) == 0 {
+		return nil
+	}
+
+	if singular {
+		foreign := resultSlice[0]
+		object.R.AccountTypeRole = foreign
+		if foreign.R == nil {
+			foreign.R = &accountTypeRoleR{}
+		}
+		foreign.R.FeaturePermissions = append(foreign.R.FeaturePermissions, object)
+		return nil
+	}
+
+	for _, local := range slice {
+		for _, foreign := range resultSlice {
+			if local.AccountTypeRoleID == foreign.ID {
+				local.R.AccountTypeRole = foreign
+				if foreign.R == nil {
+					foreign.R = &accountTypeRoleR{}
 				}
 				foreign.R.FeaturePermissions = append(foreign.R.FeaturePermissions, local)
 				break
@@ -730,126 +858,6 @@ func (featurePermissionL) LoadFeature(ctx context.Context, e boil.ContextExecuto
 	return nil
 }
 
-// LoadRole allows an eager lookup of values, cached into the
-// loaded structs of the objects. This is for an N-1 relationship.
-func (featurePermissionL) LoadRole(ctx context.Context, e boil.ContextExecutor, singular bool, maybeFeaturePermission interface{}, mods queries.Applicator) error {
-	var slice []*FeaturePermission
-	var object *FeaturePermission
-
-	if singular {
-		var ok bool
-		object, ok = maybeFeaturePermission.(*FeaturePermission)
-		if !ok {
-			object = new(FeaturePermission)
-			ok = queries.SetFromEmbeddedStruct(&object, &maybeFeaturePermission)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeFeaturePermission))
-			}
-		}
-	} else {
-		s, ok := maybeFeaturePermission.(*[]*FeaturePermission)
-		if ok {
-			slice = *s
-		} else {
-			ok = queries.SetFromEmbeddedStruct(&slice, maybeFeaturePermission)
-			if !ok {
-				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeFeaturePermission))
-			}
-		}
-	}
-
-	args := make(map[interface{}]struct{})
-	if singular {
-		if object.R == nil {
-			object.R = &featurePermissionR{}
-		}
-		args[object.RoleID] = struct{}{}
-
-	} else {
-		for _, obj := range slice {
-			if obj.R == nil {
-				obj.R = &featurePermissionR{}
-			}
-
-			args[obj.RoleID] = struct{}{}
-
-		}
-	}
-
-	if len(args) == 0 {
-		return nil
-	}
-
-	argsSlice := make([]interface{}, len(args))
-	i := 0
-	for arg := range args {
-		argsSlice[i] = arg
-		i++
-	}
-
-	query := NewQuery(
-		qm.From(`roles`),
-		qm.WhereIn(`roles.id in ?`, argsSlice...),
-	)
-	if mods != nil {
-		mods.Apply(query)
-	}
-
-	results, err := query.QueryContext(ctx, e)
-	if err != nil {
-		return errors.Wrap(err, "failed to eager load Role")
-	}
-
-	var resultSlice []*Role
-	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice Role")
-	}
-
-	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for roles")
-	}
-	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for roles")
-	}
-
-	if len(roleAfterSelectHooks) != 0 {
-		for _, obj := range resultSlice {
-			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
-				return err
-			}
-		}
-	}
-
-	if len(resultSlice) == 0 {
-		return nil
-	}
-
-	if singular {
-		foreign := resultSlice[0]
-		object.R.Role = foreign
-		if foreign.R == nil {
-			foreign.R = &roleR{}
-		}
-		foreign.R.FeaturePermissions = append(foreign.R.FeaturePermissions, object)
-		return nil
-	}
-
-	for _, local := range slice {
-		for _, foreign := range resultSlice {
-			if local.RoleID == foreign.ID {
-				local.R.Role = foreign
-				if foreign.R == nil {
-					foreign.R = &roleR{}
-				}
-				foreign.R.FeaturePermissions = append(foreign.R.FeaturePermissions, local)
-				break
-			}
-		}
-	}
-
-	return nil
-}
-
 // SetAccessLevel of the featurePermission to the related item.
 // Sets o.R.AccessLevel to related.
 // Adds o to related.R.FeaturePermissions.
@@ -897,6 +905,53 @@ func (o *FeaturePermission) SetAccessLevel(ctx context.Context, exec boil.Contex
 	return nil
 }
 
+// SetAccountTypeRole of the featurePermission to the related item.
+// Sets o.R.AccountTypeRole to related.
+// Adds o to related.R.FeaturePermissions.
+func (o *FeaturePermission) SetAccountTypeRole(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AccountTypeRole) error {
+	var err error
+	if insert {
+		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
+			return errors.Wrap(err, "failed to insert into foreign table")
+		}
+	}
+
+	updateQuery := fmt.Sprintf(
+		"UPDATE \"feature_permission\" SET %s WHERE %s",
+		strmangle.SetParamNames("\"", "\"", 1, []string{"account_type_role_id"}),
+		strmangle.WhereClause("\"", "\"", 2, featurePermissionPrimaryKeyColumns),
+	)
+	values := []interface{}{related.ID, o.ID}
+
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, updateQuery)
+		fmt.Fprintln(writer, values)
+	}
+	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+		return errors.Wrap(err, "failed to update local table")
+	}
+
+	o.AccountTypeRoleID = related.ID
+	if o.R == nil {
+		o.R = &featurePermissionR{
+			AccountTypeRole: related,
+		}
+	} else {
+		o.R.AccountTypeRole = related
+	}
+
+	if related.R == nil {
+		related.R = &accountTypeRoleR{
+			FeaturePermissions: FeaturePermissionSlice{o},
+		}
+	} else {
+		related.R.FeaturePermissions = append(related.R.FeaturePermissions, o)
+	}
+
+	return nil
+}
+
 // SetFeature of the featurePermission to the related item.
 // Sets o.R.Feature to related.
 // Adds o to related.R.FeaturePermissions.
@@ -935,53 +990,6 @@ func (o *FeaturePermission) SetFeature(ctx context.Context, exec boil.ContextExe
 
 	if related.R == nil {
 		related.R = &featureR{
-			FeaturePermissions: FeaturePermissionSlice{o},
-		}
-	} else {
-		related.R.FeaturePermissions = append(related.R.FeaturePermissions, o)
-	}
-
-	return nil
-}
-
-// SetRole of the featurePermission to the related item.
-// Sets o.R.Role to related.
-// Adds o to related.R.FeaturePermissions.
-func (o *FeaturePermission) SetRole(ctx context.Context, exec boil.ContextExecutor, insert bool, related *Role) error {
-	var err error
-	if insert {
-		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
-			return errors.Wrap(err, "failed to insert into foreign table")
-		}
-	}
-
-	updateQuery := fmt.Sprintf(
-		"UPDATE \"feature_permission\" SET %s WHERE %s",
-		strmangle.SetParamNames("\"", "\"", 1, []string{"role_id"}),
-		strmangle.WhereClause("\"", "\"", 2, featurePermissionPrimaryKeyColumns),
-	)
-	values := []interface{}{related.ID, o.ID}
-
-	if boil.IsDebug(ctx) {
-		writer := boil.DebugWriterFrom(ctx)
-		fmt.Fprintln(writer, updateQuery)
-		fmt.Fprintln(writer, values)
-	}
-	if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
-		return errors.Wrap(err, "failed to update local table")
-	}
-
-	o.RoleID = related.ID
-	if o.R == nil {
-		o.R = &featurePermissionR{
-			Role: related,
-		}
-	} else {
-		o.R.Role = related
-	}
-
-	if related.R == nil {
-		related.R = &roleR{
 			FeaturePermissions: FeaturePermissionSlice{o},
 		}
 	} else {
@@ -1040,6 +1048,13 @@ func (o *FeaturePermission) Insert(ctx context.Context, exec boil.ContextExecuto
 	}
 
 	var err error
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
+	}
 
 	if err := o.doBeforeInsertHooks(ctx, exec); err != nil {
 		return err
@@ -1244,6 +1259,13 @@ func (o FeaturePermissionSlice) UpdateAll(ctx context.Context, exec boil.Context
 func (o *FeaturePermission) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns, opts ...UpsertOptionFunc) error {
 	if o == nil {
 		return errors.New("models: no feature_permission provided for upsert")
+	}
+	if !boil.TimestampsAreSkipped(ctx) {
+		currTime := time.Now().In(boil.GetLocation())
+
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
+		}
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {

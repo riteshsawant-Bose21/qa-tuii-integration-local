@@ -1,10 +1,23 @@
-//	@title			Fusion Cloud Backend API
-//	@version		1.0
-//	@description	This is the Fusion Cloud Backend API server.
+// @title Fusion Cloud Backend API
+// @version 1.0
+// @description This is the Fusion Cloud Backend API server providing comprehensive role-based access control, user management, and project management capabilities.
+// @termsOfService http://swagger.io/terms/
 
-// @host		localhost:8080
-// @BasePath	/api/v1
-// @schemes	http https
+// @contact.name API Support
+// @contact.url http://www.swagger.io/support
+// @contact.email support@swagger.io
+
+// @license.name MIT
+// @license.url https://opensource.org/licenses/MIT
+
+// @host localhost:8020
+// @BasePath /api/v1
+// @schemes http https
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token.
 package main
 
 import (
@@ -35,6 +48,9 @@ import (
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
+	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 )
 
 func main() {
@@ -132,11 +148,32 @@ func main() {
 	}
 	logger.Info("Initialized Project Service.")
 
+	// Initialize User DB Service
+	userDBSvc := userdb.NewService(pgs)
+	if userDBSvc == nil {
+		logger.Fatal("Failed to initialize user service")
+	}
+	logger.Info("Initialized User DB Service.")
+
+	// Initialize User Service
+	userSVC := user.NewService(userDBSvc)
+	if userSVC == nil {
+		logger.Fatal("Failed to initialize user service")
+	}
+	logger.Info("Initialized User Service.")
+
+	// Initialize Role Management Service
+	roleManagementSvc := userdb.NewRoleManagementService(pgs)
+	if roleManagementSvc == nil {
+		logger.Fatal("Failed to initialize role management service")
+	}
+	logger.Info("Initialized Role Management Service.")
+
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host: appConfig.Server.APIHost,
 		Port: appConfig.Server.APIPort,
-	}, productSVC, projectSVC)
+	}, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
