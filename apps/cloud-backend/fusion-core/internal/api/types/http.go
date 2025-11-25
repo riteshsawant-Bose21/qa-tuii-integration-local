@@ -7,7 +7,7 @@ type SuccessResponse struct {
 }
 
 // ErrorResponse represents an error API response
-type ErrorResponse struct {
+type ErrorResponse2 struct {
 	Message string `json:"message"`
 	Code    string `json:"code"`
 }
