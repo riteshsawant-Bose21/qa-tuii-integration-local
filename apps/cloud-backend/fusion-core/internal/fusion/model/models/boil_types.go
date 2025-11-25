@@ -51,7 +51,6 @@ func makeCacheKey(cols boil.Columns, nzDefaults []string) string {
 	return str
 }
 
-<<<<<<< HEAD
 // Enum values for AccountsTypeEnum
 const (
 	AccountsTypeEnumAdmin    string = "admin"
@@ -64,7 +63,6 @@ func AllAccountsTypeEnum() []string {
 		AccountsTypeEnumAdmin,
 		AccountsTypeEnumReseller,
 		AccountsTypeEnumRetail,
-=======
 // Enum values for ProductTypeEnum
 const (
 	ProductTypeEnumSpeaker    string = "speaker"
@@ -115,6 +113,5 @@ func AllSyncStatusEnum() []string {
 		SyncStatusEnumInProgress,
 		SyncStatusEnumCompleted,
 		SyncStatusEnumFailed,
->>>>>>> e0dddcac9 (product and price sync)
 	}
 }

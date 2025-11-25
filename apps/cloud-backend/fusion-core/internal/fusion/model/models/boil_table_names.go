@@ -4,7 +4,6 @@
 package models
 
 var TableNames = struct {
-<<<<<<< HEAD
 	AccessLevel       string
 	Account           string
 	AccountTypeRole   string
@@ -28,7 +27,6 @@ var TableNames = struct {
 	ProjectUser:       "project_user",
 	Roles:             "roles",
 	User:              "user",
-=======
 	Product        string
 	ProductPrice   string
 	ProductSyncJob string
@@ -36,5 +34,4 @@ var TableNames = struct {
 	Product:        "product",
 	ProductPrice:   "product_price",
 	ProductSyncJob: "product_sync_job",
->>>>>>> e0dddcac9 (product and price sync)
 }

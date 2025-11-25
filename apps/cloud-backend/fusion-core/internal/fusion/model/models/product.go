@@ -94,9 +94,7 @@ var ProductTableColumns = struct {
 
 // Generated where
 
-<<<<<<< HEAD:apps/cloud-backend/fusion-core/internal/fusion/model/models/products.go
 type whereHelpertypes_Decimal struct{ field string }
-=======
 type whereHelperint struct{ field string }
 
 func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
@@ -208,7 +206,6 @@ func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereI
 func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 type whereHelpernull_JSON struct{ field string }
->>>>>>> e0dddcac9 (product and price sync):apps/cloud-backend/fusion-core/internal/fusion/model/models/product.go
 
 func (w whereHelpernull_JSON) EQ(x null.JSON) qm.QueryMod {
 	return qmhelper.WhereNullEQ(w.field, false, x)

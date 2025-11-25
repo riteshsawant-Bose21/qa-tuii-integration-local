@@ -119,19 +119,11 @@ func main() {
 	logger.Info("Initialized Product Service.")
 
 	//Initialize Project Service
-<<<<<<< HEAD
-	// projectSVC := project.NewService(projectDBSvc)
-	// if projectSVC == nil {
-	// 	logger.Fatal("Failed to initialize project service")
-	// }
-	// logger.Info("Initialized Project Service.")
-=======
 	projectSVC := project.NewService(projectDBSvc)
 	if projectSVC == nil {
 		logger.Fatal("Failed to initialize project service")
 	}
 	logger.Info("Initialized Project Service.")
->>>>>>> a1eb14e4b (refactoring)
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{

@@ -419,14 +419,6 @@ The project uses SQLBoiler for ORM code generation:
 
 ```bash
 # Install SQLBoiler
-<<<<<<< HEAD
-go install github.com/aarondl/sqlboiler/v4@latest
-go install github.com/aarondl/sqlboiler/v4/drivers/sqlboiler-psql@latest
-
-# Generate models from database schema
-cd internal/fusion/model
-sqlboiler psql --no-tests --config sqlboiler.toml
-=======
 go clean -modcache
 
 go install github.com/aarondl/sqlboiler/v4@latest
@@ -450,7 +442,6 @@ which sqlboiler
 # Generate models from database schema
 sqlboiler psql --config sqlboiler.toml
 
->>>>>>> e0dddcac9 (product and price sync)
 ```
 
 ### Regenerating API Documentation

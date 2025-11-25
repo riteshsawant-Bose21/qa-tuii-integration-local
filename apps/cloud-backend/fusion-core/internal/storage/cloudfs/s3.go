@@ -93,7 +93,6 @@ func (b *S3BucketHandle) Object(name string) ObjectHandle {
 		handle: b,
 		name:   name,
 		client: b.client,
-<<<<<<< HEAD
 		bucket: b.bucketName,
 	}
 }
@@ -126,12 +125,6 @@ func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl t
 	return req.URL, nil
 }
 
-=======
-		bucket: b.name,
-	}
-}
-
->>>>>>> a1eb14e4b (refactoring)
 // S3ObjectHandle provides methods to operate on an object in an S3 bucket.
 type S3ObjectHandle struct {
 	handle *S3BucketHandle

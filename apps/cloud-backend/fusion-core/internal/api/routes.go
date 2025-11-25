@@ -16,7 +16,6 @@ func (a *API) registerRoutes() {
 	}
 
 	// Project routes
-<<<<<<< HEAD
 	projectHandler := handler.NewProjectHandler(a.project)
 	projects := v1.Group("/projects")
 	{
@@ -30,19 +29,4 @@ func (a *API) registerRoutes() {
 		projects.POST("/:projectId/archive", projectHandler.UpdateProjectArchive)
 		projects.POST("/:projectId/lock", projectHandler.UpdateProjectLock)
 	}
-=======
-	// if a.project != nil {
-	// 	projectHandler := handler.NewProjectHandler(a.project)
-	// 	projects := v1.Group("/projects")
-	// 	{
-	// 		projects.POST("", projectHandler.CreateProject)
-	// 		projects.GET("/:id", projectHandler.GetProjectByID)
-	// 		projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
-	// 		projects.PATCH("/:id", projectHandler.UpdateProject)
-	// 		projects.DELETE("/:id", projectHandler.DeleteProject)
-
-	// 		projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
-	// 	}
-	// }
->>>>>>> a1eb14e4b (refactoring)
 }
