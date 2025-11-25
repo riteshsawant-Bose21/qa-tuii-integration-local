@@ -162,7 +162,7 @@ type Task struct {
 	ID          string         `json:"id"`
 	Description string         `json:"description"`
 	CronExpr    string         `json:"cron_expr"`
-	Enabled     bool           `json:"active"`
+	Enabled     bool           `json:"enabled"`
 	Type        TaskType       `json:"type"`
 	Params      map[string]any `json:"params"`
 	CronEntryID cron.EntryID   `json:"-"`
@@ -174,6 +174,17 @@ type TaskMessage struct {
 	MessageID   string `json:"message_id"`
 	Description string `json:"description"`
 	CronExpr    string `json:"cron_expr"`
+	Priority    int64  `json:"priority"`
+	Zones       string `json:"zones"`
+}
+
+// TaskMessagePatch represents a patchable message task
+type TaskMessagePatch struct {
+	MessageID   *string `json:"message_id,omitempty"`
+	Description *string `json:"description,omitempty"`
+	CronExpr    *string `json:"cron_expr,omitempty"`
+	Priority    *int64  `json:"priority"`
+	Zones       *string `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task

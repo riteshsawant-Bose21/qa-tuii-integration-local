@@ -84,6 +84,7 @@ func TestTasksSnapshotCrudThroughAPI(t *testing.T) {
 		CronExpr:    "*/5 * * * *",
 		Description: "Snapshot CRUD test",
 		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
 		Params:      map[string]any{api.SnapshotIDKey: "default"},
 	}
 
@@ -203,6 +204,7 @@ func TestEnableDisableEndpoints(t *testing.T) {
 		CronExpr:    "*/5 * * * *",
 		Description: "toggle via API",
 		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
 		Params:      map[string]any{api.SnapshotIDKey: "default"},
 	}
 
@@ -244,6 +246,7 @@ func TestSchedulerTasksEndpointErrorCases(t *testing.T) {
 		CronExpr:    "*/5 * * * *",
 		Description: "error test",
 		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
 		Params:      map[string]any{api.SnapshotIDKey: "default"},
 	}
 
@@ -368,6 +371,7 @@ func TestScheduledSnapshotActivationThroughAPI(t *testing.T) {
 		CronExpr:    "@every 1s",
 		Description: "scheduled activation test",
 		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
 		Params:      map[string]any{api.SnapshotIDKey: snapName},
 	}
 
