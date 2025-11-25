@@ -738,7 +738,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                 ),
               ],
             ),
-
+          ),
         );
       },
     );
