@@ -10,6 +10,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,7 +23,7 @@ type API struct {
 	user                  fusion.User
 	userDBService         *userdb.Service
 	roleManagementService *userdb.RoleManagementService
-	auth0Validator        *auth.Auth0Validator
+	authMiddleware        middleware.AuthMiddleware
 }
 
 type Config struct {
@@ -66,13 +67,14 @@ func New(cfg *Config,
 		return nil, errors.New("missing user service")
 	}
 
-	// Initialize Auth0 validator
-	var auth0Validator *auth.Auth0Validator
+	// Initialize Auth0 validator and middleware
+	var authMiddleware middleware.AuthMiddleware
 	if cfg.Auth0Domain != "" {
 		auth0Config := auth.Auth0Config{
 			Domain: cfg.Auth0Domain,
 		}
-		auth0Validator = auth.NewAuth0Validator(auth0Config)
+		auth0Validator := auth.NewAuth0Validator(auth0Config)
+		authMiddleware = middleware.NewAuth0Middleware(auth0Validator)
 	} else {
 		return nil, errors.New("Auth0Domain is required for authentication")
 	}
@@ -84,7 +86,7 @@ func New(cfg *Config,
 		user:                  userSvc,
 		userDBService:         userDBSvc,
 		roleManagementService: roleManagementSvc,
-		auth0Validator:        auth0Validator,
+		authMiddleware:        authMiddleware,
 	}
 
 	api.registerRoutes()

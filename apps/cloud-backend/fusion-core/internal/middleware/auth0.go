@@ -2,67 +2,59 @@ package middleware
 
 import (
 	"context"
-	"net/http"
-	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/golang-jwt/jwt/v5"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
+	authutils "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/auth"
 )
 
-// Auth0Middleware creates a middleware for Auth0 JWT token validation
-func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
+// AuthMiddleware defines the interface for authentication middleware
+type AuthMiddleware interface {
+	// Middleware returns a Gin middleware function for authentication
+	Middleware() gin.HandlerFunc
+}
+
+// Auth0MiddlewareImpl implements the AuthMiddleware interface using Auth0
+type Auth0MiddlewareImpl struct {
+	validator *auth.Auth0Validator
+}
+
+// NewAuth0Middleware creates a new Auth0 middleware implementation
+func NewAuth0Middleware(validator *auth.Auth0Validator) AuthMiddleware {
+	return &Auth0MiddlewareImpl{
+		validator: validator,
+	}
+}
+
+// Middleware implements the AuthMiddleware interface for Auth0 JWT token validation
+func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Get the Authorization header
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "Authorization header is required",
-			})
+			authutils.RespondWithUnauthorized(c)
 			c.Abort()
 			return
-		} // Extract token from header
+		}
+
+		// Extract token from header
 		token, err := auth.ExtractTokenFromHeader(authHeader)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "Invalid authorization header format",
-			})
+			authutils.RespondWithInvalidToken(c)
 			c.Abort()
 			return
 		}
 
 		// Validate the token
-		claims, err := validator.ValidateToken(token)
+		claims, err := a.validator.ValidateToken(token)
 		if err != nil {
-			// Provide specific error codes for different token validation failures
-			errorCode := "INVALID_TOKEN"
-			message := "Invalid or expired token"
-
-			// Check for specific error types in the error message
-			errStr := err.Error()
-			if strings.Contains(errStr, "token is expired") || strings.Contains(errStr, "expired") {
-				errorCode = "TOKEN_EXPIRED"
-				message = "Token has expired"
-			} else if strings.Contains(errStr, "malformed") || strings.Contains(errStr, "not a valid JWT") {
-				errorCode = "TOKEN_MALFORMED"
-				message = "Malformed token"
-			} else if strings.Contains(errStr, "signature") {
-				errorCode = "INVALID_SIGNATURE"
-				message = "Invalid token signature"
-			} else if strings.Contains(errStr, "JWE token") {
-				errorCode = "UNSUPPORTED_TOKEN_FORMAT"
-				message = "Received JWE token but JWT expected"
+			// Check error type and respond accordingly
+			if authutils.IsTokenExpired(err.Error()) {
+				authutils.RespondWithTokenExpired(c)
+			} else {
+				authutils.RespondWithInvalidToken(c)
 			}
-
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": message,
-				"code":    errorCode,
-				"details": err.Error(),
-			})
 			c.Abort()
 			return
 		}
@@ -70,11 +62,7 @@ func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
 		// Extract user information from claims
 		userID, err := auth.ExtractUserID(claims)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error":   "Unauthorized",
-				"message": "Invalid token claims",
-				"details": err.Error(),
-			})
+			authutils.RespondWithInvalidToken(c)
 			c.Abort()
 			return
 		}
@@ -96,45 +84,8 @@ func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
 	}
 }
 
-// GetUserIDFromContext extracts the user ID from the Gin context
-func GetUserIDFromContext(c *gin.Context) (string, bool) {
-	userID, exists := c.Get("userID")
-	if !exists {
-		return "", false
-	}
-
-	userIDStr, ok := userID.(string)
-	return userIDStr, ok
-}
-
-// GetEmailFromContext extracts the user email from the Gin context
-func GetEmailFromContext(c *gin.Context) (string, bool) {
-	email, exists := c.Get("email")
-	if !exists {
-		return "", false
-	}
-
-	emailStr, ok := email.(string)
-	return emailStr, ok
-}
-
-// GetClaimsFromContext extracts the JWT claims from the Gin context
-func GetClaimsFromContext(c *gin.Context) (map[string]interface{}, bool) {
-	claims, exists := c.Get("claims")
-	if !exists {
-		return nil, false
-	}
-
-	claimsMap, ok := claims.(*jwt.MapClaims)
-	if !ok {
-		return nil, false
-	}
-
-	// Convert to map[string]interface{}
-	result := make(map[string]interface{})
-	for k, v := range *claimsMap {
-		result[k] = v
-	}
-
-	return result, true
+// Auth0Middleware creates a middleware for Auth0 JWT token validation (backward compatibility)
+func Auth0Middleware(validator *auth.Auth0Validator) gin.HandlerFunc {
+	authMiddleware := NewAuth0Middleware(validator)
+	return authMiddleware.Middleware()
 }

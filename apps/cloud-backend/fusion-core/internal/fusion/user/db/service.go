@@ -196,8 +196,6 @@ func (s *Service) isPermissionSufficient(userLevel, requiredLevel string) bool {
 		"none":  0,
 		"read":  1,
 		"write": 2,
-		"admin": 4,
-		"full":  4,
 	}
 
 	userLevelInt, userExists := levelHierarchy[strings.ToLower(userLevel)]

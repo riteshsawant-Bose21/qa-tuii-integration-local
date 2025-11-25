@@ -32,8 +32,8 @@ func (a *API) registerRoutes() {
 	projectHandler := handler.NewProjectHandler(a.project)
 	projects := v1.Group("/projects")
 	{
-		// Apply Auth0 middleware first to establish authentication
-		projects.Use(middleware.Auth0Middleware(a.auth0Validator))
+		// Apply auth middleware first to establish authentication
+		projects.Use(a.authMiddleware.Middleware())
 
 		// Then apply access control middleware
 		projects.Use(accessControl.GlobalAccessControlMiddleware())
@@ -47,12 +47,12 @@ func (a *API) registerRoutes() {
 		projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
 	}
 
-	// User routes with Auth0 authentication
+	// User routes with authentication
 	userHandler := handler.NewUserHandler(a.user)
 	user := v1.Group("/user")
 
-	// Apply Auth0 middleware to protected user routes
-	user.Use(middleware.Auth0Middleware(a.auth0Validator))
+	// Apply auth middleware to protected user routes
+	user.Use(a.authMiddleware.Middleware())
 
 	{
 		user.GET("/me/authorization", userHandler.GetUserAuthorization)
@@ -61,7 +61,7 @@ func (a *API) registerRoutes() {
 
 	// Additional user management routes
 	users := v1.Group("/users")
-	users.Use(middleware.Auth0Middleware(a.auth0Validator))
+	users.Use(a.authMiddleware.Middleware())
 	{
 		users.POST("", userHandler.CreateUser)
 		users.GET("/:email", userHandler.GetUserByEmail)
@@ -70,7 +70,7 @@ func (a *API) registerRoutes() {
 
 	// Auth status endpoint
 	auth := v1.Group("/auth")
-	auth.Use(middleware.Auth0Middleware(a.auth0Validator))
+	auth.Use(a.authMiddleware.Middleware())
 	{
 		auth.GET("/status", userHandler.CheckAuthStatus)
 	}
@@ -79,8 +79,8 @@ func (a *API) registerRoutes() {
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
 	organization := v1.Group("/organization")
 
-	// Apply Auth0 middleware to protected organization routes
-	organization.Use(middleware.Auth0Middleware(a.auth0Validator))
+	// Apply auth middleware to protected organization routes
+	organization.Use(a.authMiddleware.Middleware())
 
 	{
 		organization.GET("/role-management", roleManagementHandler.GetOrganizationRoleManagement)
