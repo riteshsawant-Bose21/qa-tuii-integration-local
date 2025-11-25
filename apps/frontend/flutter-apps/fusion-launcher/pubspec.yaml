@@ -62,6 +62,9 @@ dependencies:
   equatable: ^2.0.7
   flutter_svg: ^2.2.1
 
+  flutter_date_range_picker: ^0.2.1
+  date_picker_plus: ^4.2.0
+
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
     
@@ -104,6 +107,7 @@ flutter:
     - assets/images/splash/
     - assets/icons/
     - assets/icons/wiring_ports/
+    - assets/icons/scheduler/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
 

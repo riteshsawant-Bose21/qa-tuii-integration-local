@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
@@ -500,18 +501,32 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         showRight: false,
         mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
-                ? const ConfigurationPage()
-                : Center(
-                  child: FusionAppText(
-                    text:
-                        _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
-                            ? "Sources Configuration Page"
-                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
-                            ? "Presets Configuration Page"
-                            : "Scheduling Configuration Page",
-                  ),
-                );
+            return switch (_projectViewModel.currentConfigurationMenuMode) {
+              ConfigurationMenuMode.processing => const ConfigurationPage(),
+              ConfigurationMenuMode.presets => const Center(
+                child: FusionAppText(
+                  text: "Presets Configuration Page",
+                ),
+              ),
+              ConfigurationMenuMode.gpio => const Center(
+                child: FusionAppText(
+                  text: "Sources Configuration Page",
+                ),
+              ),
+              ConfigurationMenuMode.scheduling => const SchedulingPage(),
+            };
+            // return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
+            //     ? const ConfigurationPage()
+            //     : Center(
+            //       child: FusionAppText(
+            //         text:
+            //             _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
+            //                 ? "Sources Configuration Page"
+            //                 : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
+            //                 ? "Presets Configuration Page"
+            //                 : "Scheduling Configuration Page",
+            //       ),
+            //     );
           },
         ),
 
