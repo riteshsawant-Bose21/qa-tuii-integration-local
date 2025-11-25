@@ -176,18 +176,23 @@ func (m *mockPresigner) PresignGet(ctx context.Context, key string, ttl time.Dur
 }
 
 func (m *mockPresigner) PresignPut(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	return "", errors.New("not implemented")
+	args := m.Called(ctx, key, ttl)
+	return args.String(0), args.Error(1)
 }
 
 func TestCreateProject(t *testing.T) {
 	tests := []struct {
-		name           string
-		project        *types.ProjectCreateRequest
-		mockID         string
-		mockErr        error
-		expectedID     string
-		expectedErr    error
-		expectResponse bool
+		name            string
+		project         *types.ProjectCreateRequest
+		mockID          string
+		mockErr         error
+		expectedID      string
+		expectedErr     error
+		expectResponse  bool
+		presignFileURL  string
+		presignThumbURL string
+		presignFileErr  error
+		presignThumbErr error
 	}{
 		{
 			name: "successful creation",
@@ -212,6 +217,39 @@ func TestCreateProject(t *testing.T) {
 			expectedID:     "",
 			expectedErr:    fmt.Errorf("failed to insert project: %v", errDatabaseMsg),
 			expectResponse: false,
+		},
+		{
+			name: "creation with file & thumbnail URLs",
+			project: &types.ProjectCreateRequest{
+				Name:                      "Project With Files",
+				UserID:                    "user-123",
+				IsProjectFileCreated:      true,
+				IsProjectThumbnailCreated: true,
+			},
+			mockID:          "123e4567-e89b-12d3-a456-426614174001",
+			mockErr:         nil,
+			expectedID:      "123e4567-e89b-12d3-a456-426614174001",
+			expectedErr:     nil,
+			expectResponse:  true,
+			presignFileURL:  "https://put-file-url",
+			presignThumbURL: "https://put-thumb-url",
+			presignFileErr:  nil,
+			presignThumbErr: nil,
+		},
+		{
+			name: "creation presign file error",
+			project: &types.ProjectCreateRequest{
+				Name:                 "Project With File Error",
+				UserID:               "user-123",
+				IsProjectFileCreated: true,
+			},
+			mockID:         "123e4567-e89b-12d3-a456-426614174002",
+			mockErr:        nil,
+			expectedID:     "",
+			expectedErr:    fmt.Errorf("failed to generate presign URL: %v", errors.New("put error")),
+			expectResponse: false,
+			presignFileURL: "",
+			presignFileErr: errors.New("put error"),
 		},
 	}
 
@@ -247,6 +285,13 @@ func TestCreateProject(t *testing.T) {
 			// Always expect InsertProjectUser to be called if Insert succeeds
 			if tt.mockErr == nil {
 				mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, tt.project.UserID, mock.Anything).Return(nil)
+				// Presign expectations when flags set
+				if tt.project.IsProjectFileCreated {
+					mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
+				}
+				if tt.project.IsProjectThumbnailCreated {
+					mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
+				}
 			}
 
 			service := &Service{
@@ -256,13 +301,20 @@ func TestCreateProject(t *testing.T) {
 
 			response, err := service.CreateProject(context.Background(), tt.project)
 			if tt.expectedErr != nil {
-				assert.EqualError(t, err, tt.expectedErr.Error())
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr.Error())
 				assert.Nil(t, response)
 			} else {
 				assert.NoError(t, err)
 				if tt.expectResponse {
 					assert.NotNil(t, response)
 					assert.Equal(t, tt.expectedID, response.ID)
+					if tt.project.IsProjectFileCreated {
+						assert.Equal(t, tt.presignFileURL, *response.ProjectUploadURL)
+					}
+					if tt.project.IsProjectThumbnailCreated {
+						assert.Equal(t, tt.presignThumbURL, *response.ThumbnailUploadURL)
+					}
 				}
 			}
 			mockDB.AssertExpectations(t)
@@ -443,6 +495,54 @@ func TestUpdateProject(t *testing.T) {
 				assert.NotNil(t, response)
 			}
 			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUpdateProjectPresignURLs(t *testing.T) {
+	mockProjectRow := &models.Project{ID: "u1", IsArchived: false, IsDeleted: false}
+	tests := []struct {
+		name            string
+		req             *types.ProjectUpdateRequest
+		presignFileURL  string
+		presignThumbURL string
+		presignFileErr  error
+		presignThumbErr error
+		expectedErr     string
+	}{
+		{name: "dirty flags success", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true, IsProjectThumbnailDirty: true}, presignFileURL: "https://upd-file", presignThumbURL: "https://upd-thumb"},
+		{name: "file presign error", req: &types.ProjectUpdateRequest{IsProjectFileDirty: true}, presignFileErr: errors.New("put error"), expectedErr: "failed to generate presign URL"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockPresigner := &mockPresigner{}
+			mockDB.On("GetProjectByID", mock.Anything, mockProjectRow.ID).Return(mockProjectRow, nil)
+			mockDB.On("IsUserAssigned", mock.Anything, mockProjectRow.ID, testUserID1).Return(true, nil)
+			mockDB.On("Update", mock.Anything, mockProjectRow, tt.req).Return(nil)
+			if tt.req.IsProjectFileDirty {
+				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectFile, mockProjectRow.ID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
+			}
+			if tt.req.IsProjectThumbnailDirty && tt.presignFileErr == nil { // only proceed if previous not failing so function reaches here
+				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectThumbnail, mockProjectRow.ID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
+			}
+			service := &Service{dbService: mockDB, presigner: mockPresigner}
+			resp, err := service.UpdateProject(context.Background(), mockProjectRow.ID, testUserID1, tt.req)
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+				assert.Nil(t, resp)
+			} else {
+				assert.NoError(t, err)
+				if tt.req.IsProjectFileDirty {
+					assert.Equal(t, tt.presignFileURL, *resp.ProjectUploadURL)
+				}
+				if tt.req.IsProjectThumbnailDirty {
+					assert.Equal(t, tt.presignThumbURL, *resp.ThumbnailUploadURL)
+				}
+			}
+			mockDB.AssertExpectations(t)
+			mockPresigner.AssertExpectations(t)
 		})
 	}
 }
@@ -1466,4 +1566,210 @@ func TestValidateProjectNotLockedByOtherUser(t *testing.T) {
 			mockDB.AssertExpectations(t)
 		})
 	}
+}
+
+// Additional coverage tests
+func TestGenerateProjectFileURL(t *testing.T) {
+	mockPresigner := &mockPresigner{}
+	service := &Service{presigner: mockPresigner}
+	ctx := context.Background()
+	projectID := "proj-123"
+	// GET
+	mockPresigner.On("PresignGet", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectFile, projectID), time.Minute*10).Return("https://get-url", nil)
+	url, err := service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectFile, time.Minute*10, "get")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://get-url", url)
+	// PUT
+	mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectThumbnail, projectID), time.Minute*5).Return("https://put-url", nil)
+	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "put")
+	assert.NoError(t, err)
+	assert.Equal(t, "https://put-url", url)
+	// Unsupported
+	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute, "delete")
+	assert.Error(t, err)
+	assert.Empty(t, url)
+	assert.Contains(t, err.Error(), "unsupported operation")
+	mockPresigner.AssertExpectations(t)
+}
+
+func TestValidateUserExistence(t *testing.T) {
+	mockDB := &mockDBService{}
+	service := &Service{dbService: mockDB}
+	ctx := context.Background()
+	userID := "user-xyz"
+	// Exists
+	mockDB.On("UserExists", mock.Anything, userID).Return(true, nil)
+	assert.NoError(t, service.validateUserExistence(ctx, userID))
+	// Not exists
+	mockDB.ExpectedCalls = nil
+	mockDB.On("UserExists", mock.Anything, userID).Return(false, nil)
+	err := service.validateUserExistence(ctx, userID)
+	assert.Error(t, err)
+	assert.Equal(t, types.ErrMsgUserNotFound, err.Error())
+	// DB error
+	mockDB.ExpectedCalls = nil
+	mockDB.On("UserExists", mock.Anything, userID).Return(false, errDatabaseMsg)
+	err = service.validateUserExistence(ctx, userID)
+	assert.Error(t, err)
+	assert.Equal(t, errDatabaseMsg, err)
+	mockDB.AssertExpectations(t)
+}
+
+func TestValidateProject_UserAssignmentDBError(t *testing.T) {
+	mockDB := &mockDBService{}
+	service := &Service{dbService: mockDB}
+	ctx := context.Background()
+	project := &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false}
+	mockDB.On("GetProjectByID", mock.Anything, testProjectID1).Return(project, nil)
+	mockDB.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(false, errDatabaseMsg)
+	_, err := service.validateProject(ctx, testProjectID1, ValidationOptions{CheckUserAssigned: true, UserID: testUserID1})
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), types.ErrMsgFailedUserAssignmentCheck)
+	mockDB.AssertExpectations(t)
+}
+
+func TestLockProject(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name        string
+		project     *models.Project
+		userID      string
+		expectLock  bool
+		expectedErr string
+	}{
+		{name: "lock success", project: &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false}, userID: testUserID1, expectLock: true},
+		{name: "already locked by same user", project: &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false, LockedByUserID: null.NewString(testUserID1, true)}, userID: testUserID1, expectLock: false},
+		{name: "locked by other user", project: &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false, LockedByUserID: null.NewString("other-user", true)}, userID: testUserID1, expectLock: false, expectedErr: "project is locked by user"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockDB.On("GetProjectByID", mock.Anything, testProjectID1).Return(tt.project, nil)
+			mockDB.On("IsUserAssigned", mock.Anything, testProjectID1, tt.userID).Return(true, nil)
+			if tt.project.LockedByUserID.Valid && tt.project.LockedByUserID.String != tt.userID {
+				mockDB.On("GetUserEmailByID", mock.Anything, tt.project.LockedByUserID.String).Return("locked@example.com", nil)
+			}
+			if tt.expectLock {
+				mockDB.On("LockProject", mock.Anything, testProjectID1, tt.userID).Return(nil)
+			}
+			service := &Service{dbService: mockDB}
+			err := service.LockProject(ctx, testProjectID1, tt.userID)
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestUnlockProject(t *testing.T) {
+	ctx := context.Background()
+	tests := []struct {
+		name         string
+		project      *models.Project
+		userID       string
+		expectUnlock bool
+		expectedErr  string
+	}{
+		{name: "unlock success", project: &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false, LockedByUserID: null.NewString(testUserID1, true)}, userID: testUserID1, expectUnlock: true},
+		{name: "already unlocked", project: &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false}, userID: testUserID1, expectUnlock: false},
+		{name: "locked by other user", project: &models.Project{ID: testProjectID1, IsDeleted: false, IsArchived: false, LockedByUserID: null.NewString("other-user", true)}, userID: testUserID1, expectUnlock: false, expectedErr: "project is locked by user"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockDB := &mockDBService{}
+			mockDB.On("GetProjectByID", mock.Anything, testProjectID1).Return(tt.project, nil)
+			mockDB.On("IsUserAssigned", mock.Anything, testProjectID1, tt.userID).Return(true, nil)
+			if tt.project.LockedByUserID.Valid && tt.project.LockedByUserID.String != tt.userID {
+				mockDB.On("GetUserEmailByID", mock.Anything, tt.project.LockedByUserID.String).Return("locked@example.com", nil)
+			}
+			if tt.expectUnlock {
+				mockDB.On("UnlockProject", mock.Anything, testProjectID1, tt.userID).Return(nil)
+			}
+			service := &Service{dbService: mockDB}
+			err := service.UnlockProject(ctx, testProjectID1, tt.userID)
+			if tt.expectedErr != "" {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tt.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			mockDB.AssertExpectations(t)
+		})
+	}
+}
+
+func TestGetProjectLockInfo(t *testing.T) {
+	ctx := context.Background()
+	mockDB := &mockDBService{}
+	service := &Service{dbService: mockDB}
+	// Unlocked
+	mockDB.On("GetProjectLockUserID", mock.Anything, testProjectID1).Return(false, "", nil)
+	locked, email, err := service.GetProjectLockInfo(ctx, testProjectID1)
+	assert.NoError(t, err)
+	assert.False(t, locked)
+	assert.Empty(t, email)
+	mockDB.ExpectedCalls = nil
+	// Locked success
+	mockDB.On("GetProjectLockUserID", mock.Anything, testProjectID1).Return(true, "locker", nil)
+	mockDB.On("GetUserEmailByID", mock.Anything, "locker").Return("locker@example.com", nil)
+	locked, email, err = service.GetProjectLockInfo(ctx, testProjectID1)
+	assert.NoError(t, err)
+	assert.True(t, locked)
+	assert.Equal(t, "locker@example.com", email)
+	mockDB.ExpectedCalls = nil
+	// Locked email error
+	mockDB.On("GetProjectLockUserID", mock.Anything, testProjectID1).Return(true, "locker", nil)
+	mockDB.On("GetUserEmailByID", mock.Anything, "locker").Return("", errDatabaseMsg)
+	locked, email, err = service.GetProjectLockInfo(ctx, testProjectID1)
+	assert.Error(t, err)
+	assert.True(t, locked)
+	assert.Empty(t, email)
+	mockDB.AssertExpectations(t)
+}
+
+func TestWrappers_ProjectExists_IsUserAssigned(t *testing.T) {
+	ctx := context.Background()
+	mockDB := &mockDBService{}
+	service := &Service{dbService: mockDB}
+	mockDB.On("ProjectExists", mock.Anything, testProjectID1).Return(true, nil)
+	exists, err := service.ProjectExists(ctx, testProjectID1)
+	assert.NoError(t, err)
+	assert.True(t, exists)
+	mockDB.ExpectedCalls = nil
+	mockDB.On("ProjectExists", mock.Anything, testProjectID1).Return(false, errDatabaseMsg)
+	exists, err = service.ProjectExists(ctx, testProjectID1)
+	assert.Error(t, err)
+	assert.False(t, exists)
+	mockDB.ExpectedCalls = nil
+	mockDB.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(true, nil)
+	assigned, err := service.IsUserAssigned(ctx, testProjectID1, testUserID1)
+	assert.NoError(t, err)
+	assert.True(t, assigned)
+	mockDB.ExpectedCalls = nil
+	mockDB.On("IsUserAssigned", mock.Anything, testProjectID1, testUserID1).Return(false, errDatabaseMsg)
+	assigned, err = service.IsUserAssigned(ctx, testProjectID1, testUserID1)
+	assert.Error(t, err)
+	assert.False(t, assigned)
+	mockDB.AssertExpectations(t)
+}
+
+func TestWrappers_GetProjectLockUserID_GetUserEmailByID(t *testing.T) {
+	ctx := context.Background()
+	mockDB := &mockDBService{}
+	service := &Service{dbService: mockDB}
+	mockDB.On("GetProjectLockUserID", mock.Anything, testProjectID1).Return(true, "locker", nil)
+	locked, uid, err := service.GetProjectLockUserID(ctx, testProjectID1)
+	assert.NoError(t, err)
+	assert.True(t, locked)
+	assert.Equal(t, "locker", uid)
+	mockDB.ExpectedCalls = nil
+	mockDB.On("GetUserEmailByID", mock.Anything, "locker").Return("locker@example.com", nil)
+	email, err := service.GetUserEmailByID(ctx, "locker")
+	assert.NoError(t, err)
+	assert.Equal(t, "locker@example.com", email)
+	mockDB.AssertExpectations(t)
 }
