@@ -40,11 +40,7 @@ func main() {
 
 	logger.Info("Database connection established successfully")
 
-	s3, err := cloudfs.NewS3Client(context.Background(),
-		"AKIAYOURACCESSKEY",
-		"YOURSECRETKEY",
-		"us-east-1",
-	)
+	s3, err := cloudfs.NewS3Client(context.Background())
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))
 	}

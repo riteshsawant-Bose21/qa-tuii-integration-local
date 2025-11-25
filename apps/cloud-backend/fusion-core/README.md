@@ -72,31 +72,85 @@ The Fusion Cloud Backend API is the core cloud services for the Bose Professiona
 ```
 fusion-core/
 ├── cmd/
-│   └── api/
-│       └── main.go              # Application entry point
-├── docs/                        # Auto-generated Swagger docs
+│   ├── api/
+│   │   └── main.go             # Application entry point
+│   └── scripts/
+│       └── product-sync.go     # Product synchronization utility
+├── docs/                       # Auto-generated Swagger docs
 │   ├── docs.go
 │   ├── swagger.json
 │   └── swagger.yaml
 ├── internal/
-│   ├── api/                     # API routing and middleware
-│   │   ├── routes.go
-│   │   └── service.go
-│   ├── fusion/                  # Business logic and models
-│   │   ├── product.go           # Product domain models
-│   │   ├── project.go           # Project domain models
-│   │   ├── model/               # Database models
-│   │   ├── product/             # Product service layer
-│   │   └── project/             # Project service layer
-│   ├── handler/                 # HTTP request handlers
-│   │   ├── product.go
-│   │   └── project.go
-│   ├── log/                     # Logging configuration
-│   └── storage/                 # Database and storage layers
-│       ├── cloudfs/             # Cloud filesystem (S3)
-│       └── sql/                 # SQL database connections
-├── migration/                   # Database migrations
-└── go.mod                      # Go module dependencies
+│   ├── api/                    # API routing and middleware
+│   │   ├── types/
+│   │   │   ├── product.go      # Product domain models
+│   │   │   └── project.go      # Project domain models
+│   │   ├── config.go           # API configuration
+│   │   ├── routes.go           # Route definitions
+│   │   └── service.go          # API service layer
+│   ├── config/                 # Configuration management
+│   │   ├── config.go           # Main configuration
+│   │   ├── postgres.go         # PostgreSQL configuration
+│   │   └── s3.go               # S3 configuration
+│   ├── environment/            # Environment handling
+│   │   ├── environment.go      # Environment utilities
+│   │   └── load_lookuper.go    # Configuration lookup
+│   ├── fusion/                 # Business logic and models
+│   │   ├── id/
+│   │   │   └── service.go      # ID generation service
+│   │   ├── model/              # Database models
+│   │   │   ├── custom_models.go # Custom model definitions
+│   │   │   ├── db.go           # Database connection
+│   │   │   ├── sqlboiler.toml  # SQLBoiler configuration
+│   │   │   └── models/         # Generated SQLBoiler models
+│   │   │       ├── *.go        # Auto-generated model files
+│   │   │       └── *_test.go   # Auto-generated test files
+│   │   ├── product/            # Product service layer
+│   │   │   ├── db/
+│   │   │   │   ├── model_product.go # Product database models
+│   │   │   │   └── service.go  # Product database service
+│   │   │   ├── product.go      # Product business logic
+│   │   │   └── service.go      # Product service interface
+│   │   ├── project/            # Project service layer
+│   │   │   ├── db/
+│   │   │   │   ├── model_project.go     # Project database models
+│   │   │   │   ├── model_project_test.go # Project model tests
+│   │   │   │   ├── service.go           # Project database service
+│   │   │   │   └── service_test.go      # Project service tests
+│   │   │   ├── project.go      # Project business logic
+│   │   │   ├── project_test.go # Project business logic tests
+│   │   │   └── service.go      # Project service interface
+│   │   ├── product.go          # Product domain models
+│   │   └── project.go          # Project domain models
+│   ├── handler/                # HTTP request handlers
+│   │   ├── product.go          # Product API handlers
+│   │   ├── project.go          # Project API handlers
+│   │   └── project_test.go     # Project handler tests
+│   ├── log/                    # Logging configuration
+│   │   └── log.go              # Logger setup and utilities
+│   ├── storage/                # Database and storage layers
+│   │   ├── cloudfs/            # Cloud filesystem (S3)
+│   │   │   ├── cloudfs.go      # Cloud filesystem interface
+│   │   │   ├── s3.go           # S3 implementation
+│   │   │   └── s3_test.go      # S3 implementation tests
+│   │   └── sql/                # SQL database connections
+│   │       ├── postgres.go     # PostgreSQL implementation
+│   │       └── sql.go          # SQL interface
+│   ├── tests/                  # Integration tests
+│   │   └── project_integration_test.go # Project integration tests
+│   └── validation/             # Input validation
+│       ├── validator.go        # Validation logic
+│       └── validator_test.go   # Validation tests
+├── migration/                  # Database migrations
+│   ├── fusion_cloud.sql        # Main database schema
+│   ├── products.sql            # Product table schema
+│   └── test_data.sql           # Test data insertions
+├── scripts/
+│   └── lint.sh                 # Linting script
+├── moon.yml                    # Moon build configuration
+├── README.md                   # Project documentation
+├── go.mod                      # Go module dependencies
+└── go.sum                      # Go module checksums
 ```
 
 ### Service Architecture
@@ -129,13 +183,13 @@ Before you begin, ensure you have the following installed:
 * **PostgreSQL 12+**
   ```bash
   # macOS with Homebrew
-  brew install postgresql@14
+  brew install postgresql@18
   
   # Ubuntu/Debian
-  sudo apt-get install postgresql-14
+  sudo apt-get install postgresql-18
   
   # Or use Docker
-  docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:14
+  docker run --name postgres -e POSTGRES_PASSWORD=postgres -p 5432:5432 -d postgres:18
   ```
 
 * **Git**
@@ -181,7 +235,7 @@ Before you begin, ensure you have the following installed:
      -e POSTGRES_DB=fusion_cloud \
      -p 5432:5432 \
      -v fusion_pgdata:/var/lib/postgresql/data \
-     postgres:14
+     postgres:18
    
    # Verify container is running
    docker ps | grep fusion-postgres
@@ -190,7 +244,7 @@ Before you begin, ensure you have the following installed:
    **Option B: Local PostgreSQL Installation**
    ```bash
    # Start PostgreSQL service
-   brew services start postgresql@14  # macOS
+   brew services start postgresql@18  # macOS
    # or
    sudo systemctl start postgresql    # Linux
    
@@ -225,9 +279,48 @@ Before you begin, ensure you have the following installed:
 
 ### Running the Application
 
+**Pre-requisites:**
+
+1. **Create environment configuration file**
+   ```bash
+   # Create .env file in cmd/api/ directory
+   cd cmd/api
+   cat > .env << EOF
+   POSTGRES_HOST=localhost
+   POSTGRES_PORT=5432
+   POSTGRES_USER=fusion_cloud
+   POSTGRES_PASS=bose123
+   POSTGRES_INSTANCE=fusion_cloud
+   S3_PROJECT_BUCKET=bose.cloud-backend.test
+   EOF
+   ```
+
+2. **Setup AWS credentials locally**
+   ```bash
+   # Navigate to your home directory and create AWS credentials directory
+   cd
+   mkdir -p ~/.aws
+   
+   # Follow these steps to get your AWS credentials:
+   # 1. Go to https://myapps.microsoft.com/
+   # 2. Click on "AWS IAM Identity Center" app
+   # 3. Copy the provided credentials
+   # 4. Create/update your AWS credentials file:
+   
+   # Example credentials file format (~/.aws/credentials):
+   cat > ~/.aws/credentials << EOF
+   [default]
+   region=us-east-2
+   aws_access_key_id = YOUR_ACCESS_KEY_ID
+   aws_secret_access_key = YOUR_SECRET_ACCESS_KEY
+   aws_session_token = YOUR_SESSION_TOKEN
+   EOF
+   ```
+
+
 1. **Start the development server**
    ```bash
-   go run cmd/api/main.go
+   go run main.go -c .env -e local
    ```
 
 2. **Verify the server is running**
@@ -326,12 +419,12 @@ The project uses SQLBoiler for ORM code generation:
 
 ```bash
 # Install SQLBoiler
-go install github.com/volatiletech/sqlboiler/v4@latest
-go install github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql@latest
+go install github.com/aarondl/sqlboiler/v4@latest
+go install github.com/aarondl/sqlboiler/v4/drivers/sqlboiler-psql@latest
 
 # Generate models from database schema
 cd internal/fusion/model
-sqlboiler psql --config sqlboiler.toml
+sqlboiler psql --no-tests --config sqlboiler.toml
 ```
 
 ### Regenerating API Documentation
@@ -442,7 +535,3 @@ We welcome contributions to the Fusion Cloud Backend API! Please follow these gu
 - Include test coverage for new features
 - Ensure all tests pass
 - Update README if necessary
-
-
-
-

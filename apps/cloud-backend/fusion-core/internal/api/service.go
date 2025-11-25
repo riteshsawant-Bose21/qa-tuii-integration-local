@@ -36,8 +36,8 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	// productSvc fusion.Product,
-	// projectSvc fusion.Project,
+	product fusion.Product,
+	project fusion.Project,
 	userSvc fusion.User,
 	userDBSvc *userdb.Service,
 	roleManagementSvc *userdb.RoleManagementService,
@@ -55,13 +55,13 @@ func New(cfg *Config,
 	// engine.Use(ginLogger(logger)) // Custom logging middleware
 	engine.Use(corsMiddleware()) // CORS if needed
 
-	// if productSvc == nil {
-	// 	return nil, errors.New("missing product service")
-	// }
+	if product == nil {
+		return nil, errors.New("missing product service")
+	}
 
-	// if projectSvc == nil {
-	// 	return nil, errors.New("missing project service")
-	// }
+	if project == nil {
+		return nil, errors.New("missing project service")
+	}
 
 	if userSvc == nil {
 		return nil, errors.New("missing user service")
@@ -80,10 +80,11 @@ func New(cfg *Config,
 	}
 
 	api := &API{
-		engine: engine,
-		// product:               productSvc,
-		// project:               projectSvc,
-		user:                  userSvc,
+		engine:  engine,
+		product: product,
+		project: project,
+		user:    userSvc,
+
 		userDBService:         userDBSvc,
 		roleManagementService: roleManagementSvc,
 		authMiddleware:        authMiddleware,
@@ -129,6 +130,11 @@ func (s *API) shutdown() error {
 	defer cancel()
 
 	return s.server.Shutdown(ctx)
+}
+
+// Engine returns the underlying Gin engine for testing purposes
+func (s *API) Engine() *gin.Engine {
+	return s.engine
 }
 
 // corsMiddleware adds CORS headers

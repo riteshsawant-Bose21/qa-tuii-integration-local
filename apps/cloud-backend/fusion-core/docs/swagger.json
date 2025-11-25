@@ -522,23 +522,47 @@
                     "projects"
                 ],
                 "summary": "Get all projects",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter projects by archived status",
+                        "name": "is_archived",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to sort projects by (e.g., created_at, updated_at)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order (ascending or descending)",
+                        "name": "sort_order",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successfully retrieved all projects",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/types.Project"
-                            }
+                            "$ref": "#/definitions/types.GetAllProjectsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
@@ -558,11 +582,11 @@
                 "parameters": [
                     {
                         "description": "Project details",
-                        "name": "project",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectCreateRequest"
                         }
                     }
                 ],
@@ -570,79 +594,25 @@
                     "201": {
                         "description": "Successfully created project",
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectCreateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload or user not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             }
         },
-        "/projects/{id}": {
-            "get": {
-                "description": "Get a specific project by its unique identifier",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Get project by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved project",
-                        "schema": {
-                            "$ref": "#/definitions/types.Project"
-                        }
-                    },
-                    "404": {
-                        "description": "Project not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
+        "/projects/{projectId}": {
             "delete": {
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
@@ -659,7 +629,7 @@
                     {
                         "type": "string",
                         "description": "Project ID",
-                        "name": "id",
+                        "name": "projectId",
                         "in": "path",
                         "required": true
                     }
@@ -668,22 +638,28 @@
                     "204": {
                         "description": "Successfully deleted project"
                     },
-                    "404": {
-                        "description": "Project not found",
+                    "400": {
+                        "description": "Bad request - Missing user ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project or user not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
@@ -704,17 +680,17 @@
                     {
                         "type": "string",
                         "description": "Project ID",
-                        "name": "id",
+                        "name": "projectId",
                         "in": "path",
                         "required": true
                     },
                     {
                         "description": "Updated project details",
-                        "name": "project",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectUpdateRequest"
                         }
                     }
                 ],
@@ -722,42 +698,39 @@
                     "200": {
                         "description": "Successfully updated project",
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectUpdateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
-                        "description": "Project not found",
+                        "description": "Project or user not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             }
         },
-        "/projects/{id}/sync": {
+        "/projects/{projectId}/archive": {
             "post": {
-                "description": "Synchronize project data with external source using metadata and ZIP file URL",
+                "description": "Archive or unarchive a project based on request body",
                 "consumes": [
                     "application/json"
                 ],
@@ -767,60 +740,276 @@
                 "tags": [
                     "projects"
                 ],
-                "summary": "Sync project",
+                "summary": "Update project archive status",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Project ID",
-                        "name": "id",
+                        "name": "projectId",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Sync request containing metadata and ZIP file URL",
-                        "name": "syncRequest",
+                        "description": "Archive/unarchive request",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.SyncProjectRequest"
+                            "$ref": "#/definitions/types.ProjectArchiveRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Successfully initiated project sync",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                    "204": {
+                        "description": "Project archive status updated successfully"
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
                         "description": "Project not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectId}/lock": {
+            "post": {
+                "description": "Lock or unlock a project for a specific user based on request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Update project lock status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lock/unlock request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ProjectLockRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated project lock status"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project already locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectId}/star/{userId}": {
+            "post": {
+                "description": "Star or unstar a project for a specific user based on request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Update project star status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Star/unstar request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ProjectStarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated project star status"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project or User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectId}/users/{userEmail}": {
+            "put": {
+                "description": "Assign a user to a project by project ID and user email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Assign a user to a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Email",
+                        "name": "userEmail",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User successfully assigned to the project"
+                    },
+                    "404": {
+                        "description": "Project or User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "description": "Remove a user from a project by project ID and user email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Remove a user from a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Email",
+                        "name": "userEmail",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User successfully removed from the project"
+                    },
+                    "404": {
+                        "description": "Project or User not found, or user not assigned to the project",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
@@ -1105,37 +1294,6 @@
         }
     },
     "definitions": {
-        "types.AccessLevel": {
-            "type": "object",
-            "properties": {
-                "id": {
-                    "type": "integer"
-                },
-                "key": {
-                    "type": "string"
-                },
-                "label": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.AccountInfo": {
-            "type": "object",
-            "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "type": {
-                    "type": "string"
-                }
-            }
-        },
         "types.Amplifier": {
             "type": "object",
             "properties": {
@@ -1173,71 +1331,28 @@
                 }
             }
         },
-        "types.AssignRoleRequest": {
+        "types.BadRequestError": {
             "type": "object",
-            "required": [
-                "role_id",
-                "user_id"
-            ],
             "properties": {
-                "role_id": {
-                    "type": "integer"
-                },
-                "user_id": {
-                    "type": "integer"
+                "message": {
+                    "type": "string",
+                    "example": "Bad Request"
                 }
             }
         },
         "types.Budget": {
             "type": "object",
+            "required": [
+                "currency"
+            ],
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "type": "integer",
+                    "example": 50000
                 },
                 "currency": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.CreateRoleRequest": {
-            "type": "object",
-            "required": [
-                "description",
-                "name"
-            ],
-            "properties": {
-                "description": {
                     "type": "string",
-                    "maxLength": 255,
-                    "minLength": 10
-                },
-                "name": {
-                    "type": "string",
-                    "maxLength": 50,
-                    "minLength": 3
-                }
-            }
-        },
-        "types.CreateUserRequest": {
-            "type": "object",
-            "required": [
-                "account_id",
-                "account_type_role_id",
-                "email",
-                "full_name"
-            ],
-            "properties": {
-                "account_id": {
-                    "type": "string"
-                },
-                "account_type_role_id": {
-                    "type": "integer"
-                },
-                "email": {
-                    "type": "string"
-                },
-                "full_name": {
-                    "type": "string"
+                    "example": "USD"
                 }
             }
         },
@@ -1429,75 +1544,66 @@
                 }
             }
         },
-        "types.Feature": {
+        "types.EnvironmentType": {
+            "type": "string",
+            "enum": [
+                "indoor",
+                "outdoor",
+                "hybrid"
+            ],
+            "x-enum-varnames": [
+                "EnvironmentTypeIndoor",
+                "EnvironmentTypeOutdoor",
+                "EnvironmentTypeHybrid"
+            ]
+        },
+        "types.ForbiddenError": {
             "type": "object",
             "properties": {
-                "description": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "name": {
-                    "type": "string"
+                "message": {
+                    "type": "string",
+                    "example": "Forbidden"
                 }
             }
         },
-        "types.FeaturePermissionDetail": {
+        "types.GetAllProjectsResponse": {
             "type": "object",
             "properties": {
-                "access_label": {
-                    "type": "string"
-                },
-                "access_level": {
-                    "type": "string"
-                },
-                "access_level_id": {
-                    "type": "integer"
-                },
-                "feature_id": {
-                    "type": "integer"
-                },
-                "feature_name": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.OrganizationUsersResponse": {
-            "type": "object",
-            "properties": {
-                "account": {
-                    "$ref": "#/definitions/types.AccountInfo"
-                },
-                "users": {
+                "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.UserWithRole"
+                        "$ref": "#/definitions/types.Project"
                     }
+                },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
-        "types.PermissionUpdateRequest": {
+        "types.InternalServerError": {
             "type": "object",
-            "required": [
-                "access_level_id",
-                "action",
-                "feature_id"
-            ],
             "properties": {
-                "access_level_id": {
-                    "type": "integer"
-                },
-                "action": {
+                "message": {
                     "type": "string",
-                    "enum": [
-                        "add",
-                        "update",
-                        "remove"
-                    ]
-                },
-                "feature_id": {
-                    "type": "integer"
+                    "example": "Internal Server Error"
+                }
+            }
+        },
+        "types.NotFoundError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Not Found"
                 }
             }
         },
@@ -1528,101 +1634,274 @@
             "type": "object",
             "properties": {
                 "application": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Audio System Design"
+                },
+                "budget": {
+                    "$ref": "#/definitions/types.Budget"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-10-15T14:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Professional audio system for corporate conference room"
+                },
+                "environment_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_archived": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "is_starred": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "locked_by_user": {
+                    "type": "string",
+                    "example": "user456"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Conference Room Audio Setup"
+                },
+                "project_file_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/projects/123e4567/project.json"
+                },
+                "project_phase": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Development"
+                },
+                "thumbnail_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/projects/123e4567/thumbnail.jpg"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-10-20T16:45:00Z"
+                },
+                "venue": {
+                    "type": "string",
+                    "example": "Building A - Conference Room 101"
+                }
+            }
+        },
+        "types.ProjectArchiveRequest": {
+            "type": "object",
+            "properties": {
+                "archive": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "types.ProjectCreateRequest": {
+            "type": "object",
+            "required": [
+                "application",
+                "budget",
+                "environment_type",
+                "name",
+                "user_id"
+            ],
+            "properties": {
+                "application": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Audio System Design"
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Professional audio system for corporate conference room"
+                },
+                "environment_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
-                "meta_data": {
-                    "type": "object",
-                    "additionalProperties": true
+                "is_project_file_created": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "is_project_thumbnail_created": {
+                    "type": "boolean",
+                    "example": false
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Conference Room Audio Setup"
                 },
-                "organization_id": {
-                    "type": "string"
+                "project_phase": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Proposal"
                 },
-                "project_file_url": {
-                    "type": "string"
+                "user_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "example": "user123"
                 },
                 "venue": {
-                    "type": "string"
-                },
-                "venue_type": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Building A - Conference Room 101"
                 }
             }
         },
-        "types.RoleInfo": {
+        "types.ProjectCreateResponse": {
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "integer"
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
-                "role_name": {
-                    "type": "string"
+                "project_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                },
+                "thumbnail_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
                 }
             }
         },
-        "types.RoleManagementResponse": {
+        "types.ProjectLockRequest": {
             "type": "object",
             "properties": {
-                "access_levels": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.AccessLevel"
-                    }
-                },
-                "features": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.Feature"
-                    }
-                },
-                "roles": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.RoleWithPermissions"
-                    }
-                },
-                "users": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.UserBasicInfo"
-                    }
+                "is_locked": {
+                    "type": "boolean",
+                    "example": true
                 }
             }
         },
-        "types.RoleWithPermissions": {
+        "types.ProjectPhase": {
+            "type": "string",
+            "enum": [
+                "Proposal",
+                "Development",
+                "Commissioned"
+            ],
+            "x-enum-varnames": [
+                "ProjectPhaseProposal",
+                "ProjectPhaseDevelopment",
+                "ProjectPhaseCommissioned"
+            ]
+        },
+        "types.ProjectStarRequest": {
             "type": "object",
             "properties": {
-                "created_at": {
-                    "type": "string"
+                "is_starred": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "types.ProjectUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string",
+                    "minLength": 1,
+                    "example": "account456"
+                },
+                "application": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Audio System Design"
+                },
+                "budget": {
+                    "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Updated professional audio system for corporate conference room"
+                },
+                "environment_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_project_file_dirty": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "is_project_thumbnail_dirty": {
+                    "type": "boolean",
+                    "example": true
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Updated Conference Room Audio Setup"
                 },
-                "permissions": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/types.FeaturePermissionDetail"
-                    }
+                "project_phase": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Development"
                 },
-                "user_count": {
-                    "type": "integer"
+                "venue": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Building B - Conference Room 205"
+                }
+            }
+        },
+        "types.ProjectUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "project_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                },
+                "thumbnail_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
                 }
             }
         },
