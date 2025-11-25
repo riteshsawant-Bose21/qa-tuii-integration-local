@@ -259,6 +259,30 @@ func TestCreateProject(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("returns validation error on missing required fields", func(t *testing.T) {
+		// Missing Application and Budget currency invalid
+		r, mockSvc := setupTest()
+		project := &types.ProjectCreateRequest{
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			UserID:          "123", // required present
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "US", // invalid length triggers validation error
+			},
+		}
+		body, _ := json.Marshal(project)
+		req := httptest.NewRequest(http.MethodPost, projectsEndpoint, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		mockSvc.AssertNotCalled(t, "CreateProject")
+	})
 }
 
 func TestGetAllProjects(t *testing.T) {
@@ -331,6 +355,41 @@ func TestGetAllProjects(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request when user_id missing", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, projectsEndpoint, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns bad request when user_id invalid UUID", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, projectsEndpoint+"?user_id=not-a-uuid", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns bad request on query binding error", func(t *testing.T) {
+		// is_archived expects bool
+		req := httptest.NewRequest(http.MethodGet, projectsEndpoint+"?user_id="+testProjectID+"&is_archived=notabool", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("applies default sort parameters", func(t *testing.T) {
+		// Only user_id provided; handler sets sort_by=updated_at sort_order=desc
+		r, mockSvc := setupTest()
+		mockSvc.On("GetAllProjects", mock.Anything, mock.MatchedBy(func(params *types.GetAllProjectsParams) bool {
+			return params.UserID == testProjectID && params.SortBy == "updated_at" && params.SortOrder == "desc"
+		})).Return(&types.GetAllProjectsResponse{Data: []types.Project{}, TotalCount: 0, Page: 1, TotalPages: 1}, nil)
+		req := httptest.NewRequest(http.MethodGet, projectsEndpoint+"?user_id="+testProjectID, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusOK, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 }
@@ -437,6 +496,91 @@ func TestUpdateProject(t *testing.T) {
 		assert.Equal(t, http.StatusForbidden, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("returns not found on invalid project UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+"not-a-uuid"+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns not found on invalid user UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID+userQueryParam+"not-a-uuid", bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns bad request on validation failure (empty name)", func(t *testing.T) {
+		r, _ := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: "   "}
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns unauthorized when user not found", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
+		mockSvc.On("UpdateProject", mock.Anything, testProjectID, testUserID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgUserNotFound))
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when project archived", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
+		mockSvc.On("UpdateProject", mock.Anything, testProjectID, testUserID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectArchived))
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when project locked by another user", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
+		mockSvc.On("UpdateProject", mock.Anything, testProjectID, testUserID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New(types.ErrMsgProjectLockedByUser+" other-user"))
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns internal server error on unexpected service error", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		updateReq := &types.ProjectUpdateRequest{Name: testUpdatedProject}
+		mockSvc.On("UpdateProject", mock.Anything, testProjectID, testUserID, updateReq).Return((*types.ProjectUpdateResponse)(nil), errors.New("db timeout"))
+		body, _ := json.Marshal(updateReq)
+		req := httptest.NewRequest(http.MethodPatch, projectsPathPrefix+testProjectID+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
 }
 
 func TestDeleteProject(t *testing.T) {
@@ -535,6 +679,52 @@ func TestDeleteProject(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("returns not found on invalid project UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+"not-a-uuid"+userQueryParam+testUserID, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns not found on invalid user UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID+userQueryParam+"not-a-uuid", nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns forbidden when project archived", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		mockSvc.On("DeleteProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgProjectArchived))
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID+userQueryParam+testUserID, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when locked by another user", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		mockSvc.On("DeleteProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgProjectLockedByUser + " other-user"))
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID+userQueryParam+testUserID, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when user not found", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		mockSvc.On("DeleteProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgUserNotFound))
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+testProjectID+userQueryParam+testUserID, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
 }
 
 func TestAssignUserToProject(t *testing.T) {
@@ -613,6 +803,26 @@ func TestAssignUserToProject(t *testing.T) {
 		assert.Equal(t, http.StatusNoContent, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("returns bad request when project ID invalid format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+"not-a-uuid"+usersPath+testUserEmail, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns internal server error on unexpected failure", func(t *testing.T) {
+		// fresh router + mock to avoid earlier expectations
+		r, mockSvc := setupTest()
+		projectID := testProjectID
+		userEmail := testUserEmail
+		mockSvc.On("AssignUserToProjectByEmail", mock.Anything, projectID, userEmail).Return((*types.UserAssignmentResponse)(nil), errors.New("db error"))
+		req := httptest.NewRequest(http.MethodPut, projectsPathPrefix+projectID+usersPath+userEmail, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
 }
 
 func TestRemoveUserFromProject(t *testing.T) {
@@ -685,6 +895,26 @@ func TestRemoveUserFromProject(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request when project ID invalid format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+"not-a-uuid"+usersPath+testUserEmail, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns internal server error on unexpected failure", func(t *testing.T) {
+		// fresh router + mock to avoid earlier expectations
+		r, mockSvc := setupTest()
+		projectID := testProjectID
+		userEmail := testUserEmail
+		mockSvc.On("RemoveUserFromProjectByEmail", mock.Anything, projectID, userEmail).Return((*types.UserAssignmentResponse)(nil), errors.New("db error"))
+		req := httptest.NewRequest(http.MethodDelete, projectsPathPrefix+projectID+usersPath+userEmail, nil)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 }
@@ -783,6 +1013,27 @@ func TestUpdateProjectStar(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns not found on invalid project UUID format", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+"not-a-uuid"+starPath+testUserID, bytes.NewBuffer([]byte(`{"is_starred":true}`)))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns forbidden when user not assigned to project", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		starReq := types.ProjectStarRequest{IsStarred: true}
+		mockSvc.On("StarProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		body, _ := json.Marshal(starReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+starPath+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 }
@@ -887,6 +1138,78 @@ func TestUpdateProjectArchive(t *testing.T) {
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
+
+	t.Run("returns bad request when user_id missing", func(t *testing.T) {
+		r, _ := setupTest()
+		archiveReq := types.ProjectArchiveRequest{Archive: true}
+		body, _ := json.Marshal(archiveReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns not found on invalid project UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		archiveReq := types.ProjectArchiveRequest{Archive: true}
+		body, _ := json.Marshal(archiveReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+"not-a-uuid"+archivePath+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns not found on invalid user UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		archiveReq := types.ProjectArchiveRequest{Archive: true}
+		body, _ := json.Marshal(archiveReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath+userQueryParam+"not-a-uuid", bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns forbidden when user not assigned", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		archiveReq := types.ProjectArchiveRequest{Archive: true}
+		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		body, _ := json.Marshal(archiveReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when locked by another user", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		archiveReq := types.ProjectArchiveRequest{Archive: true}
+		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgProjectLockedByUser + " other-user"))
+		body, _ := json.Marshal(archiveReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns not found when user not found", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		archiveReq := types.ProjectArchiveRequest{Archive: true}
+		mockSvc.On("ArchiveProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgUserNotFound))
+		body, _ := json.Marshal(archiveReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+archivePath+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
 }
 
 func TestUpdateProjectLock(t *testing.T) {
@@ -983,6 +1306,91 @@ func TestUpdateProjectLock(t *testing.T) {
 		r.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusInternalServerError, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns bad request when user_id missing", func(t *testing.T) {
+		r, _ := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: true}
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock", bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+	})
+
+	t.Run("returns not found on invalid project UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: true}
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+"not-a-uuid"+"/lock"+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns not found on invalid user UUID format", func(t *testing.T) {
+		r, _ := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: true}
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock"+userQueryParam+"not-a-uuid", bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusNotFound, w.Code)
+	})
+
+	t.Run("returns forbidden when user not assigned", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: true}
+		mockSvc.On("LockProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgUserNotAssignedToProject))
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock"+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when user not found", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: true}
+		mockSvc.On("LockProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgUserNotFound))
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock"+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when project already locked by another user", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: true}
+		mockSvc.On("LockProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgProjectLockedByUser + " other-user"))
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock"+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
+		mockSvc.AssertExpectations(t)
+	})
+
+	t.Run("returns forbidden when unlocking not locked by user", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		lockReq := types.ProjectLockRequest{IsLocked: false}
+		mockSvc.On("UnlockProject", mock.Anything, testProjectID, testUserID).Return(errors.New(types.ErrMsgProjectNotLockedByUser))
+		body, _ := json.Marshal(lockReq)
+		req := httptest.NewRequest(http.MethodPost, projectsPathPrefix+testProjectID+"/lock"+userQueryParam+testUserID, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		assert.Equal(t, http.StatusForbidden, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
 }

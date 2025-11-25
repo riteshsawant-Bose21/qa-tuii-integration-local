@@ -288,3 +288,177 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 		assert.Equal(t, types.ProjectPhaseProposal, request.ProjectPhase)
 	})
 }
+
+func TestValidateGetAllProjectsParams(t *testing.T) {
+	t.Run("valid params", func(t *testing.T) {
+		params := &types.GetAllProjectsParams{
+			UserID:     "user1",
+			SortBy:     "created_at",
+			SortOrder:  "asc",
+			IsArchived: false,
+		}
+
+		err := ValidateGetAllProjectsParams(params)
+		assert.NoError(t, err)
+	})
+
+	t.Run("invalid sort_by", func(t *testing.T) {
+		params := &types.GetAllProjectsParams{
+			UserID:    "user1",
+			SortBy:    "name",
+			SortOrder: "asc",
+		}
+
+		err := ValidateGetAllProjectsParams(params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid sort_by field")
+	})
+
+	t.Run("invalid sort_order", func(t *testing.T) {
+		params := &types.GetAllProjectsParams{
+			UserID:    "user1",
+			SortBy:    "created_at",
+			SortOrder: "up",
+		}
+
+		err := ValidateGetAllProjectsParams(params)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid sort_order")
+	})
+
+	t.Run("nil params", func(t *testing.T) {
+		err := ValidateGetAllProjectsParams(nil)
+		assert.Error(t, err)
+	})
+}
+
+func TestArchiveLockStarValidators(t *testing.T) {
+	t.Run("archive validator nil", func(t *testing.T) {
+		err := ValidateProjectArchiveRequest(nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("archive validator valid", func(t *testing.T) {
+		req := &types.ProjectArchiveRequest{Archive: true}
+		assert.NoError(t, ValidateProjectArchiveRequest(req))
+	})
+
+	t.Run("lock validator nil", func(t *testing.T) {
+		err := ValidateProjectLockRequest(nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("lock validator valid", func(t *testing.T) {
+		req := &types.ProjectLockRequest{IsLocked: true}
+		assert.NoError(t, ValidateProjectLockRequest(req))
+	})
+
+	t.Run("star validator nil", func(t *testing.T) {
+		err := ValidateProjectStarRequest(nil)
+		assert.Error(t, err)
+	})
+
+	t.Run("star validator valid", func(t *testing.T) {
+		req := &types.ProjectStarRequest{IsStarred: true}
+		assert.NoError(t, ValidateProjectStarRequest(req))
+	})
+}
+
+func TestIsValidUUID(t *testing.T) {
+	valid := "123e4567-e89b-12d3-a456-426614174000"
+	invalid := "not-a-uuid"
+
+	assert.True(t, IsValidUUID(valid))
+	assert.False(t, IsValidUUID(invalid))
+}
+
+func TestFormatValidationErrorMappings(t *testing.T) {
+	// Create a struct with many validator tags to trigger different messages
+	type vStruct struct {
+		Email       string `validate:"required,email"`
+		ID          string `validate:"required,uuid"`
+		Name        string `validate:"required,min=3"`
+		SortOrder   string `validate:"required,sort_order"`
+		SortField   string `validate:"required,project_sort_field"`
+		Currency    string `validate:"required,currency,len=3"`
+		Environment string `validate:"required,environment_type"`
+		Phase       string `validate:"required,project_phase"`
+	}
+
+	v := vStruct{
+		Email:       "bad-email",
+		ID:          "not-uuid",
+		Name:        "ab",
+		SortOrder:   "UP",
+		SortField:   "name",
+		Currency:    "usd",
+		Environment: "inside",
+		Phase:       "Unknown",
+	}
+
+	err := validate.Struct(v)
+	// ensure we got a validation error
+	assert.Error(t, err)
+
+	formatted := formatValidationError(err)
+	assert.Error(t, formatted)
+
+	msg := formatted.Error()
+	// Check that mapped messages appear for several tags
+	assert.Contains(t, msg, "must be a valid email")
+	assert.Contains(t, msg, "must be a valid UUID")
+	assert.Contains(t, msg, "must be at least")
+	assert.Contains(t, msg, "must be 'asc' or 'desc'")
+	assert.Contains(t, msg, "must be a valid sortable field")
+	assert.Contains(t, msg, "must be a valid 3-letter ISO 4217 currency code")
+	assert.Contains(t, msg, "must be one of: indoor, outdoor, hybrid")
+	assert.Contains(t, msg, "must be one of: Proposal, Development, Commissioned")
+}
+
+func TestHelperValidators(t *testing.T) {
+	// currency
+	assert.True(t, isValidCurrency("USD"))
+	assert.False(t, isValidCurrency("UsD"))
+	assert.False(t, isValidCurrency("US"))
+
+	// sort order
+	assert.True(t, isValidSortOrder("asc"))
+	assert.True(t, isValidSortOrder("ASC"))
+	assert.False(t, isValidSortOrder("up"))
+
+	// project sort field
+	assert.True(t, isValidProjectSortField("created_at"))
+	assert.False(t, isValidProjectSortField("name"))
+}
+
+func TestValidateEnvironmentType(t *testing.T) {
+	assert.True(t, isValidEnvironmentType("indoor"))
+	assert.True(t, isValidEnvironmentType("outdoor"))
+	assert.True(t, isValidEnvironmentType("hybrid"))
+	assert.False(t, isValidEnvironmentType("space"))
+}
+
+func TestValidateProjectPhase(t *testing.T) {
+	assert.True(t, isValidProjectPhase("Proposal"))
+	assert.True(t, isValidProjectPhase("Development"))
+	assert.True(t, isValidProjectPhase("Commissioned"))
+	assert.False(t, isValidProjectPhase("Unknown"))
+}
+
+func TestValidateCurrency(t *testing.T) {
+	assert.True(t, isValidCurrency("USD"))
+	assert.False(t, isValidCurrency("usd"))
+	assert.False(t, isValidCurrency("US"))
+}
+
+func TestValidateSortOrder(t *testing.T) {
+	assert.True(t, isValidSortOrder("asc"))
+	assert.True(t, isValidSortOrder("desc"))
+	assert.False(t, isValidSortOrder("ascending"))
+}
+
+func TestValidateProjectSortField(t *testing.T) {
+	assert.True(t, isValidProjectSortField("created_at"))
+	assert.True(t, isValidProjectSortField("updated_at"))
+	assert.False(t, isValidProjectSortField("name"))
+}

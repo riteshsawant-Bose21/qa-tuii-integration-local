@@ -134,28 +134,6 @@ INSERT INTO project_user (id, project_id, user_id, is_starred, created_at, updat
     (11, '30000001-0000-4000-8000-000000000006', '20000001-0000-4000-8000-000000000005', true, '2024-03-25 15:30:00', '2024-03-26 09:45:00'),
     (12, '30000001-0000-4000-8000-000000000006', '20000001-0000-4000-8000-000000000009', false, '2024-03-26 10:15:00', '2024-03-26 10:15:00');
 
--- Insert products data
-INSERT INTO products (id, category, description, price, meta_info, created_at, updated_at) VALUES
-    (1, 'Loudspeakers', 'Professional ceiling-mounted speaker with 70V/100V transformer', 299.99, '{"power": "25W", "frequency_range": "60Hz-20kHz", "mounting": "ceiling", "color_options": ["white", "black"]}', '2024-01-10 08:00:00', '2024-01-10 08:00:00'),
-    
-    (2, 'Amplifiers', 'Multi-channel digital amplifier with DSP processing', 1299.99, '{"channels": 4, "power_per_channel": "100W", "dsp_features": ["EQ", "crossover", "delay"], "connectivity": ["analog", "digital", "ethernet"]}', '2024-01-10 08:15:00', '2024-01-10 08:15:00'),
-    
-    (3, 'Microphones', 'Wireless handheld microphone system with diversity receiver', 899.99, '{"type": "wireless", "frequency_band": "UHF", "battery_life": "8 hours", "range": "100 meters", "features": ["diversity", "encryption"]}', '2024-01-10 08:30:00', '2024-01-10 08:30:00'),
-    
-    (4, 'Mixers', 'Compact digital mixer with USB recording capability', 799.99, '{"channels": 8, "inputs": ["XLR", "1/4_inch", "USB"], "outputs": ["main", "monitor", "USB"], "effects": ["reverb", "delay", "compression"]}', '2024-01-10 08:45:00', '2024-01-10 08:45:00'),
-    
-    (5, 'Loudspeakers', 'Portable column array speaker with built-in mixer', 1899.99, '{"type": "column_array", "drivers": "8x3inch + 1x8inch", "power": "400W", "bluetooth": true, "battery": "8 hours", "weight": "15kg"}', '2024-01-10 09:00:00', '2024-02-15 14:20:00'),
-    
-    (6, 'Signal_Processing', 'Digital signal processor with advanced room correction', 2299.99, '{"inputs": 8, "outputs": 8, "processing": ["EQ", "dynamics", "room_correction"], "network": ["dante", "ethernet"], "control": ["software", "hardware_panel"]}', '2024-01-10 09:15:00', '2024-01-10 09:15:00'),
-    
-    (7, 'Accessories', 'Professional microphone stand with boom arm', 129.99, '{"type": "boom_stand", "height_range": "90-165cm", "boom_length": "75cm", "material": "steel", "weight": "3.2kg", "color": "black"}', '2024-01-10 09:30:00', '2024-01-10 09:30:00'),
-    
-    (8, 'Amplifiers', 'High-power subwoofer amplifier with variable crossover', 699.99, '{"power": "500W", "frequency_range": "20Hz-200Hz", "crossover": "variable", "protection": ["thermal", "short_circuit"], "cooling": "forced_air"}', '2024-01-10 09:45:00', '2024-03-01 11:30:00'),
-    
-    (9, 'Loudspeakers', 'Weather-resistant outdoor speaker for distributed systems', 449.99, '{"rating": "IP65", "power": "50W", "mounting": ["wall", "pole"], "transformer": "70V/100V", "materials": "marine_grade", "warranty": "5_years"}', '2024-01-10 10:00:00', '2024-01-10 10:00:00'),
-    
-    (10, 'Control_Systems', 'Wall-mounted control panel with preset recall', 399.99, '{"presets": 16, "controls": ["volume", "source_select", "mute"], "display": "LCD", "network": "ethernet", "mounting": "single_gang"}', '2024-01-10 10:15:00', '2024-01-10 10:15:00');
-
 -- Reset sequences to match inserted data
 SELECT setval('access_level_id_seq', 4, true);
 SELECT setval('account_id_seq', 6, true);
@@ -165,3 +143,61 @@ SELECT setval('feature_permission_id_seq', 41, true);
 SELECT setval('products_id_seq', 10, true);
 SELECT setval('project_user_id_seq', 12, true);
 SELECT setval('roles_id_seq', 7, true);
+
+-- -----------------------------------------------------------
+-- Additional dummy data for new product-related tables
+-- (Tables defined in fusion_cloud.sql: product, product_price, product_sync_job)
+-- -----------------------------------------------------------
+
+-- Insert product data (cover all enum types)
+INSERT INTO product (product_id, product_type, model_name, model_family, description, short_description, images, specifications, created_at, updated_at) VALUES
+    (1001, 'speaker', 'DM2SE', 'DesignMax', 'Surface-mount loudspeaker for premium installed sound systems', 'Premium surface-mount speaker',
+        '{"primary":["https://example.com/images/dm2se_front.png"],"thumb":["https://example.com/images/dm2se_thumb.png"]}'::jsonb,
+        '{"power_handling":"25W","frequency_range":"65Hz-20kHz","impedance":"8Ω"}'::jsonb,
+        '2024-01-10 08:00:00','2024-01-10 08:00:00'),
+    (1002, 'amplifier', 'PWR4X100', 'PowerSeries', '4-channel digital amplifier with integrated DSP', '4ch DSP amplifier',
+        '{"primary":["https://example.com/images/pwr4x100_front.png"],"rear":["https://example.com/images/pwr4x100_rear.png"]}'::jsonb,
+        '{"channels":4,"power_per_channel":"100W","dsp_features":["EQ","crossover","delay"],"network":["ethernet"]}'::jsonb,
+        '2024-01-10 08:05:00','2024-01-10 08:05:00'),
+    (1003, 'dsp', 'RoomDSP8', 'AcousticLogic', '8x8 digital signal processor with advanced room correction', '8x8 DSP processor',
+        '{"primary":["https://example.com/images/roomdsp8_front.png"],"top":["https://example.com/images/roomdsp8_top.png"]}'::jsonb,
+        '{"inputs":8,"outputs":8,"processing":["EQ","dynamics","room_correction"],"network":["dante","ethernet"]}'::jsonb,
+        '2024-01-10 08:10:00','2024-01-10 08:10:00'),
+    (1004, 'controller', 'CTL16', 'ControlPro', 'Wall-mounted control panel with preset recall and LCD', 'Wall control panel',
+        '{"primary":["https://example.com/images/ctl16_front.png"],"in_situ":["https://example.com/images/ctl16_room.png"]}'::jsonb,
+        '{"presets":16,"controls":["volume","source_select","mute"],"display":"LCD"}'::jsonb,
+        '2024-01-10 08:15:00','2024-01-10 08:15:00'),
+    (1005, 'io_endpoint', 'NetIO4', 'NetLink', 'Networked audio I/O endpoint with 4 in / 4 out', '4x4 network IO',
+        '{"primary":["https://example.com/images/netio4_front.png"],"ports":["https://example.com/images/netio4_ports.png"]}'::jsonb,
+        '{"inputs":4,"outputs":4,"protocols":["dante","aes67"],"sample_rates":[48000,96000]}'::jsonb,
+        '2024-01-10 08:20:00','2024-01-10 08:20:00'),
+    (1006, 'accessory', 'MICSTANDPRO', 'StageGear', 'Professional microphone stand with boom arm', 'Boom mic stand',
+        '{"primary":["https://example.com/images/micstandpro.png"]}'::jsonb,
+        '{"height_range":"90-165cm","boom_length":"75cm","material":"steel"}'::jsonb,
+        '2024-01-10 08:25:00','2024-01-10 08:25:00');
+
+-- Insert product_price data (variants & currencies)
+INSERT INTO product_price (product_id, variant, currency, price, created_at, updated_at) VALUES
+    (1001, 'black', 'USD', 299.99, '2024-01-10 08:30:00','2024-01-10 08:30:00'),
+    (1001, 'white', 'USD', 299.99, '2024-01-10 08:30:00','2024-01-10 08:30:00'),
+    (1002, 'standard', 'USD', 1299.99, '2024-01-10 08:35:00','2024-01-10 08:35:00'),
+    (1002, 'standard', 'EUR', 1199.99, '2024-01-10 08:35:00','2024-01-10 08:35:00'),
+    (1003, 'rackmount', 'USD', 2299.99, '2024-01-10 08:40:00','2024-01-10 08:40:00'),
+    (1004, 'single_gang', 'USD', 399.99, '2024-01-10 08:45:00','2024-01-10 08:45:00'),
+    (1005, 'poe', 'USD', 899.99, '2024-01-10 08:50:00','2024-01-10 08:50:00'),
+    (1006, 'black', 'USD', 129.99, '2024-01-10 08:55:00','2024-01-10 08:55:00');
+
+-- Insert product_sync_job data (sample sync jobs)
+INSERT INTO product_sync_job (
+    sync_operation, status, s3_bucket, s3_key, file_size_bytes, error_message,
+    validation_errors, total_items, successful_items, failed_items, started_at, completed_at
+) VALUES
+    ('full_sync', 'completed', 'fusion-product-import', 'imports/2024/01/full_catalog.json', 524288,
+        NULL, '{"warnings":[],"errors":[]}'::jsonb, 150, 150, 0,
+        '2024-01-11 09:00:00','2024-01-11 09:02:30'),
+    ('manual_sync', 'failed', 'fusion-product-import', 'imports/2024/01/manual_update.json', 104857,
+        'Validation failed: missing required field model_name', '{"errors":[{"line":27,"issue":"missing model_name"}]}'::jsonb, 10, 7, 3,
+        '2024-01-12 10:15:00','2024-01-12 10:16:10'),
+    ('scheduled_sync', 'in_progress', 'fusion-product-import', 'imports/2024/01/scheduled_delta.json', 256000,
+        NULL, NULL, NULL, NULL, NULL,
+        '2024-01-13 02:00:00', NULL);
