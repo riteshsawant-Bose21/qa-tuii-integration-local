@@ -303,6 +303,7 @@ class FusionAppTheme {
   /// Returns a fully configured [ThemeData] for dark theme
   static ThemeData get darkTheme {
     final darkColorScheme = ColorScheme.fromSeed(
+      surface: Color(0xFF1D1D1D),
       seedColor: const Color(0xFF80C7FF), // Using your dark primary color
       brightness: Brightness.dark,
     );
@@ -310,6 +311,7 @@ class FusionAppTheme {
     return ThemeData(
       // Primary color scheme using custom dark primary color
       colorScheme: darkColorScheme,
+      scaffoldBackgroundColor: darkColorScheme.surface,
       fontFamily: GoogleFonts.montserrat().fontFamily,
 
       // Custom TextTheme with proper dark theme color assignments

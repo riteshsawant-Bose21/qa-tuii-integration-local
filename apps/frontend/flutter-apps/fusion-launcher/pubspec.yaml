@@ -61,6 +61,8 @@ dependencies:
   bloc: ^9.0.0
   equatable: ^2.0.7
   flutter_svg: ^2.2.1
+  lucide_icons_flutter: ^3.1.6
+
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib

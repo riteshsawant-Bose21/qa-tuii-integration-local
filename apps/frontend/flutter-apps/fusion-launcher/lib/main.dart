@@ -5,13 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/user_session_manager.dart';
-import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
+import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
 
@@ -98,9 +98,9 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
-            themeMode: mode,
+            themeMode: ThemeMode.dark,
             home: Scaffold(
-              body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
+              body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const LauncherSignInPage(),
             ),
             navigatorKey: globalNavigatorKey,
             navigatorObservers: <NavigatorObserver>[
