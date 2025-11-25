@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -48,7 +46,6 @@ class _MixScenesState extends State<MixScenes> {
 
   @override
   void didUpdateWidget(covariant MixScenes oldWidget) {
-    log("MixScenes didUpdateWidget called with ${oldWidget.selectedMixSceneName}  ===  ${widget.selectedMixSceneName}");
     if (widget.selectedMixSceneName != oldWidget.selectedMixSceneName) {
       mixSceneNameController.text = widget.selectedMixSceneName ?? "";
     }
@@ -65,18 +62,18 @@ class _MixScenesState extends State<MixScenes> {
       width: 150,
       color: const Color(0xFFF5F5F5),
       child: Column(
-        spacing: 10,
         children: <Widget>[
           Container(
             height: 28,
             color: const Color(0xFFF5F5F5),
-            child: Center(
-              child: FusionAppText(
-                text: "MIX SCENES",
-                style: Theme.of(context).textTheme.labelMedium,
-              ),
+            alignment: Alignment.center,
+            child: FusionAppText(
+              text: "MIX SCENES",
+              style: Theme.of(context).textTheme.labelSmall,
             ),
           ),
+          const Divider(color: Colors.black12, height: 0),
+          const SizedBox(height: 10),
 
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -89,23 +86,24 @@ class _MixScenesState extends State<MixScenes> {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 20),
           NeumorphicButton(
             text: "STORE",
             width: 72,
-            height: 24,
-            borderRadius: 9,
+            height: 28,
+            borderRadius: 8,
             onTap: () {
               widget.onStoreTap(
                 mixSceneNameController.text.trim(),
               );
             },
           ),
+          const SizedBox(height: 10),
           NeumorphicButton(
             text: "DELETE",
             width: 72,
-            height: 24,
-            borderRadius: 9,
+            height: 28,
+            borderRadius: 8,
             textColor: Colors.black12,
             onTap: widget.onDeleteTap,
           ),

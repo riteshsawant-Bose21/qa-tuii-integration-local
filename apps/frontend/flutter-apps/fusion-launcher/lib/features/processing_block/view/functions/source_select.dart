@@ -50,7 +50,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
     return Dialog(
       constraints: BoxConstraints(
         maxWidth: controlScreenWidth,
-        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.5,
       ),
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
@@ -93,6 +93,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                           style: Theme.of(context).textTheme.labelSmall,
                                         ),
                                       ),
+                                  const Divider(color: Colors.black12, height: 0),
                                       Container(
                                         margin: const EdgeInsets.symmetric(horizontal: 8),
                                         padding: const EdgeInsets.all(8.0),
@@ -156,11 +157,10 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                       color: Colors.white,
                                                     ),
                                                     child: Row(
-                                                      spacing: 5,
                                                       children: <Widget>[
                                                         Flexible(
                                                           child: Container(
-                                                            height: 24,
+                                                        height: 28,
                                                             margin: const EdgeInsets.all(4),
                                                             alignment: Alignment.center,
                                                             padding: const EdgeInsets.all(2),
@@ -176,8 +176,8 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                           ),
                                                         ),
                                                         PBRadio(
-                                                          value: isSelected,
-                                                          size: const Size(24, 24),
+                                                      value: isSelected,
+                                                      size: const Size(28, 28),
                                                           padding: const EdgeInsets.all(2),
                                                           onChanged: (bool value) {
                                                             projectViewModel.selectSourceForFunction(
@@ -187,7 +187,7 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                                                           },
                                                         ),
 
-                                                        const SizedBox(),
+                                                    const SizedBox(width: 5),
                                                       ],
                                                     ),
                                                   ),

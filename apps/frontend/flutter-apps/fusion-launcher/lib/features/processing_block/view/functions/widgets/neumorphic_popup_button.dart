@@ -75,9 +75,9 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                   style: Theme.of(context).textTheme.labelLarge,
                   decoration: InputDecoration(
                     border: InputBorder.none,
-                    hintText: widget.hintText ?? 'preset name',
+                    hintText: widget.hintText ?? 'Scene name',
+                    hintStyle: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
                     isDense: true,
-                    hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
                     contentPadding: const EdgeInsets.all(0),
                   ),
                 ),
@@ -121,8 +121,8 @@ class _NeumorphicPopupButtonState extends State<NeumorphicPopupButton> {
                             return Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: FusionAppText(
-                                text: "No presets saved",
-                                style: Theme.of(context).textTheme.labelMedium,
+                                text: "No scenes saved",
+                                style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.grey),
                               ),
                             );
                           }

@@ -13,8 +13,8 @@ class SliderAndMeterWidget extends StatelessWidget {
     super.key,
     this.onSliderChanged,
     this.sliderValue = 0.0,
-    this.sliderMin = 0.0,
-    this.sliderMax = 0.0,
+    this.sliderMin = -60.0,
+    this.sliderMax = 12.0,
   });
 
   @override
@@ -29,6 +29,7 @@ class SliderAndMeterWidget extends StatelessWidget {
             value: sliderValue,
             min: sliderMin,
             max: sliderMax,
+            intervalGap: 6,
           ),
           const Padding(
             padding: EdgeInsets.symmetric(vertical: 4),

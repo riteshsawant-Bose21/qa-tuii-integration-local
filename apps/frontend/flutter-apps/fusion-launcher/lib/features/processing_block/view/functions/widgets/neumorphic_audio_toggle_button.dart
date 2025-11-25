@@ -42,7 +42,7 @@ class _NeumorphicAudioToggleButtonState extends State<NeumorphicAudioToggleButto
           borderRadius: BorderRadiusGeometry.circular(widget.borderRadius),
           clipBehavior: _effectiveIsActive ? Clip.hardEdge : Clip.none,
           child: Container(
-            height: widget.height ?? 50,
+            height: widget.height ?? 28,
             width: widget.width ?? double.infinity,
             clipBehavior: _effectiveIsActive ? Clip.hardEdge : Clip.none,
             margin: const EdgeInsets.all(2),

@@ -7,6 +7,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'widgets/horizontal_scroll_effect_wrapper.dart';
 import 'widgets/mix_scene.dart';
 import 'widgets/neumorphic_audio_toggle_button.dart';
 import 'widgets/neumorphic_gain_text_field.dart';
@@ -63,7 +64,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
     return Dialog(
       constraints: BoxConstraints(
         maxWidth: controlScreenWidth,
-        maxHeight: MediaQuery.sizeOf(context).height * 0.5,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
       ),
       backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
@@ -84,6 +85,8 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                       const SizedBox(height: 35),
                       Flexible(
                         fit: FlexFit.loose,
+                    child: Container(
+                      color: const Color(0xFFF5F5F5),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -96,6 +99,8 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                                 zoneFunctions: zoneFunction,
                               ),
                             ),
+
+                          const VerticalDivider(width: 1, color: Colors.black12),
 
                             MixScenes(
                               selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
@@ -137,17 +142,9 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                               },
                             ),
 
-                            DecoratedBox(
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFF5F5F5),
-                                border: Border(
-                                  left: BorderSide(
-                                    color: Colors.black12,
-                                  ),
-                                ),
-                              ),
-                              child: PrioritySelectionWidget(zoneId: widget.zoneID),
-                            ),
+                          const VerticalDivider(width: 1, color: Colors.black12),
+                          PrioritySelectionWidget(zoneId: widget.zoneID),
+                          // const VerticalDivider(width: 1, color: Colors.black12),
 
                             // Right side (only one widget)
                             Flexible(
@@ -162,6 +159,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                           ],
                         ),
                       ),
+                  ),
                     ],
                   ),
                 ),
@@ -214,6 +212,7 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
   }
 }
 
+// Updated SourceMixLeftWidget using the wrapper
 class SourceMixLeftWidget extends StatefulWidget {
   final String zoneID;
   final ZoneFunctions zoneFunctions;
@@ -270,110 +269,103 @@ class _SourceMixLeftWidgetState extends State<SourceMixLeftWidget> {
       );
     }
 
-    return Scrollbar(
+    return HorizontalScrollWithShadows(
       controller: _scrollController,
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        physics: const ClampingScrollPhysics(),
-        scrollDirection: Axis.horizontal,
-        child: ColoredBox(
-          color: const Color(0xFFF5F5F5),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: List<Widget>.generate(sources.length, (int index) {
-              final Source source = sources[index];
+      child: ColoredBox(
+        color: const Color(0xFFF5F5F5),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List<Widget>.generate(sources.length, (int index) {
+            final Source source = sources[index];
 
               final MixSettings mixSetting = widget.zoneFunctions.mixSettings!.singleWhere(
-                (MixSettings setting) => setting.sourceId == source.id,
+              (MixSettings setting) => setting.sourceId == source.id,
                 orElse: () => MixSettings(sourceId: source.id, gain: 0, muted: true),
-              );
+            );
 
-              return SizedBox(
-                width: 150,
-                child: Column(
-                  spacing: 10,
-                  children: <Widget>[
-                    Container(
-                      height: 28,
-                      color: const Color(0xFFF5F5F5),
-                      child: Center(
-                        child: FusionAppText(
-                          text: source.name,
-                          textAlign: TextAlign.center,
-                          maxLine: 1,
-                          style: Theme.of(context).textTheme.labelMedium,
-                        ),
-                      ),
-                    ),
-                    NeumorphicGainTextField(
-                      controllerValue: mixSetting.gain,
-                      minGain: -60,
-                      maxGain: 12,
-                      onSubmitted: (double value) {
-                        projectViewModel.updateMixSettings(
-                          mixSettings: mixSetting.copyWith(
-                            gain: value,
-                          ),
-                          functionId: widget.zoneFunctions.id,
-                        );
-                      },
-                    ),
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            right: BorderSide(
-                              color: Colors.black12,
-                            ),
-                          ),
-                        ),
-                        child: Column(
-                          children: <Widget>[
-                            Expanded(
-                              child: SliderAndMeterWidget(
-                                sliderValue: mixSetting.gain,
-                                sliderMax: 12,
-                                sliderMin: -60,
-                                onSliderChanged: (num value) {
-                                  projectViewModel.updateMixSettings(
-                                    mixSettings: mixSetting.copyWith(
-                                      gain: value.toDouble(),
-                                    ),
-                                    functionId: widget.zoneFunctions.id,
-                                  );
-                                },
-                              ),
-                            ),
-                            NeumorphicAudioToggleButton(
-                              isActive: mixSetting.muted,
-                              width: 72,
-                              height: 24,
-                              onTap: () {
-                                projectViewModel.updateMixSettings(
-                                  mixSettings: mixSetting.copyWith(
-                                    muted: !mixSetting.muted,
-                                  ),
-                                  functionId: widget.zoneFunctions.id,
-                                );
-                              },
-                              backgroundColor: const Color(0xFFF5F5F5),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
+            return Container(
+              width: 150,
+              decoration: const BoxDecoration(
+                border: Border(
+                  right: BorderSide(
+                    color: Colors.black12,
+                  ),
                 ),
-              );
-            }),
-          ),
+              ),
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    height: 28,
+                    color: const Color(0xFFF5F5F5),
+                    child: Center(
+                      child: FusionAppText(
+                        text: source.name,
+                        textAlign: TextAlign.center,
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.labelMedium,
+                      ),
+                    ),
+                  ),
+                  const Divider(color: Colors.black12, height: 0),
+                  const SizedBox(height: 10),
+                  NeumorphicGainTextField(
+                    controllerValue: mixSetting.gain,
+                    minGain: -60,
+                    maxGain: 12,
+                    onSubmitted: (double value) {
+                      projectViewModel.updateMixSettings(
+                        mixSettings: mixSetting.copyWith(
+                          gain: value,
+                        ),
+                          functionId: widget.zoneFunctions.id,
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: Column(
+                      children: <Widget>[
+                        Expanded(
+                          child: SliderAndMeterWidget(
+                            sliderValue: mixSetting.gain,
+                            onSliderChanged: (num value) {
+                              projectViewModel.updateMixSettings(
+                                mixSettings: mixSetting.copyWith(
+                                  gain: value.toDouble(),
+                                ),
+                                    functionId: widget.zoneFunctions.id,
+                              );
+                            },
+                          ),
+                        ),
+                        NeumorphicAudioToggleButton(
+                          isActive: mixSetting.muted,
+                          width: 72,
+                          onTap: () {
+                            projectViewModel.updateMixSettings(
+                              mixSettings: mixSetting.copyWith(
+                                muted: !mixSetting.muted,
+                              ),
+                                  functionId: widget.zoneFunctions.id,
+                            );
+                          },
+                          backgroundColor: const Color(0xFFF5F5F5),
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
         ),
       ),
     );
   }
 }
 
+// Updated ZoneControlSliderBuilder using the wrapper
 class ZoneControlSliderBuilder extends StatefulWidget {
   final String zoneID;
   final Color? headerBackgroundColor;
@@ -408,111 +400,97 @@ class _ZoneControlSliderBuilderState extends State<ZoneControlSliderBuilder> {
 
   @override
   Widget build(BuildContext context) {
-    context.watch<ProjectViewModel>(); // To rebuild when ProjectViewModel changes.
+    context.watch<ProjectViewModel>();
 
     subZones = projectViewModel.getSubZonesForZone(parentZoneId: widget.zoneID);
     if (subZones.isEmpty) zone = projectViewModel.getZone(zoneId: widget.zoneID);
 
     final bool isSubZonesAvailable = subZones.isNotEmpty;
 
-    return Scrollbar(
+    return HorizontalScrollWithShadows(
       controller: _scrollController,
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        physics: const ClampingScrollPhysics(),
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: List<Widget>.generate(
-            isSubZonesAvailable ? subZones.length : 1,
-            (int index) {
-              final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: List<Widget>.generate(
+          isSubZonesAvailable ? subZones.length : 1,
+          (int index) {
+            final SubZone? subZone = isSubZonesAvailable ? subZones[index] : null;
 
-              final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
-              // Just for safer mode.
-              if (title == null) return const SizedBox.shrink();
+            final String? title = isSubZonesAvailable ? subZone!.name : zone?.name;
+            if (title == null) return const SizedBox.shrink();
 
-              final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
-              final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
-              final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
+            final String zoneOrSubzoneID = isSubZonesAvailable ? subZone!.id : zone!.id;
+            final bool isMuted = isSubZonesAvailable ? subZone!.muted : zone!.muted;
+            final double zoneOrSubzoneGain = isSubZonesAvailable ? subZone!.gain : zone!.gain;
 
-              return Container(
-                width: 150,
-                decoration: const BoxDecoration(
-                  border: Border(
-                    left: BorderSide(color: Colors.black12),
-                  ),
+            return Container(
+              width: 150,
+              decoration: const BoxDecoration(
+                border: Border(
+                  left: BorderSide(color: Colors.black12),
                 ),
-                child: Column(
-                  spacing: 10,
-                  children: <Widget>[
-                    Container(
-                      height: 28,
-                      color: widget.headerBackgroundColor ?? const Color(0xFFF5F5F5),
-                      alignment: Alignment.center,
-                      child: FusionAppText(
-                        text: title,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.labelMedium,
-                      ),
+              ),
+              child: Column(
+                children: <Widget>[
+                  Container(
+                    height: 28,
+                    color: widget.headerBackgroundColor ?? const Color(0xFFF5F5F5),
+                    alignment: Alignment.center,
+                    child: FusionAppText(
+                      text: title,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelMedium,
                     ),
-                    NeumorphicGainTextField(
-                      controllerValue: zoneOrSubzoneGain,
-                      minGain: -60,
-                      maxGain: 12,
-                      onSubmitted: (double value) {
-                        projectViewModel.updateZoneGain(
-                          zoneId: zoneOrSubzoneID,
-                          gain: value,
-                        );
-                      },
-                      width: 100,
-                      height: 32,
-                    ),
-                    Expanded(
-                      child: DecoratedBox(
-                        decoration: const BoxDecoration(
-                          border: Border(
-                            right: BorderSide(color: Colors.black12),
+                  ),
+                  const Divider(color: Colors.black12, height: 0),
+                  const SizedBox(height: 10),
+                  NeumorphicGainTextField(
+                    controllerValue: zoneOrSubzoneGain,
+                    minGain: -60,
+                    maxGain: 12,
+                    onSubmitted: (double value) {
+                      projectViewModel.updateZoneGain(
+                        zoneId: zoneOrSubzoneID,
+                        gain: value,
+                      );
+                    },
+                    width: 100,
+                    height: 32,
+                  ),
+                  const SizedBox(height: 10),
+                  Expanded(
+                    child: Column(
+                      children: <Widget>[
+                        Expanded(
+                          child: SliderAndMeterWidget(
+                            sliderValue: zoneOrSubzoneGain,
+                            onSliderChanged: (num value) {
+                              projectViewModel.updateZoneGain(
+                                zoneId: zoneOrSubzoneID,
+                                gain: value.toDouble(),
+                              );
+                            },
                           ),
                         ),
-                        child: Column(
-                          children: <Widget>[
-                            Expanded(
-                              child: SliderAndMeterWidget(
-                                sliderValue: zoneOrSubzoneGain,
-                                sliderMax: 12,
-                                sliderMin: -60,
-                                onSliderChanged: (num value) {
-                                  projectViewModel.updateZoneGain(
-                                    zoneId: zoneOrSubzoneID,
-                                    gain: value.toDouble(),
-                                  );
-                                },
-                              ),
-                            ),
-                            NeumorphicAudioToggleButton(
-                              isActive: isMuted,
-                              width: 72,
-                              height: 24,
-                              onTap: () {
-                                projectViewModel.muteZone(
-                                  zoneId: zoneOrSubzoneID,
-                                  isMuted: !isMuted,
-                                );
-                              },
-                              backgroundColor: const Color(0xFFF5F5F5),
-                            ),
-                            const SizedBox(height: 10),
-                          ],
+                        NeumorphicAudioToggleButton(
+                          isActive: isMuted,
+                          width: 72,
+                          onTap: () {
+                            projectViewModel.muteZone(
+                              zoneId: zoneOrSubzoneID,
+                              isMuted: !isMuted,
+                            );
+                          },
+                          backgroundColor: const Color(0xFFF5F5F5),
                         ),
-                      ),
+                        const SizedBox(height: 10),
+                      ],
                     ),
-                  ],
-                ),
-              );
-            },
-          ),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

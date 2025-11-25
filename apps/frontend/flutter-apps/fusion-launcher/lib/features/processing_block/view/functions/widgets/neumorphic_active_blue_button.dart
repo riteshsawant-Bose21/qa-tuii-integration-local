@@ -35,7 +35,7 @@ class NeumorphicActiveBlueButton extends StatelessWidget {
           borderRadius: BorderRadiusGeometry.circular(borderRadius),
           clipBehavior: isActive ? Clip.hardEdge : Clip.none,
           child: Container(
-            height: height ?? 50,
+            height: height ?? 28,
             width: width ?? double.infinity,
             clipBehavior: isActive ? Clip.hardEdge : Clip.none,
             alignment: Alignment.center,
