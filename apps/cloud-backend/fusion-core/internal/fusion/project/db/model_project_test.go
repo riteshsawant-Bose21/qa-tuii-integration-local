@@ -150,6 +150,38 @@ func TestNewProject(t *testing.T) {
 	})
 }
 
+func TestNewProject_ErrorHandling(t *testing.T) {
+	t.Run("returns error for invalid budget amount", func(t *testing.T) {
+		projectModel := &customModel.GetProjectModel{
+			Project: model.Project{
+				ID:           "test-id",
+				BudgetAmount: boilerTypes.NewNullDecimal(&decimal.Big{}), // Invalid budget
+				Currency:     null.NewString("USD", true),
+			},
+		}
+
+		project, err := newProject(projectModel)
+		assert.NoError(t, err)
+		assert.NotNil(t, project)
+		assert.Equal(t, int64(0), project.Budget.Amount) // Zero value expected
+	})
+
+	t.Run("handles missing currency gracefully", func(t *testing.T) {
+		projectModel := &customModel.GetProjectModel{
+			Project: model.Project{
+				ID:           "test-id",
+				BudgetAmount: boilerTypes.NewNullDecimal(decimal.New(1000, 0)),
+				Currency:     null.NewString("", false), // Missing currency
+			},
+		}
+
+		project, err := newProject(projectModel)
+		assert.NoError(t, err)
+		assert.NotNil(t, project)
+		assert.Equal(t, "", project.Budget.Currency) // Empty string expected
+	})
+}
+
 func TestProjectTableAndColumns(t *testing.T) {
 	t.Run("project table name is set correctly", func(t *testing.T) {
 		assert.Equal(t, model.TableNames.Project, ProjectTable)

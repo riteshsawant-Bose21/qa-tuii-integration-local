@@ -42,6 +42,33 @@ func NewS3Client(ctx context.Context) (*S3, error) {
 	}, nil
 }
 
+func NewS3ClientWithProfile(ctx context.Context, profile, region string) (*S3, error) {
+	var cfg aws.Config
+	var err error
+
+	// Load config with profile if specified, otherwise use default
+	if profile != "" && profile != "default" {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	// Override region if specified
+	if region != "" {
+		cfg.Region = region
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	return &S3{
+		client: client,
+	}, nil
+}
+
 // S3BucketHandle provides methods to operate on a bucket in AWS S3.
 type S3BucketHandle struct {
 	bucketName    string

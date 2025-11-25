@@ -26,6 +26,7 @@ func (a *API) registerRoutes() {
 	{
 		products.GET("", productHandler.GetAllProducts)
 		products.GET("/:id", productHandler.GetProductByID)
+		products.GET("/:id/prices", productHandler.GetProductPrices)
 	}
 
 	// Project routes with authentication and access control

@@ -30,7 +30,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
@@ -38,12 +40,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
-	// projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
+	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 
@@ -80,9 +82,15 @@ func main() {
 	}
 
 	// Load API configuration
-	cfg, err := api.NewAPIConfig(configSVC)
+	cfg, err := serverapi.NewAPIConfig(configSVC)
 	if err != nil {
 		logger.Fatal("Failed to load API config", zap.Error(err))
+	}
+
+	// Load general application configuration
+	appConfig, err := config.Load()
+	if err != nil {
+		logger.Fatal("Failed to load application config", zap.Error(err))
 	}
 
 	// Initialize the database connection.
@@ -106,33 +114,12 @@ func main() {
 		logger.Fatal("Failed to initialize ID service")
 	}
 	logger.Info("Initialized ID Service.")
-
 	//Initialize Product DB Service
 	productDBSvc := productdb.NewService(pgs)
 	if productDBSvc == nil {
 		logger.Fatal("Failed to initialize product database service")
 	}
 	logger.Info("Initialized Product DB Service.")
-
-	// Initialize Project DB Service
-	projectDBSvc := projectdb.NewService(pgs)
-	if projectDBSvc == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
-
-	// Initialize User DB Service
-	userDBSvc := userdb.NewService(pgs)
-	if userDBSvc == nil {
-		logger.Fatal("Failed to initialize user service")
-	}
-	logger.Info("Initialized User DB Service.")
-
-	// Initialize Role Management Service
-	roleManagementSvc := userdb.NewRoleManagementService(pgs)
-	if roleManagementSvc == nil {
-		logger.Fatal("Failed to initialize role management service")
-	}
-	logger.Info("Initialized Role Management Service.")
 
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc, idSVC)
@@ -161,6 +148,13 @@ func main() {
 	}
 	logger.Info("Initialized Project Service.")
 
+	// Initialize User DB Service
+	userDBSvc := userdb.NewService(pgs)
+	if userDBSvc == nil {
+		logger.Fatal("Failed to initialize user service")
+	}
+	logger.Info("Initialized User DB Service.")
+
 	// Initialize User Service
 	userSVC := user.NewService(userDBSvc)
 	if userSVC == nil {
@@ -168,16 +162,24 @@ func main() {
 	}
 	logger.Info("Initialized User Service.")
 
-	// Initialize API Server
+	// Initialize Role Management Service
+	roleManagementSvc := userdb.NewRoleManagementService(pgs)
+	if roleManagementSvc == nil {
+		logger.Fatal("Failed to initialize role management service")
+	}
+	logger.Info("Initialized Role Management Service.")
+
+	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
-		Host:        "localhost",
-		Port:        "8080",
-		Auth0Domain: cfg.Auth0.Domain, // Auth0 domain
-	}, userSVC, userDBSvc, roleManagementSvc)
+		Host: appConfig.Server.APIHost,
+		Port: appConfig.Server.APIPort,
+	}, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
-	logger.Info("Initialized the API.")
+	logger.Info("Initialized the API.",
+		zap.String("host", appConfig.Server.APIHost),
+		zap.String("port", appConfig.Server.APIPort))
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(ctx)
@@ -200,7 +202,7 @@ func main() {
 		logger.Info("Received shutdown signal, initiating graceful shutdown...")
 		cancel()
 
-		// Wait for server to complete shutdown
+		// Give server time to shutdown gracefully
 		shutdownTimeout := time.NewTimer(30 * time.Second)
 		defer shutdownTimeout.Stop()
 
@@ -225,4 +227,5 @@ func main() {
 	}
 
 	logger.Info("Application stopped gracefully")
+
 }

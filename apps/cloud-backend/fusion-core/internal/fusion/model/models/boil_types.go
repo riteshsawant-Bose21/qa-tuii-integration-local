@@ -65,3 +65,56 @@ func AllAccountsTypeEnum() []string {
 		AccountsTypeEnumRetail,
 	}
 }
+
+// Enum values for ProductTypeEnum
+const (
+	ProductTypeEnumSpeaker    string = "speaker"
+	ProductTypeEnumAmplifier  string = "amplifier"
+	ProductTypeEnumDSP        string = "dsp"
+	ProductTypeEnumController string = "controller"
+	ProductTypeEnumIoEndpoint string = "io_endpoint"
+	ProductTypeEnumAccessory  string = "accessory"
+)
+
+func AllProductTypeEnum() []string {
+	return []string{
+		ProductTypeEnumSpeaker,
+		ProductTypeEnumAmplifier,
+		ProductTypeEnumDSP,
+		ProductTypeEnumController,
+		ProductTypeEnumIoEndpoint,
+		ProductTypeEnumAccessory,
+	}
+}
+
+// Enum values for SyncOperationEnum
+const (
+	SyncOperationEnumFullSync      string = "full_sync"
+	SyncOperationEnumManualSync    string = "manual_sync"
+	SyncOperationEnumScheduledSync string = "scheduled_sync"
+)
+
+func AllSyncOperationEnum() []string {
+	return []string{
+		SyncOperationEnumFullSync,
+		SyncOperationEnumManualSync,
+		SyncOperationEnumScheduledSync,
+	}
+}
+
+// Enum values for SyncStatusEnum
+const (
+	SyncStatusEnumPending    string = "pending"
+	SyncStatusEnumInProgress string = "in_progress"
+	SyncStatusEnumCompleted  string = "completed"
+	SyncStatusEnumFailed     string = "failed"
+)
+
+func AllSyncStatusEnum() []string {
+	return []string{
+		SyncStatusEnumPending,
+		SyncStatusEnumInProgress,
+		SyncStatusEnumCompleted,
+		SyncStatusEnumFailed,
+	}
+}

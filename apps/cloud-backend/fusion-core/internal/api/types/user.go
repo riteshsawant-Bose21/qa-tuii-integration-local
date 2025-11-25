@@ -68,10 +68,10 @@ type FeaturePermission struct {
 
 // UserAuthorizationResponse represents the complete user authorization information
 type UserAuthorizationResponse struct {
-	User        UserInfo          `json:"user" example:"{\"id\":\"usr_123456789\",\"email\":\"john.doe@company.com\"}"`
-	Account     AccountInfo       `json:"account" example:"{\"id\":\"acc_987654321\",\"name\":\"Acme Corporation\",\"description\":\"Leading technology company\",\"type\":\"Enterprise\"}"`
-	Role        RoleInfo          `json:"role" example:"{\"id\":1,\"role_name\":\"Admin\"}"`
-	Permissions map[string]string `json:"permissions" example:"{\"launcher.project.create\":\"full\",\"launcher.project.read\":\"full\",\"launcher.user.manage\":\"admin\"}"`
+	User        UserInfo          `json:"user"`
+	Account     AccountInfo       `json:"account"`
+	Role        RoleInfo          `json:"role"`
+	Permissions map[string]string `json:"permissions"`
 }
 
 // UserInfo represents simplified user information for the response

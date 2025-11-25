@@ -422,7 +422,7 @@ const docTemplate = `{
         },
         "/products": {
             "get": {
-                "description": "Get all available products including speakers, amplifiers and digital signal processors",
+                "description": "Get all available products including speakers, amplifiers, DSPs, controllers, and endpoints",
                 "consumes": [
                     "application/json"
                 ],
@@ -479,6 +479,71 @@ const docTemplate = `{
                         "description": "Successful response with product details",
                         "schema": {
                             "$ref": "#/definitions/types.ProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Product ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}/prices": {
+            "get": {
+                "description": "Get prices for a specific product by its unique identifier, optionally filtered by currency",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get product prices by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Currency code (e.g., USD, EUR) to filter prices",
+                        "name": "currency",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with product prices",
+                        "schema": {
+                            "$ref": "#/definitions/types.PriceResponse"
                         }
                     },
                     "400": {
@@ -1051,6 +1116,15 @@ const docTemplate = `{
                             }
                         }
                     },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
@@ -1090,6 +1164,15 @@ const docTemplate = `{
                     },
                     "401": {
                         "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -1296,40 +1379,58 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "types.Amplifier": {
+        "types.AccessLevel": {
             "type": "object",
             "properties": {
-                "category": {
-                    "type": "string"
-                },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
-                "meta_info": {
-                    "$ref": "#/definitions/types.Amplifier_meta_response"
+                "key": {
+                    "type": "string",
+                    "example": "full"
+                },
+                "label": {
+                    "type": "string",
+                    "example": "Full Access"
                 }
             }
         },
-        "types.Amplifier_meta_response": {
+        "types.AccountInfo": {
             "type": "object",
             "properties": {
-                "channels": {
-                    "type": "integer"
+                "description": {
+                    "type": "string",
+                    "example": "Leading technology company"
                 },
-                "image_url": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                "id": {
+                    "type": "string",
+                    "example": "acc_987654321"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Acme Corporation"
                 },
-                "power_output": {
-                    "$ref": "#/definitions/types.powerOutput"
+                "type": {
+                    "type": "string",
+                    "example": "Enterprise"
+                }
+            }
+        },
+        "types.AssignRoleRequest": {
+            "type": "object",
+            "required": [
+                "role_id",
+                "user_id"
+            ],
+            "properties": {
+                "role_id": {
+                    "type": "integer",
+                    "example": 2
                 },
-                "total_capacity": {
-                    "type": "number"
+                "user_id": {
+                    "type": "integer",
+                    "example": 123
                 }
             }
         },
@@ -1358,191 +1459,51 @@ const docTemplate = `{
                 }
             }
         },
-        "types.DSP_meta": {
+        "types.CreateRoleRequest": {
             "type": "object",
+            "required": [
+                "description",
+                "name"
+            ],
             "properties": {
-                "acoustic_echo_cancellation": {
-                    "type": "object",
-                    "properties": {
-                        "channels": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "configuration_software": {
-                    "type": "string"
-                },
-                "dimensions": {
-                    "type": "object",
-                    "properties": {
-                        "rack_space": {
-                            "type": "string"
-                        },
-                        "size": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "depth": {
-                                        "type": "integer"
-                                    },
-                                    "height": {
-                                        "type": "integer"
-                                    },
-                                    "unit": {
-                                        "type": "string"
-                                    },
-                                    "width": {
-                                        "type": "integer"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "dsp_architecture": {
-                    "type": "string"
-                },
-                "firmware": {
-                    "type": "object",
-                    "properties": {
-                        "current_published_version": {
-                            "type": "string"
-                        },
-                        "current_running_version": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "gpio_logic_ports": {
-                    "type": "object",
-                    "properties": {
-                        "inputs": {
-                            "type": "integer"
-                        },
-                        "outputs": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "images": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "max_number_of_analog_control": {
-                    "type": "integer"
-                },
-                "max_number_of_digital_control": {
-                    "type": "integer"
-                },
-                "model": {
-                    "type": "string"
+                "description": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 10,
+                    "example": "Role for managing projects and team members"
                 },
                 "name": {
-                    "type": "string"
-                },
-                "net_weight": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "unit": {
-                                "type": "string"
-                            },
-                            "value": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "number_of_inputs_and_outputs": {
-                    "type": "object",
-                    "properties": {
-                        "aes67": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "dante": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "fusion_connect": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    }
-                },
-                "product_codes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "safe_operating_temperature": {
-                    "type": "object",
-                    "properties": {
-                        "max": {
-                            "type": "integer"
-                        },
-                        "min": {
-                            "type": "integer"
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "skus": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "supported_bose_professional_dante_endpoints": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
+                    "type": "string",
+                    "maxLength": 50,
+                    "minLength": 3,
+                    "example": "Project Manager"
                 }
             }
         },
-        "types.DigitalSignalProcessor": {
+        "types.CreateUserRequest": {
             "type": "object",
+            "required": [
+                "account_id",
+                "account_type_role_id",
+                "email",
+                "full_name"
+            ],
             "properties": {
-                "category": {
-                    "type": "string"
+                "account_id": {
+                    "type": "string",
+                    "example": "acc_987654321"
                 },
-                "id": {
-                    "type": "integer"
+                "account_type_role_id": {
+                    "type": "integer",
+                    "example": 2
                 },
-                "meta_info": {
-                    "$ref": "#/definitions/types.DSP_meta"
+                "email": {
+                    "type": "string",
+                    "example": "jane.smith@company.com"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "Jane Smith"
                 }
             }
         },
@@ -1558,6 +1519,48 @@ const docTemplate = `{
                 "EnvironmentTypeOutdoor",
                 "EnvironmentTypeHybrid"
             ]
+        },
+        "types.Feature": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string",
+                    "example": "Permission to create new projects"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "launcher.project.create"
+                }
+            }
+        },
+        "types.FeaturePermissionDetail": {
+            "type": "object",
+            "properties": {
+                "access_label": {
+                    "type": "string",
+                    "example": "Full Access"
+                },
+                "access_level": {
+                    "type": "string",
+                    "example": "full"
+                },
+                "access_level_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "feature_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "feature_name": {
+                    "type": "string",
+                    "example": "launcher.project.create"
+                }
+            }
         },
         "types.ForbiddenError": {
             "type": "object",
@@ -1609,25 +1612,131 @@ const docTemplate = `{
                 }
             }
         },
+        "types.OrganizationUsersResponse": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/types.AccountInfo"
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.UserWithRole"
+                    }
+                }
+            }
+        },
+        "types.PermissionUpdateRequest": {
+            "type": "object",
+            "required": [
+                "access_level_id",
+                "action",
+                "feature_id"
+            ],
+            "properties": {
+                "access_level_id": {
+                    "type": "integer",
+                    "example": 2
+                },
+                "action": {
+                    "type": "string",
+                    "enum": [
+                        "add",
+                        "update",
+                        "remove"
+                    ],
+                    "example": "update"
+                },
+                "feature_id": {
+                    "type": "integer",
+                    "example": 1
+                }
+            }
+        },
+        "types.PriceDetail": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.PriceResponse": {
+            "type": "object",
+            "properties": {
+                "prices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PriceDetail"
+                    }
+                },
+                "product_id": {
+                    "type": "integer"
+                }
+            }
+        },
+        "types.ProductItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {},
+                "description": {
+                    "type": "string"
+                },
+                "model_family": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "productid": {
+                    "type": "integer"
+                },
+                "specifications": {}
+            }
+        },
         "types.ProductResponse": {
             "type": "object",
             "properties": {
+                "accessory": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
                 "amplifier": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.Amplifier"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
-                "digital_signal_processors": {
+                "controller": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.DigitalSignalProcessor"
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "dsp": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "io_endpoint": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "speaker": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.Speaker"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 }
             }
@@ -1907,316 +2016,223 @@ const docTemplate = `{
                 }
             }
         },
-        "types.Speaker": {
+        "types.RoleInfo": {
             "type": "object",
             "properties": {
-                "category": {
-                    "type": "string"
-                },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
-                "meta_info": {
-                    "$ref": "#/definitions/types.Speaker_meta_response"
+                "role_name": {
+                    "type": "string",
+                    "example": "Admin"
                 }
             }
         },
-        "types.Speaker_meta_response": {
+        "types.RoleManagementResponse": {
             "type": "object",
             "properties": {
-                "available_taps": {
-                    "type": "object",
-                    "properties": {
-                        "100v": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        },
-                        "70v": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        }
-                    }
-                },
-                "environment": {
-                    "type": "string"
-                },
-                "image_url": {
+                "access_levels": {
                     "type": "array",
                     "items": {
+                        "$ref": "#/definitions/types.AccessLevel"
+                    }
+                },
+                "features": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Feature"
+                    }
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.RoleWithPermissions"
+                    }
+                },
+                "users": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.UserBasicInfo"
+                    }
+                }
+            }
+        },
+        "types.RoleWithPermissions": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Administrator with full system access"
+                },
+                "id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Admin"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.FeaturePermissionDetail"
+                    }
+                },
+                "user_count": {
+                    "type": "integer",
+                    "example": 5
+                }
+            }
+        },
+        "types.UpdateUserRequest": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string",
+                    "example": "acc_111222333"
+                },
+                "account_type_role_id": {
+                    "type": "integer",
+                    "example": 3
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "John Smith"
+                }
+            }
+        },
+        "types.User": {
+            "type": "object",
+            "properties": {
+                "account_id": {
+                    "type": "string",
+                    "example": "acc_987654321"
+                },
+                "account_type_role_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
+                },
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@company.com"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-06-20T14:45:00Z"
+                }
+            }
+        },
+        "types.UserAuthorizationResponse": {
+            "type": "object",
+            "properties": {
+                "account": {
+                    "$ref": "#/definitions/types.AccountInfo"
+                },
+                "permissions": {
+                    "type": "object",
+                    "additionalProperties": {
                         "type": "string"
                     }
                 },
-                "is_subwoofer": {
-                    "type": "boolean"
+                "role": {
+                    "$ref": "#/definitions/types.RoleInfo"
                 },
-                "max_spl": {
-                    "type": "number"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "mount_type": {
-                    "type": "string"
-                },
-                "nominal_impedance": {
-                    "$ref": "#/definitions/types.nominal_impedence"
-                },
-                "power_handling": {
-                    "type": "object",
-                    "properties": {
-                        "long_term_continuous": {
-                            "type": "string"
-                        },
-                        "peak": {
-                            "type": "string"
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "sensitivity": {
-                    "type": "object",
-                    "properties": {
-                        "at": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "key": {
-                                        "type": "string"
-                                    },
-                                    "value": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
+                "user": {
+                    "$ref": "#/definitions/types.UserInfo"
                 }
             }
         },
-        "types.nominal_impedence": {
+        "types.UserBasicInfo": {
             "type": "object",
             "properties": {
-                "unit": {
-                    "type": "string"
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@company.com"
                 },
-                "value": {
-                    "type": "string"
+                "full_name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                },
+                "role_id": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "role_name": {
+                    "type": "string",
+                    "example": "Admin"
                 }
             }
         },
-        "types.powerOutput": {
+        "types.UserInfo": {
             "type": "object",
             "properties": {
-                "asymmetrical": {
-                    "type": "object",
-                    "properties": {
-                        "peak_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "peak_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "rated_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "rated_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@company.com"
                 },
-                "symmetrical": {
-                    "type": "object",
-                    "properties": {
-                        "peak_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "peak_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "rated_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "impedance": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "unit": {
-                                                        "type": "string"
-                                                    },
-                                                    "value": {
-                                                        "type": "integer"
-                                                    }
-                                                }
-                                            },
-                                            "power": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "unit": {
-                                                        "type": "string"
-                                                    },
-                                                    "value": {
-                                                        "type": "integer"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "rated_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
+                "id": {
+                    "type": "string",
+                    "example": "usr_123456789"
                 }
             }
+        },
+        "types.UserWithRole": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "example": "john.doe@company.com"
+                },
+                "full_name": {
+                    "type": "string",
+                    "example": "John Doe"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "usr_123456789"
+                },
+                "joined_at": {
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
+                },
+                "role": {
+                    "$ref": "#/definitions/types.RoleInfo"
+                },
+                "status": {
+                    "description": "active, pending, suspended",
+                    "type": "string",
+                    "example": "active"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "description": "Type \"Bearer\" followed by a space and JWT token.",
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

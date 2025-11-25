@@ -3,46 +3,41 @@ definitions:
   types.AccessLevel:
     properties:
       id:
+        example: 1
         type: integer
       key:
+        example: full
         type: string
       label:
+        example: Full Access
         type: string
     type: object
   types.AccountInfo:
     properties:
       description:
+        example: Leading technology company
         type: string
       id:
+        example: acc_987654321
         type: string
       name:
+        example: Acme Corporation
         type: string
       type:
+        example: Enterprise
         type: string
     type: object
-  types.Amplifier:
+  types.AssignRoleRequest:
     properties:
-      category:
-        type: string
-      id:
+      role_id:
+        example: 2
         type: integer
-      meta_info:
-        $ref: '#/definitions/types.Amplifier_meta_response'
-    type: object
-  types.Amplifier_meta_response:
-    properties:
-      channels:
+      user_id:
+        example: 123
         type: integer
-      image_url:
-        items:
-          type: string
-        type: array
-      name:
-        type: string
-      power_output:
-        $ref: '#/definitions/types.powerOutput'
-      total_capacity:
-        type: number
+    required:
+    - role_id
+    - user_id
     type: object
   types.BadRequestError:
     properties:
@@ -61,126 +56,41 @@ definitions:
     required:
     - currency
     type: object
-  types.DSP_meta:
+  types.CreateRoleRequest:
     properties:
-      acoustic_echo_cancellation:
-        properties:
-          channels:
-            type: integer
-        type: object
-      configuration_software:
-        type: string
-      dimensions:
-        properties:
-          rack_space:
-            type: string
-          size:
-            items:
-              properties:
-                depth:
-                  type: integer
-                height:
-                  type: integer
-                unit:
-                  type: string
-                width:
-                  type: integer
-              type: object
-            type: array
-        type: object
-      dsp_architecture:
-        type: string
-      firmware:
-        properties:
-          current_published_version:
-            type: string
-          current_running_version:
-            type: string
-        type: object
-      gpio_logic_ports:
-        properties:
-          inputs:
-            type: integer
-          outputs:
-            type: integer
-        type: object
-      id:
-        type: integer
-      images:
-        items:
-          type: string
-        type: array
-      max_number_of_analog_control:
-        type: integer
-      max_number_of_digital_control:
-        type: integer
-      model:
+      description:
+        example: Role for managing projects and team members
+        maxLength: 255
+        minLength: 10
         type: string
       name:
+        example: Project Manager
+        maxLength: 50
+        minLength: 3
         type: string
-      net_weight:
-        items:
-          properties:
-            unit:
-              type: string
-            value:
-              type: string
-          type: object
-        type: array
-      number_of_inputs_and_outputs:
-        properties:
-          aes67:
-            properties:
-              max_inputs:
-                type: integer
-              max_outputs:
-                type: integer
-            type: object
-          dante:
-            properties:
-              max_inputs:
-                type: integer
-              max_outputs:
-                type: integer
-            type: object
-          fusion_connect:
-            properties:
-              max_inputs:
-                type: integer
-              max_outputs:
-                type: integer
-            type: object
-        type: object
-      product_codes:
-        items:
-          type: string
-        type: array
-      safe_operating_temperature:
-        properties:
-          max:
-            type: integer
-          min:
-            type: integer
-          unit:
-            type: string
-        type: object
-      skus:
-        items:
-          type: integer
-        type: array
-      supported_bose_professional_dante_endpoints:
-        items:
-          type: string
-        type: array
+    required:
+    - description
+    - name
     type: object
-  types.DigitalSignalProcessor:
+  types.CreateUserRequest:
     properties:
-      category:
+      account_id:
+        example: acc_987654321
         type: string
-      id:
+      account_type_role_id:
+        example: 2
         type: integer
-      meta_info:
-        $ref: '#/definitions/types.DSP_meta'
+      email:
+        example: jane.smith@company.com
+        type: string
+      full_name:
+        example: Jane Smith
+        type: string
+    required:
+    - account_id
+    - account_type_role_id
+    - email
+    - full_name
     type: object
   types.EnvironmentType:
     enum:
@@ -192,6 +102,36 @@ definitions:
     - EnvironmentTypeIndoor
     - EnvironmentTypeOutdoor
     - EnvironmentTypeHybrid
+  types.Feature:
+    properties:
+      description:
+        example: Permission to create new projects
+        type: string
+      id:
+        example: 1
+        type: integer
+      name:
+        example: launcher.project.create
+        type: string
+    type: object
+  types.FeaturePermissionDetail:
+    properties:
+      access_label:
+        example: Full Access
+        type: string
+      access_level:
+        example: full
+        type: string
+      access_level_id:
+        example: 1
+        type: integer
+      feature_id:
+        example: 1
+        type: integer
+      feature_name:
+        example: launcher.project.create
+        type: string
+    type: object
   types.ForbiddenError:
     properties:
       message:
@@ -226,19 +166,91 @@ definitions:
         example: Not Found
         type: string
     type: object
+  types.OrganizationUsersResponse:
+    properties:
+      account:
+        $ref: '#/definitions/types.AccountInfo'
+      users:
+        items:
+          $ref: '#/definitions/types.UserWithRole'
+        type: array
+    type: object
+  types.PermissionUpdateRequest:
+    properties:
+      access_level_id:
+        example: 2
+        type: integer
+      action:
+        enum:
+        - add
+        - update
+        - remove
+        example: update
+        type: string
+      feature_id:
+        example: 1
+        type: integer
+    required:
+    - access_level_id
+    - action
+    - feature_id
+    type: object
+  types.PriceDetail:
+    properties:
+      currency:
+        type: string
+      price:
+        type: number
+      variant:
+        type: string
+    type: object
+  types.PriceResponse:
+    properties:
+      prices:
+        items:
+          $ref: '#/definitions/types.PriceDetail'
+        type: array
+      product_id:
+        type: integer
+    type: object
+  types.ProductItemResponse:
+    properties:
+      assets: {}
+      description:
+        type: string
+      model_family:
+        type: string
+      model_name:
+        type: string
+      productid:
+        type: integer
+      specifications: {}
+    type: object
   types.ProductResponse:
     properties:
+      accessory:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
       amplifier:
         items:
-          $ref: '#/definitions/types.Amplifier'
+          $ref: '#/definitions/types.ProductItemResponse'
         type: array
-      digital_signal_processors:
+      controller:
         items:
-          $ref: '#/definitions/types.DigitalSignalProcessor'
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      dsp:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      io_endpoint:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
         type: array
       speaker:
         items:
-          $ref: '#/definitions/types.Speaker'
+          $ref: '#/definitions/types.ProductItemResponse'
         type: array
     type: object
   types.Project:
@@ -433,203 +445,152 @@ definitions:
         example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
-  types.Speaker:
+  types.RoleInfo:
     properties:
-      category:
+      id:
+        example: 1
+        type: integer
+      role_name:
+        example: Admin
+        type: string
+    type: object
+  types.RoleManagementResponse:
+    properties:
+      access_levels:
+        items:
+          $ref: '#/definitions/types.AccessLevel'
+        type: array
+      features:
+        items:
+          $ref: '#/definitions/types.Feature'
+        type: array
+      roles:
+        items:
+          $ref: '#/definitions/types.RoleWithPermissions'
+        type: array
+      users:
+        items:
+          $ref: '#/definitions/types.UserBasicInfo'
+        type: array
+    type: object
+  types.RoleWithPermissions:
+    properties:
+      created_at:
+        example: "2023-01-15T10:30:00Z"
+        type: string
+      description:
+        example: Administrator with full system access
         type: string
       id:
+        example: 1
         type: integer
-      meta_info:
-        $ref: '#/definitions/types.Speaker_meta_response'
-    type: object
-  types.Speaker_meta_response:
-    properties:
-      available_taps:
-        properties:
-          70v:
-            items:
-              type: number
-            type: array
-          100v:
-            items:
-              type: number
-            type: array
-        type: object
-      environment:
+      name:
+        example: Admin
         type: string
-      image_url:
+      permissions:
         items:
-          type: string
+          $ref: '#/definitions/types.FeaturePermissionDetail'
         type: array
-      is_subwoofer:
-        type: boolean
-      max_spl:
-        type: number
-      model:
-        type: string
-      mount_type:
-        type: string
-      nominal_impedance:
-        $ref: '#/definitions/types.nominal_impedence'
-      power_handling:
-        properties:
-          long_term_continuous:
-            type: string
-          peak:
-            type: string
-          unit:
-            type: string
-        type: object
-      sensitivity:
-        properties:
-          at:
-            items:
-              properties:
-                key:
-                  type: string
-                value:
-                  type: string
-              type: object
-            type: array
-          unit:
-            type: string
-        type: object
+      user_count:
+        example: 5
+        type: integer
     type: object
-  types.nominal_impedence:
+  types.UpdateUserRequest:
     properties:
-      unit:
+      account_id:
+        example: acc_111222333
         type: string
-      value:
+      account_type_role_id:
+        example: 3
+        type: integer
+      full_name:
+        example: John Smith
         type: string
     type: object
-  types.powerOutput:
+  types.User:
     properties:
-      asymmetrical:
-        properties:
-          peak_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          peak_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          rated_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          rated_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
+      account_id:
+        example: acc_987654321
+        type: string
+      account_type_role_id:
+        example: 1
+        type: integer
+      created_at:
+        example: "2023-01-15T10:30:00Z"
+        type: string
+      email:
+        example: john.doe@company.com
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      id:
+        example: usr_123456789
+        type: string
+      updated_at:
+        example: "2023-06-20T14:45:00Z"
+        type: string
+    type: object
+  types.UserAuthorizationResponse:
+    properties:
+      account:
+        $ref: '#/definitions/types.AccountInfo'
+      permissions:
+        additionalProperties:
+          type: string
         type: object
-      symmetrical:
-        properties:
-          peak_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          peak_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          rated_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    impedance:
-                      properties:
-                        unit:
-                          type: string
-                        value:
-                          type: integer
-                      type: object
-                    power:
-                      properties:
-                        unit:
-                          type: string
-                        value:
-                          type: integer
-                      type: object
-                  type: object
-                type: array
-            type: object
-          rated_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-        type: object
+      role:
+        $ref: '#/definitions/types.RoleInfo'
+      user:
+        $ref: '#/definitions/types.UserInfo'
+    type: object
+  types.UserBasicInfo:
+    properties:
+      email:
+        example: john.doe@company.com
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      id:
+        example: usr_123456789
+        type: string
+      role_id:
+        example: 1
+        type: integer
+      role_name:
+        example: Admin
+        type: string
+    type: object
+  types.UserInfo:
+    properties:
+      email:
+        example: john.doe@company.com
+        type: string
+      id:
+        example: usr_123456789
+        type: string
+    type: object
+  types.UserWithRole:
+    properties:
+      email:
+        example: john.doe@company.com
+        type: string
+      full_name:
+        example: John Doe
+        type: string
+      id:
+        example: usr_123456789
+        type: string
+      joined_at:
+        example: "2023-01-15T10:30:00Z"
+        type: string
+      role:
+        $ref: '#/definitions/types.RoleInfo'
+      status:
+        description: active, pending, suspended
+        example: active
+        type: string
     type: object
 host: localhost:8020
 info:
@@ -907,8 +868,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all available products including speakers, amplifiers and digital
-        signal processors
+      description: Get all available products including speakers, amplifiers, DSPs,
+        controllers, and endpoints
       produces:
       - application/json
       responses:
@@ -962,6 +923,50 @@ paths:
               type: string
             type: object
       summary: Get product by ID
+      tags:
+      - products
+  /products/{id}/prices:
+    get:
+      consumes:
+      - application/json
+      description: Get prices for a specific product by its unique identifier, optionally
+        filtered by currency
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Currency code (e.g., USD, EUR) to filter prices
+        in: query
+        name: currency
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with product prices
+          schema:
+            $ref: '#/definitions/types.PriceResponse'
+        "400":
+          description: Bad request - Product ID is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get product prices by ID
       tags:
       - products
   /projects:
@@ -1324,6 +1329,12 @@ paths:
             additionalProperties:
               type: string
             type: object
+        "404":
+          description: User not found in the system
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal server error
           schema:
@@ -1349,6 +1360,12 @@ paths:
             $ref: '#/definitions/types.User'
         "401":
           description: Unauthorized - User email not found in token
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: User not found in the system
           schema:
             additionalProperties:
               type: string

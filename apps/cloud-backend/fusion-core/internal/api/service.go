@@ -16,10 +16,11 @@ import (
 
 // API is a service for the main API.
 type API struct {
-	engine                *gin.Engine
-	server                *http.Server
-	product               fusion.Product
-	project               fusion.Project
+	engine  *gin.Engine
+	server  *http.Server
+	product fusion.Product
+	project fusion.Project
+	sync    fusion.Sync
 	user                  fusion.User
 	userDBService         *userdb.Service
 	roleManagementService *userdb.RoleManagementService
