@@ -18,142 +18,265 @@ import (
 	"github.com/aarondl/sqlboiler/v4/queries"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 	"github.com/aarondl/sqlboiler/v4/queries/qmhelper"
-	"github.com/aarondl/sqlboiler/v4/types"
 	"github.com/aarondl/strmangle"
 	"github.com/friendsofgo/errors"
 )
 
 // Product is an object representing the database table.
 type Product struct {
-	ID          int           `boil:"id" json:"id" toml:"id" yaml:"id"`
-	Category    string        `boil:"category" json:"category" toml:"category" yaml:"category"`
-	Description null.String   `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
-	Price       types.Decimal `boil:"price" json:"price" toml:"price" yaml:"price"`
-	MetaInfo    types.JSON    `boil:"meta_info" json:"meta_info" toml:"meta_info" yaml:"meta_info"`
-	CreatedAt   time.Time     `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
-	UpdatedAt   time.Time     `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
+	ID               int         `boil:"id" json:"id" toml:"id" yaml:"id"`
+	ProductID        int         `boil:"product_id" json:"product_id" toml:"product_id" yaml:"product_id"`
+	ProductType      string      `boil:"product_type" json:"product_type" toml:"product_type" yaml:"product_type"`
+	ModelName        string      `boil:"model_name" json:"model_name" toml:"model_name" yaml:"model_name"`
+	ModelFamily      null.String `boil:"model_family" json:"model_family,omitempty" toml:"model_family" yaml:"model_family,omitempty"`
+	Description      null.String `boil:"description" json:"description,omitempty" toml:"description" yaml:"description,omitempty"`
+	ShortDescription null.String `boil:"short_description" json:"short_description,omitempty" toml:"short_description" yaml:"short_description,omitempty"`
+	Images           null.JSON   `boil:"images" json:"images,omitempty" toml:"images" yaml:"images,omitempty"`
+	Specifications   null.JSON   `boil:"specifications" json:"specifications,omitempty" toml:"specifications" yaml:"specifications,omitempty"`
+	CreatedAt        null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
+	UpdatedAt        null.Time   `boil:"updated_at" json:"updated_at,omitempty" toml:"updated_at" yaml:"updated_at,omitempty"`
 
 	R *productR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L productL  `boil:"-" json:"-" toml:"-" yaml:"-"`
 }
 
 var ProductColumns = struct {
-	ID          string
-	Category    string
-	Description string
-	Price       string
-	MetaInfo    string
-	CreatedAt   string
-	UpdatedAt   string
+	ID               string
+	ProductID        string
+	ProductType      string
+	ModelName        string
+	ModelFamily      string
+	Description      string
+	ShortDescription string
+	Images           string
+	Specifications   string
+	CreatedAt        string
+	UpdatedAt        string
 }{
-	ID:          "id",
-	Category:    "category",
-	Description: "description",
-	Price:       "price",
-	MetaInfo:    "meta_info",
-	CreatedAt:   "created_at",
-	UpdatedAt:   "updated_at",
+	ID:               "id",
+	ProductID:        "product_id",
+	ProductType:      "product_type",
+	ModelName:        "model_name",
+	ModelFamily:      "model_family",
+	Description:      "description",
+	ShortDescription: "short_description",
+	Images:           "images",
+	Specifications:   "specifications",
+	CreatedAt:        "created_at",
+	UpdatedAt:        "updated_at",
 }
 
 var ProductTableColumns = struct {
-	ID          string
-	Category    string
-	Description string
-	Price       string
-	MetaInfo    string
-	CreatedAt   string
-	UpdatedAt   string
+	ID               string
+	ProductID        string
+	ProductType      string
+	ModelName        string
+	ModelFamily      string
+	Description      string
+	ShortDescription string
+	Images           string
+	Specifications   string
+	CreatedAt        string
+	UpdatedAt        string
 }{
-	ID:          "products.id",
-	Category:    "products.category",
-	Description: "products.description",
-	Price:       "products.price",
-	MetaInfo:    "products.meta_info",
-	CreatedAt:   "products.created_at",
-	UpdatedAt:   "products.updated_at",
+	ID:               "product.id",
+	ProductID:        "product.product_id",
+	ProductType:      "product.product_type",
+	ModelName:        "product.model_name",
+	ModelFamily:      "product.model_family",
+	Description:      "product.description",
+	ShortDescription: "product.short_description",
+	Images:           "product.images",
+	Specifications:   "product.specifications",
+	CreatedAt:        "product.created_at",
+	UpdatedAt:        "product.updated_at",
 }
 
 // Generated where
 
 type whereHelpertypes_Decimal struct{ field string }
+type whereHelperint struct{ field string }
 
-func (w whereHelpertypes_Decimal) EQ(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
+func (w whereHelperint) EQ(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperint) NEQ(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperint) LT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperint) LTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperint) GT(x int) qm.QueryMod  { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperint) GTE(x int) qm.QueryMod { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperint) IN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
 }
-func (w whereHelpertypes_Decimal) NEQ(x types.Decimal) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+func (w whereHelperint) NIN(slice []int) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
 }
-func (w whereHelpertypes_Decimal) LT(x types.Decimal) qm.QueryMod {
+
+type whereHelperstring struct{ field string }
+
+func (w whereHelperstring) EQ(x string) qm.QueryMod      { return qmhelper.Where(w.field, qmhelper.EQ, x) }
+func (w whereHelperstring) NEQ(x string) qm.QueryMod     { return qmhelper.Where(w.field, qmhelper.NEQ, x) }
+func (w whereHelperstring) LT(x string) qm.QueryMod      { return qmhelper.Where(w.field, qmhelper.LT, x) }
+func (w whereHelperstring) LTE(x string) qm.QueryMod     { return qmhelper.Where(w.field, qmhelper.LTE, x) }
+func (w whereHelperstring) GT(x string) qm.QueryMod      { return qmhelper.Where(w.field, qmhelper.GT, x) }
+func (w whereHelperstring) GTE(x string) qm.QueryMod     { return qmhelper.Where(w.field, qmhelper.GTE, x) }
+func (w whereHelperstring) LIKE(x string) qm.QueryMod    { return qm.Where(w.field+" LIKE ?", x) }
+func (w whereHelperstring) NLIKE(x string) qm.QueryMod   { return qm.Where(w.field+" NOT LIKE ?", x) }
+func (w whereHelperstring) ILIKE(x string) qm.QueryMod   { return qm.Where(w.field+" ILIKE ?", x) }
+func (w whereHelperstring) NILIKE(x string) qm.QueryMod  { return qm.Where(w.field+" NOT ILIKE ?", x) }
+func (w whereHelperstring) SIMILAR(x string) qm.QueryMod { return qm.Where(w.field+" SIMILAR TO ?", x) }
+func (w whereHelperstring) NSIMILAR(x string) qm.QueryMod {
+	return qm.Where(w.field+" NOT SIMILAR TO ?", x)
+}
+func (w whereHelperstring) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelperstring) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+type whereHelpernull_String struct{ field string }
+
+func (w whereHelpernull_String) EQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_String) NEQ(x null.String) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_String) LT(x null.String) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelpertypes_Decimal) LTE(x types.Decimal) qm.QueryMod {
+func (w whereHelpernull_String) LTE(x null.String) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpertypes_Decimal) GT(x types.Decimal) qm.QueryMod {
+func (w whereHelpernull_String) GT(x null.String) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
-func (w whereHelpertypes_Decimal) GTE(x types.Decimal) qm.QueryMod {
+func (w whereHelpernull_String) GTE(x null.String) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GTE, x)
+}
+func (w whereHelpernull_String) LIKE(x null.String) qm.QueryMod {
+	return qm.Where(w.field+" LIKE ?", x)
+}
+func (w whereHelpernull_String) NLIKE(x null.String) qm.QueryMod {
+	return qm.Where(w.field+" NOT LIKE ?", x)
+}
+func (w whereHelpernull_String) ILIKE(x null.String) qm.QueryMod {
+	return qm.Where(w.field+" ILIKE ?", x)
+}
+func (w whereHelpernull_String) NILIKE(x null.String) qm.QueryMod {
+	return qm.Where(w.field+" NOT ILIKE ?", x)
+}
+func (w whereHelpernull_String) SIMILAR(x null.String) qm.QueryMod {
+	return qm.Where(w.field+" SIMILAR TO ?", x)
+}
+func (w whereHelpernull_String) NSIMILAR(x null.String) qm.QueryMod {
+	return qm.Where(w.field+" NOT SIMILAR TO ?", x)
+}
+func (w whereHelpernull_String) IN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereIn(fmt.Sprintf("%s IN ?", w.field), values...)
+}
+func (w whereHelpernull_String) NIN(slice []string) qm.QueryMod {
+	values := make([]interface{}, 0, len(slice))
+	for _, value := range slice {
+		values = append(values, value)
+	}
+	return qm.WhereNotIn(fmt.Sprintf("%s NOT IN ?", w.field), values...)
+}
+
+func (w whereHelpernull_String) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_String) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
+
+type whereHelpernull_JSON struct{ field string }
+
+func (w whereHelpernull_JSON) EQ(x null.JSON) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
+}
+func (w whereHelpernull_JSON) NEQ(x null.JSON) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
+}
+func (w whereHelpernull_JSON) LT(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LT, x)
+}
+func (w whereHelpernull_JSON) LTE(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.LTE, x)
+}
+func (w whereHelpernull_JSON) GT(x null.JSON) qm.QueryMod {
+	return qmhelper.Where(w.field, qmhelper.GT, x)
+}
+func (w whereHelpernull_JSON) GTE(x null.JSON) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpertypes_JSON struct{ field string }
+func (w whereHelpernull_JSON) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_JSON) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
-func (w whereHelpertypes_JSON) EQ(x types.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
+type whereHelpernull_Time struct{ field string }
+
+func (w whereHelpernull_Time) EQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, false, x)
 }
-func (w whereHelpertypes_JSON) NEQ(x types.JSON) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
+func (w whereHelpernull_Time) NEQ(x null.Time) qm.QueryMod {
+	return qmhelper.WhereNullEQ(w.field, true, x)
 }
-func (w whereHelpertypes_JSON) LT(x types.JSON) qm.QueryMod {
+func (w whereHelpernull_Time) LT(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LT, x)
 }
-func (w whereHelpertypes_JSON) LTE(x types.JSON) qm.QueryMod {
+func (w whereHelpernull_Time) LTE(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.LTE, x)
 }
-func (w whereHelpertypes_JSON) GT(x types.JSON) qm.QueryMod {
+func (w whereHelpernull_Time) GT(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GT, x)
 }
-func (w whereHelpertypes_JSON) GTE(x types.JSON) qm.QueryMod {
+func (w whereHelpernull_Time) GTE(x null.Time) qm.QueryMod {
 	return qmhelper.Where(w.field, qmhelper.GTE, x)
 }
 
-type whereHelpertime_Time struct{ field string }
-
-func (w whereHelpertime_Time) EQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.EQ, x)
-}
-func (w whereHelpertime_Time) NEQ(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.NEQ, x)
-}
-func (w whereHelpertime_Time) LT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LT, x)
-}
-func (w whereHelpertime_Time) LTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.LTE, x)
-}
-func (w whereHelpertime_Time) GT(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GT, x)
-}
-func (w whereHelpertime_Time) GTE(x time.Time) qm.QueryMod {
-	return qmhelper.Where(w.field, qmhelper.GTE, x)
-}
+func (w whereHelpernull_Time) IsNull() qm.QueryMod    { return qmhelper.WhereIsNull(w.field) }
+func (w whereHelpernull_Time) IsNotNull() qm.QueryMod { return qmhelper.WhereIsNotNull(w.field) }
 
 var ProductWhere = struct {
-	ID          whereHelperint
-	Category    whereHelperstring
-	Description whereHelpernull_String
-	Price       whereHelpertypes_Decimal
-	MetaInfo    whereHelpertypes_JSON
-	CreatedAt   whereHelpertime_Time
-	UpdatedAt   whereHelpertime_Time
+	ID               whereHelperint
+	ProductID        whereHelperint
+	ProductType      whereHelperstring
+	ModelName        whereHelperstring
+	ModelFamily      whereHelpernull_String
+	Description      whereHelpernull_String
+	ShortDescription whereHelpernull_String
+	Images           whereHelpernull_JSON
+	Specifications   whereHelpernull_JSON
+	CreatedAt        whereHelpernull_Time
+	UpdatedAt        whereHelpernull_Time
 }{
-	ID:          whereHelperint{field: "\"products\".\"id\""},
-	Category:    whereHelperstring{field: "\"products\".\"category\""},
-	Description: whereHelpernull_String{field: "\"products\".\"description\""},
-	Price:       whereHelpertypes_Decimal{field: "\"products\".\"price\""},
-	MetaInfo:    whereHelpertypes_JSON{field: "\"products\".\"meta_info\""},
-	CreatedAt:   whereHelpertime_Time{field: "\"products\".\"created_at\""},
-	UpdatedAt:   whereHelpertime_Time{field: "\"products\".\"updated_at\""},
+	ID:               whereHelperint{field: "\"product\".\"id\""},
+	ProductID:        whereHelperint{field: "\"product\".\"product_id\""},
+	ProductType:      whereHelperstring{field: "\"product\".\"product_type\""},
+	ModelName:        whereHelperstring{field: "\"product\".\"model_name\""},
+	ModelFamily:      whereHelpernull_String{field: "\"product\".\"model_family\""},
+	Description:      whereHelpernull_String{field: "\"product\".\"description\""},
+	ShortDescription: whereHelpernull_String{field: "\"product\".\"short_description\""},
+	Images:           whereHelpernull_JSON{field: "\"product\".\"images\""},
+	Specifications:   whereHelpernull_JSON{field: "\"product\".\"specifications\""},
+	CreatedAt:        whereHelpernull_Time{field: "\"product\".\"created_at\""},
+	UpdatedAt:        whereHelpernull_Time{field: "\"product\".\"updated_at\""},
 }
 
 // ProductRels is where relationship names are stored.
@@ -173,9 +296,9 @@ func (*productR) NewStruct() *productR {
 type productL struct{}
 
 var (
-	productAllColumns            = []string{"id", "category", "description", "price", "meta_info", "created_at", "updated_at"}
-	productColumnsWithoutDefault = []string{"category", "price"}
-	productColumnsWithDefault    = []string{"id", "description", "meta_info", "created_at", "updated_at"}
+	productAllColumns            = []string{"id", "product_id", "product_type", "model_name", "model_family", "description", "short_description", "images", "specifications", "created_at", "updated_at"}
+	productColumnsWithoutDefault = []string{"product_id", "product_type", "model_name"}
+	productColumnsWithDefault    = []string{"id", "model_family", "description", "short_description", "images", "specifications", "created_at", "updated_at"}
 	productPrimaryKeyColumns     = []string{"id"}
 	productGeneratedColumns      = []string{}
 )
@@ -424,7 +547,7 @@ func (q productQuery) One(ctx context.Context, exec boil.ContextExecutor) (*Prod
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: failed to execute a one query for products")
+		return nil, errors.Wrap(err, "models: failed to execute a one query for product")
 	}
 
 	if err := o.doAfterSelectHooks(ctx, exec); err != nil {
@@ -463,7 +586,7 @@ func (q productQuery) Count(ctx context.Context, exec boil.ContextExecutor) (int
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to count products rows")
+		return 0, errors.Wrap(err, "models: failed to count product rows")
 	}
 
 	return count, nil
@@ -479,7 +602,7 @@ func (q productQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bo
 
 	err := q.Query.QueryRowContext(ctx, exec).Scan(&count)
 	if err != nil {
-		return false, errors.Wrap(err, "models: failed to check if products exists")
+		return false, errors.Wrap(err, "models: failed to check if product exists")
 	}
 
 	return count > 0, nil
@@ -487,10 +610,10 @@ func (q productQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bo
 
 // Products retrieves all the records using an executor.
 func Products(mods ...qm.QueryMod) productQuery {
-	mods = append(mods, qm.From("\"products\""))
+	mods = append(mods, qm.From("\"product\""))
 	q := NewQuery(mods...)
 	if len(queries.GetSelect(q)) == 0 {
-		queries.SetSelect(q, []string{"\"products\".*"})
+		queries.SetSelect(q, []string{"\"product\".*"})
 	}
 
 	return productQuery{q}
@@ -506,7 +629,7 @@ func FindProduct(ctx context.Context, exec boil.ContextExecutor, iD int, selectC
 		sel = strings.Join(strmangle.IdentQuoteSlice(dialect.LQ, dialect.RQ, selectCols), ",")
 	}
 	query := fmt.Sprintf(
-		"select %s from \"products\" where \"id\"=$1", sel,
+		"select %s from \"product\" where \"id\"=$1", sel,
 	)
 
 	q := queries.Raw(query, iD)
@@ -516,7 +639,7 @@ func FindProduct(ctx context.Context, exec boil.ContextExecutor, iD int, selectC
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, sql.ErrNoRows
 		}
-		return nil, errors.Wrap(err, "models: unable to select from products")
+		return nil, errors.Wrap(err, "models: unable to select from product")
 	}
 
 	if err = productObj.doAfterSelectHooks(ctx, exec); err != nil {
@@ -530,18 +653,18 @@ func FindProduct(ctx context.Context, exec boil.ContextExecutor, iD int, selectC
 // See boil.Columns.InsertColumnSet documentation to understand column list inference for inserts.
 func (o *Product) Insert(ctx context.Context, exec boil.ContextExecutor, columns boil.Columns) error {
 	if o == nil {
-		return errors.New("models: no products provided for insertion")
+		return errors.New("models: no product provided for insertion")
 	}
 
 	var err error
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if o.CreatedAt.IsZero() {
-			o.CreatedAt = currTime
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
 		}
-		if o.UpdatedAt.IsZero() {
-			o.UpdatedAt = currTime
+		if queries.MustTime(o.UpdatedAt).IsZero() {
+			queries.SetScanner(&o.UpdatedAt, currTime)
 		}
 	}
 
@@ -573,9 +696,9 @@ func (o *Product) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 			return err
 		}
 		if len(wl) != 0 {
-			cache.query = fmt.Sprintf("INSERT INTO \"products\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
+			cache.query = fmt.Sprintf("INSERT INTO \"product\" (\"%s\") %%sVALUES (%s)%%s", strings.Join(wl, "\",\""), strmangle.Placeholders(dialect.UseIndexPlaceholders, len(wl), 1, 1))
 		} else {
-			cache.query = "INSERT INTO \"products\" %sDEFAULT VALUES%s"
+			cache.query = "INSERT INTO \"product\" %sDEFAULT VALUES%s"
 		}
 
 		var queryOutput, queryReturning string
@@ -603,7 +726,7 @@ func (o *Product) Insert(ctx context.Context, exec boil.ContextExecutor, columns
 	}
 
 	if err != nil {
-		return errors.Wrap(err, "models: unable to insert into products")
+		return errors.Wrap(err, "models: unable to insert into product")
 	}
 
 	if !cached {
@@ -622,7 +745,7 @@ func (o *Product) Update(ctx context.Context, exec boil.ContextExecutor, columns
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		o.UpdatedAt = currTime
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	var err error
@@ -644,10 +767,10 @@ func (o *Product) Update(ctx context.Context, exec boil.ContextExecutor, columns
 			wl = strmangle.SetComplement(wl, []string{"created_at"})
 		}
 		if len(wl) == 0 {
-			return 0, errors.New("models: unable to update products, could not build whitelist")
+			return 0, errors.New("models: unable to update product, could not build whitelist")
 		}
 
-		cache.query = fmt.Sprintf("UPDATE \"products\" SET %s WHERE %s",
+		cache.query = fmt.Sprintf("UPDATE \"product\" SET %s WHERE %s",
 			strmangle.SetParamNames("\"", "\"", 1, wl),
 			strmangle.WhereClause("\"", "\"", len(wl)+1, productPrimaryKeyColumns),
 		)
@@ -667,12 +790,12 @@ func (o *Product) Update(ctx context.Context, exec boil.ContextExecutor, columns
 	var result sql.Result
 	result, err = exec.ExecContext(ctx, cache.query, values...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update products row")
+		return 0, errors.Wrap(err, "models: unable to update product row")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by update for products")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by update for product")
 	}
 
 	if !cached {
@@ -690,12 +813,12 @@ func (q productQuery) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to update all for products")
+		return 0, errors.Wrap(err, "models: unable to update all for product")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for products")
+		return 0, errors.Wrap(err, "models: unable to retrieve rows affected for product")
 	}
 
 	return rowsAff, nil
@@ -728,7 +851,7 @@ func (o ProductSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := fmt.Sprintf("UPDATE \"products\" SET %s WHERE %s",
+	sql := fmt.Sprintf("UPDATE \"product\" SET %s WHERE %s",
 		strmangle.SetParamNames("\"", "\"", 1, colNames),
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), len(colNames)+1, productPrimaryKeyColumns, len(o)))
 
@@ -753,15 +876,15 @@ func (o ProductSlice) UpdateAll(ctx context.Context, exec boil.ContextExecutor, 
 // See boil.Columns documentation for how to properly use updateColumns and insertColumns.
 func (o *Product) Upsert(ctx context.Context, exec boil.ContextExecutor, updateOnConflict bool, conflictColumns []string, updateColumns, insertColumns boil.Columns, opts ...UpsertOptionFunc) error {
 	if o == nil {
-		return errors.New("models: no products provided for upsert")
+		return errors.New("models: no product provided for upsert")
 	}
 	if !boil.TimestampsAreSkipped(ctx) {
 		currTime := time.Now().In(boil.GetLocation())
 
-		if o.CreatedAt.IsZero() {
-			o.CreatedAt = currTime
+		if queries.MustTime(o.CreatedAt).IsZero() {
+			queries.SetScanner(&o.CreatedAt, currTime)
 		}
-		o.UpdatedAt = currTime
+		queries.SetScanner(&o.UpdatedAt, currTime)
 	}
 
 	if err := o.doBeforeUpsertHooks(ctx, exec); err != nil {
@@ -818,7 +941,7 @@ func (o *Product) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 		)
 
 		if updateOnConflict && len(update) == 0 {
-			return errors.New("models: unable to upsert products, could not build update column list")
+			return errors.New("models: unable to upsert product, could not build update column list")
 		}
 
 		ret := strmangle.SetComplement(productAllColumns, strmangle.SetIntersect(insert, update))
@@ -826,13 +949,13 @@ func (o *Product) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 		conflict := conflictColumns
 		if len(conflict) == 0 && updateOnConflict && len(update) != 0 {
 			if len(productPrimaryKeyColumns) == 0 {
-				return errors.New("models: unable to upsert products, could not build conflict column list")
+				return errors.New("models: unable to upsert product, could not build conflict column list")
 			}
 
 			conflict = make([]string, len(productPrimaryKeyColumns))
 			copy(conflict, productPrimaryKeyColumns)
 		}
-		cache.query = buildUpsertQueryPostgres(dialect, "\"products\"", updateOnConflict, ret, update, conflict, insert, opts...)
+		cache.query = buildUpsertQueryPostgres(dialect, "\"product\"", updateOnConflict, ret, update, conflict, insert, opts...)
 
 		cache.valueMapping, err = queries.BindMapping(productType, productMapping, insert)
 		if err != nil {
@@ -867,7 +990,7 @@ func (o *Product) Upsert(ctx context.Context, exec boil.ContextExecutor, updateO
 		_, err = exec.ExecContext(ctx, cache.query, vals...)
 	}
 	if err != nil {
-		return errors.Wrap(err, "models: unable to upsert products")
+		return errors.Wrap(err, "models: unable to upsert product")
 	}
 
 	if !cached {
@@ -891,7 +1014,7 @@ func (o *Product) Delete(ctx context.Context, exec boil.ContextExecutor) (int64,
 	}
 
 	args := queries.ValuesFromMapping(reflect.Indirect(reflect.ValueOf(o)), productPrimaryKeyMapping)
-	sql := "DELETE FROM \"products\" WHERE \"id\"=$1"
+	sql := "DELETE FROM \"product\" WHERE \"id\"=$1"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -900,12 +1023,12 @@ func (o *Product) Delete(ctx context.Context, exec boil.ContextExecutor) (int64,
 	}
 	result, err := exec.ExecContext(ctx, sql, args...)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete from products")
+		return 0, errors.Wrap(err, "models: unable to delete from product")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for products")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by delete for product")
 	}
 
 	if err := o.doAfterDeleteHooks(ctx, exec); err != nil {
@@ -925,12 +1048,12 @@ func (q productQuery) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 
 	result, err := q.Query.ExecContext(ctx, exec)
 	if err != nil {
-		return 0, errors.Wrap(err, "models: unable to delete all from products")
+		return 0, errors.Wrap(err, "models: unable to delete all from product")
 	}
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for products")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for product")
 	}
 
 	return rowsAff, nil
@@ -956,7 +1079,7 @@ func (o ProductSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "DELETE FROM \"products\" WHERE " +
+	sql := "DELETE FROM \"product\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, productPrimaryKeyColumns, len(o))
 
 	if boil.IsDebug(ctx) {
@@ -971,7 +1094,7 @@ func (o ProductSlice) DeleteAll(ctx context.Context, exec boil.ContextExecutor) 
 
 	rowsAff, err := result.RowsAffected()
 	if err != nil {
-		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for products")
+		return 0, errors.Wrap(err, "models: failed to get rows affected by deleteall for product")
 	}
 
 	if len(productAfterDeleteHooks) != 0 {
@@ -1011,7 +1134,7 @@ func (o *ProductSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 		args = append(args, pkeyArgs...)
 	}
 
-	sql := "SELECT \"products\".* FROM \"products\" WHERE " +
+	sql := "SELECT \"product\".* FROM \"product\" WHERE " +
 		strmangle.WhereClauseRepeated(string(dialect.LQ), string(dialect.RQ), 1, productPrimaryKeyColumns, len(*o))
 
 	q := queries.Raw(sql, args...)
@@ -1029,7 +1152,7 @@ func (o *ProductSlice) ReloadAll(ctx context.Context, exec boil.ContextExecutor)
 // ProductExists checks if the Product row exists.
 func ProductExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool, error) {
 	var exists bool
-	sql := "select exists(select 1 from \"products\" where \"id\"=$1 limit 1)"
+	sql := "select exists(select 1 from \"product\" where \"id\"=$1 limit 1)"
 
 	if boil.IsDebug(ctx) {
 		writer := boil.DebugWriterFrom(ctx)
@@ -1040,7 +1163,7 @@ func ProductExists(ctx context.Context, exec boil.ContextExecutor, iD int) (bool
 
 	err := row.Scan(&exists)
 	if err != nil {
-		return false, errors.Wrap(err, "models: unable to check if products exists")
+		return false, errors.Wrap(err, "models: unable to check if product exists")
 	}
 
 	return exists, nil

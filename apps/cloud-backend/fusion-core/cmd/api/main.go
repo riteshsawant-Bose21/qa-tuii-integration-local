@@ -1,10 +1,10 @@
-// @title Fusion Cloud Backend API
-// @version 1.0
-// @description This is the Fusion Cloud Backend API server.
+//	@title			Fusion Cloud Backend API
+//	@version		1.0
+//	@description	This is the Fusion Cloud Backend API server.
 
-// @host localhost:8020
-// @BasePath /api/v1
-// @schemes http https
+// @host		localhost:8080
+// @BasePath	/api/v1
+// @schemes	http https
 package main
 
 import (
@@ -17,7 +17,9 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
+	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
@@ -25,7 +27,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
@@ -64,9 +66,15 @@ func main() {
 	}
 
 	// Load API configuration
-	cfg, err := api.NewAPIConfig(configSVC)
+	cfg, err := serverapi.NewAPIConfig(configSVC)
 	if err != nil {
 		logger.Fatal("Failed to load API config", zap.Error(err))
+	}
+
+	// Load general application configuration
+	appConfig, err := config.Load()
+	if err != nil {
+		logger.Fatal("Failed to load application config", zap.Error(err))
 	}
 
 	// Initialize the database connection.
@@ -90,13 +98,18 @@ func main() {
 		logger.Fatal("Failed to initialize ID service")
 	}
 	logger.Info("Initialized ID Service.")
-
 	//Initialize Product DB Service
 	productDBSvc := productdb.NewService(pgs)
 	if productDBSvc == nil {
 		logger.Fatal("Failed to initialize product database service")
 	}
 	logger.Info("Initialized Product DB Service.")
+
+	// Initialize Project DB Service
+	projectDBSvc := projectdb.NewService(pgs)
+	if projectDBSvc == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
 
 	//Initialize Product Service
 	productSVC := product.NewService(productDBSvc, idSVC)
@@ -125,15 +138,17 @@ func main() {
 	}
 	logger.Info("Initialized Project Service.")
 
-	// Initialize API Server
+	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
-		Host: "localhost",
-		Port: "8080",
+		Host: appConfig.Server.APIHost,
+		Port: appConfig.Server.APIPort,
 	}, productSVC, projectSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
-	logger.Info("Initialized the API.")
+	logger.Info("Initialized the API.",
+		zap.String("host", appConfig.Server.APIHost),
+		zap.String("port", appConfig.Server.APIPort))
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(ctx)
@@ -156,7 +171,7 @@ func main() {
 		logger.Info("Received shutdown signal, initiating graceful shutdown...")
 		cancel()
 
-		// Wait for server to complete shutdown
+		// Give server time to shutdown gracefully
 		shutdownTimeout := time.NewTimer(30 * time.Second)
 		defer shutdownTimeout.Stop()
 
@@ -181,4 +196,5 @@ func main() {
 	}
 
 	logger.Info("Application stopped gracefully")
+
 }

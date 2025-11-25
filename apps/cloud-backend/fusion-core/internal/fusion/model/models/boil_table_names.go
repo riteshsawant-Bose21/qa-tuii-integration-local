@@ -27,4 +27,11 @@ var TableNames = struct {
 	ProjectUser:       "project_user",
 	Roles:             "roles",
 	User:              "user",
+	Product        string
+	ProductPrice   string
+	ProductSyncJob string
+}{
+	Product:        "product",
+	ProductPrice:   "product_price",
+	ProductSyncJob: "product_sync_job",
 }

@@ -14,9 +14,10 @@ type Service struct {
 
 // DatabaseService defines the interface for database operations related to products.
 type DatabaseService interface {
-	SelectByID(ctx context.Context, id string) (*types.ProductResponse, error)
+	SelectByID(ctx context.Context, id string) (*types.SingleProductResponse, error)
 	SelectAll(ctx context.Context) (*types.ProductResponse, error)
-	Upsert(ctx context.Context, product *types.ProductFetch) error
+	GetPricesByProductID(ctx context.Context, productID int, currency string, variant string) (*types.PriceResponse, error)
+	// Upsert(ctx context.Context, product *types.ProductFetch) error  // Commented out for now
 }
 
 type IDService interface {
