@@ -35,6 +35,22 @@ const (
 	tcpTimeout          = 10 * time.Second
 )
 
+type MemberlistTransport struct {
+	ml *memberlist.Memberlist
+}
+
+func (t *MemberlistTransport) LocalNode() *memberlist.Node {
+	return t.ml.LocalNode()
+}
+
+func (t *MemberlistTransport) Members() []*memberlist.Node {
+	return t.ml.Members()
+}
+
+func (t *MemberlistTransport) SendReliable(n *memberlist.Node, msg []byte) error {
+	return t.ml.SendReliable(n, msg)
+}
+
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()

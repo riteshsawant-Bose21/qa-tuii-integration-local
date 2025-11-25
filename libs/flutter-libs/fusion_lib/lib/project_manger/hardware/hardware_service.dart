@@ -81,8 +81,24 @@ extension HardwareService on ProjectService {
       }
     }
 
+    final hwToRemove = hardware.get(hardwareId);
+    if (hwToRemove is Source) {
+      // Remove source set relationship if any
+      final sourceSetIds = relationships.getParent(RelationshipType.sourceSetSources, hardwareId);
+      if (sourceSetIds != null) {
+        removeSourceFromSourceSet(hardwareId, sourceSetIds);
+      }
+
+      // Remove from all scenes if source is added to any
+      removeSourceFromAllScenes(hardwareId);
+
+      //remove priority source data for this source
+      removePrioritySourceDataForSource(hardwareId);
+    }
+
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);
-    for (final connId in wireConnections) {
+    final wireConnectionsCopy = List<String>.from(wireConnections);
+    for (final connId in wireConnectionsCopy) {
       removeWiringConnection(connId);
     }
 
@@ -307,5 +323,19 @@ extension HardwareService on ProjectService {
 
     // Convert back to Map
     return {for (var hw in items) hw.id: hw};
+  }
+
+  void removePrioritySourceDataForSource(String sourceId) {
+    final List<PrioritySourceData> prioDataList = prioritySourceData.getBySource(sourceId);
+
+    final copyOfPrioDataList = List<PrioritySourceData>.from(prioDataList);
+    // Remove the source from the priority data of affected zones
+    for (final priorityData in copyOfPrioDataList) {
+      final zoneId = relationships.getParent(RelationshipType.zonePriorities, priorityData.id);
+      if (zoneId != null) {
+        relationships.unlink(RelationshipType.zonePriorities, zoneId, priorityData.id);
+      }
+      prioritySourceData.remove(priorityData.id);
+    }
   }
 }

@@ -47,13 +47,13 @@ class _ProcessingBlockViewState extends State<ProcessingBlockView> {
   List<ProcessingBlockModel> get _availableBlocks {
     switch (widget.processingType) {
       case ProcessingType.input:
-        return ProcessingBlockModel.inputBlocks;
+        return ProcessingBlockModel.sourceBlocks;
       case ProcessingType.zone:
         return ProcessingBlockModel.zoneBlocks;
       case ProcessingType.mix:
         return ProcessingBlockModel.mixBlocks;
       case ProcessingType.output:
-        return ProcessingBlockModel.outputBlocks;
+        return ProcessingBlockModel.circuitBlocks;
     }
   }
 

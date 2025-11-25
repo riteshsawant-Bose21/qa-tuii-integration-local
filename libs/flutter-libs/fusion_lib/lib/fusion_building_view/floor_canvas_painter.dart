@@ -219,7 +219,7 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size size) {
-    const double dotRadius = 1.75;
+    const double dotRadius = 10;
 
     final Paint paint = Paint()
       ..color = Colors.grey.shade300.withValues(alpha: 0.5)
@@ -238,7 +238,8 @@ class FloorCanvasPainter extends CustomPainter {
 
     for (double x = startX; x < right; x += spacing) {
       for (double y = startY; y < bottom; y += spacing) {
-        canvas.drawCircle(Offset(x, y), dotRadius / zoomScale, paint);
+        final double r = (dotRadius / zoomScale).clamp(6.0, 8.0); // clamp to avoid oversized dots
+        canvas.drawCircle(Offset(x, y), r, paint);
       }
     }
   }

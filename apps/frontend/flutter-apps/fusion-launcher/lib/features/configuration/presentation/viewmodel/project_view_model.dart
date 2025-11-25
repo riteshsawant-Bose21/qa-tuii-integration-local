@@ -18,6 +18,8 @@ export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
+export 'functions/functions_view_model.dart';
+export 'mix_scenes/mix_scenes_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -32,8 +34,11 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
+enum ConfigurationMenuMode { processing, presets, gpio, scheduling }
+
 enum SelectedItemType {
   source,
+  sourceSet,
   endpoint,
   processor,
   amplifier,
@@ -95,6 +100,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ProjectMode currentProjectMode = ProjectMode.systemListingMode;
 
   ToolbarMode currentToolbarMode = ToolbarMode.acoustics;
+  ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
 
@@ -368,6 +374,13 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  void setConfigurationMenuMode(ConfigurationMenuMode mode) {
+    if (currentConfigurationMenuMode != mode) {
+      currentConfigurationMenuMode = mode;
+      emit(ConfigurationMenuModeChanged(mode));
+    }
+  }
+
   void setSelectedProductToAdd(ProductQueryModel? product) {
     selectedProductToAdd = product;
     emit(ProductToAddChanged(product));
@@ -401,6 +414,9 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
           break;
         case SelectedItemType.subzone:
           projectManager.removeSubZone(_selectedDevice!.id);
+          break;
+        case SelectedItemType.sourceSet:
+          projectManager.removeSourceSet(_selectedDevice!.id);
           break;
       }
       clearSelections();

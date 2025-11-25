@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/cluster/transport"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
-
-	"github.com/hashicorp/memberlist"
 )
 
 type Broadcaster interface {
@@ -20,7 +19,7 @@ type Hub struct {
 	broadcasters []Broadcaster
 	stateManager *persistence.StateManager
 	persistence  *persistence.Persistence
-	Memberlist   *memberlist.Memberlist
+	transport    transport.ClusterTransport
 }
 
 func NewHub(stateManager *persistence.StateManager, persistence *persistence.Persistence) *Hub {
@@ -30,6 +29,11 @@ func NewHub(stateManager *persistence.StateManager, persistence *persistence.Per
 	}
 }
 
+// SetClusterTransport injects the cluster transport (backed by memberlist).
+// This is called once during app wiring after memberlist is constructed.
+func (h *Hub) SetClusterTransport(t transport.ClusterTransport) {
+	h.transport = t
+}
 func (h *Hub) Register(b Broadcaster) {
 	h.broadcasters = append(h.broadcasters, b)
 }
@@ -69,7 +73,10 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		var dirty bool
 		var err error
 
-		localNode := h.Memberlist.LocalNode().Name
+		if h.transport == nil || h.transport.LocalNode() == nil {
+			return fmt.Errorf("cluster transport not configured")
+		}
+		localNode := h.transport.LocalNode().Name
 
 		if message.Node != localNode {
 			// Handle remote update
@@ -86,7 +93,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 				return nil
 			}
 		} else {
-			// Local update: We already applied it before calling broadcastMessage
+			// Local update: We already applied it before calling BroadcastToNodes
 			dirty = true
 		}
 
@@ -98,12 +105,6 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		h.persistence.MarkDirty()
 
 	case api.NotifyOpSnapActivate:
-		// For snapshot activation:
-		// - The origin node has already called ActivateSnapshotAndReturnState
-		//   in Handler.HandleActivateSnapshot.
-		// - Remote nodes will activate the snapshot in ClusterDelegate.NotifyMsg.
-		//
-		// Just validate the payload; no local activation.
 		if message.SnapshotUpdate == nil || message.SnapshotUpdate.Name == "" {
 			return fmt.Errorf("SnapshotUpdate with valid name required for snap activate")
 		}
@@ -113,13 +114,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		}
 
 	case api.NotifyOpSnapCreate:
-		// Create a snapshot with the given name.
 		if err := h.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
 			return fmt.Errorf("error creating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapDelete:
-		// Delete the specified snapshot.
 		if err := h.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)
 		}
@@ -129,7 +128,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 	}
 
 	// Broadcast the message to other nodes if this is the origin node.
-	if message.Node == h.Memberlist.LocalNode().Name {
+	if h.transport == nil || h.transport.LocalNode() == nil {
+		return fmt.Errorf("cluster transport not configured")
+	}
+
+	if message.Node == h.transport.LocalNode().Name {
 		data, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)
@@ -144,11 +147,19 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 
 func (h *Hub) broadcastToNodes(message []byte) {
 	logger := logging.GetLogger()
-	for _, node := range h.Memberlist.Members() {
-		if node.Name == h.Memberlist.LocalNode().Name {
+
+	if h.transport == nil || h.transport.LocalNode() == nil {
+		logger.Error("cluster transport not configured; cannot broadcast to nodes")
+		return
+	}
+
+	localName := h.transport.LocalNode().Name
+
+	for _, node := range h.transport.Members() {
+		if node.Name == localName {
 			continue
 		}
-		if err := h.Memberlist.SendReliable(node, message); err != nil {
+		if err := h.transport.SendReliable(node, message); err != nil {
 			logger.Error("Failed to send message to node %s: %v", node.Name, err)
 		}
 	}

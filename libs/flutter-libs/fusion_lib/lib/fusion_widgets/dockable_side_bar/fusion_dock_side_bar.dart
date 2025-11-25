@@ -42,7 +42,7 @@ class FusionDockSidebar extends StatelessWidget {
       builder: (BuildContext context, List<DockItem?> candidateItems, List<dynamic> rejectedItems) {
         final bool hasIncomingData = candidateItems.isNotEmpty;
         return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, side == "left" ? FusionTestKeys.dockLeftSideBar : FusionTestKeys.dockRightSideBar),                                          
+          testId: SemanticHelper.createTestId(SemanticTypes.container, side == "left" ? FusionTestKeys.dockLeftSideBar : FusionTestKeys.dockRightSideBar),
           child: Container(
             width: 240,
             height: double.infinity,
@@ -57,12 +57,16 @@ class FusionDockSidebar extends StatelessWidget {
               physics: const ClampingScrollPhysics(),
               children: items.map((item) {
                 final config = getConfigForItem(item.id);
-                if (config == null || !config.isVisible) return const SizedBox.shrink();
-          
+                if (config == null || !config.isVisible) {
+                  return const SizedBox.shrink();
+                }
+
                 // Only show items that are configured for this tab
                 final bool isConfiguredForThisTab = itemConfigs.any((c) => c.id == item.id);
-                if (!isConfiguredForThisTab) return const SizedBox.shrink();
-          
+                if (!isConfiguredForThisTab) {
+                  return const SizedBox.shrink();
+                }
+
                 if (config.isCollapsibleSection) {
                   final int index = items.indexOf(item);
                   return SemanticHelper.listItem(
@@ -80,8 +84,7 @@ class FusionDockSidebar extends StatelessWidget {
                   return config.dockItemWidget();
                 }
               }).toList(),
-            ),
-          ),
+            ),),
         );
       },
     );

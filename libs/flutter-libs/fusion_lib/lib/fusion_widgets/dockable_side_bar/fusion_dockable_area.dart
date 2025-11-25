@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
-import '../others/fusion_horizontal_resizable_widget.dart';
-import 'fusion_dock_floating_panel.dart';
-import 'fusion_dock_side_bar.dart';
 
 class FusionDockableArea extends StatefulWidget {
   final String tabKey;
@@ -232,7 +230,8 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
             Expanded(
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
-                  return SizedBox(
+                  return Container(
+                    color: Theme.of(context).colorScheme.white,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
                     child: widget.mainArea,

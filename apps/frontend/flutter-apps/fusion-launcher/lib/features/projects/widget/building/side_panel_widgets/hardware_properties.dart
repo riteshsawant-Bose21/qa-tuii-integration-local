@@ -9,11 +9,13 @@ import '../../../../configuration/presentation/viewmodel/project_view_model.dart
 class HardwareComponentProperties extends StatefulWidget {
   final HardwareComponent selectedHardware;
   final VoidCallback? onSpeakerParametersChanged;
+  final VoidCallback? onSpeakerDeleted;
 
   const HardwareComponentProperties({
     super.key,
     required this.selectedHardware,
     this.onSpeakerParametersChanged,
+    this.onSpeakerDeleted,
   });
 
   @override
@@ -736,7 +738,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                 ),
               ],
             ),
-          ),
+
         );
       },
     );

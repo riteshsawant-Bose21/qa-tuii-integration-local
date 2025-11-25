@@ -74,6 +74,11 @@ final class ToolbarModeChanged extends ProjectViewModelState {
   ToolbarModeChanged(this.mode);
 }
 
+final class ConfigurationMenuModeChanged extends ProjectViewModelState {
+  final ConfigurationMenuMode mode;
+  ConfigurationMenuModeChanged(this.mode);
+}
+
 final class ProductToAddChanged extends ProjectViewModelState {
   final ProductQueryModel? product;
   ProductToAddChanged(this.product);
