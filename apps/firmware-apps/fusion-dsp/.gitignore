@@ -17,3 +17,6 @@ wafconf/__pycache__
 
 # Python virtual environments
 venv/
+
+# Rnnoise folder
+src/x86/.deps/
