@@ -125,29 +125,23 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 
 	id, err := s.dbService.Insert(ctx, project, tx)
 	if err != nil {
-		if tx != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
-			}
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
 		}
+
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
 	}
 
 	// Assign user to project
 	if err := s.dbService.InsertProjectUser(ctx, id, project.UserID, tx); err != nil {
-		if tx != nil {
-			if rollbackErr := tx.Rollback(); rollbackErr != nil {
-				return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
-			}
+		if rollbackErr := tx.Rollback(); rollbackErr != nil {
+			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
 		}
 		return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
 	}
 
-	// Commit transaction
-	if tx != nil {
-		if err := tx.Commit(); err != nil {
-			return nil, errors.New(types.ErrMsgFailedToInsertProject)
-		}
+	if err := tx.Commit(); err != nil {
+		return nil, errors.New(types.ErrMsgFailedToInsertProject)
 	}
 
 	response := &types.ProjectCreateResponse{
@@ -215,7 +209,6 @@ func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, p
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
-
 	if err != nil {
 		return nil, err
 	}

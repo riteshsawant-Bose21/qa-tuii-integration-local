@@ -2,17 +2,16 @@ package project
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
-	"database/sql"
-
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
-
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -40,35 +39,33 @@ type mockDBService struct {
 	mock.Mock
 }
 
-// mockDB implements db.ProjectDBFullExecutor
-type mockDB struct{}
-
-func (m *mockDB) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) { return nil, nil }
-func (m *mockDB) Exec(query string, args ...interface{}) (sql.Result, error)        { return nil, nil }
-func (m *mockDB) Query(query string, args ...interface{}) (*sql.Rows, error)        { return nil, nil }
-func (m *mockDB) QueryRow(query string, args ...interface{}) *sql.Row               { return nil }
-func (m *mockDB) Prepare(query string) (*sql.Stmt, error)                           { return nil, nil }
-func (m *mockDB) ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error) {
-	return nil, nil
-}
-func (m *mockDB) QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error) {
-	return nil, nil
-}
-func (m *mockDB) QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row {
-	return nil
-}
-func (m *mockDB) PrepareContext(ctx context.Context, query string) (*sql.Stmt, error) {
-	return nil, nil
+// mockDBWithTransactions implements model.DBWithTransactions for testing using sqlmock
+type mockDBWithTransactions struct {
+	*sql.DB
+	mock sqlmock.Sqlmock
 }
 
-func (m *mockDBService) GetDB(ctx context.Context) db.ProjectDBFullExecutor { return &mockDB{} }
-func (m *mockDBService) InsertProjectUser(ctx context.Context, projectID, userID string, tx db.ProjectDBTxExecutor) error {
+func newMockDBWithTransactions() (*mockDBWithTransactions, sqlmock.Sqlmock, error) {
+	db, mock, err := sqlmock.New()
+	if err != nil {
+		return nil, nil, err
+	}
+	return &mockDBWithTransactions{DB: db, mock: mock}, mock, nil
+}
+
+// No need to override the database methods - sql.DB with sqlmock handles everything
+
+func (m *mockDBService) GetDB(ctx context.Context) model.DBWithTransactions {
+	args := m.Called(ctx)
+	return args.Get(0).(model.DBWithTransactions)
+}
+func (m *mockDBService) InsertProjectUser(ctx context.Context, projectID, userID string, tx model.DBTxExecutor) error {
 	args := m.Called(ctx, projectID, userID, tx)
 	return args.Error(0)
 }
 
 // Satisfy DatabaseService interface for tests
-func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx db.ProjectDBTxExecutor) (string, error) {
+func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx model.DBTxExecutor) (string, error) {
 	args := m.Called(ctx, project, tx)
 	return args.String(0), args.Error(1)
 }
@@ -222,6 +219,27 @@ func TestCreateProject(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			mockDB := &mockDBService{}
 			mockPresigner := &mockPresigner{}
+
+			// Create a mock database connection with transaction support
+			dbWithTx, sqlMock, err := newMockDBWithTransactions()
+			if err != nil {
+				t.Fatalf("Failed to create mock DB: %v", err)
+			}
+			defer dbWithTx.Close()
+
+			// Set up sqlmock expectations for transaction flow
+			if tt.mockErr == nil {
+				// Expect successful transaction
+				sqlMock.ExpectBegin()
+				sqlMock.ExpectCommit()
+			} else {
+				// Expect transaction that will be rolled back
+				sqlMock.ExpectBegin()
+				sqlMock.ExpectRollback()
+			}
+
+			// Mock the GetDB call to return our mock database
+			mockDB.On("GetDB", mock.Anything).Return(dbWithTx)
 
 			// Mock user existence validation
 			mockDB.On("UserExists", mock.Anything, tt.project.UserID).Return(true, nil)

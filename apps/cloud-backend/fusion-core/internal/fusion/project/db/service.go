@@ -21,44 +21,14 @@ import (
 	ericDecimal "github.com/ericlagergren/decimal"
 )
 
-// ProjectDBExecutor provides basic SQL query operations (compatible with both *sql.DB and *sql.Tx)
-type ProjectDBExecutor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	Prepare(query string) (*sql.Stmt, error)
-}
-
-// ProjectDBContextExecutor adds context-aware operations
-type ProjectDBContextExecutor interface {
-	ProjectDBExecutor
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-	PrepareContext(ctx context.Context, query string) (*sql.Stmt, error)
-}
-
-// ProjectDBTxExecutor adds transaction control (only for *sql.Tx)
-type ProjectDBTxExecutor interface {
-	ProjectDBContextExecutor
-	Commit() error
-	Rollback() error
-}
-
-// ProjectDBFullExecutor includes transaction creation (only for *sql.DB)
-type ProjectDBFullExecutor interface {
-	ProjectDBContextExecutor
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
-}
-
 // Service is a service for managing projects in the database.
 type Service struct {
-	db     ProjectDBFullExecutor
+	db     customModel.DBWithTransactions
 	logger *log.Logger
 }
 
 // NewService creates a new database service.
-func NewService(db ProjectDBFullExecutor, logger *log.Logger) *Service {
+func NewService(db customModel.DBWithTransactions, logger *log.Logger) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
@@ -85,7 +55,7 @@ func isDuplicateKeyError(err error) bool {
 }
 
 // GetDB returns the database instance for transaction management.
-func (s *Service) GetDB(ctx context.Context) ProjectDBFullExecutor {
+func (s *Service) GetDB(ctx context.Context) customModel.DBWithTransactions {
 	return s.db
 }
 
@@ -110,7 +80,7 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx ProjectDBTxExecutor) (string, error) {
+func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx customModel.DBTxExecutor) (string, error) {
 
 	// Create project record
 	now := time.Now()
@@ -142,7 +112,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 }
 
 // InsertProjectUser inserts a new project user association into the database.
-func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx ProjectDBTxExecutor) error {
+func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx customModel.DBTxExecutor) error {
 
 	now := time.Now()
 	// Create project user association

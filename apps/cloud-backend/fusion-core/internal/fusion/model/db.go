@@ -5,19 +5,30 @@ import (
 	"database/sql"
 )
 
-// Executor can perform SQL queries.
+// DBExecutor provides basic SQL query operations (compatible with both *sql.DB and *sql.Tx)
 type DBExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Query(query string, args ...interface{}) (*sql.Rows, error)
 	QueryRow(query string, args ...interface{}) *sql.Row
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
-// ContextExecutor can perform SQL queries with context
+// DBContextExecutor adds context-aware operations
 type DBContextExecutor interface {
 	DBExecutor
-
 	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
 	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
 	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
+}
+
+// DBWithTransactions includes transaction creation (only for *sql.DB)
+type DBWithTransactions interface {
+	DBContextExecutor
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
+// DBTxExecutor adds transaction control (only for *sql.Tx)
+type DBTxExecutor interface {
+	DBContextExecutor
+	Commit() error
+	Rollback() error
 }
