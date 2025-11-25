@@ -30,10 +30,21 @@ class MixScenes extends StatefulWidget {
 
 class _MixScenesState extends State<MixScenes> {
   final TextEditingController mixSceneNameController = TextEditingController();
+  ValueNotifier<bool> isNewMixSceneNameNotifier = ValueNotifier<bool>(true);
 
   @override
   void initState() {
     super.initState();
+
+    mixSceneNameController.addListener(() {
+      final String trimmedText = mixSceneNameController.text.trim();
+
+      if (trimmedText != widget.selectedMixSceneName) {
+        isNewMixSceneNameNotifier.value = true;
+      } else {
+        isNewMixSceneNameNotifier.value = false;
+      }
+    });
 
     mixSceneNameController.text = widget.selectedMixSceneName ?? "";
   }
@@ -87,25 +98,35 @@ class _MixScenesState extends State<MixScenes> {
           ),
 
           const SizedBox(height: 20),
-          NeumorphicButton(
-            text: "STORE",
-            width: 72,
-            height: 28,
-            borderRadius: 8,
-            onTap: () {
-              widget.onStoreTap(
-                mixSceneNameController.text.trim(),
+          ValueListenableBuilder<bool>(
+            valueListenable: isNewMixSceneNameNotifier,
+            builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
+              return NeumorphicButton(
+                text: isNewMixSceneName ? "STORE" : "UPDATE",
+                width: 72,
+                height: 28,
+                borderRadius: 8,
+                onTap: () {
+                  widget.onStoreTap(
+                    mixSceneNameController.text.trim(),
+                  );
+                },
               );
             },
           ),
           const SizedBox(height: 10),
-          NeumorphicButton(
-            text: "DELETE",
-            width: 72,
-            height: 28,
-            borderRadius: 8,
-            textColor: Colors.black12,
-            onTap: widget.onDeleteTap,
+          ValueListenableBuilder<bool>(
+            valueListenable: isNewMixSceneNameNotifier,
+            builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
+              return NeumorphicButton(
+                text: "DELETE",
+                width: 72,
+                height: 28,
+                borderRadius: 8,
+                textColor: isNewMixSceneName ? Colors.black12 : Colors.black87,
+                onTap: widget.onDeleteTap,
+              );
+            },
           ),
           const SizedBox(height: 10),
         ],

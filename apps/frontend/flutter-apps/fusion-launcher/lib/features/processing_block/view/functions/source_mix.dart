@@ -143,7 +143,10 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
                               ),
 
                               const VerticalDivider(width: 1, color: Colors.black12),
-                              PrioritySelectionWidget(zoneId: widget.zoneID),
+                              Container(
+                                color: Colors.white,
+                                child: PrioritySelectionWidget(zoneId: widget.zoneID),
+                              ),
                               // const VerticalDivider(width: 1, color: Colors.black12),
 
                               // Right side (only one widget)
