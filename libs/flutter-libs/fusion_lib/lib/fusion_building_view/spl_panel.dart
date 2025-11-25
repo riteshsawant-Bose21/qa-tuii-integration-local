@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_widgets/others/hover_dropdown.dart';
 
+import '../constants/test_keys.dart';
 import '../fusion_lib.dart';
 import 'spl_range_controller.dart';
 
@@ -525,7 +526,7 @@ class _SplPanelState extends State<SplPanel> {
                                 .map(
                                   (SplFrequency e) => DropdownMenuItem<SplFrequency>(
                                     value: e,
-                                    child: FusionAppText(text:e.displayName, style: const TextStyle(fontSize: 12)),
+                                    child: FusionAppText(text: e.displayName, style: const TextStyle(fontSize: 12)),
                                   ),
                                 )
                                 .toList(),
@@ -658,7 +659,7 @@ class _SplPanelState extends State<SplPanel> {
       children: <Widget>[
         Padding(
           padding: const EdgeInsets.only(right: 8, top: 4, bottom: 4),
-          child: FusionAppText(text:label, style: labelStyle),
+          child: FusionAppText(text: label, style: labelStyle),
         ),
         SemanticHelper.button(
           testId: SemanticHelper.createTestId(SemanticTypes.button, label),
@@ -689,8 +690,8 @@ class _SplPanelState extends State<SplPanel> {
                 value: e,
                 child: SemanticHelper.button(
                   testId: SemanticHelper.createTestId(SemanticTypes.button, (e as dynamic).displayName),
-                  child: FusionAppText(text:
-                    (e as dynamic).displayName,
+                  child: FusionAppText(
+                    text: (e as dynamic).displayName,
                     style: const TextStyle(fontSize: 12),
                   ),
                 ),
@@ -748,7 +749,7 @@ class _SplPanelState extends State<SplPanel> {
           ),
         ),
         const SizedBox(width: 2),
-        FusionAppText(text:label, style: const TextStyle(fontSize: 12)),
+        FusionAppText(text: label, style: const TextStyle(fontSize: 12)),
       ],
     );
   }
@@ -850,8 +851,8 @@ class _Section extends StatelessWidget {
         initiallyExpanded: initiallyExpanded,
         onExpansionChanged: onExpansionChanged,
         tilePadding: EdgeInsets.zero,
-        title: FusionAppText(text:
-          title,
+        title: FusionAppText(
+          text: title,
           style: const TextStyle(
             fontWeight: FontWeight.w500,
             fontSize: 13,

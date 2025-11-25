@@ -146,8 +146,9 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
               child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
             ),
 
-          initiallyExpanded: widget.config.initiallyExpanded,
-          children: <Widget>[widget.config.dockItemWidget],
+            initiallyExpanded: widget.config.initiallyExpanded,
+            children: <Widget>[widget.config.dockItemWidget],
+          ),
         ),
       ),
     );

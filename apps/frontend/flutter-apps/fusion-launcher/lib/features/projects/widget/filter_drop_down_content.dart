@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -77,7 +78,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                         // _applyFilters();
                         Navigator.of(context).pop();
                       },
-                      child: FusionAppText(text:'Apply', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                      child: FusionAppText(text: 'Apply', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                     ),
                   ),
                   if (_hasAnyFilters())
@@ -85,7 +86,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                       testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.clearProductQueryFilters),
                       child: TextButton(
                         onPressed: _clearAllFilters,
-                        child: FusionAppText(text:'Clear', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                        child: FusionAppText(text: 'Clear', style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                       ),
                     ),
                 ],

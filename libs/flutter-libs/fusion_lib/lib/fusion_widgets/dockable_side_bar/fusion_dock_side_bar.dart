@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../constants/test_keys.dart';
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
-import '../others/fusion_expandable_tile_widget.dart';
 
 class FusionDockSidebar extends StatelessWidget {
   final String side;
@@ -81,10 +81,11 @@ class FusionDockSidebar extends StatelessWidget {
                     ),
                   );
                 } else {
-                  return config.dockItemWidget();
+                  return config.dockItemWidget;
                 }
               }).toList(),
-            ),),
+            ),
+          ),
         );
       },
     );
