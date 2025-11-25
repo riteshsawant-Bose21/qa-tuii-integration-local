@@ -2,10 +2,12 @@ package network
 
 import (
 	"fmt"
+	"maps"
 	"math/rand"
 	"net"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -38,7 +40,8 @@ type UDPServer struct {
 	numWorkers int
 
 	// ACK handling
-	pending sync.Map
+	pending              sync.Map
+	lastBroadcastVersion atomic.Int64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -77,16 +80,17 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 
 // enqueuePacket is called from the I/O goroutine. Keep it very fast.
 func (s *UDPServer) enqueuePacket(data []byte, addr *net.UDPAddr) {
+
+	// Copy to prevent concurrent buffer reuse corruption
+	buf := make([]byte, len(data))
+	copy(buf, data)
+
 	select {
-	case s.queue <- packet{data, addr}:
+	case s.queue <- packet{buf, addr}:
 	default:
-		// Drop packet if queue full
-
-		// Log ~0.1% of drops
 		if rand.Intn(1000) == 0 {
-			logging.GetLogger().Warn("UDP queue full; dropping packet from %s", addr)
+			logging.GetLogger().Warn("UDP queue full. Dropping packet from %s", addr)
 		}
-
 	}
 }
 
@@ -135,47 +139,68 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 }
 
 func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+
 	if !msg.IsPublic() {
 		return nil
 	}
+	logger := logging.GetLogger()
 
-	data, err := json.Marshal(msg.ConfigUpdate.Data)
+	force := false
+
+	// Snapshot full-state updates must bypass version gating.
+	if msg.Operation == api.NotifyOpConfigUpdate &&
+		msg.ConfigUpdate != nil &&
+		msg.ConfigUpdate.FromSnapshot {
+
+		logger.Debug("udp broadcast: forcing snapshot full-state update (FromSnapshot=true)")
+		force = true
+	}
+
+	// Normal config updates: apply Lamport version gating
+	if !force &&
+		msg.Operation == api.NotifyOpConfigUpdate &&
+		msg.ConfigUpdate != nil {
+
+		v := msg.ConfigUpdate.Version.Counter
+		last := s.lastBroadcastVersion.Load()
+
+		if v <= last {
+			logger.Debug(
+				"udp broadcast: skipping stale/duplicate config_update version=%d (last=%d)",
+				v, last,
+			)
+			return nil
+		}
+
+		s.lastBroadcastVersion.Store(v)
+	}
+
+	// Build payload including authoritative Lamport version
+	payload := make(map[string]any, len(msg.ConfigUpdate.Data)+1)
+	maps.Copy(payload, msg.ConfigUpdate.Data)
+	payload[api.FusionVersion] = msg.ConfigUpdate.Version.Counter
+	payload[api.FusionEpoch] = msg.ConfigUpdate.Version.Epoch
+
+	data, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("marshal update: %w", err)
 	}
 
-	logger := logging.GetLogger()
-
-	// Limit the number of concurrent writes
-	sem := make(chan struct{}, maxConcurrent)
-	var wg sync.WaitGroup
-
+	// Send to all UDP clients
 	s.clients.Range(func(k, v any) bool {
 		addr, ok := v.(*net.UDPAddr)
 		if !ok || addr == nil {
 			return true
 		}
 
-		wg.Add(1)
+		if _, err := s.conn.WriteToUDP(data, addr); err != nil {
+			logger.Warn("udp broadcast to %s failed: %v", k, err)
+			s.clients.Delete(k)
+		}
 
-		// Acquire a slot
-		sem <- struct{}{}
-		go func(k string, addr *net.UDPAddr) {
-			defer wg.Done()
-			defer func() {
-				// Release the slot
-				<-sem
-			}()
-
-			if _, err := s.conn.WriteToUDP(data, addr); err != nil {
-				logger.Warn("broadcast to %s failed: %v", k, err)
-				s.clients.Delete(k)
-			}
-		}(k.(string), addr)
 		return true
 	})
 
-	wg.Wait()
 	return nil
 }
 

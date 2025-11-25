@@ -45,7 +45,6 @@ type App struct {
 	StateManager      *persistence.StateManager
 	Persistence       *persistence.Persistence
 	TaskManager       *tasks.TaskManager
-	Updater           *handler.Updater
 	ConnectionHandler *handler.Handler
 	Cluster           *cluster.Cluster
 	Delegate          *cluster.ClusterDelegate
@@ -70,15 +69,14 @@ func NewApp(config *api.AppConfig) *App {
 
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
-	taskManager := initTaskManager(config, persistence)
-	updater := handler.NewUpdater()
-	hub := pubsub.NewHub()
+	hub := pubsub.NewHub(stateManager, persistence)
+	taskManager := initTaskManager(config, persistence, hub)
 
 	controllerManager := controllers.NewControllerManager(hub, "7950")
-
-	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater, hub)
+	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater, hub, controllerManager)
+	hub.Memberlist = memberlist
+	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -100,7 +98,6 @@ func NewApp(config *api.AppConfig) *App {
 		StateManager:      stateManager,
 		Persistence:       persistence,
 		TaskManager:       taskManager,
-		Updater:           updater,
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
 		Delegate:          delegate,
@@ -208,7 +205,7 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicDELETE(routes.PAVAMessagesIDEndpoint, app.Server.DeleteMessage)
 	app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListMessages)
 	app.registerPublicGET(routes.PAVAMessageStreamEndpoint, app.Server.StreamMessage)
-	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.Server.ListScheduledMessages)
+	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
 	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
 	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
@@ -228,6 +225,7 @@ func (app *App) setupPublicRoutes() {
 	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
 	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
 	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
 	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
 	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
 	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
@@ -238,8 +236,8 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
 	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
-	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTask)
-	app.registerPublicPOST(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
@@ -252,8 +250,6 @@ func (app *App) setupPublicRoutes() {
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
-	app.registerPublicPOST(routes.VersionEndpoint, app.Server.RollbackVersion)
-	app.registerPublicPUT(routes.VersionEndpoint, app.Server.UpdateVersion)
 
 	// WebSocket
 	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
@@ -446,8 +442,8 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence)
+func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub)
 	taskManager.Start()
 	return taskManager
 }
@@ -494,7 +490,6 @@ func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *netw
 	}
 
 	hub.Register(udpServer)
-	udpServer.Start()
 	return udpServer
 }
 
