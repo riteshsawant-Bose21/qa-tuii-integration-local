@@ -1,29 +1,5 @@
 basePath: /api/v1
 definitions:
-  types.Amplifier:
-    properties:
-      category:
-        type: string
-      id:
-        type: integer
-      meta_info:
-        $ref: '#/definitions/types.Amplifier_meta_response'
-    type: object
-  types.Amplifier_meta_response:
-    properties:
-      channels:
-        type: integer
-      image_url:
-        items:
-          type: string
-        type: array
-      name:
-        type: string
-      power_output:
-        $ref: '#/definitions/types.powerOutput'
-      total_capacity:
-        type: number
-    type: object
   types.BadRequestError:
     properties:
       message:
@@ -40,127 +16,6 @@ definitions:
         type: string
     required:
     - currency
-    type: object
-  types.DSP_meta:
-    properties:
-      acoustic_echo_cancellation:
-        properties:
-          channels:
-            type: integer
-        type: object
-      configuration_software:
-        type: string
-      dimensions:
-        properties:
-          rack_space:
-            type: string
-          size:
-            items:
-              properties:
-                depth:
-                  type: integer
-                height:
-                  type: integer
-                unit:
-                  type: string
-                width:
-                  type: integer
-              type: object
-            type: array
-        type: object
-      dsp_architecture:
-        type: string
-      firmware:
-        properties:
-          current_published_version:
-            type: string
-          current_running_version:
-            type: string
-        type: object
-      gpio_logic_ports:
-        properties:
-          inputs:
-            type: integer
-          outputs:
-            type: integer
-        type: object
-      id:
-        type: integer
-      images:
-        items:
-          type: string
-        type: array
-      max_number_of_analog_control:
-        type: integer
-      max_number_of_digital_control:
-        type: integer
-      model:
-        type: string
-      name:
-        type: string
-      net_weight:
-        items:
-          properties:
-            unit:
-              type: string
-            value:
-              type: string
-          type: object
-        type: array
-      number_of_inputs_and_outputs:
-        properties:
-          aes67:
-            properties:
-              max_inputs:
-                type: integer
-              max_outputs:
-                type: integer
-            type: object
-          dante:
-            properties:
-              max_inputs:
-                type: integer
-              max_outputs:
-                type: integer
-            type: object
-          fusion_connect:
-            properties:
-              max_inputs:
-                type: integer
-              max_outputs:
-                type: integer
-            type: object
-        type: object
-      product_codes:
-        items:
-          type: string
-        type: array
-      safe_operating_temperature:
-        properties:
-          max:
-            type: integer
-          min:
-            type: integer
-          unit:
-            type: string
-        type: object
-      skus:
-        items:
-          type: integer
-        type: array
-      supported_bose_professional_dante_endpoints:
-        items:
-          type: string
-        type: array
-    type: object
-  types.DigitalSignalProcessor:
-    properties:
-      category:
-        type: string
-      id:
-        type: integer
-      meta_info:
-        $ref: '#/definitions/types.DSP_meta'
     type: object
   types.EnvironmentType:
     enum:
@@ -206,19 +61,62 @@ definitions:
         example: Not Found
         type: string
     type: object
+  types.PriceDetail:
+    properties:
+      currency:
+        type: string
+      price:
+        type: number
+      variant:
+        type: string
+    type: object
+  types.PriceResponse:
+    properties:
+      prices:
+        items:
+          $ref: '#/definitions/types.PriceDetail'
+        type: array
+      product_id:
+        type: integer
+    type: object
+  types.ProductItemResponse:
+    properties:
+      assets: {}
+      description:
+        type: string
+      model_family:
+        type: string
+      model_name:
+        type: string
+      productid:
+        type: integer
+      specifications: {}
+    type: object
   types.ProductResponse:
     properties:
+      accessory:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
       amplifier:
         items:
-          $ref: '#/definitions/types.Amplifier'
+          $ref: '#/definitions/types.ProductItemResponse'
         type: array
-      digital_signal_processors:
+      controller:
         items:
-          $ref: '#/definitions/types.DigitalSignalProcessor'
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      dsp:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
+        type: array
+      io_endpoint:
+        items:
+          $ref: '#/definitions/types.ProductItemResponse'
         type: array
       speaker:
         items:
-          $ref: '#/definitions/types.Speaker'
+          $ref: '#/definitions/types.ProductItemResponse'
         type: array
     type: object
   types.Project:
@@ -413,205 +311,7 @@ definitions:
         example: https://storage.example.com/upload/projects/123e4567
         type: string
     type: object
-  types.Speaker:
-    properties:
-      category:
-        type: string
-      id:
-        type: integer
-      meta_info:
-        $ref: '#/definitions/types.Speaker_meta_response'
-    type: object
-  types.Speaker_meta_response:
-    properties:
-      available_taps:
-        properties:
-          70v:
-            items:
-              type: number
-            type: array
-          100v:
-            items:
-              type: number
-            type: array
-        type: object
-      environment:
-        type: string
-      image_url:
-        items:
-          type: string
-        type: array
-      is_subwoofer:
-        type: boolean
-      max_spl:
-        type: number
-      model:
-        type: string
-      mount_type:
-        type: string
-      nominal_impedance:
-        $ref: '#/definitions/types.nominal_impedence'
-      power_handling:
-        properties:
-          long_term_continuous:
-            type: string
-          peak:
-            type: string
-          unit:
-            type: string
-        type: object
-      sensitivity:
-        properties:
-          at:
-            items:
-              properties:
-                key:
-                  type: string
-                value:
-                  type: string
-              type: object
-            type: array
-          unit:
-            type: string
-        type: object
-    type: object
-  types.nominal_impedence:
-    properties:
-      unit:
-        type: string
-      value:
-        type: string
-    type: object
-  types.powerOutput:
-    properties:
-      asymmetrical:
-        properties:
-          peak_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          peak_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          rated_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          rated_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-        type: object
-      symmetrical:
-        properties:
-          peak_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          peak_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-          rated_per_channel:
-            properties:
-              at:
-                items:
-                  properties:
-                    impedance:
-                      properties:
-                        unit:
-                          type: string
-                        value:
-                          type: integer
-                      type: object
-                    power:
-                      properties:
-                        unit:
-                          type: string
-                        value:
-                          type: integer
-                      type: object
-                  type: object
-                type: array
-            type: object
-          rated_per_channel_high_voltage:
-            properties:
-              at:
-                items:
-                  properties:
-                    key:
-                      type: string
-                    value:
-                      type: integer
-                  type: object
-                type: array
-              unit:
-                type: string
-            type: object
-        type: object
-    type: object
-host: localhost:8020
+host: localhost:8080
 info:
   contact: {}
   description: This is the Fusion Cloud Backend API server.
@@ -622,8 +322,8 @@ paths:
     get:
       consumes:
       - application/json
-      description: Get all available products including speakers, amplifiers and digital
-        signal processors
+      description: Get all available products including speakers, amplifiers, DSPs,
+        controllers, and endpoints
       produces:
       - application/json
       responses:
@@ -677,6 +377,50 @@ paths:
               type: string
             type: object
       summary: Get product by ID
+      tags:
+      - products
+  /products/{id}/prices:
+    get:
+      consumes:
+      - application/json
+      description: Get prices for a specific product by its unique identifier, optionally
+        filtered by currency
+      parameters:
+      - description: Product ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Currency code (e.g., USD, EUR) to filter prices
+        in: query
+        name: currency
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successful response with product prices
+          schema:
+            $ref: '#/definitions/types.PriceResponse'
+        "400":
+          description: Bad request - Product ID is required
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Product not found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal server error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get product prices by ID
       tags:
       - products
   /projects:
