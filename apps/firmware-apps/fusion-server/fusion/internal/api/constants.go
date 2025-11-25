@@ -6,6 +6,7 @@ const (
 	AudioFilesLocation = "/var/lib/fusion/audio"
 
 	AdminPort          = "9090"
+	ControllerPort     = "7950"
 	HTTPPort           = "8080"
 	MessageTriggerPort = 7949
 	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974

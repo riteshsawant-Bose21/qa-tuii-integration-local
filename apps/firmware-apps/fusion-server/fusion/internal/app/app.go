@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	clustertransport "fusion/internal/cluster/transport"
 	"fusion/internal/controllers"
 	"fusion/internal/logging"
 	"fusion/internal/network"
@@ -71,11 +72,11 @@ func NewApp(config *api.AppConfig) *App {
 	persistence := initPersistence(fusionDatabasePath, stateManager)
 	hub := pubsub.NewHub(stateManager, persistence)
 	taskManager := initTaskManager(config, persistence, hub)
-
-	controllerManager := controllers.NewControllerManager(hub, "7950")
+	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
 	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	hub.Memberlist = memberlist
+	transport := clustertransport.NewMemberlistTransport(memberlist)
+	hub.SetClusterTransport(transport)
 	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
