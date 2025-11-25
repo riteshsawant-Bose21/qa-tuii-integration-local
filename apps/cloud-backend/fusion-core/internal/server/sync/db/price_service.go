@@ -110,6 +110,101 @@ func (s *PriceService) UpsertPrice(ctx context.Context, price *syncTypes.DBPrice
 	return nil
 }
 
+// UpsertBatch upserts multiple prices within a single transaction
+// If any price fails to upsert, the entire batch is rolled back
+func (s *PriceService) UpsertBatch(ctx context.Context, prices []*syncTypes.DBPrice) error {
+	if len(prices) == 0 {
+		return nil
+	}
+
+	return s.db.WithTransaction(ctx, func(tx *sql.Tx) error {
+		for _, price := range prices {
+			if err := s.upsertInTx(ctx, tx, price); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// upsertInTx performs upsert using a transaction executor
+func (s *PriceService) upsertInTx(ctx context.Context, exec boil.ContextExecutor, price *syncTypes.DBPrice) error {
+	// Build query conditions for variant support
+	var conditions []qm.QueryMod
+	conditions = append(conditions, qm.Where("product_id = ?", price.ProductID))
+	conditions = append(conditions, qm.Where("currency = ?", price.Currency))
+
+	// Handle variant: check for null or specific value
+	if price.Variant != nil && *price.Variant != "" {
+		conditions = append(conditions, qm.Where("variant = ?", *price.Variant))
+	} else {
+		conditions = append(conditions, qm.Where("variant IS NULL"))
+	}
+
+	// Check if price exists
+	existing, err := models.ProductPrices(conditions...).One(ctx, exec)
+
+	// Convert amount to types.Decimal
+	var bigDecimal decimal.Big
+	bigDecimal.SetFloat64(price.Amount)
+	amount := types.NewDecimal(&bigDecimal)
+
+	if err == sql.ErrNoRows {
+		// Create new price record
+		p := &models.ProductPrice{
+			ProductID: price.ProductID,
+			Currency:  price.Currency,
+			Price:     amount,
+		}
+
+		// Set variant if provided
+		if price.Variant != nil && *price.Variant != "" {
+			p.Variant = null.StringFrom(*price.Variant)
+		}
+
+		// Set created_at if provided
+		if price.CreatedAt != nil {
+			if ts := parseTimestamp(*price.CreatedAt); ts != nil {
+				p.CreatedAt = null.TimeFrom(*ts)
+			}
+		}
+
+		// Set updated_at if provided
+		if price.UpdatedAt != nil {
+			if ts := parseTimestamp(*price.UpdatedAt); ts != nil {
+				p.UpdatedAt = null.TimeFrom(*ts)
+			}
+		}
+
+		if err := p.Insert(ctx, exec, boil.Infer()); err != nil {
+			return fmt.Errorf("failed to insert price for product %d: %w", price.ProductID, err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("failed to check existing price for product %d: %w", price.ProductID, err)
+	} else {
+		// Update existing price
+		existing.Price = amount
+
+		// Update variant if provided
+		if price.Variant != nil && *price.Variant != "" {
+			existing.Variant = null.StringFrom(*price.Variant)
+		}
+
+		// Update timestamp if provided
+		if price.UpdatedAt != nil {
+			if ts := parseTimestamp(*price.UpdatedAt); ts != nil {
+				existing.UpdatedAt = null.TimeFrom(*ts)
+			}
+		}
+
+		if _, err := existing.Update(ctx, exec, boil.Infer()); err != nil {
+			return fmt.Errorf("failed to update price for product %d: %w", price.ProductID, err)
+		}
+	}
+
+	return nil
+}
+
 // GetPriceByProductID retrieves a price by product ID
 func (s *PriceService) GetPriceByProductID(ctx context.Context, productID int) (*syncTypes.DBPrice, error) {
 	price, err := models.ProductPrices(

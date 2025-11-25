@@ -245,7 +245,7 @@ func main() {
 	result.Duration = time.Since(startTime)
 	result.JobID = jobID
 
-	// Update job status with results
+	// Update job status with results atomically
 	if jobID != "" {
 		var errMsg *string
 		if result.Failed > 0 {

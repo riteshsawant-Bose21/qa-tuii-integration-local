@@ -195,6 +195,67 @@ func (s *JobService) UpdateWithResults(jobID, status string, totalItems, success
 	return nil
 }
 
+// UpdateStatusAndResults atomically updates job status and results in a single transaction
+// This ensures the job record is updated consistently without partial failures
+func (s *JobService) UpdateStatusAndResults(
+	ctx context.Context,
+	jobID, status string,
+	totalItems, successful, failed int,
+	validationWarnings []string,
+	errorMsg *string,
+) error {
+	return s.db.WithTransaction(ctx, func(tx *sql.Tx) error {
+		// Find the job
+		job, err := models.ProductSyncJobs(
+			qm.Where("job_id = ?", jobID),
+		).One(ctx, tx)
+
+		if err != nil {
+			s.logger.Error("Failed to find sync job for atomic update",
+				zap.String("job_id", jobID),
+				zap.Error(err),
+			)
+			return fmt.Errorf("failed to find sync job: %w", err)
+		}
+
+		// Update all fields atomically
+		job.Status = status
+		job.TotalItems = null.IntFrom(totalItems)
+		job.SuccessfulItems = null.IntFrom(successful)
+		job.FailedItems = null.IntFrom(failed)
+		job.CompletedAt = null.TimeFrom(time.Now().UTC())
+
+		// Store error message if provided
+		if errorMsg != nil {
+			job.ErrorMessage = null.StringFrom(*errorMsg)
+		}
+
+		// Update the job within the transaction
+		_, err = job.Update(ctx, tx, boil.Infer())
+		if err != nil {
+			s.logger.Error("Failed to update sync job atomically",
+				zap.String("job_id", jobID),
+				zap.String("status", status),
+				zap.Int("total", totalItems),
+				zap.Int("successful", successful),
+				zap.Int("failed", failed),
+				zap.Error(err),
+			)
+			return fmt.Errorf("failed to update sync job: %w", err)
+		}
+
+		s.logger.Info("Atomically updated sync job",
+			zap.String("job_id", jobID),
+			zap.String("status", status),
+			zap.Int("total_items", totalItems),
+			zap.Int("successful", successful),
+			zap.Int("failed", failed),
+		)
+
+		return nil
+	})
+}
+
 // GetByID retrieves a sync job by its ID
 func (s *JobService) GetByID(jobID string) (*types.SyncJobResult, error) {
 	job, err := models.ProductSyncJobs(

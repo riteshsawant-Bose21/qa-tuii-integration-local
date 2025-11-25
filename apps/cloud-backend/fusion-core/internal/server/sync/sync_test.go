@@ -33,6 +33,12 @@ func (m *MockProductDBService) InsertWithRetry(ctx context.Context, product *DBP
 	return args.Error(0)
 }
 
+func (m *MockProductDBService) InsertBatch(ctx context.Context, products []*DBProduct) error {
+	args := m.Called(ctx, products)
+	m.insertedProducts = append(m.insertedProducts, products...)
+	return args.Error(0)
+}
+
 func (m *MockProductDBService) LookupProductIDBySKU(ctx context.Context, sku int) (int, bool, error) {
 	args := m.Called(ctx, sku)
 	return args.Get(0).(int), args.Bool(1), args.Error(2)
@@ -75,6 +81,18 @@ func (m *MockPriceDBService) GetPriceTimestamps(ctx context.Context, priceKeys [
 	return m.timestamps, args.Error(1)
 }
 
+func (m *MockPriceDBService) UpsertBatch(ctx context.Context, prices []*DBPrice) error {
+	args := m.Called(ctx, prices)
+	for _, price := range prices {
+		key := m.priceKey(price)
+		if m.insertedPrices == nil {
+			m.insertedPrices = make(map[string]*DBPrice)
+		}
+		m.insertedPrices[key] = price
+	}
+	return args.Error(0)
+}
+
 func (m *MockPriceDBService) priceKey(price *DBPrice) string {
 	variant := ""
 	if price.Variant != nil {
@@ -114,6 +132,11 @@ func (m *MockJobDBService) StoreValidationErrors(jobID string, errorCollector *e
 		m.validationErrors = make(map[string]*errors.ErrorCollector)
 	}
 	m.validationErrors[jobID] = errorCollector
+	return args.Error(0)
+}
+
+func (m *MockJobDBService) UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error {
+	args := m.Called(ctx, jobID, status, totalItems, successful, failed, validationWarnings, errorMsg)
 	return args.Error(0)
 }
 

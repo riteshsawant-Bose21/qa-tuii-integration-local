@@ -110,6 +110,103 @@ func (s *ProductService) Insert(ctx context.Context, product *syncTypes.DBProduc
 	return nil
 }
 
+// InsertBatch inserts multiple products within a single transaction
+// If any product fails to insert/update, the entire batch is rolled back
+func (s *ProductService) InsertBatch(ctx context.Context, products []*syncTypes.DBProduct) error {
+	if len(products) == 0 {
+		return nil
+	}
+
+	return s.db.WithTransaction(ctx, func(tx *sql.Tx) error {
+		for _, product := range products {
+			if err := s.insertInTx(ctx, tx, product); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// insertInTx inserts or updates a single product using a transaction executor
+func (s *ProductService) insertInTx(ctx context.Context, exec boil.ContextExecutor, product *syncTypes.DBProduct) error {
+	// Check if product exists
+	existing, err := models.Products(qm.Where("product_id = ?", product.ProductID)).One(ctx, exec)
+
+	var p *models.Product
+	if err == sql.ErrNoRows {
+		// Create new product
+		p = &models.Product{
+			ProductID:        product.ProductID,
+			ProductType:      product.ProductType,
+			ModelName:        product.ModelName,
+			ShortDescription: null.StringFrom(product.ShortDescription),
+		}
+
+		// Set optional fields
+		if product.ModelFamily != "" {
+			p.ModelFamily = null.StringFrom(product.ModelFamily)
+		}
+		if product.Description != "" {
+			p.Description = null.StringFrom(product.Description)
+		}
+		if product.Images != "" {
+			p.Images = null.JSONFrom([]byte(product.Images))
+		}
+		if product.Specifications != "" {
+			p.Specifications = null.JSONFrom([]byte(product.Specifications))
+		}
+
+		// Parse and set timestamps
+		if product.CreatedAt != nil {
+			if ts := parseTimestamp(*product.CreatedAt); ts != nil {
+				p.CreatedAt = null.TimeFrom(*ts)
+			}
+		}
+		if product.UpdatedAt != nil {
+			if ts := parseTimestamp(*product.UpdatedAt); ts != nil {
+				p.UpdatedAt = null.TimeFrom(*ts)
+			}
+		}
+
+		if err := p.Insert(ctx, exec, boil.Infer()); err != nil {
+			return fmt.Errorf("failed to insert product %d: %w", product.ProductID, err)
+		}
+	} else if err != nil {
+		return fmt.Errorf("failed to check existing product %d: %w", product.ProductID, err)
+	} else {
+		// Update existing product
+		existing.ModelName = product.ModelName
+		existing.ProductType = product.ProductType
+		existing.ShortDescription = null.StringFrom(product.ShortDescription)
+
+		// Update optional fields
+		if product.ModelFamily != "" {
+			existing.ModelFamily = null.StringFrom(product.ModelFamily)
+		}
+		if product.Description != "" {
+			existing.Description = null.StringFrom(product.Description)
+		}
+		if product.Images != "" {
+			existing.Images = null.JSONFrom([]byte(product.Images))
+		}
+		if product.Specifications != "" {
+			existing.Specifications = null.JSONFrom([]byte(product.Specifications))
+		}
+		// Parse and update timestamps
+		if product.UpdatedAt != nil {
+			if ts := parseTimestamp(*product.UpdatedAt); ts != nil {
+				existing.UpdatedAt = null.TimeFrom(*ts)
+			}
+		}
+
+		if _, err := existing.Update(ctx, exec, boil.Infer()); err != nil {
+			return fmt.Errorf("failed to update product %d: %w", product.ProductID, err)
+		}
+	}
+
+	return nil
+}
+
 // parseTimestamp parses various timestamp formats to time.Time
 func parseTimestamp(timestamp string) *time.Time {
 	// Handle empty timestamp

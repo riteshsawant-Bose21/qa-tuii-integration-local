@@ -48,9 +48,15 @@ func New(cfg *Config,
 		return nil, errors.New("missing product service")
 	}
 
+<<<<<<< HEAD
 	if project == nil {
 		return nil, errors.New("missing project service")
 	}
+=======
+	// if projectSvc == nil {
+	// 	return nil, errors.New("missing project service")
+	// }
+>>>>>>> a1eb14e4b (refactoring)
 
 	api := &API{
 		engine:  engine,

@@ -42,6 +42,36 @@ func NewS3Client(ctx context.Context) (*S3, error) {
 	}, nil
 }
 
+func NewS3ClientWithProfile(ctx context.Context, profile, region string) (*S3, error) {
+	var cfg aws.Config
+	var err error
+
+	// Load config with profile if specified, otherwise use default
+	if profile != "" && profile != "default" {
+		cfg, err = config.LoadDefaultConfig(ctx, config.WithSharedConfigProfile(profile))
+	} else {
+		cfg, err = config.LoadDefaultConfig(ctx)
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to load AWS config: %w", err)
+	}
+
+	// Override region if specified
+	if region != "" {
+		cfg.Region = region
+	}
+
+	client := s3.NewFromConfig(cfg)
+
+	return &S3{
+		client: client,
+		config: &s3Config{
+			region: cfg.Region,
+		},
+	}, nil
+}
+
 // S3BucketHandle provides methods to operate on a bucket in AWS S3.
 type S3BucketHandle struct {
 	bucketName    string
@@ -63,6 +93,7 @@ func (b *S3BucketHandle) Object(name string) ObjectHandle {
 		handle: b,
 		name:   name,
 		client: b.client,
+<<<<<<< HEAD
 		bucket: b.bucketName,
 	}
 }
@@ -95,6 +126,12 @@ func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl t
 	return req.URL, nil
 }
 
+=======
+		bucket: b.name,
+	}
+}
+
+>>>>>>> a1eb14e4b (refactoring)
 // S3ObjectHandle provides methods to operate on an object in an S3 bucket.
 type S3ObjectHandle struct {
 	handle *S3BucketHandle

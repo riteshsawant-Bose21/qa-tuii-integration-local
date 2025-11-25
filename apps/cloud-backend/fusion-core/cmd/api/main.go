@@ -27,6 +27,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
@@ -118,11 +119,19 @@ func main() {
 	logger.Info("Initialized Product Service.")
 
 	//Initialize Project Service
+<<<<<<< HEAD
 	// projectSVC := project.NewService(projectDBSvc)
 	// if projectSVC == nil {
 	// 	logger.Fatal("Failed to initialize project service")
 	// }
 	// logger.Info("Initialized Project Service.")
+=======
+	projectSVC := project.NewService(projectDBSvc)
+	if projectSVC == nil {
+		logger.Fatal("Failed to initialize project service")
+	}
+	logger.Info("Initialized Project Service.")
+>>>>>>> a1eb14e4b (refactoring)
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
