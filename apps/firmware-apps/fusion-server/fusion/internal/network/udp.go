@@ -202,8 +202,8 @@ func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) (
 
 	payload := make(map[string]any, len(data)+1)
 	maps.Copy(payload, data)
-	payload[api.FusionVersion] = version
-	payload[api.FusionEpoch] = version
+	payload[api.FusionVersion] = version.Counter
+	payload[api.FusionEpoch] = version.Epoch
 
 	json, err := json.Marshal(payload)
 	if err != nil {

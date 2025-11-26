@@ -120,20 +120,8 @@ func (h *Handler) HandleHTTPPatch(patch map[string]any) (map[string]any, error) 
 
 	diff := utils.CalculateDiff(before, after)
 
-	// Broadcast change
-	configUpdate, err := h.StateManager.NewConfigUpdate(after)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create config update: %w", err)
-	}
-
-	message := api.NewNotifyMessage(
-		api.NotifyOpConfigUpdate,
-		h.memberlist.LocalNode().Name,
-		api.WithConfigUpdate(configUpdate),
-	)
-
-	if err := h.broadcastMessage(message); err != nil {
-		return nil, fmt.Errorf("failed to broadcast patch update: %w", err)
+	if err := h.handleConfigUpdate(after, false); err != nil {
+		return nil, err
 	}
 
 	return diff, nil

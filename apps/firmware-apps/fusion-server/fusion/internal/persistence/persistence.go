@@ -502,7 +502,9 @@ func (p *Persistence) saveWorker() {
 		}
 
 		timer = time.AfterFunc(p.saveDebounce, func() {
-			p.SaveState()
+			if err := p.SaveState(); err != nil {
+				logging.GetLogger().Error("Error saving state: %v", err)
+			}
 
 			mu.Lock()
 			timer = nil
