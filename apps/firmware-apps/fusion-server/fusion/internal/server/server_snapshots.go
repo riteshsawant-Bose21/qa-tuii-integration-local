@@ -11,8 +11,8 @@ import (
 
 // GetSnapshot handles HTTP GET requests to retrieve a specific snapshot.
 func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
@@ -34,8 +34,8 @@ func (s *FusionServer) GetSnapshot(w http.ResponseWriter, r *http.Request) {
 
 // GetActiveSnapshot handles HTTP GET requests to retrieve the active snapshot name.
 func (s *FusionServer) GetActiveSnapshotName(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !utils.RequireGet(w, r) {
 		return
 	}
 
@@ -66,8 +66,8 @@ func (s *FusionServer) ListSnapshots(w http.ResponseWriter, r *http.Request) {
 // ActivateSnapshot handles HTTP POST requests to activate a specific snapshot.
 // It expects a query parameter "name" specifying the snapshot to activate.
 func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !utils.RequirePost(w, r) {
 		return
 	}
 
@@ -88,11 +88,6 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	name := s.handler.HandleGetActiveSnapshotName()
-	if name == snapshotName {
-		w.WriteHeader(http.StatusNoContent)
-		return
-	}
 	if err := s.handler.HandleActivateSnapshot(snapshotName); err != nil {
 		http.Error(w, fmt.Sprintf("Error activating snapshot: %v", err), http.StatusInternalServerError)
 		return
@@ -103,8 +98,8 @@ func (s *FusionServer) ActivateSnapshot(w http.ResponseWriter, r *http.Request) 
 
 // CreateSnapshot handles HTTP POST requests to create a new snapshot.
 func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !utils.RequirePost(w, r) {
 		return
 	}
 
@@ -140,8 +135,8 @@ func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 // DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
 // It expects a query parameter "name" specifying the snapshot to delete.
 func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodDelete {
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+
+	if !utils.RequireDelete(w, r) {
 		return
 	}
 

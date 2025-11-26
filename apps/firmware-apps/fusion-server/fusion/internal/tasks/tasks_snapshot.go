@@ -167,7 +167,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 		}
 
 		// Activate the snapshot only on the instance.
-		restored, err := tm.persistence.ActivateSnapshotAndReturnState(snapID)
+		err := tm.persistence.ActivateSnapshot(snapID)
 		if err != nil {
 			return err
 		}
@@ -181,23 +181,9 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 			return err
 		}
 
-		// Broadcast message containing the entire restored state
-		update := api.ConfigUpdate{
-			Data:         restored,
-			Version:      tm.persistence.GetVersion(),
-			Clear:        false,
-			FromSnapshot: true,
-		}
-
-		msg := api.NewNotifyMessage(
-			api.NotifyOpConfigUpdate,
-			tm.node,
-			api.WithConfigUpdate(&update),
-		)
-
 		logger.Debug("---------------->>>> Snapshot '%s' activated successfully via task", snapID)
 
-		return tm.hub.BroadcastToNodes(msg)
+		return nil
 	}
 }
 
@@ -206,7 +192,11 @@ func (tm *TaskManager) handleSnapshotOperation(node string, name string, update 
 
 	msg := api.NewNotifyMessage(update,
 		node,
-		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
+		api.WithSnapshotUpdate(&api.SnapshotUpdate{
+			Name:      name,
+			Data:      data,
+			Timestamp: time.Now().UTC(),
+		}),
 	)
 	return tm.hub.BroadcastToNodes(msg)
 }

@@ -52,12 +52,7 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 	logger := logging.GetLogger()
 
-	if metadata.ActiveSnapshot == snapshotKey {
-		logger.Debug("Snapshot '%s' already active", snapshotKey)
-		return nil
-	}
-
-	// Update activate snapshot in metadata
+	// Update active snapshot in metadata
 	metadata.ActiveSnapshot = snapshotKey
 	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
@@ -90,32 +85,6 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	return nil
 }
 
-// ActivateSnapshotAndReturnState restores snapshot and returns the restored state map.
-// Used only by handlers that need to broadcast the updated config.
-func (p *Persistence) ActivateSnapshotAndReturnState(name string) (map[string]any, error) {
-
-	ps, err := p.readSnapshot(name)
-	if err != nil {
-		return nil, err
-	}
-
-	if ps == nil {
-		return nil, fmt.Errorf("snapshot %s does not exist", name)
-	}
-
-	// Activate normally
-	if err := p.ActivateSnapshot(name); err != nil {
-		return nil, err
-	}
-
-	// Produce normalized full-state map for broadcasting
-	restored := make(map[string]any)
-	for key, entry := range ps.State {
-		restored[key] = entry.Data
-	}
-	return restored, nil
-}
-
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 
@@ -134,15 +103,6 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 		return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotKey, err)
 	}
 
-	// If the deleted snapshot was active, clear it from metadata.
-	metadata, err := p.loadMetadata()
-	if err == nil && metadata.ActiveSnapshot == snapshotKey {
-		metadata.ActiveSnapshot = ""
-		if err := p.saveMetadata(metadata); err != nil {
-			return fmt.Errorf("failed to update metadata after deleting active snapshot: %w", err)
-		}
-	}
-
 	// Remove tasks associated with the snapshot
 	tasks, err := p.GetTaskIDsBySnapshot(snapshotKey)
 	if err != nil {
@@ -152,6 +112,14 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 	for _, taskID := range tasks {
 		if err := p.DeleteTask(taskID); err != nil {
 			return fmt.Errorf("failed to delete task %s: %w", taskID, err)
+		}
+	}
+
+	// If the deleted snapshot was active, clear it from metadata.
+	metadata, err := p.loadMetadata()
+	if err == nil && metadata.ActiveSnapshot == snapshotKey {
+		if err := p.ActivateSnapshot(keyDefaultSnapshot); err != nil {
+			return fmt.Errorf("failed to restore active snapshot %q: %w", keyDefaultSnapshot, err)
 		}
 	}
 
@@ -247,7 +215,7 @@ func (p *Persistence) LoadActiveSnapshot() error {
 
 	if snapshotName == "" {
 		logger.Warn("No active snapshot on startup")
-		return nil
+		snapshotName = keyDefaultSnapshot
 	}
 
 	if err := p.ActivateSnapshot(snapshotName); err != nil {

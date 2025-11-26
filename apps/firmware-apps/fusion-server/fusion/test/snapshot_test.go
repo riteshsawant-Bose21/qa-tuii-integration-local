@@ -1,4 +1,3 @@
-// Snapshot tests using RESTful snapshot endpoints
 package main
 
 import (
@@ -8,6 +7,7 @@ import (
 	"fusion/internal/logging"
 	"io"
 	"net/http"
+	"os/exec"
 	"slices"
 	"testing"
 	"time"
@@ -610,50 +610,6 @@ func getStateValue(t *testing.T, key string) any {
 	return result.Value
 }
 
-func getLiveNodeAddresses() ([]string, error) {
-	resp, err := http.Get(fmt.Sprintf("%s/cluster/members", snapServerAddr))
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	var members []struct {
-		Addr string `json:"Addr"`
-		Port int    `json:"Port"`
-	}
-	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
-		return nil, err
-	}
-	var nodes []string
-	for _, m := range members {
-		nodes = append(nodes, fmt.Sprintf("http://%s:%s", m.Addr, snapServerPort))
-	}
-	return nodes, nil
-}
-
-func waitForSnapshotSync(timeout time.Duration, check func() bool) bool {
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if check() {
-			return true
-		}
-		<-ticker.C
-	}
-	return false
-}
-
-func asInt(v any) int {
-	switch n := v.(type) {
-	case float64:
-		return int(n)
-	case int:
-		return n
-	default:
-		return 0
-	}
-}
-
 func TestSnapshotRestoresStateExactly(t *testing.T) {
 	initialEpoch := getAnyClusterEpoch(t)
 
@@ -842,4 +798,225 @@ func logPerNodeSnapshotStatus(t *testing.T, snapshotName string) {
 	}
 
 	t.Log("-------------------------------------------------")
+}
+
+func TestActiveSnapshotPropagatesClusterWide(t *testing.T) {
+	snapshotName := fmt.Sprintf("active_snap_%d", time.Now().UnixNano())
+
+	// Create
+	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+
+	// Activate
+	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
+	if _, err := (&http.Client{}).Do(req); err != nil {
+		t.Fatalf("Failed to activate snapshot: %v", err)
+	}
+
+	// Wait for propagation
+	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+		return activeSnapshotMatchesAllNodes(t, snapshotName)
+	})
+	if !ok {
+		t.Fatalf("Active snapshot did not propagate; got=%v", getClusterActiveSnapshots(t))
+	}
+}
+
+func activeSnapshotMatchesAllNodes(t *testing.T, expected string) bool {
+	snaps := getClusterActiveSnapshots(t)
+	if len(snaps) == 0 {
+		return false
+	}
+	for _, s := range snaps {
+		if s != expected {
+			return false
+		}
+	}
+	return true
+}
+
+func getClusterActiveSnapshots(t *testing.T) []string {
+	t.Helper()
+
+	nodes, err := getLiveNodeAddresses()
+	if err != nil {
+		t.Fatalf("failed to get nodes: %v", err)
+	}
+
+	out := make([]string, 0, len(nodes))
+	for _, addr := range nodes {
+		resp, err := http.Get(fmt.Sprintf("%s/metadata", addr))
+		if err != nil {
+			t.Fatalf("GET metadata failed: %v", err)
+		}
+		defer resp.Body.Close()
+
+		var metaResp struct {
+			Metadata struct {
+				ActiveSnapshot string `json:"active_snapshot"`
+			} `json:"metadata"`
+		}
+
+		if err := json.NewDecoder(resp.Body).Decode(&metaResp); err != nil {
+			t.Fatalf("Decode metadata: %v", err)
+		}
+
+		out = append(out, metaResp.Metadata.ActiveSnapshot)
+	}
+
+	return out
+}
+
+func TestActiveSnapshotSurvivesRestart(t *testing.T) {
+	snapshotName := fmt.Sprintf("persist_snap_%d", time.Now().UnixNano())
+
+	// Create
+	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+
+	// Activate
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName), nil)
+	(&http.Client{}).Do(req)
+
+	// Wait for propagation
+	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+		return activeSnapshotMatchesAllNodes(t, snapshotName)
+	})
+	if !ok {
+		t.Fatalf("Active snapshot mismatch before restart: %v", getClusterActiveSnapshots(t))
+	}
+
+	// Restart cluster
+	restartAllNodes(t)
+
+	// After restart, the active snapshot must remain identical everywhere
+	ok = waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+		return activeSnapshotMatchesAllNodes(t, snapshotName)
+	})
+	if !ok {
+		t.Fatalf("Active snapshot mismatch after restart: %v", getClusterActiveSnapshots(t))
+	}
+}
+
+func TestSnapshotActivationOutOfOrderMessages(t *testing.T) {
+	snapshotName := fmt.Sprintf("ooom_%d", time.Now().UnixNano())
+
+	// Create snapshot
+	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+
+	//
+	// Simulate out-of-order delivery:
+	// 1. Apply a state update first (ConfigUpdate)
+	// 2. Activate snapshot
+	//
+	// This is realistic because memberlist gossip does not guarantee ordering.
+	//
+	patchStateValue(t, "ooom_key", 123)
+
+	// Activate snapshot
+	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
+	(&http.Client{}).Do(req)
+
+	// Must converge to the new active snapshot on all nodes
+	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+		return activeSnapshotMatchesAllNodes(t, snapshotName)
+	})
+	if !ok {
+		t.Fatalf("Active snapshot not synchronized after out-of-order handling: %v",
+			getClusterActiveSnapshots(t))
+	}
+}
+
+func TestDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
+	snapshotName := fmt.Sprintf("delete_active_%d", time.Now().UnixNano())
+
+	// Create and activate
+	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
+	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName), nil)
+	(&http.Client{}).Do(req)
+
+	waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+		return activeSnapshotMatchesAllNodes(t, snapshotName)
+	})
+
+	// Delete the active snapshot
+	req, _ = http.NewRequest(http.MethodDelete, fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), nil)
+	(&http.Client{}).Do(req)
+
+	// After deletion, active snapshot should be cleared uniformly
+	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+		snaps := getClusterActiveSnapshots(t)
+		for _, s := range snaps {
+			if s != "default" {
+				return false
+			}
+		}
+		return true
+	})
+
+	if !ok {
+		t.Fatalf("Active snapshot not reset after deletion: %v", getClusterActiveSnapshots(t))
+	}
+}
+
+func restartAllNodes(t *testing.T) {
+	t.Helper()
+
+	// I can't get the go test runner to use a relative path!!!
+	script := "/Users/gragan/inprogress/bose/fusion-monorepo/apps/firmware-apps/fusion-server/scripts/multipass/restart-fusion.sh"
+
+	cmd := exec.Command(script)
+	cmd.Dir = "" // ensure it uses the test's actual working directory
+
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("restart-fusion failed: %v\nOutput:\n%s", err, out)
+	}
+}
+
+func waitForSnapshotSync(timeout time.Duration, check func() bool) bool {
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if check() {
+			return true
+		}
+		<-ticker.C
+	}
+	return false
+}
+
+func asInt(v any) int {
+	switch n := v.(type) {
+	case float64:
+		return int(n)
+	case int:
+		return n
+	default:
+		return 0
+	}
+}
+
+func getLiveNodeAddresses() ([]string, error) {
+	resp, err := http.Get(fmt.Sprintf("%s/cluster/members", snapServerAddr))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	var members []struct {
+		Addr string `json:"Addr"`
+		Port int    `json:"Port"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
+		return nil, err
+	}
+	var nodes []string
+	for _, m := range members {
+		nodes = append(nodes, fmt.Sprintf("http://%s:%s", m.Addr, snapServerPort))
+	}
+	return nodes, nil
 }
