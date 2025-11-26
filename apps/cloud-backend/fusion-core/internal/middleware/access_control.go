@@ -15,7 +15,7 @@ type PermissionLevel string
 
 const (
 	PermissionRead  PermissionLevel = "read"
-	PermissionWrite PermissionLevel = "write"
+	PermissionWrite PermissionLevel = "edit"
 	PermissionAdmin PermissionLevel = "admin"
 )
 
@@ -159,9 +159,9 @@ func (acc *AccessControlConfig) hasPermission(permissions map[string]string, fea
 func (acc *AccessControlConfig) isPermissionSufficient(userLevel string, requiredLevel PermissionLevel) bool {
 	// Define permission hierarchy
 	levelHierarchy := map[string]int{
-		"none":  0,
-		"read":  1,
-		"write": 2,
+		"none":  1,
+		"read":  2,
+		"edit": 3,
 	}
 
 	userLevelInt, userExists := levelHierarchy[strings.ToLower(userLevel)]
