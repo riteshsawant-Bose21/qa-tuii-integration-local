@@ -1342,7 +1342,7 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     // TODO
     // Read IMX8 ROM for this. hardcode for now
-    data.type = BD_TYPE_FUSION_C1;
+    data.type = BD_TYPE_FUSION_FM6;
 
     if (data.type >= BD_TYPE_FIXED_IO_START && data.type < BD_TYPE_FIXED_IO_END) {
         has_slot_io = false;
