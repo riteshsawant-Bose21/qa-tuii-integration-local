@@ -15,7 +15,6 @@ import (
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
 
-	logging.GetLogger().Info("--------------->>> CreateSnapshot")
 	p.stateManager.BumpEpoch()
 
 	p.mutex.Lock()
@@ -222,7 +221,6 @@ func (p *Persistence) LoadActiveSnapshot() error {
 	}
 
 	// Save version is authoritative
-	//logging.GetLogger().Info("-------->>> GetActiveSnapshotName setting Version: %d", metadata.Version.Counter)
 	p.stateManager.SetVersion(metadata.Version)
 
 	logger.Debug("Restored active snapshot on startup: %s %d %d", snapshotName, metadata.Version.Epoch, metadata.Version.Counter)

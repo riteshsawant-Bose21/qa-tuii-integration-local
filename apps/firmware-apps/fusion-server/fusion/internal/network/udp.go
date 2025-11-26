@@ -41,7 +41,8 @@ type UDPServer struct {
 
 	// ACK handling
 	pending              sync.Map
-	lastBroadcastVersion atomic.Int64
+	lastBroadcastEpoch   atomic.Uint64
+	lastBroadcastVersion atomic.Uint64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -167,18 +168,23 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	if msg.Operation == api.NotifyOpConfigUpdate &&
 		msg.ConfigUpdate != nil {
 
-		v := msg.ConfigUpdate.Version.Counter
-		last := s.lastBroadcastVersion.Load()
+		v := msg.ConfigUpdate.Version
 
-		if v <= last {
+		last := api.Version{
+			Epoch:   s.lastBroadcastEpoch.Load(),
+			Counter: s.lastBroadcastVersion.Load(),
+		}
+
+		if v.Less(last) {
 			logger.Debug(
-				"udp broadcast: skipping stale/duplicate config_update version=%d (last=%d)",
+				"udp broadcast: skipping stale/duplicate config_update version=%v (last=%v)",
 				v, last,
 			)
 			return nil
 		}
 
-		s.lastBroadcastVersion.Store(v)
+		s.lastBroadcastEpoch.Store(v.Epoch)
+		s.lastBroadcastVersion.Store(v.Counter)
 	}
 
 	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
