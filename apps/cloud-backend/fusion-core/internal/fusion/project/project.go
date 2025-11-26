@@ -255,7 +255,6 @@ func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth 
 	opts := ValidationOptions{
 		CheckDeleted:              true,
 		CheckArchived:             true,
-		CheckNotLockedByOtherUser: true,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -264,6 +263,7 @@ func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth 
 	} else {
 		opts.CheckUserAssigned = true
 		opts.UserID = userAuth.User.ID
+		opts.CheckNotLockedByOtherUser = true
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -433,15 +433,16 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth
 	opts := ValidationOptions{
 		CheckDeleted:              true,
 		CheckArchived:             false,
-		CheckNotLockedByOtherUser: true,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
 		opts.CheckPrimaryOwner = true
 		opts.AccountID = userAuth.Account.ID
+		opts.CheckNotLockedByOtherUser = false
 	} else {
 		opts.CheckUserAssigned = true
 		opts.UserID = userAuth.User.ID
+		opts.CheckNotLockedByOtherUser = true
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -466,7 +467,6 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAu
 	opts := ValidationOptions{
 		CheckDeleted:              true,
 		CheckArchived:             false,
-		CheckNotLockedByOtherUser: true,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -475,6 +475,7 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAu
 	} else {
 		opts.CheckUserAssigned = true
 		opts.UserID = userAuth.User.ID
+		opts.CheckNotLockedByOtherUser = true
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
