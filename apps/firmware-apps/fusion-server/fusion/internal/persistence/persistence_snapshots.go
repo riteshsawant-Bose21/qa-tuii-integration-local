@@ -15,6 +15,7 @@ import (
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
 
+	logging.GetLogger().Info("--------------->>> CreateSnapshot")
 	p.stateManager.BumpEpoch()
 
 	p.mutex.Lock()
