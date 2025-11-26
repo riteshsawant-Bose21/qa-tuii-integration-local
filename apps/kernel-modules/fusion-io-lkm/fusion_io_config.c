@@ -39,54 +39,39 @@ const struct base_device bd_empty = {
     }
 };
 
-const struct base_device bd_fusion_c0 = {
+const struct base_device bd_fusion_fm6 = {
     .data = {
-        .model = "fusion_c0",
+        .model = "fusion_fm6",
         .sn = "tbd",
-        .type = BD_TYPE_FUSION_C0
+        .type = BD_TYPE_FUSION_FM6
     },
-    .num_gpios = 6,
+    .num_gpios = 4,
     .gpios = (struct endpoint_gpio[]) {
         {
-            .name = "gpio_i2c4_int",
+            .name = "gpio_a_mute_out",
             .type = EP_GPIO_TYPE_PHYS,
-            .is_irq = true,
-            .num = 11,
-            .trigger_type = IRQ_TYPE_EDGE_FALLING
+            .num = 5, // GPIO1_IO5
+            .dir = EP_GPIO_DIR_I
         },
         {
             .name = "gpio_tca9544_int",
             .type = EP_GPIO_TYPE_PHYS,
             .is_irq = true,
-            .num = 12,
+            .num = 6, // GPIO1_IO6
             .trigger_type = IRQ_TYPE_EDGE_FALLING
         },
         {
             .name = "gpio_tcal6408_int",
             .type = EP_GPIO_TYPE_PHYS,
             .is_irq = true,
-            .num = 13,
+            .num = 14, // GPIO1_IO14
             .trigger_type = IRQ_TYPE_EDGE_FALLING
         },
         {
-            .name = "gpio_a_mute_out",
-            .type = EP_GPIO_TYPE_PHYS,
-            .num = 47,
-            .dir = EP_GPIO_DIR_I
-        },
-        {
-            .name = "gpio_gpio2_16",
+            .name = "gpio_uv_warn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 48,
-            .dir = EP_GPIO_DIR_O,
-            .default_val = EP_GPIO_VAL_LO
-        },
-        {
-            .name = "gpio_pwr_goodn",
-            .type = EP_GPIO_TYPE_PHYS,
-            .export = true,
-            .num = 52,
+            .num = 129, // GPIO5_IO5
             .dir = EP_GPIO_DIR_I
         }
     },
@@ -98,7 +83,7 @@ const struct base_device bd_fusion_c0 = {
             .i2c_addr = 0x70,
             .ep_handle_irq = tca9544_handle_irq,
             .ep_configure = tca9544_configure,
-            .num_gpios = 5,
+            .num_gpios = 4,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_ana_int",
@@ -122,13 +107,6 @@ const struct base_device bd_fusion_c0 = {
                     .trigger_type = IRQ_TYPE_EDGE_FALLING
                 },
                 {
-                    .name = "gpio_amp_int",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .is_irq = true,
-                    .num = 4,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING
-                },
-                {
                     .name = "gpio_tca9544_int",
                     .type = EP_GPIO_TYPE_PHYS,
                     .is_irq = true,
@@ -142,7 +120,7 @@ const struct base_device bd_fusion_c0 = {
             .ioexp_id = 1,
             .i2c_addr = 0x20,
             .ep_handle_irq = tcal6408_handle_irq,
-            .num_gpios = 9,
+            .num_gpios = 6,
             .gpios = (struct endpoint_gpio[]) {
                 {
                     .name = "gpio_ana_3v3_psw",
@@ -168,21 +146,6 @@ const struct base_device bd_fusion_c0 = {
                     .name = "gpio_hdmi_reset",
                     .type = EP_GPIO_TYPE_VIRT,
                     .num = 5
-                },
-                {
-                    .name = "gpio_amp_stby",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .num = 6
-                },
-                {
-                    .name = "gpio_amp_reset",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .num = 7
-                },
-                {
-                    .name = "gpio_ui_reset",
-                    .type = EP_GPIO_TYPE_VIRT,
-                    .num = 8
                 },
                 {
                     .name = "gpio_tcal6408_int",
@@ -663,7 +626,7 @@ const struct base_device bd_fusion_c0 = {
                     .ioexp_id = 4,
                     .i2c_addr = 0x23,
                     .ep_handle_irq = tca9535_handle_irq,
-                    .num_gpios = 11,
+                    .num_gpios = 16,
                     .gpios = (struct endpoint_gpio[]) {
                         {
                             .name = "gpio_ctrl0_gpio0",
@@ -678,51 +641,81 @@ const struct base_device bd_fusion_c0 = {
                             .aggregate_id = 1
                         },
                         {
-                            .name = "gpio_ctrl0_gpio1",
+                            .name = "gpio_ctrl2_gpio0",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 3,
-                            .aggregate_id = 2
+                            .aggregate_id = 1
                         },
                         {
-                            .name = "gpio_ctrl1_gpio1",
+                            .name = "gpio_ctrl0_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 4,
                             .aggregate_id = 2
                         },
                         {
-                            .name = "gpio_ctrl0_gpio2",
+                            .name = "gpio_ctrl1_gpio1",
                             .type = EP_GPIO_TYPE_VIRT,
                             .num = 5,
+                            .aggregate_id = 2
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio1",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 6,
+                            .aggregate_id = 2
+                        },
+                        {
+                            .name = "gpio_ctrl0_gpio2",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 7,
                             .aggregate_id = 3
                         },
                         {
                             .name = "gpio_ctrl1_gpio2",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 6,
+                            .num = 8,
+                            .aggregate_id = 3
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio2",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 9,
                             .aggregate_id = 3
                         },
                         {
                             .name = "gpio_ctrl0_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 7,
+                            .num = 10,
                             .aggregate_id = 4
                         },
                         {
                             .name = "gpio_ctrl1_gpio3",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 8,
+                            .num = 11,
+                            .aggregate_id = 4
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio3",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 12,
                             .aggregate_id = 4
                         },
                         {
                             .name = "gpio_ctrl0_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 9,
+                            .num = 13,
                             .aggregate_id = 5
                         },
                         {
                             .name = "gpio_ctrl1_gpio4",
                             .type = EP_GPIO_TYPE_VIRT,
-                            .num = 10,
+                            .num = 14,
+                            .aggregate_id = 5
+                        },
+                        {
+                            .name = "gpio_ctrl2_gpio4",
+                            .type = EP_GPIO_TYPE_VIRT,
+                            .num = 15,
                             .aggregate_id = 5
                         },
                         {
@@ -870,7 +863,7 @@ const struct base_device bd_fusion_c0 = {
                 .parent_ep_name = "ep_ioexp_tca9535-2",
                 .num_msgs = 2,
                 .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x02aa },
+                    { .reg_addr = TCA9535_REG_OUTPUT_PORT0,   .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x36db }, // default Hi-Z
                     { .reg_addr = TCA9535_REG_CONFIGURATION0, .op_size = ENDPOINT_CMD_MSG_OP_16BIT, .data = 0x0000 }
                 }
             },
@@ -939,11 +932,11 @@ const struct base_device bd_fusion_c0 = {
     }
 };
 
-const struct base_device bd_fusion_c1 = {
+const struct base_device bd_fusion_fm8y = {
     .data = {
-        .model = "fusion_c1",
+        .model = "fusion_fm8y",
         .sn = "tbd",
-        .type = BD_TYPE_FUSION_C1
+        .type = BD_TYPE_FUSION_FM8Y
     },
     .num_gpios = 4,
     .gpios = (struct endpoint_gpio[]) {
@@ -1833,12 +1826,12 @@ const struct base_device bd_fusion_c1 = {
 };
 
 const enum base_device_type default_bd_types[] = {
-    BD_TYPE_FUSION_C0,
-    BD_TYPE_FUSION_C1,
+    BD_TYPE_FUSION_FM6,
+    BD_TYPE_FUSION_FM8Y,
     BD_TYPE_NONE
 };
 
 const struct base_device *default_bds[] = {
-    &bd_fusion_c0,
-    &bd_fusion_c1
+    &bd_fusion_fm6,
+    &bd_fusion_fm8y,
 };

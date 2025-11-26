@@ -225,8 +225,8 @@ static int gpt_probe(struct platform_device *pdev)
                            dev_name(&pdev->dev), g);
     if (ret) return ret;
 
-    ret = gpt_start(g);
-    if (ret) return ret;
+    // ret = gpt_start(g);
+    // if (ret) return ret;
 
     dev_info(&pdev->dev, "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
     return 0;
