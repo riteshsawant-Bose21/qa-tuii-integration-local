@@ -14,17 +14,9 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(name string) error {
 
-	err := h.persistence.ActivateSnapshot(name)
-	if err != nil {
-		return err
-	}
-
 	// Broadcast snapshot-activation (cluster-sync)
-	if err := h.handleSnapshotOperation(
-		h.StateManager.GetNode(),
-		name,
-		api.NotifyOpSnapActivate); err != nil {
-		return err
+	if err := h.handleSnapshotOperation(name, api.NotifyOpSnapActivate); err != nil {
+		return fmt.Errorf("failed to handle snapshot activate: %w", err)
 	}
 
 	return nil
@@ -32,11 +24,7 @@ func (h *Handler) HandleActivateSnapshot(name string) error {
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
 func (h *Handler) HandleCreateSnapshot(name string) error {
-	if err := h.persistence.CreateSnapshot(name); err != nil {
-		return fmt.Errorf("failed to create snapshot: %w", err)
-	}
-
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate); err != nil {
+	if err := h.handleSnapshotOperation(name, api.NotifyOpSnapCreate); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil
@@ -44,10 +32,7 @@ func (h *Handler) HandleCreateSnapshot(name string) error {
 
 // HandleDeleteSnapshot removes the specified snapshot and notifies the cluster.
 func (h *Handler) HandleDeleteSnapshot(name string) error {
-	if err := h.persistence.DeleteSnapshot(name); err != nil {
-		return fmt.Errorf("failed to delete snapshot: %w", err)
-	}
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapDelete); err != nil {
+	if err := h.handleSnapshotOperation(name, api.NotifyOpSnapDelete); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
 	}
 	return nil
@@ -79,10 +64,10 @@ func (h *Handler) IsDefaultSnapshot(name string) bool {
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
-func (h *Handler) handleSnapshotOperation(node string, name string, update api.NotifyOp) error {
+func (h *Handler) handleSnapshotOperation(name string, update api.NotifyOp) error {
 
 	msg := api.NewNotifyMessage(update,
-		node,
+		h.StateManager.GetNode(),
 		api.WithSnapshotUpdate(
 			&api.SnapshotUpdate{
 				Name:      name,

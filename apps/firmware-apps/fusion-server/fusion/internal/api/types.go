@@ -100,11 +100,10 @@ type AudioSyncUpdate struct {
 // This separation keeps replication simple and Lamport-correct, while PATCH
 // provides advanced local update semantics.
 type ConfigUpdate struct {
-	Hash         string         `json:"hash"`
-	Data         map[string]any `json:"data"`
-	Version      Version        `json:"version"`
-	Clear        bool           `json:"clear,omitempty"`
-	FromSnapshot bool           `json:"from_snapshot,omitempty"`
+	Hash    string         `json:"hash"`
+	Data    map[string]any `json:"data"`
+	Version Version        `json:"version"`
+	Clear   bool           `json:"clear,omitempty"`
 }
 
 // ConfigValue represents a key/value pair

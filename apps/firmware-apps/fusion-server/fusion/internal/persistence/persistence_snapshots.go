@@ -14,6 +14,10 @@ import (
 
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
+
+	logging.GetLogger().Info("--------------->>> CreateSnapshot")
+	p.stateManager.BumpEpoch()
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -40,7 +44,6 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	if err != nil {
 		return err
 	}
-
 	if ps == nil {
 		return fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
@@ -52,32 +55,25 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 	logger := logging.GetLogger()
 
-	// Update active snapshot in metadata
+	// Replace state and bump epoch atomically
+	p.stateManager.Lock()
+	newVersion := p.stateManager.BumpEpochLocked()
+	p.stateManager.state.State = deepCopyState(ps.State)
+	p.stateManager.updateChecksumUnsafe()
+	p.stateManager.Unlock()
+
+	// Update metadata snapshot
 	metadata.ActiveSnapshot = snapshotKey
 	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	// Replace state and bump epoch atomically
-	p.stateManager.Lock()
-	defer p.stateManager.Unlock()
-
-	// Determine new epoch and version
-	newEpoch := p.stateManager.version.Epoch + 1
-	newVersion := p.stateManager.version
-	newVersion.Epoch = newEpoch
-	newVersion.Counter = 0
-
-	// Replace state with snapshot
-	p.stateManager.state.State = deepCopyState(ps.State)
-	p.stateManager.version = newVersion
-	p.stateManager.updateChecksumUnsafe()
-
 	logger.Info(
-		"Activated snapshot '%s' → new epoch=%d",
-		snapshotKey, newEpoch,
+		"Activated snapshot '%s': Epoch=%d Version=%d",
+		snapshotKey, newVersion.Epoch, newVersion.Counter,
 	)
 
+	// Mark last save time
 	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
 	p.mutex.Unlock()
@@ -87,6 +83,8 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
+
+	p.stateManager.BumpEpoch()
 
 	// Perform deletion in a single atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
@@ -201,8 +199,9 @@ func (p *Persistence) GetActiveSnapshotName() string {
 	return p.getActiveSnapshotKey()
 }
 
-// LoadActiveSnapshot loads the active snapshot from metadata,
-// restores its full state into the state manager, and persists it.
+// LoadActiveSnapshot loads the active snapshot.
+// Load the epoch and version from the saved state.
+// State will be synchronized across instances.
 func (p *Persistence) LoadActiveSnapshot() error {
 
 	metadata, err := p.loadMetadata()
@@ -222,7 +221,11 @@ func (p *Persistence) LoadActiveSnapshot() error {
 		return fmt.Errorf("failed to restore active snapshot %q: %w", snapshotName, err)
 	}
 
-	logger.Debug("Restored active snapshot on startup: %s", snapshotName)
+	// Save version is authoritative
+	//logging.GetLogger().Info("-------->>> GetActiveSnapshotName setting Version: %d", metadata.Version.Counter)
+	p.stateManager.SetVersion(metadata.Version)
+
+	logger.Debug("Restored active snapshot on startup: %s %d %d", snapshotName, metadata.Version.Epoch, metadata.Version.Counter)
 
 	return nil
 }
