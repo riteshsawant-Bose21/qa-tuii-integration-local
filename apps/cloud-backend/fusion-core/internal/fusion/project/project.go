@@ -205,15 +205,16 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 	opts := ValidationOptions{
 		CheckDeleted:              true,
 		CheckArchived:             true,
-		CheckNotLockedByOtherUser: true,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
 		opts.CheckPrimaryOwner = true
 		opts.AccountID = userAuth.Account.ID
+
 	} else {
 		opts.CheckUserAssigned = true
 		opts.UserID = userAuth.User.ID
+		opts.CheckNotLockedByOtherUser = true
 	}
 
 	projectRow, err := s.validateProject(ctx, project.ID, opts)
