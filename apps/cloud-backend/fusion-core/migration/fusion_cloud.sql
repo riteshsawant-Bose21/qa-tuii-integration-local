@@ -1,84 +1,69 @@
--- fusion_cloud database schema
--- Contains all table definitions with inline foreign key constraints
+-- Latest account / role / permission schema
+-- Enable pgcrypto for gen_random_uuid()
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Create custom enum types
-CREATE TYPE accounts_type_enum AS ENUM (
-    'admin',
-    'reseller',
-    'retail'
-);
-
--- Create sequences
-CREATE SEQUENCE IF NOT EXISTS access_level_id_seq;
-CREATE SEQUENCE IF NOT EXISTS account_id_seq;
-CREATE SEQUENCE IF NOT EXISTS account_type_role_id_seq;
-CREATE SEQUENCE IF NOT EXISTS feature_id_seq;
-CREATE SEQUENCE IF NOT EXISTS feature_permission_id_seq;
-CREATE SEQUENCE IF NOT EXISTS products_id_seq;
-CREATE SEQUENCE IF NOT EXISTS project_user_id_seq;
-CREATE SEQUENCE IF NOT EXISTS roles_id_seq;
-
--- Table: accounts_type
-CREATE TABLE accounts_type (
-    id UUID PRIMARY KEY,
-    name VARCHAR(256)
+-- Table: account_type
+CREATE TABLE account_type (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name varchar(256) UNIQUE NOT NULL,
+    description text
 );
 
 -- Table: account
 CREATE TABLE account (
-    id INTEGER PRIMARY KEY DEFAULT nextval('account_id_seq'::regclass),
-    name VARCHAR(150) NOT NULL UNIQUE,
-    description VARCHAR(200),
-    type accounts_type_enum,
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now()
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    name varchar(150) UNIQUE NOT NULL,
+    description varchar(200),
+    account_type_id uuid NOT NULL REFERENCES account_type(id),
+    created_at timestamp DEFAULT now()
 );
 
--- Table: roles
-CREATE TABLE roles (
-    id INTEGER PRIMARY KEY DEFAULT nextval('roles_id_seq'::regclass),
-    name VARCHAR(100) NOT NULL,
-    description TEXT
+-- Table: role
+CREATE TABLE role (
+    id serial PRIMARY KEY,
+    name varchar(100) UNIQUE NOT NULL,
+    description text
 );
 
 -- Table: access_level
 CREATE TABLE access_level (
-    id INTEGER PRIMARY KEY DEFAULT nextval('access_level_id_seq'::regclass),
-    key VARCHAR(50) NOT NULL UNIQUE,
-    label VARCHAR(100) NOT NULL
+    id serial PRIMARY KEY,
+    key varchar(50) UNIQUE NOT NULL,
+    label varchar(100) NOT NULL
 );
 
--- Table: account_type_role
+-- Table: account_type_role (junction of account_type and role)
 CREATE TABLE account_type_role (
-    id INTEGER PRIMARY KEY DEFAULT nextval('account_type_role_id_seq'::regclass),
-    account_id INTEGER NOT NULL REFERENCES account(id),
-    role_id INTEGER NOT NULL REFERENCES roles(id)
+    id serial PRIMARY KEY,
+    account_type_id uuid NOT NULL REFERENCES account_type(id),
+    role_id int NOT NULL REFERENCES role(id)
 );
 
--- Table: user
-CREATE TABLE "user" (
-    id UUID PRIMARY KEY,
-    email VARCHAR(255) NOT NULL UNIQUE,
-    full_name VARCHAR(255),
-    password_hash VARCHAR(255),
-    role_id INTEGER NOT NULL REFERENCES account_type_role(id),
-    account_id INTEGER NOT NULL REFERENCES account(id),
-    created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now(),
-    updated_at TIMESTAMP WITHOUT TIME ZONE
-);
-
--- Table: feature
+-- Table: feature (unchanged aside from using serial implicitly)
 CREATE TABLE feature (
-    id INTEGER PRIMARY KEY DEFAULT nextval('feature_id_seq'::regclass),
-    name VARCHAR(200) NOT NULL UNIQUE,
-    description TEXT
+    id serial PRIMARY KEY,
+    name varchar(200) UNIQUE NOT NULL,
+    description text
 );
 
--- Table: feature_permission
+-- Table: feature_permission (now references account_type_role)
 CREATE TABLE feature_permission (
-    id INTEGER PRIMARY KEY DEFAULT nextval('feature_permission_id_seq'::regclass),
-    feature_id INTEGER NOT NULL REFERENCES feature(id),
-    role_id INTEGER NOT NULL REFERENCES roles(id),
-    access_level_id INTEGER NOT NULL REFERENCES access_level(id)
+    id serial PRIMARY KEY,
+    feature_id int NOT NULL REFERENCES feature(id),
+    account_type_role_id int NOT NULL REFERENCES account_type_role(id),
+    access_level_id int NOT NULL REFERENCES access_level(id),
+    created_at timestamp DEFAULT now()
+);
+
+-- Table: app_user (renamed from previous "user")
+CREATE TABLE app_user (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    email varchar(255) UNIQUE NOT NULL,
+    full_name varchar(255),
+    account_type_role_id int NOT NULL REFERENCES account_type_role(id),
+    account_id uuid NOT NULL REFERENCES account(id),
+    created_at timestamp DEFAULT now(),
+    updated_at timestamp
 );
 
 -- Table: project
@@ -94,17 +79,22 @@ CREATE TABLE project (
     environment_type VARCHAR(50),
     is_archived BOOLEAN DEFAULT false NOT NULL,
     is_deleted BOOLEAN DEFAULT false NOT NULL,
-    locked_by_user_id UUID REFERENCES "user"(id),
-    primary_owner_account_id INTEGER NOT NULL REFERENCES account(id),
+    locked_by_user_id UUID REFERENCES app_user(id),
+    primary_owner_account_id UUID NOT NULL REFERENCES account(id),
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
 );
+
+
+
+-- Create sequence for project_user table
+CREATE SEQUENCE project_user_id_seq;
 
 -- Table: project_user
 CREATE TABLE project_user (
     id BIGINT PRIMARY KEY DEFAULT nextval('project_user_id_seq'::regclass),
     project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    user_id UUID NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES app_user(id) ON DELETE CASCADE,
     is_starred BOOLEAN DEFAULT false NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE DEFAULT now() NOT NULL
