@@ -14,6 +14,9 @@ import (
 
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
+
+	p.stateManager.BumpEpoch()
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -40,7 +43,6 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	if err != nil {
 		return err
 	}
-
 	if ps == nil {
 		return fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
@@ -52,7 +54,7 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 	logger := logging.GetLogger()
 
-	// Update active snapshot in metadata
+	// Update active snapshot name in metadata
 	metadata.ActiveSnapshot = snapshotKey
 	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
@@ -60,24 +62,17 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 	// Replace state and bump epoch atomically
 	p.stateManager.Lock()
-	defer p.stateManager.Unlock()
-
-	// Determine new epoch and version
-	newEpoch := p.stateManager.version.Epoch + 1
-	newVersion := p.stateManager.version
-	newVersion.Epoch = newEpoch
-	newVersion.Counter = 0
-
-	// Replace state with snapshot
+	newVersion := p.stateManager.BumpEpochLocked()
 	p.stateManager.state.State = deepCopyState(ps.State)
-	p.stateManager.version = newVersion
 	p.stateManager.updateChecksumUnsafe()
+	p.stateManager.Unlock()
 
 	logger.Info(
-		"Activated snapshot '%s' → new epoch=%d",
-		snapshotKey, newEpoch,
+		"Activated snapshot '%s' → new epoch=%d counter=%d",
+		snapshotKey, newVersion.Epoch, newVersion.Counter,
 	)
 
+	// Mark last save time
 	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
 	p.mutex.Unlock()
@@ -87,6 +82,8 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
+
+	p.stateManager.BumpEpoch()
 
 	// Perform deletion in a single atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {

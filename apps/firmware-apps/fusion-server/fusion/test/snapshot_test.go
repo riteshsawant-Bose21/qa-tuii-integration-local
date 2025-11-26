@@ -1,3 +1,5 @@
+//go:build !parallel
+
 package main
 
 import (
@@ -7,6 +9,7 @@ import (
 	"fusion/internal/logging"
 	"io"
 	"net/http"
+	"os"
 	"os/exec"
 	"slices"
 	"testing"
@@ -22,7 +25,7 @@ const (
 	snapServerAdminPort       = "9090"
 	snapServerAddr            = snapServerAddress + ":" + snapServerPort
 	snapAdminServerAddr       = snapServerAddress + ":" + snapServerAdminPort
-	snapshotSyncTime          = 5
+	snapshotSyncTime          = 5 * time.Second
 	snapshotsPath             = "/snapshots"
 	snapshotsURL              = snapServerAddr + snapshotsPath
 	snapshotsURLActivate      = snapshotsURL + "/activate"
@@ -30,6 +33,8 @@ const (
 )
 
 func init() {
+	_ = os.Setenv("GOMAXPROCS", "1")
+
 	logging.InitLogger(logging.LogConfig{
 		NodeName:    "snapshot_test",
 		LogDir:      "/tmp/snapshot_test",
@@ -159,7 +164,7 @@ func TestSnapshotPropagation(t *testing.T) {
 	resp.Body.Close()
 
 	// Wait until all nodes have the snapshot
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return snapshotExistsOnAllNodes(t, snapshotName)
 	}) {
 		logPerNodeSnapshotStatus(t, snapshotName)
@@ -186,7 +191,7 @@ func TestSnapshotPropagation(t *testing.T) {
 	resp.Body.Close()
 
 	// Wait until all nodes remove the snapshot
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return snapshotRemovedOnAllNodes(t, snapshotName)
 	}) {
 		logPerNodeSnapshotStatus(t, snapshotName)
@@ -332,7 +337,7 @@ func TestSnapshotActivationBumpsEpoch(t *testing.T) {
 	}
 
 	// Wait for cluster to converge to a single epoch > initial
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return epochsConverged(t, initial)
 	}) {
 		t.Fatalf("Epoch did not converge after snapshot activation; initial=%d, epochs=%v",
@@ -358,7 +363,7 @@ func TestRejectOldEpochUpdatesAfterSnapshot(t *testing.T) {
 	}
 
 	// Wait for epoch convergence
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return epochsConverged(t, initialEpoch)
 	}) {
 		t.Fatalf("Epochs did not converge after activation; initial=%d, epochs=%v",
@@ -401,7 +406,7 @@ func TestNewEpochUpdatesApply(t *testing.T) {
 	initialEpoch := getAnyClusterEpoch(t)
 
 	// Wait for epoch convergence
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return epochsConverged(t, initialEpoch)
 	}) {
 		t.Fatalf("Epochs did not converge after activation; initial=%d, epochs=%v",
@@ -418,7 +423,7 @@ func TestNewEpochUpdatesApply(t *testing.T) {
 	}
 
 	// Wait for propagation across cluster
-	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
 		val := getStateValue(t, "foo_new")
 		return asInt(val) == 999
 	})
@@ -654,7 +659,7 @@ func TestSnapshotRestoresStateExactly(t *testing.T) {
 	}
 
 	// Wait for epoch convergence to ensure activation fully applied cluster-wide
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return epochsConverged(t, initialEpoch)
 	}) {
 		t.Fatalf("Epochs did not converge after activation; initial=%d, epochs=%v",
@@ -713,7 +718,7 @@ func TestSnapshotRestoresNestedState(t *testing.T) {
 	}
 
 	// Wait for epoch convergence to ensure activation fully applied
-	if !waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return epochsConverged(t, initialEpoch)
 	}) {
 		t.Fatalf("Epochs did not converge after nested snapshot activation; initial=%d, epochs=%v",
@@ -817,7 +822,7 @@ func TestActiveSnapshotPropagatesClusterWide(t *testing.T) {
 	}
 
 	// Wait for propagation
-	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return activeSnapshotMatchesAllNodes(t, snapshotName)
 	})
 	if !ok {
@@ -881,7 +886,7 @@ func TestActiveSnapshotSurvivesRestart(t *testing.T) {
 	(&http.Client{}).Do(req)
 
 	// Wait for propagation
-	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return activeSnapshotMatchesAllNodes(t, snapshotName)
 	})
 	if !ok {
@@ -892,11 +897,114 @@ func TestActiveSnapshotSurvivesRestart(t *testing.T) {
 	restartAllNodes(t)
 
 	// After restart, the active snapshot must remain identical everywhere
-	ok = waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	ok = waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return activeSnapshotMatchesAllNodes(t, snapshotName)
 	})
 	if !ok {
 		t.Fatalf("Active snapshot mismatch after restart: %v", getClusterActiveSnapshots(t))
+	}
+}
+
+func TestSnapshotDataSurvivesRestart(t *testing.T) {
+	initialEpoch := getAnyClusterEpoch(t)
+
+	snapshotName := fmt.Sprintf("persist_data_%d", time.Now().UnixNano())
+
+	// Unique keys to avoid collisions with other tests
+	fooKey := snapshotName + "_foo"
+	barKey := snapshotName + "_bar"
+	nestedKey := snapshotName + "_nested"
+	removedKey := snapshotName + "_to_be_removed"
+
+	// Set initial state
+	patchStateValue(t, fooKey, 111)
+	patchStateValue(t, barKey, 222)
+	patchStateValue(t, removedKey, 999)
+
+	initialNested := map[string]any{
+		"a": 1,
+		"b": []any{10, 20},
+	}
+	setStateValue(t, nestedKey, initialNested)
+
+	// Sanity: ensure pre-snapshot state is correct
+	if asInt(getStateValue(t, fooKey)) != 111 {
+		t.Fatalf("Sanity: expected %s=111, got %v", fooKey, getStateValue(t, fooKey))
+	}
+	if asInt(getStateValue(t, barKey)) != 222 {
+		t.Fatalf("Sanity: expected %s=222, got %v", barKey, getStateValue(t, barKey))
+	}
+
+	// Create snapshot
+	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+		t.Fatalf("Failed to create snapshot %q: %v", snapshotName, err)
+	}
+
+	// Mutate state AFTER snapshot
+	patchStateValue(t, fooKey, 999)
+	patchStateValue(t, barKey, 444)
+	patchStateValue(t, nestedKey, map[string]any{"a": 9})
+	patchStateValue(t, removedKey, nil) // delete this key
+
+	// Sanity: ensure mutations took effect before restart
+	if asInt(getStateValue(t, fooKey)) != 999 {
+		t.Fatalf("Sanity pre-restart: expected %s=999, got %v", fooKey, getStateValue(t, fooKey))
+	}
+	if asInt(getStateValue(t, barKey)) != 444 {
+		t.Fatalf("Sanity pre-restart: expected %s=444, got %v", barKey, getStateValue(t, barKey))
+	}
+
+	restartAllNodes(t)
+
+	// Activate snapshot after restart
+	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
+	if _, err := (&http.Client{}).Do(req); err != nil {
+		t.Fatalf("Failed to activate snapshot after restart: %v", err)
+	}
+
+	// Wait for epoch convergence
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+		return epochsConverged(t, initialEpoch)
+	}) {
+		t.Fatalf("Epochs did not converge after restart + activation; initial=%d, epochs=%v",
+			initialEpoch, getClusterEpochs(t))
+	}
+
+	// Validate snapshot data restored correctly
+
+	// foo restored
+	if got := asInt(getStateValue(t, fooKey)); got != 111 {
+		t.Fatalf("After restart+activation: expected %s=111, got %v", fooKey, got)
+	}
+
+	// bar restored
+	if got := asInt(getStateValue(t, barKey)); got != 222 {
+		t.Fatalf("After restart+activation: expected %s=222, got %v", barKey, got)
+	}
+
+	// nested restored fully
+	nv := getStateValue(t, nestedKey)
+	nested, ok := nv.(map[string]any)
+	if !ok {
+		t.Fatalf("After restart+activation: expected nested map for %s, got %T (%v)",
+			nestedKey, nv, nv)
+	}
+	if asInt(nested["a"]) != 1 {
+		t.Fatalf("After restart+activation: expected %s.a=1, got %v", nestedKey, nested["a"])
+	}
+
+	bSlice, ok := nested["b"].([]any)
+	if !ok || len(bSlice) != 2 || asInt(bSlice[0]) != 10 || asInt(bSlice[1]) != 20 {
+		t.Fatalf("After restart+activation: expected %s.b=[10,20], got %v", nestedKey, nested["b"])
+	}
+
+	// removedKey must NOT exist (restored snapshot did not have it deleted)
+	if v := getStateValue(t, removedKey); v == nil {
+		// good
+	} else {
+		t.Fatalf("After restart+activation: expected %s to be absent, got %v", removedKey, v)
 	}
 }
 
@@ -921,7 +1029,7 @@ func TestSnapshotActivationOutOfOrderMessages(t *testing.T) {
 	(&http.Client{}).Do(req)
 
 	// Must converge to the new active snapshot on all nodes
-	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return activeSnapshotMatchesAllNodes(t, snapshotName)
 	})
 	if !ok {
@@ -938,7 +1046,7 @@ func TestDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
 	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName), nil)
 	(&http.Client{}).Do(req)
 
-	waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return activeSnapshotMatchesAllNodes(t, snapshotName)
 	})
 
@@ -947,7 +1055,7 @@ func TestDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
 	(&http.Client{}).Do(req)
 
 	// After deletion, active snapshot should be cleared uniformly
-	ok := waitForSnapshotSync(snapshotSyncTime*time.Second, func() bool {
+	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
 		snaps := getClusterActiveSnapshots(t)
 		for _, s := range snaps {
 			if s != "default" {
@@ -980,7 +1088,12 @@ func restartAllNodes(t *testing.T) {
 func waitForSnapshotSync(timeout time.Duration, check func() bool) bool {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
-	deadline := time.Now().Add(timeout)
+
+	// Give the cluster half the timeout before starting checks
+	initialDelay := timeout / 2
+	time.Sleep(initialDelay)
+
+	deadline := time.Now().Add(timeout - initialDelay)
 	for time.Now().Before(deadline) {
 		if check() {
 			return true

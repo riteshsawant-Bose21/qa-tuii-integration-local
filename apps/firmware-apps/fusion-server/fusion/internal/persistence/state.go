@@ -492,6 +492,20 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.updateChecksumUnsafe()
 }
 
+// BumpEpochLocked caller must hold sm.Lock()
+func (sm *StateManager) BumpEpochLocked() api.Version {
+
+	sm.version.Epoch++
+	sm.version.Counter = 0
+	return sm.version
+}
+
+func (sm *StateManager) BumpEpoch() api.Version {
+	sm.Lock()
+	defer sm.Unlock()
+	return sm.BumpEpochLocked()
+}
+
 // validateState fetches and compares state from other cluster members
 // to check consistency. Logs any inconsistencies found.
 func (sm *StateManager) validateState() {

@@ -110,6 +110,7 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 
 func (msg *NotifyMessage) IsPublic() bool {
 	return msg.Operation == NotifyOpConfigUpdate ||
+		msg.Operation == NotifyOpSnapActivate ||
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus
 }
