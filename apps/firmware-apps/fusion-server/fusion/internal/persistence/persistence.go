@@ -120,8 +120,6 @@ func (p *Persistence) SaveState() error {
 	metadata.Version = ps.Version
 	metadata.Valid = len(ps.State) > 0
 
-	//logging.GetLogger().Info("-------->>> SaveState setting Version: %d", metadata.Version.Counter)
-
 	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}

@@ -29,7 +29,7 @@ func (a *AppConfig) SelfUrl() string {
 // https://en.wikipedia.org/wiki/Lamport_timestamp
 type Version struct {
 	Epoch   uint64 `json:"epoch"`
-	Counter int64  `json:"counter"`
+	Counter uint64 `json:"counter"`
 	NodeID  string `json:"node_id"`
 }
 
