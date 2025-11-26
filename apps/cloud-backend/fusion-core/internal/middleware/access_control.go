@@ -257,10 +257,3 @@ func (acc *AccessControlConfig) GlobalAccessControlMiddleware() gin.HandlerFunc 
 		c.Next()
 	}
 }
-
-// hasPermissionLevel is a helper function for testing that checks if a user permission
-// level is sufficient for the required level
-func hasPermissionLevel(userPermission string, requiredLevel PermissionLevel) bool {
-	acc := &AccessControlConfig{}
-	return acc.hasPermission(map[string]string{"test": userPermission}, "test", requiredLevel)
-}
