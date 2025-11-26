@@ -153,7 +153,7 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		snapshotState := sm.GetFullState()
 		snapshotFlat := snapshotState.Flatten()
 
-		payload, err := s.buildPayload(snapshotFlat, sm.GetVersion())
+		payload, err := s.buildJSONPayload(snapshotFlat, sm.GetVersion())
 		if err != nil {
 			return err
 		}
@@ -181,17 +181,12 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 		s.lastBroadcastVersion.Store(v)
 	}
 
-	payload, err := s.buildPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
+	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
 	if err != nil {
 		return err
 	}
 
-	data, err := json.Marshal(payload)
-	if err != nil {
-		return fmt.Errorf("marshal update: %w", err)
-	}
-
-	s.broadcast(data)
+	s.broadcast(payload)
 
 	return nil
 }
@@ -202,8 +197,8 @@ func (s *UDPServer) Close() error {
 	return s.conn.Close()
 }
 
-// buildPayload builds a payload including authoritative Lamport version
-func (s *UDPServer) buildPayload(data map[string]any, version api.Version) ([]byte, error) {
+// buildPayload creates a JSON byte stream including authoritative Lamport version
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) ([]byte, error) {
 
 	payload := make(map[string]any, len(data)+1)
 	maps.Copy(payload, data)
