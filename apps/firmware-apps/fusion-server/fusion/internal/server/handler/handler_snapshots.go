@@ -14,7 +14,7 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
 func (h *Handler) HandleActivateSnapshot(name string) error {
 
-	restored, err := h.persistence.ActivateSnapshotAndReturnState(name)
+	err := h.persistence.ActivateSnapshot(name)
 	if err != nil {
 		return err
 	}
@@ -23,26 +23,11 @@ func (h *Handler) HandleActivateSnapshot(name string) error {
 	if err := h.handleSnapshotOperation(
 		h.StateManager.GetNode(),
 		name,
-		api.NotifyOpSnapActivate,
-		nil); err != nil {
+		api.NotifyOpSnapActivate); err != nil {
 		return err
 	}
 
-	// Broadcast message containing the entire restored state
-	update := api.ConfigUpdate{
-		Data:         restored,
-		Version:      h.StateManager.GetVersion(),
-		Clear:        false,
-		FromSnapshot: true,
-	}
-
-	msg := api.NewNotifyMessage(
-		api.NotifyOpConfigUpdate,
-		h.StateManager.GetNode(),
-		api.WithConfigUpdate(&update),
-	)
-
-	return h.hub.BroadcastToNodes(msg)
+	return nil
 }
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
@@ -51,7 +36,7 @@ func (h *Handler) HandleCreateSnapshot(name string) error {
 		return fmt.Errorf("failed to create snapshot: %w", err)
 	}
 
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate, nil); err != nil {
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapCreate); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil
@@ -62,7 +47,7 @@ func (h *Handler) HandleDeleteSnapshot(name string) error {
 	if err := h.persistence.DeleteSnapshot(name); err != nil {
 		return fmt.Errorf("failed to delete snapshot: %w", err)
 	}
-	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapDelete, nil); err != nil {
+	if err := h.handleSnapshotOperation(h.StateManager.GetNode(), name, api.NotifyOpSnapDelete); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
 	}
 	return nil
@@ -94,11 +79,15 @@ func (h *Handler) IsDefaultSnapshot(name string) bool {
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
-func (h *Handler) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
+func (h *Handler) handleSnapshotOperation(node string, name string, update api.NotifyOp) error {
 
 	msg := api.NewNotifyMessage(update,
 		node,
-		api.WithSnapshotUpdate(&api.SnapshotUpdate{Name: name, Data: data, Timestamp: time.Now().UTC()}),
+		api.WithSnapshotUpdate(
+			&api.SnapshotUpdate{
+				Name:      name,
+				Timestamp: time.Now().UTC(),
+			}),
 	)
 	return h.broadcastMessage(msg)
 }
