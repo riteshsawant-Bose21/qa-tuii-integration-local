@@ -98,6 +98,9 @@ runs:
       uses: actions/checkout@v4
       with:
         path: C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build
+        sparse-checkout: |
+          apps/frontend/flutter-apps/fusion-launcher
+          libs/
         fetch-depth: 0 
 
     - name: Flutter Windows Automation build
