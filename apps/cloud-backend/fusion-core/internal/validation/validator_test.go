@@ -26,7 +26,6 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			name: "valid request with project phase",
 			request: &types.ProjectCreateRequest{
 				Name:            testProjectName,
-				UserID:          testAccountID,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    types.ProjectPhaseDevelopment,
@@ -43,7 +42,6 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			name: "valid request with empty project phase - should default to Proposal",
 			request: &types.ProjectCreateRequest{
 				Name:            testProjectName,
-				UserID:          testAccountID,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    "", // Empty phase should default to Proposal
@@ -60,7 +58,6 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			name: "valid request without project phase - should default to Proposal",
 			request: &types.ProjectCreateRequest{
 				Name:            testProjectName,
-				UserID:          testAccountID,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				// ProjectPhase field omitted
@@ -83,7 +80,6 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			name: "invalid request - missing name",
 			request: &types.ProjectCreateRequest{
 				Name:            "", // Missing name
-				UserID:          testAccountID,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    types.ProjectPhaseProposal,
@@ -99,7 +95,6 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			name: "invalid request - missing account ID",
 			request: &types.ProjectCreateRequest{
 				Name:            testProjectName,
-				UserID:          "", // Missing account ID
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    types.ProjectPhaseProposal,
@@ -115,7 +110,6 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			name: "invalid request - negative budget",
 			request: &types.ProjectCreateRequest{
 				Name:            testProjectName,
-				UserID:          testAccountID,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    types.ProjectPhaseProposal,
@@ -220,7 +214,6 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 	t.Run("project phase defaults to Proposal when empty", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
 			Name:            phaseTestProjectName,
-			UserID:          phaseTestAccountID,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
 			ProjectPhase:    "", // Explicitly empty
@@ -244,7 +237,6 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 	t.Run("project phase is not changed when already set", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
 			Name:            phaseTestProjectName,
-			UserID:          phaseTestAccountID,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
 			ProjectPhase:    types.ProjectPhaseDevelopment, // Already set
@@ -265,7 +257,6 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 	t.Run("project phase defaults when field is uninitialized", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
 			Name:            phaseTestProjectName,
-			UserID:          phaseTestAccountID,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
 			// ProjectPhase field not set at all - should be zero value (empty string)
@@ -292,7 +283,6 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 func TestValidateGetAllProjectsParams(t *testing.T) {
 	t.Run("valid params", func(t *testing.T) {
 		params := &types.GetAllProjectsParams{
-			UserID:     "user1",
 			SortBy:     "created_at",
 			SortOrder:  "asc",
 			IsArchived: false,
@@ -304,7 +294,6 @@ func TestValidateGetAllProjectsParams(t *testing.T) {
 
 	t.Run("invalid sort_by", func(t *testing.T) {
 		params := &types.GetAllProjectsParams{
-			UserID:    "user1",
 			SortBy:    "name",
 			SortOrder: "asc",
 		}
@@ -316,7 +305,6 @@ func TestValidateGetAllProjectsParams(t *testing.T) {
 
 	t.Run("invalid sort_order", func(t *testing.T) {
 		params := &types.GetAllProjectsParams{
-			UserID:    "user1",
 			SortBy:    "created_at",
 			SortOrder: "up",
 		}

@@ -17,18 +17,6 @@ const (
 	errorWithDetailsFormat = "%s: %v"
 )
 
-// validateUserExistence is a helper function to validate that a user exists
-func (s *Service) validateUserExistence(ctx context.Context, userID string) error {
-	userExists, err := s.dbService.UserExists(ctx, userID)
-	if err != nil {
-		return err
-	}
-	if !userExists {
-		return errors.New(types.ErrMsgUserNotFound)
-	}
-	return nil
-}
-
 // generateProjectFileURL generates a presigned URL for project file operations
 func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, fileType types.ProjectFileType, ttl time.Duration, operation string) (string, error) {
 	key := fmt.Sprintf(projectFilePathFormat, projectID, fileType, projectID)
@@ -48,12 +36,15 @@ type ValidationOptions struct {
 	CheckDeleted              bool
 	CheckArchived             bool
 	CheckUserAssigned         bool
+	CheckPrimaryOwner         bool
 	CheckNotLockedByOtherUser bool
 	UserID                    string
+	AccountID                 string
 }
 
 // validateProject performs common project validations
 func (s *Service) validateProject(ctx context.Context, projectID string, opts ValidationOptions) (*models.Project, error) {
+	
 	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
 	if err != nil {
 		return nil, err
@@ -69,6 +60,12 @@ func (s *Service) validateProject(ctx context.Context, projectID string, opts Va
 
 	if opts.CheckUserAssigned {
 		if err := s.validateUserAssignment(ctx, projectID, opts.UserID); err != nil {
+			return nil, err
+		}
+	}
+
+	if opts.CheckPrimaryOwner {
+		if err := s.validatePrimaryOwner(projectRow, opts.AccountID); err != nil {
 			return nil, err
 		}
 	}
@@ -96,7 +93,7 @@ func (s *Service) validateUserAssignment(ctx context.Context, projectID, userID 
 
 // validateProjectNotLockedByOtherUser checks if project is not locked by another user
 func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, projectRow *models.Project, userID string) error {
-	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
+	if projectRow.LockedByUserID.Valid && projectRow.LockedByUserID.String != userID {
 		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
 		if err != nil {
 			return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
@@ -106,12 +103,17 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 	return nil
 }
 
-// CreateProject adds a new project to the database.
-func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest) (*types.ProjectCreateResponse, error) {
-	// Validate user existence
-	if err := s.validateUserExistence(ctx, project.UserID); err != nil {
-		return nil, err
+// validatePrimaryOwner checks if user org account is the primary owner of the project
+func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID string) error {
+
+	if projectRow.PrimaryOwnerAccountID.String != accountID {
+		return errors.New(types.ErrMsgForbidden)
 	}
+	return nil
+}
+
+// CreateProject adds a new project to the database.
+func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectCreateResponse, error) {
 
 	// Generate ID
 	project.ID = uuid.New().String()
@@ -123,7 +125,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 		return nil, fmt.Errorf("failed to begin transaction: %v", err)
 	}
 
-	id, err := s.dbService.Insert(ctx, project, tx)
+	id, err := s.dbService.Insert(ctx, project, userAuth.Account.ID, tx)
 	if err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
@@ -133,7 +135,7 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 	}
 
 	// Assign user to project
-	if err := s.dbService.InsertProjectUser(ctx, id, project.UserID, tx); err != nil {
+	if err := s.dbService.InsertProjectUser(ctx, id, userAuth.User.ID, tx); err != nil {
 		if rollbackErr := tx.Rollback(); rollbackErr != nil {
 			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToInsertProject, err)
 		}
@@ -168,8 +170,8 @@ func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreat
 }
 
 // GetAllProjects retrieves all projects.
-func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams) (*types.GetAllProjectsResponse, error) {
-	projects, err := s.dbService.SelectAll(ctx, queryParams)
+func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse) (*types.GetAllProjectsResponse, error) {
+	projects, err := s.dbService.SelectAll(ctx, queryParams, userAuth)
 	if err != nil {
 		return nil, err
 	}
@@ -198,17 +200,23 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 }
 
 // UpdateProject modifies an existing project.
-func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, project *types.ProjectUpdateRequest) (*types.ProjectUpdateResponse, error) {
+func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectUpdateResponse, error) {
 
 	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
 		CheckDeleted:              true,
 		CheckArchived:             true,
 		CheckNotLockedByOtherUser: true,
 	}
 
-	projectRow, err := s.validateProject(ctx, projectID, opts)
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
+	}
+
+	projectRow, err := s.validateProject(ctx, project.ID, opts)
 	if err != nil {
 		return nil, err
 	}
@@ -241,14 +249,20 @@ func (s *Service) UpdateProject(ctx context.Context, projectID, userID string, p
 
 // DeleteProject removes a project by its ID.
 // Note: This method should be called with userID for validation when invoked from handlers
-func (s *Service) DeleteProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 
 	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
-		CheckDeleted:              false,
+		CheckDeleted:              true,
 		CheckArchived:             true,
 		CheckNotLockedByOtherUser: true,
+	}
+
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -265,20 +279,32 @@ func (s *Service) DeleteProject(ctx context.Context, projectID, userID string) e
 }
 
 // AssignUserToProject assigns a user to a project.
-func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
+func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse) (*types.UserAssignmentResponse, error) {
 
 	opts := ValidationOptions{
-		CheckUserAssigned:         false,
-		UserID:                    userID,
 		CheckDeleted:              true,
 		CheckArchived:             true,
 		CheckNotLockedByOtherUser: false,
+	}
+
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
 	}
 
 	_, err := s.validateProject(ctx, projectID, opts)
 
 	if err != nil {
 		return nil, err
+	}
+
+	// Get user ID by email
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	if err != nil {
+		return nil, err // This will return "user not found" from the database service
 	}
 
 	// Check if user is already assigned to the project
@@ -304,47 +330,31 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userID str
 }
 
 // RemoveUserFromProject removes a user from a project.
-func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID string) (*types.UserAssignmentResponse, error) {
-	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
-
-	if err != nil {
-		return nil, err
-	}
-
-	if projectRow.IsArchived {
-		return nil, errors.New(types.ErrMsgProjectArchived)
-	}
-
-	if projectRow.IsDeleted {
-		return nil, errors.New(types.ErrMsgProjectNotFound)
-	}
-
-	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String != userID {
-		lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
-		if err != nil {
-			return nil, fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
-		}
-		return nil, fmt.Errorf("project is locked by user: %s", lockedByEmail)
-	}
+func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmail string, userAuth types.UserAuthorizationResponse) (*types.UserAssignmentResponse, error) {
 
 	opts := ValidationOptions{
-		CheckUserAssigned:         false,
-		UserID:                    userID,
 		CheckDeleted:              true,
 		CheckArchived:             true,
 		CheckNotLockedByOtherUser: false,
 	}
 
-	projectRow, err = s.validateProject(ctx, projectID, opts)
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
+	}
+
+	_, err := s.validateProject(ctx, projectID, opts)
 	if err != nil {
 		return nil, err
 	}
 
-	if projectRow.LockedByUserID.String != "" && projectRow.LockedByUserID.String == userID {
-		// Unlock the project
-		if err := s.dbService.UnlockProject(ctx, projectID, userID); err != nil {
-			return nil, err
-		}
+	// Get user ID by email
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	if err != nil {
+		return nil, err // This will return "user not found" from the database service
 	}
 
 	// Check if user is assigned to the project
@@ -366,30 +376,6 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userID s
 	return &types.UserAssignmentResponse{
 		Message: "User successfully removed from the project",
 	}, nil
-}
-
-// AssignUserToProjectByEmail assigns a user to a project by email.
-func (s *Service) AssignUserToProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error) {
-	// Get user ID by email
-	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
-	if err != nil {
-		return nil, err // This will return "user not found" from the database service
-	}
-
-	// Use the existing AssignUserToProject method
-	return s.AssignUserToProject(ctx, projectID, userID)
-}
-
-// RemoveUserFromProjectByEmail removes a user from a project by email.
-func (s *Service) RemoveUserFromProjectByEmail(ctx context.Context, projectID, userEmail string) (*types.UserAssignmentResponse, error) {
-	// Get user ID by email
-	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
-	if err != nil {
-		return nil, err // This will return "user not found" from the database service
-	}
-
-	// Use the existing RemoveUserFromProject method
-	return s.RemoveUserFromProject(ctx, projectID, userID)
 }
 
 // StarProject stars a project for a user.
@@ -441,13 +427,20 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 }
 
 // ArchiveProject archives a project.
-func (s *Service) ArchiveProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
+
 	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
 		CheckDeleted:              true,
 		CheckArchived:             false,
 		CheckNotLockedByOtherUser: true,
+	}
+
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -468,13 +461,19 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID, userID string) 
 }
 
 // UnarchiveProject unarchives a project.
-func (s *Service) UnarchiveProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
 		CheckDeleted:              true,
 		CheckArchived:             false,
 		CheckNotLockedByOtherUser: true,
+	}
+
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -505,14 +504,20 @@ func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) 
 }
 
 // LockProject locks a project for a user.
-func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) LockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 
 	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
 		CheckDeleted:              true,
 		CheckArchived:             true,
-		CheckNotLockedByOtherUser: true,
+		CheckNotLockedByOtherUser: false,
+	}
+
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -520,12 +525,20 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 		return err
 	}
 
-	if projectRow.LockedByUserID.String != "" {
-		return nil // Project is already locked by the same user, idempotent behavior
+	if projectRow.LockedByUserID.Valid {
+	    if projectRow.LockedByUserID.String == userAuth.User.ID {
+			return nil // Project is already locked by the same user, idempotent behavior
+		} else {
+			lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)
+			if err != nil {
+				return fmt.Errorf(errorWithDetailsFormat, types.ErrMsgFailedToGetUserByEmail, err)
+			}
+			return fmt.Errorf("project is locked by user: %s", lockedByEmail)
+		}
 	}
 
 	// Lock the project
-	if err := s.dbService.LockProject(ctx, projectID, userID); err != nil {
+	if err := s.dbService.LockProject(ctx, projectID, userAuth.User.ID); err != nil {
 		return err
 	}
 
@@ -533,13 +546,20 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 }
 
 // UnlockProject unlocks a project for a user.
-func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) UnlockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 	opts := ValidationOptions{
-		CheckUserAssigned:         true,
-		UserID:                    userID,
-		CheckDeleted:              true,
-		CheckArchived:             true,
-		CheckNotLockedByOtherUser: true,
+		CheckDeleted:  true,
+		CheckArchived: true,
+	}
+
+	if userAuth.Role.RoleName == "Admin" {
+		opts.CheckPrimaryOwner = true
+		opts.AccountID = userAuth.Account.ID
+		opts.CheckNotLockedByOtherUser = false
+	} else {
+		opts.CheckUserAssigned = true
+		opts.UserID = userAuth.User.ID
+		opts.CheckNotLockedByOtherUser = true
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)
@@ -547,12 +567,12 @@ func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) e
 		return err
 	}
 
-	if projectRow.LockedByUserID.String == "" {
+	if !projectRow.LockedByUserID.Valid {
 		return nil // Project is already unlocked, idempotent behavior
 	}
 
 	// Unlock the project
-	if err := s.dbService.UnlockProject(ctx, projectID, userID); err != nil {
+	if err := s.dbService.UnlockProject(ctx, projectID); err != nil {
 		return err
 	}
 

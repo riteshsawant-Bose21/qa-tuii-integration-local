@@ -80,13 +80,13 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx customModel.DBTxExecutor) (string, error) {
+func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx customModel.DBTxExecutor) (string, error) {
 
 	// Create project record
 	now := time.Now()
 	projectRecord := &model.Project{
 		ID:                    project.ID,
-		PrimaryOwnerAccountID: null.NewInt(1, true), // TODO: Placeholder, replace with actual account ID if available
+		PrimaryOwnerAccountID: null.NewString(accountID, accountID != ""),
 		Name:                  null.NewString(project.Name, project.Name != ""),
 		Description:           null.NewString(project.Description, project.Description != ""),
 		Venue:                 null.NewString(project.Venue, project.Venue != ""),
@@ -104,7 +104,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 		s.logger.Error(types.ErrMsgFailedToInsertProject,
 			zap.Error(err),
 			zap.String("project_id", project.ID),
-			zap.String("user_id", project.UserID))
+			zap.String("account_id", accountID))
 		return "", errors.New(types.ErrMsgFailedToInsertProject)
 	}
 
@@ -136,33 +136,52 @@ func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID strin
 }
 
 // SelectAll retrieves all projects from the database.
-func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]types.Project, error) {
+func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse) ([]types.Project, error) {
 
 	order := strings.ToUpper(queryParams.SortOrder)
 
-	// Use raw SQL query to get project data, is_starred, and locked user email in one query
-	// Explicitly listing all columns to match our scanning order
-	query := fmt.Sprintf(`
-		SELECT p.id, p.name, p.description, p.venue, 
+	query := ""
+	var rows *sql.Rows
+	var err error
+	if userAuth.Role.RoleName == "Admin" {
+		query = fmt.Sprintf(`
+			SELECT p.id, p.name, p.description, p.venue, 
 		       p.environment_type, p.project_phase, p.application, p.budget_amount, 
 		       p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
 		       p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
-		FROM project p
-		INNER JOIN project_user pu ON p.id = pu.project_id
-		LEFT JOIN "user" u ON p.locked_by_user_id = u.id
-		WHERE pu.user_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
-		ORDER BY p.%s %s
-	`, queryParams.SortBy, order)
-	rows, err := s.db.QueryContext(ctx, query, queryParams.UserID, queryParams.IsArchived, false)
+			FROM project p
+			INNER JOIN project_user pu ON p.id = pu.project_id
+			LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+			WHERE p.primary_owner_account_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
+			ORDER BY p.%s %s`, queryParams.SortBy, order)
+		rows, err = s.db.QueryContext(ctx, query, userAuth.Account.ID, queryParams.IsArchived, false)
+
+	} else {
+		query = fmt.Sprintf(`
+			SELECT p.id, p.name, p.description, p.venue, 
+				p.environment_type, p.project_phase, p.application, p.budget_amount, 
+				p.currency, p.is_archived, p.is_deleted, p.locked_by_user_id, 
+				p.created_at, p.updated_at, pu.is_starred, u.email as locked_by_user_email
+			FROM project p
+			INNER JOIN project_user pu ON p.id = pu.project_id
+			LEFT JOIN app_user u ON p.locked_by_user_id = u.id
+			WHERE pu.user_id = $1 AND p.is_archived = $2 AND p.is_deleted = $3
+			ORDER BY p.%s %s
+		`, queryParams.SortBy, order)
+
+		rows, err = s.db.QueryContext(ctx, query, userAuth.User.ID, queryParams.IsArchived, false)
+	}
+
 	if err != nil {
 		s.logger.Error(types.ErrMsgFailedToGetProjects,
 			zap.Error(err),
-			zap.String("user_id", queryParams.UserID),
+			zap.String("user_id", userAuth.User.ID),
 			zap.Bool("is_archived", queryParams.IsArchived),
 			zap.String("sort_by", queryParams.SortBy),
 			zap.String("sort_order", order))
 		return nil, errors.New(types.ErrMsgFailedToGetProjects)
 	}
+
 	defer func() {
 		if err := rows.Close(); err != nil {
 			if s.logger != nil {
@@ -232,10 +251,6 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 		return errors.New(types.ErrMsgProjectArchived)
 	}
 
-	if project.AccountID != "" {
-		projectRow.PrimaryOwnerAccountID = null.NewInt(1, true) // TODO: Replace with actual account ID if available
-	}
-
 	if project.Name != "" {
 		projectRow.Name = null.NewString(project.Name, project.Name != "")
 	}
@@ -300,10 +315,13 @@ func (s *Service) Delete(ctx context.Context, projectRow *model.Project) error {
 // AssignUser assigns a user to a project.
 func (s *Service) AssignUser(ctx context.Context, projectID, userID string) error {
 
+	now := time.Now()
 	projectUser := &model.ProjectUser{
 		ProjectID: projectID,
 		UserID:    userID,
 		IsStarred: false,
+		CreatedAt: now,
+		UpdatedAt: now,
 	}
 
 	if err := projectUser.Insert(ctx, s.db, boil.Infer()); err != nil {
@@ -376,8 +394,8 @@ func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, er
 
 // UserExists checks if a user exists.
 func (s *Service) UserExists(ctx context.Context, userID string) (bool, error) {
-	exists, err := model.Users(
-		model.UserWhere.ID.EQ(userID),
+	exists, err := model.AppUsers(
+		model.AppUserWhere.ID.EQ(userID),
 	).Exists(ctx, s.db)
 
 	if err != nil {
@@ -391,14 +409,13 @@ func (s *Service) UserExists(ctx context.Context, userID string) (bool, error) {
 
 // GetUserIDByEmail gets user ID by email address.
 func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, error) {
-	user, err := model.Users(
-		model.UserWhere.Email.EQ(email),
+	user, err := model.AppUsers(
+		model.AppUserWhere.Email.EQ(email),
 	).One(ctx, s.db)
+
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			s.logger.Error(types.ErrMsgUserNotFound,
-				zap.String("email", email))
 			return "", errors.New(types.ErrMsgUserNotFound)
 		}
 		s.logger.Error(types.ErrMsgFailedToGetUserByEmail,
@@ -566,7 +583,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 		if project.LockedByUserID.String == userID {
 			return nil // Already locked by the same user
 		}
-		return errors.New(types.ErrMsgProjectNotLockedByUser)
+		return errors.New(types.ErrMsgProjectLockedByUser + " " + project.LockedByUserID.String)
 	}
 
 	// Lock the project
@@ -582,7 +599,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 }
 
 // UnlockProject unlocks a project for a specific user.
-func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) UnlockProject(ctx context.Context, projectID string) error {
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -595,14 +612,9 @@ func (s *Service) UnlockProject(ctx context.Context, projectID, userID string) e
 		return errors.New(types.ErrMsgFailedToGetProject)
 	}
 
-	// Check if project is locked
+	// Check if project is already unlocked
 	if !project.LockedByUserID.Valid {
 		return nil
-	}
-
-	// Check if project is locked by the requesting user
-	if project.LockedByUserID.String != userID {
-		return errors.New(types.ErrMsgProjectNotLockedByUser)
 	}
 
 	// Unlock the project
@@ -642,8 +654,8 @@ func (s *Service) GetProjectLockUserID(ctx context.Context, projectID string) (i
 // GetUserEmailByID returns the email address for a given user ID.
 func (s *Service) GetUserEmailByID(ctx context.Context, userID string) (string, error) {
 	// Get the user who locked the project
-	user, err := model.Users(
-		model.UserWhere.ID.EQ(userID),
+	user, err := model.AppUsers(
+		model.AppUserWhere.ID.EQ(userID),
 	).One(ctx, s.db)
 
 	if err != nil {

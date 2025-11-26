@@ -80,7 +80,6 @@ func TestServiceInsert(t *testing.T) {
 	t.Run("successfully inserts project", func(t *testing.T) {
 		project := &types.ProjectCreateRequest{
 			ID:              testProjectID,
-			UserID:          testProjectAccountID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Venue:           testProjectVenue,
@@ -102,7 +101,7 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnRows(returnRows)
 
-		id, err := service.Insert(ctx, project, tx)
+		id, err := service.Insert(ctx, project, testProjectAccountID, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, testProjectID, id)
 
@@ -113,7 +112,6 @@ func TestServiceInsert(t *testing.T) {
 		projectID := "generated-uuid-123"
 		project := &types.ProjectCreateRequest{
 			ID:              projectID, // ID should be provided by business layer
-			UserID:          testProjectAccountID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Venue:           testProjectVenue,
@@ -135,7 +133,7 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnRows(returnRows)
 
-		id, err := service.Insert(ctx, project, tx)
+		id, err := service.Insert(ctx, project, testProjectAccountID, tx)
 		assert.NoError(t, err)
 		assert.Equal(t, projectID, id)
 
@@ -147,14 +145,13 @@ func TestServiceInsert(t *testing.T) {
 		tx, err := db.BeginTx(ctx, nil)
 		require.NoError(t, err)
 		assert.Panics(t, func() {
-			_, _ = service.Insert(ctx, nil, tx)
+			_, _ = service.Insert(ctx, nil, testProjectAccountID, tx)
 		})
 	})
 
 	t.Run("rolls back transaction on project insert failure", func(t *testing.T) {
 		project := &types.ProjectCreateRequest{
 			ID:              testProjectID,
-			UserID:          testProjectAccountID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Venue:           testProjectVenue,
@@ -173,7 +170,7 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnError(assert.AnError)
 
-		id, err := service.Insert(ctx, project, tx)
+		id, err := service.Insert(ctx, project, testProjectAccountID, tx)
 		assert.Error(t, err)
 		assert.Empty(t, id)
 		assert.Contains(t, err.Error(), "failed to insert project")
@@ -207,10 +204,23 @@ func TestServiceSelectAll(t *testing.T) {
 
 	t.Run("successfully retrieves all projects", func(t *testing.T) {
 		queryParams := &types.GetAllProjectsParams{
-			UserID:     testProjectAccountID,
 			IsArchived: false,
 			SortBy:     "created_at",
 			SortOrder:  "asc",
+		}
+
+		userAuth := types.UserAuthorizationResponse{
+			User: types.UserInfo{
+				ID:    testProjectAccountID,
+				Email: "test@example.com",
+			},
+			Account: types.AccountInfo{
+				ID:   "test-account-id",
+				Name: "Test Account",
+			},
+			Role: types.RoleInfo{
+				RoleName: "User",
+			},
 		}
 
 		// Mock the new raw SQL query with joined data (without primary_owner_user_id)
@@ -223,9 +233,9 @@ func TestServiceSelectAll(t *testing.T) {
 			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
 			"USD", false, false, nil, time.Now(), time.Now(), false, nil,
 		)
-		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN "user" u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
+		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN app_user u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
 
-		projects, err := service.SelectAll(ctx, queryParams)
+		projects, err := service.SelectAll(ctx, queryParams, userAuth)
 		assert.NoError(t, err)
 		assert.Len(t, projects, 1)
 		assert.Equal(t, testProjectID, projects[0].ID)
@@ -234,10 +244,23 @@ func TestServiceSelectAll(t *testing.T) {
 
 	t.Run("successfully retrieves starred projects", func(t *testing.T) {
 		queryParams := &types.GetAllProjectsParams{
-			UserID:     testProjectAccountID,
 			IsArchived: false,
 			SortBy:     "created_at",
 			SortOrder:  "asc",
+		}
+
+		userAuth := types.UserAuthorizationResponse{
+			User: types.UserInfo{
+				ID:    testProjectAccountID,
+				Email: "test@example.com",
+			},
+			Account: types.AccountInfo{
+				ID:   "test-account-id",
+				Name: "Test Account",
+			},
+			Role: types.RoleInfo{
+				RoleName: "User",
+			},
 		}
 
 		// Mock the new raw SQL query with joined data and is_starred = true (without primary_owner_user_id)
@@ -250,9 +273,9 @@ func TestServiceSelectAll(t *testing.T) {
 			testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0,
 			"USD", false, false, nil, time.Now(), time.Now(), true, nil, // is_starred = true
 		)
-		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN "user" u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
+		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN app_user u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
 
-		projects, err := service.SelectAll(ctx, queryParams)
+		projects, err := service.SelectAll(ctx, queryParams, userAuth)
 		assert.NoError(t, err)
 		assert.Len(t, projects, 1)
 		assert.Equal(t, testProjectID, projects[0].ID)
@@ -320,7 +343,6 @@ func TestServiceUpdate(t *testing.T) {
 
 	t.Run("successfully updates project", func(t *testing.T) {
 		updateReq := &types.ProjectUpdateRequest{
-			AccountID:       testProjectAccountID,
 			Name:            "Updated Project",
 			Description:     "Updated Description",
 			Venue:           "Updated Venue",
@@ -539,7 +561,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("user exists true", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "user"`).
+		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "app_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
 		exists, err := service.UserExists(ctx, testUserID)
 		assert.NoError(t, err)
@@ -547,7 +569,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("user exists false", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "user"`).
+		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "app_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
 		exists, err := service.UserExists(ctx, testUserID)
 		assert.NoError(t, err)
@@ -555,7 +577,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("get user id by email success", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "user"\.\* FROM "user" WHERE \("user"\."email" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."email" = \$1\) LIMIT 1`).
 			WithArgs(testEmail).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "email", "full_name", "password_hash", "role_id", "account_id", "created_at", "updated_at"}).
 				AddRow(testUserID, testEmail, nil, nil, 1, 1, time.Now(), time.Now()))
@@ -565,7 +587,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("get user id by email not found", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "user"\.\* FROM "user" WHERE \("user"\."email" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."email" = \$1\) LIMIT 1`).
 			WithArgs(testEmail).
 			WillReturnError(sql.ErrNoRows)
 		id, err := service.GetUserIDByEmail(ctx, testEmail)
@@ -614,7 +636,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, testUserID, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
-		err := service.UnlockProject(ctx, testProjectID, testUserID)
+		err := service.UnlockProject(ctx, testProjectID)
 		assert.NoError(t, err)
 	})
 
@@ -641,7 +663,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("get user email by id success", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "user"\.\* FROM "user" WHERE \("user"\."id" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testUserID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "email", "full_name", "password_hash", "role_id", "account_id", "created_at", "updated_at"}).
 				AddRow(testUserID, testEmail, nil, nil, 1, 1, time.Now(), time.Now()))
@@ -856,7 +878,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, nil, time.Now(), time.Now()))
-		err := service.UnlockProject(ctx, testProjectID, testUserID)
+		err := service.UnlockProject(ctx, testProjectID)
 		assert.NoError(t, err)
 	})
 
@@ -866,7 +888,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, otherUser, time.Now(), time.Now()))
-		err := service.UnlockProject(ctx, testProjectID, testUserID)
+		err := service.UnlockProject(ctx, testProjectID)
 		assert.Error(t, err)
 	})
 
@@ -874,7 +896,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(sql.ErrNoRows)
-		err := service.UnlockProject(ctx, testProjectID, testUserID)
+		err := service.UnlockProject(ctx, testProjectID)
 		assert.Error(t, err)
 	})
 
@@ -882,7 +904,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(errors.New("fetch failed"))
-		err := service.UnlockProject(ctx, testProjectID, testUserID)
+		err := service.UnlockProject(ctx, testProjectID)
 		assert.Error(t, err)
 	})
 
@@ -893,7 +915,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, testUserID, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnError(errors.New("update failed"))
-		err := service.UnlockProject(ctx, testProjectID, testUserID)
+		err := service.UnlockProject(ctx, testProjectID)
 		assert.Error(t, err)
 	})
 
@@ -918,7 +940,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("get user email by id not found", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "user"\.\* FROM "user" WHERE \("user"\."id" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testUserID).
 			WillReturnError(sql.ErrNoRows)
 		email, err := service.GetUserEmailByID(ctx, testUserID)
@@ -927,7 +949,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("get user email by id fetch error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "user"\.\* FROM "user" WHERE \("user"\."id" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testUserID).
 			WillReturnError(errors.New("fetch failed"))
 		email, err := service.GetUserEmailByID(ctx, testUserID)

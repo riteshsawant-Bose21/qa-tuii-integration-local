@@ -119,7 +119,7 @@ var ProjectUserRels = struct {
 // projectUserR is where relationships are stored.
 type projectUserR struct {
 	Project *Project `boil:"Project" json:"Project" toml:"Project" yaml:"Project"`
-	User    *User    `boil:"User" json:"User" toml:"User" yaml:"User"`
+	User    *AppUser `boil:"User" json:"User" toml:"User" yaml:"User"`
 }
 
 // NewStruct creates a new relationship struct
@@ -143,7 +143,7 @@ func (r *projectUserR) GetProject() *Project {
 	return r.Project
 }
 
-func (o *ProjectUser) GetUser() *User {
+func (o *ProjectUser) GetUser() *AppUser {
 	if o == nil {
 		return nil
 	}
@@ -151,7 +151,7 @@ func (o *ProjectUser) GetUser() *User {
 	return o.R.GetUser()
 }
 
-func (r *projectUserR) GetUser() *User {
+func (r *projectUserR) GetUser() *AppUser {
 	if r == nil {
 		return nil
 	}
@@ -487,14 +487,14 @@ func (o *ProjectUser) Project(mods ...qm.QueryMod) projectQuery {
 }
 
 // User pointed to by the foreign key.
-func (o *ProjectUser) User(mods ...qm.QueryMod) userQuery {
+func (o *ProjectUser) User(mods ...qm.QueryMod) appUserQuery {
 	queryMods := []qm.QueryMod{
 		qm.Where("\"id\" = ?", o.UserID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Users(queryMods...)
+	return AppUsers(queryMods...)
 }
 
 // LoadProject allows an eager lookup of values, cached into the
@@ -675,8 +675,8 @@ func (projectUserL) LoadUser(ctx context.Context, e boil.ContextExecutor, singul
 	}
 
 	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.id in ?`, argsSlice...),
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -684,22 +684,22 @@ func (projectUserL) LoadUser(ctx context.Context, e boil.ContextExecutor, singul
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load User")
+		return errors.Wrap(err, "failed to eager load AppUser")
 	}
 
-	var resultSlice []*User
+	var resultSlice []*AppUser
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice User")
+		return errors.Wrap(err, "failed to bind eager loaded slice AppUser")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user")
+		return errors.Wrap(err, "failed to close results of eager load for app_user")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
 	}
 
-	if len(userAfterSelectHooks) != 0 {
+	if len(appUserAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -715,9 +715,9 @@ func (projectUserL) LoadUser(ctx context.Context, e boil.ContextExecutor, singul
 		foreign := resultSlice[0]
 		object.R.User = foreign
 		if foreign.R == nil {
-			foreign.R = &userR{}
+			foreign.R = &appUserR{}
 		}
-		foreign.R.ProjectUsers = append(foreign.R.ProjectUsers, object)
+		foreign.R.UserProjectUsers = append(foreign.R.UserProjectUsers, object)
 		return nil
 	}
 
@@ -726,9 +726,9 @@ func (projectUserL) LoadUser(ctx context.Context, e boil.ContextExecutor, singul
 			if local.UserID == foreign.ID {
 				local.R.User = foreign
 				if foreign.R == nil {
-					foreign.R = &userR{}
+					foreign.R = &appUserR{}
 				}
-				foreign.R.ProjectUsers = append(foreign.R.ProjectUsers, local)
+				foreign.R.UserProjectUsers = append(foreign.R.UserProjectUsers, local)
 				break
 			}
 		}
@@ -786,8 +786,8 @@ func (o *ProjectUser) SetProject(ctx context.Context, exec boil.ContextExecutor,
 
 // SetUser of the projectUser to the related item.
 // Sets o.R.User to related.
-// Adds o to related.R.ProjectUsers.
-func (o *ProjectUser) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
+// Adds o to related.R.UserProjectUsers.
+func (o *ProjectUser) SetUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -821,11 +821,11 @@ func (o *ProjectUser) SetUser(ctx context.Context, exec boil.ContextExecutor, in
 	}
 
 	if related.R == nil {
-		related.R = &userR{
-			ProjectUsers: ProjectUserSlice{o},
+		related.R = &appUserR{
+			UserProjectUsers: ProjectUserSlice{o},
 		}
 	} else {
-		related.R.ProjectUsers = append(related.R.ProjectUsers, o)
+		related.R.UserProjectUsers = append(related.R.UserProjectUsers, o)
 	}
 
 	return nil

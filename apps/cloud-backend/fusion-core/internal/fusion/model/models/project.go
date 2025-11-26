@@ -39,7 +39,7 @@ type Project struct {
 	LockedByUserID        null.String       `boil:"locked_by_user_id" json:"locked_by_user_id,omitempty" toml:"locked_by_user_id" yaml:"locked_by_user_id,omitempty"`
 	CreatedAt             time.Time         `boil:"created_at" json:"created_at" toml:"created_at" yaml:"created_at"`
 	UpdatedAt             time.Time         `boil:"updated_at" json:"updated_at" toml:"updated_at" yaml:"updated_at"`
-	PrimaryOwnerAccountID null.Int          `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
+	PrimaryOwnerAccountID null.String       `boil:"primary_owner_account_id" json:"primary_owner_account_id,omitempty" toml:"primary_owner_account_id" yaml:"primary_owner_account_id,omitempty"`
 
 	R *projectR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L projectL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -186,7 +186,7 @@ var ProjectWhere = struct {
 	LockedByUserID        whereHelpernull_String
 	CreatedAt             whereHelpertime_Time
 	UpdatedAt             whereHelpertime_Time
-	PrimaryOwnerAccountID whereHelpernull_Int
+	PrimaryOwnerAccountID whereHelpernull_String
 }{
 	ID:                    whereHelperstring{field: "\"project\".\"id\""},
 	Application:           whereHelpernull_String{field: "\"project\".\"application\""},
@@ -202,7 +202,7 @@ var ProjectWhere = struct {
 	LockedByUserID:        whereHelpernull_String{field: "\"project\".\"locked_by_user_id\""},
 	CreatedAt:             whereHelpertime_Time{field: "\"project\".\"created_at\""},
 	UpdatedAt:             whereHelpertime_Time{field: "\"project\".\"updated_at\""},
-	PrimaryOwnerAccountID: whereHelpernull_Int{field: "\"project\".\"primary_owner_account_id\""},
+	PrimaryOwnerAccountID: whereHelpernull_String{field: "\"project\".\"primary_owner_account_id\""},
 }
 
 // ProjectRels is where relationship names are stored.
@@ -218,7 +218,7 @@ var ProjectRels = struct {
 
 // projectR is where relationships are stored.
 type projectR struct {
-	LockedByUser        *User            `boil:"LockedByUser" json:"LockedByUser" toml:"LockedByUser" yaml:"LockedByUser"`
+	LockedByUser        *AppUser         `boil:"LockedByUser" json:"LockedByUser" toml:"LockedByUser" yaml:"LockedByUser"`
 	PrimaryOwnerAccount *Account         `boil:"PrimaryOwnerAccount" json:"PrimaryOwnerAccount" toml:"PrimaryOwnerAccount" yaml:"PrimaryOwnerAccount"`
 	ProjectUsers        ProjectUserSlice `boil:"ProjectUsers" json:"ProjectUsers" toml:"ProjectUsers" yaml:"ProjectUsers"`
 }
@@ -228,7 +228,7 @@ func (*projectR) NewStruct() *projectR {
 	return &projectR{}
 }
 
-func (o *Project) GetLockedByUser() *User {
+func (o *Project) GetLockedByUser() *AppUser {
 	if o == nil {
 		return nil
 	}
@@ -236,7 +236,7 @@ func (o *Project) GetLockedByUser() *User {
 	return o.R.GetLockedByUser()
 }
 
-func (r *projectR) GetLockedByUser() *User {
+func (r *projectR) GetLockedByUser() *AppUser {
 	if r == nil {
 		return nil
 	}
@@ -593,14 +593,14 @@ func (q projectQuery) Exists(ctx context.Context, exec boil.ContextExecutor) (bo
 }
 
 // LockedByUser pointed to by the foreign key.
-func (o *Project) LockedByUser(mods ...qm.QueryMod) userQuery {
+func (o *Project) LockedByUser(mods ...qm.QueryMod) appUserQuery {
 	queryMods := []qm.QueryMod{
 		qm.Where("\"id\" = ?", o.LockedByUserID),
 	}
 
 	queryMods = append(queryMods, mods...)
 
-	return Users(queryMods...)
+	return AppUsers(queryMods...)
 }
 
 // PrimaryOwnerAccount pointed to by the foreign key.
@@ -690,8 +690,8 @@ func (projectL) LoadLockedByUser(ctx context.Context, e boil.ContextExecutor, si
 	}
 
 	query := NewQuery(
-		qm.From(`user`),
-		qm.WhereIn(`user.id in ?`, argsSlice...),
+		qm.From(`app_user`),
+		qm.WhereIn(`app_user.id in ?`, argsSlice...),
 	)
 	if mods != nil {
 		mods.Apply(query)
@@ -699,22 +699,22 @@ func (projectL) LoadLockedByUser(ctx context.Context, e boil.ContextExecutor, si
 
 	results, err := query.QueryContext(ctx, e)
 	if err != nil {
-		return errors.Wrap(err, "failed to eager load User")
+		return errors.Wrap(err, "failed to eager load AppUser")
 	}
 
-	var resultSlice []*User
+	var resultSlice []*AppUser
 	if err = queries.Bind(results, &resultSlice); err != nil {
-		return errors.Wrap(err, "failed to bind eager loaded slice User")
+		return errors.Wrap(err, "failed to bind eager loaded slice AppUser")
 	}
 
 	if err = results.Close(); err != nil {
-		return errors.Wrap(err, "failed to close results of eager load for user")
+		return errors.Wrap(err, "failed to close results of eager load for app_user")
 	}
 	if err = results.Err(); err != nil {
-		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for user")
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for app_user")
 	}
 
-	if len(userAfterSelectHooks) != 0 {
+	if len(appUserAfterSelectHooks) != 0 {
 		for _, obj := range resultSlice {
 			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
 				return err
@@ -730,7 +730,7 @@ func (projectL) LoadLockedByUser(ctx context.Context, e boil.ContextExecutor, si
 		foreign := resultSlice[0]
 		object.R.LockedByUser = foreign
 		if foreign.R == nil {
-			foreign.R = &userR{}
+			foreign.R = &appUserR{}
 		}
 		foreign.R.LockedByUserProjects = append(foreign.R.LockedByUserProjects, object)
 		return nil
@@ -741,7 +741,7 @@ func (projectL) LoadLockedByUser(ctx context.Context, e boil.ContextExecutor, si
 			if queries.Equal(local.LockedByUserID, foreign.ID) {
 				local.R.LockedByUser = foreign
 				if foreign.R == nil {
-					foreign.R = &userR{}
+					foreign.R = &appUserR{}
 				}
 				foreign.R.LockedByUserProjects = append(foreign.R.LockedByUserProjects, local)
 				break
@@ -992,7 +992,7 @@ func (projectL) LoadProjectUsers(ctx context.Context, e boil.ContextExecutor, si
 // SetLockedByUser of the project to the related item.
 // Sets o.R.LockedByUser to related.
 // Adds o to related.R.LockedByUserProjects.
-func (o *Project) SetLockedByUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *User) error {
+func (o *Project) SetLockedByUser(ctx context.Context, exec boil.ContextExecutor, insert bool, related *AppUser) error {
 	var err error
 	if insert {
 		if err = related.Insert(ctx, exec, boil.Infer()); err != nil {
@@ -1026,7 +1026,7 @@ func (o *Project) SetLockedByUser(ctx context.Context, exec boil.ContextExecutor
 	}
 
 	if related.R == nil {
-		related.R = &userR{
+		related.R = &appUserR{
 			LockedByUserProjects: ProjectSlice{o},
 		}
 	} else {
@@ -1039,7 +1039,7 @@ func (o *Project) SetLockedByUser(ctx context.Context, exec boil.ContextExecutor
 // RemoveLockedByUser relationship.
 // Sets o.R.LockedByUser to nil.
 // Removes o from all passed in related items' relationships struct.
-func (o *Project) RemoveLockedByUser(ctx context.Context, exec boil.ContextExecutor, related *User) error {
+func (o *Project) RemoveLockedByUser(ctx context.Context, exec boil.ContextExecutor, related *AppUser) error {
 	var err error
 
 	queries.SetScanner(&o.LockedByUserID, nil)

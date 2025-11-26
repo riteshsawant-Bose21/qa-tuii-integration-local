@@ -27,19 +27,28 @@ const (
 func SetupProjectPermissions(acc *AccessControlConfig) {
 	// Project GET endpoints - require read permission
 	acc.RegisterPermission("GET", "/api/v1/projects", ProjectRead, PermissionRead, "View all projects")
-	acc.RegisterPermission("GET", "/api/v1/projects/:id", ProjectRead, PermissionRead, "View specific project")
 
 	// Project CREATE endpoint - require write permission
 	acc.RegisterPermission("POST", "/api/v1/projects", ProjectCreate, PermissionWrite, "Create new project")
 
 	// Project UPDATE endpoint - require write permission
-	acc.RegisterPermission("PATCH", "/api/v1/projects/:id", ProjectUpdate, PermissionWrite, "Update project")
+	acc.RegisterPermission("PATCH", "/api/v1/projects/:projectId", ProjectUpdate, PermissionWrite, "Update project")
 
 	// Project DELETE endpoint - require admin permission
-	acc.RegisterPermission("DELETE", "/api/v1/projects/:id", ProjectDelete, PermissionAdmin, "Delete project")
+	acc.RegisterPermission("DELETE", "/api/v1/projects/:projectId", ProjectDelete, PermissionAdmin, "Delete project")
 
-	// Project SYNC endpoint - require write permission
-	acc.RegisterPermission("POST", "/api/v1/projects/:id/sync", ProjectSync, PermissionWrite, "Sync project")
+	// Project user assignment endpoints - require write permission
+	acc.RegisterPermission("PUT", "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Assign user to project")
+	acc.RegisterPermission("DELETE", "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Remove user from project")
+
+	// Project star endpoint - require write permission
+	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/star/:userId", ProjectUpdate, PermissionRead, "Star or unstar project")
+
+	// Project archive endpoint - require write permission
+	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/archive", ProjectUpdate, PermissionWrite, "Archive or unarchive project")
+
+	// Project lock endpoint - require write permission
+	acc.RegisterPermission("POST", "/api/v1/projects/:projectId/lock", ProjectUpdate, PermissionWrite, "Lock or unlock project")
 }
 
 // SetupCommonPermissions configures common permission patterns

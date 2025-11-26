@@ -173,6 +173,7 @@ func main() {
 	server, err := api.New(&api.Config{
 		Host: appConfig.Server.APIHost,
 		Port: appConfig.Server.APIPort,
+		Auth0Domain: cfg.Auth0.Domain,
 	}, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))

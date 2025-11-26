@@ -1815,8 +1815,11 @@ const docTemplate = `{
         },
         "types.ProjectArchiveRequest": {
             "type": "object",
+            "required": [
+                "is_archived"
+            ],
             "properties": {
-                "archive": {
+                "is_archived": {
                     "type": "boolean",
                     "example": true
                 }
@@ -1826,10 +1829,8 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "application",
-                "budget",
                 "environment_type",
-                "name",
-                "user_id"
+                "name"
             ],
             "properties": {
                 "application": {
@@ -1854,10 +1855,6 @@ const docTemplate = `{
                     ],
                     "example": "indoor"
                 },
-                "id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
-                },
                 "is_project_file_created": {
                     "type": "boolean",
                     "example": false
@@ -1879,11 +1876,6 @@ const docTemplate = `{
                         }
                     ],
                     "example": "Proposal"
-                },
-                "user_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "example": "user123"
                 },
                 "venue": {
                     "type": "string",
@@ -1911,6 +1903,9 @@ const docTemplate = `{
         },
         "types.ProjectLockRequest": {
             "type": "object",
+            "required": [
+                "is_locked"
+            ],
             "properties": {
                 "is_locked": {
                     "type": "boolean",
@@ -1933,6 +1928,9 @@ const docTemplate = `{
         },
         "types.ProjectStarRequest": {
             "type": "object",
+            "required": [
+                "is_starred"
+            ],
             "properties": {
                 "is_starred": {
                     "type": "boolean",
@@ -1943,11 +1941,6 @@ const docTemplate = `{
         "types.ProjectUpdateRequest": {
             "type": "object",
             "properties": {
-                "account_id": {
-                    "type": "string",
-                    "minLength": 1,
-                    "example": "account456"
-                },
                 "application": {
                     "type": "string",
                     "maxLength": 255,
@@ -1969,10 +1962,6 @@ const docTemplate = `{
                         }
                     ],
                     "example": "indoor"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
                 "is_project_file_dirty": {
                     "type": "boolean",

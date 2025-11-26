@@ -304,9 +304,11 @@ definitions:
     type: object
   types.ProjectArchiveRequest:
     properties:
-      archive:
+      is_archived:
         example: true
         type: boolean
+    required:
+    - is_archived
     type: object
   types.ProjectCreateRequest:
     properties:
@@ -325,9 +327,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/types.EnvironmentType'
         example: indoor
-      id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       is_project_file_created:
         example: false
         type: boolean
@@ -343,20 +342,14 @@ definitions:
         allOf:
         - $ref: '#/definitions/types.ProjectPhase'
         example: Proposal
-      user_id:
-        example: user123
-        minLength: 1
-        type: string
       venue:
         example: Building A - Conference Room 101
         maxLength: 255
         type: string
     required:
     - application
-    - budget
     - environment_type
     - name
-    - user_id
     type: object
   types.ProjectCreateResponse:
     properties:
@@ -375,6 +368,8 @@ definitions:
       is_locked:
         example: true
         type: boolean
+    required:
+    - is_locked
     type: object
   types.ProjectPhase:
     enum:
@@ -391,13 +386,11 @@ definitions:
       is_starred:
         example: true
         type: boolean
+    required:
+    - is_starred
     type: object
   types.ProjectUpdateRequest:
     properties:
-      account_id:
-        example: account456
-        minLength: 1
-        type: string
       application:
         example: Audio System Design
         maxLength: 255
@@ -413,9 +406,6 @@ definitions:
         allOf:
         - $ref: '#/definitions/types.EnvironmentType'
         example: indoor
-      id:
-        example: 123e4567-e89b-12d3-a456-426614174000
-        type: string
       is_project_file_dirty:
         example: true
         type: boolean

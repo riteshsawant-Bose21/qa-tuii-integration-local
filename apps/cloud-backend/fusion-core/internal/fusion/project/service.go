@@ -19,9 +19,9 @@ type Service struct {
 type DatabaseService interface {
 	GetProjectByID(ctx context.Context, id string) (*models.Project, error)
 	GetDB(ctx context.Context) model.DBWithTransactions
-	Insert(ctx context.Context, project *types.ProjectCreateRequest, tx model.DBTxExecutor) (string, error)
+	Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx model.DBTxExecutor) (string, error)
 	InsertProjectUser(ctx context.Context, projectID, userID string, tx model.DBTxExecutor) error
-	SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams) ([]types.Project, error)
+	SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse) ([]types.Project, error)
 	Update(ctx context.Context, projectRow *models.Project, project *types.ProjectUpdateRequest) error
 	Delete(ctx context.Context, projectRow *models.Project) error
 	AssignUser(ctx context.Context, projectID, userID string) error
@@ -35,7 +35,7 @@ type DatabaseService interface {
 	ArchiveProject(ctx context.Context, projectID string) error
 	UnarchiveProject(ctx context.Context, projectID string) error
 	LockProject(ctx context.Context, projectID, userID string) error
-	UnlockProject(ctx context.Context, projectID, userID string) error
+	UnlockProject(ctx context.Context, projectID string) error
 	GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error)
 	GetUserEmailByID(ctx context.Context, userID string) (string, error)
 }

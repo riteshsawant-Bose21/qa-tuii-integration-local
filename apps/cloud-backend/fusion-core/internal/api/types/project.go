@@ -32,26 +32,30 @@ type Budget struct {
 	Currency string `json:"currency" validate:"required,currency,len=3" example:"USD"`
 }
 
+type ProjectAuth struct {
+	UserID    string `swaggerignore:"true"`
+	Role      string `swaggerignore:"true"`
+	AccountID string `swaggerignore:"true"`
+}
+
 // Request body for creating or updating a project.
 type ProjectCreateRequest struct {
-	ID                        string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ID                        string          `swaggerignore:"true"`
 	Application               string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
-	UserID                    string          `json:"user_id" validate:"required,min=1" example:"user123"`
 	Name                      string          `json:"name" validate:"required,min=1,max=255" example:"Conference Room Audio Setup"`
 	Description               string          `json:"description" validate:"omitempty,max=1000" example:"Professional audio system for corporate conference room"`
 	Venue                     string          `json:"venue" validate:"omitempty,max=255" example:"Building A - Conference Room 101"`
 	EnvironmentType           EnvironmentType `json:"environment_type" validate:"required,environment_type" example:"indoor"`
 	ProjectPhase              ProjectPhase    `json:"project_phase" validate:"omitempty,project_phase" example:"Proposal"`
-	Budget                    Budget          `json:"budget" validate:"required"`
+	Budget                    Budget          `json:"budget"`
 	IsProjectFileCreated      bool            `json:"is_project_file_created" example:"false"`
 	IsProjectThumbnailCreated bool            `json:"is_project_thumbnail_created" example:"false"`
 }
 
 // Request body for creating or updating a project.
 type ProjectUpdateRequest struct {
-	ID                      string          `json:"id" validate:"omitempty,uuid" example:"123e4567-e89b-12d3-a456-426614174000"`
+	ID                      string          `swaggerignore:"true"`
 	Application             string          `json:"application" validate:"omitempty,min=1,max=255" example:"Audio System Design"`
-	AccountID               string          `json:"account_id" validate:"omitempty,min=1" example:"account456"`
 	Name                    string          `json:"name" validate:"omitempty,min=1,max=255" example:"Updated Conference Room Audio Setup"`
 	Description             string          `json:"description" validate:"omitempty,max=1000" example:"Updated professional audio system for corporate conference room"`
 	Venue                   string          `json:"venue" validate:"omitempty,max=255" example:"Building B - Conference Room 205"`
@@ -83,7 +87,6 @@ type Project struct {
 
 // Parameters for retrieving all projects.
 type GetAllProjectsParams struct {
-	UserID     string `form:"user_id" validate:"required,min=1" example:"user123"`
 	IsArchived bool   `form:"is_archived" example:"false"`
 	SortBy     string `form:"sort_by" validate:"omitempty,project_sort_field" example:"created_at"`
 	SortOrder  string `form:"sort_order" validate:"omitempty,sort_order" example:"asc"`
@@ -99,17 +102,17 @@ type GetAllProjectsResponse struct {
 
 // Request body for archiving or unarchiving a project.
 type ProjectArchiveRequest struct {
-	Archive bool `json:"archive" example:"true"`
+	Archive bool `json:"is_archived" example:"true" validate:"required"`
 }
 
 // Request body for locking or unlocking a project.
 type ProjectLockRequest struct {
-	IsLocked bool `json:"is_locked" example:"true"`
+	IsLocked bool `json:"is_locked" example:"true" validate:"required"`
 }
 
 // Request body for starring or unstarring a project.
 type ProjectStarRequest struct {
-	IsStarred bool `json:"is_starred" example:"true"`
+	IsStarred bool `json:"is_starred" example:"true" validate:"required"`
 }
 
 // Response for creating a project.

@@ -94,17 +94,23 @@ var AppUserWhere = struct {
 
 // AppUserRels is where relationship names are stored.
 var AppUserRels = struct {
-	Account         string
-	AccountTypeRole string
+	Account              string
+	AccountTypeRole      string
+	LockedByUserProjects string
+	UserProjectUsers     string
 }{
-	Account:         "Account",
-	AccountTypeRole: "AccountTypeRole",
+	Account:              "Account",
+	AccountTypeRole:      "AccountTypeRole",
+	LockedByUserProjects: "LockedByUserProjects",
+	UserProjectUsers:     "UserProjectUsers",
 }
 
 // appUserR is where relationships are stored.
 type appUserR struct {
-	Account         *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
-	AccountTypeRole *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
+	Account              *Account         `boil:"Account" json:"Account" toml:"Account" yaml:"Account"`
+	AccountTypeRole      *AccountTypeRole `boil:"AccountTypeRole" json:"AccountTypeRole" toml:"AccountTypeRole" yaml:"AccountTypeRole"`
+	LockedByUserProjects ProjectSlice     `boil:"LockedByUserProjects" json:"LockedByUserProjects" toml:"LockedByUserProjects" yaml:"LockedByUserProjects"`
+	UserProjectUsers     ProjectUserSlice `boil:"UserProjectUsers" json:"UserProjectUsers" toml:"UserProjectUsers" yaml:"UserProjectUsers"`
 }
 
 // NewStruct creates a new relationship struct
@@ -142,6 +148,38 @@ func (r *appUserR) GetAccountTypeRole() *AccountTypeRole {
 	}
 
 	return r.AccountTypeRole
+}
+
+func (o *AppUser) GetLockedByUserProjects() ProjectSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetLockedByUserProjects()
+}
+
+func (r *appUserR) GetLockedByUserProjects() ProjectSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.LockedByUserProjects
+}
+
+func (o *AppUser) GetUserProjectUsers() ProjectUserSlice {
+	if o == nil {
+		return nil
+	}
+
+	return o.R.GetUserProjectUsers()
+}
+
+func (r *appUserR) GetUserProjectUsers() ProjectUserSlice {
+	if r == nil {
+		return nil
+	}
+
+	return r.UserProjectUsers
 }
 
 // appUserL is where Load methods for each relationship are stored.
@@ -482,6 +520,34 @@ func (o *AppUser) AccountTypeRole(mods ...qm.QueryMod) accountTypeRoleQuery {
 	return AccountTypeRoles(queryMods...)
 }
 
+// LockedByUserProjects retrieves all the project's Projects with an executor via locked_by_user_id column.
+func (o *AppUser) LockedByUserProjects(mods ...qm.QueryMod) projectQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"project\".\"locked_by_user_id\"=?", o.ID),
+	)
+
+	return Projects(queryMods...)
+}
+
+// UserProjectUsers retrieves all the project_user's ProjectUsers with an executor via user_id column.
+func (o *AppUser) UserProjectUsers(mods ...qm.QueryMod) projectUserQuery {
+	var queryMods []qm.QueryMod
+	if len(mods) != 0 {
+		queryMods = append(queryMods, mods...)
+	}
+
+	queryMods = append(queryMods,
+		qm.Where("\"project_user\".\"user_id\"=?", o.ID),
+	)
+
+	return ProjectUsers(queryMods...)
+}
+
 // LoadAccount allows an eager lookup of values, cached into the
 // loaded structs of the objects. This is for an N-1 relationship.
 func (appUserL) LoadAccount(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
@@ -722,6 +788,232 @@ func (appUserL) LoadAccountTypeRole(ctx context.Context, e boil.ContextExecutor,
 	return nil
 }
 
+// LoadLockedByUserProjects allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (appUserL) LoadLockedByUserProjects(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
+
+	if singular {
+		var ok bool
+		object, ok = maybeAppUser.(*AppUser)
+		if !ok {
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
+			}
+		}
+	} else {
+		s, ok := maybeAppUser.(*[]*AppUser)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &appUserR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &appUserR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`project`),
+		qm.WhereIn(`project.locked_by_user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load project")
+	}
+
+	var resultSlice []*Project
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice project")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on project")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for project")
+	}
+
+	if len(projectAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.LockedByUserProjects = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &projectR{}
+			}
+			foreign.R.LockedByUser = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if queries.Equal(local.ID, foreign.LockedByUserID) {
+				local.R.LockedByUserProjects = append(local.R.LockedByUserProjects, foreign)
+				if foreign.R == nil {
+					foreign.R = &projectR{}
+				}
+				foreign.R.LockedByUser = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
+// LoadUserProjectUsers allows an eager lookup of values, cached into the
+// loaded structs of the objects. This is for a 1-M or N-M relationship.
+func (appUserL) LoadUserProjectUsers(ctx context.Context, e boil.ContextExecutor, singular bool, maybeAppUser interface{}, mods queries.Applicator) error {
+	var slice []*AppUser
+	var object *AppUser
+
+	if singular {
+		var ok bool
+		object, ok = maybeAppUser.(*AppUser)
+		if !ok {
+			object = new(AppUser)
+			ok = queries.SetFromEmbeddedStruct(&object, &maybeAppUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", object, maybeAppUser))
+			}
+		}
+	} else {
+		s, ok := maybeAppUser.(*[]*AppUser)
+		if ok {
+			slice = *s
+		} else {
+			ok = queries.SetFromEmbeddedStruct(&slice, maybeAppUser)
+			if !ok {
+				return errors.New(fmt.Sprintf("failed to set %T from embedded struct %T", slice, maybeAppUser))
+			}
+		}
+	}
+
+	args := make(map[interface{}]struct{})
+	if singular {
+		if object.R == nil {
+			object.R = &appUserR{}
+		}
+		args[object.ID] = struct{}{}
+	} else {
+		for _, obj := range slice {
+			if obj.R == nil {
+				obj.R = &appUserR{}
+			}
+			args[obj.ID] = struct{}{}
+		}
+	}
+
+	if len(args) == 0 {
+		return nil
+	}
+
+	argsSlice := make([]interface{}, len(args))
+	i := 0
+	for arg := range args {
+		argsSlice[i] = arg
+		i++
+	}
+
+	query := NewQuery(
+		qm.From(`project_user`),
+		qm.WhereIn(`project_user.user_id in ?`, argsSlice...),
+	)
+	if mods != nil {
+		mods.Apply(query)
+	}
+
+	results, err := query.QueryContext(ctx, e)
+	if err != nil {
+		return errors.Wrap(err, "failed to eager load project_user")
+	}
+
+	var resultSlice []*ProjectUser
+	if err = queries.Bind(results, &resultSlice); err != nil {
+		return errors.Wrap(err, "failed to bind eager loaded slice project_user")
+	}
+
+	if err = results.Close(); err != nil {
+		return errors.Wrap(err, "failed to close results in eager load on project_user")
+	}
+	if err = results.Err(); err != nil {
+		return errors.Wrap(err, "error occurred during iteration of eager loaded relations for project_user")
+	}
+
+	if len(projectUserAfterSelectHooks) != 0 {
+		for _, obj := range resultSlice {
+			if err := obj.doAfterSelectHooks(ctx, e); err != nil {
+				return err
+			}
+		}
+	}
+	if singular {
+		object.R.UserProjectUsers = resultSlice
+		for _, foreign := range resultSlice {
+			if foreign.R == nil {
+				foreign.R = &projectUserR{}
+			}
+			foreign.R.User = object
+		}
+		return nil
+	}
+
+	for _, foreign := range resultSlice {
+		for _, local := range slice {
+			if local.ID == foreign.UserID {
+				local.R.UserProjectUsers = append(local.R.UserProjectUsers, foreign)
+				if foreign.R == nil {
+					foreign.R = &projectUserR{}
+				}
+				foreign.R.User = local
+				break
+			}
+		}
+	}
+
+	return nil
+}
+
 // SetAccount of the appUser to the related item.
 // Sets o.R.Account to related.
 // Adds o to related.R.AppUsers.
@@ -813,6 +1105,186 @@ func (o *AppUser) SetAccountTypeRole(ctx context.Context, exec boil.ContextExecu
 		related.R.AppUsers = append(related.R.AppUsers, o)
 	}
 
+	return nil
+}
+
+// AddLockedByUserProjects adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.LockedByUserProjects.
+// Sets related.R.LockedByUser appropriately.
+func (o *AppUser) AddLockedByUserProjects(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Project) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			queries.Assign(&rel.LockedByUserID, o.ID)
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"project\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"locked_by_user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, projectPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			queries.Assign(&rel.LockedByUserID, o.ID)
+		}
+	}
+
+	if o.R == nil {
+		o.R = &appUserR{
+			LockedByUserProjects: related,
+		}
+	} else {
+		o.R.LockedByUserProjects = append(o.R.LockedByUserProjects, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &projectR{
+				LockedByUser: o,
+			}
+		} else {
+			rel.R.LockedByUser = o
+		}
+	}
+	return nil
+}
+
+// SetLockedByUserProjects removes all previously related items of the
+// app_user replacing them completely with the passed
+// in related items, optionally inserting them as new records.
+// Sets o.R.LockedByUser's LockedByUserProjects accordingly.
+// Replaces o.R.LockedByUserProjects with related.
+// Sets related.R.LockedByUser's LockedByUserProjects accordingly.
+func (o *AppUser) SetLockedByUserProjects(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*Project) error {
+	query := "update \"project\" set \"locked_by_user_id\" = null where \"locked_by_user_id\" = $1"
+	values := []interface{}{o.ID}
+	if boil.IsDebug(ctx) {
+		writer := boil.DebugWriterFrom(ctx)
+		fmt.Fprintln(writer, query)
+		fmt.Fprintln(writer, values)
+	}
+	_, err := exec.ExecContext(ctx, query, values...)
+	if err != nil {
+		return errors.Wrap(err, "failed to remove relationships before set")
+	}
+
+	if o.R != nil {
+		for _, rel := range o.R.LockedByUserProjects {
+			queries.SetScanner(&rel.LockedByUserID, nil)
+			if rel.R == nil {
+				continue
+			}
+
+			rel.R.LockedByUser = nil
+		}
+		o.R.LockedByUserProjects = nil
+	}
+
+	return o.AddLockedByUserProjects(ctx, exec, insert, related...)
+}
+
+// RemoveLockedByUserProjects relationships from objects passed in.
+// Removes related items from R.LockedByUserProjects (uses pointer comparison, removal does not keep order)
+// Sets related.R.LockedByUser.
+func (o *AppUser) RemoveLockedByUserProjects(ctx context.Context, exec boil.ContextExecutor, related ...*Project) error {
+	if len(related) == 0 {
+		return nil
+	}
+
+	var err error
+	for _, rel := range related {
+		queries.SetScanner(&rel.LockedByUserID, nil)
+		if rel.R != nil {
+			rel.R.LockedByUser = nil
+		}
+		if _, err = rel.Update(ctx, exec, boil.Whitelist("locked_by_user_id")); err != nil {
+			return err
+		}
+	}
+	if o.R == nil {
+		return nil
+	}
+
+	for _, rel := range related {
+		for i, ri := range o.R.LockedByUserProjects {
+			if rel != ri {
+				continue
+			}
+
+			ln := len(o.R.LockedByUserProjects)
+			if ln > 1 && i < ln-1 {
+				o.R.LockedByUserProjects[i] = o.R.LockedByUserProjects[ln-1]
+			}
+			o.R.LockedByUserProjects = o.R.LockedByUserProjects[:ln-1]
+			break
+		}
+	}
+
+	return nil
+}
+
+// AddUserProjectUsers adds the given related objects to the existing relationships
+// of the app_user, optionally inserting them as new records.
+// Appends related to o.R.UserProjectUsers.
+// Sets related.R.User appropriately.
+func (o *AppUser) AddUserProjectUsers(ctx context.Context, exec boil.ContextExecutor, insert bool, related ...*ProjectUser) error {
+	var err error
+	for _, rel := range related {
+		if insert {
+			rel.UserID = o.ID
+			if err = rel.Insert(ctx, exec, boil.Infer()); err != nil {
+				return errors.Wrap(err, "failed to insert into foreign table")
+			}
+		} else {
+			updateQuery := fmt.Sprintf(
+				"UPDATE \"project_user\" SET %s WHERE %s",
+				strmangle.SetParamNames("\"", "\"", 1, []string{"user_id"}),
+				strmangle.WhereClause("\"", "\"", 2, projectUserPrimaryKeyColumns),
+			)
+			values := []interface{}{o.ID, rel.ID}
+
+			if boil.IsDebug(ctx) {
+				writer := boil.DebugWriterFrom(ctx)
+				fmt.Fprintln(writer, updateQuery)
+				fmt.Fprintln(writer, values)
+			}
+			if _, err = exec.ExecContext(ctx, updateQuery, values...); err != nil {
+				return errors.Wrap(err, "failed to update foreign table")
+			}
+
+			rel.UserID = o.ID
+		}
+	}
+
+	if o.R == nil {
+		o.R = &appUserR{
+			UserProjectUsers: related,
+		}
+	} else {
+		o.R.UserProjectUsers = append(o.R.UserProjectUsers, related...)
+	}
+
+	for _, rel := range related {
+		if rel.R == nil {
+			rel.R = &projectUserR{
+				User: o,
+			}
+		} else {
+			rel.R.User = o
+		}
+	}
 	return nil
 }
 

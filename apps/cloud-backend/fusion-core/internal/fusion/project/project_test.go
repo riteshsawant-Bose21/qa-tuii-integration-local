@@ -65,13 +65,13 @@ func (m *mockDBService) InsertProjectUser(ctx context.Context, projectID, userID
 }
 
 // Satisfy DatabaseService interface for tests
-func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, tx model.DBTxExecutor) (string, error) {
-	args := m.Called(ctx, project, tx)
+func (m *mockDBService) Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx model.DBTxExecutor) (string, error) {
+	args := m.Called(ctx, project, accountID, tx)
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProjectsParams) ([]types.Project, error) {
-	args := m.Called(ctx, params)
+func (m *mockDBService) SelectAll(ctx context.Context, params *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse) ([]types.Project, error) {
+	args := m.Called(ctx, params, userAuth)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -151,8 +151,8 @@ func (m *mockDBService) LockProject(ctx context.Context, projectID, userID strin
 	return args.Error(0)
 }
 
-func (m *mockDBService) UnlockProject(ctx context.Context, projectID, userID string) error {
-	args := m.Called(ctx, projectID, userID)
+func (m *mockDBService) UnlockProject(ctx context.Context, projectID string) error {
+	args := m.Called(ctx, projectID)
 	return args.Error(0)
 }
 
@@ -197,8 +197,7 @@ func TestCreateProject(t *testing.T) {
 		{
 			name: "successful creation",
 			project: &types.ProjectCreateRequest{
-				Name:   "Test Project",
-				UserID: "user-123",
+				Name: "Test Project",
 			},
 			mockID:         "123e4567-e89b-12d3-a456-426614174000",
 			mockErr:        nil,
@@ -209,8 +208,7 @@ func TestCreateProject(t *testing.T) {
 		{
 			name: "database error",
 			project: &types.ProjectCreateRequest{
-				Name:   "Test Project",
-				UserID: "user-123",
+				Name: "Test Project",
 			},
 			mockID:         "",
 			mockErr:        errDatabaseMsg,
@@ -222,7 +220,6 @@ func TestCreateProject(t *testing.T) {
 			name: "creation with file & thumbnail URLs",
 			project: &types.ProjectCreateRequest{
 				Name:                      "Project With Files",
-				UserID:                    "user-123",
 				IsProjectFileCreated:      true,
 				IsProjectThumbnailCreated: true,
 			},
@@ -240,7 +237,6 @@ func TestCreateProject(t *testing.T) {
 			name: "creation presign file error",
 			project: &types.ProjectCreateRequest{
 				Name:                 "Project With File Error",
-				UserID:               "user-123",
 				IsProjectFileCreated: true,
 			},
 			mockID:         "123e4567-e89b-12d3-a456-426614174002",
@@ -279,12 +275,11 @@ func TestCreateProject(t *testing.T) {
 			// Mock the GetDB call to return our mock database
 			mockDB.On("GetDB", mock.Anything).Return(dbWithTx)
 
-			// Mock user existence validation
-			mockDB.On("UserExists", mock.Anything, tt.project.UserID).Return(true, nil)
-			mockDB.On("Insert", mock.Anything, tt.project, mock.Anything).Return(tt.mockID, tt.mockErr)
+			// Mock Insert call with accountID parameter
+			mockDB.On("Insert", mock.Anything, tt.project, "test-account-id", mock.Anything).Return(tt.mockID, tt.mockErr)
 			// Always expect InsertProjectUser to be called if Insert succeeds
 			if tt.mockErr == nil {
-				mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, tt.project.UserID, mock.Anything).Return(nil)
+				mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, "test-user-id", mock.Anything).Return(nil)
 				// Presign expectations when flags set
 				if tt.project.IsProjectFileCreated {
 					mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
@@ -299,7 +294,19 @@ func TestCreateProject(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.CreateProject(context.Background(), tt.project)
+			// Create test user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    "test-user-id",
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+			}
+
+			response, err := service.CreateProject(context.Background(), tt.project, userAuth)
 			if tt.expectedErr != nil {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErr.Error())
@@ -377,7 +384,17 @@ func TestGetAllProjects(t *testing.T) {
 			mockDB := &mockDBService{}
 			mockPresigner := &mockPresigner{}
 
-			mockDB.On("SelectAll", mock.Anything, tt.params).Return(tt.mockProjects, tt.mockDBErr)
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    "test-user-id",
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+			}
+			mockDB.On("SelectAll", mock.Anything, tt.params, userAuth).Return(tt.mockProjects, tt.mockDBErr)
 			if tt.mockDBErr == nil {
 				for _, p := range tt.mockProjects {
 					// Mock project file URL generation
@@ -401,7 +418,7 @@ func TestGetAllProjects(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.GetAllProjects(context.Background(), tt.params)
+			response, err := service.GetAllProjects(context.Background(), tt.params, userAuth)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 				assert.Nil(t, response)
@@ -428,7 +445,7 @@ func TestGetAllProjects(t *testing.T) {
 func TestUpdateProject(t *testing.T) {
 	mockProjectRow := &models.Project{
 		ID:                    "1",
-		PrimaryOwnerAccountID: null.NewInt(123, true),
+		PrimaryOwnerAccountID: null.NewString("123", true),
 		Name:                  null.NewString(updatedProjectName, true),
 		IsArchived:            false,
 		IsDeleted:             false,
@@ -486,7 +503,25 @@ func TestUpdateProject(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.UpdateProject(context.Background(), tt.id, testUserID1, tt.project)
+			// Set the project ID on the request
+			tt.project.ID = tt.id
+
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			response, err := service.UpdateProject(context.Background(), tt.project, userAuth)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 				assert.Nil(t, response)
@@ -527,7 +562,26 @@ func TestUpdateProjectPresignURLs(t *testing.T) {
 				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectThumbnail, mockProjectRow.ID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
 			}
 			service := &Service{dbService: mockDB, presigner: mockPresigner}
-			resp, err := service.UpdateProject(context.Background(), mockProjectRow.ID, testUserID1, tt.req)
+
+			// Set the project ID on the request
+			tt.req.ID = mockProjectRow.ID
+
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			resp, err := service.UpdateProject(context.Background(), tt.req, userAuth)
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErr)
@@ -597,7 +651,22 @@ func TestDeleteProject(t *testing.T) {
 				dbService: mockDB,
 			}
 
-			err := service.DeleteProject(context.Background(), tt.id, testUserID1)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			err := service.DeleteProject(context.Background(), tt.id, userAuth)
 			if tt.expectedErr != nil {
 				assert.EqualError(t, err, tt.expectedErr.Error())
 			} else {
@@ -625,7 +694,7 @@ func TestAssignUserToProject(t *testing.T) {
 		{
 			name:                "successful assignment",
 			projectID:           testProjectID1,
-			userID:              testUserID1,
+			userID:              "target-user-id", // Different from current user (testUserID1)
 			projectExists:       true,
 			projectExistsErr:    nil,
 			userExists:          true,
@@ -638,7 +707,7 @@ func TestAssignUserToProject(t *testing.T) {
 		{
 			name:                projectNotFoundMsg,
 			projectID:           testProjectID1,
-			userID:              testUserID1,
+			userID:              "target-user-id",
 			projectExists:       false,
 			projectExistsErr:    nil,
 			userExists:          true,
@@ -652,7 +721,7 @@ func TestAssignUserToProject(t *testing.T) {
 		{
 			name:                "user already assigned",
 			projectID:           testProjectID1,
-			userID:              testUserID1,
+			userID:              "target-user-id",
 			projectExists:       true,
 			projectExistsErr:    nil,
 			userExists:          true,
@@ -678,9 +747,27 @@ func TestAssignUserToProject(t *testing.T) {
 					IsDeleted:  false,
 				}
 				mockDB.On("GetProjectByID", mock.Anything, tt.projectID).Return(mockProject, nil)
-				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.userID).Return(tt.userAlreadyAssigned, tt.userAssignedErr)
-				if !tt.userAlreadyAssigned && tt.assignErr == nil {
-					mockDB.On("AssignUser", mock.Anything, tt.projectID, tt.userID).Return(tt.assignErr)
+
+				// Mock the current user assignment check (validation requires this)
+				// For non-admin users, validateProject checks if the current user is assigned to the project
+				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, testUserID1).Return(true, nil)
+
+				// Mock GetUserIDByEmail - the service needs this to convert email to userID
+				if tt.userExists && tt.userExistsErr == nil {
+					mockDB.On("GetUserIDByEmail", mock.Anything, "test@example.com").Return(tt.userID, nil)
+					mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.userID).Return(tt.userAlreadyAssigned, tt.userAssignedErr)
+					if !tt.userAlreadyAssigned && tt.assignErr == nil {
+						mockDB.On("AssignUser", mock.Anything, tt.projectID, tt.userID).Return(tt.assignErr)
+					}
+				} else {
+					// User doesn't exist or error case
+					var err error
+					if tt.userExistsErr != nil {
+						err = tt.userExistsErr
+					} else {
+						err = errors.New("user not found")
+					}
+					mockDB.On("GetUserIDByEmail", mock.Anything, "test@example.com").Return("", err)
 				}
 			} else {
 				// Project doesn't exist or error case
@@ -698,7 +785,23 @@ func TestAssignUserToProject(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.AssignUserToProject(context.Background(), tt.projectID, tt.userID)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			// Use email instead of userID since the method signature changed
+			response, err := service.AssignUserToProject(context.Background(), tt.projectID, "test@example.com", userAuth)
 
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
@@ -750,7 +853,7 @@ func TestRemoveUserFromProject(t *testing.T) {
 			projectExistsErr: nil,
 			userExists:       true,
 			userExistsErr:    nil,
-			userAssigned:     true,
+			userAssigned:     false,
 			userAssignedErr:  nil,
 			removeErr:        nil,
 			expectedErr:      projectNotFoundMsg,
@@ -775,7 +878,7 @@ func TestRemoveUserFromProject(t *testing.T) {
 			mockDB := &mockDBService{}
 			mockPresigner := &mockPresigner{}
 
-			// Setup mock based on expected flow
+			// Setup mocks based on project existence first - validateProject is called first
 			if tt.projectExists && tt.projectExistsErr == nil {
 				// Project exists, create mock project
 				mockProject := &models.Project{
@@ -784,9 +887,33 @@ func TestRemoveUserFromProject(t *testing.T) {
 					IsDeleted:  false,
 				}
 				mockDB.On("GetProjectByID", mock.Anything, tt.projectID).Return(mockProject, nil)
-				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.userID).Return(tt.userAssigned, tt.userAssignedErr)
-				if tt.userAssigned && tt.removeErr == nil {
-					mockDB.On("RemoveUser", mock.Anything, tt.projectID, tt.userID).Return(tt.removeErr)
+
+				// Mock the current user assignment check (validation requires this)
+				// For non-admin users, validateProject checks if the current user is assigned to the project
+				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, testUserID1).Return(true, nil)
+
+				// Mock GetUserIDByEmail after project validation
+				if tt.userExists && tt.userExistsErr == nil {
+					// Use a different target user ID (just like in AssignUserToProject test)
+					targetUserID := "target-user-id"
+					mockDB.On("GetUserIDByEmail", mock.Anything, "test@example.com").Return(targetUserID, nil)
+
+					// Mock target user assignment check - this is called after GetUserIDByEmail
+					mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, targetUserID).Return(tt.userAssigned, tt.userAssignedErr)
+
+					// If user is assigned and no assignment check error, then RemoveUser is called
+					if tt.userAssigned && tt.userAssignedErr == nil && tt.removeErr == nil {
+						mockDB.On("RemoveUser", mock.Anything, tt.projectID, targetUserID).Return(tt.removeErr)
+					}
+				} else {
+					// User doesn't exist or error case - this should return early, no need for other mocks
+					var err error
+					if tt.userExistsErr != nil {
+						err = tt.userExistsErr
+					} else {
+						err = errors.New("user not found")
+					}
+					mockDB.On("GetUserIDByEmail", mock.Anything, "test@example.com").Return("", err)
 				}
 			} else {
 				// Project doesn't exist or error case
@@ -804,7 +931,23 @@ func TestRemoveUserFromProject(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.RemoveUserFromProject(context.Background(), tt.projectID, tt.userID)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			// Use email instead of userID since the method signature changed
+			response, err := service.RemoveUserFromProject(context.Background(), tt.projectID, "test@example.com", userAuth)
 
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
@@ -833,8 +976,8 @@ func TestAssignUserToProjectByEmail(t *testing.T) {
 		{
 			name:        "successful assignment by email",
 			projectID:   testProjectID1,
-			userEmail:   "test@example.com",
-			mockUserID:  testUserID1,
+			userEmail:   "target@example.com", // Use different email
+			mockUserID:  "target-user-id",     // Use different user ID
 			mockErr:     nil,
 			expectedErr: "",
 		},
@@ -853,16 +996,21 @@ func TestAssignUserToProjectByEmail(t *testing.T) {
 			mockDB := &mockDBService{}
 			mockPresigner := &mockPresigner{}
 
+			// Project validation is always called first
+			mockProject := &models.Project{
+				ID:         tt.projectID,
+				IsArchived: false,
+				IsDeleted:  false,
+			}
+			mockDB.On("GetProjectByID", mock.Anything, tt.projectID).Return(mockProject, nil)
+			// Mock the current user assignment check (validation requires this)
+			mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, testUserID1).Return(true, nil)
+
+			// Mock GetUserIDByEmail after project validation
 			mockDB.On("GetUserIDByEmail", mock.Anything, tt.userEmail).Return(tt.mockUserID, tt.mockErr)
 
 			if tt.mockErr == nil {
-				// Setup mocks for successful user assignment - this calls AssignUserToProject internally
-				mockProject := &models.Project{
-					ID:         tt.projectID,
-					IsArchived: false,
-					IsDeleted:  false,
-				}
-				mockDB.On("GetProjectByID", mock.Anything, tt.projectID).Return(mockProject, nil)
+				// Setup mocks for successful user assignment
 				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.mockUserID).Return(false, nil)
 				mockDB.On("AssignUser", mock.Anything, tt.projectID, tt.mockUserID).Return(nil)
 			}
@@ -872,7 +1020,22 @@ func TestAssignUserToProjectByEmail(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.AssignUserToProjectByEmail(context.Background(), tt.projectID, tt.userEmail)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			response, err := service.AssignUserToProject(context.Background(), tt.projectID, tt.userEmail, userAuth)
 
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
@@ -921,16 +1084,21 @@ func TestRemoveUserFromProjectByEmail(t *testing.T) {
 			mockDB := &mockDBService{}
 			mockPresigner := &mockPresigner{}
 
+			// Project validation is always called first now
+			mockProject := &models.Project{
+				ID:         tt.projectID,
+				IsArchived: false,
+				IsDeleted:  false,
+			}
+			mockDB.On("GetProjectByID", mock.Anything, tt.projectID).Return(mockProject, nil)
+			// Mock the current user assignment check (validation requires this)
+			mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, testUserID1).Return(true, nil)
+
+			// Mock GetUserIDByEmail after project validation
 			mockDB.On("GetUserIDByEmail", mock.Anything, tt.userEmail).Return(tt.mockUserID, tt.mockErr)
 
 			if tt.mockErr == nil {
-				// Setup mocks for successful user removal - this calls RemoveUserFromProject internally
-				mockProject := &models.Project{
-					ID:         tt.projectID,
-					IsArchived: false,
-					IsDeleted:  false,
-				}
-				mockDB.On("GetProjectByID", mock.Anything, tt.projectID).Return(mockProject, nil)
+				// Setup mocks for successful user removal
 				mockDB.On("IsUserAssigned", mock.Anything, tt.projectID, tt.mockUserID).Return(true, nil)
 				mockDB.On("RemoveUser", mock.Anything, tt.projectID, tt.mockUserID).Return(nil)
 			}
@@ -940,7 +1108,22 @@ func TestRemoveUserFromProjectByEmail(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			response, err := service.RemoveUserFromProjectByEmail(context.Background(), tt.projectID, tt.userEmail)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			response, err := service.RemoveUserFromProject(context.Background(), tt.projectID, tt.userEmail, userAuth)
 
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
@@ -1176,7 +1359,22 @@ func TestArchiveProject(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			err := service.ArchiveProject(context.Background(), tt.projectID, testUserID1)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			err := service.ArchiveProject(context.Background(), tt.projectID, userAuth)
 
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
@@ -1254,7 +1452,22 @@ func TestUnarchiveProject(t *testing.T) {
 				presigner: mockPresigner,
 			}
 
-			err := service.UnarchiveProject(context.Background(), tt.projectID, testUserID1)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    testUserID1,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			err := service.UnarchiveProject(context.Background(), tt.projectID, userAuth)
 
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
@@ -1592,28 +1805,7 @@ func TestGenerateProjectFileURL(t *testing.T) {
 	mockPresigner.AssertExpectations(t)
 }
 
-func TestValidateUserExistence(t *testing.T) {
-	mockDB := &mockDBService{}
-	service := &Service{dbService: mockDB}
-	ctx := context.Background()
-	userID := "user-xyz"
-	// Exists
-	mockDB.On("UserExists", mock.Anything, userID).Return(true, nil)
-	assert.NoError(t, service.validateUserExistence(ctx, userID))
-	// Not exists
-	mockDB.ExpectedCalls = nil
-	mockDB.On("UserExists", mock.Anything, userID).Return(false, nil)
-	err := service.validateUserExistence(ctx, userID)
-	assert.Error(t, err)
-	assert.Equal(t, types.ErrMsgUserNotFound, err.Error())
-	// DB error
-	mockDB.ExpectedCalls = nil
-	mockDB.On("UserExists", mock.Anything, userID).Return(false, errDatabaseMsg)
-	err = service.validateUserExistence(ctx, userID)
-	assert.Error(t, err)
-	assert.Equal(t, errDatabaseMsg, err)
-	mockDB.AssertExpectations(t)
-}
+// TestValidateUserExistence removed - validateUserExistence method does not exist in current implementation
 
 func TestValidateProject_UserAssignmentDBError(t *testing.T) {
 	mockDB := &mockDBService{}
@@ -1653,7 +1845,22 @@ func TestLockProject(t *testing.T) {
 				mockDB.On("LockProject", mock.Anything, testProjectID1, tt.userID).Return(nil)
 			}
 			service := &Service{dbService: mockDB}
-			err := service.LockProject(ctx, testProjectID1, tt.userID)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    tt.userID,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			err := service.LockProject(ctx, testProjectID1, userAuth)
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErr)
@@ -1687,10 +1894,25 @@ func TestUnlockProject(t *testing.T) {
 				mockDB.On("GetUserEmailByID", mock.Anything, tt.project.LockedByUserID.String).Return("locked@example.com", nil)
 			}
 			if tt.expectUnlock {
-				mockDB.On("UnlockProject", mock.Anything, testProjectID1, tt.userID).Return(nil)
+				mockDB.On("UnlockProject", mock.Anything, testProjectID1).Return(nil)
 			}
 			service := &Service{dbService: mockDB}
-			err := service.UnlockProject(ctx, testProjectID1, tt.userID)
+			// Create user auth data
+			userAuth := types.UserAuthorizationResponse{
+				User: types.UserInfo{
+					ID:    tt.userID,
+					Email: "test@example.com",
+				},
+				Account: types.AccountInfo{
+					ID:   "test-account-id",
+					Name: "Test Account",
+				},
+				Role: types.RoleInfo{
+					RoleName: "User",
+				},
+			}
+
+			err := service.UnlockProject(ctx, testProjectID1, userAuth)
 			if tt.expectedErr != "" {
 				assert.Error(t, err)
 				assert.Contains(t, err.Error(), tt.expectedErr)

@@ -5,7 +5,6 @@ go 1.24.4
 require (
 	github.com/DATA-DOG/go-sqlmock v1.4.1
 	github.com/aarondl/null/v8 v8.1.3
-	github.com/aarondl/randomize v0.0.2
 	github.com/aarondl/sqlboiler/v4 v4.19.5
 	github.com/aarondl/strmangle v0.0.9
 	github.com/aws/aws-sdk-go-v2 v1.39.2
@@ -32,6 +31,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/PuerkitoBio/purell v1.1.1 // indirect
 	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
+	github.com/aarondl/randomize v0.0.2 // indirect
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.7.1 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.18.16 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.9 // indirect
