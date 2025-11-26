@@ -399,7 +399,9 @@ func (sm *StateManager) applyWhileLocked(
 		// Important: we compare against incomingVersion (the timestamp of the
 		// originating event), not effectiveVersion (the local receive event).
 		if exists && !localEntry.Version.Less(incomingVersion) {
-			logger.Debug("Skipping key %q: local version is newer or equal", key)
+			logger.Info("------>>> Skipping key %q: local version is newer or equal", key)
+			logger.Info("incoming.Version: %d local.Version %d", incomingVersion.Counter, localEntry.Version.Counter)
+			logger.Info("incoming.Epoch: %d local.Epoch %d", incomingVersion.Epoch, localEntry.Version.Epoch)
 			continue
 		}
 
@@ -504,6 +506,12 @@ func (sm *StateManager) BumpEpoch() api.Version {
 	sm.Lock()
 	defer sm.Unlock()
 	return sm.BumpEpochLocked()
+}
+
+func (sm *StateManager) SetVersion(newVersion api.Version) {
+	sm.Lock()
+	defer sm.Unlock()
+	sm.version = newVersion
 }
 
 // validateState fetches and compares state from other cluster members
