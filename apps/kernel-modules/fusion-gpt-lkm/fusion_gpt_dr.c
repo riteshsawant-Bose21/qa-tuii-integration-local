@@ -13,7 +13,9 @@
 #include <linux/spinlock.h>
 #include <linux/math64.h>
 #include <linux/seqlock.h>
+#include <linux/clk.h>
 #include "fusion_gpt_client.h"
+
 
 #define GPT_CR      0x00
 #define GPT_PR      0x04
@@ -44,27 +46,27 @@
 /* 10 MHz -> 100 ns/tick; 1/3 ms = 333333.333 ns -> 3333,3333,3334 ticks */
 #define PERIOD_TICKS_BASE 3333U
 
-struct fusion_gpt {
-    void __iomem *base;
-    int irq;
+struct fusion_gpt
+{
+	void __iomem *base;
+	int irq;
 
-    /* absolute compare scheduler */
-    u32 next_ocr1;
-    u8  frac;
+	u32 next_ocr1;
+	u8  frac;
 
-    /* softirq delivery to client */
-    struct irq_work tick_iw;
+	struct irq_work tick_iw;
 
-    /* optional: synthesize 64-bit ticks on demand */
-    u32 last32;
-    u64 hi;
-    seqlock_t ticks_sl;
+	u32 last32;
+	u64 hi;
+	seqlock_t ticks_sl;
 
-    /* single client (simple for now) */
-    const struct fusion_gpt_client_ops *ops;
-    void *ops_ctx;
-    struct module *ops_owner;
-    struct mutex ops_lock;
+	const struct fusion_gpt_client_ops *ops;
+	void *ops_ctx;
+	struct module *ops_owner;
+	struct mutex ops_lock;
+
+	struct clk *clk_ipg;
+	struct clk *clk_per;
 };
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
@@ -202,41 +204,81 @@ static int gpt_start(struct fusion_gpt *g)
 
 static int gpt_probe(struct platform_device *pdev)
 {
-    struct fusion_gpt *g;
-    struct resource *res;
-    int irq, ret;
+	struct fusion_gpt *g;
+	struct resource *res;
+	int irq, ret;
 
-    g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
-    if (!g) return -ENOMEM;
+	g = devm_kzalloc(&pdev->dev, sizeof(*g), GFP_KERNEL);
+	if (!g)
+		return -ENOMEM;
 
-    res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
-    g->base = devm_ioremap_resource(&pdev->dev, res);
-    if (IS_ERR(g->base)) return PTR_ERR(g->base);
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	g->base = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(g->base))
+		return PTR_ERR(g->base);
 
-    irq = platform_get_irq(pdev, 0);
-    if (irq < 0) return irq;
-    g->irq = irq;
+	irq = platform_get_irq(pdev, 0);
+	if (irq < 0)
+		return irq;
+	g->irq = irq;
 
-    init_irq_work(&g->tick_iw, gpt_tick_iw);
-    mutex_init(&g->ops_lock);
-    platform_set_drvdata(pdev, g);
+	/* Get and enable clocks */
+	g->clk_ipg = devm_clk_get(&pdev->dev, "ipg");
+	if (IS_ERR(g->clk_ipg))
+		return dev_err_probe(&pdev->dev, PTR_ERR(g->clk_ipg),
+				     "failed to get ipg clk\n");
 
-    ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
-                           dev_name(&pdev->dev), g);
-    if (ret) return ret;
+	g->clk_per = devm_clk_get(&pdev->dev, "per");
+	if (IS_ERR(g->clk_per))
+		return dev_err_probe(&pdev->dev, PTR_ERR(g->clk_per),
+				     "failed to get per clk\n");
 
-    // ret = gpt_start(g);
-    // if (ret) return ret;
+	ret = clk_prepare_enable(g->clk_ipg);
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret,
+				     "failed to enable ipg clk\n");
 
-    dev_info(&pdev->dev, "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
-    return 0;
+	ret = clk_prepare_enable(g->clk_per);
+	if (ret) {
+		clk_disable_unprepare(g->clk_ipg);
+		return dev_err_probe(&pdev->dev, ret,
+				     "failed to enable per clk\n");
+	}
+
+	init_irq_work(&g->tick_iw, gpt_tick_iw);
+	mutex_init(&g->ops_lock);
+	platform_set_drvdata(pdev, g);
+
+	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
+			       dev_name(&pdev->dev), g);
+	if (ret)
+		goto err_disable_clks;
+
+	ret = gpt_start(g);
+	if (ret)
+		goto err_disable_clks;
+
+	dev_info(&pdev->dev,
+		 "GPT1 shim running (EXT 10MHz, 1/3ms compares)\n");
+	return 0;
+
+err_disable_clks:
+	clk_disable_unprepare(g->clk_per);
+	clk_disable_unprepare(g->clk_ipg);
+	return ret;
 }
 
 static void gpt_remove(struct platform_device *pdev)
 {
-    struct fusion_gpt *g = platform_get_drvdata(pdev);
-    u32 cr = rdl(g, GPT_CR);
-    wrl(g, cr & ~CR_EN, GPT_CR);
+	struct fusion_gpt *g = platform_get_drvdata(pdev);
+	u32 cr = rdl(g, GPT_CR);
+
+	/* Stop timer */
+	wrl(g, cr & ~CR_EN, GPT_CR);
+
+	/* Gate clocks */
+	clk_disable_unprepare(g->clk_per);
+	clk_disable_unprepare(g->clk_ipg);
 }
 
 static const struct of_device_id of_match[] = {
