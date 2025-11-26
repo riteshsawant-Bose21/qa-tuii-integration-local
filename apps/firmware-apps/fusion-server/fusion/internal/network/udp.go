@@ -206,7 +206,7 @@ func (s *UDPServer) Close() error {
 // buildPayload creates a JSON byte stream including authoritative Lamport version
 func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) ([]byte, error) {
 
-	payload := make(map[string]any, len(data)+1)
+	payload := make(map[string]any, len(data)+2)
 	maps.Copy(payload, data)
 	payload[api.FusionVersion] = version.Counter
 	payload[api.FusionEpoch] = version.Epoch
