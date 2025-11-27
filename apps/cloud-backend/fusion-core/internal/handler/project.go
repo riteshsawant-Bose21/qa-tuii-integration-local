@@ -29,6 +29,7 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param body body types.ProjectCreateRequest true "Project details"
 // @Success 201 {object} types.ProjectCreateResponse "Successfully created project"
 // @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload or user not found"
@@ -71,6 +72,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param is_archived query bool false "Filter projects by archived status"
 // @Param sort_by query string false "Field to sort projects by (e.g., created_at, updated_at)"
 // @Param sort_order query string false "Sort order (ascending or descending)" Enums(asc, desc)
@@ -125,6 +127,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectUpdateRequest true "Updated project details"
 // @Success 200 {object} types.ProjectUpdateResponse "Successfully updated project"
@@ -198,6 +201,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Success 204 "Successfully deleted project"
 // @Failure 400 {object} types.BadRequestError "Bad request - Missing user ID"
@@ -250,6 +254,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Param userEmail path string true "User Email"
 // @Success 204 "User successfully assigned to the project"
@@ -294,6 +299,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Param userEmail path string true "User Email"
 // @Success 204 "User successfully removed from the project"
@@ -343,6 +349,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Param userId path string true "User ID"
 // @Param body body types.ProjectStarRequest true "Star/unstar request"
@@ -422,6 +429,7 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectArchiveRequest true "Archive/unarchive request"
 // @Success 204 "Project archive status updated successfully"
@@ -492,6 +500,7 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 // @Tags projects
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param projectId path string true "Project ID"
 // @Param body body types.ProjectLockRequest true "Lock/unlock request"
 // @Success 204 "Successfully updated project lock status"

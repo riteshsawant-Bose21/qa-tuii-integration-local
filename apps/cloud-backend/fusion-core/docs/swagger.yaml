@@ -995,6 +995,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Get all projects
       tags:
       - projects
@@ -1024,6 +1026,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Create a new project
       tags:
       - projects
@@ -1060,6 +1064,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Delete project
       tags:
       - projects
@@ -1103,6 +1109,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Update project
       tags:
       - projects
@@ -1145,6 +1153,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Update project archive status
       tags:
       - projects
@@ -1187,6 +1197,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Update project lock status
       tags:
       - projects
@@ -1234,6 +1246,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Update project star status
       tags:
       - projects
@@ -1266,6 +1280,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Remove a user from a project
       tags:
       - projects
@@ -1297,6 +1313,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Assign a user to a project
       tags:
       - projects
