@@ -14,6 +14,9 @@ import (
 
 // CreateSnapshot saves the current state under a custom snapshot key.
 func (p *Persistence) CreateSnapshot(snapshotKey string) error {
+
+	p.stateManager.BumpEpoch()
+
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
@@ -40,7 +43,6 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	if err != nil {
 		return err
 	}
-
 	if ps == nil {
 		return fmt.Errorf("snapshot %s does not exist", snapshotKey)
 	}
@@ -52,37 +54,25 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 
 	logger := logging.GetLogger()
 
-	if metadata.ActiveSnapshot == snapshotKey {
-		logger.Debug("Snapshot '%s' already active", snapshotKey)
-		return nil
-	}
+	// Replace state and bump epoch atomically
+	p.stateManager.Lock()
+	newVersion := p.stateManager.BumpEpochLocked()
+	p.stateManager.state.State = deepCopyState(ps.State)
+	p.stateManager.updateChecksumUnsafe()
+	p.stateManager.Unlock()
 
-	// Update activate snapshot in metadata
+	// Update metadata snapshot
 	metadata.ActiveSnapshot = snapshotKey
 	if err := p.saveMetadata(metadata); err != nil {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	// Replace state and bump epoch atomically
-	p.stateManager.Lock()
-	defer p.stateManager.Unlock()
-
-	// Determine new epoch and version
-	newEpoch := p.stateManager.version.Epoch + 1
-	newVersion := p.stateManager.version
-	newVersion.Epoch = newEpoch
-	newVersion.Counter = 0
-
-	// Replace state with snapshot
-	p.stateManager.state.State = deepCopyState(ps.State)
-	p.stateManager.version = newVersion
-	p.stateManager.updateChecksumUnsafe()
-
 	logger.Info(
-		"Activated snapshot '%s' → new epoch=%d",
-		snapshotKey, newEpoch,
+		"Activated snapshot '%s': Epoch=%d Version=%d",
+		snapshotKey, newVersion.Epoch, newVersion.Counter,
 	)
 
+	// Mark last save time
 	p.mutex.Lock()
 	p.lastSave = time.Now().UTC()
 	p.mutex.Unlock()
@@ -90,34 +80,10 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 	return nil
 }
 
-// ActivateSnapshotAndReturnState restores snapshot and returns the restored state map.
-// Used only by handlers that need to broadcast the updated config.
-func (p *Persistence) ActivateSnapshotAndReturnState(name string) (map[string]any, error) {
-
-	ps, err := p.readSnapshot(name)
-	if err != nil {
-		return nil, err
-	}
-
-	if ps == nil {
-		return nil, fmt.Errorf("snapshot %s does not exist", name)
-	}
-
-	// Activate normally
-	if err := p.ActivateSnapshot(name); err != nil {
-		return nil, err
-	}
-
-	// Produce normalized full-state map for broadcasting
-	restored := make(map[string]any)
-	for key, entry := range ps.State {
-		restored[key] = entry.Data
-	}
-	return restored, nil
-}
-
 // DeleteSnapshot removes the snapshot and clears the active pointer if it was active.
 func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
+
+	p.stateManager.BumpEpoch()
 
 	// Perform deletion in a single atomic transaction.
 	err := p.db.Update(func(tx *bbolt.Tx) error {
@@ -134,15 +100,6 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 		return fmt.Errorf("failed to delete snapshot '%s': %w", snapshotKey, err)
 	}
 
-	// If the deleted snapshot was active, clear it from metadata.
-	metadata, err := p.loadMetadata()
-	if err == nil && metadata.ActiveSnapshot == snapshotKey {
-		metadata.ActiveSnapshot = ""
-		if err := p.saveMetadata(metadata); err != nil {
-			return fmt.Errorf("failed to update metadata after deleting active snapshot: %w", err)
-		}
-	}
-
 	// Remove tasks associated with the snapshot
 	tasks, err := p.GetTaskIDsBySnapshot(snapshotKey)
 	if err != nil {
@@ -152,6 +109,14 @@ func (p *Persistence) DeleteSnapshot(snapshotKey string) error {
 	for _, taskID := range tasks {
 		if err := p.DeleteTask(taskID); err != nil {
 			return fmt.Errorf("failed to delete task %s: %w", taskID, err)
+		}
+	}
+
+	// If the deleted snapshot was active, clear it from metadata.
+	metadata, err := p.loadMetadata()
+	if err == nil && metadata.ActiveSnapshot == snapshotKey {
+		if err := p.ActivateSnapshot(keyDefaultSnapshot); err != nil {
+			return fmt.Errorf("failed to restore active snapshot %q: %w", keyDefaultSnapshot, err)
 		}
 	}
 
@@ -233,8 +198,9 @@ func (p *Persistence) GetActiveSnapshotName() string {
 	return p.getActiveSnapshotKey()
 }
 
-// LoadActiveSnapshot loads the active snapshot from metadata,
-// restores its full state into the state manager, and persists it.
+// LoadActiveSnapshot loads the active snapshot.
+// Load the epoch and version from the saved state.
+// State will be synchronized across instances.
 func (p *Persistence) LoadActiveSnapshot() error {
 
 	metadata, err := p.loadMetadata()
@@ -247,14 +213,17 @@ func (p *Persistence) LoadActiveSnapshot() error {
 
 	if snapshotName == "" {
 		logger.Warn("No active snapshot on startup")
-		return nil
+		snapshotName = keyDefaultSnapshot
 	}
 
 	if err := p.ActivateSnapshot(snapshotName); err != nil {
 		return fmt.Errorf("failed to restore active snapshot %q: %w", snapshotName, err)
 	}
 
-	logger.Debug("Restored active snapshot on startup: %s", snapshotName)
+	// Save version is authoritative
+	p.stateManager.SetVersion(metadata.Version)
+
+	logger.Debug("Restored active snapshot on startup: %s %d %d", snapshotName, metadata.Version.Epoch, metadata.Version.Counter)
 
 	return nil
 }

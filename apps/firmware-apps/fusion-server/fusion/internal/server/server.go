@@ -143,7 +143,6 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// --- Read body ---
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
@@ -157,7 +156,6 @@ func (s *FusionServer) UpdateValue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Extract query
 	key, err := getSingleQueryParam(r, "key")
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)

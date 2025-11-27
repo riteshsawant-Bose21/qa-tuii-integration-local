@@ -29,7 +29,7 @@ func (a *AppConfig) SelfUrl() string {
 // https://en.wikipedia.org/wiki/Lamport_timestamp
 type Version struct {
 	Epoch   uint64 `json:"epoch"`
-	Counter int64  `json:"counter"`
+	Counter uint64 `json:"counter"`
 	NodeID  string `json:"node_id"`
 }
 
@@ -100,11 +100,10 @@ type AudioSyncUpdate struct {
 // This separation keeps replication simple and Lamport-correct, while PATCH
 // provides advanced local update semantics.
 type ConfigUpdate struct {
-	Hash         string         `json:"hash"`
-	Data         map[string]any `json:"data"`
-	Version      Version        `json:"version"`
-	Clear        bool           `json:"clear,omitempty"`
-	FromSnapshot bool           `json:"from_snapshot,omitempty"`
+	Hash    string         `json:"hash"`
+	Data    map[string]any `json:"data"`
+	Version Version        `json:"version"`
+	Clear   bool           `json:"clear,omitempty"`
 }
 
 // ConfigValue represents a key/value pair
@@ -162,7 +161,7 @@ type Task struct {
 	ID          string         `json:"id"`
 	Description string         `json:"description"`
 	CronExpr    string         `json:"cron_expr"`
-	Enabled     bool           `json:"active"`
+	Enabled     bool           `json:"enabled"`
 	Type        TaskType       `json:"type"`
 	Params      map[string]any `json:"params"`
 	CronEntryID cron.EntryID   `json:"-"`
@@ -174,6 +173,17 @@ type TaskMessage struct {
 	MessageID   string `json:"message_id"`
 	Description string `json:"description"`
 	CronExpr    string `json:"cron_expr"`
+	Priority    int64  `json:"priority"`
+	Zones       string `json:"zones"`
+}
+
+// TaskMessagePatch represents a patchable message task
+type TaskMessagePatch struct {
+	MessageID   *string `json:"message_id,omitempty"`
+	Description *string `json:"description,omitempty"`
+	CronExpr    *string `json:"cron_expr,omitempty"`
+	Priority    *int64  `json:"priority"`
+	Zones       *string `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task
