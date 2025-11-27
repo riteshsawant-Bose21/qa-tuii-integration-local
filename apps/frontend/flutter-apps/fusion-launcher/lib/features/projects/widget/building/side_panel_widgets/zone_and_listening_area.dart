@@ -137,8 +137,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 minimumSize: const Size(0, 32),
               ),
-              child: const Text(
-                '+ Add Zone',
+              child: const FusionAppText(
+                text: '+ Add Zone',
                 style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w500,
@@ -173,7 +173,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
               return SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_card_$index"),
                 child: Container(
-                  child: _buildZoneCard(zone),
+                  child: _buildZoneCard(zone, index),
                 ),
               );
             }),
@@ -211,7 +211,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  Widget _buildZoneCard(Zone zone) {
+  Widget _buildZoneCard(Zone zone, int index) {
     final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getListeningAreasForZone(
       zoneId: zone.id,
     );
@@ -251,7 +251,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               // Zone Header
-              _buildZoneHeader(zone, isSelected, isCollapsed),
+              _buildZoneHeader(zone, isSelected, isCollapsed, index),
 
               // Expandable Zone Content Section
               AnimatedCrossFade(
@@ -277,7 +277,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
-  Widget _buildZoneHeader(Zone zone, bool isSelected, bool isCollapsed) {
+  Widget _buildZoneHeader(Zone zone, bool isSelected, bool isCollapsed, int index) {
     // Check if zone has subzones - if it does, don't accept drops on the zone header
     final List<SubZone> subZones = serviceLocator<ProjectViewModel>().getSubZonesForZone(parentZoneId: zone.id);
     final bool canAcceptDrops = subZones.isEmpty;
@@ -337,7 +337,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                           duration: const Duration(milliseconds: 200),
                           turns: isCollapsed ? 0.0 : 0.25,
                           child: SemanticHelper.toggle(
-                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "zone_expand_collapse"),
+                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "zone_expand_collapse_$index"),
                             value: isCollapsed,
                             child: Icon(
                               Icons.keyboard_arrow_right,
@@ -364,10 +364,13 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                               padding: EdgeInsets.zero,
                               iconSize: 12,
                               position: PopupMenuPosition.under,
-                              icon: const Icon(
-                                Icons.more_vert,
-                                size: 12,
-                                color: Colors.grey,
+                              icon: SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_actions_$index"),
+                                child: const Icon(
+                                  Icons.more_vert,
+                                  size: 12,
+                                  color: Colors.grey,
+                                ),
                               ),
                               tooltip: 'Zone actions',
                               onSelected: (String value) {
@@ -388,7 +391,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   PopupMenuItem<String>(
                                     value: 'add_subzone',
                                     child: SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "add_subzone_menu_item"),
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "add_subzone_menu_item_$index"),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
@@ -411,7 +414,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                     PopupMenuItem<String>(
                                       value: 'add_listening_area',
                                       child: SemanticHelper.container(
-                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item"),
+                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "add_listening_area_menu_item_$index"),
                                         child: const Row(
                                           mainAxisSize: MainAxisSize.min,
                                           children: <Widget>[
@@ -429,7 +432,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                                   PopupMenuItem<String>(
                                     value: 'delete',
                                     child: SemanticHelper.container(
-                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "delete_zone_menu_item"),
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "delete_zone_menu_item_$index"),
                                       child: const Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: <Widget>[
