@@ -4,6 +4,7 @@
  */
 
 import React, { useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -175,7 +176,10 @@ const App: React.FC = () => {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Dashboard />
+      <Routes>
+        <Route path="/dashboard/*" element={<Dashboard />} />
+        <Route path="/" element={<Dashboard />} />
+      </Routes>
     </ThemeProvider>
   );
 };
