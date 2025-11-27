@@ -1,6 +1,5 @@
 import 'package:flutter/cupertino.dart';
 import 'package:fusion_launcher/core/widgets/test_library_screen.dart';
-import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_up_page.dart';
 
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/projects/presentation/project_work_area.dart';
@@ -8,7 +7,6 @@ import '../../features/user_account_setup/presentation/pages/launcher_sign_in_pa
 
 class Routes {
   static const String launcherSignInPage = '/launcherSignInPage';
-  static const String launcherSignUpPage = '/launcherSignUpPage';
   static const String launcherHomePage = '/launcherHomePage';
   static const String projectPage = '/projectPage';
   static const String mylibraryPage = '/mylibraryPage';
@@ -20,13 +18,6 @@ class Routes {
         return CupertinoPageRoute<void>(
           builder: (BuildContext context) => const LauncherSignInPage(),
           settings: const RouteSettings(name: launcherSignInPage),
-        );
-
-      /// Sign Up Page
-      case launcherSignUpPage:
-        return CupertinoPageRoute<void>(
-          builder: (BuildContext context) => const LauncherSignUpPage(),
-          settings: const RouteSettings(name: launcherSignUpPage),
         );
 
       /// Home Page

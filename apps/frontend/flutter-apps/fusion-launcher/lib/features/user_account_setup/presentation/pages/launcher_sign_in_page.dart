@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/constants.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -24,6 +22,14 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
   final TextEditingController _passwordController = TextEditingController();
 
   ValueNotifier<bool> obscuredNotifier = ValueNotifier<bool>(true);
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    obscuredNotifier.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -135,20 +141,23 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                                         return NeumorphicDarkTextField(
                                           hintText: 'Password',
                                           controller: _passwordController,
-                                          suffix: GestureDetector(
-                                            onTap: () => obscuredNotifier.value = isObscured,
-                                            child: Icon(
-                                              isObscured ? LucideIcons.eyeClosed : LucideIcons.eye,
-                                              size: 15,
-                                              color: Theme.of(context).colorScheme.primaryColor,
+                                          suffix: MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () => obscuredNotifier.value = !obscuredNotifier.value,
+                                              child: Icon(
+                                                isObscured ? LucideIcons.eyeClosed : LucideIcons.eye,
+                                                size: 15,
+                                                color: Theme.of(context).colorScheme.onSurface,
+                                              ),
                                             ),
                                           ),
-                                          // obscureText: obscured,
+                                          isObscured: isObscured,
                                           validator: (String? value) {
                                             /// Allow local admin login for testing purposes
                                             if (value == "admin") return null;
 
-                                            if (value == null || value.isEmpty) return "Enter password";
+                                            if (value == null || value.isEmpty) return "Enter password or click on the eye icon to show password";
                                             if (value.trim().length < 8) return "Password must be at least 8 digits";
                                             return null;
                                           },
@@ -161,10 +170,10 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
 
                               NeumorphicDarkButton(
                                 onTap: () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    Routes.launcherSignInPage,
-                                  );
+                                  if (_formKey.currentState!.validate()) {
+                                    final SignInRequested newState = SignInRequested(_emailController.text, _passwordController.text);
+                                    serviceLocator<AuthBloc>().add(newState);
+                                  }
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 12.0),
@@ -221,7 +230,9 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final FormFieldValidator<String>? validator;
   final String? hintText;
   final double borderRadius;
+  final Widget? prefix;
   final Widget? suffix;
+  final bool isObscured;
 
   const NeumorphicDarkTextField({
     super.key,
@@ -231,7 +242,9 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.validator,
     this.hintText,
     this.borderRadius = 12,
+    this.prefix,
     this.suffix,
+    this.isObscured = false,
   });
 
   @override
@@ -256,16 +269,20 @@ class NeumorphicDarkTextField extends StatelessWidget {
             keyboardType: keyboardType,
             validator: validator,
             style: Theme.of(context).textTheme.labelLarge,
+            obscureText: isObscured,
             decoration: InputDecoration(
-              suffix: suffix,
+              prefixIcon: prefix,
+              prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
+              suffixIcon: suffix,
               filled: true,
+              isDense: true,
               fillColor: const Color(0xFF282826),
               border: InputBorder.none,
               enabledBorder: InputBorder.none,
               focusedBorder: InputBorder.none,
               hintText: hintText,
               hoverColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
               hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
             ),
           ),
@@ -278,6 +295,9 @@ class NeumorphicDarkTextField extends StatelessWidget {
 class NeumorphicDarkButton extends StatefulWidget {
   final String? text;
   final Widget? child;
+
+  final double? width;
+  final double? height;
   final VoidCallback? onTap;
   final double borderRadius;
   const NeumorphicDarkButton({
@@ -286,6 +306,8 @@ class NeumorphicDarkButton extends StatefulWidget {
     this.borderRadius = 12,
     this.child,
     this.onTap,
+    this.width,
+    this.height,
   });
 
   @override
@@ -307,9 +329,9 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
         widget.onTap?.call();
       },
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        height: 44,
+        duration: const Duration(milliseconds: 100),
+        width: widget.width,
+        height: widget.height ?? 44,
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           boxShadow: <BoxShadow>[
@@ -570,250 +592,250 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
 //     );
 //   }
 
-//Dialog with 3 text fields for 3 different  Ip address endpoint setting
-void _showSettingsDialog(BuildContext context) {
-  // Controllers for the text fields
-  final TextEditingController droAddressController = TextEditingController(text: serviceLocator<FusionPreferences>().droServerUrl);
-  final TextEditingController backendUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().fusionCloudBackendUrl);
-  final TextEditingController cloudWebUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().cloudWebUrl);
+// //Dialog with 3 text fields for 3 different  Ip address endpoint setting
+// void _showSettingsDialog(BuildContext context) {
+//   // Controllers for the text fields
+//   final TextEditingController droAddressController = TextEditingController(text: serviceLocator<FusionPreferences>().droServerUrl);
+//   final TextEditingController backendUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().fusionCloudBackendUrl);
+//   final TextEditingController cloudWebUrlController = TextEditingController(text: serviceLocator<FusionPreferences>().cloudWebUrl);
 
-  showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        backgroundColor: AppColors.backgroundSoft,
-        title: const Center(
-          child: Column(
-            children: <Widget>[
-              Text(
-                "Settings",
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              SizedBox(height: 8),
-              Divider(
-                color: Colors.grey,
-                height: 1,
-              ),
-            ],
-          ),
-        ),
-        content: Container(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.8,
-            maxHeight: MediaQuery.of(context).size.height * 0.7,
-            minHeight: 300,
-            minWidth: 300,
-          ),
-          color: AppColors.backgroundSoft,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                // DRO IP Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'DRO IP',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: droAddressController,
-                        decoration: const InputDecoration(
-                          hintText: 'Enter DRO IP address',
-                          isDense: true,
-                          border: OutlineInputBorder(),
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 28,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            // validate ip address and update project
-                            final String ip = droAddressController.text.trim();
-                            serviceLocator<FusionPreferences>().setDroServerUrl(ip);
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('DRO IP updated to $ip'),
-                                backgroundColor: Colors.green.shade600,
-                              ),
-                            );
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade800,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            elevation: 0,
-                          ),
-                          child: const Text('Update', style: TextStyle(fontSize: 11)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+//   showDialog(
+//     context: context,
+//     builder: (BuildContext context) {
+//       return AlertDialog(
+//         backgroundColor: AppColors.backgroundSoft,
+//         title: const Center(
+//           child: Column(
+//             children: <Widget>[
+//               Text(
+//                 "Settings",
+//                 style: TextStyle(
+//                   fontSize: 24,
+//                   fontWeight: FontWeight.w600,
+//                 ),
+//               ),
+//               SizedBox(height: 8),
+//               Divider(
+//                 color: Colors.grey,
+//                 height: 1,
+//               ),
+//             ],
+//           ),
+//         ),
+//         content: Container(
+//           constraints: BoxConstraints(
+//             maxWidth: MediaQuery.of(context).size.width * 0.8,
+//             maxHeight: MediaQuery.of(context).size.height * 0.7,
+//             minHeight: 300,
+//             minWidth: 300,
+//           ),
+//           color: AppColors.backgroundSoft,
+//           child: SingleChildScrollView(
+//             padding: const EdgeInsets.all(16),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: <Widget>[
+//                 // DRO IP Section
+//                 Container(
+//                   width: double.infinity,
+//                   padding: const EdgeInsets.all(12),
+//                   decoration: BoxDecoration(
+//                     color: Colors.white,
+//                     borderRadius: BorderRadius.circular(6),
+//                     border: Border.all(color: Colors.grey.shade200),
+//                   ),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: <Widget>[
+//                       Text(
+//                         'DRO IP',
+//                         style: TextStyle(
+//                           fontSize: 13,
+//                           fontWeight: FontWeight.w600,
+//                           color: Colors.grey.shade700,
+//                         ),
+//                       ),
+//                       const SizedBox(height: 12),
+//                       TextFormField(
+//                         controller: droAddressController,
+//                         decoration: const InputDecoration(
+//                           hintText: 'Enter DRO IP address',
+//                           isDense: true,
+//                           border: OutlineInputBorder(),
+//                           contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+//                         ),
+//                         style: const TextStyle(fontSize: 12),
+//                       ),
+//                       const SizedBox(height: 8),
+//                       SizedBox(
+//                         width: double.infinity,
+//                         height: 28,
+//                         child: ElevatedButton(
+//                           onPressed: () {
+//                             // validate ip address and update project
+//                             final String ip = droAddressController.text.trim();
+//                             serviceLocator<FusionPreferences>().setDroServerUrl(ip);
+//                             ScaffoldMessenger.of(context).showSnackBar(
+//                               SnackBar(
+//                                 content: Text('DRO IP updated to $ip'),
+//                                 backgroundColor: Colors.green.shade600,
+//                               ),
+//                             );
+//                           },
+//                           style: ElevatedButton.styleFrom(
+//                             backgroundColor: Colors.grey.shade800,
+//                             foregroundColor: Colors.white,
+//                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+//                             elevation: 0,
+//                           ),
+//                           child: const Text('Update', style: TextStyle(fontSize: 11)),
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
 
-                const SizedBox(height: 16),
+//                 const SizedBox(height: 16),
 
-                // Backend Address Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Backend Address',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: backendUrlController,
-                        readOnly: false,
-                        decoration: InputDecoration(
-                          hintText: '192.168.1.100',
-                          isDense: true,
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          disabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
-                        style: const TextStyle(fontSize: 12),
-                        enabled: true,
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 28,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            serviceLocator<FusionPreferences>().setFusionCloudBackendUrl(backendUrlController.text);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade800,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            elevation: 0,
-                          ),
-                          child: const Text('Configure', style: TextStyle(fontSize: 11)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+//                 // Backend Address Section
+//                 Container(
+//                   width: double.infinity,
+//                   padding: const EdgeInsets.all(12),
+//                   decoration: BoxDecoration(
+//                     color: Colors.white,
+//                     borderRadius: BorderRadius.circular(6),
+//                     border: Border.all(color: Colors.grey.shade200),
+//                   ),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: <Widget>[
+//                       Text(
+//                         'Backend Address',
+//                         style: TextStyle(
+//                           fontSize: 13,
+//                           fontWeight: FontWeight.w600,
+//                           color: Colors.grey.shade700,
+//                         ),
+//                       ),
+//                       const SizedBox(height: 12),
+//                       TextFormField(
+//                         controller: backendUrlController,
+//                         readOnly: false,
+//                         decoration: InputDecoration(
+//                           hintText: '192.168.1.100',
+//                           isDense: true,
+//                           border: const OutlineInputBorder(),
+//                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+//                           disabledBorder: OutlineInputBorder(
+//                             borderSide: BorderSide(color: Colors.grey.shade300),
+//                           ),
+//                         ),
+//                         style: const TextStyle(fontSize: 12),
+//                         enabled: true,
+//                       ),
+//                       const SizedBox(height: 8),
+//                       SizedBox(
+//                         width: double.infinity,
+//                         height: 28,
+//                         child: ElevatedButton(
+//                           onPressed: () {
+//                             serviceLocator<FusionPreferences>().setFusionCloudBackendUrl(backendUrlController.text);
+//                           },
+//                           style: ElevatedButton.styleFrom(
+//                             backgroundColor: Colors.grey.shade800,
+//                             foregroundColor: Colors.white,
+//                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+//                             elevation: 0,
+//                           ),
+//                           child: const Text('Configure', style: TextStyle(fontSize: 11)),
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
 
-                const SizedBox(height: 16),
+//                 const SizedBox(height: 16),
 
-                // Backend Address Section
-                Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        'Cloud web url',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      TextFormField(
-                        controller: cloudWebUrlController,
-                        readOnly: false,
-                        decoration: InputDecoration(
-                          hintText: '192.168.1.100',
-                          isDense: true,
-                          border: const OutlineInputBorder(),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          disabledBorder: OutlineInputBorder(
-                            borderSide: BorderSide(color: Colors.grey.shade300),
-                          ),
-                        ),
-                        style: const TextStyle(fontSize: 12),
-                        enabled: true,
-                      ),
-                      const SizedBox(height: 8),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 28,
-                        child: ElevatedButton(
-                          onPressed: () {
-                            serviceLocator<FusionPreferences>().setCloudWebUrl(cloudWebUrlController.text);
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.grey.shade800,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            elevation: 0,
-                          ),
-                          child: const Text('Configure', style: TextStyle(fontSize: 11)),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        actionsAlignment: MainAxisAlignment.center,
-        actions: <Widget>[
-          Center(
-            child: TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text(
-                "Close",
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Theme.of(context).colorScheme.primaryColor,
-                ),
-              ),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
+//                 // Backend Address Section
+//                 Container(
+//                   width: double.infinity,
+//                   padding: const EdgeInsets.all(12),
+//                   decoration: BoxDecoration(
+//                     color: Colors.white,
+//                     borderRadius: BorderRadius.circular(6),
+//                     border: Border.all(color: Colors.grey.shade200),
+//                   ),
+//                   child: Column(
+//                     crossAxisAlignment: CrossAxisAlignment.start,
+//                     children: <Widget>[
+//                       Text(
+//                         'Cloud web url',
+//                         style: TextStyle(
+//                           fontSize: 13,
+//                           fontWeight: FontWeight.w600,
+//                           color: Colors.grey.shade700,
+//                         ),
+//                       ),
+//                       const SizedBox(height: 12),
+//                       TextFormField(
+//                         controller: cloudWebUrlController,
+//                         readOnly: false,
+//                         decoration: InputDecoration(
+//                           hintText: '192.168.1.100',
+//                           isDense: true,
+//                           border: const OutlineInputBorder(),
+//                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+//                           disabledBorder: OutlineInputBorder(
+//                             borderSide: BorderSide(color: Colors.grey.shade300),
+//                           ),
+//                         ),
+//                         style: const TextStyle(fontSize: 12),
+//                         enabled: true,
+//                       ),
+//                       const SizedBox(height: 8),
+//                       SizedBox(
+//                         width: double.infinity,
+//                         height: 28,
+//                         child: ElevatedButton(
+//                           onPressed: () {
+//                             serviceLocator<FusionPreferences>().setCloudWebUrl(cloudWebUrlController.text);
+//                           },
+//                           style: ElevatedButton.styleFrom(
+//                             backgroundColor: Colors.grey.shade800,
+//                             foregroundColor: Colors.white,
+//                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+//                             elevation: 0,
+//                           ),
+//                           child: const Text('Configure', style: TextStyle(fontSize: 11)),
+//                         ),
+//                       ),
+//                     ],
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           ),
+//         ),
+//         actionsAlignment: MainAxisAlignment.center,
+//         actions: <Widget>[
+//           Center(
+//             child: TextButton(
+//               onPressed: () {
+//                 Navigator.of(context).pop();
+//               },
+//               child: Text(
+//                 "Close",
+//                 style: TextStyle(
+//                   fontSize: 16,
+//                   color: Theme.of(context).colorScheme.primaryColor,
+//                 ),
+//               ),
+//             ),
+//           ),
+//         ],
+//       );
+//     },
+//   );
+// }
 
 // }

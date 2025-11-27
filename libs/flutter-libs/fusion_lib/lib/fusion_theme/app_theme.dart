@@ -364,6 +364,23 @@ class FusionAppTheme {
         ),
       ),
 
+      dividerTheme: DividerThemeData(
+        color: darkColorScheme.dividerColor,
+        thickness: 1,
+      ),
+
+      iconTheme: IconThemeData(
+        size: 16,
+        color: darkColorScheme.onSurface,
+      ),
+
+      dialogTheme: DialogThemeData(
+        barrierColor: Colors.black87,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: darkColorScheme.surface,
+        elevation: 0,
+      ),
+
       /// Tab bar styling with custom font and dark theme colors
       tabBarTheme: TabBarThemeData(
         labelStyle: TextStyle(

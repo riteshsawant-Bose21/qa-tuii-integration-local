@@ -1,11 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/dashboard/presentation/pages/dashboard_page.dart';
+import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
@@ -13,8 +13,8 @@ import '../../../../core/utils/fusion_utils.dart';
 
 class FusionSidebar extends StatefulWidget {
   final ValueNotifier<bool> showAllProjects;
-  final ValueChanged<String>? onTabChanged;
-  final String? selectedTab;
+  final ValueChanged<DashboardTabs>? onTabChanged;
+  final DashboardTabs? selectedTab;
 
   const FusionSidebar({
     super.key,
@@ -30,223 +30,227 @@ class FusionSidebar extends StatefulWidget {
 class _FusionSidebarState extends State<FusionSidebar> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 224,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(
-          right: BorderSide(
-            color: Theme.of(context).colorScheme.borderColorL,
-            width: 0.1,
+    return SizedBox(
+      width: 250,
+      child: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Column(
+            spacing: 10,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              // ========== Notification Icon ==========
+              Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  spacing: 10,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: <Widget>[
+                        Badge.count(
+                          count: 0,
+                          backgroundColor: FusionDarkColorPallette.green20,
+                          textColor: FusionDarkColorPallette.green20,
+                          padding: const EdgeInsets.only(),
+                          textStyle: const TextStyle(fontSize: 0),
+                          child: Container(
+                            height: 36,
+                            width: 36,
+                            decoration: BoxDecoration(
+                              color: FusionDarkColorPallette.dark80,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(LucideIcons.bell, size: 16),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    // ========== User Info Tile ==========
+                    Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: FusionAppText(
+                            text: "Welcome back",
+                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                              color: FusionDarkColorPallette.medium50,
+                            ),
+                          ),
+                        ),
+
+                        const Icon(LucideIcons.chevronDown),
+                        const SizedBox(width: 10),
+                      ],
+                    ),
+                    Text(
+                      UserSessionManager.getSignedInUserEmail() ?? "",
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            const NeumorphicDarkTextField(
+                              hintText: 'Search',
+                              prefix: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 8),
+                                child: Icon(LucideIcons.search, size: 10),
+                              ),
+                              borderRadius: 8,
+                            ),
+                            const SizedBox(height: 10),
+
+                            _HoverNavItem(
+                              icon: Icons.home_filled,
+                              title: DashboardTabs.home.name,
+                              semanticsId: 'home_tab',
+                              isSelected: widget.selectedTab == DashboardTabs.home,
+                              onTap: () => widget.onTabChanged?.call(DashboardTabs.home),
+                            ),
+                            _HoverNavItem(
+                              icon: Icons.account_circle,
+                              title: DashboardTabs.profile.name,
+                              semanticsId: 'profile_tab',
+                              isSelected: widget.selectedTab == DashboardTabs.profile,
+                              onTap: () => widget.onTabChanged?.call(DashboardTabs.profile),
+                            ),
+                            _HoverNavItem(
+                              icon: Icons.settings_sharp,
+                              title: DashboardTabs.settings.name,
+                              semanticsId: 'settings_tab',
+                              isSelected: widget.selectedTab == DashboardTabs.settings,
+                              onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Divider(height: 0),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            _HoverNavItem(
+                              icon: Icons.public,
+                              title: DashboardTabs.community.name,
+                              semanticsId: 'community_tab',
+                              isSelected: widget.selectedTab == DashboardTabs.community,
+                              onTap: () => widget.onTabChanged?.call(DashboardTabs.community),
+                            ),
+                            // show only in debug mode
+                            if (kDebugMode)
+                              _HoverNavItem(
+                                icon: Icons.library_books_sharp,
+                                title: 'Test Library',
+                                semanticsId: 'library_tab',
+                                isSelected: widget.selectedTab == 'Library',
+                                onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
+                              ),
+                          ],
+                        ),
+                      ),
+
+                      const Divider(height: 0),
+
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            GuideShowcaseWrapper(
+                              step: GuideShowCaseSteps.myProjects,
+                              onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
+                              child: _HoverNavItem(
+                                icon: Icons.description,
+                                title: 'New Project',
+                                semanticsId: 'my_projects_section',
+                                trailing: Icons.add_sharp,
+                                onTap: () => _showNewProjectDialog(context),
+                              ),
+                            ),
+                            _HoverNavItem(
+                              icon: Icons.save,
+                              title: 'Saved Projects',
+                              semanticsId: 'saved_projects_section',
+                              onTap: () {},
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(),
+                      const Divider(height: 0),
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: _HoverNavItem(
+                          icon: LucideIcons.logOut,
+                          title: 'Sign Out',
+                          semanticsId: 'signout_section',
+                          onTap: () => _logoutDialog(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // _buildProjectList(),
+            ],
           ),
         ),
       ),
-      child: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            const SizedBox(height: 16),
-            _buildUserInfoTile(),
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: _buildSearchBox(),
-            ),
-            const SizedBox(height: 6),
-            // Replaced nav items with _HoverNavItem
-            _HoverNavItem(
-              icon: Icons.home_filled,
-              title: 'Home',
-              semanticsId: 'home_tab',
-              isSelected: widget.selectedTab == 'Home',
-              onTap: () => widget.onTabChanged?.call('Home'),
-            ),
-            _HoverNavItem(
-              icon: Icons.person_sharp,
-              title: 'Profile',
-              semanticsId: 'profile_tab',
-              isSelected: widget.selectedTab == 'Profile',
-              onTap: () => widget.onTabChanged?.call('Profile'),
-            ),
-            _HoverNavItem(
-              icon: Icons.settings_sharp,
-              title: 'Settings',
-              semanticsId: 'settings_tab',
-              isSelected: widget.selectedTab == 'Settings',
-              onTap: () => widget.onTabChanged?.call('Settings'),
-            ),
-            _HoverNavItem(
-              icon: Icons.public,
-              title: 'Community',
-              semanticsId: 'community_tab',
-              isSelected: widget.selectedTab == 'Community',
-              onTap: () => widget.onTabChanged?.call('Community'),
-            ),
-            // show only in debug mode
-            if (kDebugMode)
-              _HoverNavItem(
-                icon: Icons.library_books_sharp,
-                title: 'Test Library',
-                semanticsId: 'library_tab',
-                isSelected: widget.selectedTab == 'Library',
-                onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
-              ),
-            Divider(
-              height: 1,
-              thickness: 1,
-              color: Theme.of(context).colorScheme.borderColorL,
-            ),
-            GuideShowcaseWrapper(
-              step: GuideShowCaseSteps.myProjects,
-              onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
-              child: _HoverNavItem(
-                icon: Icons.folder_sharp,
-                title: 'Add New Project',
-                semanticsId: 'my_projects_section',
-                isBold: true,
-                trailing: Icons.add_sharp,
-                onTap: () => _showNewProjectDialog(context),
-              ),
-            ),
-            const SizedBox(width: 5),
-            // _buildProjectList(),
-          ],
-        ),
-      ),
     );
   }
-
-  Widget _buildUserInfoTile() {
-    return GestureDetector(
-      onTap: () => _logoutDialog(context),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: Row(
-          children: <Widget>[
-            const CircleAvatar(
-              radius: 13, // (28 - 2) / 2 to account for border
-              backgroundImage: AssetImage("assets/images/fusion_default_icon.png"),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                UserSessionManager.getSignedInUserEmail() ?? "",
-                style: const TextStyle(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 14,
-                ),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSearchBox() {
-    return Container(
-      height: 32,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.borderColorL,
-          width: 1,
-        ),
-      ),
-      child: const TextField(
-        decoration: InputDecoration(
-          hintText: 'Search',
-          hintStyle: TextStyle(color: Colors.grey, fontSize: 11),
-          border: InputBorder.none,
-          prefixIcon: Icon(Icons.search, size: 16, color: Colors.grey),
-          contentPadding: EdgeInsets.symmetric(vertical: 2, horizontal: 10),
-        ),
-        style: TextStyle(fontSize: 11),
-      ),
-    );
-  }
-
-  // Widget _buildProjectList() {
-  //   return ValueListenableBuilder<List<ProjectListModel>>(
-  //     valueListenable: widget.projectListManager,
-  //     builder: (BuildContext context, List<ProjectListModel> projects, _) {
-  //       return ValueListenableBuilder<bool>(
-  //         valueListenable: widget.showAllProjects,
-  //         builder: (BuildContext context, bool showAll, __) {
-  //           if (projects.isEmpty) {
-  //             return _buildNavItem(Icons.folder_outlined, 'No Projects Available', isSubItem: true);
-  //           }
-  //
-  //           final List<ProjectListModel> visibleProjects = showAll ? projects : projects.take(5).toList();
-  //
-  //           return Column(
-  //             crossAxisAlignment: CrossAxisAlignment.start,
-  //             children: <Widget>[
-  //               ...visibleProjects.map((ProjectListModel project) {
-  //                 return MouseRegion(
-  //                   cursor: SystemMouseCursors.click,
-  //                   child: InkWell(
-  //                     onTap: () async {
-  //                       FusionUtils.showLoader(context);
-  //                       await widget.projectListManager.downloadAndExtractProjectZip(
-  //                         fileId: project.metaData.fileId,
-  //                         projectName: project.name,
-  //                         projectManager: widget.projectManager,
-  //                         localUpdatedAt: project.updatedAt,
-  //                       );
-  //                       if (context.mounted) {
-  //                         FusionUtils.hideLoader(context);
-  //                         Navigator.pushNamed(context, Routes.projectPage);
-  //                       }
-  //                     },
-  //                     onLongPress: () async {
-  //                       await widget.projectListManager.deleteProject(
-  //                         folderName: project.name,
-  //                         projectId: project.id,
-  //                       );
-  //                       widget.projectListManager.remove(project.id);
-  //                     },
-  //                     child: _buildNavItem(Icons.folder_outlined, project.name, isSubItem: true),
-  //                   ),
-  //                 );
-  //               }),
-  //               if (projects.length > 5)
-  //                 Padding(
-  //                   padding: const EdgeInsets.only(left: 32.0, top: 8),
-  //                   child: TextButton(
-  //                     onPressed: () => widget.showAllProjects.value = !showAll,
-  //                     child: Text(showAll ? 'View Less' : 'View All'),
-  //                   ),
-  //                 ),
-  //             ],
-  //           );
-  //         },
-  //       );
-  //     },
-  //   );
-  // }
 
   void _logoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder:
-          (BuildContext ctx) => AlertDialog(
-            title: const Text("Logout"),
-            content: const Text("Are you sure you want to logout?"),
-            actions: <Widget>[
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text("Cancel")),
-              TextButton(
-                onPressed: () {
-                  UserSessionManager.logout();
-                  Navigator.pop(ctx);
-                  Navigator.pushReplacementNamed(context, '/welcome');
-                },
-                child: const Text("Logout"),
-              ),
-            ],
-          ),
+      builder: (BuildContext ctx) {
+        return AlertDialog(
+          title: FusionAppText(text: "Sign Out", style: Theme.of(context).textTheme.titleMedium),
+          content: const FusionAppText(text: "Are you sure you want to sign out?"),
+          actions: <Widget>[
+            NeumorphicDarkButton(
+              onTap: () {
+                UserSessionManager.logout();
+                Navigator.pop(ctx);
+                Navigator.pushReplacementNamed(context, '/welcome');
+              },
+              height: 32,
+              borderRadius: 8,
+              child: FusionAppText(text: "Sign Out", style: Theme.of(context).textTheme.labelMedium),
+            ),
+            const SizedBox(height: 5),
+            NeumorphicDarkButton(
+              onTap: () => Navigator.pop(ctx),
+              height: 32,
+              borderRadius: 8,
+              child: FusionAppText(text: "Cancel", style: Theme.of(context).textTheme.labelMedium),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -741,78 +745,27 @@ class _FusionSidebarState extends State<FusionSidebar> {
       ),
     );
   }
-
-  Widget _buildCheckboxTile(String title, bool value, Function(bool?) onChanged) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: CheckboxListTile(
-        title: Text(
-          title,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-          ),
-        ),
-        value: value,
-        onChanged: onChanged,
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
-        dense: true,
-        activeColor: Colors.blue.shade600,
-        checkColor: Colors.white,
-      ),
-    );
-  }
-
-  // NEW: Helper method to wrap _HoverNavItem for project list items.
-  Widget _buildNavItem(
-    IconData icon,
-    String title, {
-    bool isSubItem = false,
-    bool isBold = false,
-    IconData? trailing,
-    VoidCallback? onTap,
-  }) {
-    return _HoverNavItem(
-      icon: icon,
-      title: title,
-      semanticsId: '${title.toLowerCase().replaceAll(' ', '_')}_nav_item',
-      isSubItem: isSubItem,
-      isBold: isBold,
-      trailing: trailing,
-      onTap: onTap,
-    );
-  }
 }
 
 /// New widget for nav items with hover and selected style.
 class _HoverNavItem extends StatefulWidget {
   final IconData icon;
   final String title;
-  final bool isSubItem;
-  final bool isBold;
   final IconData? trailing;
   final VoidCallback? onTap;
-  final Color? textColor;
+
   final bool isSelected;
   final String semanticsId;
 
   const _HoverNavItem({
     required this.icon,
     required this.title,
-    this.isSubItem = false,
-    this.isBold = false,
     this.trailing,
     this.onTap,
-    this.textColor,
+
     this.isSelected = false,
     required this.semanticsId,
-    Key? key,
-  }) : super(key: key);
+  });
 
   @override
   State<_HoverNavItem> createState() => _HoverNavItemState();
@@ -823,11 +776,8 @@ class _HoverNavItemState extends State<_HoverNavItem> {
 
   @override
   Widget build(BuildContext context) {
-    final TextStyle style = TextStyle(
-      fontSize: 13,
-      fontWeight: widget.isBold || widget.isSelected ? FontWeight.bold : FontWeight.normal,
-      color: widget.textColor ?? Colors.black87,
-    );
+    final Color themeColor = Theme.of(context).colorScheme.onSurface;
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -835,22 +785,25 @@ class _HoverNavItemState extends State<_HoverNavItem> {
         testId: SemanticHelper.createTestId(SemanticTypes.listItem, widget.semanticsId),
         child: InkWell(
           onTap: widget.onTap,
+          borderRadius: BorderRadius.circular(8),
           child: Container(
-            color: widget.isSelected ? Colors.blue.shade100 : (_isHovered ? Colors.grey.shade200 : Colors.transparent),
-            padding: EdgeInsets.only(
-              left: widget.isSubItem ? 32 : 16,
-              right: 16,
-              top: 10,
-              bottom: 10,
+            decoration: BoxDecoration(
+              color: widget.isSelected ? themeColor.withValues(alpha: 0.04) : (_isHovered ? themeColor.withValues(alpha: 0.02) : Colors.transparent),
+              borderRadius: BorderRadius.circular(8),
             ),
+            padding: const EdgeInsets.all(8),
             child: Row(
+              spacing: 10,
               children: <Widget>[
-                Icon(widget.icon, size: 16, color: widget.textColor ?? Colors.black),
-                const SizedBox(width: 16),
+                Icon(widget.icon),
                 Expanded(
-                  child: Text(widget.title, style: style, overflow: TextOverflow.ellipsis),
+                  child: Text(
+                    widget.title,
+                    style: Theme.of(context).textTheme.labelMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                if (widget.trailing != null) Icon(widget.trailing, size: 16, color: widget.textColor ?? Colors.black),
+                if (widget.trailing != null) Icon(widget.trailing),
               ],
             ),
           ),
