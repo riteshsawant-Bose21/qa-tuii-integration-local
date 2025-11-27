@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
   Drawer,
@@ -20,10 +21,7 @@ import {
   Card,
   CardContent,
   Divider,
-  Avatar,
   Stack,
-  Chip,
-  CircularProgress,
   Menu,
   MenuItem,
   Tooltip,
@@ -31,25 +29,35 @@ import {
 import {
   Menu as MenuIcon,
   Person as PersonIcon,
-  Security as SecurityIcon,
   Logout as LogoutIcon,
   Dashboard as DashboardIcon,
-  AccountCircle as AccountCircleIcon,
+  FolderOpen as ProjectsIcon,
+  Devices as DevicesIcon,
+  People as UsersIcon,
 } from '@mui/icons-material';
 import { useAuth0 } from '@auth0/auth0-react';
-import { useUserAuthorization } from '../../hooks/useApi';
-import TokenDebug from '../debug/TokenDebug';
 import RoleManagement from '../role-management/RoleManagement';
+import ProfilePage from '../../pages/ProfilePage';
 import BoseProLogo from '../../assets/bose_pro_logo_lines_black.png';
 
 const DRAWER_WIDTH = 300;
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth0();
-  const { authorization: userAuthData, isLoading: isLoadingAuth, error: authError } = useUserAuthorization();
+  const { logout } = useAuth0();
+  const navigate = useNavigate();
+  const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [selectedTab, setSelectedTab] = useState('profile');
   const [profileMenuAnchor, setProfileMenuAnchor] = useState<null | HTMLElement>(null);
+  
+  // Determine current path for navigation highlighting
+  const getCurrentPath = () => {
+    if (location.pathname === '/dashboard' || location.pathname === '/') return '/';
+    if (location.pathname.startsWith('/dashboard/')) {
+      return location.pathname.replace('/dashboard', '');
+    }
+    return location.pathname;
+  };
+  const currentPath = getCurrentPath();
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -69,62 +77,13 @@ const Dashboard: React.FC = () => {
 
 
 
-  // Helper function to check if user has admin permissions
-  const hasAdminPermissions = () => {
-    if (!userAuthData) {
-      return false;
-    }
 
-    // First, check if the user has an admin role name (like "Reseller Admin")
-    if (userAuthData.role?.role_name) {
-      const roleName = userAuthData.role.role_name;
-      const adminRolePatterns = [
-        'Admin', 'admin', 'ADMIN',
-        'Reseller Admin', 'reseller admin', 'RESELLER ADMIN',
-        'Organization Admin', 'organization admin', 'ORGANIZATION ADMIN',
-        'Super Admin', 'super admin', 'SUPER ADMIN',
-        'User Management', 'user management', 'USER MANAGEMENT',
-      ];
-      
-      if (adminRolePatterns.some(pattern => roleName === pattern)) {
-        return true;
-      }
-    }
-
-    // Fallback: check permissions if available
-    if (!userAuthData.permissions) {
-      return false;
-    }
-    
-    // Handle both array and object formats
-    if (Array.isArray(userAuthData.permissions)) {
-      const hasAdminAccess = userAuthData.permissions.some(permission => 
-        permission.includes('user.manage') || 
-        permission.includes('user_management') ||
-        permission.includes('User Management')
-      );
-      return hasAdminAccess;
-    }
-    
-    // Handle object format
-    if (typeof userAuthData.permissions === 'object') {
-      const permissions = userAuthData.permissions as Record<string, string>;
-      const hasAdminAccess = Object.entries(permissions).some(([key, value]) => 
-        (key.includes('user.manage') || 
-         key.includes('user_management') || 
-         key.includes('User Management') ||
-         key.includes('launcher.user.manage')) &&
-        (value === 'admin' || value === 'full' || value === 'write')
-      );
-      return hasAdminAccess;
-    }
-    
-    return false;
-  };
 
   const navigationItems = [
-    { id: 'profile', label: 'Profile', icon: <PersonIcon /> },
-    { id: 'role-management', label: 'Role Management', icon: <SecurityIcon /> },
+    { id: '/', label: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
+    { id: '/projects', label: 'Projects', icon: <ProjectsIcon />, path: '/dashboard/projects' },
+    { id: '/devices', label: 'Devices', icon: <DevicesIcon />, path: '/dashboard/devices' },
+    { id: '/users-roles', label: 'Users and Roles', icon: <UsersIcon />, path: '/dashboard/users-roles' },
   ];
 
   const drawer = (
@@ -148,8 +107,8 @@ const Dashboard: React.FC = () => {
           {navigationItems.map((item) => (
             <ListItem key={item.id} disablePadding>
               <ListItemButton
-                selected={selectedTab === item.id}
-                onClick={() => setSelectedTab(item.id)}
+                selected={currentPath === item.id}
+                onClick={() => navigate(item.path)}
                 sx={{
                   '&.Mui-selected': {
                     backgroundColor: '#f5f5f5',
@@ -202,169 +161,83 @@ const Dashboard: React.FC = () => {
     </Box>
   );
 
-  const ProfileTab = () => (
+  const DashboardTab = () => (
     <Stack spacing={3}>
       <Typography variant="h4" component="h2">
-        Profile
+        Dashboard
       </Typography>
-      
       <Card>
         <CardContent>
-          <Stack spacing={2} alignItems="center" textAlign="center">
-            <Avatar
-              src={user?.picture}
-              alt={user?.name}
-              sx={{ width: 80, height: 80 }}
-            />
-            <Typography variant="h6">{user?.name}</Typography>
-            <Typography variant="body2" color="text.secondary">
-              {user?.email}
-            </Typography>
-          </Stack>
+          <Typography variant="h6" gutterBottom>
+            Coming Soon
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Dashboard features are currently under development.
+          </Typography>
         </CardContent>
       </Card>
-
-      {authError && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" color="error" gutterBottom>
-              Error Loading Account Information
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {authError}
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
-
-      {isLoadingAuth ? (
-        <Card>
-          <CardContent>
-            <Box display="flex" alignItems="center" gap={2}>
-              <CircularProgress size={24} />
-              <Typography variant="body2" color="text.secondary">
-                Loading account information...
-              </Typography>
-            </Box>
-          </CardContent>
-        </Card>
-      ) : userAuthData && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Account Information
-            </Typography>
-            <Stack spacing={1}>
-              <Typography variant="body2">
-                <strong>Account:</strong> {userAuthData.account.name}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Type:</strong> {userAuthData.account.type}
-              </Typography>
-              <Typography variant="body2">
-                <strong>Description:</strong> {userAuthData.account.description}
-              </Typography>
-            </Stack>
-          </CardContent>
-        </Card>
-      )}
-
-      <TokenDebug authorizationData={userAuthData} />
     </Stack>
   );
 
-  const RoleTab = () => (
+  const ProjectsTab = () => (
     <Stack spacing={3}>
       <Typography variant="h4" component="h2">
-        Role Management
+        Projects
       </Typography>
-      
-      {authError && (
-        <Card>
-          <CardContent>
-            <Typography variant="h6" color="error" gutterBottom>
-              Error Loading Role Information
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              {authError}
-            </Typography>
-          </CardContent>
-        </Card>
-      )}
-      
-      {isLoadingAuth ? (
-        <Card>
-          <CardContent>
-            <Box display="flex" alignItems="center" gap={2}>
-              <CircularProgress size={24} />
-              <Typography variant="body2" color="text.secondary">
-                Loading role information...
-              </Typography>
-            </Box>
-          </CardContent>
-        </Card>
-      ) : userAuthData && (
-        <>
-          {/* Current User Role Info */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Your Current Role
-              </Typography>
-              <Chip
-                label={userAuthData.role.role_name}
-                variant="outlined"
-                size="medium"
-              />
-            </CardContent>
-          </Card>
-
-          {/* User Permissions */}
-          <Card>
-            <CardContent>
-              <Typography variant="h6" gutterBottom>
-                Your Permissions
-              </Typography>
-              <Stack direction="row" spacing={1} flexWrap="wrap" gap={1}>
-                {userAuthData.permissions ? (
-                  Object.entries(userAuthData.permissions).map(([key, value], index) => (
-                    <Chip
-                      key={index}
-                      label={`${key}: ${value}`}
-                      variant="outlined"
-                      size="small"
-                      color="primary"
-                      sx={{ mb: 1 }}
-                    />
-                  ))
-                ) : (
-                  <Typography variant="body2" color="text.secondary">
-                    No permissions found
-                  </Typography>
-                )}
-              </Stack>
-            </CardContent>
-          </Card>
-
-          {/* Admin Role Management Section - Only show if user has admin permissions */}
-          {hasAdminPermissions() && (
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                  <SecurityIcon />
-                  Organization Management
-                </Typography>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
-                  As an administrator, you can manage roles and users in your organization.
-                </Typography>
-                <RoleManagement />
-              </CardContent>
-            </Card>
-          )}
-        </>
-      )}
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Coming Soon
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Project management features are currently under development.
+          </Typography>
+        </CardContent>
+      </Card>
     </Stack>
   );
+
+  const DevicesTab = () => (
+    <Stack spacing={3}>
+      <Typography variant="h4" component="h2">
+        Devices
+      </Typography>
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            Coming Soon
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Device management features are currently under development.
+          </Typography>
+        </CardContent>
+      </Card>
+    </Stack>
+  );
+
+  const UsersRolesTab = React.memo(() => (
+    <Stack spacing={3}>
+      <Typography variant="h4" component="h2">
+        Users and Roles
+      </Typography>
+      <Card>
+        <CardContent>
+          <Typography variant="h6" gutterBottom>
+            User and Role Management
+          </Typography>
+          <Typography variant="body2" color="text.secondary" gutterBottom>
+            Manage users and roles in your organization.
+          </Typography>
+          <RoleManagement />
+        </CardContent>
+      </Card>
+    </Stack>
+  ));
+  UsersRolesTab.displayName = 'UsersRolesTab';
+
+  const ProfileTab = () => <ProfilePage />;
+
+
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -391,42 +264,36 @@ const Dashboard: React.FC = () => {
           </Typography>
           
           {/* Profile Menu */}
-          <Tooltip title="Account settings">
+          <Tooltip title="Profile">
             <IconButton
               onClick={handleProfileMenuOpen}
               size="large"
               sx={{ ml: 2 }}
               color="inherit"
-              aria-controls={profileMenuAnchor ? 'account-menu' : undefined}
+              aria-controls={profileMenuAnchor ? 'profile-menu' : undefined}
               aria-haspopup="true"
               aria-expanded={profileMenuAnchor ? 'true' : undefined}
             >
-              <AccountCircleIcon />
+              <PersonIcon />
             </IconButton>
           </Tooltip>
           <Menu
             anchorEl={profileMenuAnchor}
-            id="account-menu"
+            id="profile-menu"
             open={Boolean(profileMenuAnchor)}
             onClose={handleProfileMenuClose}
             onClick={handleProfileMenuClose}
             transformOrigin={{ horizontal: 'right', vertical: 'top' }}
             anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
           >
-            <MenuItem onClick={() => { setSelectedTab('profile'); handleProfileMenuClose(); }}>
+            <MenuItem onClick={() => { navigate('/dashboard/profile'); handleProfileMenuClose(); }}>
               <PersonIcon sx={{ mr: 2 }} />
               Profile
             </MenuItem>
-            {hasAdminPermissions() && (
-              <MenuItem onClick={() => { setSelectedTab('role-management'); handleProfileMenuClose(); }}>
-                <SecurityIcon sx={{ mr: 2 }} />
-                Role Management
-              </MenuItem>
-            )}
             <Divider />
             <MenuItem onClick={handleLogout}>
               <LogoutIcon sx={{ mr: 2 }} />
-              Sign Out
+              Logout
             </MenuItem>
           </Menu>
         </Toolbar>
@@ -478,8 +345,13 @@ const Dashboard: React.FC = () => {
       >
         <Toolbar />
         <Container maxWidth="lg">
-          {selectedTab === 'profile' && <ProfileTab />}
-          {selectedTab === 'role-management' && <RoleTab />}
+          <Routes>
+            <Route index element={<DashboardTab />} />
+            <Route path="projects" element={<ProjectsTab />} />
+            <Route path="devices" element={<DevicesTab />} />
+            <Route path="users-roles" element={<UsersRolesTab />} />
+            <Route path="profile" element={<ProfileTab />} />
+          </Routes>
         </Container>
       </Box>
     </Box>
