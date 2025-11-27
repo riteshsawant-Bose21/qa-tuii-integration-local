@@ -578,6 +578,11 @@ const docTemplate = `{
         },
         "/projects": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all projects in the system",
                 "consumes": [
                     "application/json"
@@ -635,6 +640,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new project in the system",
                 "consumes": [
                     "application/json"
@@ -681,6 +691,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
                     "application/json"
@@ -732,6 +747,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing project by its ID",
                 "consumes": [
                     "application/json"
@@ -797,6 +817,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/archive": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Archive or unarchive a project based on request body",
                 "consumes": [
                     "application/json"
@@ -859,6 +884,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/lock": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Lock or unlock a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
@@ -921,6 +951,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/star/{userId}": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Star or unstar a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
@@ -990,6 +1025,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/users/{userEmail}": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Assign a user to a project by project ID and user email",
                 "consumes": [
                     "application/json"
@@ -1036,6 +1076,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Remove a user from a project by project ID and user email",
                 "consumes": [
                     "application/json"
