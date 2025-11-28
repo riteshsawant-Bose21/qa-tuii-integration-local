@@ -303,7 +303,11 @@ class FusionAppTheme {
   /// Returns a fully configured [ThemeData] for dark theme
   static ThemeData get darkTheme {
     final darkColorScheme = ColorScheme.fromSeed(
+      primary: Color(0xFF2F7554),
+      onPrimary: Colors.white,
       surface: Color(0xFF1D1D1D),
+      onSurface: Colors.white,
+      surfaceDim: Color(0xFFC0C0C0),
       seedColor: const Color(0xFF80C7FF), // Using your dark primary color
       brightness: Brightness.dark,
     );

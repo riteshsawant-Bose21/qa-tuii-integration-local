@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -25,6 +26,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
     final double subHeadingFontSize = MediaQuery.of(context).size.width * 0.02;
 
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Expanded(
           flex: 6,
@@ -116,6 +118,10 @@ class _HomeTabContentState extends State<HomeTabContent> {
             ),
           ),
         ),
+
+        // ==============================
+        //   Getting Started / Right Content
+        // ==============================
         ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 320),
           child: const _HomeRightContent(),
@@ -223,11 +229,8 @@ class _RecentProjects extends StatelessWidget {
                       final ProjectData project = projects[index];
 
                       return GestureDetector(
-                        onTap: () async {
-                          FusionUiUtils.showLoader(context);
-                          serviceLocator<ProjectViewModel>().openProject(project.id);
-                        },
-                        child: _BuildProjectCard(
+                        onTap: () => ProjectDetailsDialog.show(context, project: project),
+                        child: ProjectCard(
                           title: project.projectName,
                           onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
                         ),
@@ -345,7 +348,7 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
                       // FusionUiUtils.showLoader(context);
                       // serviceLocator<ProjectViewModel>().openProject(project.id);
                     },
-                    child: _BuildProjectCard(
+                    child: ProjectCard(
                       title: title,
                       subtitle: subtitle,
                       assetPath: assetPath,
@@ -363,141 +366,115 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
   }
 }
 
-class _BuildProjectCard extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final VoidCallback onDelete;
-  final String? assetPath;
-  final bool showMore;
-
-  const _BuildProjectCard({
-    required this.title,
-    this.subtitle,
-    required this.onDelete,
-    this.assetPath,
-    this.showMore = true,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 268,
-      height: 178,
-      child: Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: Align(
-                      alignment: Alignment.topLeft,
-                      child: FittedBox(
-                        child: Image.asset(
-                          assetPath ?? "assets/images/floor_plans/floor_plan_placeholder.png",
-                        ),
-                      ),
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          FusionAppText(
-                            text: title,
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-
-                          if (subtitle != null) ...<Widget>[
-                            Tooltip(
-                              message: subtitle!,
-                              textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                              ),
-                              constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.2),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.surface,
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3),
-                              ),
-                              child: FusionAppText(
-                                text: subtitle!,
-                                maxLine: 1,
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (showMore)
-              Positioned(
-                top: 6,
-                right: 6,
-                child: PopupMenuButton<String>(
-                  onSelected: (String value) {
-                    if (value == 'delete') onDelete();
-                  },
-                  tooltip: "", // Remove default tooltip
-                  padding: EdgeInsets.zero,
-                  menuPadding: const EdgeInsets.only(),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  color: Theme.of(context).colorScheme.surface,
-                  itemBuilder: (BuildContext context) {
-                    return <PopupMenuEntry<String>>[
-                      const PopupMenuItem<String>(
-                        value: 'delete',
-                        child: Row(
-                          children: <Widget>[
-                            Icon(LucideIcons.trash),
-                            SizedBox(width: 8),
-                            FusionAppText(text: 'Delete'),
-                          ],
-                        ),
-                      ),
-                    ];
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Icon(Icons.more_vert),
-                  ),
-                ),
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 class _HomeRightContent extends StatelessWidget {
   const _HomeRightContent();
   @override
   Widget build(BuildContext context) {
-    return const Column(
-      children: <Widget>[],
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        spacing: 10,
+        children: <Widget>[
+          _buildCard(
+            context,
+            title: 'Getting Started',
+            description: 'Watch our introduction & Training videos!\nTutorials and walkthroughs for our new and existing users.',
+            buttonText: 'Start Tutorials',
+            onTap: () {},
+          ),
+
+          _buildCard(
+            context,
+            title: 'Build My System',
+            description:
+                'Build new project with fast product database and cost calculator! Instantly design, estimate and configure your system and see cost updates as you build.',
+            buttonText: 'Start Building',
+            onTap: () {},
+          ),
+
+          _buildCard(
+            context,
+            title: 'Need Design Assistance',
+            description: 'We are here to help and validate your design whenever you need it!',
+            buttonText: 'Click for Support',
+            onTap: () {},
+          ),
+
+          _buildCard(
+            context,
+            title: 'Sign-Up for In-person Training',
+            description: 'Register for hands-on sessions with our experts to deepen your knowledge and gain practical experience.',
+            buttonText: 'View Training Courses',
+            onTap: () {},
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCard(
+    BuildContext context, {
+    required String title,
+    required String description,
+    required String buttonText,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      height: 190,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+        ),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        spacing: 12,
+        mainAxisAlignment: MainAxisAlignment.end,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          FusionAppText(
+            text: title,
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: Theme.of(context).colorScheme.onSurface,
+            ),
+          ),
+
+          Flexible(
+            child: FusionAppText(
+              text: description,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: FusionDarkColorPallette.medium50,
+              ),
+            ),
+          ),
+          InkWell(
+            onTap: onTap,
+            borderRadius: BorderRadius.circular(8),
+            splashColor: Colors.transparent,
+            child: Container(
+              height: 32,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  FusionAppText(
+                    text: buttonText,
+                    maxLine: 1,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

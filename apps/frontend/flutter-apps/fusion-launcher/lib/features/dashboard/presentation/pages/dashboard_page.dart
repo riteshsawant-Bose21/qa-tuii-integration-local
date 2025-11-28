@@ -8,13 +8,16 @@ import '../../../../core/service_locator.dart';
 import '../widgets/community_tab_content.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/profile_tab_content.dart';
+import '../widgets/saved_projects_tab.dart';
 import '../widgets/settings_tab_content.dart';
 
 enum DashboardTabs {
   home("Home"),
   profile("Profile"),
   settings("Settings"),
-  community("Community");
+  community("Community"),
+  testLibrady("Test Library"),
+  savedProjects("Saved Projects");
 
   final String name;
   const DashboardTabs(this.name);
@@ -92,6 +95,10 @@ class _HomePageState extends State<HomePage> {
                           return const SettingsTabContent();
                         case DashboardTabs.community:
                           return const CommunityTabContent();
+                        case DashboardTabs.savedProjects:
+                          return const SavedProjectsTabContent();
+                        case DashboardTabs.testLibrady:
+                          return const SizedBox.shrink();
                       }
                     },
                   ),

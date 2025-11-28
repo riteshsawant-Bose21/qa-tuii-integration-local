@@ -159,14 +159,15 @@ class _FusionSidebarState extends State<FusionSidebar> {
                               onTap: () => widget.onTabChanged?.call(DashboardTabs.community),
                             ),
                             // show only in debug mode
-                            if (kDebugMode)
+                            if (kDebugMode) ...<Widget>[
                               _HoverNavItem(
                                 icon: Icons.library_books_sharp,
-                                title: 'Test Library',
+                                title: DashboardTabs.testLibrady.name,
                                 semanticsId: 'library_tab',
-                                isSelected: widget.selectedTab == 'Library',
+                                isSelected: widget.selectedTab == DashboardTabs.testLibrady,
                                 onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
                               ),
+                            ],
                           ],
                         ),
                       ),
@@ -191,9 +192,12 @@ class _FusionSidebarState extends State<FusionSidebar> {
                             ),
                             _HoverNavItem(
                               icon: Icons.save,
-                              title: 'Saved Projects',
+                              title: DashboardTabs.savedProjects.name,
+                              isSelected: widget.selectedTab == DashboardTabs.savedProjects,
                               semanticsId: 'saved_projects_section',
-                              onTap: () {},
+                              onTap: () {
+                                widget.onTabChanged?.call(DashboardTabs.savedProjects);
+                              },
                             ),
                           ],
                         ),

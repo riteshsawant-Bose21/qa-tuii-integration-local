@@ -233,6 +233,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final Widget? prefix;
   final Widget? suffix;
   final bool isObscured;
+  final double? width;
 
   const NeumorphicDarkTextField({
     super.key,
@@ -245,6 +246,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.prefix,
     this.suffix,
     this.isObscured = false,
+    this.width,
   });
 
   @override
@@ -252,6 +254,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
     return ClipRRect(
       borderRadius: BorderRadius.circular(borderRadius),
       child: Container(
+        width: width,
         margin: const EdgeInsets.all(2),
         decoration: BoxDecoration(
           boxShadow: <BoxShadow>[
