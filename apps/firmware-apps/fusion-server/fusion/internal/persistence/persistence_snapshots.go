@@ -30,7 +30,7 @@ func (p *Persistence) CreateSnapshot(snapshotKey string) error {
 		checksum = checksum[:8]
 	}
 
-	logging.GetLogger().Debug("Snapshot '%s' saved (version: %v, checksum: %s)",
+	logging.GetLogger().Debug("Snapshot '%s' created (version: %v, checksum: %s)",
 		snapshotKey, ps.Version, checksum)
 
 	return nil
@@ -67,7 +67,7 @@ func (p *Persistence) ActivateSnapshot(snapshotKey string) error {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	logger.Info(
+	logger.Debug(
 		"Activated snapshot '%s': Epoch=%d Version=%d",
 		snapshotKey, newVersion.Epoch, newVersion.Counter,
 	)

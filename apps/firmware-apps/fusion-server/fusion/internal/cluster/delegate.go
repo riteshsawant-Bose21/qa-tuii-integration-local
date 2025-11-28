@@ -186,7 +186,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		}
 
 		if !dirty {
-			logger.Debug("delegate: skipping stale ConfigUpdate version=%v from %s",
+			logger.Debug("[Delegate] Skipping stale ConfigUpdate version=%v from %s",
 				message.ConfigUpdate.Version, message.Node)
 			return
 		}
@@ -194,24 +194,35 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		// Overwrite with effective local Lamport version
 		updated := *message.ConfigUpdate
 		updated.Version = d.stateManager.GetVersion()
-		//logger.Info("-------->>> NotifyMsg::NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
+		logger.Debug("[Delegate] NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
 		message.ConfigUpdate = &updated
 
 		d.persistence.MarkDirty()
 		d.hub.BroadcastToObservers(&message)
 
 	case api.NotifyOpSnapActivate:
-		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if message.SnapshotOperation == nil {
+			logger.Error("SnapActivate message with nil payload from %s", message.Node)
+			return
+		}
+
+		logger.Debug("[Delegate] SnapActivate on %s for %s (from=%s)",
+			d.appConfig.NodeName,
+			message.SnapshotOperation.Name,
+			message.Node,
+		)
+
+		if err := d.persistence.ActivateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error activating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapCreate:
-		if err := d.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := d.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error creating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapDelete:
-		if err := d.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := d.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error deleting snapshot: %v", err)
 		}
 

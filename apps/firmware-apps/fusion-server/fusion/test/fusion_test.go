@@ -66,6 +66,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	flag.Parse()
+
 	cfg, err := getClusterConfig()
 	if err != nil {
 		fmt.Printf("Failed to get cluster configuration: %v\n", err)
