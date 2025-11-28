@@ -128,7 +128,7 @@ runs:
         robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
         cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
 
-        flutter pub get --suppress-analytics --no-verbose *> $null
+        flutter pub get --suppress-analytics *> $null
         moon run flutter-apps:win-automation-build
         E:\'Program Files (x86)'\NSIS\makensis.exe C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\windows\Installer\NSIS\fusion_launcher_automation_build.nsi
 
