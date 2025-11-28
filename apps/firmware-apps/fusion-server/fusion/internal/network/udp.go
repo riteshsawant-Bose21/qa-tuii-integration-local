@@ -41,7 +41,8 @@ type UDPServer struct {
 
 	// ACK handling
 	pending              sync.Map
-	lastBroadcastVersion atomic.Int64
+	lastBroadcastEpoch   atomic.Uint64
+	lastBroadcastVersion atomic.Uint64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -143,63 +144,55 @@ func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
 	if !msg.IsPublic() {
 		return nil
 	}
+
 	logger := logging.GetLogger()
 
-	force := false
+	if msg.Operation == api.NotifyOpSnapActivate {
 
-	// Snapshot full-state updates must bypass version gating.
-	if msg.Operation == api.NotifyOpConfigUpdate &&
-		msg.ConfigUpdate != nil &&
-		msg.ConfigUpdate.FromSnapshot {
+		// Load the snapshot data
+		sm := s.handler.StateManager
+		snapshotState := sm.GetFullState()
+		snapshotFlat := snapshotState.Flatten()
 
-		logger.Debug("udp broadcast: forcing snapshot full-state update (FromSnapshot=true)")
-		force = true
+		payload, err := s.buildJSONPayload(snapshotFlat, sm.GetVersion())
+		if err != nil {
+			return err
+		}
+
+		s.broadcast(payload)
+
+		return nil
 	}
 
 	// Normal config updates: apply Lamport version gating
-	if !force &&
-		msg.Operation == api.NotifyOpConfigUpdate &&
+	if msg.Operation == api.NotifyOpConfigUpdate &&
 		msg.ConfigUpdate != nil {
 
-		v := msg.ConfigUpdate.Version.Counter
-		last := s.lastBroadcastVersion.Load()
+		v := msg.ConfigUpdate.Version
 
-		if v <= last {
+		last := api.Version{
+			Epoch:   s.lastBroadcastEpoch.Load(),
+			Counter: s.lastBroadcastVersion.Load(),
+		}
+
+		if v.Less(last) {
 			logger.Debug(
-				"udp broadcast: skipping stale/duplicate config_update version=%d (last=%d)",
+				"udp broadcast: skipping stale/duplicate config_update version=%v (last=%v)",
 				v, last,
 			)
 			return nil
 		}
 
-		s.lastBroadcastVersion.Store(v)
+		s.lastBroadcastEpoch.Store(v.Epoch)
+		s.lastBroadcastVersion.Store(v.Counter)
 	}
 
-	// Build payload including authoritative Lamport version
-	payload := make(map[string]any, len(msg.ConfigUpdate.Data)+1)
-	maps.Copy(payload, msg.ConfigUpdate.Data)
-	payload[api.FusionVersion] = msg.ConfigUpdate.Version.Counter
-	payload[api.FusionEpoch] = msg.ConfigUpdate.Version.Epoch
-
-	data, err := json.Marshal(payload)
+	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
 	if err != nil {
-		return fmt.Errorf("marshal update: %w", err)
+		return err
 	}
 
-	// Send to all UDP clients
-	s.clients.Range(func(k, v any) bool {
-		addr, ok := v.(*net.UDPAddr)
-		if !ok || addr == nil {
-			return true
-		}
-
-		if _, err := s.conn.WriteToUDP(data, addr); err != nil {
-			logger.Warn("udp broadcast to %s failed: %v", k, err)
-			s.clients.Delete(k)
-		}
-
-		return true
-	})
+	s.broadcast(payload)
 
 	return nil
 }
@@ -208,4 +201,37 @@ func (s *UDPServer) Close() error {
 	close(s.queue)
 	s.wg.Wait()
 	return s.conn.Close()
+}
+
+// buildPayload creates a JSON byte stream including authoritative Lamport version
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) ([]byte, error) {
+
+	payload := make(map[string]any, len(data)+2)
+	maps.Copy(payload, data)
+	payload[api.FusionVersion] = version.Counter
+	payload[api.FusionEpoch] = version.Epoch
+
+	json, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return json, nil
+}
+
+func (s *UDPServer) broadcast(payload []byte) {
+
+	s.clients.Range(func(k, v any) bool {
+		addr, ok := v.(*net.UDPAddr)
+		if !ok || addr == nil {
+			return true
+		}
+
+		if _, err := s.conn.WriteToUDP(payload, addr); err != nil {
+			logging.GetLogger().Warn("udp broadcast to %s failed: %v", k, err)
+			s.clients.Delete(k)
+		}
+
+		return true
+	})
 }

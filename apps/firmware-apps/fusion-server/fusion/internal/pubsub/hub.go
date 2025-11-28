@@ -100,6 +100,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		// Overwrite with effective local Lamport version
 		updated := *message.ConfigUpdate
 		updated.Version = h.stateManager.GetVersion()
+		//logging.GetLogger().Info("-------->>> BroadcastToNodes::NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
 		message.ConfigUpdate = &updated
 
 		h.persistence.MarkDirty()

@@ -194,6 +194,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 		// Overwrite with effective local Lamport version
 		updated := *message.ConfigUpdate
 		updated.Version = d.stateManager.GetVersion()
+		//logger.Info("-------->>> NotifyMsg::NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
 		message.ConfigUpdate = &updated
 
 		d.persistence.MarkDirty()
