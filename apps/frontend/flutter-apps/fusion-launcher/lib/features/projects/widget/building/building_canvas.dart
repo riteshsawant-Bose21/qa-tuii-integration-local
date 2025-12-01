@@ -209,10 +209,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     child: FloorCanvas(
                                       gridSize: 100,
                                       controller: widget.floorCanvasController,
-                                      hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(
+                                      hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
                                         floorId: floor.id,
                                       ),
-                                      listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                      listeningAreas: serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
                                         floorId: floor.id,
                                       ),
                                       floor: floor,

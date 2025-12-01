@@ -86,7 +86,7 @@ extension SubZoneService on ProjectService {
   }
 
   void addCircuitToSubZone(String subZoneId, String circuitId) {
-    if (!subZones.exists(subZoneId)) throw Exception('Sub Zone $subZoneId not found');
+    // if (!subZones.exists(subZoneId)) throw Exception('Sub Zone $subZoneId not found');
     if (!circuits.exists(circuitId)) throw Exception('Circuit $circuitId not found');
 
     // Update relationship graph (idempotent)

@@ -116,6 +116,26 @@ extension ListeningAreaService on ProjectService {
     return areas;
   }
 
+  List<ListeningArea> getPendingListeningAreasToDraw(String floorId) {
+    //get all listening areas for floor
+    final allAreas = getListeningAreasForFloor(floorId);
+
+    //filter listening areas which are not drawn yet
+    final pendingAreas = allAreas.where((la) => !la.isDrawn).toList();
+
+    return pendingAreas;
+  }
+
+  List<ListeningArea> getDrawnListeningAreas(String floorId) {
+    //get all listening areas for floor
+    final allAreas = getListeningAreasForFloor(floorId);
+
+    //filter listening areas which are drawn
+    final drawnAreas = allAreas.where((la) => la.isDrawn).toList();
+
+    return drawnAreas;
+  }
+
   void addMultipleAreasToAddZone(List<String> allAreasToAdd, String zoneId) {
     //if zone already have a subzone, then add listening area to subzone
     final subZoneForZone = relationships.getChildren(RelationshipType.zoneSubZones, zoneId);

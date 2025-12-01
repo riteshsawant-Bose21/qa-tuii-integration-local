@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -257,7 +255,6 @@ extension CircuitViewmodel on ProjectViewModel {
     for (int i = 0; i < speakerCount; i++) {
       final HardwareComponent newHardware = fromProductQueryModel(
         speakerData,
-        pos: Offset.zero,
         locationEntity: locationModel,
       );
       projectManager.addHardware(newHardware);

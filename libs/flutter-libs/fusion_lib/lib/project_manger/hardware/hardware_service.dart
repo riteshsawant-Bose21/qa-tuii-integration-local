@@ -2,7 +2,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 extension HardwareService on ProjectService {
   /// Add hardware component into repo; create relationships based on its LocationModel.
-  void addHardware(HardwareComponent hw) {
+  void addHardware({required HardwareComponent hw, bool addToCircuit = true}) {
     if (hardware.exists(hw.id)) {
       throw Exception('Hardware ${hw.id} already exists');
     }
@@ -18,8 +18,77 @@ extension HardwareService on ProjectService {
     if (loc.listeningAreaId != null) {
       relationships.link(RelationshipType.hardwareLocation, loc.listeningAreaId!, hw.id);
     }
-    // Optional persistence/notification hook
-    // _onProjectChanged();
+
+    if (addToCircuit) {
+      checkAndAddHardwareForCircuit(hw.id);
+    }
+  }
+
+  void checkAndAddHardwareForCircuit(String hardwareId) {
+    final hw = hardware.get(hardwareId);
+    if (hw == null) {
+      throw Exception('Hardware $hardwareId not found');
+    }
+    final loc = hw.locationEntity;
+
+    if (hw is Speaker && loc.listeningAreaId != null) {
+      //chek if it has subzone
+      String? zoneIdForHw = getSubZoneForHardware(hw.id)?.id;
+
+      //else check if it has zone
+      zoneIdForHw ??= getZoneForHardware(hw.id)?.id;
+
+      if (zoneIdForHw != null) {
+        final circuitsInZone = getCircuitsInZone(zoneIdForHw);
+        bool addedToCircuit = false;
+        for (final circuit in circuitsInZone) {
+          if (circuit.speakerSKU == hw.speakerSKU) {
+            //add hardware to this circuit
+            addHardwareToCircuit(hw.id, circuit.id);
+            addedToCircuit = true;
+            break;
+          }
+        }
+        if (!addedToCircuit) {
+          //create new circuit for this hardware
+          final newCircuit = CircuitModel(
+            name: hw.hardwareName,
+            speakerSKU: hw.speakerSKU,
+          );
+          addCircuit(newCircuit);
+          addHardwareToCircuit(hw.id, newCircuit.id);
+          addCircuitToZone(newCircuit.id, zoneIdForHw);
+        }
+      } else {
+        final hardwareInLa = getHardwareForListeningArea(loc.listeningAreaId ?? '');
+        String? circuitForNewHardware;
+        if (hardwareInLa.length > 1) {
+          for (final hardwareItem in hardwareInLa) {
+            if (hardwareItem is Speaker) {
+              if (hardwareItem.speakerSKU == hw.speakerSKU) {
+                final hwCircuitId = relationships.getParent(RelationshipType.circuitHardware, hardwareItem.id);
+                if (hwCircuitId != null) {
+                  circuitForNewHardware = hwCircuitId;
+                  break;
+                }
+              }
+            }
+          }
+        }
+        if (circuitForNewHardware == null) {
+          //create new circuit for this hardware
+          final newCircuit = CircuitModel(
+            name: hw.hardwareName,
+            speakerSKU: hw.speakerSKU,
+          );
+          addCircuit(newCircuit);
+          addHardwareToCircuit(hw.id, newCircuit.id);
+        } else {
+          //add hardware to existing circuit
+          addHardwareToCircuit(hw.id, circuitForNewHardware);
+        }
+      }
+    }
   }
 
   Zone? getZoneForHardware(String hardwareId) {
@@ -177,24 +246,6 @@ extension HardwareService on ProjectService {
         loc.floorId = inferredFloorId;
         relationships.link(RelationshipType.hardwareLocation, inferredFloorId, hardwareId);
       }
-
-      // validate circuit is valid for new listening area
-      final hardwareCircuit = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
-      if (hardwareCircuit.isNotEmpty) {
-        final circuitId = hardwareCircuit.first;
-        List<ListeningArea> laInCircuit = getListeningAreasForCircuit(circuitId);
-        //check if new listening area is part of the circuit
-        bool isPartOfCircuit = laInCircuit.any((la) => la.id == listeningAreaId);
-        if (!isPartOfCircuit) {
-          relationships.unlink(RelationshipType.circuitHardware, circuitId, hardwareId);
-          final hwInCircuit = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
-          if (hwInCircuit.isEmpty) {
-            //remove circuit if no hardware left
-            relationships.removeAllRelationships(circuitId);
-            circuits.remove(circuitId);
-          }
-        }
-      }
     } else if (floorId != null) {
       // 4) Moving to a floor only (no listening area, no zone)
       if (!floors.exists(floorId)) {
@@ -203,21 +254,6 @@ extension HardwareService on ProjectService {
 
       loc.floorId = floorId;
       relationships.link(RelationshipType.hardwareFloor, floorId, hardwareId);
-
-      // updating Circuits after moving the hardware to floor only
-      final hardwareCircuit = relationships.getParents(RelationshipType.circuitHardware, hardwareId);
-      if (hardwareCircuit.isNotEmpty) {
-        final circuitId = hardwareCircuit.first;
-        relationships.unlink(RelationshipType.circuitHardware, circuitId, hardwareId);
-        final hwInCircuit = relationships.getChildren(RelationshipType.circuitHardware, circuitId);
-        if (hwInCircuit.isEmpty) {
-          //remove circuit if no hardware left
-          relationships.removeAllRelationships(circuitId);
-          circuits.remove(circuitId);
-        }
-      }
-
-      // listeningAreaId and zoneId remain null
     }
   }
 
@@ -249,6 +285,16 @@ extension HardwareService on ProjectService {
     // }
 
     return resultIds.map((id) => hardware.get(id)).whereType<HardwareComponent>().toList();
+  }
+
+  List<HardwareComponent> getAllHardwareInFloorWithPosition({required String floorId}) {
+    final allHardware = getAllHardwareInFloor(floorId);
+    return allHardware.where((hw) => hw.pos != null).toList();
+  }
+
+  List<HardwareComponent> getAllHardwareInFloorWithoutPosition({required String floorId}) {
+    final allHardware = getAllHardwareInFloor(floorId);
+    return allHardware.where((hw) => hw.pos == null).toList();
   }
 
   // get Hardware by id

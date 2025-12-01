@@ -485,7 +485,7 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final Rect dst = Rect.fromCenter(
-        center: comp.pos,
+        center: comp.pos!,
         width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
         height: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
       );
@@ -507,7 +507,7 @@ class FloorCanvasPainter extends CustomPainter {
           // --- SURFACE-MOUNTED (Rectangle) ---
           if (speakerModel.mountingType == 'surface') {
             final Rect rect = Rect.fromCenter(
-              center: comp.pos,
+              center: comp.pos!,
               width: radius * 1.5,
               height: radius * 2,
             );
@@ -517,17 +517,17 @@ class FloorCanvasPainter extends CustomPainter {
           // --- PENDANT (Triangle) ---
           else if (speakerModel.mountingType == 'pendant') {
             final Path path = Path()
-              ..moveTo(comp.pos.dx, comp.pos.dy - radius)
-              ..lineTo(comp.pos.dx - radius * 0.866, comp.pos.dy + radius * 0.75)
-              ..lineTo(comp.pos.dx + radius * 0.866, comp.pos.dy + radius * 0.75)
+              ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)
+              ..lineTo(comp.pos!.dx - radius * 0.866, comp.pos!.dy + radius * 0.75)
+              ..lineTo(comp.pos!.dx + radius * 0.866, comp.pos!.dy + radius * 0.75)
               ..close();
             canvas.drawPath(path, fillPaint);
             canvas.drawPath(path, outlinePaint);
           }
           // --- DEFAULT (Circle) ---
           else {
-            canvas.drawCircle(comp.pos, radius, fillPaint);
-            canvas.drawCircle(comp.pos, radius, outlinePaint);
+            canvas.drawCircle(comp.pos!, radius, fillPaint);
+            canvas.drawCircle(comp.pos!, radius, outlinePaint);
           }
         }
       } else {
@@ -552,7 +552,7 @@ class FloorCanvasPainter extends CustomPainter {
       // draw selection border - in acoustics mode, only show selection for speakers
       if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
         canvas.drawRect(
-          Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
+          Rect.fromCenter(center: comp.pos!, width: gridSize, height: gridSize),
           Paint()
             ..color = Colors.pinkAccent
             ..style = PaintingStyle.stroke

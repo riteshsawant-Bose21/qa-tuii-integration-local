@@ -36,6 +36,7 @@ class ProjectService {
   final ProcessingBlockRepository processingBlocks;
   final ZoneFunctionRepository zoneFunctions;
   final PrioritySourceDataRepository prioritySourceData;
+  final EquipLocationRepository equipLocations;
 
   final RelationshipManager relationships;
 
@@ -77,6 +78,7 @@ class ProjectService {
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
     PrioritySourceDataRepository? prioritySourceData,
+    EquipLocationRepository? equipLocations,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -91,7 +93,8 @@ class ProjectService {
        processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
        relationships = relationships ?? RelationshipManager(),
-       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository();
+       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
+       equipLocations = equipLocations ?? EquipLocationRepository();
 
   ProjectService copyWith({
     String? id,
@@ -123,6 +126,7 @@ class ProjectService {
     ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
     PrioritySourceDataRepository? prioritySourceData,
+    EquipLocationRepository? equipLocations,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -154,6 +158,7 @@ class ProjectService {
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
+      equipLocations: equipLocations ?? this.equipLocations,
     );
 
     // Preserve undo/redo stacks
@@ -207,6 +212,7 @@ class ProjectService {
       "relationships": relationships.toJson(),
       "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
       "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
+      'equipLocations': equipLocations.toJson((el) => el.toJson()),
     };
   }
 
@@ -265,7 +271,7 @@ class ProjectService {
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
     service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
-
+    service.equipLocations.fromJsonList(json['equipLocations'], (m) => EquipLocation.fromJson(m), 'id');
     service.relationships.fromJson(json["relationships"]);
 
     return service;

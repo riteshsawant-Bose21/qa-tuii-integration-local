@@ -150,6 +150,34 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<HardwareComponent> getHardwareInFloorWithPosition({
+    required String floorId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInFloorWithPosition(floorId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get hardware with position for floor: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<HardwareComponent> getHardwareInFloorWithoutPosition({
+    required String floorId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInFloorWithoutPosition(floorId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get hardware without position for floor: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
   ResponseCallback<bool> moveHardware({
     required String hardwareId,
     String? listeningAreaId,
@@ -311,23 +339,23 @@ extension HardwareViewModel on ProjectViewModel {
       );
       addHardware(hardware: newHardware, autoSave: false);
 
-      if (newHardware is Speaker) {
-        final CircuitModel circuitModel = CircuitModel(name: newHardware.name, speakerSKU: (newHardware).speakerSKU);
-        addCircuit(circuit: circuitModel, autoSave: false);
-        addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);
-
-        if (listeningAreaId != null) {
-          final SubZone? subZone = getSubZoneForListeningArea(areaId: listeningAreaId);
-          if (subZone != null) {
-            addCircuitToSubZone(subZoneId: subZone.id, circuitId: circuitModel.id);
-          }
-
-          final Zone? zone = getZonesForListeningArea(areaId: listeningAreaId);
-          if (zone != null) {
-            addCircuitToZone(zoneId: zone.id, circuitId: circuitModel.id);
-          }
-        }
-      }
+      // if (newHardware is Speaker) {
+      //   final CircuitModel circuitModel = CircuitModel(name: newHardware.name, speakerSKU: (newHardware).speakerSKU);
+      //   addCircuit(circuit: circuitModel, autoSave: false);
+      //   addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);
+      //
+      //   if (listeningAreaId != null) {
+      //     final SubZone? subZone = getSubZoneForListeningArea(areaId: listeningAreaId);
+      //     if (subZone != null) {
+      //       addCircuitToSubZone(subZoneId: subZone.id, circuitId: circuitModel.id);
+      //     }
+      //
+      //     final Zone? zone = getZonesForListeningArea(areaId: listeningAreaId);
+      //     if (zone != null) {
+      //       addCircuitToZone(zoneId: zone.id, circuitId: circuitModel.id);
+      //     }
+      //   }
+      // }
 
       // final SubZone? subZone = getZonesForListeningArea(hardwareId: newHardware.id);
       // if(subZone == null){
@@ -352,7 +380,7 @@ extension HardwareViewModel on ProjectViewModel {
 
   HardwareComponent fromProductQueryModel(
     ProductQueryModel product, {
-    required Offset pos,
+    Offset? pos,
     required LocationModel locationEntity,
   }) {
     switch (product.type) {

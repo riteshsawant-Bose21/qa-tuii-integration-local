@@ -61,7 +61,7 @@ class NetworkSwitch extends HardwareComponent {
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
     'name': name,
-    'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+    'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
     'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
     'zAxis': zAxis,
     'assetImagePath': assetImagePath,
@@ -79,7 +79,7 @@ class NetworkSwitch extends HardwareComponent {
     return NetworkSwitch(
       id: json['id'] as String,
       name: json['name'] as String,
-      pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       zAxis: (json['zAxis'] as num).toDouble(),
       assetImagePath: json['assetImagePath'] as String,

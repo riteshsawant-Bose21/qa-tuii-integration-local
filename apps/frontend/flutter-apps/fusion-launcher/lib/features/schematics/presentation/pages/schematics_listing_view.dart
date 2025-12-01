@@ -308,7 +308,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
-                      pos: Offset.zero,
                     );
 
                     serviceLocator<ProjectViewModel>().addHardware(
@@ -394,7 +393,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
-                      pos: Offset.zero,
                     );
                     if (item.type == ProductType.dsps) {
                       serviceLocator<ProjectViewModel>().addHardware(
@@ -470,7 +468,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
-                      pos: Offset.zero,
                     );
 
                     serviceLocator<ProjectViewModel>().addHardware(
@@ -549,7 +546,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         floorId: floorId,
                       ),
                       name: item.name,
-                      pos: Offset.zero,
                       assetImagePath: item.assetPath,
                       price: item.price,
                       hardwareName: item.name,
@@ -568,7 +564,6 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         floorId: floorId,
                       ),
                       name: item.name,
-                      pos: Offset.zero,
                       assetImagePath: item.assetPath,
                       price: item.price,
                       hardwareName: item.name,

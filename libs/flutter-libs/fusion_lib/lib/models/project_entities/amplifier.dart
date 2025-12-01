@@ -111,7 +111,7 @@ class Amplifier extends HardwareComponent {
       'id': id,
       'hardwareName': hardwareName,
       'locationEntity': locationEntity.toJson(),
-      'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'zAxis': zAxis,
       'componentType': 'amplifier',

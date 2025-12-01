@@ -32,3 +32,4 @@ export 'project_entities/hardware_rack.dart';
 export 'project_entities/zone_functions.dart';
 export 'project_entities/mix_scenes.dart';
 export 'project_entities/priority_source_data.dart';
+export 'project_entities/equip_location.dart';

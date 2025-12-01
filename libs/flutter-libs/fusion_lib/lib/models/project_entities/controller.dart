@@ -67,7 +67,7 @@ class FusionController extends HardwareComponent {
     return <String, dynamic>{
       'id': id,
       'name': name,
-      'pos': {'x': pos.dx, 'y': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? {'x': wiringPos!.dx, 'y': wiringPos!.dy} : null,
       'zAxis': zAxis,
       'assetImagePath': assetImagePath,
@@ -87,7 +87,7 @@ class FusionController extends HardwareComponent {
     return FusionController(
       id: json['id'] as String?,
       name: json['name'] as String,
-      pos: Offset((json['pos']['x'] as num).toDouble(), (json['pos']['y'] as num).toDouble()),
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
       assetImagePath: json['assetImagePath'] as String,
