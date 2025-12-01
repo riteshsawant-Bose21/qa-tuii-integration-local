@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
-
 import '../../fusion_lib.dart';
 
 /// -------------------
@@ -35,6 +34,8 @@ class ProjectService {
   final SubZoneRepository subZones;
   final WiringConnectionRepository wiringConnection;
   final ProcessingBlockRepository processingBlocks;
+  final ZoneFunctionRepository zoneFunctions;
+  final PrioritySourceDataRepository prioritySourceData;
 
   final RelationshipManager relationships;
 
@@ -44,7 +45,7 @@ class ProjectService {
   List<Map<String, dynamic>> undoStack = [];
   List<Map<String, dynamic>> redoStack = [];
 
-  int get maxHistory => 25; // cap history to avoid unbounded memory growth
+  int get maxHistory => 25;
 
   ProjectService({
     required this.id,
@@ -74,6 +75,8 @@ class ProjectService {
     WiringConnectionRepository? wiringConnection,
     ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
+    ZoneFunctionRepository? zoneFunctions,
+    PrioritySourceDataRepository? prioritySourceData,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -86,7 +89,9 @@ class ProjectService {
        circuits = circuits ?? CircuitRepository(),
        wiringConnection = wiringConnection ?? WiringConnectionRepository(),
        processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
-       relationships = relationships ?? RelationshipManager();
+       zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
+       relationships = relationships ?? RelationshipManager(),
+       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository();
 
   ProjectService copyWith({
     String? id,
@@ -115,7 +120,9 @@ class ProjectService {
     WiringConnectionRepository? wiringConnection,
     ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
+    ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
+    PrioritySourceDataRepository? prioritySourceData,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -145,6 +152,8 @@ class ProjectService {
       processingBlocks: processingBlocks ?? this.processingBlocks,
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
+      zoneFunctions: zoneFunctions ?? this.zoneFunctions,
+      prioritySourceData: prioritySourceData ?? this.prioritySourceData,
     );
 
     // Preserve undo/redo stacks
@@ -154,11 +163,7 @@ class ProjectService {
   }
 
   /// -------------------
-  /// Queries
-  /// -------------------
-
-  /// -------------------
-  /// JSON
+  /// JSON Serialization
   /// -------------------
 
   Map<String, dynamic> toJson() {
@@ -183,25 +188,15 @@ class ProjectService {
       "subZones": subZones.toJson((sz) => sz.toJson()),
       "sourceSet": sourceSets.toJson((m) => m.toJson()),
       "hardware": hardware.toJson((HardwareComponent c) {
-        if (c is Source) {
-          return c.toJson();
-        } else if (c is Speaker) {
-          return c.toJson();
-        } else if (c is FusionDsp) {
-          return c.toJson();
-        } else if (c is FusionController) {
-          return c.toJson();
-        } else if (c is Amplifier) {
-          return c.toJson();
-        } else if (c is FusionEndpoints) {
-          return c.toJson();
-        } else if (c is HardwareRack) {
-          return c.toJson();
-        } else if (c is NetworkSwitch) {
-          return c.toJson();
-        } else {
-          return (c as GenericHardwareComponent).toJson();
-        }
+        if (c is Source) return c.toJson();
+        if (c is Speaker) return c.toJson();
+        if (c is FusionDsp) return c.toJson();
+        if (c is FusionController) return c.toJson();
+        if (c is Amplifier) return c.toJson();
+        if (c is FusionEndpoints) return c.toJson();
+        if (c is HardwareRack) return c.toJson();
+        if (c is NetworkSwitch) return c.toJson();
+        return (c as GenericHardwareComponent).toJson();
       }),
       "fusionDevices": fusionDevices.toJson((f) => f.toJson()),
       "suggestedFusionDevices": suggestedFusionDevices.toJson((f) => f.toJson()),
@@ -210,6 +205,8 @@ class ProjectService {
       "wiringConnection": wiringConnection.toJson((wc) => wc.toJson()),
       "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
+      "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
+      "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
     };
   }
 
@@ -236,6 +233,7 @@ class ProjectService {
     service.zones.fromJsonList(json["zones"], (m) => Zone.fromJson(m), "id");
     service.subZones.fromJsonList(json["subZones"], (m) => SubZone.fromJson(m), "id");
     service.sourceSets.fromJsonList(json["sourceSet"], (m) => SourceSet.fromJson(m), "id");
+
     service.hardware.fromJsonList(json["hardware"], (dynamic e) {
       final Map<String, dynamic> m = e as Map<String, dynamic>;
       if (m.containsKey('componentType') && m['componentType'] == 'source') {
@@ -258,12 +256,16 @@ class ProjectService {
         return GenericHardwareComponent.fromJson(m);
       }
     }, "id");
+
     service.fusionDevices.fromJsonList(json["fusionDevices"], (m) => FusionDsp.fromJson(m), "id");
     service.suggestedFusionDevices.fromJsonList(json["suggestedFusionDevices"], (m) => FusionDsp.fromJson(m), "id");
     service.amplifiers.fromJsonList(json["amplifiers"], (m) => Amplifier.fromJson(m), "id");
     service.circuits.fromJsonList(json["circuits"], (m) => CircuitModel.fromJson(m), "id");
     service.wiringConnection.fromJsonList(json["wiringConnection"], (m) => WiringConnectionModel.fromJson(m), "id");
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
+    service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
+    service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
+
     service.relationships.fromJson(json["relationships"]);
 
     return service;

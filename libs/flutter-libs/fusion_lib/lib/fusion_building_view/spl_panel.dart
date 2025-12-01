@@ -669,8 +669,8 @@ class _SplPanelState extends State<SplPanel> {
   }) {
     return SizedBox(
       height: 32,
-      child: DropdownButtonFormField<T>(
-        // initialValue: value,
+      child: DropdownButton<T>(
+        value: value,
         isExpanded: true,
         style: const TextStyle(fontSize: 12, color: Colors.black),
         items: items
@@ -685,13 +685,7 @@ class _SplPanelState extends State<SplPanel> {
             )
             .toList(),
         onChanged: onChanged,
-        decoration: const InputDecoration(
-          border: InputBorder.none,
-          enabledBorder: InputBorder.none,
-          focusedBorder: InputBorder.none,
-          errorBorder: InputBorder.none,
-          disabledBorder: InputBorder.none,
-        ),
+        underline: Container(),
         icon: const Icon(Icons.arrow_drop_down, size: 16),
       ),
     );

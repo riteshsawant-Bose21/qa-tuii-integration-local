@@ -65,6 +65,23 @@ extension HardwareViewModel on ProjectViewModel {
           projectManager.addHardware(hardware.getClone());
         }
       }
+      if (hardware is Source) {
+        final SourceType spurceType = (hardware).type;
+        final List<String> chain = switch (spurceType) {
+          SourceType.mic => <String>['peq', 'gate', 'compressor', 'agc'],
+          SourceType.media => <String>['peq', 'compressor', 'agc'],
+          SourceType.generic => <String>['peq', 'compressor'],
+        };
+        for (final String algo in chain) {
+          addProcessingBlockToSource(
+            processingBlock: ProcessingBlockModel.sourceBlocks.firstWhere(
+              (ProcessingBlockModel element) => element.algorithmId == algo,
+            ),
+            sourceId: hardware.id,
+            autoSave: false,
+          );
+        }
+      }
       if (autoSave) {
         saveProject();
       }
@@ -345,13 +362,12 @@ extension HardwareViewModel on ProjectViewModel {
           name: product.name,
           pos: pos,
           zAxis: 300.0,
-          // 200 cm default height
           speakerSKU: product.sku,
           gain: 0.0,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
-          pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
+          pitch: product.mountingType == "pendant" || product.mountingType == "ceiling" ? 90.0 : 0.0,
           inputPortsData: <PortData>[
             PortData(
               name: "In",
@@ -365,11 +381,12 @@ extension HardwareViewModel on ProjectViewModel {
           outputPortsData: <PortData>[],
         );
       case ProductType.sources:
+        final SourceConnectionType connectionType = SourceData.getSourceConnectionType(product.sku);
         final SourceType type = SourceData.getSourceType(product.sku);
-        final PortType portType = switch (type) {
-          SourceType.analogInput || SourceType.aes67input => PortType.analogOutput,
-          SourceType.bluetooth => PortType.bleOut,
-          SourceType.usb => PortType.usbOut,
+        final PortType portType = switch (connectionType) {
+          SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+          SourceConnectionType.bluetooth => PortType.bleOut,
+          SourceConnectionType.usb => PortType.usbOut,
         };
         return Source(
           locationEntity: locationEntity,
@@ -379,6 +396,7 @@ extension HardwareViewModel on ProjectViewModel {
           sku: product.sku,
           price: product.price,
           hardwareName: product.name,
+          connectionType: connectionType,
           type: type,
           inputPortsData: <PortData>[],
           outputPortsData: <PortData>[
@@ -386,15 +404,15 @@ extension HardwareViewModel on ProjectViewModel {
               name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: switch (type) {
-                SourceType.analogInput || SourceType.aes67input => <PortType>[
+              compatibleTypes: switch (connectionType) {
+                SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
                   PortType.dspAnalogInput,
                   PortType.endpointInput,
                 ],
-                SourceType.bluetooth => <PortType>[
+                SourceConnectionType.bluetooth => <PortType>[
                   PortType.bleIn,
                 ],
-                SourceType.usb => <PortType>[PortType.usbIn],
+                SourceConnectionType.usb => <PortType>[PortType.usbIn],
               },
               type: portType,
               description: portType.description,
