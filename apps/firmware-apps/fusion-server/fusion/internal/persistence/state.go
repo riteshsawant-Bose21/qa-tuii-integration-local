@@ -107,13 +107,6 @@ func (sm *StateManager) Start(memberlist *memberlist.Memberlist) {
 	}()
 }
 
-// GetNode returns the node name
-func (sm *StateManager) GetNode() string {
-	sm.RLock()
-	defer sm.RUnlock()
-	return sm.version.NodeID
-}
-
 func (sm *StateManager) SetMemberlist(memberlist *memberlist.Memberlist) {
 	sm.Lock()
 	defer sm.Unlock()
@@ -313,6 +306,7 @@ func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 //	ApplyPatch  = merges into existing hierarchical state
 //	ConfigUpdate/ApplyUpdate = replicate authoritative state snapshots
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
+
 	sm.Lock()
 	defer sm.Unlock()
 
@@ -329,8 +323,6 @@ func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
 		// Adopt new epoch and counter
 		sm.version.Epoch = incoming.Epoch
 		sm.version.Counter = incoming.Counter
-		sm.version.NodeID = incoming.NodeID
-		// Continue to apply update
 		goto apply
 	}
 
@@ -512,6 +504,10 @@ func (sm *StateManager) SetVersion(newVersion api.Version) {
 	sm.Lock()
 	defer sm.Unlock()
 	sm.version = newVersion
+}
+
+func (sm *StateManager) GetMemberList() *memberlist.Memberlist {
+	return sm.memberlist
 }
 
 // validateState fetches and compares state from other cluster members

@@ -66,6 +66,11 @@ func NewPersistence(dbPath string, stateManager *StateManager) (*Persistence, er
 		logger.Debug("Successfully recreated new database at %s", dbPath)
 	}
 
+	// Ensure audio directory exists
+	if err := os.MkdirAll(api.AudioFilesLocation, 0755); err != nil {
+		return nil, fmt.Errorf("mkdir %s: %w", api.AudioFilesLocation, err)
+	}
+
 	persistence := &Persistence{
 		dbPath:       dbPath,
 		stateManager: stateManager,
@@ -463,6 +468,11 @@ func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
 
 func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 
+	// If metadata already exists, do not overwrite.
+	if existing := bucket.Get([]byte(keyMetadata)); existing != nil {
+		return nil
+	}
+
 	newHash, err := p.computeHash()
 	if err != nil {
 		return fmt.Errorf("failed to compute DB hash: %w", err)
@@ -479,11 +489,7 @@ func (p *Persistence) initializeMetadata(bucket *bbolt.Bucket) error {
 		return fmt.Errorf("failed to marshal metadata: %w", err)
 	}
 
-	if err := bucket.Put([]byte(keyMetadata), data); err != nil {
-		return fmt.Errorf("failed to save metadata: %w", err)
-	}
-
-	return nil
+	return bucket.Put([]byte(keyMetadata), data)
 }
 
 // saveWorker saves state with debounce
@@ -535,11 +541,6 @@ func (p *Persistence) RemoveAudioFile(id string) error {
 // SyncAudioFile retrieves an audio file from another node and stores metadata.
 func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 	finalPath := filepath.Join(api.AudioFilesLocation, update.Metadata.Filename)
-
-	// Ensure audio directory exists
-	if err := os.MkdirAll(api.AudioFilesLocation, 0755); err != nil {
-		return fmt.Errorf("mkdir %s: %w", api.AudioFilesLocation, err)
-	}
 
 	// Attempt to open a temp file with O_CREATE|O_EXCL
 	// If the final file already exists, return early.
