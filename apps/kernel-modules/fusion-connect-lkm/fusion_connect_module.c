@@ -16,7 +16,7 @@ static int __init fusion_cn_init(void)
 {
   int ret;
   strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
-  mgr.ptp.ptp_timing_mode = TIMING_HRTIMER;
+  mgr.ptp.ptp_timing_mode = TIMING_GPT;
   mgr.debug = mgr.rtp.debug = debug;
 
   ret = fusion_cn_mgr_init(&mgr);

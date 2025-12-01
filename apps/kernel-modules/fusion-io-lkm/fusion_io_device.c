@@ -1268,10 +1268,7 @@ static struct base_device *new_default_base_device(const char *device_id)
     if (!device_id || !device_id[0])
         return NULL;
 
-    for (size_t i = 0; i < ARRAY_SIZE(default_bds); ++i) {
-        if (default_bds[i] == NULL)
-            continue;
-
+    for (size_t i = 0; default_bd_types[i] != BD_TYPE_NONE; ++i) {
         if (strcasecmp(device_id, default_bds[i]->data.model) != 0)
             continue;
 
