@@ -96,6 +96,7 @@ int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
                                void *ctx, struct module *owner)
 {
     struct fusion_gpt *g;
+    struct device *dev;
     int ret = -ENODEV;
 
     if (!ops || !ops->tick || !owner)
@@ -103,8 +104,14 @@ int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
 
     /* We only have one shim instance, so find the associated device */
     /* Use class or driver_data; here we rely on a single registered device */
-    g = dev_get_drvdata(bus_find_device_by_name(&platform_bus_type, NULL, "fusion-gpt.0"));
-    if (!g) return -ENODEV;
+    dev = bus_find_device_by_name(&platform_bus_type, NULL, "fusion-gpt.0");
+    if (!dev)
+        return -ENODEV;
+
+    g = dev_get_drvdata(dev);
+    put_device(dev);
+    if (!g)
+        return -ENODEV;
 
     mutex_lock(&g->ops_lock);
     if (g->ops) {
@@ -126,8 +133,16 @@ EXPORT_SYMBOL(fusion_gpt_register_client);  /* non-GPL */
 void fusion_gpt_unregister_client(void)
 {
     struct fusion_gpt *g;
-    g = dev_get_drvdata(bus_find_device_by_name(&platform_bus_type, NULL, "fusion-gpt.0"));
-    if (!g) return;
+    struct device *dev;
+
+    dev = bus_find_device_by_name(&platform_bus_type, NULL, "fusion-gpt.0");
+    if (!dev)
+        return;
+
+    g = dev_get_drvdata(dev);
+    put_device(dev);
+    if (!g)
+        return;
 
     mutex_lock(&g->ops_lock);
     if (g->ops_owner)
