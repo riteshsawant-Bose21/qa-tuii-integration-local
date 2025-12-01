@@ -45,7 +45,7 @@ const struct base_device bd_fusion_c1_evk = {
         .sn = "tbd",
         .type = BD_TYPE_FUSION_C1_EVK
     },
-    .num_gpios = 7,
+    .num_gpios = 8,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_GPIO1_IO5",
@@ -76,6 +76,12 @@ const struct base_device bd_fusion_c1_evk = {
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
             .num = 10 // GPIO1_IO10
+        },
+        {
+            .name = "gpio_amp_net_wake",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 11 // GPIO1_IO11
         },
         {
             .name = "GPIO1_IO14",
