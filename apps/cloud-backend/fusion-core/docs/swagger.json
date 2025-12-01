@@ -19,7 +19,6 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
     "basePath": "/api/v1",
     "paths": {
         "/auth/status": {
@@ -970,13 +969,6 @@
                         "type": "string",
                         "description": "Project ID",
                         "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "userId",
                         "in": "path",
                         "required": true
                     },

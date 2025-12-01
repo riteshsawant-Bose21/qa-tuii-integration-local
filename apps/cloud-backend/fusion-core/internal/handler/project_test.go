@@ -149,7 +149,7 @@ func setupTest() (*gin.Engine, *MockProjectService) {
 
 	// Inject authenticated user into context for all test requests
 	r.Use(func(c *gin.Context) {
-		c.Set("user_auth", types.UserAuthorizationResponse{User: types.UserInfo{ID: testUserID, Email: testUserEmail}})
+		c.Set("user_auth", &types.UserAuthorizationResponse{User: types.UserInfo{ID: testUserID, Email: testUserEmail}})
 		c.Next()
 	})
 
@@ -263,10 +263,80 @@ func TestCreateProject(t *testing.T) {
 		assert.Equal(t, http.StatusBadRequest, w.Code)
 		mockSvc.AssertNotCalled(t, "CreateProject")
 	})
+
+	t.Run("returns validation error on negative budget amount", func(t *testing.T) {
+		r, mockSvc := setupTest()
+		project := &types.ProjectCreateRequest{
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Application:     "test-app",
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   -1000, // negative amount should fail validation
+				Currency: "USD",
+			},
+		}
+		body, _ := json.Marshal(project)
+		req := httptest.NewRequest(http.MethodPost, projectsEndpoint, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusBadRequest, w.Code)
+		assert.Contains(t, w.Body.String(), "budget amount must be non-negative")
+		mockSvc.AssertNotCalled(t, "CreateProject")
+	})
+
+	t.Run("returns error when user_auth context missing", func(t *testing.T) {
+		// Create router without authentication middleware
+		gin.SetMode(gin.TestMode)
+		r := gin.New()
+		mockSvc := new(MockProjectService)
+		handler := NewProjectHandler(mockSvc)
+		r.POST(projectsEndpoint, handler.CreateProject)
+
+		project := &types.ProjectCreateRequest{
+			Name:            testProjectName,
+			Description:     testProjectDesc,
+			Application:     "test-app",
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+		body, _ := json.Marshal(project)
+		req := httptest.NewRequest(http.MethodPost, projectsEndpoint, bytes.NewBuffer(body))
+		req.Header.Set(contentTypeHeader, applicationJSON)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		mockSvc.AssertNotCalled(t, "CreateProject")
+	})
 }
 
 func TestGetAllProjects(t *testing.T) {
 	r, mockSvc := setupTest()
+
+	t.Run("returns unauthorized when user_auth context missing", func(t *testing.T) {
+		// Create router without authentication middleware
+		gin.SetMode(gin.TestMode)
+		r := gin.New()
+		mockSvc := new(MockProjectService)
+		handler := NewProjectHandler(mockSvc)
+		r.GET(projectsEndpoint, handler.GetAllProjects)
+
+		req := httptest.NewRequest(http.MethodGet, projectsEndpoint, nil)
+		w := httptest.NewRecorder()
+
+		r.ServeHTTP(w, req)
+
+		assert.Equal(t, http.StatusUnauthorized, w.Code)
+		mockSvc.AssertNotCalled(t, "GetAllProjects")
+	})
 
 	t.Run("successfully retrieves projects", func(t *testing.T) {
 		projects := []types.Project{

@@ -582,7 +582,6 @@ definitions:
         example: active
         type: string
     type: object
-host: localhost:8080
 info:
   contact:
     email: support@swagger.io
@@ -1211,11 +1210,6 @@ paths:
       - description: Project ID
         in: path
         name: projectId
-        required: true
-        type: string
-      - description: User ID
-        in: path
-        name: userId
         required: true
         type: string
       - description: Star/unstar request

@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -85,10 +86,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 	params := types.GetAllProjectsParams{}
 
 	user_auth, exists := ctx.Get("user_auth")
-
-	user := user_auth.(*types.UserAuthorizationResponse)
-
 	if !exists {
+		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
+		return
+	}
+
+	user, ok := user_auth.(*types.UserAuthorizationResponse)
+	if !ok || user == nil {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
@@ -179,17 +183,20 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 
 		if err.Error() == types.ErrMsgUserNotFound {
 			ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: err.Error()})
+			return
 		}
 
 		// Check if it's authorization errors
 		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
 			err.Error() == types.ErrMsgProjectArchived ||
-			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) {
+			err.Error() == types.ErrMsgForbidden ||
+			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) ||
+			strings.Contains(err.Error(), types.ErrMsgFailedToGetUserByEmail) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: err.Error()})
 			return
 		}
-		// All other errors are internal server errors
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		// All other errors are internal server errors - temporarily log for debugging
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: fmt.Sprintf("DEBUG ERROR: %s", err.Error())})
 		return
 	}
 	ctx.JSON(http.StatusOK, response)
@@ -237,7 +244,9 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 		if err.Error() == types.ErrMsgUserNotAssignedToProject ||
 			err.Error() == types.ErrMsgUserNotFound ||
 			err.Error() == types.ErrMsgProjectArchived ||
-			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) {
+			err.Error() == types.ErrMsgForbidden ||
+			strings.Contains(err.Error(), types.ErrMsgProjectLockedByUser) ||
+			strings.Contains(err.Error(), types.ErrMsgFailedToGetUserByEmail) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: err.Error()})
 			return
 		}
@@ -351,7 +360,6 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param projectId path string true "Project ID"
-// @Param userId path string true "User ID"
 // @Param body body types.ProjectStarRequest true "Star/unstar request"
 // @Success 204 "Successfully updated project star status"
 // @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload"
@@ -361,7 +369,6 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Router /projects/{projectId}/star/{userId} [post]
 func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
-	userID := ctx.Param("userId")
 
 	user_auth, exists := ctx.Get("user_auth")
 	if !exists {
@@ -373,15 +380,6 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
 		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgProjectNotFound})
-		return
-	}
-	if !validation.IsValidUUID(userID) {
-		ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: types.ErrMsgUserNotFound})
-		return
-	}
-
-	if user.User.ID != userID {
-		ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: types.ErrMsgForbidden})
 		return
 	}
 
@@ -399,9 +397,9 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 
 	var err error
 	if req.IsStarred {
-		err = h.project.StarProject(ctx, projectID, userID)
+		err = h.project.StarProject(ctx, projectID, user.User.ID)
 	} else {
-		err = h.project.UnstarProject(ctx, projectID, userID)
+		err = h.project.UnstarProject(ctx, projectID, user.User.ID)
 	}
 
 	if err != nil {
@@ -482,7 +480,8 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 		}
 		// Check if it's authorization errors
 		if errorMsg == types.ErrMsgUserNotAssignedToProject ||
-			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
+			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) ||
+			strings.Contains(errorMsg, types.ErrMsgFailedToGetUserByEmail) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return
 		}
@@ -554,6 +553,8 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 		// Check if it's authorization errors
 		if errorMsg == types.ErrMsgUserNotAssignedToProject || errorMsg == types.ErrMsgUserNotFound ||
 			errorMsg == types.ErrMsgProjectNotLockedByUser ||
+			errorMsg == types.ErrMsgFailedToGetUserByEmail ||
+			errorMsg == types.ErrMsgForbidden ||
 			strings.Contains(errorMsg, types.ErrMsgProjectLockedByUser) {
 			ctx.JSON(http.StatusForbidden, types.ErrorResponse{Message: errorMsg})
 			return

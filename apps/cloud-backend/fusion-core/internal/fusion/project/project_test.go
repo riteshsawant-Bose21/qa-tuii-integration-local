@@ -247,6 +247,17 @@ func TestCreateProject(t *testing.T) {
 			presignFileURL: "",
 			presignFileErr: errors.New("put error"),
 		},
+		{
+			name: "transaction rollback on user assignment failure",
+			project: &types.ProjectCreateRequest{
+				Name: "Project With User Assignment Error",
+			},
+			mockID:         "123e4567-e89b-12d3-a456-426614174003",
+			mockErr:        nil,
+			expectedID:     "",
+			expectedErr:    fmt.Errorf("failed to insert project: %v", errors.New("user assignment failed")),
+			expectResponse: false,
+		},
 	}
 
 	for _, tt := range tests {
@@ -279,13 +290,18 @@ func TestCreateProject(t *testing.T) {
 			mockDB.On("Insert", mock.Anything, tt.project, "test-account-id", mock.Anything).Return(tt.mockID, tt.mockErr)
 			// Always expect InsertProjectUser to be called if Insert succeeds
 			if tt.mockErr == nil {
-				mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, "test-user-id", mock.Anything).Return(nil)
-				// Presign expectations when flags set
-				if tt.project.IsProjectFileCreated {
-					mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
-				}
-				if tt.project.IsProjectThumbnailCreated {
-					mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
+				// Special case for user assignment failure test
+				if tt.name == "transaction rollback on user assignment failure" {
+					mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, "test-user-id", mock.Anything).Return(errors.New("user assignment failed"))
+				} else {
+					mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, "test-user-id", mock.Anything).Return(nil)
+					// Presign expectations when flags set
+					if tt.project.IsProjectFileCreated {
+						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
+					}
+					if tt.project.IsProjectThumbnailCreated {
+						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
+					}
 				}
 			}
 
@@ -430,8 +446,12 @@ func TestGetAllProjects(t *testing.T) {
 				assert.Equal(t, 1, response.Page)
 				assert.Equal(t, 1, response.TotalPages)
 				for i, p := range response.Data {
-					assert.Equal(t, tt.mockPresignURL, p.ProjectFileURL)
-					assert.Equal(t, tt.mockPresignURL, p.ThumbnailURL)
+					if p.ProjectFileURL != nil {
+						assert.Equal(t, tt.mockPresignURL, *p.ProjectFileURL)
+					}
+					if p.ThumbnailURL != nil {
+						assert.Equal(t, tt.mockPresignURL, *p.ThumbnailURL)
+					}
 					assert.Equal(t, tt.mockProjects[i].ID, p.ID)
 				}
 			}

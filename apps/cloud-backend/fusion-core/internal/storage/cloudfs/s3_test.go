@@ -19,8 +19,9 @@ const (
 )
 
 type mockS3Client struct {
-	getObjectFunc func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
-	putObjectFunc func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	getObjectFunc  func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
+	putObjectFunc  func(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	headObjectFunc func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 }
 
 func (m *mockS3Client) GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error) {
@@ -28,6 +29,12 @@ func (m *mockS3Client) GetObject(ctx context.Context, params *s3.GetObjectInput,
 }
 func (m *mockS3Client) PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error) {
 	return m.putObjectFunc(ctx, params, optFns...)
+}
+func (m *mockS3Client) HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+	if m.headObjectFunc != nil {
+		return m.headObjectFunc(ctx, params, optFns...)
+	}
+	return &s3.HeadObjectOutput{}, nil
 }
 
 type mockPresignClient struct {
@@ -43,6 +50,11 @@ func (m *mockPresignClient) PresignPutObject(ctx context.Context, params *s3.Put
 }
 
 func TestPresignGet(t *testing.T) {
+	mockClient := &mockS3Client{
+		headObjectFunc: func(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error) {
+			return &s3.HeadObjectOutput{}, nil
+		},
+	}
 	mockPresign := &mockPresignClient{
 		presignGetFunc: func(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.PresignOptions)) (*v4.PresignedHTTPRequest, error) {
 			return &v4.PresignedHTTPRequest{URL: "https://example.com/get"}, nil
@@ -50,6 +62,7 @@ func TestPresignGet(t *testing.T) {
 	}
 	bucket := &S3BucketHandle{
 		bucketName:    testBucketName,
+		client:        mockClient,
 		presignClient: mockPresign,
 	}
 	url, err := bucket.PresignGet(context.Background(), testObjectKey, time.Minute)

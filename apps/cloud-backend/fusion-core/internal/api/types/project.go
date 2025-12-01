@@ -79,8 +79,8 @@ type Project struct {
 	IsStarred       bool            `json:"is_starred" example:"true"`
 	LockedByUser    string          `json:"locked_by_user" example:"user456"`
 	Budget          Budget          `json:"budget"`
-	ProjectFileURL  string          `json:"project_file_url" example:"https://storage.example.com/projects/123e4567/project.json"`
-	ThumbnailURL    string          `json:"thumbnail_url" example:"https://storage.example.com/projects/123e4567/thumbnail.jpg"`
+	ProjectFileURL  *string         `json:"project_file_url" example:"https://storage.example.com/projects/123e4567/project.json"`
+	ThumbnailURL    *string         `json:"thumbnail_url" example:"https://storage.example.com/projects/123e4567/thumbnail.jpg"`
 	CreatedAt       time.Time       `json:"created_at" example:"2023-10-15T14:30:00Z"`
 	UpdatedAt       time.Time       `json:"updated_at" example:"2023-10-20T16:45:00Z"`
 }

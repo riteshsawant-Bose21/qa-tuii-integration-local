@@ -91,21 +91,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			expectedErr: true,
 			checkPhase:  false,
 		},
-		{
-			name: "invalid request - missing account ID",
-			request: &types.ProjectCreateRequest{
-				Name:            testProjectName,
-				Application:     testApplication,
-				EnvironmentType: types.EnvironmentTypeIndoor,
-				ProjectPhase:    types.ProjectPhaseProposal,
-				Budget: types.Budget{
-					Amount:   1000.0,
-					Currency: "USD",
-				},
-			},
-			expectedErr: true,
-			checkPhase:  false,
-		},
+
 		{
 			name: "invalid request - negative budget",
 			request: &types.ProjectCreateRequest{
@@ -449,4 +435,71 @@ func TestValidateProjectSortField(t *testing.T) {
 	assert.True(t, isValidProjectSortField("created_at"))
 	assert.True(t, isValidProjectSortField("updated_at"))
 	assert.False(t, isValidProjectSortField("name"))
+}
+
+func TestValidateProjectCreateRequest_EdgeCases(t *testing.T) {
+	t.Run("whitespace-only name should fail", func(t *testing.T) {
+		req := &types.ProjectCreateRequest{
+			Name:            "   ", // Only whitespace
+			Application:     testApplication,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+		err := ValidateProjectCreateRequest(req)
+		assert.Error(t, err)
+	})
+
+	t.Run("zero budget amount should pass", func(t *testing.T) {
+		req := &types.ProjectCreateRequest{
+			Name:            testProjectName,
+			Application:     testApplication,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   0, // Zero should be valid
+				Currency: "USD",
+			},
+		}
+		err := ValidateProjectCreateRequest(req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("maximum valid currency length", func(t *testing.T) {
+		req := &types.ProjectCreateRequest{
+			Name:            testProjectName,
+			Application:     testApplication,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "EUR", // Valid 3-letter currency
+			},
+		}
+		err := ValidateProjectCreateRequest(req)
+		assert.NoError(t, err)
+	})
+}
+
+func TestValidateProjectUpdateRequest_EdgeCases(t *testing.T) {
+	t.Run("partial update with valid name only", func(t *testing.T) {
+		req := &types.ProjectUpdateRequest{
+			Name: "New Valid Name",
+			// Other fields empty
+		}
+		err := ValidateProjectUpdateRequest(req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("budget with currency but zero amount should pass", func(t *testing.T) {
+		req := &types.ProjectUpdateRequest{
+			Name: "Valid Name",
+			Budget: types.Budget{
+				Amount:   0, // Zero with currency should be valid
+				Currency: "USD",
+			},
+		}
+		err := ValidateProjectUpdateRequest(req)
+		assert.NoError(t, err)
+	})
 }
