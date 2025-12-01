@@ -414,10 +414,8 @@ func (suite *ProjectIntegrationTestSuite) makeRequestWithUser(method, path strin
 
 	// Debug response for failures
 	if w.Code >= 400 {
-		fmt.Printf("DEBUG - Request failed: %s %s -> Status: %d, Body: %s\n", method, path, w.Code, w.Body.String())
 		if body != nil {
-			bodyBytes, _ := json.Marshal(body)
-			fmt.Printf("DEBUG - Request body was: %s\n", string(bodyBytes))
+			_, _ = json.Marshal(body)
 		}
 	}
 
