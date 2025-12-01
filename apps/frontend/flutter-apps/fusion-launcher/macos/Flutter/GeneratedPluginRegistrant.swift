@@ -6,6 +6,7 @@ import FlutterMacOS
 import Foundation
 
 import a_bridge
+import auth0_flutter
 import device_info_plus
 import file_picker
 import file_selector_macos
@@ -18,6 +19,7 @@ import webview_flutter_wkwebview
 
 func RegisterGeneratedPlugins(registry: FlutterPluginRegistry) {
   ABridgePlugin.register(with: registry.registrar(forPlugin: "ABridgePlugin"))
+  Auth0FlutterPlugin.register(with: registry.registrar(forPlugin: "Auth0FlutterPlugin"))
   DeviceInfoPlusMacosPlugin.register(with: registry.registrar(forPlugin: "DeviceInfoPlusMacosPlugin"))
   FilePickerPlugin.register(with: registry.registrar(forPlugin: "FilePickerPlugin"))
   FileSelectorPlugin.register(with: registry.registrar(forPlugin: "FileSelectorPlugin"))

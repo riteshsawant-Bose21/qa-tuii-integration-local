@@ -64,6 +64,9 @@ dependencies:
   lucide_icons_flutter: ^3.1.6
 
 
+  # Authentication
+  auth0_flutter: ^1.14.0
+
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
     

@@ -58,7 +58,9 @@ void _setupMacOSDeepLinkListener() {
   // Use MethodChannel to receive the URL from native code
   const MethodChannel channel = MethodChannel('custom_url_scheme_channel');
   channel.setMethodCallHandler((MethodCall call) async {
-    debugPrint('Received method call: ${call.method} with arguments: ${call.arguments}');
+    debugPrint(
+      'Received method call: ${call.method} with arguments: ${call.arguments}',
+    );
     if (call.method == 'onCustomUrlScheme') {
       final String url = call.arguments as String;
       // Handle the URL here
