@@ -30,7 +30,7 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void deleteScene({required String sceneId, bool autoSave = true}) {
+  void removeScene({required String sceneId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
@@ -239,7 +239,7 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void deleteSceneSet({required String sceneSetId, bool autoSave = true}) {
+  void removeSceneSet({required String sceneSetId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();

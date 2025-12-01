@@ -143,7 +143,7 @@ extension SceneService on ProjectService {
             )
             .toList();
       case SceneActionType.gpOut:
-        return gpioConfig
+        return gpioConfigs
             .getAll()
             .where((gpio) => (gpio.direction == GpioDirection.output))
             .map(

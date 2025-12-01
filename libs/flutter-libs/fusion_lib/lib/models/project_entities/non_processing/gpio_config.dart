@@ -9,10 +9,36 @@ enum GpiAction {
   voltageTrigger,
 }
 
+extension GpiActionExtension on GpiAction {
+  String get displayName {
+    switch (this) {
+      case GpiAction.activeHigh:
+        return "Active High";
+      case GpiAction.activeLow:
+        return "Active Low";
+      case GpiAction.voltageTrigger:
+        return "Voltage Trigger";
+    }
+  }
+}
+
 enum GpoAction {
   activeHigh,
   activeLow,
   openCollector,
+}
+
+extension GpoActionExtension on GpoAction {
+  String get displayName {
+    switch (this) {
+      case GpoAction.activeHigh:
+        return "Active High";
+      case GpoAction.activeLow:
+        return "Active Low";
+      case GpoAction.openCollector:
+        return "Open Collector";
+    }
+  }
 }
 
 class GpioConfig {

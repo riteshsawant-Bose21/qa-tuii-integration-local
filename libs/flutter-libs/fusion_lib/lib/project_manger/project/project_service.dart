@@ -39,7 +39,8 @@ class ProjectService {
   final ScenesRepository scenes;
   final SceneActionRepository sceneActions;
   final SceneSetRepository sceneSets;
-  final GPIORepository gpioConfig;
+  final GPIORepository gpioConfigs;
+  final SchedulerRepository schedulerConfig;
 
   final RelationshipManager relationships;
 
@@ -85,6 +86,7 @@ class ProjectService {
     SceneActionRepository? sceneActionRepository,
     SceneSetRepository? sceneSetRepository,
     GPIORepository? gpioRepository,
+    SchedulerRepository? schedulerConfig,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -103,7 +105,8 @@ class ProjectService {
        scenes = scenesRepository ?? ScenesRepository(),
        sceneActions = sceneActionRepository ?? SceneActionRepository(),
        sceneSets = sceneSetRepository ?? SceneSetRepository(),
-       gpioConfig = gpioRepository ?? GPIORepository();
+       gpioConfigs = gpioRepository ?? GPIORepository(),
+       schedulerConfig = schedulerConfig ?? SchedulerRepository();
 
   ProjectService copyWith({
     String? id,
@@ -139,6 +142,7 @@ class ProjectService {
     SceneActionRepository? sceneActionRepository,
     SceneSetRepository? sceneSetRepository,
     GPIORepository? gpioRepository,
+    SchedulerRepository? schedulerConfig,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -173,7 +177,8 @@ class ProjectService {
       scenesRepository: scenesRepository ?? scenes,
       sceneActionRepository: sceneActionRepository ?? sceneActions,
       sceneSetRepository: sceneSetRepository ?? sceneSets,
-      gpioRepository: gpioRepository ?? gpioConfig,
+      gpioRepository: gpioRepository ?? gpioConfigs,
+      schedulerConfig: schedulerConfig ?? this.schedulerConfig,
     );
 
     // Preserve undo/redo stacks
@@ -230,7 +235,8 @@ class ProjectService {
       "scenesRepository": scenes.toJson((s) => s.toJson()),
       "sceneActions": sceneActions.toJson((sa) => sa.toJson()),
       "sceneSetsRepository": sceneSets.toJson((ss) => ss.toJson()),
-      "gpioConfig": gpioConfig.toJson((g) => g.toJson()),
+      "gpioConfig": gpioConfigs.toJson((g) => g.toJson()),
+      "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
     };
   }
 
@@ -292,7 +298,8 @@ class ProjectService {
     service.scenes.fromJsonList(json["scenesRepository"], (m) => SceneModel.fromJson(m), "id");
     service.sceneActions.fromJsonList(json["sceneActions"], (m) => SceneActionModel.fromJson(m), "id");
     service.sceneSets.fromJsonList(json["sceneSetsRepository"], (m) => SceneSetModel.fromJson(m), "id");
-    service.gpioConfig.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
+    service.gpioConfigs.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
+    service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

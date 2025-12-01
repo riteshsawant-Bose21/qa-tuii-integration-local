@@ -62,3 +62,11 @@ export 'mix_scenes/mix_scenes_service.dart';
 //scenes
 export 'scenes/scene_manager.dart';
 export 'scenes/scene_service.dart';
+
+//scheduler
+export 'scheduler/scheduler_manager.dart';
+export 'scheduler/scheduler_service.dart';
+
+//GPIO
+export 'gpio/gpio_manager.dart';
+export 'gpio/gpio_service.dart';

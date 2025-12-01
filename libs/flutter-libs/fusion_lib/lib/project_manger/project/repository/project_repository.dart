@@ -118,6 +118,8 @@ class SceneSetRepository extends Repository<SceneSetModel> {}
 
 class GPIORepository extends Repository<GpioConfig> {}
 
+class SchedulerRepository extends Repository<ScheduleConfig> {}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {
