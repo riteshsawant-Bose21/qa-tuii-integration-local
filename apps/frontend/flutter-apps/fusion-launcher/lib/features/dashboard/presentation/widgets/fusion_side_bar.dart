@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/router/routes.dart';
@@ -42,7 +43,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               // ========== Notification Icon ==========
               Container(
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
+                  color: context.colorScheme.surface,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 padding: const EdgeInsets.all(16.0),
@@ -53,8 +54,9 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
-                        Badge.count(
-                          count: 0,
+                        Badge(
+                          smallSize: 10, // ← tiny dot size
+                          alignment: Alignment.topRight,
                           backgroundColor: FusionDarkColorPallette.green20,
                           textColor: FusionDarkColorPallette.green20,
                           padding: const EdgeInsets.only(),
@@ -78,7 +80,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                         Expanded(
                           child: FusionAppText(
                             text: "Welcome back",
-                            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            style: context.textTheme.labelMedium?.copyWith(
                               color: FusionDarkColorPallette.medium50,
                             ),
                           ),
@@ -90,7 +92,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     ),
                     Text(
                       UserSessionManager.getSignedInUserEmail() ?? "",
-                      style: Theme.of(context).textTheme.titleMedium,
+                      style: context.textTheme.titleMedium,
                     ),
                   ],
                 ),
@@ -99,7 +101,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               Expanded(
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: context.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Column(
@@ -117,6 +119,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                                 child: Icon(LucideIcons.search, size: 10),
                               ),
                               borderRadius: 8,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             ),
                             const SizedBox(height: 10),
 
@@ -232,7 +235,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
       context: context,
       builder: (BuildContext ctx) {
         return AlertDialog(
-          title: FusionAppText(text: "Sign Out", style: Theme.of(context).textTheme.titleMedium),
+          title: FusionAppText(text: "Sign Out", style: context.textTheme.titleMedium),
           content: const FusionAppText(text: "Are you sure you want to sign out?"),
           actions: <Widget>[
             NeumorphicDarkButton(
@@ -243,14 +246,14 @@ class _FusionSidebarState extends State<FusionSidebar> {
               },
               height: 32,
               borderRadius: 8,
-              child: FusionAppText(text: "Sign Out", style: Theme.of(context).textTheme.labelMedium),
+              child: FusionAppText(text: "Sign Out", style: context.textTheme.labelMedium),
             ),
             const SizedBox(height: 5),
             NeumorphicDarkButton(
               onTap: () => Navigator.pop(ctx),
               height: 32,
               borderRadius: 8,
-              child: FusionAppText(text: "Cancel", style: Theme.of(context).textTheme.labelMedium),
+              child: FusionAppText(text: "Cancel", style: context.textTheme.labelMedium),
             ),
           ],
         );
@@ -586,7 +589,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 onPressed: () async {
                   final String projectName = projectNameController.text.trim();
                   final String venueName = venueNameController.text.trim();
-                  final String budget = budgetController.text.trim();
+                  // final String budget = budgetController.text.trim();
 
                   // Clear all previous errors
                   projectNameErrorNotifier.value = null;
@@ -780,7 +783,7 @@ class _HoverNavItemState extends State<_HoverNavItem> {
 
   @override
   Widget build(BuildContext context) {
-    final Color themeColor = Theme.of(context).colorScheme.onSurface;
+    final Color themeColor = context.colorScheme.onSurface;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
@@ -803,7 +806,7 @@ class _HoverNavItemState extends State<_HoverNavItem> {
                 Expanded(
                   child: Text(
                     widget.title,
-                    style: Theme.of(context).textTheme.labelMedium,
+                    style: context.textTheme.labelMedium,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

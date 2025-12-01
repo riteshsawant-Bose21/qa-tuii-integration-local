@@ -1,8 +1,10 @@
 import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/api_data/speakers/speaker_types.dart';
 import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
 import 'package:fusion_lib/fusion_algorithms/shared/speaker_database.dart';
-import 'package:fusion_lib/api_data/speakers/speaker_types.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_gradient_text.dart';
 
@@ -113,32 +115,32 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       if (_selectedStrategy == PowerAllocationStrategy.comparison) {
         // Run both strategies for side-by-side comparison
         final Map<PowerAllocationStrategy, AmpMatchingResult> results = <PowerAllocationStrategy, AmpMatchingResult>{};
-        
+
         final AmpMatchingResult symmetricalResult = await matchAmplifiers(
-          validCircuits, 
+          validCircuits,
           SpeakerCatalog.database,
           strategy: PowerAllocationStrategy.symmetrical,
         );
         results[PowerAllocationStrategy.symmetrical] = symmetricalResult;
-        
+
         final AmpMatchingResult asymmetricalResult = await matchAmplifiers(
-          validCircuits, 
+          validCircuits,
           SpeakerCatalog.database,
           strategy: PowerAllocationStrategy.asymmetrical,
         );
         results[PowerAllocationStrategy.asymmetrical] = asymmetricalResult;
-        
+
         setState(() {
           comparisonResults = results;
         });
       } else {
         // Perform single strategy matching
         final AmpMatchingResult result = await matchAmplifiers(
-          validCircuits, 
+          validCircuits,
           SpeakerCatalog.database,
           strategy: _selectedStrategy,
         );
-        
+
         setState(() {
           matchingResult = result;
         });
@@ -227,7 +229,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
           const SizedBox(height: 8),
           Text(
             'Configure your circuits and get optimal amplifier recommendations with detailed calculations',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            style: context.textTheme.bodyMedium?.copyWith(
               color: Colors.grey[600],
             ),
           ),
@@ -297,7 +299,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 children: <Widget>[
                   Text(
                     'Power Allocation Strategy',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    style: context.textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -308,22 +310,23 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                   ),
                   const SizedBox(height: 16),
                   Column(
-                    children: PowerAllocationStrategy.values.map((PowerAllocationStrategy strategy) {
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 8.0),
-                        child: RadioListTile<PowerAllocationStrategy>(
-                          title: Text(strategy.label, style: const TextStyle(fontSize: 14)),
-                          subtitle: Text(strategy.description, style: const TextStyle(fontSize: 14)),
-                          value: strategy,
-                          groupValue: _selectedStrategy,
-                          onChanged: (PowerAllocationStrategy? value) {
-                            setState(() {
-                              _selectedStrategy = value!;
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
+                    children:
+                        PowerAllocationStrategy.values.map((PowerAllocationStrategy strategy) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: RadioListTile<PowerAllocationStrategy>(
+                              title: Text(strategy.label, style: const TextStyle(fontSize: 14)),
+                              subtitle: Text(strategy.description, style: const TextStyle(fontSize: 14)),
+                              value: strategy,
+                              groupValue: _selectedStrategy,
+                              onChanged: (PowerAllocationStrategy? value) {
+                                setState(() {
+                                  _selectedStrategy = value!;
+                                });
+                              },
+                            ),
+                          );
+                        }).toList(),
                   ),
                 ],
               ),
@@ -344,7 +347,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                     children: <Widget>[
                       Text(
                         'Circuit Configuration',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        style: context.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -416,12 +419,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
           ],
 
           // Results section
-          if (matchingResult != null) 
-            _buildResultsSection(matchingResult!),
-          
+          if (matchingResult != null) _buildResultsSection(matchingResult!),
+
           // Comparison results section
-          if (comparisonResults != null)
-            _buildSideBySideComparison(comparisonResults!),
+          if (comparisonResults != null) _buildSideBySideComparison(comparisonResults!),
         ],
       ),
     );
@@ -458,13 +459,14 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
 
             // Speaker model selection
             DropdownButtonFormField<String>(
-              value: circuit.selectedModel,
-              items: availableSpeakerModels.map((String model) {
-                return DropdownMenuItem<String>(
-                  value: model,
-                  child: Text(model),
-                );
-              }).toList(),
+              initialValue: circuit.selectedModel,
+              items:
+                  availableSpeakerModels.map((String model) {
+                    return DropdownMenuItem<String>(
+                      value: model,
+                      child: Text(model),
+                    );
+                  }).toList(),
               onChanged: (String? value) {
                 setState(() {
                   circuit.selectedModel = value;
@@ -553,7 +555,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               const SizedBox(height: 8),
               Text(
                 'Available Taps: ${SpeakerCatalog.database[circuit.selectedModel]!.hiZTaps.map((double t) => '${t}W').join(', ')}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                style: context.textTheme.bodySmall?.copyWith(
                   fontStyle: FontStyle.italic,
                   color: Colors.blue[700],
                 ),
@@ -575,7 +577,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
           children: <Widget>[
             Text(
               'Amplifier Matching Results',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: context.textTheme.headlineSmall?.copyWith(
                 color: Colors.green[700],
                 fontWeight: FontWeight.bold,
               ),
@@ -593,7 +595,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             // Amplifier assignments
             Text(
               'Recommended Amplifiers',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              style: context.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -754,7 +756,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          
+
           // Power calculation formulas
           Container(
             padding: const EdgeInsets.all(8),
@@ -774,13 +776,13 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Individual circuit calculations
           ...allCircuits.map((Circuit circuit) {
             final SpeakerModel? speakerSpec = SpeakerCatalog.database[circuit.model];
             double basePower = 0;
             String calculation = '';
-            
+
             if (circuit.mode == 'hi-z') {
               basePower = circuit.speakerCount * circuit.tapWatts * 2;
               calculation = '${circuit.speakerCount} × ${circuit.tapWatts}W × 2 = ${basePower}W';
@@ -788,14 +790,14 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               basePower = circuit.speakerCount * (speakerSpec?.ppk ?? 100);
               calculation = '${circuit.speakerCount} × ${speakerSpec?.ppk ?? 100}W = ${basePower}W';
             }
-            
+
             double finalPower = basePower;
             if (circuit.outputOffsetDb > 0) {
               final double reductionFactor = math.pow(10.0, -circuit.outputOffsetDb / 10.0).toDouble();
               finalPower = basePower * reductionFactor;
               calculation += ' → ${finalPower.toStringAsFixed(1)}W (with ${circuit.outputOffsetDb}dB offset)';
             }
-            
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Text(
@@ -804,7 +806,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               ),
             );
           }),
-          
+
           // Total power
           const SizedBox(height: 8),
           Container(
@@ -828,7 +830,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
     for (final AmpAssignment assignment in result.assignments) {
       allCircuits.addAll(assignment.circuits);
     }
-    
+
     // Sort by power (highest first)
     allCircuits.sort((Circuit a, Circuit b) {
       final double aPower = _getCircuitPower(a);
@@ -872,12 +874,12 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          
+
           ...allCircuits.asMap().entries.map((MapEntry<int, Circuit> entry) {
             final int index = entry.key;
             final Circuit circuit = entry.value;
             final double power = _getCircuitPower(circuit);
-            
+
             return Padding(
               padding: const EdgeInsets.only(bottom: 4),
               child: Row(
@@ -944,13 +946,13 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: const TextStyle(fontWeight: FontWeight.w500),
           ),
           const SizedBox(height: 8),
-          
+
           ...result.assignments.asMap().entries.map((MapEntry<int, AmpAssignment> entry) {
             final int index = entry.key;
             final AmpAssignment assignment = entry.value;
             final double totalAssignedPower = assignment.circuits.fold(0.0, (double sum, Circuit circuit) => sum + _getCircuitPower(circuit));
             final double totalAmpCapacity = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 8),
               padding: const EdgeInsets.all(8),
@@ -1026,7 +1028,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ],
           ),
           const SizedBox(height: 12),
-          
+
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
@@ -1065,29 +1067,29 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
   double _getCircuitPower(Circuit circuit) {
     final SpeakerModel? speakerSpec = SpeakerCatalog.database[circuit.model];
     double basePower = 0;
-    
+
     if (circuit.mode == 'hi-z') {
       basePower = circuit.speakerCount * circuit.tapWatts * 2;
     } else {
       basePower = circuit.speakerCount * (speakerSpec?.ppk ?? 100);
     }
-    
+
     if (circuit.outputOffsetDb > 0) {
       final double reductionFactor = math.pow(10.0, -circuit.outputOffsetDb / 10.0).toDouble();
       basePower *= reductionFactor;
     }
-    
+
     return basePower;
   }
 
   Widget _buildAmplifierCard(AmpAssignment assignment, int index) {
     // Calculate detailed metrics for this amplifier
     double assignedPower = 0;
-    
+
     for (final Circuit circuit in assignment.circuits) {
       assignedPower += _getCircuitPower(circuit);
     }
-    
+
     final double totalAmpPower = assignment.ampModel.peakPerChannel * assignment.ampModel.channels;
     final double powerUtilization = assignedPower / totalAmpPower;
 
@@ -1151,9 +1153,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                     ],
                   ),
                 ),
-                
+
                 const SizedBox(height: 12),
-                
+
                 // Circuit assignments
                 const Text('Assigned Circuits:', style: TextStyle(fontWeight: FontWeight.bold)),
                 const SizedBox(height: 4),
@@ -1170,10 +1172,10 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                     ),
                   );
                 }),
-                
+
                 const SizedBox(height: 8),
                 const Divider(),
-                
+
                 // Summary
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1282,7 +1284,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             // Header
             Text(
               'Side-by-Side Strategy Comparison',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              style: context.textTheme.headlineSmall?.copyWith(
                 color: Colors.purple[700],
                 fontWeight: FontWeight.bold,
               ),
@@ -1332,15 +1334,24 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               ],
             ),
           ),
-          
+
           // Comparison rows
           _buildComparisonRow('Amplifiers Required', '${symmetrical.amplifierCount}', '${asymmetrical.amplifierCount}'),
-          _buildComparisonRow('Power Efficiency', '${(symmetrical.powerEfficiency * 100).toStringAsFixed(1)}%', 
-              '${(asymmetrical.powerEfficiency * 100).toStringAsFixed(1)}%'),
-          _buildComparisonRow('Channel Efficiency', '${(symmetrical.channelEfficiency * 100).toStringAsFixed(1)}%', 
-              '${(asymmetrical.channelEfficiency * 100).toStringAsFixed(1)}%'),
-          _buildComparisonRow('Total System Power', '${symmetrical.totalSystemCapacity.toStringAsFixed(0)}W', 
-              '${asymmetrical.totalSystemCapacity.toStringAsFixed(0)}W'),
+          _buildComparisonRow(
+            'Power Efficiency',
+            '${(symmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
+            '${(asymmetrical.powerEfficiency * 100).toStringAsFixed(1)}%',
+          ),
+          _buildComparisonRow(
+            'Channel Efficiency',
+            '${(symmetrical.channelEfficiency * 100).toStringAsFixed(1)}%',
+            '${(asymmetrical.channelEfficiency * 100).toStringAsFixed(1)}%',
+          ),
+          _buildComparisonRow(
+            'Total System Power',
+            '${symmetrical.totalSystemCapacity.toStringAsFixed(0)}W',
+            '${asymmetrical.totalSystemCapacity.toStringAsFixed(0)}W',
+          ),
         ],
       ),
     );
@@ -1368,7 +1379,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       children: <Widget>[
         Text(
           'Detailed Algorithm Step-by-Step Comparison',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+          style: context.textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -1562,7 +1573,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
           ),
           const SizedBox(height: 12),
-          
+
           // Circuit Data
           const Text('1. Loudspeaker Circuiting:', style: TextStyle(fontWeight: FontWeight.bold)),
           ...allCircuits.map((Circuit circuit) {
@@ -1571,18 +1582,18 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Text('• Circuit ${circuit.circuitId}: ${circuit.model} (${circuit.mode})'),
             );
           }),
-          
+
           const SizedBox(height: 8),
-          
+
           // System Configuration
           const Text('2. System Configuration:', style: TextStyle(fontWeight: FontWeight.bold)),
           const Padding(
             padding: EdgeInsets.only(left: 16),
             child: Text('• Hi-Z and Lo-Z circuits identified'),
           ),
-          
+
           const SizedBox(height: 8),
-          
+
           // Power Settings
           const Text('3. Power Settings:', style: TextStyle(fontWeight: FontWeight.bold)),
           ...allCircuits.map((Circuit circuit) {
@@ -1599,9 +1610,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               );
             }
           }),
-          
+
           const SizedBox(height: 8),
-          
+
           // Offsets
           const Text('4. Output Offsets:', style: TextStyle(fontWeight: FontWeight.bold)),
           ...allCircuits.where((Circuit c) => c.outputOffsetDb > 0).map((Circuit circuit) {
@@ -1610,7 +1621,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Text('• Circuit ${circuit.circuitId}: -${circuit.outputOffsetDb}dB offset'),
             );
           }),
-          if (allCircuits.every((Circuit c) => c.outputOffsetDb == 0)) 
+          if (allCircuits.every((Circuit c) => c.outputOffsetDb == 0))
             const Padding(
               padding: EdgeInsets.only(left: 16),
               child: Text('• No output offsets applied'),
@@ -1643,7 +1654,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 12),
-          
+
           // Sub-step 1: Determine Hi-Z/Lo-Z
           const Text('1a. Circuit Type Determination:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ...allCircuits.map((Circuit circuit) {
@@ -1652,19 +1663,19 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               child: Text('• Circuit ${circuit.circuitId}: ${circuit.mode.toUpperCase()}', style: const TextStyle(fontSize: 13)),
             );
           }),
-          
+
           const SizedBox(height: 8),
-          
+
           // Sub-step 2: Power Calculations
           const Text('1b. Total Power Calculation per Circuit:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 4),
-          
+
           ...allCircuits.map((Circuit circuit) {
             final SpeakerModel? speaker = SpeakerCatalog.database[circuit.model];
             String formula;
             double basePower;
             double finalPower;
-            
+
             if (circuit.mode == 'hi-z') {
               basePower = circuit.speakerCount * circuit.tapWatts * 2;
               formula = 'Ppk_speaker_total = ∑(Loudspeaker_Ptaps × 2)';
@@ -1673,17 +1684,17 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               basePower = circuit.speakerCount * (speaker?.ppk ?? 100);
               formula = 'Ppk_speaker_total = ∑(Loudspeaker_Ppk)';
               finalPower = basePower;
-              
+
               // Add impedance note for Lo-Z
               final double totalImpedance = (speaker?.nominalOhms ?? 8) / circuit.speakerCount;
               formula += '\nΩtotal = 1/∑(1/Z) = ${totalImpedance.toStringAsFixed(1)}Ω';
             }
-            
+
             if (circuit.outputOffsetDb > 0) {
               final double reductionFactor = math.pow(10.0, -circuit.outputOffsetDb / 10.0).toDouble();
               finalPower = basePower * reductionFactor;
             }
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 6, left: 12),
               padding: const EdgeInsets.all(8),
@@ -1697,38 +1708,56 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 children: <Widget>[
                   Text('Circuit ${circuit.circuitId} (${circuit.mode}):', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                   Text(formula, style: const TextStyle(fontFamily: 'monospace', fontSize: 14)),
-                  
+
                   // Detailed step-by-step calculation
                   if (circuit.mode == 'hi-z') ...<Widget>[
                     Text('Step: ${circuit.speakerCount} speakers × ${circuit.tapWatts}W tap × 2 (Hi-Z factor)', style: const TextStyle(fontSize: 14)),
-                    Text('Calculation: ${circuit.speakerCount} × ${circuit.tapWatts} × 2 = ${basePower.toStringAsFixed(1)}W', style: const TextStyle(fontSize: 14, color: Colors.blue)),
+                    Text(
+                      'Calculation: ${circuit.speakerCount} × ${circuit.tapWatts} × 2 = ${basePower.toStringAsFixed(1)}W',
+                      style: const TextStyle(fontSize: 14, color: Colors.blue),
+                    ),
                   ] else ...<Widget>[
                     Text('Step: ${circuit.speakerCount} speakers × ${speaker?.ppk ?? 100}W (peak)', style: const TextStyle(fontSize: 14)),
-                    Text('Calculation: ${circuit.speakerCount} × ${speaker?.ppk ?? 100} = ${basePower.toStringAsFixed(1)}W', style: const TextStyle(fontSize: 14, color: Colors.blue)),
-                    Text('Impedance check: Ω = ${(speaker?.nominalOhms ?? 8)}Ω ÷ ${circuit.speakerCount} = ${((speaker?.nominalOhms ?? 8) / circuit.speakerCount).toStringAsFixed(1)}Ω (≥4Ω ✓)', style: const TextStyle(fontSize: 13, color: Colors.green)),
+                    Text(
+                      'Calculation: ${circuit.speakerCount} × ${speaker?.ppk ?? 100} = ${basePower.toStringAsFixed(1)}W',
+                      style: const TextStyle(fontSize: 14, color: Colors.blue),
+                    ),
+                    Text(
+                      'Impedance check: Ω = ${(speaker?.nominalOhms ?? 8)}Ω ÷ ${circuit.speakerCount} = ${((speaker?.nominalOhms ?? 8) / circuit.speakerCount).toStringAsFixed(1)}Ω (≥4Ω ✓)',
+                      style: const TextStyle(fontSize: 13, color: Colors.green),
+                    ),
                   ],
-                  
+
                   if (circuit.outputOffsetDb > 0) ...<Widget>[
                     const SizedBox(height: 2),
                     const Text('Output offset applied:', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                    Text('Reduction factor = 10^(-${circuit.outputOffsetDb}/10) = ${math.pow(10.0, -circuit.outputOffsetDb / 10.0).toStringAsFixed(3)}', style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                    Text('Final power = ${basePower.toStringAsFixed(1)}W × ${math.pow(10.0, -circuit.outputOffsetDb / 10.0).toStringAsFixed(3)} = ${finalPower.toStringAsFixed(1)}W', style: const TextStyle(fontSize: 14, color: Colors.red)),
+                    Text(
+                      'Reduction factor = 10^(-${circuit.outputOffsetDb}/10) = ${math.pow(10.0, -circuit.outputOffsetDb / 10.0).toStringAsFixed(3)}',
+                      style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                    ),
+                    Text(
+                      'Final power = ${basePower.toStringAsFixed(1)}W × ${math.pow(10.0, -circuit.outputOffsetDb / 10.0).toStringAsFixed(3)} = ${finalPower.toStringAsFixed(1)}W',
+                      style: const TextStyle(fontSize: 14, color: Colors.red),
+                    ),
                   ],
-                  
+
                   // Power per speaker breakdown
                   const SizedBox(height: 2),
-                  Text('Per speaker: ${(finalPower / circuit.speakerCount).toStringAsFixed(1)}W', style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic)),
+                  Text(
+                    'Per speaker: ${(finalPower / circuit.speakerCount).toStringAsFixed(1)}W',
+                    style: TextStyle(fontSize: 13, color: Colors.grey[600], fontStyle: FontStyle.italic),
+                  ),
                 ],
               ),
             );
           }),
-          
+
           const SizedBox(height: 8),
-          
+
           // Sub-step 3: Circuit Ranking
           const Text('1c. Circuit Ranking (Highest to Lowest Power):', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const SizedBox(height: 4),
-          
+
           () {
             final List<Circuit> sortedCircuits = List<Circuit>.from(allCircuits);
             sortedCircuits.sort((Circuit a, Circuit b) {
@@ -1736,18 +1765,19 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               final double bPower = _getCircuitPower(b);
               return bPower.compareTo(aPower);
             });
-            
+
             return Column(
-              children: sortedCircuits.asMap().entries.map((MapEntry<int, Circuit> entry) {
-                final int index = entry.key;
-                final Circuit circuit = entry.value;
-                final double power = _getCircuitPower(circuit);
-                
-                return Padding(
-                  padding: const EdgeInsets.only(left: 12, bottom: 2),
-                  child: Text('${index + 1}. Circuit ${circuit.circuitId}: ${power.toStringAsFixed(1)}W', style: const TextStyle(fontSize: 13)),
-                );
-              }).toList(),
+              children:
+                  sortedCircuits.asMap().entries.map((MapEntry<int, Circuit> entry) {
+                    final int index = entry.key;
+                    final Circuit circuit = entry.value;
+                    final double power = _getCircuitPower(circuit);
+
+                    return Padding(
+                      padding: const EdgeInsets.only(left: 12, bottom: 2),
+                      child: Text('${index + 1}. Circuit ${circuit.circuitId}: ${power.toStringAsFixed(1)}W', style: const TextStyle(fontSize: 13)),
+                    );
+                  }).toList(),
             );
           }(),
         ],
@@ -1771,7 +1801,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 12),
-          
+
           // Amplifier Matching Logic
           const Text('2a. Amplifier Matching Logic:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const Padding(
@@ -1780,15 +1810,14 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text('Find amplifier where:', style: TextStyle(fontSize: 13)),
-                Text('Ppk_amplifier(RMS) ≥ Ppk_speaker_total(peak) ÷ 2', 
-                     style: TextStyle(fontFamily: 'monospace', fontSize: 14)),
+                Text('Ppk_amplifier(RMS) ≥ Ppk_speaker_total(peak) ÷ 2', style: TextStyle(fontFamily: 'monospace', fontSize: 14)),
                 Text('• Convert peak power to RMS for comparison (÷2)', style: TextStyle(fontSize: 12, color: Colors.grey)),
                 Text('• Amplifier ratings are RMS, circuits calculate peak power', style: TextStyle(fontSize: 12, color: Colors.grey)),
               ],
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Channel Strategy
           const Text('2b. Channel Allocation Strategy:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const Padding(
@@ -1805,7 +1834,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Results
           const Text('2c. Amplifier Assignments:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ...result.assignments.asMap().entries.map((MapEntry<int, AmpAssignment> entry) {
@@ -1816,7 +1845,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             final double utilization = totalPower / totalCapacity;
             final double headroom = totalCapacity - totalPower;
             final double powerPerChannel = totalPower / assignment.circuits.length;
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 4, left: 12),
               padding: const EdgeInsets.all(6),
@@ -1829,48 +1858,68 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text('Amplifier ${index + 1}: ${assignment.ampModel.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  
+
                   // Detailed capacity breakdown
-                  Text('Total Capacity: ${assignment.ampModel.peakPerChannel}W/ch × ${assignment.ampModel.channels}ch = ${totalCapacity.toStringAsFixed(1)}W', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Total Capacity: ${assignment.ampModel.peakPerChannel}W/ch × ${assignment.ampModel.channels}ch = ${totalCapacity.toStringAsFixed(1)}W',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                  ),
+
                   // Power assignment details
-                  Text('Assigned Circuits: ${assignment.circuits.map((Circuit c) => 'C${c.circuitId}(${_getCircuitPower(c).toStringAsFixed(0)}W)').join(', ')}', 
-                       style: const TextStyle(fontSize: 13)),
+                  Text(
+                    'Assigned Circuits: ${assignment.circuits.map((Circuit c) => 'C${c.circuitId}(${_getCircuitPower(c).toStringAsFixed(0)}W)').join(', ')}',
+                    style: const TextStyle(fontSize: 13),
+                  ),
                   Text('Total Load: ${totalPower.toStringAsFixed(1)}W', style: const TextStyle(fontSize: 13, color: Colors.blue, fontWeight: FontWeight.bold)),
-                  
+
                   // Enhanced calculations
-                  Text('Load Distribution Formula: Σ(Circuit Power) = ${assignment.circuits.map((Circuit c) => '${_getCircuitPower(c).toStringAsFixed(1)}W').join(' + ')} = ${totalPower.toStringAsFixed(1)}W', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.purple)),
-                  
+                  Text(
+                    'Load Distribution Formula: Σ(Circuit Power) = ${assignment.circuits.map((Circuit c) => '${_getCircuitPower(c).toStringAsFixed(1)}W').join(' + ')} = ${totalPower.toStringAsFixed(1)}W',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.purple),
+                  ),
+
                   // Utilization calculations
-                  Text('Utilization Calculation: ${totalPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}%', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                  Text('Power Distribution: ${assignment.circuits.length} circuits across ${assignment.ampModel.channels} channels', 
-                       style: const TextStyle(fontSize: 13, color: Colors.indigo)),
-                  Text('Power Density: ${(totalPower / assignment.ampModel.channels).toStringAsFixed(1)}W per channel', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-                  Text('Headroom Analysis: ${headroom.toStringAsFixed(1)}W unused (${((headroom / totalCapacity) * 100).toStringAsFixed(1)}% reserve)', 
-                       style: TextStyle(fontSize: 13, color: headroom > 200 ? Colors.green : Colors.orange, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Utilization Calculation: ${totalPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Power Distribution: ${assignment.circuits.length} circuits across ${assignment.ampModel.channels} channels',
+                    style: const TextStyle(fontSize: 13, color: Colors.indigo),
+                  ),
+                  Text(
+                    'Power Density: ${(totalPower / assignment.ampModel.channels).toStringAsFixed(1)}W per channel',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Headroom Analysis: ${headroom.toStringAsFixed(1)}W unused (${((headroom / totalCapacity) * 100).toStringAsFixed(1)}% reserve)',
+                    style: TextStyle(fontSize: 13, color: headroom > 200 ? Colors.green : Colors.orange, fontFamily: 'monospace'),
+                  ),
+
                   // Channel and circuit analysis
-                  Text('Channel Efficiency: ${assignment.circuits.length}/${assignment.ampModel.channels} channels used = ${((assignment.circuits.length / assignment.ampModel.channels) * 100).toStringAsFixed(1)}%', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-                  Text('Average Load per Active Channel: ${powerPerChannel.toStringAsFixed(1)}W', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Channel Efficiency: ${assignment.circuits.length}/${assignment.ampModel.channels} channels used = ${((assignment.circuits.length / assignment.ampModel.channels) * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Average Load per Active Channel: ${powerPerChannel.toStringAsFixed(1)}W',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  ),
+
                   // Impedance verification for each circuit
                   ...assignment.circuits.map((Circuit circuit) {
                     final SpeakerModel? speaker = SpeakerCatalog.database[circuit.model];
                     if (circuit.mode == 'lo-z' && speaker != null) {
                       final double impedancePerSpeaker = speaker.nominalOhms;
                       final double totalImpedance = impedancePerSpeaker / circuit.speakerCount;
-                      return Text('Circuit ${circuit.circuitId} Impedance: ${impedancePerSpeaker.toStringAsFixed(1)}Ω ÷ $circuit.speakerCount = ${totalImpedance.toStringAsFixed(1)}Ω total', 
-                           style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.grey));
+                      return Text(
+                        'Circuit ${circuit.circuitId} Impedance: ${impedancePerSpeaker.toStringAsFixed(1)}Ω ÷ $circuit.speakerCount = ${totalImpedance.toStringAsFixed(1)}Ω total',
+                        style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.grey),
+                      );
                     }
                     return const SizedBox.shrink();
                   }),
-                  
+
                   // Power safety verification - individual circuit validation
                   ...assignment.circuits.map((Circuit circuit) {
                     final double circuitPower = _getCircuitPower(circuit);
@@ -1890,9 +1939,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               ),
             );
           }),
-          
+
           const SizedBox(height: 8),
-          
+
           // Summary
           Container(
             padding: const EdgeInsets.all(6),
@@ -1909,14 +1958,20 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 Text('Power Efficiency: ${(result.powerEfficiency * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 14)),
                 Text('Channel Efficiency: ${(result.channelEfficiency * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 14)),
                 const SizedBox(height: 2),
-                
+
                 // Detailed efficiency breakdown
-                const Text('Formula: Power Efficiency = Total Required ÷ Total Capacity', 
-                     style: TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey)),
-                Text('= ${result.totalPowerRequirement.toStringAsFixed(1)}W ÷ ${result.totalSystemCapacity.toStringAsFixed(1)}W = ${(result.powerEfficiency * 100).toStringAsFixed(1)}%', 
-                     style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey)),
-                Text('Channel Formula: ${result.totalChannelsUsed} used ÷ ${result.totalChannelsAvailable} available = ${(result.channelEfficiency * 100).toStringAsFixed(1)}%', 
-                     style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey)),
+                const Text(
+                  'Formula: Power Efficiency = Total Required ÷ Total Capacity',
+                  style: TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey),
+                ),
+                Text(
+                  '= ${result.totalPowerRequirement.toStringAsFixed(1)}W ÷ ${result.totalSystemCapacity.toStringAsFixed(1)}W = ${(result.powerEfficiency * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey),
+                ),
+                Text(
+                  'Channel Formula: ${result.totalChannelsUsed} used ÷ ${result.totalChannelsAvailable} available = ${(result.channelEfficiency * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -1941,14 +1996,14 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 12),
-          
+
           const Text('1a. Power Sharing Calculator Analysis:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const Padding(
             padding: EdgeInsets.only(left: 12),
             child: Text('Run simplified power sharing calculator on each amplifier from symmetrical result', style: TextStyle(fontSize: 13)),
           ),
           const SizedBox(height: 8),
-          
+
           const Text('1b. Net Power Sharing Identification:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const Padding(
             padding: EdgeInsets.only(left: 12),
@@ -1962,7 +2017,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Show power sharing opportunities
           const Text('1c. Power Sharing Opportunities:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ...result.assignments.asMap().entries.map((MapEntry<int, AmpAssignment> entry) {
@@ -1976,7 +2031,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             final int usedChannels = assignment.circuits.length;
             final int availableChannels = assignment.ampModel.channels - usedChannels;
             final double avgLoadPerUsedChannel = usedChannels > 0 ? usedPower / usedChannels : 0;
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 4, left: 12),
               padding: const EdgeInsets.all(6),
@@ -1989,37 +2044,52 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text('Amplifier ${index + 1}: ${assignment.ampModel.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  
+
                   // Detailed power breakdown
-                  Text('Current load: ${usedPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}%', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                  Text('Available power: ${totalCapacity.toStringAsFixed(1)}W - ${usedPower.toStringAsFixed(1)}W = ${availablePower.toStringAsFixed(1)}W', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Current load: ${usedPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Available power: ${totalCapacity.toStringAsFixed(1)}W - ${usedPower.toStringAsFixed(1)}W = ${availablePower.toStringAsFixed(1)}W',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                  ),
+
                   // Channel analysis
-                  Text('Channels: $usedChannels/${assignment.ampModel.channels} used ($availableChannels available)', 
-                       style: const TextStyle(fontSize: 14)),
-                  Text('Avg load per active channel: ${avgLoadPerUsedChannel.toStringAsFixed(1)}W (max ${powerPerChannel}W)', 
-                       style: const TextStyle(fontSize: 14)),
-                  
+                  Text('Channels: $usedChannels/${assignment.ampModel.channels} used ($availableChannels available)', style: const TextStyle(fontSize: 14)),
+                  Text(
+                    'Avg load per active channel: ${avgLoadPerUsedChannel.toStringAsFixed(1)}W (max ${powerPerChannel}W)',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+
                   // Net sharing calculation
                   if (availableChannels > 0) ...<Widget>[
-                    Text('Net sharing potential: $availableChannels × ${powerPerChannel}W = ${(availableChannels * powerPerChannel).toStringAsFixed(1)}W', 
-                         style: const TextStyle(fontSize: 14, color: Colors.blue)),
+                    Text(
+                      'Net sharing potential: $availableChannels × ${powerPerChannel}W = ${(availableChannels * powerPerChannel).toStringAsFixed(1)}W',
+                      style: const TextStyle(fontSize: 14, color: Colors.blue),
+                    ),
                   ],
-                  
-                  // Power redistribution potential  
+
+                  // Power redistribution potential
                   if (utilization < 0.8 && availablePower > 50) ...<Widget>[
-                    Text('✓ High sharing candidate: ${availablePower.toStringAsFixed(1)}W available', 
-                         style: const TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.bold)),
-                    Text('Can accept circuits up to ${(availablePower * 0.8).toStringAsFixed(1)}W additional load', 
-                         style: const TextStyle(fontSize: 13, color: Colors.green)),
+                    Text(
+                      '✓ High sharing candidate: ${availablePower.toStringAsFixed(1)}W available',
+                      style: const TextStyle(fontSize: 14, color: Colors.green, fontWeight: FontWeight.bold),
+                    ),
+                    Text(
+                      'Can accept circuits up to ${(availablePower * 0.8).toStringAsFixed(1)}W additional load',
+                      style: const TextStyle(fontSize: 13, color: Colors.green),
+                    ),
                   ] else if (availablePower > 100) ...<Widget>[
-                    Text('✓ Moderate sharing candidate: ${availablePower.toStringAsFixed(1)}W available', 
-                         style: const TextStyle(fontSize: 14, color: Colors.orange, fontWeight: FontWeight.bold)),
+                    Text(
+                      '✓ Moderate sharing candidate: ${availablePower.toStringAsFixed(1)}W available',
+                      style: const TextStyle(fontSize: 14, color: Colors.orange, fontWeight: FontWeight.bold),
+                    ),
                   ] else ...<Widget>[
-                    Text('• Fully utilized: ${(100 - (availablePower / totalCapacity * 100)).toStringAsFixed(1)}% capacity used', 
-                         style: const TextStyle(fontSize: 14, color: Colors.grey)),
+                    Text(
+                      '• Fully utilized: ${(100 - (availablePower / totalCapacity * 100)).toStringAsFixed(1)}% capacity used',
+                      style: const TextStyle(fontSize: 14, color: Colors.grey),
+                    ),
                   ],
                 ],
               ),
@@ -2046,7 +2116,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
           ),
           const SizedBox(height: 12),
-          
+
           const Text('2a. Circuit Redistribution Logic:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const Padding(
             padding: EdgeInsets.only(left: 12),
@@ -2061,7 +2131,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             ),
           ),
           const SizedBox(height: 8),
-          
+
           const Text('2b. Power Level Optimization:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           const Padding(
             padding: EdgeInsets.only(left: 12),
@@ -2069,14 +2139,16 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
                 Text('• Repeat redistribution until no more sharing possible', style: TextStyle(fontSize: 13)),
-                Text('• Run final check: Ppk_amplifier(next tier) ≥ Pk_speaker_total ≥ Ppk_amplifier(current tier)', 
-                     style: TextStyle(fontFamily: 'monospace', fontSize: 14)),
+                Text(
+                  '• Run final check: Ppk_amplifier(next tier) ≥ Pk_speaker_total ≥ Ppk_amplifier(current tier)',
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 14),
+                ),
                 Text('• Reduce amplifier SKU to next tier down if possible', style: TextStyle(fontSize: 13)),
               ],
             ),
           ),
           const SizedBox(height: 8),
-          
+
           // Final Results
           const Text('2c. Optimized Amplifier Assignments:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
           ...result.assignments.asMap().entries.map((MapEntry<int, AmpAssignment> entry) {
@@ -2088,7 +2160,7 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
             final double improvementPotential = (1.0 - utilization) * 100;
             final int circuitCount = assignment.circuits.length;
             final double avgPowerPerCircuit = circuitCount > 0 ? totalPower / circuitCount : 0;
-            
+
             return Container(
               margin: const EdgeInsets.only(bottom: 4, left: 12),
               padding: const EdgeInsets.all(6),
@@ -2101,31 +2173,49 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   Text('Amplifier ${index + 1}: ${assignment.ampModel.name}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                  
+
                   // Enhanced optimization calculations
-                  Text('Total Capacity: ${assignment.ampModel.peakPerChannel}W/ch × ${assignment.ampModel.channels}ch = ${totalCapacity.toStringAsFixed(1)}W', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                  Text('Power Redistribution: ${assignment.circuits.map((Circuit c) => 'C${c.circuitId}(${_getCircuitPower(c).toStringAsFixed(0)}W)').join(' + ')} = ${totalPower.toStringAsFixed(1)}W', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.purple)),
-                  Text('Optimization Result: ${totalPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}% utilization', 
-                       style: const TextStyle(fontSize: 14, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Total Capacity: ${assignment.ampModel.peakPerChannel}W/ch × ${assignment.ampModel.channels}ch = ${totalCapacity.toStringAsFixed(1)}W',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Power Redistribution: ${assignment.circuits.map((Circuit c) => 'C${c.circuitId}(${_getCircuitPower(c).toStringAsFixed(0)}W)').join(' + ')} = ${totalPower.toStringAsFixed(1)}W',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace', color: Colors.purple),
+                  ),
+                  Text(
+                    'Optimization Result: ${totalPower.toStringAsFixed(1)}W ÷ ${totalCapacity.toStringAsFixed(1)}W = ${(utilization * 100).toStringAsFixed(1)}% utilization',
+                    style: const TextStyle(fontSize: 14, fontFamily: 'monospace'),
+                  ),
+
                   // Detailed load analysis
-                  Text('Circuit Count Optimization: $circuitCount circuits redistributed across ${assignment.ampModel.channels} channels', 
-                       style: const TextStyle(fontSize: 13, color: Colors.indigo)),
-                  Text('Average Circuit Power: ${avgPowerPerCircuit.toStringAsFixed(1)}W per circuit', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-                  Text('Power Density: ${(totalPower / assignment.ampModel.channels).toStringAsFixed(1)}W per channel', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-                  Text('Capacity Utilization: ${((utilization * assignment.ampModel.channels).toStringAsFixed(1))} effective channels used', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Circuit Count Optimization: $circuitCount circuits redistributed across ${assignment.ampModel.channels} channels',
+                    style: const TextStyle(fontSize: 13, color: Colors.indigo),
+                  ),
+                  Text(
+                    'Average Circuit Power: ${avgPowerPerCircuit.toStringAsFixed(1)}W per circuit',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Power Density: ${(totalPower / assignment.ampModel.channels).toStringAsFixed(1)}W per channel',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    'Capacity Utilization: ${((utilization * assignment.ampModel.channels).toStringAsFixed(1))} effective channels used',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace'),
+                  ),
+
                   // Power sharing efficiency
-                  Text('Power Sharing Efficiency: ${(totalPower / (avgPowerPerCircuit * circuitCount) * 100).toStringAsFixed(1)}% vs original allocation', 
-                       style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.green)),
-                  Text('Unused Capacity: ${(totalCapacity - totalPower).toStringAsFixed(1)}W (${improvementPotential.toStringAsFixed(1)}%)', 
-                       style: TextStyle(fontSize: 13, color: improvementPotential < 30 ? Colors.green : Colors.orange, fontFamily: 'monospace')),
-                  
+                  Text(
+                    'Power Sharing Efficiency: ${(totalPower / (avgPowerPerCircuit * circuitCount) * 100).toStringAsFixed(1)}% vs original allocation',
+                    style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.green),
+                  ),
+                  Text(
+                    'Unused Capacity: ${(totalCapacity - totalPower).toStringAsFixed(1)}W (${improvementPotential.toStringAsFixed(1)}%)',
+                    style: TextStyle(fontSize: 13, color: improvementPotential < 30 ? Colors.green : Colors.orange, fontFamily: 'monospace'),
+                  ),
+
                   // Verification checks - asymmetrical power sharing validation
                   () {
                     final double totalPowerRms = totalPower / 2.0; // Convert peak to RMS
@@ -2145,9 +2235,9 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
               ),
             );
           }),
-          
+
           const SizedBox(height: 8),
-          
+
           // Optimization Summary
           Container(
             padding: const EdgeInsets.all(6),
@@ -2164,14 +2254,20 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
                 Text('Power Efficiency: ${(result.powerEfficiency * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 14)),
                 Text('Channel Efficiency: ${(result.channelEfficiency * 100).toStringAsFixed(1)}%', style: const TextStyle(fontSize: 14)),
                 const SizedBox(height: 2),
-                
+
                 // Detailed efficiency breakdown
-                const Text('Formula: Power Efficiency = Total Required ÷ Total Capacity', 
-                     style: TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey)),
-                Text('= ${result.totalPowerRequirement.toStringAsFixed(1)}W ÷ ${result.totalSystemCapacity.toStringAsFixed(1)}W = ${(result.powerEfficiency * 100).toStringAsFixed(1)}%', 
-                     style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey)),
-                Text('Channel Formula: ${result.totalChannelsUsed} used ÷ ${result.totalChannelsAvailable} available = ${(result.channelEfficiency * 100).toStringAsFixed(1)}%', 
-                     style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey)),
+                const Text(
+                  'Formula: Power Efficiency = Total Required ÷ Total Capacity',
+                  style: TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey),
+                ),
+                Text(
+                  '= ${result.totalPowerRequirement.toStringAsFixed(1)}W ÷ ${result.totalSystemCapacity.toStringAsFixed(1)}W = ${(result.powerEfficiency * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey),
+                ),
+                Text(
+                  'Channel Formula: ${result.totalChannelsUsed} used ÷ ${result.totalChannelsAvailable} available = ${(result.channelEfficiency * 100).toStringAsFixed(1)}%',
+                  style: const TextStyle(fontSize: 13, fontFamily: 'monospace', color: Colors.grey),
+                ),
               ],
             ),
           ),
@@ -2304,5 +2400,4 @@ class _AmplifierMatchingWidgetState extends State<AmplifierMatchingWidget> {
       ],
     );
   }
-
 }

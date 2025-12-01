@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
@@ -36,7 +37,7 @@ class ProjectCard extends StatelessWidget {
       height: height ?? 178,
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+          color: context.colorScheme.onSurface.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(borderRadius ?? 6),
         ),
         child: Stack(
@@ -77,7 +78,7 @@ class ProjectCard extends StatelessWidget {
                             child: FusionAppText(
                               text: title,
                               maxLine: 1,
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              style: context.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -87,21 +88,21 @@ class ProjectCard extends StatelessWidget {
                             Flexible(
                               child: Tooltip(
                                 message: subtitle!,
-                                textStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                textStyle: context.textTheme.labelSmall?.copyWith(
+                                  color: context.colorScheme.onSurface.withValues(alpha: 0.3),
                                 ),
                                 constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.2),
                                 padding: const EdgeInsets.all(16),
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.surface,
+                                  color: context.colorScheme.surface,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3),
+                                  border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3),
                                 ),
                                 child: FusionAppText(
                                   text: subtitle!,
                                   maxLine: 1,
-                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.3),
                                   ),
                                 ),
                               ),
@@ -128,9 +129,13 @@ class ProjectCard extends StatelessWidget {
                   menuPadding: const EdgeInsets.only(),
                   borderRadius: BorderRadius.circular(8),
                   position: PopupMenuPosition.under,
-
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  color: Theme.of(context).colorScheme.surface,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    side: BorderSide(
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  color: context.colorScheme.surface,
                   itemBuilder: (BuildContext context) {
                     return <PopupMenuEntry<String>>[
                       const PopupMenuItem<String>(
@@ -194,8 +199,8 @@ class ProjectDetailsDialog extends StatelessWidget {
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(borderRadius),
-                  color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+                  color: context.colorScheme.surface.withValues(alpha: 0.5),
+                  border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
                 ),
                 child: ProjectCard(
                   width: cardWidth,
@@ -217,8 +222,8 @@ class ProjectDetailsDialog extends StatelessWidget {
             child: Container(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(borderRadius),
-                color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.5),
-                border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+                color: context.colorScheme.surface.withValues(alpha: 0.5),
+                border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -238,9 +243,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                                 child: FusionAppText(
                                   text: project.projectName,
                                   maxLine: 2,
-                                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                                  style: context.textTheme.displaySmall?.copyWith(
                                     fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: context.colorScheme.onSurface,
                                   ),
                                 ),
                               ),
@@ -262,12 +267,12 @@ class ProjectDetailsDialog extends StatelessWidget {
                                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                           decoration: BoxDecoration(
                                             borderRadius: BorderRadius.circular(6),
-                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                                            color: context.colorScheme.onSurface.withValues(alpha: 0.3),
                                           ),
                                           child: FusionAppText(
                                             text: tag,
-                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                              color: Theme.of(context).colorScheme.onSurface,
+                                            style: context.textTheme.labelSmall?.copyWith(
+                                              color: context.colorScheme.onSurface,
                                             ),
                                           ),
                                         );
@@ -283,9 +288,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                           const SizedBox(height: 16),
                           FusionAppText(
                             text: "Project Description:",
-                            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            style: context.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.bold,
-                              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                             ),
                           ),
                           const SizedBox(height: 10),
@@ -293,9 +298,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                             child: FusionAppText(
                               text:
                                   "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam dolor amet.",
-                              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              style: context.textTheme.titleSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.onSurface,
+                                color: context.colorScheme.onSurface,
                               ),
                             ),
                           ),
@@ -311,9 +316,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                                 Flexible(
                                   child: FusionAppText(
                                     text: "Device List",
-                                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                    style: context.textTheme.labelLarge?.copyWith(
                                       fontSize: 12,
-                                      color: Theme.of(context).colorScheme.onSurface,
+                                      color: context.colorScheme.onSurface,
                                     ),
                                   ),
                                 ),
@@ -337,9 +342,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                                       Flexible(
                                         child: FusionAppText(
                                           text: "Collaborators on File",
-                                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                          style: context.textTheme.labelLarge?.copyWith(
                                             fontSize: 12,
-                                            color: Theme.of(context).colorScheme.onSurface,
+                                            color: context.colorScheme.onSurface,
                                           ),
                                         ),
                                       ),
@@ -364,9 +369,9 @@ class ProjectDetailsDialog extends StatelessWidget {
                                       Flexible(
                                         child: FusionAppText(
                                           text: "Open Project",
-                                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                          style: context.textTheme.labelLarge?.copyWith(
                                             fontSize: 12,
-                                            color: Theme.of(context).colorScheme.onSurface,
+                                            color: context.colorScheme.onSurface,
                                           ),
                                         ),
                                       ),
@@ -446,7 +451,10 @@ class AnimatedBlurDialogRoute<T> extends PageRoute<T> {
                 ),
                 child: FadeTransition(
                   opacity: animation,
-                  child: builder(context),
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: builder(context),
+                  ),
                 ),
               ),
             ),

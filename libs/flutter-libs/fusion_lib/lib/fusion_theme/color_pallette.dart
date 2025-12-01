@@ -26,4 +26,5 @@ class FusionDarkColorPallette {
   static const Color dark80 = Color(0xFF292826);
   static const Color medium50 = Color(0xFF77746E);
   static const Color green20 = Color(0xFF2F7554);
+  static const Color black = Color(0x0ff00000);
 }

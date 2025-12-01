@@ -4,6 +4,7 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/utils/fusion_utils.dart';
@@ -81,7 +82,7 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                           children: <Widget>[
                             Text(
                               'Welcome to\nFusion',
-                              style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                              style: context.textTheme.displayLarge?.copyWith(
                                 fontWeight: FontWeight.bold,
                                 fontSize: headlineFontSize > 120 ? 120 : headlineFontSize,
                               ),
@@ -89,7 +90,7 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                             const SizedBox(height: 24),
                             Text(
                               'Sign into your Fusion account on the right and\nget started creating dynamic audio experiences',
-                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                              style: context.textTheme.bodyLarge?.copyWith(
                                 color: FusionDarkColorPallette.medium50,
                                 fontSize: subHeadingFontSize > 16 ? 16 : subHeadingFontSize,
                               ),
@@ -145,10 +146,13 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                                             cursor: SystemMouseCursors.click,
                                             child: GestureDetector(
                                               onTap: () => obscuredNotifier.value = !obscuredNotifier.value,
-                                              child: Icon(
-                                                isObscured ? LucideIcons.eyeClosed : LucideIcons.eye,
-                                                size: 15,
-                                                color: Theme.of(context).colorScheme.onSurface,
+                                              child: Padding(
+                                                padding: const EdgeInsets.all(8.0),
+                                                child: Icon(
+                                                  isObscured ? LucideIcons.eyeClosed : LucideIcons.eye,
+                                                  size: 15,
+                                                  color: context.colorScheme.onSurface,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -157,8 +161,8 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                                             /// Allow local admin login for testing purposes
                                             if (value == "admin") return null;
 
-                                            if (value == null || value.isEmpty) return "Enter password or click on the eye icon to show password";
-                                            if (value.trim().length < 8) return "Password must be at least 8 digits";
+                                            if (value == null || value.isEmpty) return "Enter password";
+                                            if (value.trim().length < 8) return "Password must be at least 8 characters";
                                             return null;
                                           },
                                         );
@@ -183,7 +187,7 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                                       Expanded(
                                         child: FusionAppText(
                                           text: 'Log in',
-                                          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                          style: context.textTheme.labelLarge?.copyWith(
                                             fontSize: 16,
                                             fontWeight: FontWeight.w600,
                                           ),
@@ -234,6 +238,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final Widget? suffix;
   final bool isObscured;
   final double? width;
+  final EdgeInsetsGeometry? contentPadding;
 
   const NeumorphicDarkTextField({
     super.key,
@@ -247,6 +252,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.suffix,
     this.isObscured = false,
     this.width,
+    this.contentPadding,
   });
 
   @override
@@ -271,12 +277,13 @@ class NeumorphicDarkTextField extends StatelessWidget {
             onChanged: onChanged,
             keyboardType: keyboardType,
             validator: validator,
-            style: Theme.of(context).textTheme.labelLarge,
+            style: context.textTheme.labelLarge,
             obscureText: isObscured,
             decoration: InputDecoration(
               prefixIcon: prefix,
               prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
               suffixIcon: suffix,
+              suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
               filled: true,
               isDense: true,
               fillColor: const Color(0xFF282826),
@@ -285,8 +292,8 @@ class NeumorphicDarkTextField extends StatelessWidget {
               focusedBorder: InputBorder.none,
               hintText: hintText,
               hoverColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-              hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+              contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+              hintStyle: context.textTheme.labelLarge?.copyWith(color: Colors.grey),
             ),
           ),
         ),
@@ -470,7 +477,7 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
 //                                 const SizedBox(height: 12.0),
 //                                 AppTextView(
 //                                   text: "Sign in to your Bose Professional account",
-//                                   style: Theme.of(context).textTheme.titleSmall,
+//                                   style: context.textTheme.titleSmall,
 //                                 ),
 //                                 const SizedBox(height: 48.0),
 //                                 AppTextField(
@@ -505,7 +512,7 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
 //                                     child: Icon(
 //                                       obscured ? CupertinoIcons.eye_slash_fill : CupertinoIcons.eye_fill,
 //                                       size: 15,
-//                                       color: Theme.of(context).colorScheme.primaryColor,
+//                                       color: context.colorScheme.primaryColor,
 //                                     ),
 //                                   ),
 //                                   obscureText: obscured,
@@ -830,7 +837,7 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
 //                 "Close",
 //                 style: TextStyle(
 //                   fontSize: 16,
-//                   color: Theme.of(context).colorScheme.primaryColor,
+//                   color: context.colorScheme.primaryColor,
 //                 ),
 //               ),
 //             ),

@@ -3,14 +3,16 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
 import 'package:fusion_launcher/features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
+import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/utils/fusion_utils.dart';
 
-Border _getBorder(BuildContext context) => Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
+Border _getBorder(BuildContext context) => Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3);
 
 enum _SavedProjectsSortOption {
   name("Name");
@@ -39,7 +41,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: context.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: _getBorder(context),
                   ),
@@ -48,7 +50,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                       Expanded(
                         child: FusionAppText(
                           text: 'Create a New Blank Project',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          style: context.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.w600,
                           ),
                         ),
@@ -65,7 +67,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                           child: FittedBox(
                             child: Icon(
                               LucideIcons.plus100,
-                              color: Theme.of(context).colorScheme.onSurface,
+                              color: context.colorScheme.onSurface,
                               size: 34,
                             ),
                           ),
@@ -81,7 +83,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                   width: double.infinity,
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
+                    color: context.colorScheme.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: _getBorder(context),
                   ),
@@ -90,7 +92,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                     children: <Widget>[
                       FusionAppText(
                         text: 'Templates',
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        style: context.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -101,8 +103,8 @@ class SavedProjectsTabContent extends StatelessWidget {
                             Expanded(
                               child: FusionAppText(
                                 text: 'Start working from a prebuilt template.',
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                style: context.textTheme.labelSmall?.copyWith(
+                                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                 ),
                               ),
                             ),
@@ -118,7 +120,7 @@ class SavedProjectsTabContent extends StatelessWidget {
                                 child: FittedBox(
                                   child: Icon(
                                     LucideIcons.arrowRight,
-                                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                   ),
                                 ),
                               ),
@@ -211,10 +213,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
         if (state is ProjectLoaded && context.mounted) {
           if (state.currentProject != null) {
             FusionUiUtils.hideLoader(context);
-            Navigator.pushNamed(
-              context,
-              Routes.projectPage,
-            ).then((_) async {
+            Navigator.pushNamed(context, Routes.projectPage).then((_) async {
               await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
             });
           }
@@ -232,7 +231,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
             return Container(
               width: double.infinity,
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.surface,
+                color: context.colorScheme.surface,
                 borderRadius: BorderRadius.circular(12),
                 border: _getBorder(context),
               ),
@@ -248,7 +247,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                         Expanded(
                           child: FusionAppText(
                             text: 'Projects',
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: context.textTheme.titleMedium?.copyWith(
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -261,7 +260,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                               height: 32,
                               padding: const EdgeInsets.symmetric(horizontal: 8),
                               decoration: BoxDecoration(
-                                color: showSearchBar ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
+                                color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
                                 borderRadius: BorderRadius.circular(60),
                               ),
                               child: Row(
@@ -272,8 +271,8 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                     child: TextFormField(
                                       focusNode: _searchFocusNode,
                                       controller: _searchController,
-                                      style: Theme.of(context).textTheme.labelLarge,
-                                      cursorColor: Theme.of(context).colorScheme.onSurface,
+                                      style: context.textTheme.labelLarge,
+                                      cursorColor: context.colorScheme.onSurface,
                                       cursorWidth: 1,
                                       cursorHeight: 15,
                                       decoration: InputDecoration(
@@ -286,7 +285,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                         hintText: "Search projects",
                                         hoverColor: Colors.transparent,
                                         contentPadding: EdgeInsets.zero,
-                                        hintStyle: Theme.of(context).textTheme.labelMedium?.copyWith(color: Colors.grey),
+                                        hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
                                       ),
                                     ),
                                   ),
@@ -347,9 +346,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                           return Center(
                             child: FusionAppText(
                               text: "No Projects Found for \"${_searchController.text}\"",
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              style: context.textTheme.labelLarge?.copyWith(
                                 fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                               ),
                             ),
                           );
@@ -357,9 +356,9 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                           return Center(
                             child: FusionAppText(
                               text: "No Projects Saved Yet",
-                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              style: context.textTheme.labelLarge?.copyWith(
                                 fontSize: 16,
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                               ),
                             ),
                           );
@@ -383,7 +382,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                                 onTap: () => ProjectDetailsDialog.show(context, project: project),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.surface,
+                                    color: context.colorScheme.surface,
                                     borderRadius: BorderRadius.circular(12),
                                     border: _getBorder(context),
                                   ),
@@ -429,7 +428,7 @@ class _SortByWidget extends StatelessWidget {
         hoverColor: Colors.transparent, // Disable hover color
       ),
       child: PopupMenuButton<String>(
-        color: Theme.of(context).colorScheme.surface,
+        color: context.colorScheme.surface,
         shadowColor: Colors.transparent,
         position: PopupMenuPosition.under,
         tooltip: '',
@@ -468,14 +467,14 @@ class _SortByWidget extends StatelessWidget {
                                     padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                                     child: FusionAppText(
                                       text: sortBy.title,
-                                      style: Theme.of(context).textTheme.labelMedium,
+                                      style: context.textTheme.labelMedium,
                                     ),
                                   ),
                                 ),
                                 if (sortBy == selectedSortOption) ...<Widget>[
                                   Icon(
                                     LucideIcons.check,
-                                    color: Theme.of(context).colorScheme.onSurface,
+                                    color: context.colorScheme.onSurface,
                                   ),
                                   const SizedBox(width: 10),
                                 ],
@@ -495,21 +494,21 @@ class _SortByWidget extends StatelessWidget {
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+            color: context.colorScheme.onSurface.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(60),
           ),
           child: Row(
             children: <Widget>[
               FusionAppText(
                 text: 'Sort by',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                style: context.textTheme.labelSmall?.copyWith(
+                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Icon(
                 LucideIcons.chevronDown200,
                 size: 18,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: context.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ],
           ),
@@ -537,7 +536,7 @@ class _FilterByWidget extends StatelessWidget {
         hoverColor: Colors.transparent, // Disable hover color
       ),
       child: PopupMenuButton<String>(
-        color: Theme.of(context).colorScheme.surface,
+        color: context.colorScheme.surface,
         shadowColor: Colors.transparent,
         position: PopupMenuPosition.under,
         tooltip: '',
@@ -575,7 +574,7 @@ class _FilterByWidget extends StatelessWidget {
                                   padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                                   child: FusionAppText(
                                     text: sortBy.title,
-                                    style: Theme.of(context).textTheme.labelMedium,
+                                    style: context.textTheme.labelMedium,
                                   ),
                                 ),
                               ],
@@ -594,21 +593,21 @@ class _FilterByWidget extends StatelessWidget {
           height: 32,
           padding: const EdgeInsets.symmetric(horizontal: 10),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+            color: context.colorScheme.onSurface.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(60),
           ),
           child: Row(
             children: <Widget>[
               FusionAppText(
                 text: 'Filter',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                style: context.textTheme.labelSmall?.copyWith(
+                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Icon(
                 LucideIcons.chevronDown200,
                 size: 18,
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                color: context.colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ],
           ),
@@ -656,13 +655,11 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
         final double cardWidth = constraints.maxWidth * 0.5 > 660 ? 660 : constraints.maxWidth * 0.5;
 
         return Container(
-          constraints: BoxConstraints(
-            maxWidth: cardWidth,
-          ),
+          constraints: BoxConstraints(maxWidth: cardWidth),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(borderRadius),
-            color: Theme.of(context).colorScheme.surface,
-            border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+            color: context.colorScheme.surface,
+            border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12),
@@ -681,204 +678,380 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                       smallSize: 8, // ← tiny dot size
                       alignment: Alignment.topRight,
                       backgroundColor: Colors.red,
+                      child: InkWell(
+                        onTap: () {},
+                        splashColor: Colors.transparent,
+                        child: Container(
+                          height: 24,
+                          width: 24,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                          ),
+                          child: const Icon(
+                            LucideIcons.bell,
+                            size: 12,
+                          ),
+                        ),
+                      ),
+                    ),
+                    InkWell(
+                      onTap: () {},
+                      splashColor: Colors.transparent,
                       child: Container(
-                        height: 24,
-                        width: 24,
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+                          color: context.colorScheme.onSurface.withValues(alpha: 0.3),
                         ),
-                        child: const Icon(
-                          LucideIcons.bell,
-                          size: 12,
-                        ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
-                      ),
-                      child: FusionAppText(
-                        text: "Help",
-                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurface,
+                        child: FusionAppText(
+                          text: "Help",
+                          style: context.textTheme.labelSmall?.copyWith(
+                            color: context.colorScheme.onSurface,
+                          ),
                         ),
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Theme.of(context).colorScheme.primary,
-                      ),
-                      child: Icon(
-                        LucideIcons.userRound,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.onPrimary,
+                    InkWell(
+                      onTap: () {},
+                      splashColor: Colors.transparent,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: context.colorScheme.primary,
+                        ),
+                        child: Icon(
+                          LucideIcons.userRound,
+                          size: 16,
+                          color: context.colorScheme.onPrimary,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
-                  child: Container(
-                    padding: const EdgeInsets.all(24),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(borderRadius),
-                      color: Theme.of(context).colorScheme.surface,
-                      border: Border.all(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)),
-                    ),
-                    child: Column(
-                      spacing: 10,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        FusionAppText(
-                          text: "BASIC INFORMATION",
-                          maxLine: 2,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.onSurface,
-                          ),
-                        ),
-
-                        const Row(
-                          spacing: 10,
-                          children: <Widget>[
-                            Expanded(
-                              child: BorderedTextfield(
-                                label: "Project File Name",
-                                hintText: "Project Name",
-                              ),
-                            ),
-                            Expanded(
-                              child: BorderedTextfield(
-                                label: "File Version",
-                                hintText: "Version Number",
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 5),
-                        const BorderedTextfield(
-                          label: "Project Tags or Categories",
-                          hintText: "Add tags or categories (separated by commas)",
-                        ),
-                        const SizedBox(height: 5),
-                        const Row(
-                          spacing: 10,
-                          children: <Widget>[
-                            Expanded(
-                              child: BorderedTextfield(
-                                label: "Author Name",
-                                hintText: "Full Name",
-                              ),
-                            ),
-                            Expanded(
-                              child: BorderedTextfield(
-                                label: "Organization",
-                                hintText: "Organization Name",
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // =============================================
-                        //  Add More Details Section
-                        // =============================================
-                        ValueListenableBuilder<bool>(
-                          valueListenable: shouldShowMoreDetailsNotifier,
-                          builder: (BuildContext context, bool value, Widget? child) {
-                            return AnimatedCrossFade(
-                              duration: const Duration(milliseconds: 250),
-                              crossFadeState: shouldShowMoreDetailsNotifier.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                              firstChild: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 18).copyWith(top: 12),
-                                child: InkWell(
-                                  onTap: () {
-                                    shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
-                                  },
-                                  splashColor: Colors.transparent,
-                                  child: FusionAppText(
-                                    text: "Add More Details",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                                    ),
-                                  ),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(borderRadius),
+                        color: context.colorScheme.surface,
+                        border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.1)),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(borderRadius),
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.all(24),
+                          physics: const ClampingScrollPhysics(),
+                          child: Column(
+                            spacing: 10,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              FusionAppText(
+                                text: "BASIC INFORMATION",
+                                maxLine: 2,
+                                style: context.textTheme.bodySmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: context.colorScheme.onSurface,
                                 ),
                               ),
-                              secondChild: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
-                                child: Column(
-                                  spacing: 10,
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    FusionAppText(
-                                      text: "ORGANIZATION DETAILS",
-                                      maxLine: 2,
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: Theme.of(context).colorScheme.onSurface,
-                                      ),
+
+                              const Row(
+                                spacing: 10,
+                                children: <Widget>[
+                                  Expanded(
+                                    child: BorderedTextfield(
+                                      label: "Project File Name",
+                                      hintText: "Project Name",
                                     ),
-                                    const SizedBox(height: 5),
-                                    const BorderedTextfield(
-                                      label: "Project Tags or Categories",
-                                      hintText: "Add tags or categories (separated by commas)",
+                                  ),
+                                  Expanded(
+                                    child: BorderedTextfield(
+                                      label: "File Version",
+                                      hintText: "Version Number",
                                     ),
-                                    const SizedBox(height: 5),
-                                    const Row(
-                                      spacing: 10,
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: BorderedTextfield(
-                                            label: "Author Name",
-                                            hintText: "Full Name",
-                                          ),
-                                        ),
-                                        Expanded(
-                                          child: BorderedTextfield(
-                                            label: "Organization",
-                                            hintText: "Organization Name",
-                                          ),
-                                        ),
-                                      ],
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 5),
+                              const BorderedTextfield(
+                                label: "Project Tags or Categories",
+                                hintText: "Add tags or categories (separated by commas)",
+                              ),
+                              const SizedBox(height: 5),
+                              const Row(
+                                spacing: 10,
+                                children: <Widget>[
+                                  Expanded(
+                                    child: BorderedTextfield(
+                                      label: "Author Name",
+                                      hintText: "Full Name",
                                     ),
-                                    const SizedBox(height: 5),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 18),
+                                  ),
+                                  Expanded(
+                                    child: BorderedTextfield(
+                                      label: "Organization",
+                                      hintText: "Organization Name",
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              // =============================================
+                              //  Add More Details Section
+                              // =============================================
+                              ValueListenableBuilder<bool>(
+                                valueListenable: shouldShowMoreDetailsNotifier,
+                                builder: (BuildContext context, bool value, Widget? child) {
+                                  return AnimatedCrossFade(
+                                    duration: const Duration(milliseconds: 250),
+                                    crossFadeState: shouldShowMoreDetailsNotifier.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                                    firstChild: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 18).copyWith(top: 12),
                                       child: InkWell(
                                         onTap: () {
                                           shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
                                         },
                                         splashColor: Colors.transparent,
                                         child: FusionAppText(
-                                          text: "Show Less Details",
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          text: "Add More Details",
+                                          style: context.textTheme.bodySmall?.copyWith(
                                             fontWeight: FontWeight.w600,
-                                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                           ),
                                         ),
                                       ),
                                     ),
-                                  ],
+                                    secondChild: Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
+                                      child: Column(
+                                        spacing: 10,
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: <Widget>[
+                                          // ===============================
+                                          //  ORGANIZATION DETAILS SECTION
+                                          // ===============================
+                                          FusionAppText(
+                                            text: "ORGANIZATION DETAILS",
+                                            maxLine: 2,
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          const BorderedTextfield(
+                                            label: "Organization Name",
+                                            hintText: "Organization Name",
+                                          ),
+
+                                          const SizedBox(height: 5),
+                                          const Row(
+                                            spacing: 10,
+                                            children: <Widget>[
+                                              Expanded(
+                                                child: BorderedTextfield(
+                                                  label: "Project State",
+                                                  hintText: "State",
+                                                ),
+                                              ),
+
+                                              Expanded(
+                                                child: BorderedTextfield(
+                                                  label: "Project Country",
+                                                  hintText: "Country",
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          const SizedBox(height: 5),
+                                          const BorderedTextfield(
+                                            label: "Project Time Zone",
+                                            hintText: "Time Zone",
+                                          ),
+
+                                          const SizedBox(height: 5),
+                                          const BorderedTextfield(
+                                            label: "Primary Building Name",
+                                            hintText: "Primary Building Name",
+                                          ),
+
+                                          const SizedBox(height: 5),
+                                          // ===============================
+                                          //  BUDGET & OBJECTIVES SECTION
+                                          // ===============================
+                                          FusionAppText(
+                                            text: "BUDGET & OBJECTIVES",
+                                            maxLine: 2,
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            spacing: 10,
+                                            children: <Widget>[
+                                              const Expanded(
+                                                child: BorderedTextfield(
+                                                  label: "Target Budget",
+                                                  hintText: "Budget",
+                                                ),
+                                              ),
+
+                                              Expanded(
+                                                child: FusionDarkDropdown<CurrencyType>(
+                                                  title: "Currency",
+                                                  placeholder: "Select Currency",
+                                                  items: CurrencyType.values,
+                                                  labelBuilder: (CurrencyType value) => value.name.toUpperCase(),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          // Project Time Zone
+                                          const SizedBox(height: 5),
+                                          const BorderedTextfield(
+                                            label: "Project Goals",
+                                            hintText: "Add project goals or objectives",
+                                          ),
+
+                                          // Primary Building Name
+                                          const SizedBox(height: 5),
+                                          const BorderedTextfield(
+                                            label: "Primary Building Name",
+                                            hintText: "Primary Building Name",
+                                          ),
+
+                                          const SizedBox(height: 5),
+
+                                          // ===============================
+                                          //  UNITS & GLOBAL SETTINGS SECTION
+                                          // ===============================
+                                          FusionAppText(
+                                            text: "UNITS & GLOBAL SETTINGS",
+                                            maxLine: 2,
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 5),
+                                          Row(
+                                            spacing: 10,
+                                            children: <Widget>[
+                                              Expanded(
+                                                child: FusionDarkDropdown<MeasurementUnit>(
+                                                  title: "Measurement Units",
+                                                  placeholder: "Select",
+                                                  items: MeasurementUnit.values,
+                                                  labelBuilder: (MeasurementUnit value) => "${value.displayName} (${value.symbol})",
+                                                ),
+                                              ),
+                                              Expanded(
+                                                child: FusionDarkDropdown<String>(
+                                                  title: "Temperature",
+                                                  placeholder: "Select",
+                                                  items: <String>['Celsius', 'Fahrenheit'],
+                                                  labelBuilder: (String value) => value,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+
+                                          // Project Time Zone
+                                          const SizedBox(height: 5),
+                                          const BorderedTextfield(
+                                            label: "Regional Based Defaults",
+                                            hintText: "Add regional based default settings",
+                                          ),
+
+                                          //  ================================
+                                          //  Show Less Details Section
+                                          // ===============================
+                                          const SizedBox(height: 5),
+                                          Padding(
+                                            padding: const EdgeInsets.symmetric(horizontal: 18),
+                                            child: InkWell(
+                                              onTap: () {
+                                                shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
+                                              },
+                                              splashColor: Colors.transparent,
+                                              child: FusionAppText(
+                                                text: "Show Less Details",
+                                                style: context.textTheme.bodySmall?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+
+                              const SizedBox(height: 5),
+                              const BorderedTextfield(
+                                label: "Notes",
+                                hintText: "Add notes or comments",
+                                minLines: 5,
+                                maxLines: 10,
+                              ),
+                              const SizedBox(height: 5),
+
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: NeumorphicDarkButton(
+                                  onTap: () {},
+                                  width: 160,
+                                  child: Container(
+                                    height: 60,
+                                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Row(
+                                      children: <Widget>[
+                                        Expanded(
+                                          child: FusionAppText(
+                                            text: 'Continue',
+                                            style: context.textTheme.titleSmall?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ),
+                                        MouseRegion(
+                                          cursor: SystemMouseCursors.click,
+                                          child: Container(
+                                            height: 28,
+                                            width: 47,
+                                            decoration: BoxDecoration(
+                                              color: FusionDarkColorPallette.green20,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: const Icon(
+                                              LucideIcons.arrowRight,
+                                              color: Colors.white,
+                                              size: 12,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
                                 ),
                               ),
-                            );
-                          },
+                            ],
+                          ),
                         ),
-
-                        const SizedBox(height: 5),
-                        const BorderedTextfield(
-                          label: "Notes",
-                          hintText: "Add notes or comments",
-                          minLines: 5,
-                          maxLines: 10,
-                        ),
-                        const SizedBox(height: 5),
-                      ],
+                      ),
                     ),
                   ),
                 ),
@@ -891,10 +1064,124 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
   }
 }
 
-class BorderedTextfield extends StatelessWidget {
+class BorderedTextfield extends StatefulWidget {
+  final String? initialValue;
   final String label, hintText;
   final int minLines, maxLines;
-  const BorderedTextfield({super.key, required this.label, required this.hintText, this.minLines = 1, this.maxLines = 1});
+  final bool isEnabled, isObscured;
+
+  const BorderedTextfield({
+    super.key,
+    this.initialValue,
+    required this.label,
+    required this.hintText,
+    this.minLines = 1,
+    this.maxLines = 1,
+    this.isEnabled = true,
+    this.isObscured = false,
+  });
+
+  @override
+  State<BorderedTextfield> createState() => _BorderedTextfieldState();
+}
+
+class _BorderedTextfieldState extends State<BorderedTextfield> {
+  late bool isObscured;
+
+  @override
+  void initState() {
+    super.initState();
+    isObscured = widget.isObscured;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    const double borderRadius = 12.0;
+
+    final Widget obsecuredWidget = InkWell(
+      onTap: () => setState(() => isObscured = !isObscured),
+      splashColor: Colors.transparent,
+      child: Icon(
+        isObscured ? LucideIcons.eyeOff : LucideIcons.eye,
+        size: 18,
+        color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+      ),
+    );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 18),
+          child: FusionAppText(
+            text: widget.label,
+            style: context.textTheme.bodySmall?.copyWith(
+              fontWeight: FontWeight.w600,
+              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextFormField(
+          initialValue: widget.initialValue,
+          minLines: widget.minLines,
+          maxLines: widget.maxLines,
+          enabled: widget.isEnabled,
+          obscureText: isObscured,
+          style: context.textTheme.labelLarge?.copyWith(
+            color: context.colorScheme.onSurface,
+          ),
+          mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
+          decoration: InputDecoration(
+            hintText: widget.hintText,
+            hintStyle: context.textTheme.labelLarge?.copyWith(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
+            isDense: true,
+            filled: true,
+            fillColor: Colors.transparent,
+            contentPadding: const EdgeInsets.all(14),
+            suffixIcon: widget.isObscured ? obsecuredWidget : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+              borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+            ),
+            disabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+              borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+              borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(borderRadius),
+              borderSide: BorderSide(color: context.colorScheme.primary, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class FusionDarkDropdown<T> extends StatelessWidget {
+  final String? title;
+  final T? selectedValue;
+  final List<T> items;
+  final String Function(T item) labelBuilder;
+  final ValueChanged<T>? onChanged;
+  final String placeholder;
+
+  const FusionDarkDropdown({
+    super.key,
+    this.title,
+    required this.items,
+    required this.labelBuilder,
+    this.selectedValue,
+    this.onChanged,
+    this.placeholder = "Select",
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -903,45 +1190,126 @@ class BorderedTextfield extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18),
-          child: FusionAppText(
-            text: label,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+        if (title != null) ...<Widget>[
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 18),
+            child: FusionAppText(
+              text: title!,
+              style: context.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
             ),
           ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          minLines: minLines,
-          maxLines: maxLines,
+          const SizedBox(height: 12),
+        ],
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: Theme(
+                data: Theme.of(context).copyWith(
+                  popupMenuTheme: const PopupMenuThemeData(
+                    color: Color(0xFFF5F5F5),
+                    elevation: 0,
+                    shadowColor: Colors.transparent,
+                    surfaceTintColor: Colors.transparent,
+                  ),
+                  splashColor: Colors.transparent,
+                  highlightColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                ),
+                child: PopupMenuButton<T>(
+                  color: context.colorScheme.surface,
+                  shadowColor: Colors.transparent,
+                  position: PopupMenuPosition.under,
+                  tooltip: '',
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(9),
+                    side: BorderSide(
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  offset: const Offset(0, 10),
+                  padding: EdgeInsets.zero,
+                  menuPadding: EdgeInsets.zero,
+                  clipBehavior: Clip.none,
 
-          decoration: InputDecoration(
-            hintText: hintText,
-
-            hintStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                  onSelected: (T value) => onChanged?.call(value),
+                  itemBuilder: (BuildContext context) {
+                    return <PopupMenuEntry<T>>[
+                      PopupMenuItem<T>(
+                        enabled: false,
+                        padding: const EdgeInsets.all(8),
+                        child: SizedBox(
+                          width: double.maxFinite,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              ...items.map((T item) {
+                                return InkWell(
+                                  onTap: () {
+                                    onChanged?.call(item);
+                                    Navigator.pop(context);
+                                  },
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                          child: Text(
+                                            labelBuilder(item),
+                                            style: context.textTheme.labelMedium,
+                                          ),
+                                        ),
+                                      ),
+                                      if (item == selectedValue) ...<Widget>[
+                                        Icon(
+                                          LucideIcons.check,
+                                          color: context.colorScheme.onSurface,
+                                        ),
+                                        const SizedBox(width: 10),
+                                      ],
+                                    ],
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ];
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(borderRadius),
+                      border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Expanded(
+                          child: FusionAppText(
+                            text: selectedValue != null ? labelBuilder(selectedValue as T) : placeholder,
+                            style: context.textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(
+                                alpha: selectedValue != null ? 1.0 : 0.4,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        Icon(
+                          LucideIcons.chevronDown,
+                          color: context.colorScheme.onSurface.withAlpha(150),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             ),
-
-            isDense: true,
-            filled: true,
-            fillColor: Colors.transparent,
-            contentPadding: const EdgeInsets.all(14),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
-            ),
-          ),
+          ],
         ),
       ],
     );

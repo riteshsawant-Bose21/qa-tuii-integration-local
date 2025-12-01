@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/router/routes.dart';
@@ -46,14 +47,14 @@ class _HomeTabContentState extends State<HomeTabContent> {
                         children: <Widget>[
                           FusionAppText(
                             text: "What's new in Fusion",
-                            style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                            style: context.textTheme.displaySmall?.copyWith(
                               fontWeight: FontWeight.bold,
                               fontSize: headlineFontSize > 36 ? 36 : headlineFontSize,
                             ),
                           ),
                           FusionAppText(
                             text: "Stay ahead with the latest updates, feature plug-ins and new enhancements designed to expand your Fusion experience.",
-                            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            style: context.textTheme.bodyLarge?.copyWith(
                               color: FusionDarkColorPallette.medium50,
                               fontSize: subHeadingFontSize > 16 ? 16 : subHeadingFontSize,
                             ),
@@ -64,7 +65,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
                             width: double.infinity,
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.surface,
+                              color: context.colorScheme.surface,
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
@@ -72,7 +73,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
                                 Expanded(
                                   child: FusionAppText(
                                     text: 'Explore More',
-                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    style: context.textTheme.titleSmall?.copyWith(
                                       fontWeight: FontWeight.w600,
                                     ),
                                   ),
@@ -139,7 +140,7 @@ class _RecentProjects extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: context.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -153,9 +154,9 @@ class _RecentProjects extends StatelessWidget {
                 Expanded(
                   child: FusionAppText(
                     text: 'RECENT PROJECTS',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    style: context.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                   ),
                 ),
@@ -165,12 +166,12 @@ class _RecentProjects extends StatelessWidget {
                     height: 24,
                     width: 24,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
                       LucideIcons.chevronRight,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                       size: 12,
                     ),
                   ),
@@ -206,9 +207,9 @@ class _RecentProjects extends StatelessWidget {
                     child: Center(
                       child: FusionAppText(
                         text: "No Projects Available",
-                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        style: context.textTheme.labelLarge?.copyWith(
                           fontSize: 16,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                          color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),
                     ),
@@ -289,7 +290,7 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface,
+        color: context.colorScheme.surface,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
@@ -303,9 +304,9 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
                 Expanded(
                   child: FusionAppText(
                     text: 'CASE STUDIES & TEMPLATES',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    style: context.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                     ),
                   ),
                 ),
@@ -315,12 +316,12 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
                     height: 24,
                     width: 24,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Icon(
                       LucideIcons.chevronRight,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                       size: 12,
                     ),
                   ),
@@ -425,7 +426,7 @@ class _HomeRightContent extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
+          color: context.colorScheme.onSurface.withValues(alpha: 0.3),
         ),
       ),
       padding: const EdgeInsets.all(16),
@@ -436,16 +437,16 @@ class _HomeRightContent extends StatelessWidget {
         children: <Widget>[
           FusionAppText(
             text: title,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            style: context.textTheme.titleSmall?.copyWith(
               fontWeight: FontWeight.w600,
-              color: Theme.of(context).colorScheme.onSurface,
+              color: context.colorScheme.onSurface,
             ),
           ),
 
           Flexible(
             child: FusionAppText(
               text: description,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              style: context.textTheme.labelSmall?.copyWith(
                 color: FusionDarkColorPallette.medium50,
               ),
             ),
@@ -458,7 +459,7 @@ class _HomeRightContent extends StatelessWidget {
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+                color: context.colorScheme.onSurface.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Column(
@@ -467,7 +468,7 @@ class _HomeRightContent extends StatelessWidget {
                   FusionAppText(
                     text: buttonText,
                     maxLine: 1,
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: context.textTheme.bodySmall,
                   ),
                 ],
               ),

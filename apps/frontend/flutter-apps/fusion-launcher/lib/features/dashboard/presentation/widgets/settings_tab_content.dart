@@ -1,7 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/dashboard/presentation/widgets/saved_projects_tab.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 
-enum FusionLanguages { english }
+enum FusionLanguages {
+  english;
+
+  static FusionLanguages? fromString(String value) {
+    try {
+      return FusionLanguages.values.firstWhere((FusionLanguages element) => element.name == value);
+    } catch (e) {
+      return null;
+    }
+  }
+}
+
+enum AppStartupBehavior {
+  openLastProject("Open Last Project"),
+  openHomePage("Open Home Page");
+
+  const AppStartupBehavior(this.title);
+  final String title;
+}
+
+enum NotificationPreference {
+  inAppAlerts("In-app Alerts");
+
+  const NotificationPreference(this.title);
+  final String title;
+}
 
 class SettingsTabContent extends StatefulWidget {
   const SettingsTabContent({super.key});
@@ -13,6 +40,8 @@ class SettingsTabContent extends StatefulWidget {
 class _SettingsTabContentState extends State<SettingsTabContent> {
   FusionLanguages _selectedLanguage = FusionLanguages.english;
   ThemeMode _selectedThemeMode = ThemeMode.system;
+  AppStartupBehavior _selectedAppStartupBehavior = AppStartupBehavior.openLastProject;
+  NotificationPreference _selectedNotificationPreference = NotificationPreference.inAppAlerts;
 
   @override
   Widget build(BuildContext context) {
@@ -23,12 +52,16 @@ class _SettingsTabContentState extends State<SettingsTabContent> {
         children: <Widget>[
           const _SecionNameWidget(text: "Language & Apperance"),
           const SizedBox(height: 8),
+
+          // =======================================
+          //   Language Section
+          // =======================================
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: FusionAppText(
               text: "Language",
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onInverseSurface,
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.surfaceDim,
               ),
             ),
           ),
@@ -36,53 +69,30 @@ class _SettingsTabContentState extends State<SettingsTabContent> {
           Row(
             children: <Widget>[
               Expanded(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Theme.of(context).colorScheme.onInverseSurface),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Theme(
-                    data: Theme.of(context).copyWith(
-                      splashColor: Colors.transparent,
-                      hoverColor: Colors.transparent,
-                      focusColor: Colors.transparent,
-                      highlightColor: Colors.transparent,
-                    ),
-                    child: DropdownButton<FusionLanguages?>(
-                      value: _selectedLanguage,
-                      isExpanded: true,
-                      borderRadius: BorderRadius.circular(12),
-                      items: <DropdownMenuItem<FusionLanguages?>>[
-                        ...FusionLanguages.values.map((FusionLanguages lang) {
-                          return DropdownMenuItem<FusionLanguages>(
-                            value: lang,
-                            child: FusionAppText(
-                              text: lang.name[0].toUpperCase() + lang.name.substring(1),
-                            ),
-                          );
-                        }),
-                      ],
-                      underline: const SizedBox(),
-                      onChanged: (FusionLanguages? value) {
-                        if (value == null) return;
-                        setState(() => _selectedLanguage = value);
-                      },
-                    ),
-                  ),
+                child: FusionDarkDropdown<FusionLanguages>(
+                  selectedValue: _selectedLanguage,
+                  onChanged: (FusionLanguages? value) {
+                    if (value == null) return;
+                    setState(() => _selectedLanguage = value);
+                  },
+                  labelBuilder: (FusionLanguages item) => item.name[0].toUpperCase() + item.name.substring(1),
+                  items: FusionLanguages.values,
                 ),
               ),
               const Spacer(),
             ],
           ),
 
+          // =======================================
+          //   Theme Section
+          // =======================================
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             child: FusionAppText(
               text: "Theme",
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                color: Theme.of(context).colorScheme.onInverseSurface,
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.surfaceDim,
               ),
             ),
           ),
@@ -106,14 +116,140 @@ class _SettingsTabContentState extends State<SettingsTabContent> {
                       children: <Widget>[
                         Radio<ThemeMode>(
                           value: mode,
-                          activeColor: Theme.of(context).colorScheme.onSurface,
+                          activeColor: context.colorScheme.onSurface,
+                          overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+                          backgroundColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+                          fillColor: WidgetStatePropertyAll<Color>(
+                            context.colorScheme.onSurface.withValues(
+                              alpha: isSelected ? 0.8 : 0.3,
+                            ),
+                          ),
                         ),
-                        FusionAppText(text: mode.name[0].toUpperCase() + mode.name.substring(1)),
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedThemeMode = mode),
+                          child: FusionAppText(
+                            text: mode.name[0].toUpperCase() + mode.name.substring(1),
+                            style: context.textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ),
                       ],
                     );
                   }),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 30),
+
+          // =======================================
+          //   Application Behavior Section
+          // =======================================
+          const _SecionNameWidget(text: "Application Behavior"),
+          const SizedBox(height: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: FusionAppText(
+              text: "Startup Behavior",
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.surfaceDim,
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: RadioGroup<AppStartupBehavior>(
+              groupValue: _selectedAppStartupBehavior,
+              onChanged: (AppStartupBehavior? value) {
+                if (value == null) return;
+                setState(() => _selectedAppStartupBehavior = value);
+              },
+              child: Column(
+                children: <Widget>[
+                  ...AppStartupBehavior.values.map((AppStartupBehavior appStartupBehavior) {
+                    final bool isSelected = _selectedAppStartupBehavior == appStartupBehavior;
+
+                    return Row(
+                      spacing: 4,
+                      children: <Widget>[
+                        Radio<AppStartupBehavior>(
+                          value: appStartupBehavior,
+                          activeColor: context.colorScheme.onSurface,
+                          overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+                          backgroundColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+                          focusColor: Colors.transparent,
+                          fillColor: WidgetStatePropertyAll<Color>(
+                            context.colorScheme.onSurface.withValues(
+                              alpha: isSelected ? 0.8 : 0.3,
+                            ),
+                          ),
+                        ),
+                        GestureDetector(
+                          onTap: () => setState(() => _selectedAppStartupBehavior = appStartupBehavior),
+                          child: FusionAppText(
+                            text: appStartupBehavior.title,
+                            style: context.textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ),
+
+          // =======================================
+          //   Notification Preferences Section
+          // =======================================
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: FusionAppText(
+              text: "Notifications Preferences",
+              style: context.textTheme.labelMedium?.copyWith(
+                color: context.colorScheme.surfaceDim,
+              ),
+            ),
+          ),
+
+          // Checkbox and title
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Column(
+              children: <Widget>[
+                ...NotificationPreference.values.map((NotificationPreference notificationPreference) {
+                  final bool isSelected = _selectedNotificationPreference == notificationPreference;
+
+                  return Row(
+                    spacing: 4,
+                    children: <Widget>[
+                      Checkbox(
+                        value: isSelected,
+                        onChanged: (bool? value) {
+                          _selectedNotificationPreference = notificationPreference;
+                          // setState(() {});
+                        },
+                        activeColor: context.colorScheme.onSurface.withValues(alpha: 0.8),
+                        checkColor: context.colorScheme.surface,
+                      ),
+                      Flexible(
+                        child: FusionAppText(
+                          text: notificationPreference.title,
+                          style: context.textTheme.labelLarge?.copyWith(
+                            color: context.colorScheme.onSurface.withValues(alpha: 0.9),
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+              ],
             ),
           ),
         ],
@@ -131,9 +267,9 @@ class _SecionNameWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     return FusionAppText(
       text: text,
-      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+      style: context.textTheme.titleMedium?.copyWith(
         fontWeight: FontWeight.bold,
-        color: Theme.of(context).colorScheme.surface,
+        color: context.colorScheme.onSurface.withValues(alpha: 0.4),
       ),
     );
   }
