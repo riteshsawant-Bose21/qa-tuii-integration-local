@@ -36,6 +36,10 @@ class ProjectService {
   final ProcessingBlockRepository processingBlocks;
   final ZoneFunctionRepository zoneFunctions;
   final PrioritySourceDataRepository prioritySourceData;
+  final ScenesRepository scenes;
+  final SceneActionRepository sceneActions;
+  final SceneSetRepository sceneSets;
+  final GPIORepository gpioConfig;
 
   final RelationshipManager relationships;
 
@@ -77,6 +81,10 @@ class ProjectService {
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
     PrioritySourceDataRepository? prioritySourceData,
+    ScenesRepository? scenesRepository,
+    SceneActionRepository? sceneActionRepository,
+    SceneSetRepository? sceneSetRepository,
+    GPIORepository? gpioRepository,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -91,7 +99,11 @@ class ProjectService {
        processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
        relationships = relationships ?? RelationshipManager(),
-       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository();
+       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
+       scenes = scenesRepository ?? ScenesRepository(),
+       sceneActions = sceneActionRepository ?? SceneActionRepository(),
+       sceneSets = sceneSetRepository ?? SceneSetRepository(),
+       gpioConfig = gpioRepository ?? GPIORepository();
 
   ProjectService copyWith({
     String? id,
@@ -123,6 +135,10 @@ class ProjectService {
     ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
     PrioritySourceDataRepository? prioritySourceData,
+    ScenesRepository? scenesRepository,
+    SceneActionRepository? sceneActionRepository,
+    SceneSetRepository? sceneSetRepository,
+    GPIORepository? gpioRepository,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -154,6 +170,10 @@ class ProjectService {
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
+      scenesRepository: scenesRepository ?? scenes,
+      sceneActionRepository: sceneActionRepository ?? sceneActions,
+      sceneSetRepository: sceneSetRepository ?? sceneSets,
+      gpioRepository: gpioRepository ?? gpioConfig,
     );
 
     // Preserve undo/redo stacks
@@ -207,6 +227,10 @@ class ProjectService {
       "relationships": relationships.toJson(),
       "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
       "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
+      "scenesRepository": scenes.toJson((s) => s.toJson()),
+      "sceneActions": sceneActions.toJson((sa) => sa.toJson()),
+      "sceneSetsRepository": sceneSets.toJson((ss) => ss.toJson()),
+      "gpioConfig": gpioConfig.toJson((g) => g.toJson()),
     };
   }
 
@@ -265,6 +289,10 @@ class ProjectService {
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
     service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
+    service.scenes.fromJsonList(json["scenesRepository"], (m) => SceneModel.fromJson(m), "id");
+    service.sceneActions.fromJsonList(json["sceneActions"], (m) => SceneActionModel.fromJson(m), "id");
+    service.sceneSets.fromJsonList(json["sceneSetsRepository"], (m) => SceneSetModel.fromJson(m), "id");
+    service.gpioConfig.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

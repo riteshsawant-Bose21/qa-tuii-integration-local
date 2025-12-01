@@ -58,3 +58,7 @@ export 'functions/functions_service.dart';
 //mix scenes
 export 'mix_scenes/mix_scenes_manager.dart';
 export 'mix_scenes/mix_scenes_service.dart';
+
+//scenes
+export 'scenes/scene_manager.dart';
+export 'scenes/scene_service.dart';

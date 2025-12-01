@@ -110,6 +110,14 @@ class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
 
+class ScenesRepository extends Repository<SceneModel> {}
+
+class SceneActionRepository extends Repository<SceneActionModel> {}
+
+class SceneSetRepository extends Repository<SceneSetModel> {}
+
+class GPIORepository extends Repository<GpioConfig> {}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {
@@ -131,16 +139,15 @@ class ZoneFunctionRepository extends Repository<ZoneFunctions> {
     }
   }
 
-
   // Get MixSetting for source id, function id and scene id
   MixSettings? getMixSettingBySourceId({required String functionId, required String sceneId, required String sourceId}) {
     try {
       final zoneFunction = getByFunctionId(functionId: functionId);
       if (zoneFunction == null) return null;
       final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
-      if(mixScene is SourceMixScene) {
+      if (mixScene is SourceMixScene) {
         return mixScene.mixSettings.firstWhere((ms) => ms.sourceId == sourceId);
-      }else{
+      } else {
         return null;
       }
     } catch (e) {
@@ -153,9 +160,9 @@ class ZoneFunctionRepository extends Repository<ZoneFunctions> {
       final zoneFunction = getByFunctionId(functionId: functionId);
       if (zoneFunction == null) return [];
       final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
-      if(mixScene is SourceMixScene) {
+      if (mixScene is SourceMixScene) {
         return mixScene.mixSettings;
-      }else{
+      } else {
         return [];
       }
     } catch (e) {
@@ -168,9 +175,9 @@ class ZoneFunctionRepository extends Repository<ZoneFunctions> {
       final zoneFunction = getByFunctionId(functionId: functionId);
       if (zoneFunction == null) return null;
       final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
-      if(mixScene is MatrixMixScene) {
+      if (mixScene is MatrixMixScene) {
         return mixScene.mixerConfig;
-      }else{
+      } else {
         return null;
       }
     } catch (e) {
@@ -178,22 +185,20 @@ class ZoneFunctionRepository extends Repository<ZoneFunctions> {
     }
   }
 
-
   List<MatrixSettings> getAllMatrixSettingsFunctionAndScene({required String functionId, required String sceneId}) {
     try {
       final zoneFunction = getByFunctionId(functionId: functionId);
       if (zoneFunction == null) return [];
       final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
-      if(mixScene is MatrixMixScene) {
+      if (mixScene is MatrixMixScene) {
         return mixScene.mixerConfig.settings;
-      }else{
+      } else {
         return [];
       }
     } catch (e) {
       return [];
     }
   }
-
 }
 
 class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
@@ -226,5 +231,3 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
     }
   }
 }
-
-
