@@ -7,6 +7,9 @@
 #include <linux/interrupt.h>
 #include <linux/delay.h>
 #include <linux/workqueue.h>
+#include <linux/of.h>
+#include <linux/string.h>
+#include <linux/property.h>
 
 #include "fusion-io.h"
 #include "fusion-io-sysfs.h"
@@ -1198,20 +1201,87 @@ static void cleanup_gpios(void)
     }
 }
 
-static struct base_device *new_default_base_device(enum base_device_type bd_type) 
+static int parse_device_id_from_bootargs(struct device *dev, char *device_id, size_t len)
+{
+    struct device_node *chosen;
+    const char *bootargs;
+    const char *match, *end;
+    size_t token_len;
+
+    chosen = of_find_node_by_path("/chosen");
+    if (!chosen)
+        return -ENOENT;
+
+    bootargs = of_get_property(chosen, "bootargs", NULL);
+    if (!bootargs) {
+        of_node_put(chosen);
+        return -ENOENT;
+    }
+
+    match = strstr(bootargs, "device_id=");
+    if (!match) {
+        of_node_put(chosen);
+        return -ENOENT;
+    }
+
+    match += strlen("device_id=");
+    end = strpbrk(match, " ");
+    token_len = end ? (size_t)(end - match) : strnlen(match, len - 1);
+    token_len = min(token_len, len - 1);
+    if (!token_len) {
+        of_node_put(chosen);
+        return -EINVAL;
+    }
+
+    memcpy(device_id, match, token_len);
+    device_id[token_len] = '\0';
+
+    of_node_put(chosen);
+    dev_dbg(dev, "Parsed device_id '%s' from bootargs\n", device_id);
+
+    return 0;
+}
+
+static int get_device_id(struct device *dev, char *device_id, size_t len)
+{
+    const char *device_id_prop;
+    int ret;
+
+    ret = device_property_read_string(dev, "device_id", &device_id_prop);
+    if (!ret && device_id_prop && device_id_prop[0]) {
+        strscpy(device_id, device_id_prop, len);
+        dev_dbg(dev, "Using device_id '%s' from devicetree\n", device_id);
+        return 0;
+    }
+
+    ret = parse_device_id_from_bootargs(dev, device_id, len);
+    if (ret)
+        dev_err(dev, "Failed to get device_id from devicetree property or bootargs\n");
+
+    return ret;
+}
+
+static struct base_device *new_default_base_device(const char *device_id)
 {
     struct base_device *bd;
 
-    for (int i = 0; default_bd_types[i] != BD_TYPE_NONE; ++i) {
-        if (bd_type == default_bd_types[i]) {
-            bd = devm_kzalloc(&bd_drvdata->pdev->dev, sizeof(*default_bds[i]), GFP_KERNEL);
-            if (bd == NULL) {
-                break;
-            }
+    if (!device_id || !device_id[0])
+        return NULL;
 
-            memcpy(bd, default_bds[i], sizeof(*bd));
-            return bd;
+    for (size_t i = 0; i < ARRAY_SIZE(default_bds); ++i) {
+        if (default_bds[i] == NULL)
+            continue;
+
+        if (strcasecmp(device_id, default_bds[i]->data.model) != 0)
+            continue;
+
+        bd = devm_kzalloc(&bd_drvdata->pdev->dev, sizeof(*default_bds[i]), GFP_KERNEL);
+        if (bd == NULL) {
+            break;
         }
+
+        memcpy(bd, default_bds[i], sizeof(*bd));
+        return bd;
     }
 
     return NULL;
@@ -1318,9 +1388,10 @@ static int fusion_io_probe(struct platform_device *pdev)
 {
     struct base_device  *bd;
     struct io_card      *ic;
-    struct id_data      data;
+    struct id_data      data = {0};
 
     struct i2c_adapter  *i2c_adapter;
+    char                device_id[MAX_STRING] = {0};
 
     bool has_slot_io;
     int i, j;
@@ -1334,34 +1405,27 @@ static int fusion_io_probe(struct platform_device *pdev)
 
     bd_drvdata->pdev = pdev;
 
+    ret = get_device_id(&pdev->dev, device_id, sizeof(device_id));
+    if (ret)
+        return ret;
 
     i2c_adapter = i2c_get_adapter(I2C_ADAPTER);
     if (!i2c_adapter) {
         return dev_err_probe(&pdev->dev, -EPROBE_DEFER, "i2c bus not ready\n");;
     }
 
-    // TODO
-    // Read IMX8 ROM for this. hardcode for now
-    data.type = BD_TYPE_FUSION_FM6;
-
-    if (data.type >= BD_TYPE_FIXED_IO_START && data.type < BD_TYPE_FIXED_IO_END) {
-        has_slot_io = false;
-    } else {
-        has_slot_io = true;
-    }
-    
     // set up the base_device
-    bd = new_default_base_device(data.type);
+    bd = new_default_base_device(device_id);
     if (!bd) {
-        dev_err(&pdev->dev, "No base_device static config match found for base_device type %d\n", data.type);
+        dev_err(&pdev->dev, "No base_device static config match found for device_id '%s'\n", device_id);
         ret = -EINVAL;
         goto error;
     }
+    has_slot_io = (bd->data.type >= BD_TYPE_SLOT_IO_START && bd->data.type < BD_TYPE_SLOT_IO_END);
     bd_drvdata->fusion_device = bd;
 
     platform_set_drvdata(pdev, bd_drvdata);
     
-    strcpy(bd->data.sn, data.sn);
     bd_drvdata->i2c_adapter = i2c_adapter;
     dev_info(&pdev->dev, "Found config -- Model: %s, SN: %s", bd->data.model, bd->data.sn);
 
