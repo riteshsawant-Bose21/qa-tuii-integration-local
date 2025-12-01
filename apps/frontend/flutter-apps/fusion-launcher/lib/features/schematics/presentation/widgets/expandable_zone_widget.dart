@@ -96,7 +96,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       padding: const EdgeInsets.only(left: 14, right: 14),
       height: 36,
       decoration: BoxDecoration(
-        color: isHovered ? widget.bgColor.withAlpha(150) : widget.bgColor.withAlpha(190),
+        color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
         border: Border.all(
           color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
         ),

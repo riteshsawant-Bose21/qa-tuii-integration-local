@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
-import 'package:path_provider/path_provider.dart';
 
 const String kFusionProjectDirName = '/FusionProject';
 const String kAdminFusionProjectDirName = '/AdminFusionProject';
@@ -22,6 +19,8 @@ class LocalProjectManager {
     final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
     Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
+
+    // print("Fusion Project Directory: ${fusionDir.path}");
 
     if (!await fusionDir.exists()) {
       await fusionDir.create(recursive: true);
