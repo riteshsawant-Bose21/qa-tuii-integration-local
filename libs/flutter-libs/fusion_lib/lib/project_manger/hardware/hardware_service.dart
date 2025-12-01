@@ -20,11 +20,11 @@ extension HardwareService on ProjectService {
     }
 
     if (addToCircuit) {
-      checkAndAddHardwareForCircuit(hw.id);
+      checkAndAddHardwareForCircuit(hw.id, hw.addedFromBuildingPage);
     }
   }
 
-  void checkAndAddHardwareForCircuit(String hardwareId) {
+  void checkAndAddHardwareForCircuit(String hardwareId, bool fromBuildingPage) {
     final hw = hardware.get(hardwareId);
     if (hw == null) {
       throw Exception('Hardware $hardwareId not found');
@@ -54,6 +54,7 @@ extension HardwareService on ProjectService {
           final newCircuit = CircuitModel(
             name: hw.hardwareName,
             speakerSKU: hw.speakerSKU,
+            addedInBuildingPage: fromBuildingPage,
           );
           addCircuit(newCircuit);
           addHardwareToCircuit(hw.id, newCircuit.id);
@@ -77,10 +78,7 @@ extension HardwareService on ProjectService {
         }
         if (circuitForNewHardware == null) {
           //create new circuit for this hardware
-          final newCircuit = CircuitModel(
-            name: hw.hardwareName,
-            speakerSKU: hw.speakerSKU,
-          );
+          final newCircuit = CircuitModel(name: hw.hardwareName, speakerSKU: hw.speakerSKU, addedInBuildingPage: fromBuildingPage);
           addCircuit(newCircuit);
           addHardwareToCircuit(hw.id, newCircuit.id);
         } else {

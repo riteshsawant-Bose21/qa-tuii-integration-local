@@ -21,6 +21,7 @@ class FusionController extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    required super.addedFromBuildingPage,
   }) : sku = sku ?? name,
        super(
          hardwareName: hardwareName ?? name,
@@ -44,6 +45,7 @@ class FusionController extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -60,6 +62,7 @@ class FusionController extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
 
@@ -80,6 +83,7 @@ class FusionController extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'addedFromBuildingPage': addedFromBuildingPage,
     };
   }
 
@@ -100,6 +104,7 @@ class FusionController extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
     );
   }
 }

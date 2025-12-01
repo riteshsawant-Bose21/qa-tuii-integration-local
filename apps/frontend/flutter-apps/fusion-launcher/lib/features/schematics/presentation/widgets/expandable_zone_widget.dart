@@ -195,7 +195,9 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         if (incoming == null) return false;
                         // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                         // _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
-
+                        if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
+                          return false;
+                        }
                         final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                         final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
 
@@ -235,6 +237,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                 child: CircuitDeviceWidget(
                                   index: index,
                                   deviceId: deviceId,
+                                  circuitModel: circuitData,
                                   circuitDeviceName: circuitData.name,
                                   assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                                   location: location,
@@ -259,7 +262,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                 child: CircuitDeviceWidget(
                                   index: index,
                                   deviceId: deviceId,
-
+                                  circuitModel: circuitData,
                                   circuitDeviceName: circuitData.name,
                                   assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                                   location: location,
@@ -278,6 +281,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           child: CircuitDeviceWidget(
                             index: index,
                             deviceId: deviceId,
+                            circuitModel: circuitData,
                             circuitDeviceName: circuitData.name,
                             assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                             location: location,

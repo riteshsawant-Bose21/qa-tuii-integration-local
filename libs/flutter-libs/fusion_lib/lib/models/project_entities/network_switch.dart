@@ -18,6 +18,7 @@ class NetworkSwitch extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    required super.addedFromBuildingPage,
   }) : super(
          id: id ?? "SWITCH${FusionUtils.shortStringUUID()}",
          hardwareName: hardwareName ?? name,
@@ -38,6 +39,7 @@ class NetworkSwitch extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   }) {
     return NetworkSwitch(
       id: id ?? this.id,
@@ -53,6 +55,7 @@ class NetworkSwitch extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
 
@@ -73,6 +76,7 @@ class NetworkSwitch extends HardwareComponent {
     'communicationPorts': communicationPorts.map((e) => e.toJson()).toList(),
     'inputPortsData': inputPortsData.map((e) => e.toJson()).toList(),
     'outputPortsData': outputPortsData.map((e) => e.toJson()).toList(),
+    'addedFromBuildingPage': addedFromBuildingPage,
   };
 
   factory NetworkSwitch.fromJson(Map<String, dynamic> json) {
@@ -81,7 +85,7 @@ class NetworkSwitch extends HardwareComponent {
       name: json['name'] as String,
       pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
-      zAxis: (json['zAxis'] as num).toDouble(),
+      zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
       assetImagePath: json['assetImagePath'] as String,
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       price: (json['price'] as num).toDouble(),
@@ -91,6 +95,7 @@ class NetworkSwitch extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool,
     );
   }
 }

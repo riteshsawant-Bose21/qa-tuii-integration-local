@@ -324,6 +324,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         serviceLocator<ProjectViewModel>().addSelectedProduct(
                                           position: speakerPosition,
                                           listeningAreaId: listeningAreaId,
+                                          isFromBuildingPage: true,
                                         );
 
                                         serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);

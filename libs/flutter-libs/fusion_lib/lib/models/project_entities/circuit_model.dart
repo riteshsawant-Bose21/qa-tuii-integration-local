@@ -10,6 +10,7 @@ class CircuitModel {
   final String? impedance;
   final Offset? wiringPos;
   final String? speakerSKU;
+  final bool addedInBuildingPage;
 
   CircuitModel({
     String? id,
@@ -19,6 +20,7 @@ class CircuitModel {
     this.tapSetting,
     this.wiringPos,
     this.speakerSKU,
+    required this.addedInBuildingPage,
   }) : id = id ?? "CIRCUIT${FusionUtils.shortStringUUID()}",
        inputPort =
            inputPort ??
@@ -42,6 +44,7 @@ class CircuitModel {
     String? impedance,
     Offset? wiringPos,
     String? speakerSKU,
+    bool? createdInBuildingPage,
   }) {
     return CircuitModel(
       id: id ?? this.id,
@@ -51,6 +54,7 @@ class CircuitModel {
       impedance: impedance ?? this.impedance,
       wiringPos: wiringPos ?? this.wiringPos,
       speakerSKU: speakerSKU ?? this.speakerSKU,
+      addedInBuildingPage: createdInBuildingPage ?? this.addedInBuildingPage,
     );
   }
 
@@ -58,9 +62,7 @@ class CircuitModel {
     return CircuitModel(
       id: json['id'],
       name: json['name'],
-      inputPort: json['inputPort'] != null
-          ? PortData.fromJson(json['inputPort'])
-          : null,
+      inputPort: json['inputPort'] != null ? PortData.fromJson(json['inputPort']) : null,
       impedance: json['impedance'],
       tapSetting: json['tapSetting'],
       speakerSKU: json['speakerSKU'],
@@ -70,6 +72,7 @@ class CircuitModel {
               (json['wiringPos']['dy'] as num).toDouble(),
             )
           : null,
+      addedInBuildingPage: json['createdInBuildingPage'] ?? false,
     );
   }
 
@@ -80,10 +83,9 @@ class CircuitModel {
       'inputPort': inputPort.toJson(),
       'impedance': impedance,
       'tapSetting': tapSetting,
-      'speakerSKU':speakerSKU,
-      'wiringPos': wiringPos != null
-          ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy}
-          : null,
+      'speakerSKU': speakerSKU,
+      'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
+      'createdInBuildingPage': addedInBuildingPage,
     };
   }
 }

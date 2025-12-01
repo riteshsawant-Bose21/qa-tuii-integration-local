@@ -37,6 +37,7 @@ class FusionDsp extends HardwareComponent {
     super.outputPortsData,
     required super.locationEntity,
     this.sku = '',
+    required super.addedFromBuildingPage,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "FUSIONDSP${FusionUtils.shortStringUUID()}",
@@ -69,6 +70,7 @@ class FusionDsp extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     String? sku,
+    bool? addedFromBuildingPage,
   }) {
     return FusionDsp(
       id: id ?? this.id,
@@ -90,6 +92,7 @@ class FusionDsp extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       sku: sku ?? this.sku,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
 
@@ -119,6 +122,7 @@ class FusionDsp extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       sku: json['sku'] as String? ?? '',
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
     );
   }
 
@@ -145,6 +149,7 @@ class FusionDsp extends HardwareComponent {
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'sku': sku,
+      'addedFromBuildingPage': addedFromBuildingPage,
     };
   }
 }

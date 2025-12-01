@@ -38,6 +38,7 @@ abstract class HardwareComponent {
   final List<PortData> communicationPorts;
   final List<PortData> inputPortsData;
   final List<PortData> outputPortsData;
+  final bool addedFromBuildingPage;
 
   static final Uuid _uuid = const Uuid();
 
@@ -56,6 +57,7 @@ abstract class HardwareComponent {
     List<PortData>? outputPortsData,
     this.lockListeningArea = false,
     this.communicationPorts = const [],
+    required this.addedFromBuildingPage,
   }) : id = id ?? "HW${FusionUtils.shortStringUUID()}",
        inputPortsData =
            inputPortsData ??
@@ -119,6 +121,7 @@ abstract class HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   });
 }
 

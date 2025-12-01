@@ -230,7 +230,11 @@ extension ListeningAreaService on ProjectService {
             if (hardwareInCurrentArea.isNotEmpty) {
               //From new Circuit form the hardware
               final speaker = hardware.get(hardwareInCurrentArea.first);
-              final newCircuit = CircuitModel(name: (speaker! as Speaker).speakerSKU, speakerSKU: (speaker as Speaker).speakerSKU);
+              final newCircuit = CircuitModel(
+                name: (speaker! as Speaker).speakerSKU,
+                speakerSKU: (speaker as Speaker).speakerSKU,
+                addedInBuildingPage: speaker.addedFromBuildingPage,
+              );
               addCircuit(newCircuit);
               for (final hw in hardwareInCurrentArea) {
                 relationships.unlink(RelationshipType.circuitHardware, circuitForHardware, hw);
@@ -271,7 +275,11 @@ extension ListeningAreaService on ProjectService {
       } else {
         if (hardwareInArea.isNotEmpty) {
           //From new Circuit form the hardware
-          final newCircuit = CircuitModel(name: hardwareInArea.first.speakerSKU, speakerSKU: hardwareInArea.first.speakerSKU);
+          final newCircuit = CircuitModel(
+            name: hardwareInArea.first.speakerSKU,
+            speakerSKU: hardwareInArea.first.speakerSKU,
+            addedInBuildingPage: hardwareInArea.first.addedFromBuildingPage,
+          );
           addCircuit(newCircuit);
           for (final hw in hardwareInArea) {
             relationships.unlink(RelationshipType.circuitHardware, cid, hw.id);
@@ -318,6 +326,7 @@ extension ListeningAreaService on ProjectService {
           final newCircuit = CircuitModel(
             name: hardwareInArea.first.speakerSKU,
             speakerSKU: hardwareInArea.first.speakerSKU,
+            addedInBuildingPage: hardwareInArea.first.addedFromBuildingPage,
           );
           addCircuit(newCircuit);
           for (final hw in hardwareInArea) {
