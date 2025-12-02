@@ -192,9 +192,9 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneValueDropdown> getSceneValueDropdownItems(String sceneId) {
+  List<SceneValueDropdown> getSceneValueDropdownItems(String actionId) {
     try {
-      return projectManager.getSceneValueDropdownItems(sceneId);
+      return projectManager.getSceneValueDropdownItems(actionId);
     } catch (e) {
       throwError("Get Scene Value Dropdown Items Error  ${e.toString()}");
       return <SceneValueDropdown>[];

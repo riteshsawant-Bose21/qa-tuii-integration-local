@@ -109,12 +109,12 @@ extension SceneManager on ProjectManager {
     return projectService!.getParamsByActionTypeAndItem(actionType, item);
   }
 
-  List<SceneValueDropdown> getSceneValueDropdownItems(String sceneId) {
+  List<SceneValueDropdown> getSceneValueDropdownItems(String actionId) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
 
-    return projectService!.getSceneActionValueDropdownItems(sceneId);
+    return projectService!.getSceneActionValueDropdownItems(actionId);
   }
 
   List<SceneModel> getAllScenes() {
