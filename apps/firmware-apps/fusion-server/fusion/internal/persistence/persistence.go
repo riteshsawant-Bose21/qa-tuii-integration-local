@@ -502,7 +502,9 @@ func (p *Persistence) saveWorker() {
 		}
 
 		timer = time.AfterFunc(p.saveDebounce, func() {
-			p.SaveState()
+			if err := p.SaveState(); err != nil {
+				logging.GetLogger().Error("Error saving state: %v", err)
+			}
 
 			mu.Lock()
 			timer = nil
@@ -604,4 +606,8 @@ func (p *Persistence) SyncAudioFile(update *api.AudioSyncUpdate) error {
 	}
 
 	return nil
+}
+
+func (p *Persistence) GetVersion() api.Version {
+	return p.stateManager.GetVersion()
 }

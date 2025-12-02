@@ -15,6 +15,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"
@@ -46,6 +47,7 @@ type TaskManager struct {
 	mu               sync.Mutex
 	node             string
 	persistence      *persistence.Persistence
+	hub              *pubsub.Hub
 	running          bool
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
@@ -53,7 +55,7 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *TaskManager {
+func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
 	tm := &TaskManager{
 		cron: cron.New(
 			cron.WithParser(
@@ -72,6 +74,7 @@ func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence)
 		historyFilePath:  HistoryPath,
 		node:             config.NodeName,
 		persistence:      persistence,
+		hub:              hub,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}
@@ -335,7 +338,6 @@ func (tm *TaskManager) ClearHistory(w http.ResponseWriter, r *http.Request) {
 
 // EnableTask handles HTTP POST requests to enable a task
 func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -352,8 +354,9 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if task.CronEntryID != 0 {
-		tm.cron.Remove(task.CronEntryID)
+	if task.Enabled {
+		w.WriteHeader(http.StatusNoContent)
+		return
 	}
 
 	f, err := tm.makeTaskFunc(task)
@@ -370,6 +373,10 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 
 	task.Enabled = true
 	task.CronEntryID = entryID
+
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.tasks[id] = task
 
 	tm.saveTasks()
 
@@ -398,6 +405,10 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 	tm.cron.Remove(task.CronEntryID)
 	task.CronEntryID = 0
 	task.Enabled = false
+
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.tasks[id] = task
 
 	tm.saveTasks()
 
@@ -498,12 +509,14 @@ func (tm *TaskManager) registerEnabledTasks() error {
 	return nil
 }
 
-// fetchTask loads a task by ID from the boltdb and returns it (or an error).
+// GetTask loads a task by ID from the boltdb and returns it (or an error).
 func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 
-	task, err := tm.persistence.GetTask(id)
-	if err != nil {
-		return nil, err
+	task, ok := tm.tasks[id]
+	if !ok {
+		return nil, ErrTaskNotFound
 	}
 	return task, nil
 }
@@ -514,11 +527,6 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	case api.TaskTypeMessage:
 		id := task.Params[api.MessageIDKey]
 		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
-		}
-
-		path := task.Params[api.MessagePathKey]
-		if path == "" {
 			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
 		}
 

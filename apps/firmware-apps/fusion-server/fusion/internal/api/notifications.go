@@ -11,21 +11,20 @@ import (
 type NotifyOp string
 
 const (
-	NotifyOpAck           NotifyOp = "ack"
-	NotifyOpAudioRemove   NotifyOp = "audio_remove"
-	NotifyOpAudioSync     NotifyOp = "audio_sync"
-	NotifyOpConfigUpdate  NotifyOp = "config_update"
-	NotifyOpNoop          NotifyOp = "no_op"
-	NotifyOpSnapActivate  NotifyOp = "snapshot_activate"
-	NotifyOpSnapCreate    NotifyOp = "snapshot_create"
-	NotifyOpSnapDelete    NotifyOp = "snapshot_delete"
-	NotifyOpTaskCreate    NotifyOp = "task_create"
-	NotifyOpTaskDelete    NotifyOp = "task_delete"
-	NotifyOpTaskUpdate    NotifyOp = "task_update"
-	NotifyOpVIPStatus     NotifyOp = "vip_status"
-	NotifyOpValueGet      NotifyOp = "get"
-	NotifyOpValueSet      NotifyOp = "set"
-	NotifyOpVersionUpdate NotifyOp = "version_update"
+	NotifyOpAck          NotifyOp = "ack"
+	NotifyOpAudioRemove  NotifyOp = "audio_remove"
+	NotifyOpAudioSync    NotifyOp = "audio_sync"
+	NotifyOpConfigUpdate NotifyOp = "config_update"
+	NotifyOpNoop         NotifyOp = "no_op"
+	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
+	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
+	NotifyOpSnapDelete   NotifyOp = "snapshot_delete"
+	NotifyOpTaskCreate   NotifyOp = "task_create"
+	NotifyOpTaskDelete   NotifyOp = "task_delete"
+	NotifyOpTaskUpdate   NotifyOp = "task_update"
+	NotifyOpVIPStatus    NotifyOp = "vip_status"
+	NotifyOpValueGet     NotifyOp = "get"
+	NotifyOpValueSet     NotifyOp = "set"
 )
 
 // NotifyMessage holds information about a cross-node message
@@ -107,17 +106,11 @@ var validators = map[NotifyOp]func(*NotifyMessage) error{
 
 	NotifyOpValueGet: validateConfigValue,
 	NotifyOpValueSet: validateConfigValue,
-
-	NotifyOpVersionUpdate: func(m *NotifyMessage) error {
-		if m.VersionUpdate == nil {
-			return errors.New("VersionUpdate required for operation")
-		}
-		return nil
-	},
 }
 
 func (msg *NotifyMessage) IsPublic() bool {
 	return msg.Operation == NotifyOpConfigUpdate ||
+		msg.Operation == NotifyOpSnapActivate ||
 		msg.Operation == NotifyOpAck ||
 		msg.Operation == NotifyOpVIPStatus
 }

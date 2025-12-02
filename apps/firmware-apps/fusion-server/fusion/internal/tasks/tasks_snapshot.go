@@ -9,6 +9,8 @@ import (
 	"fusion/internal/utils"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -59,12 +61,11 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "created",
-		"id":     task.ID,
+		"id": task.ID,
 	})
 }
 
-// UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing task.
+// UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing snapshot task.
 func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequirePatch(w, r) {
@@ -96,21 +97,28 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if patch.CronExpr == nil || patch.Description == nil {
-		http.Error(w, "Cron expression and description are required", http.StatusBadRequest)
+	// At least one must be present
+	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.Snapshot) != ""
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
+
+	if !(hasSnapshot || hasCron || hasDesc) {
+		http.Error(w, "At least one field (snapshot, cron_expr, description) must be provided", http.StatusBadRequest)
 		return
 	}
 
-	if patch.Description != nil {
+	// Update description
+	if hasDesc {
 		task.Description = *patch.Description
 	}
 
-	if patch.CronExpr != nil {
+	// Update cron expression
+	if hasCron {
 		task.CronExpr = *patch.CronExpr
 	}
 
-	if patch.Snapshot != nil {
-
+	// Update snapshot
+	if hasSnapshot {
 		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -118,13 +126,14 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		}
 
 		if !exists {
-			http.Error(w, fmt.Sprintf("Snapshot %s not found: %v", *patch.Snapshot, err), http.StatusNotFound)
+			http.Error(w, fmt.Sprintf("Snapshot %s not found", *patch.Snapshot), http.StatusNotFound)
 			return
 		}
 
 		task.Params[api.SnapshotIDKey] = *patch.Snapshot
 	}
 
+	// Run update
 	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
@@ -157,15 +166,37 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 			return errors.New("snapshot_id required for snapshot tasks")
 		}
 
-		logger.Debug("Activating snapshot %s on %s", snapID, tm.node)
-
 		// Activate the snapshot only on the instance.
-		if err := tm.persistence.ActivateSnapshot(snapID); err != nil {
-			logger.Error("Snapshot apply task for '%s' failed: %v", snapID, err)
+		err := tm.persistence.ActivateSnapshot(snapID)
+		if err != nil {
 			return err
 		}
 
-		logger.Debug("Snapshot '%s' activated successfully via task", snapID)
+		// Broadcast snapshot-activation (cluster-sync)
+		if err := tm.handleSnapshotOperation(
+			tm.node,
+			snapID,
+			api.NotifyOpSnapActivate,
+			nil); err != nil {
+			return err
+		}
+
+		logger.Info("Snapshot '%s' activated successfully via task", snapID)
+
 		return nil
 	}
+}
+
+// handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
+func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
+
+	msg := api.NewNotifyMessage(update,
+		node,
+		api.WithSnapshotUpdate(&api.SnapshotUpdate{
+			Name:      name,
+			Data:      data,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	return tm.hub.BroadcastToNodes(msg)
 }

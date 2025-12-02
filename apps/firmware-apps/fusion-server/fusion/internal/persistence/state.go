@@ -243,7 +243,7 @@ func (sm *StateManager) Set(key string, value any) error {
 	return err
 }
 
-// Patch applies an upated patch to the internal state.
+// Patch applies an updated patch to the internal state.
 func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	sm.Lock()
 
@@ -287,16 +287,31 @@ func (sm *StateManager) Patch(update map[string]any) (*map[string]any, error) {
 	return &existing, nil
 }
 
-// ApplyUpdate applies a configuration update using Lamport clock semantics.
+// ApplyUpdate applies a ConfigUpdate received via memberlist replication.
 //
-// Lamport Clock Rule #2 (receiving event):
+//	ConfigUpdate is not a patch. It is not merged deeply.
+//	For each top-level key in update.Data, ApplyUpdate treats the incoming
+//	value as the complete authoritative snapshot for that key.
 //
-//	When receiving an update with timestamp T:
-//	    local = max(local, T) + 1
-//	This ensures that:
-//	    - no node's clock ever goes backwards
-//	    - all nodes converge on a globally consistent causal ordering
-//	    - updates are never incorrectly skipped
+//	That means:
+//	    - Scalar or array values overwrite directly.
+//	    - Map values overwrite the entire existing map for that key.
+//	    - Nested keys that existed locally but not in the incoming update
+//	      are intentionally discarded.
+//
+//	This is correct and intentional for cluster replication. PATCH updates
+//	(via HTTP) apply deep/partial updates locally, and THEN broadcast a
+//	new ConfigUpdate snapshot with a fresh Lamport version so other nodes
+//	accept it.
+//
+//	ApplyUpdate simply converges nodes toward the same snapshot, using
+//	Lamport timestamps to maintain causal ordering.
+//
+// Summary:
+//
+//	PATCH       = local deep/partial edits
+//	ApplyPatch  = merges into existing hierarchical state
+//	ConfigUpdate/ApplyUpdate = replicate authoritative state snapshots
 func (sm *StateManager) ApplyUpdate(update api.ConfigUpdate) (bool, error) {
 	sm.Lock()
 	defer sm.Unlock()
@@ -384,7 +399,9 @@ func (sm *StateManager) applyWhileLocked(
 		// Important: we compare against incomingVersion (the timestamp of the
 		// originating event), not effectiveVersion (the local receive event).
 		if exists && !localEntry.Version.Less(incomingVersion) {
-			logger.Debug("Skipping key %q: local version is newer or equal", key)
+			logger.Info("------>>> Skipping key %q: local version is newer or equal", key)
+			logger.Info("incoming.Version: %d local.Version %d", incomingVersion.Counter, localEntry.Version.Counter)
+			logger.Info("incoming.Epoch: %d local.Epoch %d", incomingVersion.Epoch, localEntry.Version.Epoch)
 			continue
 		}
 
@@ -423,7 +440,7 @@ func (sm *StateManager) GetFullState() VersionedState {
 	}
 }
 
-// GetFullStateRaw returns the raw
+// GetFullStateRaw returns the raw state data with metadata.
 func (sm *StateManager) GetFullStateRaw() map[string]any {
 	sm.RLock()
 	defer sm.RUnlock()
@@ -431,7 +448,6 @@ func (sm *StateManager) GetFullStateRaw() map[string]any {
 }
 
 // GetStateMap removes metadata and returns a simplified map of key-value data from the state.
-// Callers must not mutate the returned value.
 func (sm *StateManager) GetStateMap() map[string]any {
 	state := sm.GetFullState().State
 	return utils.FlattenState(state)
@@ -476,6 +492,26 @@ func (sm *StateManager) SetState(state map[string]*api.StateEntry) {
 	sm.Unlock()
 
 	sm.updateChecksumUnsafe()
+}
+
+// BumpEpochLocked caller must hold sm.Lock()
+func (sm *StateManager) BumpEpochLocked() api.Version {
+
+	sm.version.Epoch++
+	sm.version.Counter = 0
+	return sm.version
+}
+
+func (sm *StateManager) BumpEpoch() api.Version {
+	sm.Lock()
+	defer sm.Unlock()
+	return sm.BumpEpochLocked()
+}
+
+func (sm *StateManager) SetVersion(newVersion api.Version) {
+	sm.Lock()
+	defer sm.Unlock()
+	sm.version = newVersion
 }
 
 // validateState fetches and compares state from other cluster members
