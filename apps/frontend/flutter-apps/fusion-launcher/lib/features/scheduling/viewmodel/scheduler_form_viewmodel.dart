@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/scheduling/model/schedule_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+
+import 'scheduler_viewmodel.dart';
 
 class SchedulerFormViewModel extends ChangeNotifier {
   final GlobalKey<FormState> key = GlobalKey<FormState>();
   final TextEditingController name = TextEditingController();
+
+  final SchedulerViewmodel viewModel;
   String? _color;
 
   String? get color => _color;
@@ -50,6 +54,8 @@ class SchedulerFormViewModel extends ChangeNotifier {
   }
 
   final List<RecurrenceDay> _recurrenceDays = <RecurrenceDay>[];
+
+  SchedulerFormViewModel({required this.viewModel});
   List<RecurrenceDay> get recurrenceDays => _recurrenceDays;
   void addRecurrenceDay(RecurrenceDay day) {
     if (!_recurrenceDays.contains(day)) {
@@ -65,11 +71,32 @@ class SchedulerFormViewModel extends ChangeNotifier {
     }
   }
 
-  Future<void> submit() async {
+  Future<bool> submit() async {
     if (!key.currentState!.validate()) {
-      return;
+      return false;
     }
+    viewModel.addSchedule(
+      ScheduleConfig(
+        id: "SCHEDULE_${FusionUtils.shortUUID()}",
+        name: name.text,
+        colorHex: color!,
+        startDate: startDate!,
+        time: DateTime(
+          startDate!.year,
+          startDate!.month,
+          startDate!.day,
+          startTime.hour,
+          startTime.minute,
+        ),
+        endDate: endDate!,
+        recurrence: recurrenceType,
+        weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
+      ),
+    );
+    return true;
+  }
 
-    // Further submission logic goes here
+  bool get canEnableSubmit {
+    return name.text.isNotEmpty && color != null && startDate != null && endDate != null;
   }
 }
