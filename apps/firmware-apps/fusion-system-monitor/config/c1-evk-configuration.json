@@ -1,0 +1,72 @@
+{
+    "session": {
+        "name": "fusion_system_monitor"
+    },
+    "periodic_tasks": [
+        {
+            "name": "fw_monitor",
+            "property_settings": [
+                { "name": "period_ms", "value": 2000 }
+            ],
+            "blocks": [
+                {
+                    "name": "cpu_usage",
+                    "module": "cpu_usage",
+                    "telemetry": [
+                        { "name": "cpu" },
+                        { "name": "high_cpu_usage" }
+                    ]
+                },
+                {
+                    "name": "space_usage",
+                    "module": "space_usage",
+                    "telemetry": [
+                        { "name": "ram" },
+                        { "name": "high_ram_usage" },
+                        { "name": "emmc" },
+                        { "name": "high_emmc_usage" },
+                        { "name": "usb_storage" },
+                        { "name": "usb_connected" }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "fusion_connect",
+            "property_settings": [
+                { "name": "period_ms", "value": 1000 }
+            ],
+            "blocks": [
+                {
+                    "name": "fusion_connect_client",
+                    "module": "fusion_connect_client",
+                    "parameters": [
+                        { "name": "audio_streams_update" }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "amp_control",
+            "property_settings": [
+                { "name": "period_ms", "value": 100 }
+            ],
+            "blocks": [
+                {
+                    "name": "amp_control",
+                    "module": "bdif_client",
+                    "property_settings": [
+                        { 
+                            "name": "num_gain_chs",
+                            "value": 4
+                        },
+                        { 
+                            "name": "num_php_chs",
+                            "value": 4
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
