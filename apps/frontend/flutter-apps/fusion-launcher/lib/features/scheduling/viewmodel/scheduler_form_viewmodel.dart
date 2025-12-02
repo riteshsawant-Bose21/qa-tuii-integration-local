@@ -27,16 +27,16 @@ class SchedulerFormViewModel extends ChangeNotifier {
     notifyListeners();
   }
 
-  TimeOfDay? _startTime;
-  TimeOfDay? get startTime => _startTime;
-  set startTime(TimeOfDay? value) {
+  TimeOfDay _startTime = TimeOfDay.now();
+  TimeOfDay get startTime => _startTime;
+  set startTime(TimeOfDay value) {
     _startTime = value;
     notifyListeners();
   }
 
-  TimeOfDay? _endTime;
-  TimeOfDay? get endTime => _endTime;
-  set endTime(TimeOfDay? value) {
+  TimeOfDay _endTime = TimeOfDay.now().replacing(hour: TimeOfDay.now().hour + 1);
+  TimeOfDay get endTime => _endTime;
+  set endTime(TimeOfDay value) {
     _endTime = value;
 
     notifyListeners();
@@ -47,6 +47,22 @@ class SchedulerFormViewModel extends ChangeNotifier {
   set recurrenceType(RecurrenceType value) {
     _recurrenceType = value;
     notifyListeners();
+  }
+
+  final List<RecurrenceDay> _recurrenceDays = <RecurrenceDay>[];
+  List<RecurrenceDay> get recurrenceDays => _recurrenceDays;
+  void addRecurrenceDay(RecurrenceDay day) {
+    if (!_recurrenceDays.contains(day)) {
+      _recurrenceDays.add(day);
+      notifyListeners();
+    }
+  }
+
+  void removeRecurrenceDay(RecurrenceDay day) {
+    if (_recurrenceDays.contains(day)) {
+      _recurrenceDays.remove(day);
+      notifyListeners();
+    }
   }
 
   Future<void> submit() async {

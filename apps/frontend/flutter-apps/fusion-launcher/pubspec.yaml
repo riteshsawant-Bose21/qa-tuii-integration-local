@@ -62,7 +62,7 @@ dependencies:
   equatable: ^2.0.7
   flutter_svg: ^2.2.1
 
-  flutter_date_range_picker: ^0.2.1
+  calendar_date_picker2: ^2.0.1
   date_picker_plus: ^4.2.0
 
   fusion_lib:

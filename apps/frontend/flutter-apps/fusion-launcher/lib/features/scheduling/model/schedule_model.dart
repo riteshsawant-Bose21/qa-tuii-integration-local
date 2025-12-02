@@ -8,7 +8,6 @@ enum RecurrenceType {
   none,
   daily,
   weekly,
-  monthly,
 }
 
 enum RecurrenceDay {
