@@ -42,4 +42,18 @@ extension GpioManager on ProjectManager {
     }
     return projectService!.getAllGPIOConfigs();
   }
+
+  int getAvailableGpioPorts() {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getAvailableGpioPorts();
+  }
+
+  int getTotalGpioPorts() {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getTotalGpioPorts();
+  }
 }

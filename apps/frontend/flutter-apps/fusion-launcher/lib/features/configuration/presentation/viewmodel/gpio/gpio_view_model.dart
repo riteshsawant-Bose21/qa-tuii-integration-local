@@ -70,4 +70,22 @@ extension GpioViewModel on ProjectViewModel {
       return <GpoAction>[];
     }
   }
+
+  int getAvailableGpioPorts() {
+    try {
+      return projectManager.getAvailableGpioPorts();
+    } catch (e) {
+      throwError("Get Available GPIO Ports Error  ${e.toString()}");
+      return 0;
+    }
+  }
+
+  int getTotalGpioPorts() {
+    try {
+      return projectManager.getTotalGpioPorts();
+    } catch (e) {
+      throwError("Get Total GPIO Ports Error  ${e.toString()}");
+      return 0;
+    }
+  }
 }

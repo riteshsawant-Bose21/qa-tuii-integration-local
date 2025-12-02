@@ -30,4 +30,18 @@ extension GpioService on ProjectService {
   List<GpioConfig> getAllGPIOConfigs() {
     return gpioConfigs.getAll();
   }
+
+  int getAvailableGpioPorts() {
+    final dspCount = hardware.getAll().whereType<FusionDsp>();
+    final availablePins = dspCount.length * 4;
+    final usedPins = gpioConfigs.getAll().length;
+
+    return availablePins - usedPins;
+  }
+
+  int getTotalGpioPorts() {
+    final dspCount = hardware.getAll().whereType<FusionDsp>();
+    final totalPins = dspCount.length * 4;
+    return totalPins;
+  }
 }
