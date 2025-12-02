@@ -353,9 +353,15 @@ static int fusion_cn_alsa_init(struct fusion_cn_manager *mgr)
 /* --- Coalesced queue helper (re-uses your existing worker) --- */
 static inline void fusion_cn_queue_process(void)
 {
+    struct kthread_worker *worker = READ_ONCE(process_worker);
+
+    /* Ignore ticks until worker is created and work item initialized */
+    if (!worker)
+        return;
+
     /* Coalesce: only queue if not already pending */
     if (atomic_cmpxchg(&process_pending, 0, 1) == 0)
-        kthread_queue_work(process_worker, &process_work);
+        kthread_queue_work(worker, &process_work);
 }
 
 /* --- GPT client callback (softirq via irq_work) --- */
@@ -454,7 +460,7 @@ void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr)
     if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
         hrtimer_cancel(&mgr->ptp.audio_timer);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
+        fusion_gpt_unregister_client();
     }
 
     /* Stop RTP streams, which might be using ALSA buffers */
@@ -487,6 +493,8 @@ static void audio_frame_process_work(struct kthread_work *work)
 
 int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
 {
+    struct kthread_worker *worker;
+
     if (atomic_read(&mgr->state.is_started)) {
         printk(KERN_DEBUG "fusion_cn: mgr already started\n");
         return -MGR_START_ERRNO_RUNNING;
@@ -499,18 +507,20 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
     
     /* Initialize PREEMPT_RT-friendly TX worker once */
     if (!process_worker) {
-        process_worker = kthread_create_worker(0, "fusion-cn");
-        if (IS_ERR(process_worker)) {
-            int err = PTR_ERR(process_worker);
-            process_worker = NULL;
+        worker = kthread_create_worker(0, "fusion-cn");
+        if (IS_ERR(worker)) {
+            int err = PTR_ERR(worker);
             printk(KERN_ERR "fusion_cn: failed to create fusion-cn worker: %d\n", err);
             return err;
         }
-        process_thread = process_worker->task;
+        process_thread = worker->task;
         set_cpus_allowed_ptr(process_thread, cpumask_of(0));
         sched_set_fifo_low(process_thread);   /* or: sched_set_fifo(process_thread) for max RT prio */
         kthread_init_work(&process_work, audio_frame_process_work);
         atomic_set(&process_pending, 0);
+        /* Publish the worker only after fully initialized */
+        smp_wmb();
+        process_worker = worker;
     }
     g_fusion_cn_mgr = mgr;
     INIT_LIST_HEAD(&mgr->active_streams.fn_sink);
@@ -539,8 +549,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         printk(KERN_DEBUG "fusion_cn: mgr_start: Aligned hrtimer to PHC boundary, current_phc=%llu, first_tick=%llu ns\n",
                current_phc_ns, first_tick);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
-        return -MGR_START_ERRNO_MODE;
+        /* GPT ticks are driven by fusion_gpt; nothing to start here */
     } else {
         printk(KERN_ERR "fusion_cn: Invalid timing mode\n");
         return -MGR_START_ERRNO_MODE;
@@ -1031,4 +1040,3 @@ static void fusion_cn_nl_recv_msg(struct sk_buff *skb)
     msg_rcv.pid = nlh->nlmsg_pid;
     fusion_cn_process_nl_msg(mgr, &msg_rcv);
 }
-
