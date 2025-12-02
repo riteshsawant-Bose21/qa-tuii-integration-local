@@ -359,6 +359,17 @@ extension ZoneService on ProjectService {
     return prioritySourceData.get(priorityDataId);
   }
 
+  void updatePrioritySourceData({
+    required PrioritySourceData updatedData,
+  }) {
+    final existingData = prioritySourceData.get(updatedData.id);
+    if (existingData == null) {
+      throw Exception('PrioritySourceData ${updatedData.id} not found');
+    }
+
+    prioritySourceData.add(updatedData.id, updatedData);
+  }
+
   void removeAllPrioritySourcesFromZone(String zoneId) {
     if (!zones.exists(zoneId)) return;
 

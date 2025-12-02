@@ -2,6 +2,7 @@ package tasks
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -14,6 +15,7 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
+	"fusion/internal/pubsub"
 	"fusion/internal/utils"
 
 	"github.com/robfig/cron/v3"
@@ -23,6 +25,8 @@ const (
 	HistoryPath = "history.json"
 	MaxHistory  = 100
 )
+
+var ErrTaskNotFound = errors.New("task not found")
 
 // ExecutionRecord represents a log entry for a task execution.
 type ExecutionRecord struct {
@@ -43,6 +47,7 @@ type TaskManager struct {
 	mu               sync.Mutex
 	node             string
 	persistence      *persistence.Persistence
+	hub              *pubsub.Hub
 	running          bool
 	taskFuncs        map[string]func()
 	tasks            map[string]*api.Task
@@ -50,13 +55,26 @@ type TaskManager struct {
 }
 
 // NewTaskManager initializes and returns a new TaskManager with persistence.
-func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *TaskManager {
+func NewTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *TaskManager {
 	tm := &TaskManager{
-		cron:             cron.New(),
+		cron: cron.New(
+			cron.WithParser(
+				cron.NewParser(
+					cron.SecondOptional |
+						cron.Descriptor |
+						cron.Minute |
+						cron.Hour |
+						cron.Dom |
+						cron.Month |
+						cron.Dow,
+				),
+			),
+		),
 		executionHistory: make([]ExecutionRecord, 0),
 		historyFilePath:  HistoryPath,
 		node:             config.NodeName,
 		persistence:      persistence,
+		hub:              hub,
 		taskFuncs:        make(map[string]func()),
 		tasks:            make(map[string]*api.Task),
 	}
@@ -105,7 +123,7 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 
 	_, exists := tm.tasks[task.ID]
 	if !exists {
-		return fmt.Errorf("no task found with ID '%s'", task.ID)
+		return ErrTaskNotFound
 	}
 
 	tm.cron.Remove(task.CronEntryID)
@@ -156,12 +174,12 @@ func (tm *TaskManager) ListTasks() []api.Task {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
-	var taskList []api.Task
+	tasks := make([]api.Task, 0, len(tm.tasks))
 	for _, task := range tm.tasks {
-		taskList = append(taskList, *task)
+		tasks = append(tasks, *task)
 	}
 
-	return taskList
+	return tasks
 }
 
 // RecordExecution records a task execution log entry with rotation.
@@ -205,7 +223,7 @@ func (tm *TaskManager) Start() {
 		return
 	}
 
-	if err := tm.loadTasks(); err != nil {
+	if err := tm.LoadTasks(); err != nil {
 		logger.Fatal("%v", err)
 	}
 
@@ -238,19 +256,14 @@ func (tm *TaskManager) GetTasks(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	tm.mu.Lock()
-	tasks := make([]api.Task, 0, len(tm.tasks))
-	for _, task := range tm.tasks {
-		tasks = append(tasks, *task)
-	}
-	tm.mu.Unlock()
+	tasks := tm.ListTasks()
 
 	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	json.NewEncoder(w).Encode(tasks)
 }
 
-// GetTask handles HTTP GET requests to get a single task
-func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
+// GetTaskHandler handles HTTP GET requests to get a single task
+func (tm *TaskManager) GetTaskHandler(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireGet(w, r) {
 		return
@@ -262,7 +275,7 @@ func (tm *TaskManager) GetTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -325,7 +338,6 @@ func (tm *TaskManager) ClearHistory(w http.ResponseWriter, r *http.Request) {
 
 // EnableTask handles HTTP POST requests to enable a task
 func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
-
 	if !utils.RequirePost(w, r) {
 		return
 	}
@@ -336,14 +348,15 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
 	}
 
-	if task.CronEntryID != 0 {
-		tm.cron.Remove(task.CronEntryID)
+	if task.Enabled {
+		w.WriteHeader(http.StatusNoContent)
+		return
 	}
 
 	f, err := tm.makeTaskFunc(task)
@@ -360,6 +373,10 @@ func (tm *TaskManager) EnableTask(w http.ResponseWriter, r *http.Request) {
 
 	task.Enabled = true
 	task.CronEntryID = entryID
+
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.tasks[id] = task
 
 	tm.saveTasks()
 
@@ -379,7 +396,7 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	task, err := tm.getTask(id)
+	task, err := tm.GetTask(id)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusNotFound)
 		return
@@ -388,6 +405,10 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 	tm.cron.Remove(task.CronEntryID)
 	task.CronEntryID = 0
 	task.Enabled = false
+
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
+	tm.tasks[id] = task
 
 	tm.saveTasks()
 
@@ -421,8 +442,8 @@ func (tm *TaskManager) saveTasks() error {
 	return tm.persistence.SaveTasks(tm.tasks)
 }
 
-// loadTasks loads tasks from the persistence file and schedules them.
-func (tm *TaskManager) loadTasks() error {
+// LoadTasks loads tasks from the persistence file and schedules them.
+func (tm *TaskManager) LoadTasks() error {
 	tm.mu.Lock()
 	defer tm.mu.Unlock()
 
@@ -488,12 +509,14 @@ func (tm *TaskManager) registerEnabledTasks() error {
 	return nil
 }
 
-// fetchTask loads a task by ID from the boltdb and returns it (or an error).
-func (tm *TaskManager) getTask(id string) (*api.Task, error) {
+// GetTask loads a task by ID from the boltdb and returns it (or an error).
+func (tm *TaskManager) GetTask(id string) (*api.Task, error) {
+	tm.mu.Lock()
+	defer tm.mu.Unlock()
 
-	task, err := tm.persistence.GetTask(id)
-	if err != nil {
-		return nil, err
+	task, ok := tm.tasks[id]
+	if !ok {
+		return nil, ErrTaskNotFound
 	}
 	return task, nil
 }
@@ -504,11 +527,6 @@ func (tm *TaskManager) makeTaskFunc(task *api.Task) (TaskFunc, error) {
 	case api.TaskTypeMessage:
 		id := task.Params[api.MessageIDKey]
 		if id == "" {
-			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
-		}
-
-		path := task.Params[api.MessagePathKey]
-		if path == "" {
 			return nil, fmt.Errorf("missing '%s'", api.MessageIDKey)
 		}
 

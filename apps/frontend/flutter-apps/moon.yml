@@ -19,3 +19,11 @@ tasks:
   # build-web:
   #   deps:
   #     - "fusion-launcher:build-web"
+  
+  win-automation-build:
+    deps:
+      - "fusion-launcher:build-windows-automation"
+
+  macos-automation-build:
+    deps:
+      - "fusion-launcher:build-macos-automation"

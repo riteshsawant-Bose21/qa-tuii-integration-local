@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A customizable text widget for the Fusion design system.
 ///
@@ -64,7 +65,7 @@ class FusionAppText extends StatelessWidget {
   final TextOverflow? textOverflow;
 
   /// Accessibility identifier for the text.
-  final String? accessIdentifier;
+  final String? semanticId;
 
   /// Accessibility label for the text.
   final String? accessLabel;
@@ -92,7 +93,7 @@ class FusionAppText extends StatelessWidget {
     this.fontStyle = FontStyle.normal,
     this.underLine = false,
     this.capitalize = true,
-    this.accessIdentifier,
+    this.semanticId,
     this.accessLabel,
     this.textOverflow,
   });
@@ -103,10 +104,8 @@ class FusionAppText extends StatelessWidget {
     String displayText = capitalize && text.isNotEmpty ? text[0].toUpperCase() + text.substring(1) : text;
 
     /// Builds the FusionAppText widget with semantics for accessibility.
-    return Semantics(
-      container: true,
-      identifier: accessIdentifier ?? text,
-      label: accessLabel ?? text,
+    return SemanticHelper.staticText(
+      testId: SemanticHelper.createTestId(SemanticTypes.text, semanticId ?? text),
 
       /// Exclude semantics from the child widget to avoid redundancy.
       child: ExcludeSemantics(

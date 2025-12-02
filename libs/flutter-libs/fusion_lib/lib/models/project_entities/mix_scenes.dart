@@ -5,6 +5,11 @@ enum MixSceneType {
   matrix,
 }
 
+enum SignalType {
+  mono,
+  stereo,
+}
+
 // ============================================================================
 // Base MixScene - Just metadata about the scene
 // ============================================================================
@@ -12,25 +17,16 @@ abstract class MixScene {
   final String id;
   final String name;
   final MixSceneType type;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   MixScene({
     String? id,
     required this.name,
     required this.type,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) : id = id ?? "SCENE${FusionUtils.shortStringUUID()}",
-       createdAt = createdAt ?? DateTime.now(),
-       updatedAt = updatedAt ?? DateTime.now();
+  }) : id = id ?? "SCENE${FusionUtils.shortStringUUID()}";
 
   MixScene copyWith({
     String? id,
     String? name,
-    MixSceneType? type,
-    DateTime? createdAt,
-    DateTime? updatedAt,
   });
 
   Map<String, dynamic> toJson();
@@ -40,27 +36,25 @@ abstract class MixScene {
 // Source Mix Scene - No settings stored here
 // ============================================================================
 class SourceMixScene extends MixScene {
+  final List<MixSettings> mixSettings;
+
   SourceMixScene({
-    String? id,
+    super.id,
     required super.name,
     super.type = MixSceneType.source,
-    super.createdAt,
-    super.updatedAt,
+    this.mixSettings = const [],
   });
 
   @override
   SourceMixScene copyWith({
     String? id,
     String? name,
-    MixSceneType? type,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    final List<MixSettings>? mixSettings,
   }) {
     return SourceMixScene(
       id: id ?? this.id,
       name: name ?? this.name,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      mixSettings: mixSettings ?? this.mixSettings,
     );
   }
 
@@ -68,8 +62,11 @@ class SourceMixScene extends MixScene {
     return SourceMixScene(
       id: json['id'],
       name: json['name'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      mixSettings:
+          (json['mixSettings'] as List<dynamic>?)?.map((e) {
+            return MixSettings.fromJson(e);
+          }).toList() ??
+          [],
     );
   }
 
@@ -79,8 +76,7 @@ class SourceMixScene extends MixScene {
       'id': id,
       'name': name,
       'type': type.name,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'mixSettings': mixSettings.map((e) => e.toJson()).toList(),
     };
   }
 }
@@ -89,27 +85,25 @@ class SourceMixScene extends MixScene {
 // Matrix Mix Scene - No settings stored here
 // ============================================================================
 class MatrixMixScene extends MixScene {
+  final MatrixMixer mixerConfig;
+
   MatrixMixScene({
-    String? id,
+    super.id,
     required super.name,
     super.type = MixSceneType.matrix,
-    super.createdAt,
-    super.updatedAt,
+    required this.mixerConfig,
   });
 
   @override
   MatrixMixScene copyWith({
     String? id,
     String? name,
-    MixSceneType? type,
-    DateTime? createdAt,
-    DateTime? updatedAt,
+    MatrixMixer? mixerConfig,
   }) {
     return MatrixMixScene(
       id: id ?? this.id,
       name: name ?? this.name,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
+      mixerConfig: mixerConfig ?? this.mixerConfig,
     );
   }
 
@@ -117,8 +111,9 @@ class MatrixMixScene extends MixScene {
     return MatrixMixScene(
       id: json['id'],
       name: json['name'],
-      createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt']) : null,
-      updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt']) : null,
+      mixerConfig: json['mixerConfig']['type'] == SignalType.mono.name
+          ? MonoMatrixMixer.fromJson(json['mixerConfig'])
+          : StereoMatrixMixer.fromJson(json['mixerConfig']),
     );
   }
 
@@ -128,45 +123,31 @@ class MatrixMixScene extends MixScene {
       'id': id,
       'name': name,
       'type': type.name,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'mixerConfig': mixerConfig.toJson(),
     };
   }
 }
 
 // ============================================================================
-// Mix Settings - Now includes function context
-// The triple (functionId, sceneId, sourceId) uniquely identifies this setting
+// Mix Settings - Stored separately with context
 // ============================================================================
 class MixSettings {
-  final String id;
-  final String functionId; // NEW: Which function this setting belongs to
-  final String? sceneId; // NEW: Which scene this setting belongs to
-  final String sourceId; // NEW: Which source this setting is for
+  final String sourceId;
   final double gain;
   final bool muted;
 
   MixSettings({
-    String? id,
-    required this.functionId,
-    this.sceneId,
     required this.sourceId,
     required this.gain,
     required this.muted,
-  }) : id = id ?? "MIXSET${FusionUtils.shortStringUUID()}";
+  });
 
   MixSettings copyWith({
-    String? id,
-    String? functionId,
-    String? sceneId,
     String? sourceId,
     double? gain,
     bool? muted,
   }) {
     return MixSettings(
-      id: id ?? this.id,
-      functionId: functionId ?? this.functionId,
-      sceneId: sceneId ?? this.sceneId,
       sourceId: sourceId ?? this.sourceId,
       gain: gain ?? this.gain,
       muted: muted ?? this.muted,
@@ -175,9 +156,6 @@ class MixSettings {
 
   factory MixSettings.fromJson(Map<String, dynamic> json) {
     return MixSettings(
-      id: json['id'],
-      functionId: json['functionId'],
-      sceneId: json['sceneId'],
       sourceId: json['sourceId'],
       gain: (json['gain'] as num).toDouble(),
       muted: json['muted'] as bool,
@@ -186,9 +164,6 @@ class MixSettings {
 
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'functionId': functionId,
-      'sceneId': sceneId,
       'sourceId': sourceId,
       'gain': gain,
       'muted': muted,
@@ -197,31 +172,22 @@ class MixSettings {
 }
 
 // ============================================================================
-// Matrix Settings - Base class with function context
+// Matrix Settings - Base class (source-level settings)
 // ============================================================================
 abstract class MatrixSettings {
-  final String id;
-  final String functionId; // NEW: Which function this setting belongs to
-  String? sceneId; // NEW: Which scene this setting belongs to
-  final String sourceId; // NEW: Which source this setting is for
+  final String sourceId;
   final String type;
   final double gain;
   final bool muted;
 
   MatrixSettings({
-    String? id,
-    required this.functionId,
-    required this.sceneId,
     required this.sourceId,
     required this.type,
-    this.gain = 0.0,
-    this.muted = false,
-  }) : id = id ?? "MATSET${FusionUtils.shortStringUUID()}";
+    required this.gain,
+    required this.muted,
+  });
 
   MatrixSettings copyWith({
-    String? id,
-    String? functionId,
-    String? sceneId,
     String? sourceId,
     String? type,
     double? gain,
@@ -232,160 +198,198 @@ abstract class MatrixSettings {
 }
 
 // ============================================================================
-// Mono Matrix Settings
+// Mono Matrix Settings (per source)
 // ============================================================================
 class MonoMatrixSettings extends MatrixSettings {
   final double mixLevel;
-  final double outGain;
-  final bool outMuted;
 
   MonoMatrixSettings({
-    super.id,
-    required super.functionId,
-    super.sceneId,
     required super.sourceId,
     super.type = "mono",
+    required super.gain,
+    required super.muted,
     required this.mixLevel,
-    required this.outGain,
-    required this.outMuted,
-    super.gain,
-    super.muted,
   });
 
   @override
   MonoMatrixSettings copyWith({
-    String? id,
-    String? functionId,
-    String? sceneId,
     String? sourceId,
     String? type,
-    double? mixLevel,
-    double? outGain,
-    bool? outMuted,
     double? gain,
     bool? muted,
+    double? mixLevel,
   }) {
     return MonoMatrixSettings(
-      id: id ?? this.id,
-      functionId: functionId ?? this.functionId,
-      sceneId: sceneId ?? this.sceneId,
       sourceId: sourceId ?? this.sourceId,
       type: type ?? this.type,
-      mixLevel: mixLevel ?? this.mixLevel,
-      outGain: outGain ?? this.outGain,
-      outMuted: outMuted ?? this.outMuted,
       gain: gain ?? this.gain,
       muted: muted ?? this.muted,
+      mixLevel: mixLevel ?? this.mixLevel,
     );
   }
 
   factory MonoMatrixSettings.fromJson(Map<String, dynamic> json) {
     return MonoMatrixSettings(
-      id: json['id'],
-      functionId: json['functionId'],
-      sceneId: json['sceneId'],
       sourceId: json['sourceId'],
       type: json['type'],
+      gain: (json['gain'] as num).toDouble(),
+      muted: json['muted'] as bool,
       mixLevel: (json['mixLevel'] as num).toDouble(),
-      outGain: (json['outGain'] as num).toDouble(),
-      outMuted: json['outMuted'] as bool,
-      gain: (json['gain'] as num?)?.toDouble() ?? 0.0,
-      muted: json['muted'] as bool? ?? false,
     );
   }
 
   @override
   Map<String, dynamic> toJson() {
     return {
-      'id': id,
-      'functionId': functionId,
-      'sceneId': sceneId,
       'sourceId': sourceId,
       'type': type,
-      'mixLevel': mixLevel,
-      'outGain': outGain,
-      'outMuted': outMuted,
       'gain': gain,
       'muted': muted,
+      'mixLevel': mixLevel,
     };
   }
 }
 
 // ============================================================================
-// Stereo Matrix Settings
+// Stereo Matrix Settings (per source)
 // ============================================================================
 class StereoMatrixSettings extends MatrixSettings {
   final double leftMixLevel;
   final double rightMixLevel;
-  final double leftOutGain;
-  final double rightOutGain;
-  final bool leftOutMuted;
-  final bool rightOutMuted;
 
   StereoMatrixSettings({
-    super.id,
-    required super.functionId,
-    super.sceneId,
     required super.sourceId,
     super.type = "stereo",
+    required super.gain,
+    required super.muted,
     required this.leftMixLevel,
     required this.rightMixLevel,
-    required this.leftOutGain,
-    required this.rightOutGain,
-    required this.leftOutMuted,
-    required this.rightOutMuted,
-    super.gain,
-    super.muted,
   });
 
   @override
   StereoMatrixSettings copyWith({
-    String? id,
-    String? functionId,
-    String? sceneId,
     String? sourceId,
     String? type,
-    double? leftMixLevel,
-    double? rightMixLevel,
-    double? leftOutGain,
-    double? rightOutGain,
-    bool? leftOutMuted,
-    bool? rightOutMuted,
     double? gain,
     bool? muted,
+    double? leftMixLevel,
+    double? rightMixLevel,
   }) {
     return StereoMatrixSettings(
-      id: id ?? this.id,
-      functionId: functionId ?? this.functionId,
-      sceneId: sceneId ?? this.sceneId,
       sourceId: sourceId ?? this.sourceId,
       type: type ?? this.type,
-      leftMixLevel: leftMixLevel ?? this.leftMixLevel,
-      rightMixLevel: rightMixLevel ?? this.rightMixLevel,
-      leftOutGain: leftOutGain ?? this.leftOutGain,
-      rightOutGain: rightOutGain ?? this.rightOutGain,
-      leftOutMuted: leftOutMuted ?? this.leftOutMuted,
-      rightOutMuted: rightOutMuted ?? this.rightOutMuted,
       gain: gain ?? this.gain,
       muted: muted ?? this.muted,
+      leftMixLevel: leftMixLevel ?? this.leftMixLevel,
+      rightMixLevel: rightMixLevel ?? this.rightMixLevel,
     );
   }
 
   factory StereoMatrixSettings.fromJson(Map<String, dynamic> json) {
     return StereoMatrixSettings(
-      id: json['id'],
-      functionId: json['functionId'],
-      sceneId: json['sceneId'],
       sourceId: json['sourceId'],
       type: json['type'],
+      gain: (json['gain'] as num).toDouble(),
+      muted: json['muted'] as bool,
       leftMixLevel: (json['leftMixLevel'] as num).toDouble(),
       rightMixLevel: (json['rightMixLevel'] as num).toDouble(),
-      leftOutGain: (json['leftOutGain'] as num).toDouble(),
-      rightOutGain: (json['rightOutGain'] as num).toDouble(),
-      leftOutMuted: json['leftOutMuted'] as bool,
-      rightOutMuted: json['rightOutMuted'] as bool,
-      gain: (json['gain'] as num?)?.toDouble() ?? 0.0,
-      muted: json['muted'] as bool? ?? false,
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'sourceId': sourceId,
+      'type': type,
+      'gain': gain,
+      'muted': muted,
+      'leftMixLevel': leftMixLevel,
+      'rightMixLevel': rightMixLevel,
+    };
+  }
+}
+
+// ============================================================================
+// Matrix Mixer - Base class (output-level configuration)
+// ============================================================================
+abstract class MatrixMixer {
+  final String id;
+  final List<MatrixSettings> settings;
+  final SignalType type;
+
+  MatrixMixer({
+    String? id,
+    required this.type,
+    this.settings = const [],
+  }) : id = id ?? "MIXER${FusionUtils.shortStringUUID()}";
+
+  MatrixMixer copyWith({
+    String? id,
+    List<MatrixSettings>? settings,
+  });
+
+  MatrixMixer clone();
+
+  Map<String, dynamic> toJson();
+}
+
+// ============================================================================
+// Mono Matrix Mixer (output configuration)
+// ============================================================================
+class MonoMatrixMixer extends MatrixMixer {
+  final double outGain;
+  final bool outMuted;
+
+  MonoMatrixMixer({
+    super.id,
+    super.type = SignalType.mono,
+    required this.outGain,
+    required this.outMuted,
+    super.settings,
+  });
+
+  @override
+  MonoMatrixMixer copyWith({
+    String? id,
+    double? outGain,
+    bool? outMuted,
+    List<MatrixSettings>? settings,
+  }) {
+    return MonoMatrixMixer(
+      id: id ?? this.id,
+      outGain: outGain ?? this.outGain,
+      outMuted: outMuted ?? this.outMuted,
+      settings: settings ?? this.settings,
+    );
+  }
+
+  @override
+  MatrixMixer clone() {
+    return MonoMatrixMixer(
+      id: id,
+      outGain: outGain,
+      outMuted: outMuted,
+      settings: settings.map((e) {
+        return e is MonoMatrixSettings
+            ? e.copyWith()
+            : e is StereoMatrixSettings
+            ? e.copyWith()
+            : e;
+      }).toList(),
+    );
+  }
+
+  factory MonoMatrixMixer.fromJson(Map<String, dynamic> json) {
+    return MonoMatrixMixer(
+      id: json['id'],
+      outGain: (json['outGain'] as num).toDouble(),
+      outMuted: json['outMuted'] as bool,
+      type: SignalType.mono,
+      settings:
+          (json['settings'] as List<dynamic>?)?.map((e) {
+            return MonoMatrixSettings.fromJson(e);
+          }).toList() ??
+          [],
     );
   }
 
@@ -393,18 +397,99 @@ class StereoMatrixSettings extends MatrixSettings {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'functionId': functionId,
-      'sceneId': sceneId,
-      'sourceId': sourceId,
-      'type': type,
-      'leftMixLevel': leftMixLevel,
-      'rightMixLevel': rightMixLevel,
+      'outGain': outGain,
+      'outMuted': outMuted,
+      'type': type.name,
+      'settings': settings.map((e) => e.toJson()).toList(),
+    };
+  }
+}
+
+// ============================================================================
+// Stereo Matrix Mixer (output configuration)
+// ============================================================================
+class StereoMatrixMixer extends MatrixMixer {
+  final double leftOutGain;
+  final double rightOutGain;
+  final bool leftOutMuted;
+  final bool rightOutMuted;
+
+  StereoMatrixMixer({
+    super.id,
+    super.type = SignalType.stereo,
+    required this.leftOutGain,
+    required this.rightOutGain,
+    required this.leftOutMuted,
+    required this.rightOutMuted,
+    super.settings,
+  });
+
+  @override
+  StereoMatrixMixer copyWith({
+    String? id,
+    String? name,
+    String? functionId,
+    String? sceneId,
+    double? leftOutGain,
+    double? rightOutGain,
+    bool? leftOutMuted,
+    bool? rightOutMuted,
+    List<MatrixSettings>? settings,
+  }) {
+    return StereoMatrixMixer(
+      id: id ?? this.id,
+      leftOutGain: leftOutGain ?? this.leftOutGain,
+      rightOutGain: rightOutGain ?? this.rightOutGain,
+      leftOutMuted: leftOutMuted ?? this.leftOutMuted,
+      rightOutMuted: rightOutMuted ?? this.rightOutMuted,
+      settings: settings ?? this.settings,
+    );
+  }
+
+  @override
+  MatrixMixer clone() {
+    return StereoMatrixMixer(
+      id: id,
+      leftOutGain: leftOutGain,
+      rightOutGain: rightOutGain,
+      leftOutMuted: leftOutMuted,
+      rightOutMuted: rightOutMuted,
+      settings: settings.map((e) {
+        return e is MonoMatrixSettings
+            ? e.copyWith()
+            : e is StereoMatrixSettings
+            ? e.copyWith()
+            : e;
+      }).toList(),
+    );
+  }
+
+  factory StereoMatrixMixer.fromJson(Map<String, dynamic> json) {
+    return StereoMatrixMixer(
+      id: json['id'],
+      leftOutGain: (json['leftOutGain'] as num).toDouble(),
+      rightOutGain: (json['rightOutGain'] as num).toDouble(),
+      leftOutMuted: json['leftOutMuted'] as bool,
+      rightOutMuted: json['rightOutMuted'] as bool,
+      type: SignalType.stereo,
+      settings:
+          (json['settings'] as List<dynamic>?)?.map((e) {
+            return StereoMatrixSettings.fromJson(e);
+          }).toList() ??
+          [],
+    );
+  }
+
+  @override
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
       'leftOutGain': leftOutGain,
       'rightOutGain': rightOutGain,
       'leftOutMuted': leftOutMuted,
       'rightOutMuted': rightOutMuted,
-      'gain': gain,
-      'muted': muted,
+      'type': type.name,
+      'settings': settings.map((e) => e.toJson()).toList(),
     };
   }
 }

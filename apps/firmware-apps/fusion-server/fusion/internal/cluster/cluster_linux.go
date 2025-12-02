@@ -24,7 +24,7 @@ func (c *Cluster) watchLocalVIP(iface string) {
 	// Watch only the correct interface
 	link, err := netlink.LinkByName(iface)
 	if err != nil {
-		logger.Error("VIP watcher: interface enp0s1 not found: %v", err)
+		logger.Error("VIP watcher: interface %s not found: %v", iface, err)
 		return
 	}
 
@@ -33,7 +33,7 @@ func (c *Cluster) watchLocalVIP(iface string) {
 	for _, a := range addrs {
 		if canonicalVIP(a.IP.String()) == expectedVIP {
 			logger.Info("VIP present at startup: %s", expectedVIP)
-			c.listenerUpdated(expectedVIP, c.bindAddr)
+			c.listenerUpdated(expectedVIP, c.appConfig.BindAddr)
 			c.notifyLocalVIPChange(true)
 			break
 		}
@@ -67,10 +67,10 @@ func (c *Cluster) watchLocalVIP(iface string) {
 
 		if update.NewAddr {
 			logger.Info("Local VIP appeared: %s", theIP)
-			c.listenerUpdated(theIP, c.bindAddr)
+			c.listenerUpdated(theIP, c.appConfig.BindAddr)
 		} else {
 			logger.Info("Local VIP removed: %s", theIP)
-			c.listenerUpdated("", c.bindAddr)
+			c.listenerUpdated("", c.appConfig.BindAddr)
 		}
 	}
 

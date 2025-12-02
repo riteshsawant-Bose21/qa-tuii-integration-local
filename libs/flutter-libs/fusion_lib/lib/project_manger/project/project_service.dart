@@ -36,11 +36,11 @@ class ProjectService {
   final ProcessingBlockRepository processingBlocks;
   final ZoneFunctionRepository zoneFunctions;
   final PrioritySourceDataRepository prioritySourceData;
-
-  // Repositories for flattened mix scenes
-  final MixSceneRepository mixScenes;
-  final MixSettingsRepository mixSettings;
-  final MatrixSettingsRepository matrixSettings;
+  final ScenesRepository scenes;
+  final SceneActionRepository sceneActions;
+  final SceneSetRepository sceneSets;
+  final GPIORepository gpioConfigs;
+  final SchedulerRepository schedulerConfig;
 
   final RelationshipManager relationships;
 
@@ -81,10 +81,12 @@ class ProjectService {
     ProcessingBlockRepository? processingBlocks,
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
-    MixSceneRepository? mixScenes,
-    MixSettingsRepository? mixSettings,
-    MatrixSettingsRepository? matrixSettings,
     PrioritySourceDataRepository? prioritySourceData,
+    ScenesRepository? scenesRepository,
+    SceneActionRepository? sceneActionRepository,
+    SceneSetRepository? sceneSetRepository,
+    GPIORepository? gpioRepository,
+    SchedulerRepository? schedulerConfig,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -98,11 +100,13 @@ class ProjectService {
        wiringConnection = wiringConnection ?? WiringConnectionRepository(),
        processingBlocks = processingBlocks ?? ProcessingBlockRepository(),
        zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
-       mixScenes = mixScenes ?? MixSceneRepository(),
-       mixSettings = mixSettings ?? MixSettingsRepository(),
-       matrixSettings = matrixSettings ?? MatrixSettingsRepository(),
        relationships = relationships ?? RelationshipManager(),
-       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository();
+       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
+       scenes = scenesRepository ?? ScenesRepository(),
+       sceneActions = sceneActionRepository ?? SceneActionRepository(),
+       sceneSets = sceneSetRepository ?? SceneSetRepository(),
+       gpioConfigs = gpioRepository ?? GPIORepository(),
+       schedulerConfig = schedulerConfig ?? SchedulerRepository();
 
   ProjectService copyWith({
     String? id,
@@ -133,10 +137,12 @@ class ProjectService {
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
-    MixSceneRepository? mixScenes,
-    MixSettingsRepository? mixSettings,
-    MatrixSettingsRepository? matrixSettings,
     PrioritySourceDataRepository? prioritySourceData,
+    ScenesRepository? scenesRepository,
+    SceneActionRepository? sceneActionRepository,
+    SceneSetRepository? sceneSetRepository,
+    GPIORepository? gpioRepository,
+    SchedulerRepository? schedulerConfig,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -167,10 +173,12 @@ class ProjectService {
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
-      mixScenes: mixScenes ?? this.mixScenes,
-      mixSettings: mixSettings ?? this.mixSettings,
-      matrixSettings: matrixSettings ?? this.matrixSettings,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
+      scenesRepository: scenesRepository ?? scenes,
+      sceneActionRepository: sceneActionRepository ?? sceneActions,
+      sceneSetRepository: sceneSetRepository ?? sceneSets,
+      gpioRepository: gpioRepository ?? gpioConfigs,
+      schedulerConfig: schedulerConfig ?? this.schedulerConfig,
     );
 
     // Preserve undo/redo stacks
@@ -223,10 +231,12 @@ class ProjectService {
       "processingBlocks": processingBlocks.toJson((pb) => pb.toJson()),
       "relationships": relationships.toJson(),
       "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
-      "mixScenes": mixScenes.toJson((ms) => ms.toJson()),
-      "mixSettings": mixSettings.toJson((ms) => ms.toJson()),
-      "matrixSettings": matrixSettings.toJson((ms) => ms.toJson()),
       "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
+      "scenesRepository": scenes.toJson((s) => s.toJson()),
+      "sceneActions": sceneActions.toJson((sa) => sa.toJson()),
+      "sceneSetsRepository": sceneSets.toJson((ss) => ss.toJson()),
+      "gpioConfig": gpioConfigs.toJson((g) => g.toJson()),
+      "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
     };
   }
 
@@ -285,39 +295,11 @@ class ProjectService {
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
     service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
-
-    // Load mix scenes
-    if (json["mixScenes"] != null) {
-      service.mixScenes.fromJsonList(json["mixScenes"], (dynamic m) {
-        final Map<String, dynamic> sceneMap = m as Map<String, dynamic>;
-        if (sceneMap['type'] == MixSceneType.source.name) {
-          return SourceMixScene.fromJson(sceneMap);
-        } else if (sceneMap['type'] == MixSceneType.matrix.name) {
-          return MatrixMixScene.fromJson(sceneMap);
-        } else {
-          throw FormatException('Unknown MixScene type: ${sceneMap['type']}');
-        }
-      }, "id");
-    }
-
-    // Load mix settings
-    if (json["mixSettings"] != null) {
-      service.mixSettings.fromJsonList(json["mixSettings"], (m) => MixSettings.fromJson(m), "id");
-    }
-
-    // Load matrix settings
-    if (json["matrixSettings"] != null) {
-      service.matrixSettings.fromJsonList(json["matrixSettings"], (dynamic m) {
-        final Map<String, dynamic> settingMap = m as Map<String, dynamic>;
-        if (settingMap['type'] == 'mono') {
-          return MonoMatrixSettings.fromJson(settingMap);
-        } else if (settingMap['type'] == 'stereo') {
-          return StereoMatrixSettings.fromJson(settingMap);
-        } else {
-          throw FormatException('Unknown MatrixSettings type: ${settingMap['type']}');
-        }
-      }, "id");
-    }
+    service.scenes.fromJsonList(json["scenesRepository"], (m) => SceneModel.fromJson(m), "id");
+    service.sceneActions.fromJsonList(json["sceneActions"], (m) => SceneActionModel.fromJson(m), "id");
+    service.sceneSets.fromJsonList(json["sceneSetsRepository"], (m) => SceneSetModel.fromJson(m), "id");
+    service.gpioConfigs.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
+    service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

@@ -55,8 +55,9 @@ type MultipassNode struct {
 const (
 	clusterTimout = 10 * time.Second
 	instancePort  = "7947"
+	ncCommand     = "nc -4 -u -w 1 localhost"
 	requiredNodes = 3 // Number of nodes required for cluster tests
-	serverAddr    = "http://192.168.64.100:8080"
+	serverAddr    = "http://192.168.2.100:8080"
 	testTimeout   = 5 * time.Second
 )
 
@@ -1064,8 +1065,8 @@ func TestClusterStateSync(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Logf("%s", tt.name)
-			t.Logf("  Node: %s", testNodes[tt.updateNode])
+			//t.Logf("%s", tt.name)
+			//t.Logf("  Node: %s", testNodes[tt.updateNode])
 
 			err := setValueOnNode(testNodes[tt.updateNode], tt.key, tt.value)
 			if err != nil {
@@ -1074,7 +1075,7 @@ func TestClusterStateSync(t *testing.T) {
 
 			success := waitForSync(tt.timeout, func() bool {
 				for _, nodeIdx := range tt.verifyNodes {
-					t.Logf("    Checking: %s", testNodes[nodeIdx])
+					//t.Logf("    Checking: %s", testNodes[nodeIdx])
 					value, exists, err := getValueFromNode(testNodes[nodeIdx], tt.key)
 					if err != nil || !exists || !valueEquals(value, tt.value) {
 						return false
@@ -1134,7 +1135,7 @@ func TestStateConsistency(t *testing.T) {
 		}
 	}
 
-	t.Log("Waiting for initial state sync...")
+	//t.Log("Waiting for initial state sync...")
 	initialSyncTime := 5 * time.Second
 	logProgress(t, "Initial sync", initialSyncTime)
 
@@ -1164,7 +1165,7 @@ func TestStateConsistency(t *testing.T) {
 		}
 	}
 
-	t.Logf("Successfully verified state consistency across nodes")
+	//t.Logf("Successfully verified state consistency across nodes")
 }
 
 // TestClearEndpoint verifies that data is cleared on all nodes
@@ -1213,7 +1214,7 @@ func TestClearEndpoint(t *testing.T) {
 
 // TestUDPGet runs the "get" command inside the default instance.
 func TestUDPGet(t *testing.T) {
-	command := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
+	command := fmt.Sprintf(`echo '{"action":"get"}' | %s %s`, ncCommand, instancePort)
 	out, err := runMultipassCommand(t, command)
 	if err != nil {
 		t.Fatalf("Multipass get command failed: %v, output: %s", err, out)
@@ -1222,7 +1223,7 @@ func TestUDPGet(t *testing.T) {
 
 // TestUDPSet runs the "set" command inside the default instance.
 func TestUDPSet(t *testing.T) {
-	command := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost %s`, instancePort)
+	command := fmt.Sprintf(`echo '{"action":"set","test":"hello"}' | %s %s`, ncCommand, instancePort)
 	out, err := runMultipassCommand(t, command)
 	if err != nil {
 		t.Fatalf("Multipass set command failed: %v, output: %s", err, out)
@@ -1232,14 +1233,14 @@ func TestUDPSet(t *testing.T) {
 // TestUDPSetAndGet sets a value and then verifies it with a get command on the default instance.
 func TestUDPSetAndGet(t *testing.T) {
 	// Set the value on instance1.
-	setCommand := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 localhost %s`, instancePort)
+	setCommand := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
 	setOut, err := runMultipassCommand(t, setCommand)
 	if err != nil {
 		t.Fatalf("Multipass set command failed: %v, output: %s", err, setOut)
 	}
 
 	// Retrieve the value from instance1.
-	getCommand := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
+	getCommand := fmt.Sprintf(`echo '{"action":"get"}' | %s %s`, ncCommand, instancePort)
 	getOut, err := runMultipassCommand(t, getCommand)
 	if err != nil {
 		t.Fatalf("Multipass get command failed: %v, output: %s", err, getOut)
@@ -1254,8 +1255,8 @@ func TestUDPSetAndGet(t *testing.T) {
 // TestUDPPropagation sets a value on instance1 and verifies that it propagates to instance2.
 func TestUDPPropagation(t *testing.T) {
 	// Build commands once
-	setCmd := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 localhost %s`, instancePort)
-	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | nc -u -w 1 -v localhost %s`, instancePort)
+	setCmd := fmt.Sprintf(`echo '{"action":"set","payload":{"test":"hello"}}' | %s %s`, ncCommand, instancePort)
+	getCmd := fmt.Sprintf(`echo '{"action":"get"}' | %s %s`, ncCommand, instancePort)
 
 	// Set on the "master" node
 	name := clusterConfig.nodes[0].name
@@ -1313,7 +1314,7 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 	for i := 0; time.Now().Before(deadline); i++ {
 		// note the "2>&1" so we capture nc's stderr (where -v prints)
 		cmd := fmt.Sprintf(
-			`(echo '{"action":"get"}' | nc -u -vv -w1 localhost %s) 2>&1 || true`,
+			`(echo '{"action":"get"}' | nc -4 -u -w1 localhost %s) 2>/dev/null || true`,
 			instancePort,
 		)
 
@@ -1324,6 +1325,11 @@ func TestHTTPSetAndVerifyViaUDP(t *testing.T) {
 		//t.Logf("iter %02d, nc err: %v, raw UDP payload: %q", i, errRun, raw)
 
 		if raw != "" {
+
+			if idx := strings.Index(raw, "{"); idx > 0 {
+				raw = raw[idx:]
+			}
+
 			var result UDPResult
 			if err := json.Unmarshal([]byte(raw), &result); err == nil {
 				// check status
@@ -1373,7 +1379,7 @@ func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
 	}
 
 	cmd := fmt.Sprintf(
-		`(echo '%s' | nc -u -w1 localhost %s)`,
+		`(echo '%s' | nc -4 -u -w1 localhost %s)`,
 		string(udpData),
 		instancePort,
 	)
@@ -1429,7 +1435,7 @@ func TestUDPSetAndVerifyViaHTTP(t *testing.T) {
 func verifyClusterHealth(t *testing.T, nodes []clusterNode) bool {
 	t.Helper()
 
-	t.Logf("Verifying cluster health across %d nodes...", len(nodes))
+	//t.Logf("Verifying cluster health across %d nodes...", len(nodes))
 
 	deadline := time.Now().Add(clusterTimout)
 	ticker := time.NewTicker(time.Second)
@@ -1440,10 +1446,10 @@ func verifyClusterHealth(t *testing.T, nodes []clusterNode) bool {
 			size, err := getClusterSize(node)
 			if err == nil {
 				if size >= requiredNodes {
-					t.Logf("✓ Cluster is healthy with %d nodes", size)
+					//t.Logf("Cluster is healthy with %d nodes", size)
 					return true
 				}
-				t.Logf("Node %d reports cluster size %d/%d", i+1, size, requiredNodes)
+				//t.Logf("Node %d reports cluster size %d/%d", i+1, size, requiredNodes)
 			} else {
 				t.Logf("Node %d health check failed: %v", i+1, err)
 			}
@@ -1502,13 +1508,14 @@ func logProgress(t *testing.T, msg string, duration time.Duration) {
 }
 
 func checkClusterConnectivity(t *testing.T, nodes []clusterNode) {
-	t.Logf("\n=== Checking Cluster Connectivity ===")
+
+	//t.Logf("\n=== Checking Cluster Connectivity ===")
 
 	// Get cluster info from each node
 	for _, node := range nodes {
 		resp, err := http.Get(node.address)
 		if err != nil {
-			t.Logf("❌ Failed to connect to %s: %v", node.address, err)
+			t.Logf("Failed to connect to %s: %v", node.address, err)
 			continue
 		}
 		defer resp.Body.Close()
@@ -1520,17 +1527,17 @@ func checkClusterConnectivity(t *testing.T, nodes []clusterNode) {
 			Version     string   `json:"version"`
 		}
 		if err := json.NewDecoder(resp.Body).Decode(&info); err != nil {
-			t.Logf("❌ Failed to decode response from %s: %v", node.address, err)
+			t.Logf("Failed to decode response from %s: %v", node.address, err)
 			continue
 		}
 
-		t.Logf("\nNode: %s", node.address)
-		t.Logf("  ID: %s", info.NodeID)
-		t.Logf("  Cluster Size: %d", info.ClusterSize)
-		t.Logf("  Version: %s", info.Version)
-		if len(info.Members) > 0 {
-			t.Logf("  Known Members: %v", info.Members)
-		}
+		// t.Logf("\nNode: %s", node.address)
+		// t.Logf("  ID: %s", info.NodeID)
+		// t.Logf("  Cluster Size: %d", info.ClusterSize)
+		// t.Logf("  Version: %s", info.Version)
+		// if len(info.Members) > 0 {
+		// 	t.Logf("  Known Members: %v", info.Members)
+		// }
 	}
 }
 
@@ -1584,7 +1591,7 @@ func discoverMultipassNodes(baseName string) ([]MultipassNode, error) {
 func getClusterConfig() (*ClusterConfig, error) {
 	var (
 		nodesFlag    = flag.String("nodes", "", "Comma-separated list of node addresses (e.g., 192.168.64.229:8080,192.168.64.230:8080)")
-		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.64.100:8080)")
+		vipFlag      = flag.String("vip", "", "VIP address (e.g., 192.168.2.100:8080)")
 		baseNameFlag = flag.String("base-name", "fusion", "Base name for multipass instances")
 		portFlag     = flag.String("port", "8080", "Port for node services")
 		autoFlag     = flag.Bool("auto", false, "Automatically discover nodes using multipass")
@@ -1818,6 +1825,7 @@ func runMultipassCommand(t *testing.T, command string) (string, error) {
 func runMultipassCommandOnInstance(t *testing.T, instance, command string) (string, error) {
 	t.Helper()
 	args := []string{"exec", instance, "--", "bash", "-c", command}
+	//t.Logf("\nCommand: multipass %s", strings.Join(args, " "))
 	cmd := exec.Command("multipass", args...)
 	output, err := cmd.CombinedOutput()
 	return string(output), err

@@ -9,6 +9,8 @@ import (
 	"fusion/internal/utils"
 	"io"
 	"net/http"
+	"strings"
+	"time"
 
 	json "github.com/goccy/go-json"
 )
@@ -19,7 +21,6 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Decode directly into api.Task
 	var task api.Task
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
@@ -27,26 +28,22 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	}
 	defer r.Body.Close()
 
-	// Basic required fields
 	if task.ID == "" || task.CronExpr == "" || task.Description == "" {
 		http.Error(w, "Task ID, cron expression and description are required", http.StatusBadRequest)
 		return
 	}
 
-	// Must be a snapshot-type task
 	if task.Type != api.TaskTypeSnapshot {
 		http.Error(w, "Task type must be 'snapshot'", http.StatusBadRequest)
 		return
 	}
 
-	// Must have params[api.SnapshotIDKey]
 	snapID, ok := task.Params[api.SnapshotIDKey]
 	if !ok || snapID == "" {
 		http.Error(w, "params.snapshot_id is required for snapshot tasks", http.StatusBadRequest)
 		return
 	}
 
-	// Check persistence for conflicts
 	exists, err := tm.persistence.TaskExists(&task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
@@ -57,7 +54,6 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	// Schedule it via the new AddTask(task) signature
 	if err := tm.AddTask(&task); err != nil {
 		http.Error(w, fmt.Sprintf("Failed to add task: %v", err), http.StatusBadRequest)
 		return
@@ -65,15 +61,14 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{
-		"status": "created",
-		"id":     task.ID,
+		"id": task.ID,
 	})
 }
 
-// UpdateApplySnapshotTask handles HTTP POST requests to update an existing task.
+// UpdateApplySnapshotTask handles HTTP PATCH requests to update an existing snapshot task.
 func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Request) {
 
-	if !utils.RequirePost(w, r) {
+	if !utils.RequirePatch(w, r) {
 		return
 	}
 
@@ -83,33 +78,70 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	task, err := tm.GetTask(id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+
 	body, err := io.ReadAll(r.Body)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusBadRequest)
+		http.Error(w, fmt.Sprintf("Error reading request body: %v", err), http.StatusInternalServerError)
 		return
 	}
 	defer r.Body.Close()
 
-	var task api.Task
-	if err := json.Unmarshal(body, &task); err != nil {
+	var patch api.TaskSnapshopPatch
+	if err := json.Unmarshal(body, &patch); err != nil {
 		http.Error(w, fmt.Sprintf("Invalid JSON format: %v", err), http.StatusBadRequest)
 		return
 	}
-	task.ID = id
 
-	if task.CronExpr == "" || task.Description == "" {
-		http.Error(w, "Cron expression and description are required", http.StatusBadRequest)
+	// At least one must be present
+	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.Snapshot) != ""
+	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
+	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
+
+	if !(hasSnapshot || hasCron || hasDesc) {
+		http.Error(w, "At least one field (snapshot, cron_expr, description) must be provided", http.StatusBadRequest)
 		return
 	}
 
-	// Must be a snapshot-type task
-	if task.Type != api.TaskTypeSnapshot {
-		http.Error(w, "Task type must be 'snapshot'", http.StatusBadRequest)
-		return
+	// Update description
+	if hasDesc {
+		task.Description = *patch.Description
 	}
 
-	if err = tm.UpdateTask(&task, tm.taskActivateSnapshotFunc(&task)); err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+	// Update cron expression
+	if hasCron {
+		task.CronExpr = *patch.CronExpr
+	}
+
+	// Update snapshot
+	if hasSnapshot {
+		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if !exists {
+			http.Error(w, fmt.Sprintf("Snapshot %s not found", *patch.Snapshot), http.StatusNotFound)
+			return
+		}
+
+		task.Params[api.SnapshotIDKey] = *patch.Snapshot
+	}
+
+	// Run update
+	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
+	if err != nil {
+		if errors.Is(err, ErrTaskNotFound) {
+			http.Error(w, err.Error(), http.StatusNotFound)
+			return
+		}
+
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 }
@@ -134,15 +166,37 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 			return errors.New("snapshot_id required for snapshot tasks")
 		}
 
-		logger.Debug("Activating snapshot %s on %s", snapID, tm.node)
-
 		// Activate the snapshot only on the instance.
-		if err := tm.persistence.ActivateSnapshot(snapID); err != nil {
-			logger.Error("Snapshot apply task for '%s' failed: %v", snapID, err)
+		err := tm.persistence.ActivateSnapshot(snapID)
+		if err != nil {
 			return err
 		}
 
-		logger.Debug("Snapshot '%s' activated successfully via task", snapID)
+		// Broadcast snapshot-activation (cluster-sync)
+		if err := tm.handleSnapshotOperation(
+			tm.node,
+			snapID,
+			api.NotifyOpSnapActivate,
+			nil); err != nil {
+			return err
+		}
+
+		logger.Info("Snapshot '%s' activated successfully via task", snapID)
+
 		return nil
 	}
+}
+
+// handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
+func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
+
+	msg := api.NewNotifyMessage(update,
+		node,
+		api.WithSnapshotUpdate(&api.SnapshotUpdate{
+			Name:      name,
+			Data:      data,
+			Timestamp: time.Now().UTC(),
+		}),
+	)
+	return tm.hub.BroadcastToNodes(msg)
 }

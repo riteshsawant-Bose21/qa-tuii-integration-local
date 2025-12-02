@@ -433,6 +433,15 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  int getSourceCountInZone({required String zoneId}) {
+    try {
+      return projectManager.getSourcesAndSourceSetSourcesInZone(zoneId).length;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources and source set sources in zone: $e");
+      return 0;
+    }
+  }
+
   void addPrioritySourceToZone({required String zoneId, required String sourceId, required int priority, bool autoSave = true}) {
     try {
       if (autoSave) {
@@ -505,6 +514,22 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get priority source data by id: $e");
       return null;
+    }
+  }
+
+  void updatePrioritySourceData({required PrioritySourceData updatedData, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updatePrioritySourceData(updatedData: updatedData);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update priority source data: $e");
+      throwError("Failed to update priority source data: $e");
     }
   }
 

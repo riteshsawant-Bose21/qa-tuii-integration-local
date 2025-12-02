@@ -37,6 +37,10 @@ const (
 	ClusterNTPSkewEndpoint                     = ClusterEndpoint + "/ntp-skew"
 	ClusterStatusEndpoint                      = ClusterEndpoint + "/status"
 
+	ControllersEndpoint       = "/controllers"
+	ControllersIDEndpoint     = ControllersEndpoint + "/{id}"
+	ControllersIDWinkEndpoint = ControllersEndpoint + "/wink" + "/{id}"
+
 	DeviceEndpoint          = "/device"
 	DeviceReloadEndpoint    = DeviceEndpoint + "/reload"
 	DeviceReloadVIPEndpoint = DeviceReloadEndpoint + "/vip"
@@ -64,6 +68,7 @@ const (
 	PAVAZonesEndpoint          = PAVAEndpoint + "/zones"
 	PAVAMessagesIDEndpoint     = PAVAMessagesEndpoint + "/{id}"
 	PAVAMessagesTagsEndpoint   = PAVAMessagesEndpoint + "/tags"
+	PAVAScheduleIDEndpoint     = PAVAScheduleEndpoint + "/{id}"
 	PAVAMessageStreamEndpoint  = PAVAMessagesIDEndpoint + "/stream"
 	PAVAMessageTriggerEndpoint = PAVAMessagesIDEndpoint + "/trigger"
 	PAVAZoneStatusEndpoint     = PAVAZonesEndpoint + "/status/{name}"
@@ -75,12 +80,14 @@ const (
 
 	SnapshotsEndpoint         = "/snapshots"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
+	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
+	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"
 	TasksIdEndpoint        = TasksEndpoint + "/{id}"
-	TasksIdDisableEndpoint = TasksIdEndpoint + "/enable"
+	TasksIdDisableEndpoint = TasksIdEndpoint + "/disable"
 	TasksIdEnableEndpoint  = TasksIdEndpoint + "/enable"
 
 	ValueEndpoint = "/value"

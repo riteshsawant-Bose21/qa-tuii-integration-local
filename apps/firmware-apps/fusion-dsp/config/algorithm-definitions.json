@@ -1,5 +1,5 @@
 {
-    "version": "0.1.9",
+    "version": "0.1.10",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -2077,6 +2077,32 @@
             ]
         },
         {
+            "name": "unshifter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels"
+                }
+            ]
+        },
+        {
             "name": "wav_read",
             "properties": [
                 {
@@ -2216,6 +2242,185 @@
                     "default_value": false
                 }
             ]
+        },
+        {
+            "name": "vadagc",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "activity_threshold",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": -40.0,
+                    "minimum_value": -70.0,
+                    "maximum_value": 0.0
+                },
+                {
+                    "name": "target_minimum",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": -6.0,
+                    "minimum_value": -40.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "target_maximum",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 6.0,
+                    "minimum_value": -40.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "cut_rate",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 5.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 9000.0
+                },
+                {
+                    "name": "boost_rate",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 5.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 9000.0
+                },
+                {
+                    "name": "cut_range",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 18.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 30.0
+                },
+                {
+                    "name": "boost_range",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 6.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 30.0
+                },
+                {
+                    "name": "cut_hold",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 3.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "boost_hold",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 3.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "max_total_boost",
+                    "value_type": "float",
+                    "default_value": 24.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "channel_bypass",
+                    "value_type": "bool",
+                    "dimensions": ["channels"],
+                    "default_value": false
+                },
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "denoise_frame",
+                    "value_type": "bool",
+                    "default_value": true
+                },
+                {
+                    "name": "vad_threshold",
+                    "value_type": "float",
+                    "default_value": 0.9,
+                    "minimum_value": 0.0,
+                    "maximum_value": 1.0
+                },
+                {
+                    "name": "alpha",
+                    "value_type": "float",
+                    "default_value": 0.5,
+                    "minimum_value": 0.0,
+                    "maximum_value": 1.0
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "in_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -36.0,
+                    "minimum_value": -36.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "gain_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -24.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "hold_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "bool",
+                    "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
         }
+        
     ]
 }

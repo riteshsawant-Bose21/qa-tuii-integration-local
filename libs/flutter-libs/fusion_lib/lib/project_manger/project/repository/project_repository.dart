@@ -1,5 +1,3 @@
-import 'package:fusion_lib/models/project_entities/circuit_model.dart';
-
 import '../../../fusion_lib.dart';
 
 /// -------------------
@@ -112,7 +110,98 @@ class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
 
-class ZoneFunctionRepository extends Repository<ZoneFunctions> {}
+class ScenesRepository extends Repository<SceneModel> {}
+
+class SceneActionRepository extends Repository<SceneActionModel> {}
+
+class SceneSetRepository extends Repository<SceneSetModel> {}
+
+class GPIORepository extends Repository<GpioConfig> {}
+
+class SchedulerRepository extends Repository<ScheduleConfig> {}
+
+class ZoneFunctionRepository extends Repository<ZoneFunctions> {
+  // Get ZoneFunction by function id
+  ZoneFunctions? getByFunctionId({required String functionId}) {
+    try {
+      return getAll().firstWhere((zf) => zf.id == functionId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get MixScene by scene id and fucntion id
+  MixScene? getMixSceneById({required String functionId, required String sceneId}) {
+    try {
+      final zoneFunction = getByFunctionId(functionId: functionId);
+      if (zoneFunction == null) return null;
+      return zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  // Get MixSetting for source id, function id and scene id
+  MixSettings? getMixSettingBySourceId({required String functionId, required String sceneId, required String sourceId}) {
+    try {
+      final zoneFunction = getByFunctionId(functionId: functionId);
+      if (zoneFunction == null) return null;
+      final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
+      if (mixScene is SourceMixScene) {
+        return mixScene.mixSettings.firstWhere((ms) => ms.sourceId == sourceId);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<MixSettings> getAllMixSettingsForFunctionAndScene({required String functionId, required String sceneId}) {
+    try {
+      final zoneFunction = getByFunctionId(functionId: functionId);
+      if (zoneFunction == null) return [];
+      final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
+      if (mixScene is SourceMixScene) {
+        return mixScene.mixSettings;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+
+  MatrixMixer? getAllMatrixForFunctionAndScene({required String functionId, required String sceneId}) {
+    try {
+      final zoneFunction = getByFunctionId(functionId: functionId);
+      if (zoneFunction == null) return null;
+      final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
+      if (mixScene is MatrixMixScene) {
+        return mixScene.mixerConfig;
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  List<MatrixSettings> getAllMatrixSettingsFunctionAndScene({required String functionId, required String sceneId}) {
+    try {
+      final zoneFunction = getByFunctionId(functionId: functionId);
+      if (zoneFunction == null) return [];
+      final mixScene = zoneFunction.mixScenes.firstWhere((ms) => ms.id == sceneId);
+      if (mixScene is MatrixMixScene) {
+        return mixScene.mixerConfig.settings;
+      } else {
+        return [];
+      }
+    } catch (e) {
+      return [];
+    }
+  }
+}
 
 class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
   PrioritySourceDataRepository() : super();
@@ -141,103 +230,6 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
       return getAll().firstWhere((psd) => psd.zoneId == zoneId && psd.sourceId == sourceId);
     } catch (e) {
       return null;
-    }
-  }
-}
-
-class MixSceneRepository extends Repository<MixScene> {
-  MixSceneRepository() : super();
-}
-
-class MixSettingsRepository extends Repository<MixSettings> {
-  MixSettingsRepository() : super();
-
-  /// Get setting by the triple (function, scene, source)
-  MixSettings? getByContext({
-    required String functionId,
-    required String? sceneId,
-    required String sourceId,
-  }) {
-    try {
-      return getAll().firstWhere(
-        (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get all settings for a function
-  List<MixSettings> getByFunction(String functionId) {
-    try {
-      // Only return settings not associated with a scene (i.e., current function settings)
-      return getAll().where((s) => s.functionId == functionId && s.sceneId == null).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get all settings for a scene
-  List<MixSettings> getByScene(String sceneId) {
-    try {
-      return getAll().where((s) => s.sceneId == sceneId).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get all settings for a source
-  List<MixSettings> getBySource(String sourceId) {
-    try {
-      return getAll().where((s) => s.sourceId == sourceId).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-}
-
-class MatrixSettingsRepository extends Repository<MatrixSettings> {
-  MatrixSettingsRepository() : super();
-
-  /// Get setting by the triple (function, scene, source)
-  MatrixSettings? getByContext({
-    required String functionId,
-    required String? sceneId,
-    required String sourceId,
-  }) {
-    try {
-      return getAll().firstWhere(
-        (setting) => setting.functionId == functionId && setting.sceneId == sceneId && setting.sourceId == sourceId,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// Get all settings for a function
-  List<MatrixSettings> getByFunction(String functionId) {
-    try {
-      return getAll().where((s) => s.functionId == functionId).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get all settings for a scene
-  List<MatrixSettings> getByScene(String sceneId) {
-    try {
-      return getAll().where((s) => s.sceneId == sceneId).toList();
-    } catch (e) {
-      return [];
-    }
-  }
-
-  /// Get all settings for a source
-  List<MatrixSettings> getBySource(String sourceId) {
-    try {
-      return getAll().where((s) => s.sourceId == sourceId).toList();
-    } catch (e) {
-      return [];
     }
   }
 }

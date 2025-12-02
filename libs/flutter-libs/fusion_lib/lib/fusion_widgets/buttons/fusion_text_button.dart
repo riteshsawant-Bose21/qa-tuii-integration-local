@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../semantics/semantic_helper.dart';
+import '../semantics/semantic_type.dart';
+
 /// A customizable and reusable text button for the Fusion design system.
 ///
 /// The [FusionTextButton] supports:
@@ -106,11 +109,8 @@ class FusionTextButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: accessLabel ?? label,
-      identifier: accessIdentifier ?? label,
-      enabled: isActive,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, accessLabel ?? label),
       child: IgnorePointer(
         ignoring: isLoading || !isActive,
         child: InkWell(

@@ -690,6 +690,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,
+                semanticsId: "Upload Floor-plan",
                 label: "Upload Floor-plan",
                 textStyle: Theme.of(context).textTheme.titleSmall,
                 onTap: () {

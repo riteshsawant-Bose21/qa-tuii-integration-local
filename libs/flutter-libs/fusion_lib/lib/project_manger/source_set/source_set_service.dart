@@ -95,6 +95,15 @@ extension SourceSetService on ProjectService {
     if (parentZone != null) {
       relationships.unlink(RelationshipType.zoneSources, parentZone, sourceId);
     }
+
+    //validate if Source set should be in linked state
+    final sourceSet = getSourceSetById(sourceSetId);
+    if (sourceSet != null && sourceSet.isLinked) {
+      if (!canLinkSourceSet(sourceSetId)) {
+        //update source set to unlinked
+        sourceSets.add(sourceSetId, sourceSet.copyWith(isLinked: false));
+      }
+    }
   }
 
   /// Remove a source id from a SourceSet (idempotent).

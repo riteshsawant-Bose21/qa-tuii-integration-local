@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -31,6 +32,11 @@ Future<void> main() async {
     await setupServiceLocator();
 
     runApp(const MyApp());
+
+    //TODO: Only for web automation build
+    //This needs to be conditionally switched on based on some commandline param.
+    //Else, this would create the semantics tree everytime misusing computation power.
+    SemanticsBinding.instance.ensureSemantics();
 
     _setupMacOSDeepLinkListener();
   }, reportCrash);
