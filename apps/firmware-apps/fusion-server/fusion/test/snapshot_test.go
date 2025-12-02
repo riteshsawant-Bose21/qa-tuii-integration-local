@@ -52,7 +52,7 @@ func TestSnapshotCreateAndList(t *testing.T) {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Create snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
