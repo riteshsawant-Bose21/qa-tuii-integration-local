@@ -3,7 +3,7 @@ import 'package:fusion_launcher/core/widgets/test_library_screen.dart';
 
 import '../../features/dashboard/presentation/pages/dashboard_page.dart';
 import '../../features/projects/presentation/project_work_area.dart';
-import '../../features/user_account_setup/presentation/pages/launcher_sign_in_page.dart';
+import '../../features/authentication/launcher_sign_in_page.dart';
 
 class Routes {
   static const String launcherSignInPage = '/launcherSignInPage';

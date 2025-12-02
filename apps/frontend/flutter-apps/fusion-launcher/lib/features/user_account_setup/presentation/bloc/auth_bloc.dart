@@ -1,5 +1,6 @@
 import 'dart:developer';
 
+import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/user_account_setup/domain/entity/login_response_entity.dart';
 import 'package:fusion_launcher/features/user_account_setup/domain/entity/registration_response_entity.dart';
