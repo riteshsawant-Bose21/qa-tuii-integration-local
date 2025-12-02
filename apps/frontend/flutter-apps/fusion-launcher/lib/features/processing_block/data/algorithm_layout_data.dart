@@ -20,7 +20,7 @@ class AlgorithmLayoutData {
     final String? layoutJson = _preferences?.getString("layout_$algorithmId");
     if (layoutJson != null) {
       try {
-        // return PBLayout.fromJson(layoutJson);
+        return PBLayout.fromJson(layoutJson);
       } catch (e) {}
     }
     final Map<String, dynamic> layout = switch (algorithmId) {
