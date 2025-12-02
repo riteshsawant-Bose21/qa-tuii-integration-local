@@ -23,7 +23,8 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../configuration_page/pages/configuration_page.dart';
+import '../../configuration_page/pages/configuration_processing_page.dart';
+import '../../configuration_page/pages/configuration_snapshots.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -501,7 +502,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
-                ? const ConfigurationPage()
+                ? const ConfigurationProcessingPage()
+                : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.snapshots
+                ? const ConfigurationSnapshots()
                 : Center(
                   child: FusionAppText(
                     text:
@@ -509,6 +512,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             ? "Sources Configuration Page"
                             : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
                             ? "Presets Configuration Page"
+                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.snapshots
+                            ? "Snapshots Configuration Page"
                             : "Scheduling Configuration Page",
                   ),
                 );

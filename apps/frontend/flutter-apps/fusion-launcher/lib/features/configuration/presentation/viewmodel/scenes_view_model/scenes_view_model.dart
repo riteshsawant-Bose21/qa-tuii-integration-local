@@ -304,7 +304,7 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneModel> getScenesInSceneSet(String sceneSetId) {
+  List<SceneModel> getScenesInSceneSet({required String sceneSetId}) {
     try {
       return projectManager.getScenesInSceneSet(sceneSetId);
     } catch (e) {
