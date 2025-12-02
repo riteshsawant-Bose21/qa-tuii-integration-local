@@ -39,8 +39,6 @@ func New(cfg *Config,
 	// productSvc fusion.Product,
 	// projectSvc fusion.Project,
 	userSvc fusion.User,
-	userDBSvc *userdb.Service,
-	roleManagementSvc *userdb.RoleManagementService,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -84,8 +82,6 @@ func New(cfg *Config,
 		// product:               productSvc,
 		// project:               projectSvc,
 		user:                  userSvc,
-		userDBService:         userDBSvc,
-		roleManagementService: roleManagementSvc,
 		authMiddleware:        authMiddleware,
 	}
 
