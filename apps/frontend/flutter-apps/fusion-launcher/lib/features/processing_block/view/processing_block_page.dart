@@ -14,7 +14,7 @@ class ProcessingBlockPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider<AlgorithmDataViewmodel>(
-      key: ValueKey<ProcessingBlockModel>(processingBlock),
+      key: ValueKey<String>(processingBlock.id),
       create: (BuildContext context) => AlgorithmDataViewmodel(processingBlock: processingBlock, config: serviceLocator.get<FusionAlgorithmsConfig>()),
 
       child: Consumer<AlgorithmDataViewmodel>(

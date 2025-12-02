@@ -19,13 +19,23 @@ class AlgorithmDataViewmodel extends PBWidgetValueHandler with ChangeNotifier {
   AlgorithmDataViewmodel({required this.processingBlock, required this.config}) {
     final String algorithmId = processingBlock.algorithmId;
     algorithm = config.algorithms.firstWhereOrNull((Algorithm element) => element.name == algorithmId);
-    // layout = AlgorithmLayoutData.getForAlgorithm(algorithmId);
+    _loadLayout();
   }
   final ScrollController scrollController = ScrollController();
   Algorithm? algorithm;
-  PBLayout? get layout => AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");
+  PBLayout? _layout;
+  PBLayout? get layout => _layout;
 
-  @override
+  Future<void> _loadLayout() async {
+    _layout = await AlgorithmLayoutData.getForAlgorithm(algorithm?.name ?? "");
+    notifyListeners();
+  }
+
+  /// Reload the layout from local storage (useful after customization changes)
+  Future<void> reloadLayout() async {
+    await _loadLayout();
+  }
+
   dynamic getValue(PBItem param) {
     return processingBlock.properties
             .firstWhereOrNull((PropertySetting element) => element.name == param.field && element.dimension == param.dimension)
