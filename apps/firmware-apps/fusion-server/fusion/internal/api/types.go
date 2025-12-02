@@ -158,8 +158,10 @@ const (
 
 // Task represents a task
 type Task struct {
-	ID          string         `json:"id"`
-	Description string         `json:"description"`
+	ID          string `json:"id"`
+	Description string `json:"description"`
+	// StartAt     time.Time      `json:"start_at"`
+	// EndAt       time.Time      `json:"end_at"`
 	CronExpr    string         `json:"cron_expr"`
 	Enabled     bool           `json:"enabled"`
 	Type        TaskType       `json:"type"`
@@ -169,8 +171,10 @@ type Task struct {
 
 // TaskMessage represents a message playback task
 type TaskMessage struct {
-	ID          string `json:"id"`
-	MessageID   string `json:"message_id"`
+	ID        string `json:"id"`
+	MessageID string `json:"message_id"`
+	// StartAt     time.Time `json:"start_at"`
+	// EndAt       time.Time `json:"end_at"`
 	Description string `json:"description"`
 	CronExpr    string `json:"cron_expr"`
 	Priority    int64  `json:"priority"`
@@ -179,18 +183,22 @@ type TaskMessage struct {
 
 // TaskMessagePatch represents a patchable message task
 type TaskMessagePatch struct {
-	MessageID   *string `json:"message_id,omitempty"`
-	Description *string `json:"description,omitempty"`
-	CronExpr    *string `json:"cron_expr,omitempty"`
-	Priority    *int64  `json:"priority"`
-	Zones       *string `json:"zones"`
+	MessageID   *string    `json:"message_id,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	StartAt     *time.Time `json:"start_at,omitempty"`
+	EndAt       *time.Time `json:"end_at,omitempty"`
+	CronExpr    *string    `json:"cron_expr,omitempty"`
+	Priority    *int64     `json:"priority"`
+	Zones       *string    `json:"zones"`
 }
 
 // TaskSnapshopPatch represents a patchable snapshot task
 type TaskSnapshopPatch struct {
-	Description *string `json:"description,omitempty"`
-	CronExpr    *string `json:"cron_expr,omitempty"`
-	Snapshot    *string `json:"snapshot,omitempty"`
+	Description *string    `json:"description,omitempty"`
+	StartAt     *time.Time `json:"start_at,omitempty"`
+	EndAt       *time.Time `json:"end_at,omitempty"`
+	CronExpr    *string    `json:"cron_expr,omitempty"`
+	Snapshot    *string    `json:"snapshot,omitempty"`
 }
 
 // StateEntry represents a single entry in the state

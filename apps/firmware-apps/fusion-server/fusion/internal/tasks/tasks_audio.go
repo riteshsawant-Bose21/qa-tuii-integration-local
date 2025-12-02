@@ -235,7 +235,9 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		Description: taskMessage.Description,
 		CronExpr:    taskMessage.CronExpr,
 		Type:        api.TaskTypeMessage,
-		Enabled:     true,
+		// StartAt:     taskMessage.StartAt,
+		// EndAt:       taskMessage.EndAt,
+		Enabled: true,
 		Params: map[string]any{
 			api.MessageIDKey:       taskMessage.MessageID,
 			api.MessagePriorityKey: taskMessage.Priority,
@@ -292,6 +294,8 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
 	hasZones := patch.Zones != nil && strings.TrimSpace(*patch.Zones) != ""
 	hasPriority := patch.Priority != nil
+	// hasStart := patch.StartAt != nil
+	// hasEnd := patch.EndAt != nil
 
 	if !(hasMessageId || hasCron || hasDesc || hasZones || hasPriority) {
 		http.Error(w, "At least one field (message_id, cron_expr, description, zones, priority) must be provided", http.StatusBadRequest)
@@ -313,6 +317,14 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	if hasZones {
 		task.Params[api.MessageZonesKey] = *patch.Zones
 	}
+
+	// if hasStart {
+	// 	task.StartAt = *patch.StartAt
+	// }
+
+	// if hasEnd {
+	// 	task.EndAt = *patch.EndAt
+	// }
 
 	logger := logging.GetLogger()
 
@@ -379,13 +391,13 @@ func (tm *TaskManager) taskTriggerMessageFunc(task *api.Task) TaskFunc {
 			return err
 		}
 
-		tm.RecordExecution(task, "success")
+		logging.GetLogger().Info("Message '%s' triggered successfully via task", task.ID)
+
 		return nil
 	}
 }
 
 func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
-	logger := logging.GetLogger()
 
 	// Helper to coerce any value to string
 	getString := func(key string) string {
@@ -470,7 +482,6 @@ func (tm *TaskManager) notifyMessageTrigger(task *api.Task) error {
 		return fmt.Errorf("failed to send UDP message: %w", err)
 	}
 
-	logger.Info("Triggered message %q at path %q (priority %d)", messageID, filePath, priority)
 	return nil
 }
 

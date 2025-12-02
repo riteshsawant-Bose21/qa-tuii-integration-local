@@ -129,17 +129,19 @@ func (tm *TaskManager) UpdateTask(task *api.Task, taskFunc TaskFunc) error {
 	tm.cron.Remove(task.CronEntryID)
 
 	// Wrap the new taskFunc to track execution history
-	trackedTaskFunc := tm.wrapTask(task, taskFunc)
+	wrappedTaskFunc := tm.wrapTask(task, taskFunc)
 
-	entryID, err := tm.cron.AddFunc(task.CronExpr, trackedTaskFunc)
+	entryID, err := tm.cron.AddFunc(task.CronExpr, wrappedTaskFunc)
 	if err != nil {
-		logger.Error("Failed to update task '%s': %v", task.ID, err)
+		logger.Error("[TASKS] Failed to update task '%s': %v", task.ID, err)
 		return err
 	}
 	task.Enabled = true
 	task.CronEntryID = entryID
 	tm.tasks[task.ID] = task
-	tm.taskFuncs[task.ID] = trackedTaskFunc
+	tm.taskFuncs[task.ID] = wrappedTaskFunc
+
+	logger.Debug("[TASKS] Update task '%s': %v", task.ID, task)
 
 	return tm.saveTasks()
 }
@@ -219,27 +221,27 @@ func (tm *TaskManager) Start() {
 	logger := logging.GetLogger()
 
 	if tm.running {
-		logger.Warn("TaskManager already running")
+		logger.Warn("[TASKS] TaskManager already running")
 		return
 	}
 
 	if err := tm.LoadTasks(); err != nil {
-		logger.Fatal("%v", err)
+		logger.Fatal("[TASKS] %v", err)
 	}
 
 	if err := tm.loadHistory(); err != nil {
-		logger.Fatal("%v", err)
+		logger.Fatal("[TASKS] %v", err)
 	}
 
 	if err := tm.registerEnabledTasks(); err != nil {
-		logger.Fatal("%v", err)
+		logger.Fatal("[TASKS] %v", err)
 	}
 
 	tm.cron.Start()
 
 	tm.running = true
 
-	logger.Info("TaskManager running")
+	logger.Info("[TASKS] TaskManager running")
 }
 
 // Stop stops the TaskManager's scheduler.
@@ -417,22 +419,51 @@ func (tm *TaskManager) DisableTask(w http.ResponseWriter, r *http.Request) {
 
 // wrapTask wraps a task function to track execution history and handle panics.
 func (tm *TaskManager) wrapTask(task *api.Task, fn TaskFunc) func() {
-
 	logger := logging.GetLogger()
 
 	return func() {
+		//now := time.Now()
+
+		// // Enforce start window
+		// if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+		// 	logger.Debug("[TASKS] Skipping task '%s': before start time %s", task.ID, task.StartAt)
+		// 	return
+		// }
+
+		// // Enforce end window
+		// if !task.EndAt.IsZero() && now.After(task.EndAt) {
+		// 	logger.Debug("[TASKS] Skipping task '%s': after end time %s", task.ID, task.EndAt)
+		// 	return
+		// }
+
+		// if !task.EndAt.IsZero() && now.After(task.EndAt) {
+		// 	logger.Debug("[TASKS] Auto-disabling task '%s' after end time", task.ID)
+		// 	task.Enabled = false
+		// 	tm.cron.Remove(task.CronEntryID)
+		// 	task.CronEntryID = 0
+
+		// 	tm.mu.Lock()
+		// 	tm.tasks[task.ID] = task
+		// 	tm.mu.Unlock()
+
+		// 	tm.saveTasks()
+		// 	return
+		// }
+
 		defer func() {
 			if r := recover(); r != nil {
 				tm.RecordExecution(task, "failed")
-				logger.Error("Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
+				logger.Error("[TASKS] Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
 			}
 		}()
+
 		ctx := context.Background()
 		if err := fn(ctx); err != nil {
 			tm.RecordExecution(task, "failed")
-			logger.Error("Task '%s' error: %v", task.ID, err)
+			logger.Error("[TASKS] Task '%s' error: %v", task.ID, err)
 			return
 		}
+
 		tm.RecordExecution(task, "success")
 	}
 }

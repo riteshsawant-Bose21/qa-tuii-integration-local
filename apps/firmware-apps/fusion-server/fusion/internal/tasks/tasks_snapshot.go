@@ -101,6 +101,8 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.Snapshot) != ""
 	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
+	// hasStart := patch.StartAt != nil
+	// hasEnd := patch.EndAt != nil
 
 	if !(hasSnapshot || hasCron || hasDesc) {
 		http.Error(w, "At least one field (snapshot, cron_expr, description) must be provided", http.StatusBadRequest)
@@ -133,6 +135,14 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		task.Params[api.SnapshotIDKey] = *patch.Snapshot
 	}
 
+	// if hasStart {
+	// 	task.StartAt = *patch.StartAt
+	// }
+
+	// if hasEnd {
+	// 	task.EndAt = *patch.EndAt
+	// }
+
 	// Run update
 	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
 	if err != nil {
@@ -149,7 +159,6 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 // taskActivateSnapshotFunc creates a task function that applies a snapshot.
 func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 	return func(ctx context.Context) error {
-		logger := logging.GetLogger()
 
 		// Safely extract snapID as a string
 		var snapID string
@@ -181,7 +190,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 			return err
 		}
 
-		logger.Info("Snapshot '%s' activated successfully via task", snapID)
+		logging.GetLogger().Info("Snapshot '%s' activated successfully via task", snapID)
 
 		return nil
 	}
