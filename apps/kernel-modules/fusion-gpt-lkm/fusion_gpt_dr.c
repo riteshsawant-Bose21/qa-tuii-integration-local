@@ -69,6 +69,9 @@ struct fusion_gpt
 	struct clk *clk_per;
 };
 
+static struct fusion_gpt *gpt_singleton;
+static DEFINE_MUTEX(gpt_singleton_lock);
+
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
 
@@ -96,20 +99,14 @@ int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
                                void *ctx, struct module *owner)
 {
     struct fusion_gpt *g;
-    struct device *dev;
     int ret = -ENODEV;
 
     if (!ops || !ops->tick || !owner)
         return -EINVAL;
 
-    /* We only have one shim instance, so find the associated device */
-    /* Use class or driver_data; here we rely on a single registered device */
-    dev = bus_find_device_by_name(&platform_bus_type, NULL, "fusion-gpt.0");
-    if (!dev)
-        return -ENODEV;
-
-    g = dev_get_drvdata(dev);
-    put_device(dev);
+    mutex_lock(&gpt_singleton_lock);
+    g = gpt_singleton;
+    mutex_unlock(&gpt_singleton_lock);
     if (!g)
         return -ENODEV;
 
@@ -133,14 +130,10 @@ EXPORT_SYMBOL(fusion_gpt_register_client);  /* non-GPL */
 void fusion_gpt_unregister_client(void)
 {
     struct fusion_gpt *g;
-    struct device *dev;
 
-    dev = bus_find_device_by_name(&platform_bus_type, NULL, "fusion-gpt.0");
-    if (!dev)
-        return;
-
-    g = dev_get_drvdata(dev);
-    put_device(dev);
+    mutex_lock(&gpt_singleton_lock);
+    g = gpt_singleton;
+    mutex_unlock(&gpt_singleton_lock);
     if (!g)
         return;
 
@@ -263,6 +256,9 @@ static int gpt_probe(struct platform_device *pdev)
 	init_irq_work(&g->tick_iw, gpt_tick_iw);
 	mutex_init(&g->ops_lock);
 	platform_set_drvdata(pdev, g);
+	mutex_lock(&gpt_singleton_lock);
+	gpt_singleton = g;
+	mutex_unlock(&gpt_singleton_lock);
 
 	ret = devm_request_irq(&pdev->dev, g->irq, gpt_irq, IRQF_NO_THREAD,
 			       dev_name(&pdev->dev), g);
@@ -287,6 +283,10 @@ static void gpt_remove(struct platform_device *pdev)
 {
 	struct fusion_gpt *g = platform_get_drvdata(pdev);
 	u32 cr = rdl(g, GPT_CR);
+
+	mutex_lock(&gpt_singleton_lock);
+	gpt_singleton = NULL;
+	mutex_unlock(&gpt_singleton_lock);
 
 	/* Stop timer */
 	wrl(g, cr & ~CR_EN, GPT_CR);

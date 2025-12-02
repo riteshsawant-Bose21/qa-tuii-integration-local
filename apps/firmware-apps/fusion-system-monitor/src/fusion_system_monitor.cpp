@@ -18,6 +18,7 @@
 #include <atomic>
 #include <iostream>
 #include <filesystem>
+#include <fstream>
 
 
 std::atomic<bool> g_running{true};
@@ -55,6 +56,52 @@ void validate(boost::any &v, std::vector<std::string> const &, OptionCounter *, 
     else ++boost::any_cast<OptionCounter &>(v).count;
 }
 
+static std::string read_bootargs_device_id()
+{
+    constexpr const char *bootargs_path = "/proc/device-tree/chosen/bootargs";
+    const std::string key = "device_id=";
+
+    std::ifstream file(bootargs_path, std::ios::binary);
+    if (!file.is_open()) {
+        return {};
+    }
+
+    std::string bootargs((std::istreambuf_iterator<char>(file)),
+                         std::istreambuf_iterator<char>());
+
+    const auto pos = bootargs.find(key);
+    if (pos == std::string::npos) {
+        return {};
+    }
+
+    const auto start = pos + key.size();
+    auto end = start;
+    while (end < bootargs.size() && bootargs[end] != ' ' && bootargs[end] != '\0') {
+        ++end;
+    }
+
+    if (end == start) {
+        return {};
+    }
+
+    return bootargs.substr(start, end - start);
+}
+
+static std::string resolve_configuration_path(const std::string &config_dir)
+{
+    namespace fs = std::filesystem;
+    const std::string base_name = "configuration.json";
+    const std::string device_id = read_bootargs_device_id();
+
+    std::string candidate = config_dir + "/";
+    candidate += device_id.empty() ? base_name : device_id + "-" + base_name;
+
+    if (!fs::exists(candidate)) {
+        candidate = config_dir + "/som-" + base_name;
+    }
+
+    return candidate;
+}
 
 int main(int argc, char *argv[])
 {
@@ -72,10 +119,11 @@ int main(int argc, char *argv[])
     OptionCounter quietness;
 
     std::string config_path = "/etc/fusion/system-monitor";
+    std::string default_configuration = resolve_configuration_path(config_path);
 
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
-        ("configuration,c", boost::program_options::value<std::string>()->default_value(config_path + "/configuration.json"), "configuration file")
+        ("configuration,c", boost::program_options::value<std::string>()->default_value(default_configuration), "configuration file")
         ("definitions,d", boost::program_options::value<std::string>()->default_value(config_path + "/module-definitions.json"), "module definition file")
         ("telemetry-messages,m", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-messages.json"), "telemetry commands file")
         ("telemetry-configuration,p", boost::program_options::value<std::string>()->default_value(config_path + "/telemetry-configuration.json"), "telemetry configuration file")
@@ -118,7 +166,7 @@ int main(int argc, char *argv[])
     }
 
 
-    SPDLOG_INFO("fusion_system_monitor");
+    SPDLOG_INFO("fusion_system_monitor--configuration file: {}", vm["configuration"].as<std::string>());
 
     bosepro::Configuration configuration(vm["configuration"].as<std::string>());
     bosepro::TelemetryConfiguration telem_configuration(vm["telemetry-configuration"].as<std::string>());
