@@ -158,10 +158,10 @@ const (
 
 // Task represents a task
 type Task struct {
-	ID          string `json:"id"`
-	Description string `json:"description"`
-	// StartAt     time.Time      `json:"start_at"`
-	// EndAt       time.Time      `json:"end_at"`
+	ID          string         `json:"id"`
+	Description string         `json:"description"`
+	StartAt     time.Time      `json:"start_at"`
+	EndAt       time.Time      `json:"end_at"`
 	CronExpr    string         `json:"cron_expr"`
 	Enabled     bool           `json:"enabled"`
 	Type        TaskType       `json:"type"`
@@ -171,14 +171,14 @@ type Task struct {
 
 // TaskMessage represents a message playback task
 type TaskMessage struct {
-	ID        string `json:"id"`
-	MessageID string `json:"message_id"`
-	// StartAt     time.Time `json:"start_at"`
-	// EndAt       time.Time `json:"end_at"`
-	Description string `json:"description"`
-	CronExpr    string `json:"cron_expr"`
-	Priority    int64  `json:"priority"`
-	Zones       string `json:"zones"`
+	ID          string    `json:"id"`
+	MessageID   string    `json:"message_id"`
+	StartAt     time.Time `json:"start_at"`
+	EndAt       time.Time `json:"end_at"`
+	Description string    `json:"description"`
+	CronExpr    string    `json:"cron_expr"`
+	Priority    int64     `json:"priority"`
+	Zones       string    `json:"zones"`
 }
 
 // TaskMessagePatch represents a patchable message task

@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	json "github.com/goccy/go-json"
 
@@ -165,7 +166,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		clearTasks(t)
 		createTask(t)
 
-		// --- Disable Task ---
+		// Disable Task
 		reqDisable, err := http.NewRequest(http.MethodPost, tasksURL+"/"+testTaskId+"/disable", nil)
 		require.NoError(t, err)
 		respDisable, err := http.DefaultClient.Do(reqDisable)
@@ -184,7 +185,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, disabledTask.Enabled, "Task should be disabled")
 
-		// --- Enable Task ---
+		// Enable Task
 		reqEnable, err := http.NewRequest(http.MethodPost, tasksURL+"/"+testTaskId+"/enable", nil)
 		require.NoError(t, err)
 		respEnable, err := http.DefaultClient.Do(reqEnable)
@@ -363,4 +364,102 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 		assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
 	})
+}
+
+func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
+	clearTasks(t)
+
+	start := time.Now().Add(5 * time.Second)
+
+	task := api.Task{
+		ID:          "future-task",
+		CronExpr:    "* * * * *", // valid 5-field cron
+		Description: "test future start window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		StartAt:     start,
+		Params:      map[string]any{api.SnapshotIDKey: "default"},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	resp, err = http.Get(tasksURL + "/future-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.True(t, ret.Enabled)
+	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be zero before StartAt")
+}
+
+func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
+	clearTasks(t)
+
+	end := time.Now().Add(2 * time.Second)
+
+	task := api.Task{
+		ID:          "end-window-task",
+		CronExpr:    "* * * * *",
+		Description: "test end window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		EndAt:       end,
+		Params:      map[string]any{api.SnapshotIDKey: "default"},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	// Wait for EndAt + window manager evaluation
+	time.Sleep(35 * time.Second)
+
+	resp, err = http.Get(tasksURL + "/end-window-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.False(t, ret.Enabled, "Task must auto-disable after EndAt")
+	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after EndAt")
+}
+
+func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
+	clearTasks(t)
+	createTask(t) // from your existing helper
+
+	newStart := time.Now().Add(3 * time.Second)
+
+	patch := api.TaskSnapshopPatch{
+		StartAt: &newStart,
+	}
+
+	body, _ := json.Marshal(patch)
+
+	req, err := http.NewRequest(http.MethodPatch, tasksURL+"/test-task", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+
+	resp, err = http.Get(tasksURL + "/test-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.True(t, ret.Enabled)
+	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after updating StartAt into the future")
 }

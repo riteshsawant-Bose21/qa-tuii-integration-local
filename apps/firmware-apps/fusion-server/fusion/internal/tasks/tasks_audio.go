@@ -235,9 +235,9 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		Description: taskMessage.Description,
 		CronExpr:    taskMessage.CronExpr,
 		Type:        api.TaskTypeMessage,
-		// StartAt:     taskMessage.StartAt,
-		// EndAt:       taskMessage.EndAt,
-		Enabled: true,
+		StartAt:     taskMessage.StartAt,
+		EndAt:       taskMessage.EndAt,
+		Enabled:     true,
 		Params: map[string]any{
 			api.MessageIDKey:       taskMessage.MessageID,
 			api.MessagePriorityKey: taskMessage.Priority,
@@ -294,8 +294,8 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
 	hasZones := patch.Zones != nil && strings.TrimSpace(*patch.Zones) != ""
 	hasPriority := patch.Priority != nil
-	// hasStart := patch.StartAt != nil
-	// hasEnd := patch.EndAt != nil
+	hasStart := patch.StartAt != nil
+	hasEnd := patch.EndAt != nil
 
 	if !(hasMessageId || hasCron || hasDesc || hasZones || hasPriority) {
 		http.Error(w, "At least one field (message_id, cron_expr, description, zones, priority) must be provided", http.StatusBadRequest)
@@ -318,13 +318,13 @@ func (tm *TaskManager) UpdateScheduleMessageTask(w http.ResponseWriter, r *http.
 		task.Params[api.MessageZonesKey] = *patch.Zones
 	}
 
-	// if hasStart {
-	// 	task.StartAt = *patch.StartAt
-	// }
+	if hasStart {
+		task.StartAt = *patch.StartAt
+	}
 
-	// if hasEnd {
-	// 	task.EndAt = *patch.EndAt
-	// }
+	if hasEnd {
+		task.EndAt = *patch.EndAt
+	}
 
 	logger := logging.GetLogger()
 
