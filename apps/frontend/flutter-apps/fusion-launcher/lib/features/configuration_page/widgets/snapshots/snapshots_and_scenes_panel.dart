@@ -29,6 +29,10 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
   final TextEditingController _snapshotsNameController = TextEditingController();
   final TextEditingController _scenesNameController = TextEditingController();
 
+  // Add dragging state management
+  String? _draggingSnapshotId;
+  String? _draggingFromSection; // 'snapshots' or 'scenes'
+
   void _updateSourcesHeight(double delta) {
     final double screenHeight = MediaQuery.of(context).size.height;
     final double minHeight = screenHeight * 0.15; // 15% of screen height as minimum
@@ -144,36 +148,97 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
           ),
 
           /// list of snapshots would go here, constrained to _sourcesHeight SnapshotItemCard
-          SizedBox(
-            height: _sourcesHeight,
-            child: SingleChildScrollView(
-              child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                builder: (BuildContext context, ProjectViewModelState state) {
-                  final List<SceneModel> snapShotList = _projectViewModel.getAllScenes();
-                  if (snapShotList.isEmpty) {
-                    return Padding(
-                      padding: EdgeInsets.only(top: _sourcesHeight * 0.4),
-                      child: FusionAppText(
-                        text: 'No snapshots available',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontSize: 12,
-                        ),
-                      ),
-                    );
+          /// Sources list with controlled height
+          DragTarget<SceneModel>(
+            onWillAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
+              // Only accept if dragging from scenes section, not from snapshots section
+              return _draggingFromSection == 'scenes';
+            },
+            onLeave: (SceneModel? data) {},
+            onAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
+              if (_draggingFromSection == 'scenes') {
+                // First check if it already exists in snapshots to avoid duplicates
+                final List<SceneModel> existing = _projectViewModel.getAllScenes();
+                final bool alreadyInList = existing.any((SceneModel s) => s.id == details.data.id);
+
+                if (!alreadyInList) {
+                  // Add to snapshots section first
+                  _projectViewModel.addNewScene(scene: details.data);
+                }
+
+                // Remove from all scene sets (since it's now in snapshots)
+                final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
+                for (SceneSetModel sceneSet in allSceneSets) {
+                  final List<SceneModel> scenesInSet = _projectViewModel.getScenesInSceneSet(sceneSetId: sceneSet.id);
+                  if (scenesInSet.any((SceneModel scene) => scene.id == details.data.id)) {
+                    _projectViewModel.removeSceneFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
                   }
-                  return SnapshotList(
-                    snapShotList: snapShotList,
-                    onDelete: (String sceneId) {
-                      _projectViewModel.removeScene(sceneId: sceneId);
+                }
+              }
+              setState(() {
+                _draggingSnapshotId = null;
+                _draggingFromSection = null;
+              });
+            },
+            builder: (BuildContext context, List<SceneModel?> candidateData, List<dynamic> rejectedData) {
+              final bool isHovered = candidateData.isNotEmpty && _draggingFromSection == 'scenes';
+              return Container(
+                decoration: BoxDecoration(
+                  color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
+                  border:
+                      isHovered
+                          ? Border.all(
+                            color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                            width: 2,
+                          )
+                          : null,
+                ),
+                height: _sourcesHeight,
+                child: SingleChildScrollView(
+                  child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                    builder: (BuildContext context, ProjectViewModelState state) {
+                      final List<SceneModel> snapShotList = _projectViewModel.getAllScenes();
+                      if (snapShotList.isEmpty) {
+                        return Container(
+                          width: double.infinity,
+                          alignment: Alignment.center,
+                          padding: EdgeInsets.only(top: _sourcesHeight * 0.4),
+                          child: FusionAppText(
+                            text: 'No snapshots available',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                            ),
+                          ),
+                        );
+                      }
+                      return SnapshotList(
+                        snapShotList: snapShotList,
+                        onDelete: (String sceneId) {
+                          _projectViewModel.removeScene(sceneId: sceneId);
+                        },
+                        selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+                        onSelect: (String sceneId) {
+                          _projectViewModel.setSelectedSnapshotId(sceneId);
+                        },
+                        onDragStarted: (String sceneId) {
+                          setState(() {
+                            _draggingSnapshotId = sceneId;
+                            _draggingFromSection = 'snapshots';
+                          });
+                        },
+                        onDragEnd: () {
+                          setState(() {
+                            _draggingSnapshotId = null;
+                            _draggingFromSection = null;
+                          });
+                        },
+                        draggingSnapshotId: _draggingSnapshotId,
+                      );
                     },
-                    selectedSnapshotId: _projectViewModel.selectedSnapshotId,
-                    onSelect: (String sceneId) {
-                      _projectViewModel.setSelectedSnapshotId(sceneId);
-                    },
-                  );
-                },
-              ),
-            ),
+                  ),
+                ),
+              );
+            },
           ),
 
           /// Draggable divider
@@ -271,6 +336,20 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                       onScenesSnapshotDelete: (String sceneId) {
                         _projectViewModel.removeScene(sceneId: sceneId);
                       },
+                      onDragStarted: (String sceneId) {
+                        setState(() {
+                          _draggingSnapshotId = sceneId;
+                          _draggingFromSection = 'scenes';
+                        });
+                      },
+                      onDragEnd: () {
+                        setState(() {
+                          _draggingSnapshotId = null;
+                          _draggingFromSection = null;
+                        });
+                      },
+                      draggingSnapshotId: _draggingSnapshotId,
+                      draggingFromSection: _draggingFromSection,
                     );
                   },
                 );
@@ -347,192 +426,6 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
           ),
 
           const SizedBox(height: 12),
-          //
-          // /// Source Selection Label
-          // FusionAppText(
-          //   text: 'Select sources',
-          //   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          //     fontSize: 12,
-          //     fontWeight: FontWeight.w500,
-          //   ),
-          // ),
-          // const SizedBox(height: 8),
-          //
-          // /// Source Selection Dropdown
-          // Container(
-          //   height: 28,
-          //   decoration: BoxDecoration(
-          //     border: Border.all(color: Colors.grey[300]!),
-          //     borderRadius: BorderRadius.circular(4),
-          //   ),
-          //   child: PopupMenuButton<String>(
-          //     onCanceled: () {
-          //       // Handle popup close if needed
-          //     },
-          //     constraints: const BoxConstraints(
-          //       maxHeight: 500,
-          //       maxWidth: 240,
-          //     ),
-          //     shape: RoundedRectangleBorder(
-          //       borderRadius: BorderRadius.circular(8),
-          //     ),
-          //     color: Theme.of(context).colorScheme.white,
-          //     offset: const Offset(0, 35),
-          //     itemBuilder: (BuildContext context) {
-          //       return <PopupMenuEntry<String>>[
-          //         PopupMenuItem<String>(
-          //           enabled: false,
-          //           padding: EdgeInsets.zero,
-          //           child: StatefulBuilder(
-          //             builder: (BuildContext context, StateSetter setPopupState) {
-          //               return Container(
-          //                 width: 240,
-          //                 constraints: const BoxConstraints(maxHeight: 460),
-          //                 child: Column(
-          //                   mainAxisSize: MainAxisSize.min,
-          //                   children: <Widget>[
-          //                     /// Header with close button
-          //                     Container(
-          //                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          //                       decoration: BoxDecoration(
-          //                         border: Border(
-          //                           bottom: BorderSide(color: Colors.grey[300]!),
-          //                         ),
-          //                       ),
-          //                       child: Row(
-          //                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //                         children: <Widget>[
-          //                           FusionAppText(
-          //                             text: "Select source",
-          //                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          //                               fontSize: 12,
-          //                               fontWeight: FontWeight.w600,
-          //                             ),
-          //                           ),
-          //                           InkWell(
-          //                             onTap: () {
-          //                               Navigator.of(context).pop();
-          //                             },
-          //                             child: Icon(
-          //                               Icons.close,
-          //                               size: 16,
-          //                               color: Theme.of(context).colorScheme.fusionTextViewColor,
-          //                             ),
-          //                           ),
-          //                         ],
-          //                       ),
-          //                     ),
-          //
-          //                     /// Scrollable list of sources
-          //                     Flexible(
-          //                       child:
-          //                           widget.availableSources.isNotEmpty
-          //                               ? SingleChildScrollView(
-          //                                 physics: const ClampingScrollPhysics(),
-          //                                 child: Column(
-          //                                   children:
-          //                                       widget.availableSources.map<Widget>((Source source) {
-          //                                         final bool isSelected = widget.selectedSources.any(
-          //                                           (SelectedSource selectedSource) => selectedSource.id == source.id,
-          //                                         );
-          //                                         return InkWell(
-          //                                           onTap: () {
-          //                                             widget.onSourceChanged(source, !isSelected);
-          //                                             setPopupState(() {});
-          //                                             setState(() {});
-          //                                           },
-          //                                           child: Container(
-          //                                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-          //                                             color: Colors.transparent,
-          //                                             child: Row(
-          //                                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          //                                               children: <Widget>[
-          //                                                 /// Checkbox for selection
-          //                                                 SizedBox(
-          //                                                   width: 14,
-          //                                                   height: 14,
-          //                                                   child: Checkbox(
-          //                                                     value: isSelected,
-          //                                                     onChanged: (bool? value) {
-          //                                                       widget.onSourceChanged(source, value ?? false);
-          //                                                       setPopupState(() {}); // Update popup state
-          //                                                       setState(() {}); // Update main widget state
-          //                                                     },
-          //                                                     activeColor: Theme.of(context).colorScheme.greyDark,
-          //                                                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          //                                                     visualDensity: VisualDensity.compact,
-          //                                                     shape: const RoundedRectangleBorder(
-          //                                                       borderRadius: BorderRadius.zero,
-          //                                                       side: BorderSide(width: 0.5),
-          //                                                     ),
-          //                                                   ),
-          //                                                 ),
-          //                                                 const SizedBox(width: 12),
-          //
-          //                                                 /// Source name
-          //                                                 Expanded(
-          //                                                   child: FusionAppText(
-          //                                                     text: source.name,
-          //                                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          //                                                       fontWeight: FontWeight.w500,
-          //                                                       fontSize: 10,
-          //                                                       color: Theme.of(context).textTheme.bodySmall?.color,
-          //                                                     ),
-          //                                                   ),
-          //                                                 ),
-          //                                               ],
-          //                                             ),
-          //                                           ),
-          //                                         );
-          //                                       }).toList(),
-          //                                 ),
-          //                               )
-          //                               : Padding(
-          //                                 padding: const EdgeInsets.all(12.0),
-          //                                 child: FusionAppText(
-          //                                   text: "No Source Available",
-          //                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          //                                     fontSize: 10,
-          //                                   ),
-          //                                 ),
-          //                               ),
-          //                     ),
-          //                   ],
-          //                 ),
-          //               );
-          //             },
-          //           ),
-          //         ),
-          //       ];
-          //     },
-          //     child: Container(
-          //       height: 29,
-          //       padding: const EdgeInsets.symmetric(horizontal: 8),
-          //       child: Row(
-          //         children: <Widget>[
-          //           Expanded(
-          //             child: FusionAppText(
-          //               text:
-          //                   widget.selectedSources.isEmpty
-          //                       ? "Select Sources"
-          //                       : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-          //               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          //                 color: widget.selectedSources.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
-          //               ),
-          //             ),
-          //           ),
-          //           Icon(
-          //             Icons.keyboard_arrow_down,
-          //             size: 20,
-          //             color: Theme.of(context).colorScheme.greyDark,
-          //           ),
-          //         ],
-          //       ),
-          //     ),
-          //   ),
-          // ),
-          //
-          // const SizedBox(height: 12),
           Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: <Widget>[

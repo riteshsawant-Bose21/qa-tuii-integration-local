@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_item_card.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
 /// A widget that displays a list of snapshot items in a reorderable list view.
@@ -26,6 +27,9 @@ class SnapshotList extends StatelessWidget {
   final Function(String sceneId) onDelete;
   final Function(String sceneId)? onSelect;
   final String? selectedSnapshotId;
+  final Function(String sceneId)? onDragStarted;
+  final VoidCallback? onDragEnd;
+  final String? draggingSnapshotId;
 
   const SnapshotList({
     super.key,
@@ -34,6 +38,9 @@ class SnapshotList extends StatelessWidget {
     required this.onDelete,
     this.onSelect,
     this.selectedSnapshotId,
+    this.onDragStarted,
+    this.onDragEnd,
+    this.draggingSnapshotId,
   });
 
   @override
@@ -46,18 +53,81 @@ class SnapshotList extends StatelessWidget {
       separatorBuilder: (BuildContext context, int index) => const SizedBox(),
       itemBuilder: (BuildContext context, int index) {
         final SceneModel snapShotData = snapShotList[index];
-        return SnapshotItemCard(
-          snapShotData: snapShotData,
-          isDragging: false,
-          isSelected: selectedSnapshotId == snapShotData.id,
-          onDelete: () {
-            onDelete(snapShotData.id);
-          },
-          onTap: () {
-            if (onSelect != null) {
-              onSelect!(snapShotData.id);
+        final bool isDragging = draggingSnapshotId == snapShotData.id;
+
+        return Draggable<SceneModel>(
+          data: snapShotData,
+          dragAnchorStrategy: pointerDragAnchorStrategy,
+          onDragStarted: () {
+            if (onDragStarted != null) {
+              onDragStarted!(snapShotData.id);
             }
           },
+          onDraggableCanceled: (_, __) {
+            if (onDragEnd != null) {
+              onDragEnd!();
+            }
+          },
+          onDragEnd: (_) {
+            if (onDragEnd != null) {
+              onDragEnd!();
+            }
+          },
+          feedback: Material(
+            color: Colors.transparent,
+            child: Container(
+              width: 200, // Fixed width for feedback
+              constraints: const BoxConstraints(
+                minHeight: 36,
+                maxHeight: 36,
+              ),
+              child: Opacity(
+                opacity: 0.8,
+                child: SnapshotItemCard(
+                  snapShotData: snapShotData,
+                  isDragging: true,
+                  isSelected: selectedSnapshotId == snapShotData.id,
+                  onDelete: () {
+                    onDelete(snapShotData.id);
+                  },
+                  onTap: () {
+                    if (onSelect != null) {
+                      onSelect!(snapShotData.id);
+                    }
+                  },
+                ),
+              ),
+            ),
+          ),
+          childWhenDragging: Opacity(
+            opacity: 0.3,
+            child: SnapshotItemCard(
+              snapShotData: snapShotData,
+              isDragging: true,
+              isSelected: selectedSnapshotId == snapShotData.id,
+              onDelete: () {
+                onDelete(snapShotData.id);
+              },
+              onTap: () {
+                if (onSelect != null) {
+                  onSelect!(snapShotData.id);
+                }
+              },
+            ),
+          ),
+          child: SnapshotItemCard(
+            snapShotData: snapShotData,
+            isDragging: isDragging,
+            isSelected: selectedSnapshotId == snapShotData.id,
+            onDelete: () {
+              onDelete(snapShotData.id);
+            },
+            onTap: () {
+              if (onSelect != null) {
+                onSelect!(snapShotData.id);
+              }
+            },
+          ),
         );
       },
     );
