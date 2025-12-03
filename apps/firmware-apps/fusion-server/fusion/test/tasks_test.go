@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/routes"
 	"fusion/internal/tasks"
@@ -373,7 +374,7 @@ func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
 
 	task := api.Task{
 		ID:          "future-task",
-		CronExpr:    "* * * * *", // valid 5-field cron
+		CronExpr:    "* * * * *",
 		Description: "test future start window",
 		Type:        api.TaskTypeSnapshot,
 		Enabled:     true,
@@ -435,7 +436,7 @@ func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
 
 func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 	clearTasks(t)
-	createTask(t) // from your existing helper
+	createTask(t)
 
 	newStart := time.Now().Add(3 * time.Second)
 
@@ -462,4 +463,55 @@ func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
 
 	assert.True(t, ret.Enabled)
 	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after updating StartAt into the future")
+}
+
+func TestTaskSchedulesAfterStartAt(t *testing.T) {
+	clearTasks(t)
+
+	snapID := fmt.Sprintf("test-snap-%d", time.Now().UnixNano())
+	createSnapshot(t, snapID)
+
+	start := time.Now().Add(2 * time.Second)
+
+	task := api.Task{
+		ID:          "start-window-task",
+		CronExpr:    "* * * * *",
+		Description: "test start window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		StartAt:     start,
+		Params: map[string]any{
+			api.SnapshotIDKey: snapID,
+		},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	time.Sleep(35 * time.Second)
+
+	resp, err = http.Get(tasksURL + "/start-window-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.True(t, ret.Enabled)
+}
+
+func createSnapshot(t *testing.T, id string) {
+	url := tasksServerURL + "/snapshots/" + id
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "Snapshot must be created before scheduling tasks")
 }
