@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+
+import '../search_bar_sources.dart';
 
 class ActionList extends StatelessWidget {
   const ActionList({super.key});
@@ -17,62 +18,40 @@ class ActionList extends StatelessWidget {
       ),
       child: Column(
         children: <Widget>[
-          SectionHeader(
-            title: 'Zones',
-            trailing: IconButton(
-              icon: const Icon(Icons.add, size: 20),
-              onPressed: () {},
+          /// Header with Search Bar
+          Container(
+            height: 44,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              border: Border(
+                bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+              ),
+            ),
+            child: Row(
+              children: <Widget>[
+                Container(
+                  alignment: Alignment.center,
+
+                  // width 30% of the parent width
+                  width: MediaQuery.of(context).size.width * 0.2,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                    ),
+                  ),
+                  child: SearchBarSources(
+                    searchController: TextEditingController(),
+                    isFromActionList: true,
+                    hasActiveFilters: () => false,
+                    onClearSearch: () {},
+                    onSearchChanged: (String value) {},
+                  ),
+                ),
+              ],
             ),
           ),
-
-          /// Zones List
-          // BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          //   builder: (BuildContext context, ProjectViewModelState state) {
-          //     return _projectViewModel.zones.isEmpty
-          //         ? Padding(
-          //       padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.3),
-          //       child: FusionAppText(
-          //         text: 'No zones added yet',
-          //         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-          //           fontSize: 12,
-          //           fontWeight: FontWeight.w500,
-          //         ),
-          //       ),
-          //     )
-          //         : ReorderableListView.builder(
-          //       shrinkWrap: true,
-          //       physics: const ClampingScrollPhysics(),
-          //       buildDefaultDragHandles: false,
-          //       itemCount: _projectViewModel.zones.length,
-          //       onReorder: (int oldIndex, int newIndex) {
-          //         if (oldIndex < newIndex) newIndex -= 1;
-          //         final String zoneToMove = _projectViewModel.zones[oldIndex].id;
-          //         final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
-          //         _projectViewModel.reorderZones(
-          //           zoneIdToMove: zoneToMove,
-          //           zoneIdAtNewIndex: zoneAtNewIndex,
-          //         );
-          //         _projectViewModel.setSelectedDevice(
-          //           zoneToMove,
-          //           SelectedItemType.zone,
-          //         );
-          //       },
-          //       itemBuilder: (BuildContext context, int index) {
-          //         final Zone zoneData = _projectViewModel.zones[index];
-          //         return ReorderableDragStartListener(
-          //           key: ValueKey<String>(zoneData.id),
-          //           index: index,
-          //           child: ZoneCard(
-          //             zoneId: zoneData.id,
-          //             zoneName: zoneData.name,
-          //             bgColor: zoneData.color,
-          //             zoneData: zoneData,
-          //           ),
-          //         );
-          //       },
-          //     );
-          //   },
-          // ),
         ],
       ),
     );

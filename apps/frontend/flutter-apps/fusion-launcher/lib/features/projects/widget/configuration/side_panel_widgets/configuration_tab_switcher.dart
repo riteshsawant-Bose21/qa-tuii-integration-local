@@ -29,12 +29,12 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
       label: 'Processing',
     ),
     ConfigurationMenuMode.snapshots: TabConfig(
-      assetsName: Assets.processingIcon,
+      assetsName: Assets.presetsIcon,
       label: 'Snapshots',
     ),
-    ConfigurationMenuMode.presets: TabConfig(
-      assetsName: Assets.presetsIcon,
-      label: 'Presets',
+    ConfigurationMenuMode.events: TabConfig(
+      assetsName: Assets.eventsIcon,
+      label: 'Events',
     ),
     ConfigurationMenuMode.gpio: TabConfig(
       assetsName: Assets.gpioIcon,

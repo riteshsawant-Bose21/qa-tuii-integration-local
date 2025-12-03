@@ -510,7 +510,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                     text:
                         _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
                             ? "Sources Configuration Page"
-                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
+                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.events
                             ? "Presets Configuration Page"
                             : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.snapshots
                             ? "Snapshots Configuration Page"
