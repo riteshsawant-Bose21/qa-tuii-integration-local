@@ -175,6 +175,19 @@ class SceneParam {
     'type': type.name,
     'associatedId': associatedId,
   };
+
+  // Add proper equality and hashCode implementation
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SceneParam && other.label == label && other.type == type && other.associatedId == associatedId;
+  }
+
+  @override
+  int get hashCode => Object.hash(label, type, associatedId);
+
+  // Add a convenience getter for valueType
+  SceneParamValueType get valueType => type.valueType;
 }
 
 class SceneValueDropdown {
@@ -300,10 +313,10 @@ class SceneActionModel {
   factory SceneActionModel.fromJson(Map<String, dynamic> json) {
     return SceneActionModel(
       id: json['id'],
-      actionType: SceneActionType.values.firstWhere((e) => e.name == json['actionType']),
-      item: SceneItem.fromJson(json['item']),
-      param: SceneParam.fromJson(json['param']),
-      value: SceneValue.fromJson(json['value']),
+      actionType: json['actionType'] != null ? SceneActionType.values.firstWhere((e) => e.name == json['actionType']) : null,
+      item: json['item'] != null ? SceneItem.fromJson(json['item']) : null,
+      param: json['param'] != null ? SceneParam.fromJson(json['param']) : null,
+      value: json['value'] != null ? SceneValue.fromJson(json['value']) : null,
     );
   }
 

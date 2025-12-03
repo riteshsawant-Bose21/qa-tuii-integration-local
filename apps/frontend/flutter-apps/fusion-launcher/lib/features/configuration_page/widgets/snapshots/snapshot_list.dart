@@ -24,14 +24,16 @@ class SnapshotList extends StatelessWidget {
   final List<SceneModel> snapShotList;
   final Color? backgroundColor;
   final Function(String sceneId) onDelete;
-  final Function(String sceneId)? onSelect; // Add this
+  final Function(String sceneId)? onSelect;
+  final String? selectedSnapshotId;
 
   const SnapshotList({
     super.key,
     this.backgroundColor,
     required this.snapShotList,
     required this.onDelete,
-    this.onSelect, // Add this
+    this.onSelect,
+    this.selectedSnapshotId,
   });
 
   @override
@@ -47,6 +49,7 @@ class SnapshotList extends StatelessWidget {
         return SnapshotItemCard(
           snapShotData: snapShotData,
           isDragging: false,
+          isSelected: selectedSnapshotId == snapShotData.id,
           onDelete: () {
             onDelete(snapShotData.id);
           },

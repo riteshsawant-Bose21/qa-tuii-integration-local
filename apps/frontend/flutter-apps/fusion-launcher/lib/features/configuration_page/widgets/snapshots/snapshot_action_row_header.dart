@@ -23,7 +23,7 @@ class SnapshotActionRowHeader extends StatelessWidget {
           SizedBox(width: 16),
 
           _HeaderCell("Value"),
-          SizedBox(width: 20),
+          SizedBox(width: 38),
         ],
       ),
     );

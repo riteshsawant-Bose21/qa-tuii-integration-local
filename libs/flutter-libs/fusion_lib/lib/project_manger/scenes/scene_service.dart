@@ -266,6 +266,7 @@ extension SceneService on ProjectService {
     }
 
     final param = scene.param!;
+    final actionType = scene.actionType;
 
     switch (param.type) {
       case SceneParamType.sourceSelect:
@@ -291,6 +292,29 @@ extension SceneService on ProjectService {
               ),
             )
             .toList();
+      case SceneParamType.recall:
+        if (actionType == SceneActionType.scene) {
+          return getScenesInSceneSet(scene.item!.itemId)
+              .map(
+                (SceneModel scene) => SceneValueDropdown(
+                  value: scene.id,
+                  label: scene.name,
+                ),
+              )
+              .toList();
+        } else if (actionType == SceneActionType.snapshot) {
+          return getAllScenes()
+              .map(
+                (SceneModel snapshot) => SceneValueDropdown(
+                  value: snapshot.id,
+                  label: snapshot.name,
+                ),
+              )
+              .toList();
+        } else {
+          return [];
+        }
+
       case SceneParamType.prioritySelect1:
       case SceneParamType.prioritySelect2:
         final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);

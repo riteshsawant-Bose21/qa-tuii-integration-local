@@ -5,6 +5,7 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 class FusionDropdown<T> extends StatelessWidget {
   final T? value;
   final List<T> items;
+  final String hint;
   final String Function(T) display;
   final ValueChanged<T?> onChanged;
 
@@ -14,6 +15,7 @@ class FusionDropdown<T> extends StatelessWidget {
     required this.items,
     required this.display,
     required this.onChanged,
+    required this.hint,
   });
 
   @override
@@ -21,8 +23,10 @@ class FusionDropdown<T> extends StatelessWidget {
     return DropdownButtonFormField<T>(
       initialValue: value,
       hint: FusionAppText(
-        text: "Select an option",
-        style: Theme.of(context).textTheme.bodySmall,
+        text: hint,
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+          color: Theme.of(context).colorScheme.greyDark.withAlpha(200),
+        ),
         maxLine: 1,
       ),
       decoration: InputDecoration(

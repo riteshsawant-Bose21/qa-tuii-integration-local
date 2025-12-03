@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -6,11 +7,13 @@ import '../../../../core/constants/assets_constants.dart';
 class SnapshotItemCard extends StatefulWidget {
   final SceneModel snapShotData;
   final bool isDragging;
+  final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap; // Add this
 
   const SnapshotItemCard({
     this.isDragging = false,
+    this.isSelected = false,
     super.key,
     required this.snapShotData,
     this.onDelete,
@@ -27,7 +30,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: widget.onTap, // Add this
+      onTap: widget.onTap,
       child: MouseRegion(
         onEnter: (_) {
           if (!_isHovered) {
@@ -45,7 +48,11 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
           decoration: BoxDecoration(
             color: widget.isDragging ? Theme.of(context).colorScheme.primary.withOpacity(0.15) : (_isHovered ? Colors.grey[200] : null),
             borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 1.0),
+            border: Border.all(
+              color:
+                  widget.isSelected ? Theme.of(context).colorScheme.greyDark : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
+              width: 1.0,
+            ),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(

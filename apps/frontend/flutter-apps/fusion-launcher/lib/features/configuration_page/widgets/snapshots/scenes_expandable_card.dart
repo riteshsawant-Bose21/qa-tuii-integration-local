@@ -207,6 +207,8 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                   )
                   : SnapshotList(
                     snapShotList: widget.snapShotList,
+                    selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+
                     onDelete: (String sceneId) {
                       widget.onScenesSnapshotDelete(sceneId);
                     },

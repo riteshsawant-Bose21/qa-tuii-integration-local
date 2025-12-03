@@ -29,7 +29,6 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     final SceneActionModel action = widget.action;
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
-    // Move data fetching OUTSIDE BlocBuilder so it updates with setState
     final List<SceneItemDropdown> itemList = action.actionType != null ? _projectViewModel.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
 
     final List<SceneParam> paramList =
@@ -65,19 +64,21 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
           Expanded(
             child: FusionDropdown<SceneActionType>(
               value: action.actionType,
+              hint: "Select Action Type",
               items: _projectViewModel.getSceneActionTypes(),
               display: (SceneActionType e) => e.name,
-              onChanged: (SceneActionType? v) {
-                if (v != null) {
-                  action.actionType = v;
+              onChanged: (SceneActionType? actionType) {
+                if (actionType != null) {
+                  action.actionType = actionType;
+                  _projectViewModel.updateSceneActionType(actionId: action.id, actionType: actionType);
 
                   /// Get new item list for the selected action type
-                  final List<SceneItemDropdown> newItemList = _projectViewModel.getActionItemsByType(v);
-                  print('New Item List: $newItemList');
+                  final List<SceneItemDropdown> newItemList = _projectViewModel.getActionItemsByType(actionType);
 
                   /// Set first item if available, else null
                   if (newItemList.isNotEmpty) {
                     action.item = SceneItem(itemId: newItemList.first.id);
+                    print('Selected Scene Item: ${newItemList.first.name}');
                   } else {
                     action.item = null;
                   }
@@ -95,37 +96,77 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
 
           /// Scene Item Dropdown (based on actionType)
           Expanded(
-            child: FusionDropdown<SceneItemDropdown>(
-              value:
-                  (action.actionType != null && action.item != null)
-                      ? itemList.firstWhere(
-                        (SceneItemDropdown e) => e.id == action.item!.itemId,
-                        orElse: () => SceneItemDropdown(id: action.item!.itemId, name: action.item!.itemId),
-                      )
-                      : null,
-              items: itemList,
-              display: (SceneItemDropdown e) => e.name,
-              onChanged: (SceneItemDropdown? v) {
-                action.item = v == null ? null : SceneItem(itemId: v.id);
-                // Reset param and value since item changed
-                action.param = null;
-                action.value = null;
-                setState(() {});
+            child: Builder(
+              builder: (_) {
+                SceneItemDropdown? selectedItem;
+
+                if (action.item != null) {
+                  selectedItem = itemList.firstWhere(
+                    (SceneItemDropdown e) => e.id == action.item!.itemId,
+                    // orElse: () => null,
+                  );
+                }
+
+                return FusionDropdown<SceneItemDropdown>(
+                  value: selectedItem,
+                  items: itemList,
+                  hint: "Select Action Item",
+                  display: (SceneItemDropdown e) => e.name,
+                  onChanged: (SceneItemDropdown? selected) {
+                    print('Selected Scene Item: ${selected?.name}');
+
+                    action.item = selected == null ? null : SceneItem(itemId: selected.id);
+
+                    action.param = null;
+                    action.value = null;
+
+                    if (action.actionType != null) {
+                      _projectViewModel.updateSceneActionType(
+                        actionId: action.id,
+                        actionType: action.actionType!,
+                      );
+                    }
+
+                    setState(() {});
+                  },
+                );
               },
             ),
           ),
+
           const SizedBox(width: 12),
 
           /// Param Dropdown (based on actionType and item)
           Expanded(
             child: FusionDropdown<SceneParam>(
-              value: action.param,
+              hint: "Select Parameter",
+              value:
+                  (action.param != null && paramList.isNotEmpty)
+                      ? paramList
+                          .where(
+                            (SceneParam p) => p.label == action.param!.label && p.type == action.param!.type && p.associatedId == action.param!.associatedId,
+                          )
+                          .firstOrNull
+                      : null,
               items: paramList,
               display: (SceneParam e) => e.label,
-              onChanged: (SceneParam? v) {
-                action.param = v;
-                // Reset value since param changed
-                action.value = null;
+              onChanged: (SceneParam? actionType) {
+                action.param = actionType;
+                // Reset value since param changed and create new SceneValue with correct valueType and label
+                if (actionType != null) {
+                  action.value = SceneValue(
+                    value: null,
+                    label: actionType.label, // Set the label from the selected param
+                    valueType: actionType.valueType,
+                  );
+                } else {
+                  action.value = null;
+                }
+
+                if (action.actionType != null) {
+                  _projectViewModel.updateSceneActionType(actionId: action.id, actionType: action.actionType!);
+                }
+
                 setState(() {});
               },
             ),
@@ -137,13 +178,13 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             child:
                 action.param != null
                     ? ValueWidgetForRow(
+                      actionId: action.id,
                       value:
                           action.value ??
                           SceneValue(
                             value: null,
-                            label: '',
-                            // valueType: action.param!.valueType,
-                            valueType: SceneParamValueType.textInput,
+                            label: action.param!.label, // Ensure label is set from param
+                            valueType: action.param!.valueType,
                           ),
                       onChanged: (SceneValue newVal) {
                         action.value = newVal;
@@ -152,9 +193,10 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                     )
                     : const SizedBox.shrink(),
           ),
+          const SizedBox(width: 18),
 
+          /// Delete Action Button
           SizedBox(
-            // color: Colors.red,
             width: 20,
             child:
             // delete icon

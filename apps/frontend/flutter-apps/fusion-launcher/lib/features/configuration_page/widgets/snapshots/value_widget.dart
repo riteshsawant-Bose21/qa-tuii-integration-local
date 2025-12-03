@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+import 'action_drop_down.dart';
 
 class ValueWidgetForRow extends StatefulWidget {
+  final String actionId;
   final SceneValue value;
   final ValueChanged<SceneValue> onChanged;
 
@@ -12,6 +16,7 @@ class ValueWidgetForRow extends StatefulWidget {
     super.key,
     required this.value,
     required this.onChanged,
+    required this.actionId,
   });
 
   @override
@@ -26,9 +31,7 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
     final SceneValue value = widget.value;
 
     switch (value.valueType) {
-      // ---------------------------------------------------
-      // 1️⃣ Mute / Unmute (stored as "mute" or "unmute")
-      // ---------------------------------------------------
+      /// Mute / Unmute (stored as "mute" or "unmute")
       case SceneParamValueType.muteUnmute:
         final bool isMute = value.value == "mute";
 
@@ -64,58 +67,106 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
           ],
         );
 
-      // ---------------------------------------------------
-      // 2️⃣ Volume Slider → store number as string
-      // ---------------------------------------------------
+      /// Volume Slider → store number as string
       case SceneParamValueType.volumeSlider:
         final double currentValue = double.tryParse(value.value ?? "50") ?? 50;
 
-        return Slider(
-          value: currentValue,
-          min: 0,
-          max: 100,
-          divisions: 100,
-          label: currentValue.toStringAsFixed(0),
-          onChanged: (double v) {
-            final SceneValue updated = value.copyWith(value: v.toString());
-            widget.onChanged(updated);
-            setState(() {});
-          },
+        return Row(
+          children: <Widget>[
+            Flexible(
+              child: SliderTheme(
+                data: SliderTheme.of(context).copyWith(
+                  thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
+                  trackHeight: 2, // thinner track
+                ),
+                child: Slider(
+                  value: currentValue,
+                  padding: EdgeInsets.zero,
+                  activeColor: Theme.of(context).colorScheme.black,
+                  inactiveColor: Theme.of(context).colorScheme.grey,
+                  min: 0,
+                  max: 100,
+                  divisions: 100,
+
+                  label: currentValue.toStringAsFixed(0),
+                  onChanged: (double v) {
+                    final SceneValue updated = value.copyWith(value: v.toString());
+                    widget.onChanged(updated);
+                    setState(() {});
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 16),
+
+            Container(
+              alignment: Alignment.center,
+              padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.greyLight,
+                borderRadius: BorderRadius.circular(2),
+              ),
+              child: FusionAppText(text: currentValue.toStringAsFixed(0), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9)),
+            ),
+          ],
         );
 
-      // ---------------------------------------------------
-      // 3️⃣ Dropdown → must read value.dropdownItems
-      // ---------------------------------------------------
+      ///  Dropdown → must read value.dropdownItems
       case SceneParamValueType.dropdownSingle:
-        final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(value.label);
-        SceneValueDropdown? selectedValue = value.value as SceneValueDropdown?;
-
-        // Ensure the selected value is in the items list
-        if (selectedValue != null && !items.contains(selectedValue)) {
-          selectedValue = null;
+        // Check if label is valid before fetching items
+        if (value.label.isEmpty) {
+          return const Text('No parameter selected');
         }
 
-        return DropdownButton<SceneValueDropdown>(
-          isExpanded: true,
+        final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(widget.actionId);
+
+        // Find selected value by matching the stored string value with item labels
+        SceneValueDropdown? selectedValue;
+        if (value.value != null && value.value!.isNotEmpty && items.isNotEmpty) {
+          try {
+            selectedValue = items.firstWhere(
+              (SceneValueDropdown item) => item.label == value.value || item.value == value.value,
+            );
+          } catch (e) {
+            // No exact match found, leave selectedValue as null
+            selectedValue = null;
+          }
+        }
+
+        // return DropdownButton<SceneValueDropdown>(
+        //   isExpanded: true,
+        //   value: selectedValue,
+        //   hint: const Text("Select an option"),
+        //   items:
+        //       items.map<DropdownMenuItem<SceneValueDropdown>>((SceneValueDropdown v) {
+        //         return DropdownMenuItem<SceneValueDropdown>(
+        //           value: v,
+        //           child: Text(v.label),
+        //         );
+        //       }).toList(),
+        //   onChanged: (SceneValueDropdown? v) {
+        //     final SceneValue updated = value.copyWith(value: v?.label ?? v?.value);
+        //     widget.onChanged(updated);
+        //     setState(() {});
+        //   },
+        // );
+
+        /// Using FusionDropdown widget
+        return FusionDropdown<SceneValueDropdown>(
           value: selectedValue,
-          hint: const Text("Select an option"),
-          items:
-              items.map<DropdownMenuItem<SceneValueDropdown>>((SceneValueDropdown v) {
-                return DropdownMenuItem<SceneValueDropdown>(
-                  value: v,
-                  child: Text(v.label),
-                );
-              }).toList(),
+          items: items,
+          hint: "Select an option",
+          display: (SceneValueDropdown e) => e.label,
           onChanged: (SceneValueDropdown? v) {
-            final SceneValue updated = value.copyWith(value: v?.label);
+            final SceneValue updated = value.copyWith(value: v?.label ?? v?.value);
             widget.onChanged(updated);
             setState(() {});
           },
         );
 
-      // ---------------------------------------------------
-      // 4️⃣ Text Input (simple string)
-      // ---------------------------------------------------
+      /// Text Input (simple string)
       case SceneParamValueType.textInput:
         return TextFormField(
           initialValue: value.value ?? "",
@@ -129,9 +180,7 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
           },
         );
 
-      // ---------------------------------------------------
-      // 5️⃣ On/Off toggle → stored as "on" or "off"
-      // ---------------------------------------------------
+      /// On/Off toggle → stored as "on" or "off"
       case SceneParamValueType.onOffButton:
         final bool isOn = value.value == "on";
 
@@ -143,12 +192,6 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
             setState(() {});
           },
         );
-
-      // ---------------------------------------------------
-      // fallback
-      // ---------------------------------------------------
-      default:
-        return const SizedBox.shrink();
     }
   }
 }
