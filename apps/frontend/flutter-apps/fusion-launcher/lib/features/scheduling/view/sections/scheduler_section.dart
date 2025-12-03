@@ -28,10 +28,6 @@ class _SchedulerSection extends StatelessWidget {
             (title: "", flex: 1),
             (title: "", flex: 1),
             (title: "", flex: 1),
-
-            // (title: "Action", flex: 2),
-            // (title: "Enabled", flex: 1),
-            // (title: " ", flex: 1),
           ],
           itemCount: state.schedules.length,
           itemBuilder: (BuildContext context, int index) {

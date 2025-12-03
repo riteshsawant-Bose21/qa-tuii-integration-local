@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fusion_launcher/features/scheduling/view/widgets/calender_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
 
 import '../state/scheduler_state.dart';
+import '../state/timeline_state.dart';
 import '../viewmodel/scheduler_viewmodel.dart';
+import '../viewmodel/timeline_viewmodel.dart';
 import 'sections/scheduler_form.dart';
 import 'widgets/status_chip.dart';
 
@@ -27,10 +30,10 @@ class SchedulingPage extends StatefulWidget {
 }
 
 class _SchedulingPageState extends State<SchedulingPage> {
-  _PageType _currentPage = _PageType.timeline;
+  _PageType _currentPage = _PageType.scheduler;
   @override
   Widget build(BuildContext context) {
-    return Provider<SchedulerViewmodel>(
+    return BlocProvider<SchedulerViewmodel>(
       create: (BuildContext context) => SchedulerViewmodel(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -127,26 +130,69 @@ class _SchedulingPageState extends State<SchedulingPage> {
                 ],
               ),
               const Spacer(),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 200),
+                child: BlocBuilder<SchedulerViewmodel, SchedulerState>(
+                  builder: (BuildContext context, SchedulerState state) {
+                    if (state is SearchingSchedulerState) {
+                      return SizedBox(
+                        width: 200,
+                        child: FusionTextField(
+                          hintText: "Search",
+                          autofocus: true,
+                          prefixIcon: Icon(
+                            Icons.search,
+                            size: 20,
+                            color: Colors.grey[400],
+                          ),
+                          suffixIcon: InkWell(
+                            onTap: () {
+                              context.read<SchedulerViewmodel>().idle();
+                            },
+                            child: Icon(
+                              Icons.close,
+                              size: 20,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          onChanged: (String query) {
+                            context.read<SchedulerViewmodel>().searchSchedules(query);
+                          },
+                        ),
+                      );
+                    }
+                    return Row(
+                      children: <Widget>[
+                        InkWell(
+                          onTap: () {
+                            BlocProvider.of<SchedulerViewmodel>(context).searchSchedules("");
+                          },
+                          child: const _ActionButton(
+                            title: "Search",
+                            icon: Icons.search,
+                          ),
+                        ),
+                        // const _ActionButton(
+                        //   title: "Filter",
+                        //   icon: Icons.filter_list,
+                        // ),
+                        // const _ActionButton(
+                        //   title: "Sort",
+                        //   icon: Icons.unfold_more,
+                        // ),
+                        // const _ActionButton(
+                        //   title: "Fields",
+                        //   icon: Icons.list_rounded,
+                        // ),
+                      ],
+                    );
+                  },
+                ),
+              ),
 
               //
               // Right Side Actions
               //
-              const _ActionButton(
-                title: "Search",
-                icon: Icons.search,
-              ),
-              const _ActionButton(
-                title: "Filter",
-                icon: Icons.filter_list,
-              ),
-              const _ActionButton(
-                title: "Sort",
-                icon: Icons.unfold_more,
-              ),
-              const _ActionButton(
-                title: "Fields",
-                icon: Icons.list_rounded,
-              ),
               const SizedBox(
                 width: 10,
               ),
