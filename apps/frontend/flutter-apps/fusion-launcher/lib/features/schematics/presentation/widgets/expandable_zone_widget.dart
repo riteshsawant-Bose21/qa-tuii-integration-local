@@ -11,6 +11,7 @@ import 'create_new_location_widget.dart';
 import 'expandable_sub_zone_widgets.dart';
 
 class ExpandableZoneWidget extends StatefulWidget {
+  final int index;
   final String zoneName;
   final String zoneId;
   final Color bgColor;
@@ -21,6 +22,7 @@ class ExpandableZoneWidget extends StatefulWidget {
 
   const ExpandableZoneWidget({
     super.key,
+    required this.index,
     required this.zoneName,
     required this.zoneId,
     required this.bgColor,
@@ -77,6 +79,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     expanded: zoneExpanded,
                     isHovered: isHovered,
                     isSelected: isSelected,
+                    index: widget.index,
                   ),
                 ),
 
@@ -91,55 +94,73 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   }
 
   /// Zone header - always visible
-  Widget _buildZoneHeader({required BuildContext context, required bool expanded, required bool isHovered, required bool isSelected}) {
-    return Container(
-      padding: const EdgeInsets.only(left: 14, right: 14),
-      height: 36,
-      decoration: BoxDecoration(
-        color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
-        border: Border.all(
-          color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
-        ),
-      ),
-      child: Row(
-        children: <Widget>[
-          /// Drag handle
-          _buildDragHandle(),
-          const SizedBox(width: 4),
-
-          /// Expand/collapse icon
-          GestureDetector(
-            onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
-            child: _buildExpandIcon(context, expanded),
+  Widget _buildZoneHeader({
+    required BuildContext context,
+    required bool expanded,
+    required bool isHovered,
+    required bool isSelected,
+    required int index,
+  }) {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_header_container_$index"),
+      child: Container(
+        padding: const EdgeInsets.only(left: 14, right: 14),
+        height: 36,
+        decoration: BoxDecoration(
+          color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
+          border: Border.all(
+            color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
           ),
-          const SizedBox(width: 4),
+        ),
+        child: Row(
+          children: <Widget>[
+            /// Drag handle
+            _buildDragHandle(),
+            const SizedBox(width: 4),
 
-          /// Zone name
-          Expanded(
-            child: GestureDetector(
-              onTap: () {
-                /// Select zone on tap
-                _projectViewModel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
-              },
-              // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
-              child: _buildZoneName(
-                context: context,
-                name: widget.zoneName,
+            /// Expand/collapse icon
+            GestureDetector(
+              onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_expand_collapse_icon_container_$index"),
+                child: _buildExpandIcon(context, expanded),
               ),
             ),
-          ),
+            const SizedBox(width: 4),
 
-          /// Add device button
-          if (widget.subZones.isEmpty)
-            AddSpeakersMenu(
-              zoneId: widget.zoneId,
-              onSpeakerAdded: onSpeakerAdded,
+            /// Zone name
+            Expanded(
+              child: GestureDetector(
+                onTap: () {
+                  /// Select zone on tap
+                  _projectViewModel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
+                },
+                // onTap: () => _isZoneExpanded.value = !_isZoneExpanded.value,
+                child: _buildZoneName(
+                  context: context,
+                  name: widget.zoneName,
+                ),
+              ),
             ),
-          const SizedBox(width: 8),
 
-          /// Kebab menu for zone actions
-          _buildKebabMenu(context: context, zoneId: widget.zoneId),
-        ],
+            /// Add device button
+            if (widget.subZones.isEmpty)
+              SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "add_speakers_menu_container_$index"),
+                child: AddSpeakersMenu(
+                  zoneId: widget.zoneId,
+                  onSpeakerAdded: onSpeakerAdded,
+                ),
+              ),
+            const SizedBox(width: 8),
+
+            /// Kebab menu for zone actions
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_kebab_menu_container_$index"),
+              child: _buildKebabMenu(context: context, zoneId: widget.zoneId),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -189,6 +210,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
                     return DragTarget<CircuitModel>(
                       key: ValueKey<String>(deviceId),
+                      // ignore: deprecated_member_use
                       onWillAccept: (CircuitModel? incoming) {
                         /// Only accept if the incoming circuit has the same name but different ID
                         ///
@@ -196,7 +218,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                         // _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
 
-                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
                         final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
 
                         final Zone? incomingZone = _projectViewModel.getZoneForCircuit(circuitId: incoming.id);
@@ -206,6 +228,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                             incomingZone != null &&
                             incomingZone.id == widget.zoneId;
                       },
+                      // ignore: deprecated_member_use
                       onAccept: (CircuitModel incoming) {
                         /// Add speaker to target circuit
                         final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
@@ -341,7 +364,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   zoneId: widget.zoneId,
                   subZoneCircuit: _projectViewModel.getCircuitsInSubZone(subZoneId: subZone.id),
                   onDelete: (String subZoneId) {
-                    _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId!);
+                    _projectViewModel.removeSubZoneFromZone(subZoneId: subZoneId, parentZoneId: widget.zoneId);
                   },
                 ),
               );
@@ -416,10 +439,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               ),
             ),
           ],
-      child: Icon(
-        Icons.more_vert,
-        size: 14,
-        color: Colors.grey[600],
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "zone_item_kebab_menu"),
+        child: Icon(
+          Icons.more_vert,
+          size: 14,
+          color: Colors.grey[600],
+        ),
       ),
     );
   }
@@ -444,26 +470,29 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
               child: _buildSubzoneContent(context, zoneId),
             ),
           ],
-      child: Container(
-        height: 34,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        alignment: Alignment.centerLeft,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: <Widget>[
-            FusionAppText(
-              text: "Sub zone",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 12,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_menu"),
+        child: Container(
+          height: 34,
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          alignment: Alignment.centerLeft,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: <Widget>[
+              FusionAppText(
+                text: "Sub zone",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                ),
+              ),
+              Icon(
+                Icons.keyboard_arrow_right_sharp,
+                size: 12,
                 color: Theme.of(context).colorScheme.fusionTextViewColor,
               ),
-            ),
-            Icon(
-              Icons.keyboard_arrow_right_sharp,
-              size: 12,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -506,10 +535,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       newlyCreatedAreas.clear(); // <-- Clear on close
                       setState(() => showSubzonePopup = false);
                     },
-                    child: Icon(
-                      Icons.close,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_close_button"),
+                      child: Icon(
+                        Icons.close,
+                        size: 16,
+                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                      ),
                     ),
                   ),
                 ],
@@ -529,14 +561,17 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 ),
               ),
               const SizedBox(height: 4),
-              FusionTextField(
-                controller: _zoneNameController,
-                hintText: "Enter subzone name",
-                decoration: FusionInputDecoration.fusionDense(
-                  colorScheme: Theme.of(context).colorScheme,
-                  hintText: 'Enter subzone name',
+              SemanticHelper.formControl(
+                testId: SemanticHelper.createTestId(SemanticTypes.textInput, "add_subzone_name_field"),
+                child: FusionTextField(
+                  controller: _zoneNameController,
+                  hintText: "Enter subzone name",
+                  decoration: FusionInputDecoration.fusionDense(
+                    colorScheme: Theme.of(context).colorScheme,
+                    hintText: 'Enter subzone name',
+                  ),
+                  onChanged: (String value) => updateAllStates(),
                 ),
-                onChanged: (String value) => updateAllStates(),
               ),
 
               const SizedBox(height: 18),
@@ -562,6 +597,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     child: FusionOutlinedButton(
                       width: double.infinity,
                       label: "Cancel",
+                      semanticsId: "add_subzone_cancel_button",
                       textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                       onTap: () {
                         // Close only the subzone popup
@@ -576,15 +612,18 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   ),
                   const SizedBox(width: 8),
                   Flexible(
-                    child: FusionButton(
-                      width: double.infinity,
-                      textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_subzone_save_button"),
+                      child: FusionButton(
+                        width: double.infinity,
+                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          fontSize: 10,
+                          color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                        ),
+                        label: "Save",
+                        isActive: _zoneNameController.text.trim().isNotEmpty && _selectedListeningAreaIds.isNotEmpty,
+                        onTap: () => _saveSubZone(context, zoneId),
                       ),
-                      label: "Save",
-                      isActive: _zoneNameController.text.trim().isNotEmpty && _selectedListeningAreaIds.isNotEmpty,
-                      onTap: () => _saveSubZone(context, zoneId),
                     ),
                   ),
                 ],
@@ -598,47 +637,53 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
   /// Location selector dropdown
   Widget _buildLocationSelector(BuildContext context, String zoneId, VoidCallback onStateUpdate) {
-    return Container(
-      height: 28,
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: PopupMenuButton<String>(
-        constraints: const BoxConstraints(maxHeight: 250, maxWidth: 236),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        color: Theme.of(context).colorScheme.white,
-        offset: const Offset(6, 35),
-        itemBuilder:
-            (BuildContext context) => <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                enabled: false,
-                padding: EdgeInsets.zero,
-                child: _buildLocationList(context, zoneId, onStateUpdate),
-              ),
-            ],
-        child: Container(
-          height: 29,
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Row(
-            children: <Widget>[
-              Expanded(
-                child: FusionAppText(
-                  text:
-                      _selectedListeningAreaIds.isEmpty
-                          ? "Select Location"
-                          : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: _selectedListeningAreaIds.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
-                  ),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "location_selector_container"),
+      child: Container(
+        height: 28,
+        decoration: BoxDecoration(
+          border: Border.all(color: Colors.grey[300]!),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: PopupMenuButton<String>(
+          constraints: const BoxConstraints(maxHeight: 250, maxWidth: 236),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          color: Theme.of(context).colorScheme.white,
+          offset: const Offset(6, 35),
+          itemBuilder:
+              (BuildContext context) => <PopupMenuEntry<String>>[
+                PopupMenuItem<String>(
+                  enabled: false,
+                  padding: EdgeInsets.zero,
+                  child: _buildLocationList(context, zoneId, onStateUpdate),
                 ),
+              ],
+          child: SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "location_selector_button"),
+            child: Container(
+              height: 29,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: FusionAppText(
+                      text:
+                          _selectedListeningAreaIds.isEmpty
+                              ? "Select Location"
+                              : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: _selectedListeningAreaIds.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                      ),
+                    ),
+                  ),
+                  Icon(
+                    Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: Theme.of(context).colorScheme.greyDark,
+                  ),
+                ],
               ),
-              Icon(
-                Icons.keyboard_arrow_down,
-                size: 20,
-                color: Theme.of(context).colorScheme.greyDark,
-              ),
-            ],
+            ),
           ),
         ),
       ),
@@ -687,135 +732,144 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           return floorData?.name ?? '';
         }
 
-        return SizedBox(
-          width: 280,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              /// Header
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    FusionAppText(
-                      text: "Select Locations",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Icon(
-                        Icons.close,
-                        size: 16,
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              /// Scrollable list
-              allAreas.isEmpty
-                  ? Container(
-                    padding: const EdgeInsets.all(16),
-                    child: FusionAppText(
-                      text: "No locations found in this zone",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 10,
-                      ),
-                    ),
-                  )
-                  : ConstrainedBox(
-                    constraints: const BoxConstraints(maxHeight: 220),
-                    child: SingleChildScrollView(
-                      child: Column(
-                        children:
-                            allAreas.map((ListeningArea area) {
-                              final String floorName = getFloorNameForArea(area);
-                              final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
-                              final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
-                              return _buildLocationItem(
-                                context: context,
-                                area: area,
-                                zoneId: zoneId,
-                                onStateUpdate: () {
-                                  if (selectedListeningAreaIds.contains(area.id)) {
-                                    selectedListeningAreaIds.remove(area.id);
-                                  } else {
-                                    selectedListeningAreaIds.add(area.id);
-                                  }
-                                  _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
-                                  updateStates();
-                                },
-                                availableAreas: availableAreas,
-                                zoneData: zoneData,
-                                isAvailable: isAvailable,
-                                floorData: null, // not used, see below
-                                floorName: floorName, // pass floorName here
-                              );
-                            }).toList(),
-                      ),
-                    ),
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "location_list_container"),
+          child: SizedBox(
+            width: 280,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                /// Header
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    border: Border(bottom: BorderSide(color: Colors.grey[300]!)),
                   ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: <Widget>[
+                      FusionAppText(
+                        text: "Select Locations",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, "location_list_close_button"),
+                          child: Icon(
+                            Icons.close,
+                            size: 16,
+                            color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
 
-              /// Create New Location Section
-              CreateNewLocationWidget(
-                areaNameController: areaNameController,
-                isCreateAreaExpanded: isCreateAreaExpanded,
-                setDropdownState: setPopupState,
-                selectedFloor: selectedFloor,
-                selectedFloorId: selectedFloorId,
-                onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
-                  if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
-                    final ListeningArea newListeningArea = ListeningArea(
-                      name: locationName.trim(),
-                      vertices: <Offset>[
-                        const Offset(0, 0),
-                        const Offset(100, 0),
-                        const Offset(100, 100),
-                        const Offset(0, 100),
-                      ],
-                    );
+                /// Scrollable list
+                allAreas.isEmpty
+                    ? Container(
+                      padding: const EdgeInsets.all(16),
+                      child: FusionAppText(
+                        text: "No locations found in this zone",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 10,
+                        ),
+                      ),
+                    )
+                    : ConstrainedBox(
+                      constraints: const BoxConstraints(maxHeight: 220),
+                      child: SingleChildScrollView(
+                        child: Column(
+                          children:
+                              allAreas.map((ListeningArea area) {
+                                final int index = allAreas.indexOf(area);
 
-                    try {
-                      newlyCreatedAreas.add(<String, dynamic>{
-                        'area': newListeningArea,
-                        'floorId': floorId,
-                        'floorName': floorName,
-                      });
-                      // Select all newly created locations
-                      final List<String> allNewIds = newlyCreatedAreas.map((Map<String, dynamic> e) => (e['area'] as ListeningArea).id).toList();
-                      _selectedListeningAreaIds = allNewIds;
-                      setPopupState(() {});
-                      areaNameController.clear();
-                      isCreateAreaExpanded = false;
+                                final String floorName = getFloorNameForArea(area);
+                                final Zone? zoneData = _projectViewModel.getZonesForListeningArea(areaId: area.id);
+                                final bool isAvailable = availableAreas.any((ListeningArea a) => a.id == area.id);
+                                return _buildLocationItem(
+                                  index: index,
+                                  context: context,
+                                  area: area,
+                                  zoneId: zoneId,
+                                  onStateUpdate: () {
+                                    if (selectedListeningAreaIds.contains(area.id)) {
+                                      selectedListeningAreaIds.remove(area.id);
+                                    } else {
+                                      selectedListeningAreaIds.add(area.id);
+                                    }
+                                    _selectedListeningAreaIds = List<String>.from(selectedListeningAreaIds);
+                                    updateStates();
+                                  },
+                                  availableAreas: availableAreas,
+                                  zoneData: zoneData,
+                                  isAvailable: isAvailable,
+                                  floorData: null, // not used, see below
+                                  floorName: floorName, // pass floorName here
+                                );
+                              }).toList(),
+                        ),
+                      ),
+                    ),
 
-                      FusionToast.success(
-                        context,
-                        message: "Listening area '$locationName' created successfully on floor '$floorName'",
+                /// Create New Location Section
+                CreateNewLocationWidget(
+                  areaNameController: areaNameController,
+                  isCreateAreaExpanded: isCreateAreaExpanded,
+                  setDropdownState: setPopupState,
+                  selectedFloor: selectedFloor,
+                  selectedFloorId: selectedFloorId,
+                  onCreateNewArea: ({required String floorId, required String floorName, required String locationName}) {
+                    if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
+                      final ListeningArea newListeningArea = ListeningArea(
+                        name: locationName.trim(),
+                        vertices: <Offset>[
+                          const Offset(0, 0),
+                          const Offset(100, 0),
+                          const Offset(100, 100),
+                          const Offset(0, 100),
+                        ],
                       );
-                      onStateUpdate(); // Force parent rebuild so location count updates
-                    } catch (e) {
+
+                      try {
+                        newlyCreatedAreas.add(<String, dynamic>{
+                          'area': newListeningArea,
+                          'floorId': floorId,
+                          'floorName': floorName,
+                        });
+                        // Select all newly created locations
+                        final List<String> allNewIds = newlyCreatedAreas.map((Map<String, dynamic> e) => (e['area'] as ListeningArea).id).toList();
+                        _selectedListeningAreaIds = allNewIds;
+                        setPopupState(() {});
+                        areaNameController.clear();
+                        isCreateAreaExpanded = false;
+
+                        FusionToast.success(
+                          context,
+                          message: "Listening area '$locationName' created successfully on floor '$floorName'",
+                        );
+                        onStateUpdate(); // Force parent rebuild so location count updates
+                      } catch (e) {
+                        FusionToast.error(
+                          context,
+                          message: "Failed to create listening area: $e",
+                        );
+                      }
+                    } else {
                       FusionToast.error(
                         context,
-                        message: "Failed to create listening area: $e",
+                        message: "Please enter location name and select a floor",
                       );
                     }
-                  } else {
-                    FusionToast.error(
-                      context,
-                      message: "Please enter location name and select a floor",
-                    );
-                  }
-                },
-              ),
-            ],
+                  },
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -825,6 +879,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   /// Individual location item with checkbox
   Widget _buildLocationItem({
     required BuildContext context,
+    required int index,
     required ListeningArea area,
     required String zoneId,
     required VoidCallback onStateUpdate,
@@ -845,47 +900,55 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
     return InkWell(
       onTap: isAvailable ? toggleSelection : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-        child: Row(
-          children: <Widget>[
-            SizedBox(
-              width: 14,
-              height: 14,
-              child: Checkbox(
-                value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
-                activeColor: Theme.of(context).colorScheme.greyDark,
-                onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
-                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                visualDensity: VisualDensity.compact,
-                shape: const RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
-                  side: BorderSide(width: 0.5),
+      child: SemanticHelper.toggle(
+        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "location_item_checkbox_${index}_container"),
+        value: isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+          child: Row(
+            children: <Widget>[
+              SizedBox(
+                width: 14,
+                height: 14,
+                child: SemanticHelper.toggle(
+                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "location_item_checkbox_$index"),
+                  value: isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
+                  child: Checkbox(
+                    value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
+                    activeColor: Theme.of(context).colorScheme.greyDark,
+                    onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    visualDensity: VisualDensity.compact,
+                    shape: const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                      side: BorderSide(width: 0.5),
+                    ),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(width: 12),
+              const SizedBox(width: 12),
 
-            /// Location name and zone
-            Expanded(
-              child: FusionAppText(
-                text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w500,
-                  fontSize: 10,
-                  color: isAvailable ? Theme.of(context).textTheme.bodySmall?.color : Colors.grey[400],
+              /// Location name and zone
+              Expanded(
+                child: FusionAppText(
+                  text: area.name.isNotEmpty ? "${floorName ?? floorData?.name ?? ''}/${area.name}" : 'Unnamed Area',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    fontSize: 10,
+                    color: isAvailable ? Theme.of(context).textTheme.bodySmall?.color : Colors.grey[400],
+                  ),
                 ),
               ),
-            ),
-            FusionAppText(
-              text: zoneData?.name ?? "No zone",
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                fontSize: 9,
-                color: isAvailable ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
-                fontWeight: FontWeight.w600,
+              FusionAppText(
+                text: zoneData?.name ?? "No zone",
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 9,
+                  color: isAvailable ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -899,13 +962,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
     );
 
     _projectViewModel.recordSnapshot();
-    newlyCreatedAreas.forEach((Map<String, dynamic> entry) {
+    for (Map<String, dynamic> entry in newlyCreatedAreas) {
       final ListeningArea area = entry['area'] as ListeningArea;
       final String floorId = entry['floorId'] as String;
       // _projectViewModel.addFloor(floor: floor);
 
       _projectViewModel.addListeningArea(area: area, floorId: floorId);
-    });
+    }
     // _projectViewModel.addListeningArea(area: , floorId: floorId);
     _projectViewModel.addSubZone(subZone: newSubZone, autoSave: false);
     _projectViewModel.addSubZoneToZone(

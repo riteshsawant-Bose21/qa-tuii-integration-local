@@ -176,48 +176,55 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
           widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
         }
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4.0),
-        child: Row(
-          children: <Widget>[
-            Icon(
-              isExpanded ? Icons.arrow_drop_down_rounded : Icons.arrow_right_rounded,
-              size: 22,
-              color: Colors.black,
-            ),
-            const SizedBox(width: 2),
-            FusionAppText(
-              text: title,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
+      child: SemanticHelper.toggle(
+        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "expandable_header_$title"),
+        value: isExpanded,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4.0),
+          child: Row(
+            children: <Widget>[
+              Icon(
+                isExpanded ? Icons.arrow_drop_down_rounded : Icons.arrow_right_rounded,
+                size: 22,
                 color: Colors.black,
               ),
-            ),
-          ],
+              const SizedBox(width: 2),
+              FusionAppText(
+                text: title,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
   /// Helper method to build animated collapsible content
-  Widget _buildAnimatedContent(bool isExpanded, Widget content) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
-      curve: Curves.easeInOut,
-      height: isExpanded ? null : 0,
-      child: AnimatedOpacity(
-        duration: const Duration(milliseconds: 200),
-        opacity: isExpanded ? 1.0 : 0.0,
-        child:
-            isExpanded
-                ? Column(
-                  children: <Widget>[
-                    const SizedBox(height: 8),
-                    content,
-                  ],
-                )
-                : const SizedBox.shrink(),
+  Widget _buildAnimatedContent(bool isExpanded, String sectionTitle, Widget content) {
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_content_$sectionTitle"),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+        height: isExpanded ? null : 0,
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: isExpanded ? 1.0 : 0.0,
+          child:
+              isExpanded
+                  ? Column(
+                    children: <Widget>[
+                      const SizedBox(height: 8),
+                      content,
+                    ],
+                  )
+                  : const SizedBox.shrink(),
+        ),
       ),
     );
   }
@@ -228,30 +235,38 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
       return widget.sectionContent;
     }
 
-    return Padding(
-      padding: const EdgeInsets.all(10.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children:
-            widget.expandableSections!.map((ExpandableSection section) {
-              final bool isExpanded = _sectionExpansionState[section.title] ?? true;
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_sections_container"),
+      child: Padding(
+        padding: const EdgeInsets.all(10.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children:
+              widget.expandableSections!.map((ExpandableSection section) {
+                final bool isExpanded = _sectionExpansionState[section.title] ?? true;
 
-              return Column(
-                children: <Widget>[
-                  _buildExpandableHeader(
-                    section.title,
-                    isExpanded,
-                    () {
-                      setState(() {
-                        _sectionExpansionState[section.title] = !isExpanded;
-                      });
-                    },
+                final int index = widget.expandableSections!.indexOf(section);
+
+                return SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "expandable_section_${section.title}_index_$index"),
+                  child: Column(
+                    children: <Widget>[
+                      _buildExpandableHeader(
+                        section.title,
+                        isExpanded,
+                        () {
+                          setState(() {
+                            _sectionExpansionState[section.title] = !isExpanded;
+                          });
+                        },
+                      ),
+                      _buildAnimatedContent(isExpanded, section.title, section.content),
+                      if (section != widget.expandableSections!.last) const SizedBox(height: 16),
+                    ],
                   ),
-                  _buildAnimatedContent(isExpanded, section.content),
-                  if (section != widget.expandableSections!.last) const SizedBox(height: 16),
-                ],
-              );
-            }).toList(),
+                );
+              }).toList(),
+        ),
       ),
     );
   }
@@ -332,17 +347,20 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                   child: Row(
                                     children: <Widget>[
                                       Expanded(
-                                        child: FusionTextField(
-                                          controller: searchController,
-                                          hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
-                                          focusNode: _searchFocusNode,
-                                          onChanged: (String value) {
-                                            setState(() {});
-                                            widget.onSearchChanged?.call(value.trim());
-                                            if (isSearchVisible) {
-                                              widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
-                                            }
-                                          },
+                                        child: SemanticHelper.formControl(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
+                                          child: FusionTextField(
+                                            controller: searchController,
+                                            hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
+                                            focusNode: _searchFocusNode,
+                                            onChanged: (String value) {
+                                              setState(() {});
+                                              widget.onSearchChanged?.call(value.trim());
+                                              if (isSearchVisible) {
+                                                widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
+                                              }
+                                            },
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -371,10 +389,16 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 onTap: _onSearchIconPressed,
                                 child: Container(
                                   padding: const EdgeInsets.all(4),
-                                  child: Icon(
-                                    isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
-                                    color: Theme.of(context).colorScheme.greyDark,
-                                    size: 17,
+                                  child: SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(
+                                      SemanticTypes.button,
+                                      isSearchVisible ? "${widget.title.toLowerCase()}_search_close_icon" : "${widget.title.toLowerCase()}_search_icon",
+                                    ),
+                                    child: Icon(
+                                      isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
+                                      color: Theme.of(context).colorScheme.greyDark,
+                                      size: 17,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -401,26 +425,29 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                     children: <Widget>[
                       /// Search results message (only when active & query not empty)
                       if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty))
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                          child: RichText(
-                            text: TextSpan(
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
-                              children: <InlineSpan>[
-                                TextSpan(
-                                  text: '${widget.searchResultCount ?? 0} results found for ',
-                                ),
-                                TextSpan(
-                                  text: '"${widget.searchQuery}"',
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                    backgroundColor: Colors.yellow[200],
-                                    color: Colors.black,
+                        SemanticHelper.container(
+                          testId: SemanticHelper.createTestId(SemanticTypes.container, "search_results_message_container"),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                            child: RichText(
+                              text: TextSpan(
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
+                                children: <InlineSpan>[
+                                  TextSpan(
+                                    text: '${widget.searchResultCount ?? 0} results found for ',
                                   ),
-                                ),
-                              ],
+                                  TextSpan(
+                                    text: '"${widget.searchQuery}"',
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      backgroundColor: Colors.yellow[200],
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
