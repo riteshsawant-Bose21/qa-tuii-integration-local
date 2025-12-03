@@ -9,7 +9,7 @@ class SnapshotItemCard extends StatefulWidget {
   final bool isDragging;
   final bool isSelected;
   final VoidCallback? onDelete;
-  final VoidCallback? onTap; // Add this
+  final VoidCallback? onTap;
 
   const SnapshotItemCard({
     this.isDragging = false,
@@ -46,7 +46,12 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
         /// Card container
         child: Container(
           decoration: BoxDecoration(
-            color: widget.isDragging ? Theme.of(context).colorScheme.primary.withOpacity(0.15) : (_isHovered ? Colors.grey[200] : null),
+            color:
+                widget.isSelected
+                    ? Colors.grey[200]
+                    : widget.isDragging
+                    ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
+                    : (_isHovered ? Colors.grey[200] : null),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
               color:

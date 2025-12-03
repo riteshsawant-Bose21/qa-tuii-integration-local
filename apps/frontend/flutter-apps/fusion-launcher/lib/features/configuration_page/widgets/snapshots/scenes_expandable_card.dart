@@ -19,6 +19,7 @@ class ScenesExpandableCard extends StatefulWidget {
   final bool isDragHovered;
   final Function(String sceneId) onSceneSetDelete;
   final Function(String snapshotId) onScenesSnapshotDelete;
+  final Function(String sceneId)? onSelect; // Add this line
   final Function(String sceneId)? onDragStarted;
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
@@ -31,6 +32,7 @@ class ScenesExpandableCard extends StatefulWidget {
     required this.snapShotList,
     required this.onSceneSetDelete,
     required this.onScenesSnapshotDelete,
+    this.onSelect,
     this.onDragStarted,
     this.onDragEnd,
     this.draggingSnapshotId,
@@ -65,6 +67,12 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
       name: _snapshotsNameController.text.trim(),
     );
     _projectViewModel.addNewSceneToSceneSet(sceneSetId: widget.sceneSetData.id, scene: newScene);
+
+    /// expand the scene set to show the new item
+    _isScenesExpanded.value = true;
+
+    /// make this snapshot selected
+    _projectViewModel.setSelectedSnapshotId(newScene.id);
 
     /// Clear dialog and close popup
     _clearSourceSetDialog(pop: true, popContext: popupContext);
@@ -257,26 +265,33 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                   ),
                 ),
                 if (isExpanded)
-                  widget.snapShotList.isEmpty
-                      ? Padding(
-                        padding: const EdgeInsets.all(22.0),
-                        child: FusionAppText(
-                          text: "No Snapshots Available",
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                          ),
-                        ),
-                      )
-                      : SnapshotList(
-                        snapShotList: widget.snapShotList,
-                        selectedSnapshotId: _projectViewModel.selectedSnapshotId,
-                        onDelete: (String sceneId) {
-                          widget.onScenesSnapshotDelete(sceneId);
-                        },
-                        onDragStarted: widget.onDragStarted,
-                        onDragEnd: widget.onDragEnd,
-                        draggingSnapshotId: widget.draggingSnapshotId,
-                      ),
+                  Container(
+                    alignment: Alignment.center,
+                    width: double.infinity,
+                    color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.05) : Colors.transparent,
+                    child:
+                        widget.snapShotList.isEmpty
+                            ? Padding(
+                              padding: const EdgeInsets.all(22.0),
+                              child: FusionAppText(
+                                text: "No Snapshots Available",
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 12,
+                                ),
+                              ),
+                            )
+                            : SnapshotList(
+                              snapShotList: widget.snapShotList,
+                              selectedSnapshotId: _projectViewModel.selectedSnapshotId,
+                              onSelect: widget.onSelect,
+                              onDelete: (String sceneId) {
+                                widget.onScenesSnapshotDelete(sceneId);
+                              },
+                              onDragStarted: widget.onDragStarted,
+                              onDragEnd: widget.onDragEnd,
+                              draggingSnapshotId: widget.draggingSnapshotId,
+                            ),
+                  ),
               ],
             );
           },

@@ -157,16 +157,16 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
             onLeave: (SceneModel? data) {},
             onAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
               if (_draggingFromSection == 'scenes') {
-                // First check if it already exists in snapshots to avoid duplicates
+                /// First check if it already exists in snapshots to avoid duplicates
                 final List<SceneModel> existing = _projectViewModel.getAllScenes();
                 final bool alreadyInList = existing.any((SceneModel s) => s.id == details.data.id);
 
                 if (!alreadyInList) {
-                  // Add to snapshots section first
+                  /// Add to snapshots section first
                   _projectViewModel.addNewScene(scene: details.data);
                 }
 
-                // Remove from all scene sets (since it's now in snapshots)
+                /// Remove from all scene sets (since it's now in snapshots)
                 final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
                 for (SceneSetModel sceneSet in allSceneSets) {
                   final List<SceneModel> scenesInSet = _projectViewModel.getScenesInSceneSet(sceneSetId: sceneSet.id);
@@ -330,6 +330,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                       sceneSetData: sceneSetData,
                       isDragHovered: false,
                       snapShotList: associatedScenes,
+                      onSelect: (String sceneId) {
+                        _projectViewModel.setSelectedSnapshotId(sceneId);
+                      },
                       onSceneSetDelete: (String sceneSetId) {
                         _projectViewModel.removeSceneSet(sceneSetId: sceneSetId);
                       },

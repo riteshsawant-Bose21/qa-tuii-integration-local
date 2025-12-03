@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_item_card.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
 /// A widget that displays a list of snapshot items in a reorderable list view.
@@ -46,11 +45,14 @@ class SnapshotList extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView.separated(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 6),
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       itemCount: snapShotList.length,
-      separatorBuilder: (BuildContext context, int index) => const SizedBox(),
+      separatorBuilder:
+          (BuildContext context, int index) => const SizedBox(
+            height: 8,
+          ),
       itemBuilder: (BuildContext context, int index) {
         final SceneModel snapShotData = snapShotList[index];
         final bool isDragging = draggingSnapshotId == snapShotData.id;

@@ -469,13 +469,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           // const PanelHeader(title: 'OUTPUT'),
 
           /// Zones Section
-          SectionHeader(
+          const SectionHeader(
             title: 'Zones',
             assetPath: 'assets/images/zone_icon.png',
-            trailing: IconButton(
-              icon: const Icon(Icons.add, size: 20),
-              onPressed: () {},
-            ),
           ),
 
           /// Zones List
