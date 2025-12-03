@@ -202,11 +202,24 @@ class ProcessingChainView extends StatelessWidget {
                               message: "Customize Processing Block Layout",
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (BuildContext context) => Scaffold(appBar: AppBar(), body: const ProcessingBlockCustomizer()),
-                                    ),
-                                  );
+                                  Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute<void>(
+                                          builder:
+                                              (BuildContext context) => Scaffold(
+                                                appBar: AppBar(),
+                                                body: ProcessingBlockCustomizer(
+                                                  selectedAlgorithmId: state.selectedBlock.algorithmId,
+                                                ),
+                                              ),
+                                        ),
+                                      )
+                                      // refresh the layout from storage
+                                      .whenComplete(
+                                        () {
+                                          viewModel.refreshProcessingBlock(state.selectedBlock);
+                                        },
+                                      );
                                 },
                                 child: const Icon(Icons.edit_outlined),
                               ),
