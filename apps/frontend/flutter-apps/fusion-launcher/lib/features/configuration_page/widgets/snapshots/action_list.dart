@@ -80,7 +80,7 @@ class ActionList extends StatelessWidget {
                   ),
 
                   /// Action Row Header
-                  const SceneActionHeader(),
+                  const SnapshotActionRowHeader(),
 
                   /// show list of actions for the selected scene/snapshots
                   Column(
@@ -88,9 +88,8 @@ class ActionList extends StatelessWidget {
                         _projectViewModel
                             .getSceneActionsForScene(selectedSnapshotId)
                             .map(
-                              (SceneActionModel action) => SceneActionRow(
+                              (SceneActionModel action) => SnapshotActionRowData(
                                 action: action,
-                                onChanged: () => <dynamic, dynamic>{},
                               ),
                             )
                             .toList(),

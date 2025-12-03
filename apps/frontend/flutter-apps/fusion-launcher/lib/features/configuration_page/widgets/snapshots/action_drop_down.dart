@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
 class FusionDropdown<T> extends StatelessWidget {
   final T? value;
@@ -17,17 +19,33 @@ class FusionDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
-      value: value,
-      decoration: const InputDecoration(
-        border: OutlineInputBorder(),
-        isDense: true,
+      initialValue: value,
+      hint: FusionAppText(
+        text: "Select an option",
+        style: Theme.of(context).textTheme.bodySmall,
+        maxLine: 1,
       ),
+      decoration: InputDecoration(
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(4),
+        ),
+        isDense: true,
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.white,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      ),
+      dropdownColor: Theme.of(context).colorScheme.white,
+      style: Theme.of(context).textTheme.bodySmall,
       items:
           items
               .map(
-                (e) => DropdownMenuItem(
-                  value: e,
-                  child: Text(display(e)),
+                (T menuItem) => DropdownMenuItem<T>(
+                  value: menuItem,
+                  child: FusionAppText(
+                    text: display(menuItem),
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLine: 1,
+                  ),
                 ),
               )
               .toList(),

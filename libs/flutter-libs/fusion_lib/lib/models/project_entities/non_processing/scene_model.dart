@@ -260,19 +260,19 @@ class SceneModel {
 
 /// MAIN MODEL (One Row)
 class SceneActionModel {
-  final String id;
+  String id;
 
   /// Column 1
-  final SceneActionType? actionType;
+  SceneActionType? actionType;
 
   /// Column 2 — complex object
-  final SceneItem? item;
+  SceneItem? item;
 
   /// Column 3 — param object
-  final SceneParam? param;
+  SceneParam? param;
 
   /// Column 4 — typed value
-  final SceneValue? value;
+  SceneValue? value;
 
   SceneActionModel({
     String? id,
