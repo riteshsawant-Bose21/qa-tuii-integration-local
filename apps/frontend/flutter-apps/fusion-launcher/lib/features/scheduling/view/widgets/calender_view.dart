@@ -22,7 +22,7 @@ class CalenderView extends StatelessWidget {
     const double hourLabelWidth = 100;
     const double dayLabelHeight = 50;
     const double hourWidth = 100;
-    const double dayHeight = 100;
+    const double dayHeight = 200;
     final double totalWidth = hourLabelWidth + (24 * hourWidth);
     final double totalHeight = dayLabelHeight + (daysInMonth * dayHeight);
 
@@ -74,28 +74,28 @@ class CalenderView extends StatelessWidget {
               ...events.map((CalendarEvent event) {
                 final double top = dayLabelHeight + (event.startTime.day - 1) * dayHeight;
                 final double left = hourLabelWidth + (event.startTime.hour * hourWidth) + (event.startTime.minute / 60 * hourWidth);
-                // final double width = event.endTime.difference(event.startTime).inMinutes / 60 * hourWidth;
+
                 final List<CalendarEvent> todaysEvents =
                     eventsByDate[DateTime(event.startTime.year, event.startTime.month, event.startTime.day)] ?? <CalendarEvent>[];
                 final List<CalendarEvent> overlappingEvents = <CalendarEvent>[];
-                int currentEventPosition = 0;
                 for (final CalendarEvent otherEvent in todaysEvents) {
-                  if (otherEvent == event) continue;
-                  if (otherEvent.startTime.isBefore(event.startTime.add(const Duration(minutes: 120))) &&
-                      otherEvent.startTime.add(const Duration(minutes: 120)).isAfter(event.startTime)) {
-                    if (otherEvent.startTime.isBefore(event.startTime) ||
-                        (otherEvent.startTime.hour == event.startTime.hour && otherEvent.startTime.minute <= event.startTime.minute)) {
-                      currentEventPosition += 1;
-                    }
+                  final DateTime eventStartTime = event.startTime;
+                  final DateTime otherStartTime = otherEvent.startTime;
+                  final DateTime eventEndTime = eventStartTime.add(const Duration(hours: 1));
+                  final DateTime otherEndTime = otherStartTime.add(const Duration(hours: 1));
+
+                  if (eventStartTime.isBefore(otherEndTime) && otherStartTime.isBefore(eventEndTime)) {
                     overlappingEvents.add(otherEvent);
                   }
                 }
-                final double perEventHeight = (dayHeight * 0.9) / (overlappingEvents.length + 1);
+                overlappingEvents.sort((CalendarEvent a, CalendarEvent b) => a.startTime.compareTo(b.startTime));
+                final int currentEventPosition = overlappingEvents.indexOf(event);
 
+                final double perEventHeight = (dayHeight * 0.9) / (overlappingEvents.isEmpty ? 1 : overlappingEvents.length);
                 return Positioned(
                   top: top + (currentEventPosition * perEventHeight),
                   left: left,
-                  // width: width,
+                  // width: hourWidth,
                   height: perEventHeight.clamp(dayHeight * 0.1, dayHeight * 0.75),
                   child: Container(
                     decoration: BoxDecoration(
