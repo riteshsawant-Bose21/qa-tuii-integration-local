@@ -68,33 +68,40 @@ class ActionList extends StatelessWidget {
               if (selectedSnapshotId == null) {
                 return const SizedBox.shrink();
               }
-              return Column(
-                children: <Widget>[
-                  /// Snapshot Header Widget
-                  SnapshotHeaderWidget(
-                    onAdd: () {
-                      final SceneActionModel action = SceneActionModel();
-                      _projectViewModel.addSceneActionToScene(sceneId: selectedSnapshotId, action: action);
-                    },
-                    onReorder: () {},
-                  ),
+              return Expanded(
+                child: Column(
+                  children: <Widget>[
+                    /// Snapshot Header Widget
+                    SnapshotHeaderWidget(
+                      onAdd: () {
+                        final SceneActionModel action = SceneActionModel();
+                        _projectViewModel.addSceneActionToScene(sceneId: selectedSnapshotId, action: action);
+                      },
+                      onReorder: () {},
+                    ),
 
-                  /// Action Row Header
-                  const SnapshotActionRowHeader(),
+                    /// Action Row Header
+                    const SnapshotActionRowHeader(),
 
-                  /// show list of actions for the selected scene/snapshots
-                  Column(
-                    children:
-                        _projectViewModel
-                            .getSceneActionsForScene(selectedSnapshotId)
-                            .map(
-                              (SceneActionModel action) => SnapshotActionRowData(
-                                action: action,
-                              ),
-                            )
-                            .toList(),
-                  ),
-                ],
+                    /// show list of actions for the selected scene/snapshots
+                    Expanded(
+                      child: SingleChildScrollView(
+                        physics: const ClampingScrollPhysics(),
+                        child: Column(
+                          children:
+                              _projectViewModel
+                                  .getSceneActionsForScene(selectedSnapshotId)
+                                  .map(
+                                    (SceneActionModel action) => SnapshotActionRowData(
+                                      action: action,
+                                    ),
+                                  )
+                                  .toList(),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               );
             },
           ),

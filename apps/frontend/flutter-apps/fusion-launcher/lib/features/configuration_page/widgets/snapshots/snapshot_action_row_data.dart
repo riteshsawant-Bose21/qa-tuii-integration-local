@@ -78,7 +78,6 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                   /// Set first item if available, else null
                   if (newItemList.isNotEmpty) {
                     action.item = SceneItem(itemId: newItemList.first.id);
-                    print('Selected Scene Item: ${newItemList.first.name}');
                   } else {
                     action.item = null;
                   }
@@ -100,11 +99,13 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
               builder: (_) {
                 SceneItemDropdown? selectedItem;
 
-                if (action.item != null) {
-                  selectedItem = itemList.firstWhere(
-                    (SceneItemDropdown e) => e.id == action.item!.itemId,
-                    // orElse: () => null,
-                  );
+                if (action.item != null && itemList.isNotEmpty) {
+                  selectedItem = itemList.where((SceneItemDropdown e) => e.id == action.item!.itemId).firstOrNull;
+
+                  // If item not found in the current list, clear it
+                  if (selectedItem == null) {
+                    action.item = null;
+                  }
                 }
 
                 return FusionDropdown<SceneItemDropdown>(
@@ -152,7 +153,8 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
               display: (SceneParam e) => e.label,
               onChanged: (SceneParam? actionType) {
                 action.param = actionType;
-                // Reset value since param changed and create new SceneValue with correct valueType and label
+
+                /// Reset value since param changed and create new SceneValue with correct valueType and label
                 if (actionType != null) {
                   action.value = SceneValue(
                     value: null,
