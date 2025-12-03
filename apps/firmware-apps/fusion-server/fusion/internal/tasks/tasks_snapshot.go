@@ -192,7 +192,7 @@ func (tm *TaskManager) handleSnapshotOperation(node string, name string, update 
 
 	msg := api.NewNotifyMessage(update,
 		node,
-		api.WithSnapshotUpdate(&api.SnapshotUpdate{
+		api.WithSnapshotOperation(&api.SnapshotOperation{
 			Name:      name,
 			Data:      data,
 			Timestamp: time.Now().UTC(),

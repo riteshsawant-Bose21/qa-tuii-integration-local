@@ -51,6 +51,10 @@ func (h *Hub) BroadcastToObservers(msg *api.NotifyMessage) {
 // performing version changes, and then broadcasting the message to other nodes and local clients if needed.
 func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 
+	logger := logging.GetLogger()
+
+	logger.Debug("Hub::BroadcastToNodes: %v", message)
+
 	switch message.Operation {
 
 	case api.NotifyOpAudioRemove:
@@ -85,7 +89,7 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 				return fmt.Errorf("failed to apply remote update: %w", err)
 			}
 			if !dirty {
-				logging.GetLogger().Debug(
+				logger.Debug(
 					"broadcastMessage: skipping stale ConfigUpdate version=%v from node=%s",
 					message.ConfigUpdate.Version,
 					message.Node,
@@ -100,27 +104,33 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		// Overwrite with effective local Lamport version
 		updated := *message.ConfigUpdate
 		updated.Version = h.stateManager.GetVersion()
-		//logging.GetLogger().Info("-------->>> BroadcastToNodes::NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
+		logger.Debug("BroadcastToNodes::NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
 		message.ConfigUpdate = &updated
 
 		h.persistence.MarkDirty()
 
 	case api.NotifyOpSnapActivate:
-		if message.SnapshotUpdate == nil || message.SnapshotUpdate.Name == "" {
-			return fmt.Errorf("SnapshotUpdate with valid name required for snap activate")
+		if message.SnapshotOperation == nil || message.SnapshotOperation.Name == "" {
+			return fmt.Errorf("SnapshotOperation with valid name required for snap activate")
 		}
 
-		if err := h.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		logging.GetLogger().Debug("[Hub] SnapActivate on %s for %s (origin=%s)",
+			h.transport.LocalNode().Name,
+			message.SnapshotOperation.Name,
+			message.Node,
+		)
+
+		if err := h.persistence.ActivateSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error activating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapCreate:
-		if err := h.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := h.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error creating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapDelete:
-		if err := h.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := h.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)
 		}
 
@@ -133,7 +143,10 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 		return fmt.Errorf("cluster transport not configured")
 	}
 
-	if message.Node == h.transport.LocalNode().Name {
+	localNode := h.transport.LocalNode().Name
+	logger.Debug("Hub::BroadcastToNodes: messageNode (%s) localNode (%s), ", message.Node, localNode)
+
+	if message.Node == localNode {
 		data, err := json.Marshal(message)
 		if err != nil {
 			return fmt.Errorf("failed to marshal update: %w", err)

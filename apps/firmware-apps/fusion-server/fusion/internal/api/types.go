@@ -141,8 +141,8 @@ type RemoteStateSnapshot struct {
 	State   map[string]*StateEntry `json:"state"`
 }
 
-// SnapshotUpdate represents a snapshot update operation broadcast across the cluster.
-type SnapshotUpdate struct {
+// SnapshotOperation represents a snapshot operation broadcast across the cluster.
+type SnapshotOperation struct {
 	Name      string         `json:"name"`
 	Data      map[string]any `json:"data,omitempty"`
 	Timestamp time.Time      `json:"timestamp"`
