@@ -434,6 +434,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           ),
                                         ),
                                         const SizedBox(width: 16),
+                                        SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                                        child:
                                         InkWell(
                                           onTap: () {
                                             serviceLocator<ProjectViewModel>().clearSelectedZone();
@@ -469,6 +471,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
+                                        ),
                                         const SizedBox(width: 12),
                                         GuideShowcaseWrapper(
                                           step: GuideShowCaseSteps.confirmSelectListeningArea,
@@ -478,7 +481,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             widget.floorCanvasController.completeListeningAreaSelection();
                                             serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
                                           },
-                                          child: InkWell(
+                                          child:SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
+                                           child: InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
                                               widget.floorCanvasController.completeListeningAreaSelection();
@@ -513,6 +517,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
+                                      ),
                                       ],
                                     ),
                                   );
