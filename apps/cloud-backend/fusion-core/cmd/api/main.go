@@ -10,7 +10,7 @@
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
 
-// @host localhost:8020
+// @host localhost:8080
 // @BasePath /api/v1
 // @schemes http https
 
@@ -36,6 +36,11 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
+	userprofile "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/profile"
+	userprofiledb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/profile/db"
+	usersettings "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/settings"
+	usersettingsdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/settings/db"
+
 	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	// productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
@@ -153,12 +158,40 @@ func main() {
 	}
 	logger.Info("Initialized User Service.")
 
+	//Initialize User Profile DB Service
+	userProfileDBSvc := userprofiledb.NewService(pgs)
+	if userProfileDBSvc == nil {
+		logger.Fatal("Failed to initialize user profile database service")
+	}
+	logger.Info("Initialized User Profile DB Service.")
+
+	//Initialize user profile Service
+	userProfileSVC := userprofile.NewService(userProfileDBSvc)
+	if userProfileSVC == nil {
+		logger.Fatal("Failed to initialize user profile service")
+	}
+	logger.Info("Initialized User Profile Service.")
+
+	//Initialize User Settings DB Service
+	userSettingsDBSvc := usersettingsdb.NewService(pgs)
+	if userSettingsDBSvc == nil {
+		logger.Fatal("Failed to initialize user settings database service")
+	}
+	logger.Info("Initialized User Settings DB Service.")
+
+	//Initialize user settings Service
+	userSettingsSVC := usersettings.NewService(userSettingsDBSvc)
+	if userSettingsSVC == nil {
+		logger.Fatal("Failed to initialize user settings service")
+	}
+	logger.Info("Initialized User Settings Service.")
+
 	// Initialize API Server
 	server, err := api.New(&api.Config{
 		Host:        "localhost",
 		Port:        "8080",
 		Auth0Domain: cfg.Auth0.Domain, // Auth0 domain
-	}, userSVC, userDBSvc, roleManagementSvc)
+	}, userSVC, userDBSvc, roleManagementSvc, userProfileSVC, userSettingsSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

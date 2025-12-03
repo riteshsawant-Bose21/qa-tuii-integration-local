@@ -59,6 +59,24 @@ func (a *API) registerRoutes() {
 		user.GET("/me/profile", userHandler.GetUserProfile)
 	}
 
+	// user profile management routes (/user/profile/*)
+	userProfile := user.Group("/profile")
+	userProfilehandler := handler.NewUserProfileHandler(a.userProfileSvc)
+	{
+		userProfile.GET("/:userID", userProfilehandler.GetUserProfile)
+		userProfile.POST("", userProfilehandler.CreateUserProfile)
+		userProfile.PUT("", userProfilehandler.UpdateUserProfile)
+	}
+
+	// user settings management routes (/user/settings/*)
+	userSettings := user.Group("/settings")
+	userSettingsHandler := handler.NewUserSettingsHandler(a.userSettingsSvc)
+	{
+		userSettings.GET("/:userID", userSettingsHandler.GetUserSettings)
+		userSettings.POST("", userSettingsHandler.CreateUserSettings)
+		userSettings.PUT("", userSettingsHandler.UpdateUserSettings)
+	}
+
 	// Additional user management routes
 	users := v1.Group("/users")
 	users.Use(a.authMiddleware.Middleware())
@@ -89,4 +107,5 @@ func (a *API) registerRoutes() {
 		organization.PUT("/roles/:roleID/permissions", roleManagementHandler.UpdateRolePermissions)
 		organization.GET("/users", roleManagementHandler.GetOrganizationUsers)
 	}
+
 }
