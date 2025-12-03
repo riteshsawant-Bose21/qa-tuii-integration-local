@@ -30,6 +30,7 @@ class _SchedulerSection extends StatelessWidget {
             (title: "", flex: 1),
           ],
           itemCount: state.schedules.length,
+          
           itemBuilder: (BuildContext context, int index) {
             final ScheduleConfig schedule = state.schedules[index];
             return <Widget>[

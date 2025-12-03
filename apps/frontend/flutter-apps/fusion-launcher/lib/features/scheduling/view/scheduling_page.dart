@@ -140,19 +140,19 @@ class _SchedulingPageState extends State<SchedulingPage> {
                         child: FusionTextField(
                           hintText: "Search",
                           autofocus: true,
-                          prefixIcon: Icon(
+                          prefixIcon: const Icon(
                             Icons.search,
                             size: 20,
-                            color: Colors.grey[400],
+                            color: Colors.black,
                           ),
                           suffixIcon: InkWell(
                             onTap: () {
                               context.read<SchedulerViewmodel>().idle();
                             },
-                            child: Icon(
+                            child: const Icon(
                               Icons.close,
                               size: 20,
-                              color: Colors.grey[400],
+                              color: Colors.black,
                             ),
                           ),
                           onChanged: (String query) {
