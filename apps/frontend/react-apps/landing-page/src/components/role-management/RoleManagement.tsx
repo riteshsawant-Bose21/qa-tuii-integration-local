@@ -39,6 +39,7 @@ import {
   People as PeopleIcon,
   Settings as SettingsIcon,
   Save as SaveIcon,
+  Info as InfoIcon,
   Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { useAuth0 } from '@auth0/auth0-react';
@@ -54,7 +55,7 @@ interface RoleWithPermissions {
   id: number;
   name: string;
   description: string;
-  permissions: FeaturePermissionDetail[];
+  permissions: FeaturePermissionDetail[] | null;
   user_count: number;
   created_at: string;
 }
@@ -106,7 +107,7 @@ const RoleManagement: React.FC = () => {
 
   useEffect(() => {
     loadRoleManagementData();
-  }, [getIdTokenClaims]);
+  }, []);
 
   const loadRoleManagementData = async () => {
     try {
@@ -143,6 +144,10 @@ const RoleManagement: React.FC = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadRoleManagementData();
+  }, []); // Only run on mount - token is guaranteed to be available
 
   const handleCreateRole = async () => {
     try {
@@ -267,17 +272,51 @@ const RoleManagement: React.FC = () => {
           color="primary"
           startIcon={<AddIcon />}
           onClick={() => setCreateRoleDialog(true)}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 600,
+            px: 3,
+            backgroundColor: '#000000',
+            color: '#ffffff',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+            '&:hover': {
+              backgroundColor: '#333333',
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+            }
+          }}
         >
           Create Role
         </Button>
       </Stack>
 
-      <TableContainer component={Card}>
+      <TableContainer 
+        component={Card} 
+        elevation={3}
+        sx={{ 
+          borderRadius: 3,
+          overflow: 'hidden',
+          border: '1px solid #e0e7ff',
+          '& .MuiTable-root': {
+            borderCollapse: 'separate',
+          }
+        }}
+      >
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ 
+              background: 'linear-gradient(135deg, #000000 0%, #343a40 100%)',
+              '& .MuiTableCell-head': {
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                color: 'white',
+                borderBottom: 'none',
+                py: 2.5,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }
+            }}>
               <TableCell>Role Name</TableCell>
-              <TableCell>Description</TableCell>
               <TableCell>Users</TableCell>
               <TableCell>Permissions</TableCell>
               <TableCell>Actions</TableCell>
@@ -285,43 +324,133 @@ const RoleManagement: React.FC = () => {
           </TableHead>
           <TableBody>
             {data?.roles.map((role) => (
-              <TableRow key={role.id}>
+              <TableRow 
+                key={role.id}
+                sx={{ 
+                  '&:hover': {
+                    backgroundColor: '#f8fafc',
+                    transform: 'scale(1.001)',
+                    transition: 'all 0.2s ease-in-out',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  },
+                  '&:nth-of-type(even)': {
+                    backgroundColor: '#fafbfc',
+                  },
+                  '& .MuiTableCell-root': {
+                    borderBottom: '1px solid #e2e8f0',
+                    py: 3,
+                  }
+                }}
+              >
                 <TableCell>
-                  <Typography variant="subtitle2">{role.name}</Typography>
+                  <Box display="flex" alignItems="center" gap={1.5}>
+                    <Typography variant="subtitle2" sx={{ 
+                      fontWeight: 600, 
+                      color: '#1e293b',
+                      fontSize: '0.95rem'
+                    }}>
+                      {role.name}
+                    </Typography>
+                    {role.description && (
+                      <Tooltip title={role.description} arrow placement="top">
+                        <InfoIcon 
+                          fontSize="small"
+                          color='info'
+                          sx={{ 
+                            cursor: 'help',
+                            '&:hover': { 
+                              color: '#000000',
+                              transform: 'scale(1.1)',
+                              transition: 'all 0.2s ease-in-out'
+                            }
+                          }}
+                        />
+                      </Tooltip>
+                    )}
+                  </Box>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" color="text.secondary">
-                    {role.description}
-                  </Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip label={`${role.user_count} users`} variant="outlined" size="small" />
+                  <Chip 
+                    label={`${role.user_count} users`} 
+                    variant="filled"
+                    size="small" 
+                    color={role.user_count > 0 ? "primary" : "default"}
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      height: 26,
+                      background: role.user_count > 0 
+                        ? 'linear-gradient(45deg, #000000, #343a40)'
+                        : '#e9ecef',
+                      color: role.user_count > 0 ? 'white' : '#6c757d',
+                    }}
+                  />
                 </TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1} flexWrap="wrap" gap={0.5}>
-                    {role.permissions.slice(0, 3).map((perm) => (
+                    {(role.permissions || []).slice(0, 3).map((perm) => (
                       <Chip 
                         key={perm.feature_id}
                         label={`${perm.feature_name}: ${perm.access_label}`}
                         variant="outlined"
                         size="small"
+                        sx={{
+                          borderRadius: 2,
+                          fontSize: '0.7rem',
+                          height: 24,
+                          borderColor: '#dee2e6',
+                          color: '#495057',
+                          backgroundColor: '#f8f9fa',
+                          '&:hover': {
+                            borderColor: '#000000',
+                            backgroundColor: '#e9ecef',
+                          }
+                        }}
                       />
                     ))}
-                    {role.permissions.length > 3 && (
-                      <Chip label={`+${role.permissions.length - 3} more`} variant="outlined" size="small" />
+                    {(role.permissions || []).length > 3 && (
+                      <Chip 
+                        label={`+${(role.permissions || []).length - 3} more`} 
+                        variant="outlined" 
+                        size="small"
+                        sx={{
+                          borderRadius: 2,
+                          fontSize: '0.7rem',
+                          height: 24,
+                          borderColor: '#6c757d',
+                          color: '#343a40',
+                          backgroundColor: '#f1f3f4',
+                        }}
+                      />
                     )}
                   </Stack>
                 </TableCell>
                 <TableCell>
-                  <Tooltip title="Edit Permissions">
+                  <Tooltip title="Edit Permissions" arrow>
                     <IconButton
                       size="small"
                       onClick={() => {
                         setSelectedRole(role);
                         setEditPermissionsDialog(true);
                       }}
+                      sx={{
+                        borderRadius: 2,
+                        padding: 1,
+                        backgroundColor: '#f8f9fa',
+                        border: '1px solid #dee2e6',
+                        color: '#495057',
+                        '&:hover': {
+                          backgroundColor: '#000000',
+                          borderColor: '#000000',
+                          color: 'white',
+                          transform: 'scale(1.05)',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                        },
+                        transition: 'all 0.2s ease-in-out',
+                      }}
                     >
-                      <EditIcon />
+                      <EditIcon fontSize="small" />
                     </IconButton>
                   </Tooltip>
                 </TableCell>
@@ -335,26 +464,96 @@ const RoleManagement: React.FC = () => {
 
   const UsersTab = () => (
     <Box>
-      <Typography variant="h6" mb={3}>Organization Users</Typography>
+      <Typography variant="h6" mb={3} sx={{ color: '#1e293b', fontWeight: 600 }}>
+        Organization Users
+      </Typography>
       
-      <TableContainer component={Card}>
+      <TableContainer 
+        component={Card} 
+        elevation={3}
+        sx={{ 
+          borderRadius: 3,
+          overflow: 'hidden',
+          border: '1px solid #e0e7ff',
+          '& .MuiTable-root': {
+            borderCollapse: 'separate',
+          }
+        }}
+      >
         <Table>
           <TableHead>
-            <TableRow>
+            <TableRow sx={{ 
+              background: 'linear-gradient(135deg, #343a40 0%, #495057 100%)',
+              '& .MuiTableCell-head': {
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                color: 'white',
+                borderBottom: 'none',
+                py: 2.5,
+                textTransform: 'uppercase',
+                letterSpacing: '0.5px',
+              }
+            }}>
               <TableCell>User</TableCell>
               <TableCell>Email</TableCell>
               <TableCell>Current Role</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell>Status</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {data?.users.map((user) => (
-              <TableRow key={user.id}>
+              <TableRow 
+                key={user.id}
+                sx={{ 
+                  '&:hover': {
+                    backgroundColor: '#f8fafc',
+                    transform: 'scale(1.001)',
+                    transition: 'all 0.2s ease-in-out',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
+                  },
+                  '&:nth-of-type(even)': {
+                    backgroundColor: '#fafbfc',
+                  },
+                  '& .MuiTableCell-root': {
+                    borderBottom: '1px solid #e2e8f0',
+                    py: 3,
+                  }
+                }}
+              >
                 <TableCell>
-                  <Typography variant="subtitle2">{user.full_name}</Typography>
+                  <Box display="flex" alignItems="center" gap={1.5}>
+                    <Box 
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: '50%',
+                        background: 'linear-gradient(45deg, #343a40, #495057)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.875rem',
+                        boxShadow: '0 2px 8px rgba(52, 58, 64, 0.3)',
+                      }}
+                    >
+                      {user.full_name?.charAt(0).toUpperCase() || 'U'}
+                    </Box>
+                    <Typography variant="subtitle2" sx={{ 
+                      fontWeight: 600, 
+                      color: '#1e293b',
+                      fontSize: '0.95rem'
+                    }}>
+                      {user.full_name}
+                    </Typography>
+                  </Box>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography variant="body2" sx={{ 
+                    color: '#64748b',
+                    fontSize: '0.875rem',
+                    fontWeight: 500,
+                  }}>
                     {user.email}
                   </Typography>
                 </TableCell>
@@ -363,9 +562,39 @@ const RoleManagement: React.FC = () => {
                     <Select
                       value={user.role_id}
                       onChange={(e) => handleUpdateUserRole(user.id, e.target.value as number)}
+                      sx={{
+                        borderRadius: 2,
+                        '& .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#dee2e6',
+                        },
+                        '&:hover .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#000000',
+                        },
+                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                          borderColor: '#000000',
+                        },
+                        '& .MuiSelect-select': {
+                          fontWeight: 500,
+                          color: '#495057',
+                        }
+                      }}
                     >
                       {data?.roles.map((role) => (
-                        <MenuItem key={role.id} value={role.id}>
+                        <MenuItem 
+                          key={role.id} 
+                          value={role.id}
+                          sx={{
+                            '&:hover': {
+                              backgroundColor: '#f8f9fa',
+                            },
+                            '&.Mui-selected': {
+                              backgroundColor: '#e9ecef',
+                              '&:hover': {
+                                backgroundColor: '#dee2e6',
+                              }
+                            }
+                          }}
+                        >
                           {role.name}
                         </MenuItem>
                       ))}
@@ -373,7 +602,20 @@ const RoleManagement: React.FC = () => {
                   </FormControl>
                 </TableCell>
                 <TableCell>
-                  <Chip label={user.role_name} variant="outlined" size="small" />
+                  <Chip 
+                    label={user.role_name} 
+                    variant="filled"
+                    size="small"
+                    sx={{
+                      borderRadius: 2,
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      height: 26,
+                      background: 'linear-gradient(45deg, #495057, #6c757d)',
+                      color: 'white',
+                      boxShadow: '0 2px 4px rgba(73, 80, 87, 0.3)',
+                    }}
+                  />
                 </TableCell>
               </TableRow>
             ))}
@@ -515,7 +757,7 @@ const RoleManagement: React.FC = () => {
               </TableHead>
               <TableBody>
                 {data?.features.map((feature) => {
-                  const currentPerm = selectedRole?.permissions.find(p => p.feature_id === feature.id);
+                  const currentPerm = selectedRole?.permissions?.find(p => p.feature_id === feature.id);
                   const newAccessLevel = permissionChanges[feature.id] || currentPerm?.access_level_id || 0;
                   
                   return (

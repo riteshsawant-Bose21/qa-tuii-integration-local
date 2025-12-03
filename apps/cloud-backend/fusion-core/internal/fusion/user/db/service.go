@@ -9,33 +9,17 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 )
 
-// UserDBExecutor defines the basic database operations
-type UserDBExecutor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
-}
-
-// UserDBContextExecutor can perform SQL queries with context
-type UserDBContextExecutor interface {
-	UserDBExecutor
-
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-}
-
 type Service struct {
-	db UserDBContextExecutor
+	db customModel.DBContextExecutor
 }
 
-func NewService(db UserDBContextExecutor) *Service {
+func NewService(db customModel.DBContextExecutor) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}

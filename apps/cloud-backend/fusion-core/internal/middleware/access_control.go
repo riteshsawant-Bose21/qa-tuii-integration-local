@@ -17,7 +17,6 @@ const (
 	PermissionRead  PermissionLevel = "read"
 	PermissionWrite PermissionLevel = "write"
 	PermissionAdmin PermissionLevel = "admin"
-	PermissionFull  PermissionLevel = "full"
 )
 
 // EndpointPermission defines the required permission for an endpoint
@@ -163,8 +162,6 @@ func (acc *AccessControlConfig) isPermissionSufficient(userLevel string, require
 		"none":  0,
 		"read":  1,
 		"write": 2,
-		"admin": 4, // Admin should have highest privileges
-		"full":  4,
 	}
 
 	userLevelInt, userExists := levelHierarchy[strings.ToLower(userLevel)]
