@@ -1,9 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_data.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_header.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../search_bar_sources.dart';
 
 class ActionList extends StatelessWidget {
+  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+
   const ActionList({super.key});
 
   @override
@@ -51,6 +59,36 @@ class ActionList extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+
+          /// Snapshot Header Widget
+          SnapshotHeaderWidget(
+            onAdd: () {},
+            onReorder: () {},
+          ),
+
+          /// Action Row Header
+          const SceneActionHeader(),
+
+          /// show list of actions for the selected scene/snapsdhots
+          Column(
+            children:
+                _projectViewModel
+                    .getSceneActionsForScene(sceneId)
+                    .map(
+                      (SceneActionModel action) => SceneActionRow(
+                        action: action,
+                        onChanged: (updatedAction) {
+                          // // Update the action in the list
+                          // int index = actions.indexWhere((a) => a.id == updatedAction.id);
+                          // if (index != -1) {
+                          //   actions[index] = updatedAction;
+                          // }
+                          // setState(() {});
+                        },
+                      ),
+                    )
+                    .toList(),
           ),
         ],
       ),
