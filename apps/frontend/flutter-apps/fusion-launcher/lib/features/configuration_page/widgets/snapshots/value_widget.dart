@@ -34,36 +34,26 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
       case SceneParamValueType.muteUnmute:
         final bool isMute = value.value == "mute";
 
-        return Row(
-          children: <Widget>[
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  final SceneValue updated = value.copyWith(value: "mute");
-                  widget.onChanged(updated);
-                  setState(() {});
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: isMute ? Colors.red : null,
-                ),
-                child: const Text("Mute"),
+        return GestureDetector(
+          onTap: () {
+            final SceneValue updated = value.copyWith(value: isMute ? "unmute" : "mute");
+            widget.onChanged(updated);
+            setState(() {});
+          },
+          child: Row(
+            children: <Widget>[
+              Icon(
+                isMute ? Icons.volume_off : Icons.volume_up,
+                size: 20,
+                color: Theme.of(context).colorScheme.greyDark,
               ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  final SceneValue updated = value.copyWith(value: "unmute");
-                  widget.onChanged(updated);
-                  setState(() {});
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: !isMute ? Colors.green : null,
-                ),
-                child: const Text("Unmute"),
+              const SizedBox(width: 8),
+              FusionAppText(
+                text: isMute ? "Mute" : "Unmute",
+                style: Theme.of(context).textTheme.bodySmall,
               ),
-            ),
-          ],
+            ],
+          ),
         );
 
       /// Volume Slider → store number as string
@@ -113,8 +103,7 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
         );
 
       ///  Dropdown → must read value.dropdownItems
-      //   case SceneParamValueType.dropdownSingle:
-      case SceneParamValueType.onOffButton:
+      case SceneParamValueType.dropdownSingle:
         // Check if label is valid before fetching items
         if (value.label.isEmpty) {
           return const Text('No parameter selected');
@@ -181,23 +170,34 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
         );
 
       /// On/Off toggle → stored as "on" or "off"
-      // case SceneParamValueType.onOffButton:
-      case SceneParamValueType.dropdownSingle:
+      case SceneParamValueType.onOffButton:
         final bool isOn = value.value == "on";
 
-        return Switch(
-          value: isOn,
-
-          activeThumbColor: Theme.of(context).colorScheme.black,
-          activeColor: Theme.of(context).colorScheme.black,
-          inactiveThumbColor: Theme.of(context).colorScheme.greyDark,
-          inactiveTrackColor: Theme.of(context).colorScheme.grey,
-
-          onChanged: (bool v) {
-            final SceneValue updated = value.copyWith(value: v ? "on" : "off");
-            widget.onChanged(updated);
-            setState(() {});
-          },
+        return Transform.scale(
+          alignment: Alignment.center,
+          scale: 0.7,
+          child: Switch(
+            value: isOn,
+            padding: EdgeInsets.zero,
+            thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
+              if (states.contains(MaterialState.selected)) {
+                return Theme.of(context).colorScheme.white;
+              }
+              return Theme.of(context).colorScheme.greyDark;
+            }),
+            trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
+              if (states.contains(MaterialState.selected)) {
+                return Theme.of(context).colorScheme.black;
+              }
+              return Theme.of(context).colorScheme.grey;
+            }),
+            trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
+            onChanged: (bool v) {
+              final SceneValue updated = value.copyWith(value: v ? "on" : "off");
+              widget.onChanged(updated);
+              setState(() {});
+            },
+          ),
         );
     }
   }
