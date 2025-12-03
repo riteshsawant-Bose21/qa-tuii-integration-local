@@ -9,19 +9,27 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/constants"
 )
 
-// RespondWithSuccess sends a success response
-func RespondWithSuccess(c *gin.Context, message string, data interface{}) {
+// RespondWithSuccess sends a success response with generic data
+func RespondWithSuccess(c *gin.Context, message string, data any) {
 	c.JSON(http.StatusOK, types.SuccessResponse{
 		Message: message,
 		Data:    data,
 	})
 }
 
-// RespondWithError sends an error response
-func RespondWithError(c *gin.Context, statusCode int, message, code string) {
-	c.JSON(statusCode, types.ErrorResponse{
+// RespondWithUserSuccess sends a success response with user data
+func RespondWithUserSuccess(c *gin.Context, message string, data *types.User) {
+	c.JSON(http.StatusOK, types.UserSuccessResponse{
 		Message: message,
-		Code:    code,
+		Data:    data,
+	})
+}
+
+// RespondWithAuthStatusSuccess sends a success response with auth status
+func RespondWithAuthStatusSuccess(c *gin.Context, message string, data map[string]interface{}) {
+	c.JSON(http.StatusOK, types.AuthStatusSuccessResponse{
+		Message: message,
+		Data:    data,
 	})
 }
 
@@ -49,9 +57,9 @@ func RespondWithNotFound(c *gin.Context, message string) {
 	})
 }
 
-// RespondWithCreated sends a created response
-func RespondWithCreated(c *gin.Context, message string, data interface{}) {
-	c.JSON(http.StatusCreated, types.SuccessResponse{
+// RespondWithUserCreated sends a created response with user data
+func RespondWithUserCreated(c *gin.Context, message string, data *types.User) {
+	c.JSON(http.StatusCreated, types.UserSuccessResponse{
 		Message: message,
 		Data:    data,
 	})

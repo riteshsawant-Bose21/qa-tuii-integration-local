@@ -21,7 +21,6 @@ type API struct {
 	product               fusion.Product
 	project               fusion.Project
 	user                  fusion.User
-	userDBService         *userdb.Service
 	roleManagementService *userdb.RoleManagementService
 	authMiddleware        middleware.AuthMiddleware
 }
@@ -31,7 +30,6 @@ type Config struct {
 	Host          string
 	Port          string
 	Auth0Domain   string
-	Auth0Audience string
 }
 
 // New returns a new API from the given services.
@@ -66,16 +64,15 @@ func New(cfg *Config,
 	}
 
 	// Initialize Auth0 validator and middleware
-	var authMiddleware middleware.AuthMiddleware
-	if cfg.Auth0Domain != "" {
-		auth0Config := auth.Auth0Config{
-			Domain: cfg.Auth0Domain,
-		}
-		auth0Validator := auth.NewAuth0Validator(auth0Config)
-		authMiddleware = middleware.NewAuth0Middleware(auth0Validator)
-	} else {
+	if cfg.Auth0Domain == "" {
 		return nil, errors.New("Auth0Domain is required for authentication")
 	}
+	auth0Config := auth.Auth0Config{
+    	Domain: cfg.Auth0Domain,
+	}
+
+	auth0Validator := auth.NewAuth0Validator(auth0Config)
+	authMiddleware := middleware.NewAuth0Middleware(auth0Validator)
 
 	api := &API{
 		engine: engine,
