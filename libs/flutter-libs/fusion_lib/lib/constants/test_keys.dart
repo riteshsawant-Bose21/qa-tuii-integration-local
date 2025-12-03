@@ -28,6 +28,7 @@ sealed class FusionTestKeys {
   static const String splLowerLimitTextField = 'spl_lower_limit_text_field';
   static const String splInvertColorToggle = 'spl_invert_color_toggle';
   static const String close = 'close';
+  static const String check = 'check';
   static const String closeX = 'close_x';
   static const String uploadFloorPlan = 'upload_floor_plan';
   static const String floorCalibrationCanvas = 'floor_calibration_canvas';

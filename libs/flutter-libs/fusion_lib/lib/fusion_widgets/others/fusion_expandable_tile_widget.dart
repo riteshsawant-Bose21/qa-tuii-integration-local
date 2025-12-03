@@ -109,10 +109,7 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           color: theme.colorScheme.white,
           border: Border(bottom: BorderSide(color: theme.colorScheme.dividerColor, width: 1)),
         ),
-        child: SemanticHelper.toggle(
-          testId: SemanticHelper.createTestId(SemanticTypes.toggle, widget.config.title),
-          value: widget.item.expanded,
-          child: ExpansionTile(
+        child: ExpansionTile(
             key: ValueKey<String>(widget.config.title),
             minTileHeight: 24,
             controller: widget.controller,
@@ -150,7 +147,6 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
             children: <Widget>[widget.config.dockItemWidget],
           ),
         ),
-      ),
     );
   }
 }
