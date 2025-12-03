@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -114,7 +113,8 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
         );
 
       ///  Dropdown → must read value.dropdownItems
-      case SceneParamValueType.dropdownSingle:
+      //   case SceneParamValueType.dropdownSingle:
+      case SceneParamValueType.onOffButton:
         // Check if label is valid before fetching items
         if (value.label.isEmpty) {
           return const Text('No parameter selected');
@@ -181,11 +181,18 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
         );
 
       /// On/Off toggle → stored as "on" or "off"
-      case SceneParamValueType.onOffButton:
+      // case SceneParamValueType.onOffButton:
+      case SceneParamValueType.dropdownSingle:
         final bool isOn = value.value == "on";
 
         return Switch(
           value: isOn,
+
+          activeThumbColor: Theme.of(context).colorScheme.black,
+          activeColor: Theme.of(context).colorScheme.black,
+          inactiveThumbColor: Theme.of(context).colorScheme.greyDark,
+          inactiveTrackColor: Theme.of(context).colorScheme.grey,
+
           onChanged: (bool v) {
             final SceneValue updated = value.copyWith(value: v ? "on" : "off");
             widget.onChanged(updated);

@@ -185,7 +185,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                           action.value ??
                           SceneValue(
                             value: null,
-                            label: action.param!.label, // Ensure label is set from param
+                            label: action.param!.label,
                             valueType: action.param!.valueType,
                           ),
                       onChanged: (SceneValue newVal) {
@@ -201,12 +201,12 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
           SizedBox(
             width: 20,
             child:
-            // delete icon
+            /// delete action from the scene
             GestureDetector(
               onTap: () {
-                // // Notify parent to delete this action
-                // _projectViewModel.deleteSceneAction(action);
-                // widget.onChanged();
+                _projectViewModel.removeSceneAction(
+                  actionId: action.id,
+                );
               },
               // fusion image delete icon
               child: const FusionImage.asset(
