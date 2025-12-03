@@ -237,6 +237,7 @@ func (tm *TaskManager) CreateScheduleMessageTask(w http.ResponseWriter, r *http.
 		Type:        api.TaskTypeMessage,
 		StartAt:     taskMessage.StartAt,
 		EndAt:       taskMessage.EndAt,
+		Recurrence:  taskMessage.Recurrence,
 		Enabled:     true,
 		Params: map[string]any{
 			api.MessageIDKey:       taskMessage.MessageID,

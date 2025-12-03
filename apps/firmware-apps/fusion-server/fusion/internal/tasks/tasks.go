@@ -198,8 +198,7 @@ func (tm *TaskManager) RecordExecution(task *api.Task, status string) {
 		tm.executionHistory = tm.executionHistory[len(tm.executionHistory)-MaxHistory:]
 	}
 
-	err := tm.saveHistory()
-	if err != nil {
+	if err := tm.saveHistory(); err != nil {
 		logging.GetLogger().Error("Error saving history: %v", err)
 	}
 }
@@ -421,21 +420,29 @@ func (tm *TaskManager) wrapTask(task *api.Task, fn TaskFunc) func() {
 	return func() {
 		now := time.Now()
 
-		// Too early
+		// Skip before start window
 		if !task.StartAt.IsZero() && now.Before(task.StartAt) {
+			logger.Debug("[TASKS] Skipping task '%s': before start time %s", task.ID, task.StartAt)
 			return
 		}
 
-		// Too late
+		// If past window, disable permanently
 		if !task.EndAt.IsZero() && now.After(task.EndAt) {
+			logger.Debug("[TASKS] Auto-disabling task '%s' after end time", task.ID)
 			tm.disableTask(task)
+			return
+		}
+
+		// Enforce recurring window, if present
+		if task.Recurrence != nil && !withinRecurringWindow(task.Recurrence, now) {
+			logger.Debug("[TASKS] Skipping task '%s': outside recurring window", task.ID)
 			return
 		}
 
 		defer func() {
 			if r := recover(); r != nil {
 				tm.RecordExecution(task, "failed")
-				logger.Error("[TASKS] Panic in task '%s': %v\n%s", task.ID, r, debug.Stack())
+				logger.Error("[TASKS] Task '%s' panic: %v\n%s", task.ID, r, debug.Stack())
 			}
 		}()
 

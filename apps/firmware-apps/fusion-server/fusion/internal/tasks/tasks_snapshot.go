@@ -44,6 +44,11 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if err := validateRecurringWindow(task.Recurrence); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
+		return
+	}
+
 	exists, err := tm.persistence.TaskExists(&task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
@@ -103,23 +108,21 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
 	hasStart := patch.StartAt != nil
 	hasEnd := patch.EndAt != nil
+	hasRecurrence := patch.Recurrence != nil
 
-	if !(hasSnapshot || hasCron || hasDesc) {
-		http.Error(w, "At least one field (snapshot, cron_expr, description) must be provided", http.StatusBadRequest)
+	if !(hasSnapshot || hasCron || hasDesc || hasStart || hasEnd || hasRecurrence) {
+		http.Error(w, "At least one field must be provided", http.StatusBadRequest)
 		return
 	}
 
-	// Update description
 	if hasDesc {
 		task.Description = *patch.Description
 	}
 
-	// Update cron expression
 	if hasCron {
 		task.CronExpr = *patch.CronExpr
 	}
 
-	// Update snapshot
 	if hasSnapshot {
 		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
 		if err != nil {
@@ -143,7 +146,14 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		task.EndAt = *patch.EndAt
 	}
 
-	// Run update
+	if hasRecurrence {
+		if err := validateRecurringWindow(patch.Recurrence); err != nil {
+			http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
+			return
+		}
+		task.Recurrence = patch.Recurrence
+	}
+
 	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
