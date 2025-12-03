@@ -49,7 +49,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
         children: <Widget>[
           /// draggable icon
           SizedBox(
-            width: 72,
+            width: 50,
             child: Opacity(
               opacity: 0.4,
               child: Icon(
