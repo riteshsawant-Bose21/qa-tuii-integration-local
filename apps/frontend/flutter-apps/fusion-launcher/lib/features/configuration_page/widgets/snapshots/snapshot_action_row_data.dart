@@ -37,38 +37,24 @@ class _SceneActionRowState extends State<SceneActionRow> {
               items: _projectViewModel.getSceneActionTypes(),
               display: (SceneActionType e) => e.name,
               onChanged: (SceneActionType? v) {
-                // updateSceneActionType(
-                //   actionId: action.id,
-                //   actionType: v!,
-                // );
                 widget.onChanged();
               },
             ),
           ),
 
-          // Expanded(
-          //   child: FusionDropdown<SceneItemDropdown>(
-          //     value: action.item,
-          //     items: _projectViewModel.getActionItemsByType(action.actionType!),
-          //     display: (SceneItemDropdown e) => e.name,
-          //     onChanged: (SceneItemDropdown? v) {
-          //       widget.onChanged();
-          //     },
-          //   ),
-          // ),
           /// Scene Item Dropdown
           Expanded(
             child: FusionDropdown<SceneItemDropdown>(
               value:
-                  action.item == null
-                      ? null
-                      : _projectViewModel
+                  (action.actionType != null && action.item != null)
+                      ? _projectViewModel
                           .getActionItemsByType(action.actionType!)
                           .firstWhere(
                             (SceneItemDropdown e) => e.id == action.item!.itemId,
                             orElse: () => SceneItemDropdown(id: action.item!.itemId, name: action.item!.itemId),
-                          ),
-              items: _projectViewModel.getActionItemsByType(action.actionType!),
+                          )
+                      : null,
+              items: action.actionType != null ? _projectViewModel.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[],
               display: (SceneItemDropdown e) => e.name,
               onChanged: (SceneItemDropdown? v) {
                 final SceneItem? sceneItem = v == null ? null : SceneItem(itemId: v.id);
@@ -81,13 +67,12 @@ class _SceneActionRowState extends State<SceneActionRow> {
           Expanded(
             child: FusionDropdown<SceneParam>(
               value: action.param,
-              items: _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, action.item!),
+              items:
+                  (action.actionType != null && action.item != null)
+                      ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, action.item!)
+                      : <SceneParam>[],
               display: (SceneParam e) => e.label,
               onChanged: (SceneParam? v) {
-                // updateSceneActionParam(
-                //   actionId: action.id,
-                //   param: v!,
-                // );
                 widget.onChanged();
               },
             ),

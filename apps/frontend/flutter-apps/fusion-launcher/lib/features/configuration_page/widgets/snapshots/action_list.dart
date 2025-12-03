@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_data.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
@@ -61,34 +62,42 @@ class ActionList extends StatelessWidget {
             ),
           ),
 
-          /// Snapshot Header Widget
-          SnapshotHeaderWidget(
-            onAdd: () {},
-            onReorder: () {},
-          ),
+          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              final String? selectedSnapshotId = _projectViewModel.selectedSnapshotId;
+              if (selectedSnapshotId == null) {
+                return const SizedBox.shrink();
+              }
+              return Column(
+                children: <Widget>[
+                  /// Snapshot Header Widget
+                  SnapshotHeaderWidget(
+                    onAdd: () {
+                      final SceneActionModel action = SceneActionModel();
+                      _projectViewModel.addSceneActionToScene(sceneId: selectedSnapshotId, action: action);
+                    },
+                    onReorder: () {},
+                  ),
 
-          /// Action Row Header
-          const SceneActionHeader(),
+                  /// Action Row Header
+                  const SceneActionHeader(),
 
-          /// show list of actions for the selected scene/snapsdhots
-          Column(
-            children:
-                _projectViewModel
-                    .getSceneActionsForScene(sceneId)
-                    .map(
-                      (SceneActionModel action) => SceneActionRow(
-                        action: action,
-                        onChanged: (updatedAction) {
-                          // // Update the action in the list
-                          // int index = actions.indexWhere((a) => a.id == updatedAction.id);
-                          // if (index != -1) {
-                          //   actions[index] = updatedAction;
-                          // }
-                          // setState(() {});
-                        },
-                      ),
-                    )
-                    .toList(),
+                  /// show list of actions for the selected scene/snapshots
+                  Column(
+                    children:
+                        _projectViewModel
+                            .getSceneActionsForScene(selectedSnapshotId)
+                            .map(
+                              (SceneActionModel action) => SceneActionRow(
+                                action: action,
+                                onChanged: () => <dynamic, dynamic>{},
+                              ),
+                            )
+                            .toList(),
+                  ),
+                ],
+              );
+            },
           ),
         ],
       ),

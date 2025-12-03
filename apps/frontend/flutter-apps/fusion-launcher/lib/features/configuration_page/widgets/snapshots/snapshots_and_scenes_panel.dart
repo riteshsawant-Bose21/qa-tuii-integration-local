@@ -166,6 +166,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                     onDelete: (String sceneId) {
                       _projectViewModel.removeScene(sceneId: sceneId);
                     },
+                    onSelect: (String sceneId) {
+                      _projectViewModel.setSelectedSnapshotId(sceneId);
+                    },
                   );
                 },
               ),

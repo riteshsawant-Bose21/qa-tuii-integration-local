@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
+import '../../../../core/service_locator.dart';
+import '../../../configuration/presentation/viewmodel/project_view_model.dart';
+
 class ValueWidgetForRow extends StatefulWidget {
   final SceneValue value;
   final ValueChanged<SceneValue> onChanged;
@@ -16,6 +19,8 @@ class ValueWidgetForRow extends StatefulWidget {
 }
 
 class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
+  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+
   @override
   Widget build(BuildContext context) {
     final SceneValue value = widget.value;
@@ -82,25 +87,27 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
       // 3️⃣ Dropdown → must read value.dropdownItems
       // ---------------------------------------------------
       case SceneParamValueType.dropdownSingle:
-        final items = value.dropdownItems ?? <dynamic>[];
+        final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(value.label);
+        SceneValueDropdown? selectedValue = value.value as SceneValueDropdown?;
 
-        return DropdownButtonFormField<String>(
-          value: value.value,
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            isDense: true,
-          ),
+        // Ensure the selected value is in the items list
+        if (selectedValue != null && !items.contains(selectedValue)) {
+          selectedValue = null;
+        }
+
+        return DropdownButton<SceneValueDropdown>(
+          isExpanded: true,
+          value: selectedValue,
+          hint: const Text("Select an option"),
           items:
-              items
-                  .map(
-                    (e) => DropdownMenuItem(
-                      value: e,
-                      child: Text(e),
-                    ),
-                  )
-                  .toList(),
-          onChanged: (String? selected) {
-            final SceneValue updated = value.copyWith(value: selected);
+              items.map<DropdownMenuItem<SceneValueDropdown>>((SceneValueDropdown v) {
+                return DropdownMenuItem<SceneValueDropdown>(
+                  value: v,
+                  child: Text(v.label),
+                );
+              }).toList(),
+          onChanged: (SceneValueDropdown? v) {
+            final SceneValue updated = value.copyWith(value: v?.label);
             widget.onChanged(updated);
             setState(() {});
           },
