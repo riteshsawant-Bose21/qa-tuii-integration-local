@@ -35,7 +35,6 @@ sealed class FusionTestKeys {
   static const String buildingCanvas = 'building_canvas';
   static String dockLeftSideBar = 'dock_sidebar_left';
   static String dockRightSideBar = 'dock_sidebar_right';
-  static const String check = 'check';
   static const String listingViewIcon = 'listing_view_icon';
   static const String wiringViewIcon = 'wiring_view_icon';
 }
