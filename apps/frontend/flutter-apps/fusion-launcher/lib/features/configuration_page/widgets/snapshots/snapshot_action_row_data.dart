@@ -29,8 +29,10 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     final SceneActionModel action = widget.action;
     final ColorScheme colorScheme = Theme.of(context).colorScheme;
 
+    /// Get item list based on selected action type
     final List<SceneItemDropdown> itemList = action.actionType != null ? _projectViewModel.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
 
+    /// Get param list based on selected action type and item
     final List<SceneParam> paramList =
         (action.actionType != null && action.item != null) ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, action.item!) : <SceneParam>[];
 
@@ -158,7 +160,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                 if (actionType != null) {
                   action.value = SceneValue(
                     value: null,
-                    label: actionType.label, // Set the label from the selected param
+                    label: actionType.label,
                     valueType: actionType.valueType,
                   );
                 } else {
