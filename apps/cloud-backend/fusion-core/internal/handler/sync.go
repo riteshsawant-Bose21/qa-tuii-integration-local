@@ -39,15 +39,17 @@ func (d *dataSourceAdapter) Close() error             { return d.impl.Close() }
 
 // SyncHandler handles sync operations
 type SyncHandler struct {
-	syncService *fusionSync.Service
-	logger      *zap.Logger
+	syncService      *fusionSync.Service
+	validationConfig *config.Validation
+	logger           *zap.Logger
 }
 
 // NewSyncHandler creates a new SyncHandler
-func NewSyncHandler(syncService *fusionSync.Service, logger *zap.Logger) *SyncHandler {
+func NewSyncHandler(syncService *fusionSync.Service, validationConfig *config.Validation, logger *zap.Logger) *SyncHandler {
 	return &SyncHandler{
-		syncService: syncService,
-		logger:      logger,
+		syncService:      syncService,
+		validationConfig: validationConfig,
+		logger:           logger,
 	}
 }
 
@@ -99,8 +101,8 @@ func SetupHTTPServer(host, port string, logger *zap.Logger) error {
 	// Create fusion sync service
 	syncService := fusionSync.NewService(productService, priceService, jobService, sourceService)
 
-	// Create handler
-	h := NewSyncHandler(syncService, logger)
+	// Create handler with validation config
+	h := NewSyncHandler(syncService, syncCfg.Validation, logger)
 
 	// Setup Gin router
 	gin.SetMode(gin.ReleaseMode)
@@ -224,9 +226,9 @@ func (h *SyncHandler) HandleSync(c *gin.Context) {
 	var result *types.SyncResult
 	switch req.SyncType {
 	case "product":
-		result, err = h.syncService.SyncProducts(ctx, data, jobID)
+		result, err = h.syncService.SyncProducts(ctx, data, jobID, h.validationConfig)
 	case "price":
-		result, err = h.syncService.SyncPrices(ctx, data)
+		result, err = h.syncService.SyncPrices(ctx, data, h.validationConfig)
 	default:
 		if jobID != "" {
 			errMsg := fmt.Sprintf("invalid sync type: %s", req.SyncType)

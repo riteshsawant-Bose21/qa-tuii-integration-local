@@ -79,7 +79,7 @@ type RRPEntry struct {
 }
 
 // SyncProducts syncs product data from source to database with advanced features
-func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string) (*types.SyncResult, error) {
+func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string, validationCfg *config.Validation) (*types.SyncResult, error) {
 	startTime := time.Now()
 
 	// Create logger for error collection
@@ -118,15 +118,9 @@ func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string) (
 		return result, fmt.Errorf("invalid JSON: %w", err)
 	}
 
-	// Load configuration for validation settings
-	cfg, err := config.Load()
-	if err != nil {
-		logger.Warn("Failed to load config for validation, using defaults", zap.Error(err))
-	}
-
 	// Validate version before proceeding with data validation
-	if cfg != nil {
-		if err := s.validateVersion(jsonData, cfg); err != nil {
+	if validationCfg != nil {
+		if err := s.validateVersion(jsonData, validationCfg); err != nil {
 			syncErr := errors.NewError(errors.ValidationError, errors.SeverityCritical, "Data version validation failed").
 				WithOriginalError(err).
 				WithContext(errors.ErrorContext{
@@ -300,7 +294,7 @@ func (s *Service) SyncProducts(ctx context.Context, data []byte, jobID string) (
 }
 
 // SyncPrices syncs price data from source to database with timestamp-based optimization
-func (s *Service) SyncPrices(ctx context.Context, data []byte) (*types.SyncResult, error) {
+func (s *Service) SyncPrices(ctx context.Context, data []byte, validationCfg *config.Validation) (*types.SyncResult, error) {
 	startTime := time.Now()
 
 	// Create logger for error collection
@@ -344,7 +338,7 @@ func (s *Service) SyncPrices(ctx context.Context, data []byte) (*types.SyncResul
 		}
 
 		// Validate version if container format is used
-		if err := s.validatePriceVersion(&container); err != nil {
+		if err := s.validatePriceVersion(&container, validationCfg); err != nil {
 			syncErr := errors.NewError(errors.ValidationError, errors.SeverityCritical, "Price data version validation failed").
 				WithOriginalError(err).
 				WithContext(errors.ErrorContext{
@@ -1508,31 +1502,31 @@ func (s *Service) processProductType(ctx context.Context, products []Product, pr
 }
 
 // validateVersion validates that the data version is supported (matching sync_data implementation)
-func (s *Service) validateVersion(data *ProductData, cfg *config.Config) error {
-	if !cfg.Validation.RequireVersion {
+func (s *Service) validateVersion(data *ProductData, validationCfg *config.Validation) error {
+	if !validationCfg.RequireVersion {
 		// Version checking is disabled
 		return nil
 	}
 
 	version := strings.TrimSpace(data.Version)
 	if version == "" {
-		if cfg.Validation.DefaultVersion != "" {
+		if validationCfg.DefaultVersion != "" {
 			// Use default version if none provided
-			data.Version = cfg.Validation.DefaultVersion
+			data.Version = validationCfg.DefaultVersion
 			return nil
 		}
 		return fmt.Errorf("version field is required but not provided")
 	}
 
 	// Check if version is supported
-	for _, supportedVersion := range cfg.Validation.SupportedVersions {
+	for _, supportedVersion := range validationCfg.SupportedVersions {
 		if version == supportedVersion {
 			return nil
 		}
 	}
 
 	return fmt.Errorf("unsupported data version '%s'. Supported versions: %v",
-		version, cfg.Validation.SupportedVersions)
+		version, validationCfg.SupportedVersions)
 }
 
 // validateProductJSON validates the structure of the parsed JSON (matching sync_data implementation)
@@ -1561,36 +1555,35 @@ func (s *Service) validateProductJSON(data *ProductData) error {
 }
 
 // validatePriceVersion validates that the price data version is supported
-func (s *Service) validatePriceVersion(container *PriceContainer) error {
-	// Load configuration for validation settings
-	cfg, err := config.Load()
-	if err != nil {
-		// If config can't be loaded, skip version validation with warning
+func (s *Service) validatePriceVersion(container *PriceContainer, validationCfg *config.Validation) error {
+	if validationCfg == nil {
+		// If config is nil, skip version validation
 		return nil
 	}
 
-	if !cfg.Validation.RequireVersion {
+	if !validationCfg.RequireVersion {
 		// Version checking is disabled
 		return nil
 	}
 
 	version := strings.TrimSpace(container.Version)
 	if version == "" {
-		if cfg.Validation.DefaultVersion != "" {
+		if validationCfg.DefaultVersion != "" {
 			// Use default version if none provided
-			container.Version = cfg.Validation.DefaultVersion
+			container.Version = validationCfg.DefaultVersion
 			return nil
 		}
 		return fmt.Errorf("version field is required for price data but not provided")
 	}
 
 	// Check if version is supported
-	for _, supportedVersion := range cfg.Validation.SupportedVersions {
+	// Check if version is supported
+	for _, supportedVersion := range validationCfg.SupportedVersions {
 		if version == supportedVersion {
 			return nil
 		}
 	}
 
 	return fmt.Errorf("unsupported price data version '%s'. Supported versions: %v",
-		version, cfg.Validation.SupportedVersions)
+		version, validationCfg.SupportedVersions)
 }

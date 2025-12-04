@@ -27,7 +27,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
@@ -69,12 +68,6 @@ func main() {
 	cfg, err := serverapi.NewAPIConfig(configSVC)
 	if err != nil {
 		logger.Fatal("Failed to load API config", zap.Error(err))
-	}
-
-	// Load general application configuration
-	appConfig, err := config.Load()
-	if err != nil {
-		logger.Fatal("Failed to load application config", zap.Error(err))
 	}
 
 	// Initialize the database connection.
@@ -119,23 +112,23 @@ func main() {
 	logger.Info("Initialized Product Service.")
 
 	//Initialize Project Service
-	projectSVC := project.NewService(projectDBSvc)
-	if projectSVC == nil {
-		logger.Fatal("Failed to initialize project service")
-	}
-	logger.Info("Initialized Project Service.")
+	// projectSVC := project.NewService(projectDBSvc)
+	// if projectSVC == nil {
+	// 	logger.Fatal("Failed to initialize project service")
+	// }
+	// logger.Info("Initialized Project Service.")
 
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
-		Host: appConfig.Server.APIHost,
-		Port: appConfig.Server.APIPort,
+		Host: cfg.Server.APIHost,
+		Port: cfg.Server.APIPort,
 	}, productSVC, nil)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
 	logger.Info("Initialized the API.",
-		zap.String("host", appConfig.Server.APIHost),
-		zap.String("port", appConfig.Server.APIPort))
+		zap.String("host", cfg.Server.APIHost),
+		zap.String("port", cfg.Server.APIPort))
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())

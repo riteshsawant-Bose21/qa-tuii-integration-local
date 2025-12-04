@@ -84,12 +84,6 @@ func main() {
 		logger.Fatal("Failed to load Sync config", zap.Error(err))
 	}
 
-	// Load general application configuration
-	appConfig, err := config.Load()
-	if err != nil {
-		logger.Fatal("Failed to load application config", zap.Error(err))
-	}
-
 	// Initialize the database connection
 	pgs, err := sql.New(
 		sql.PostgresOpener,
@@ -111,7 +105,7 @@ func main() {
 	// HTTP Server Mode
 	if *serverMode {
 		// Use config values for server host, fall back to command line port
-		serverHost := appConfig.Server.APIHost
+		serverHost := syncCfg.Server.APIHost
 		serverPort := *port
 
 		if err := handler.SetupHTTPServer(serverHost, serverPort, logger.Zap()); err != nil {
@@ -174,7 +168,7 @@ func main() {
 	// Create data source
 	awsRegion := *region
 	if awsRegion == "" {
-		awsRegion = appConfig.AWS.Region
+		awsRegion = syncCfg.AWS.Region
 	}
 
 	dataSource, err := sourceService.New(*sourceType, *filePath, *bucket, *key, awsRegion)
@@ -224,9 +218,9 @@ func main() {
 	var result *types.SyncResult
 	switch *syncType {
 	case "product":
-		result, err = syncService.SyncProducts(ctx, data, jobID)
+		result, err = syncService.SyncProducts(ctx, data, jobID, syncCfg.Validation)
 	case "price":
-		result, err = syncService.SyncPrices(ctx, data)
+		result, err = syncService.SyncPrices(ctx, data, syncCfg.Validation)
 	default:
 		logger.Fatal("Invalid sync type", zap.String("type", *syncType))
 	}
