@@ -70,25 +70,21 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
               items: _projectViewModel.getSceneActionTypes(),
               display: (SceneActionType e) => e.displayName,
               onChanged: (SceneActionType? actionType) {
-                if (actionType != null) {
-                  action.actionType = actionType;
-                  _projectViewModel.updateSceneActionType(actionId: action.id, actionType: actionType);
-
-                  /// Get new item list for the selected action type
-                  final List<SceneItemDropdown> newItemList = _projectViewModel.getActionItemsByType(actionType);
-
-                  /// Set first item if available, else null
-                  if (newItemList.isNotEmpty) {
-                    action.item = SceneItem(itemId: newItemList.first.id);
-                  } else {
-                    action.item = null;
-                  }
-
-                  /// Reset param and value since actionType changed
-                  action.param = null;
-                  action.value = null;
-                  setState(() {});
+                // Always clear param and value when action type changes
+                action.actionType = actionType;
+                action.param = null;
+                action.value = null;
+                // Also clear item, and set to first if available
+                final List<SceneItemDropdown> newItemList = actionType != null ? _projectViewModel.getActionItemsByType(actionType) : <SceneItemDropdown>[];
+                if (newItemList.isNotEmpty) {
+                  action.item = SceneItem(itemId: newItemList.first.id);
+                } else {
+                  action.item = null;
                 }
+                if (actionType != null) {
+                  _projectViewModel.updateSceneActionType(actionId: action.id, actionType: actionType);
+                }
+                setState(() {});
               },
             ),
           ),
