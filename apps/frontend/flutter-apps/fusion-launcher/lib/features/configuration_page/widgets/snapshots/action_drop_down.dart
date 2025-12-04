@@ -7,7 +7,8 @@ class FusionDropdown<T> extends StatelessWidget {
   final List<T> items;
   final String hint;
   final String Function(T) display;
-  final ValueChanged<T?> onChanged;
+  final ValueChanged<T?>? onChanged;
+  final bool isEnabled;
 
   const FusionDropdown({
     super.key,
@@ -16,6 +17,7 @@ class FusionDropdown<T> extends StatelessWidget {
     required this.display,
     required this.onChanged,
     required this.hint,
+    this.isEnabled = true,
   });
 
   @override
@@ -25,35 +27,39 @@ class FusionDropdown<T> extends StatelessWidget {
       hint: FusionAppText(
         text: hint,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: Theme.of(context).colorScheme.greyDark.withAlpha(200),
+          color: isEnabled ? Theme.of(context).colorScheme.greyDark.withAlpha(200) : Theme.of(context).colorScheme.greyDark.withAlpha(100),
         ),
         maxLine: 1,
       ),
       decoration: InputDecoration(
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(4),
+          borderRadius: BorderRadius.circular(3),
         ),
         isDense: true,
         filled: true,
-        fillColor: Theme.of(context).colorScheme.white,
+        fillColor: isEnabled ? Theme.of(context).colorScheme.white : Theme.of(context).colorScheme.greyLight.withAlpha(100),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
       dropdownColor: Theme.of(context).colorScheme.white,
-      style: Theme.of(context).textTheme.bodySmall,
+      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+        color: isEnabled ? null : Theme.of(context).colorScheme.greyDark.withAlpha(100),
+      ),
       items:
-          items
-              .map(
-                (T menuItem) => DropdownMenuItem<T>(
-                  value: menuItem,
-                  child: FusionAppText(
-                    text: display(menuItem),
-                    style: Theme.of(context).textTheme.bodySmall,
-                    maxLine: 1,
-                  ),
-                ),
-              )
-              .toList(),
-      onChanged: onChanged,
+          isEnabled
+              ? items
+                  .map(
+                    (T menuItem) => DropdownMenuItem<T>(
+                      value: menuItem,
+                      child: FusionAppText(
+                        text: display(menuItem),
+                        style: Theme.of(context).textTheme.bodySmall,
+                        maxLine: 1,
+                      ),
+                    ),
+                  )
+                  .toList()
+              : null,
+      onChanged: isEnabled ? onChanged : null,
     );
   }
 }

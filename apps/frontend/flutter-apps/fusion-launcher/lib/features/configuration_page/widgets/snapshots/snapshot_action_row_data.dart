@@ -33,8 +33,14 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     final List<SceneItemDropdown> itemList = action.actionType != null ? _projectViewModel.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
 
     /// Get param list based on selected action type and item
+    /// If no items available, load params directly from action type
+    /// This is to handle cases where action type has params but no items (e.g., Global actions)
     final List<SceneParam> paramList =
-        (action.actionType != null && action.item != null) ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, action.item!) : <SceneParam>[];
+        action.actionType != null
+            ? (itemList.isEmpty
+                ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, SceneItem(itemId: ''))
+                : (action.item != null ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, action.item!) : <SceneParam>[]))
+            : <SceneParam>[];
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -109,25 +115,29 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                 return FusionDropdown<SceneItemDropdown>(
                   value: selectedItem,
                   items: itemList,
-                  hint: "Select Action Item",
+                  hint: itemList.isEmpty ? "No items available" : "Select Action Item",
                   display: (SceneItemDropdown e) => e.name,
-                  onChanged: (SceneItemDropdown? selected) {
-                    print('Selected Scene Item: ${selected?.name}');
+                  isEnabled: itemList.isNotEmpty,
+                  onChanged:
+                      itemList.isEmpty
+                          ? null
+                          : (SceneItemDropdown? selected) {
+                            print('Selected Scene Item: ${selected?.name}');
 
-                    action.item = selected == null ? null : SceneItem(itemId: selected.id);
+                            action.item = selected == null ? null : SceneItem(itemId: selected.id);
 
-                    action.param = null;
-                    action.value = null;
+                            action.param = null;
+                            action.value = null;
 
-                    if (action.actionType != null) {
-                      _projectViewModel.updateSceneActionType(
-                        actionId: action.id,
-                        actionType: action.actionType!,
-                      );
-                    }
+                            if (action.actionType != null) {
+                              _projectViewModel.updateSceneActionType(
+                                actionId: action.id,
+                                actionType: action.actionType!,
+                              );
+                            }
 
-                    setState(() {});
-                  },
+                            setState(() {});
+                          },
                 );
               },
             ),
