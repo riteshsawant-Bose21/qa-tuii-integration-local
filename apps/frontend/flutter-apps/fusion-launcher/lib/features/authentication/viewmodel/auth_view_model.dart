@@ -85,13 +85,18 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       // FusionLogger.log(tag: LogTag.exceptions, message: "ID Token: ${credentials.idToken}");
 
       // Get user authorization from backend
-      final UserModel authData = await getUserDetails();
+      final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
 
-      FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: $authData");
+      FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
 
-      emit(
-        Authenticated(),
-      );
+      if (authDataResponse.success) {
+        emit(
+          Authenticated(),
+        );
+      } else {
+        logout();
+        // emit(AuthError('Failed to get user details: ${authDataResponse.message}'));
+      }
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Get user authorization error: $e');
       emit(AuthError('Failed to get user details: ${e.toString()}'));
@@ -136,15 +141,11 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     }
   }
 
-  Future<UserModel> getUserDetails() async {
+  Future<ResponseCallback<UserModel>> getUserDetails() async {
     final ResponseCallback<UserModel> response = await _networkClient.get(
       api: FusionApiEndpoint.getProfile,
       fromJson: (Map<String, dynamic> json) => UserModel.fromJson(json),
     );
-    if (response.success && response.data != null) {
-      return response.data!;
-    } else {
-      throw Exception('Failed to fetch user details: ${response.message}');
-    }
+    return response;
   }
 }

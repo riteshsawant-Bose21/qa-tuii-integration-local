@@ -244,7 +244,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                 await serviceLocator<AuthViewModel>().logout();
                 if (ctx.mounted) {
                   Navigator.pop(ctx);
-                  Navigator.pushReplacementNamed(context, '/welcome');
+                  //   Navigator.pushReplacementNamed(context, '/welcome');
                 }
               },
               height: 32,

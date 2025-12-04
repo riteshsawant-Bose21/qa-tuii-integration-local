@@ -106,16 +106,17 @@ class MyApp extends StatelessWidget {
             themeMode: mode,
 
             home: Scaffold(
-              body: BlocConsumer<AuthViewModel, AuthViewModelState>(
-                listener: (BuildContext context, AuthViewModelState state) {
-                  // TODO: implement listener
-                },
+              body: BlocBuilder<AuthViewModel, AuthViewModelState>(
+                buildWhen: (AuthViewModelState prevState, AuthViewModelState currentState) => currentState is Authenticated || currentState is Unauthenticated,
                 builder: (BuildContext context, AuthViewModelState state) {
+                  if (state is Unauthenticated) {
+                    return const LauncherSignInPage();
+                  }
                   return FutureBuilder<bool>(
                     future: UserSessionManager.isUserLoggedIn(),
                     builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const CircularProgressIndicator();
+                        return const Center(child: CircularProgressIndicator());
                       }
                       return snapshot.data == true ? const HomePage() : const LauncherSignInPage();
                     },
