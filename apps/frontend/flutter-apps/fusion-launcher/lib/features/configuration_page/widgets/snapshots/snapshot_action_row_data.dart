@@ -66,7 +66,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
               value: action.actionType,
               hint: "Select Action Type",
               items: _projectViewModel.getSceneActionTypes(),
-              display: (SceneActionType e) => e.name,
+              display: (SceneActionType e) => e.displayName,
               onChanged: (SceneActionType? actionType) {
                 if (actionType != null) {
                   action.actionType = actionType;
