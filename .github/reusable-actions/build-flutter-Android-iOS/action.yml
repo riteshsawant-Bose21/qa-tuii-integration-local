@@ -57,14 +57,13 @@ runs:
         xcrun --verbose notarytool submit ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg --apple-id ${{ inputs.notarize_apple_id }} --password ${{ inputs.notarize_app_password }} --team-id "7FDK3RUF89" --wait
         xcrun --verbose stapler staple ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg
         VERSION="${{ steps.get_version.outputs.version }}-${GITHUB_RUN_NUMBER}+$(git rev-parse --short=8 HEAD)"
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
-        curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
+        # curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/app/outputs/flutter-apk/app-release.apk ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk
+        # curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/ios/ipa/Fusion\ Launcher.ipa ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg ${{ inputs.nexus_url }}/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg
         echo "Builds uploaded to Nexus successfully!"
-        echo "flutter-apk: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk"
-        echo "flutter-iOS: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa"
+        # echo "flutter-apk: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-apk/Fusion-Launcher-$VERSION.apk"
+        # echo "flutter-iOS: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-iOS/Fusion-Launcher-$VERSION.ipa"
         echo "flutter-macOS: https://nexus.dev.prod.bosepro.internal:8445/Fusion-Frontend/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/$VERSION/flutter-macOS/Fusion-Launcher-$VERSION.dmg"
-
     - name: Flutter macOS Automation build
       if: >-
         ${{
