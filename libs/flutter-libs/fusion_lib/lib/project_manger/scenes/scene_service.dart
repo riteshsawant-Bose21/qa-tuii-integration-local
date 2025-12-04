@@ -345,6 +345,10 @@ extension SceneService on ProjectService {
     return standaloneScenes;
   }
 
+  SceneModel? getSceneById(String sceneId) {
+    return scenes.get(sceneId);
+  }
+
   //Scene Sets
   void addNewSceneSet(SceneSetModel sceneSet) {
     sceneSets.add(sceneSet.id, sceneSet);

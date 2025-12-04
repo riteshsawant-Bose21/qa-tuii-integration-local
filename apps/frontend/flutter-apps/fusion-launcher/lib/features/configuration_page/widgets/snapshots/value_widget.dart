@@ -66,8 +66,9 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(
                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 12),
-                  trackHeight: 2, // thinner track
+                  overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
+                  trackHeight: 1,
+                  thumbColor: Theme.of(context).colorScheme.black,
                 ),
                 child: Slider(
                   value: currentValue,

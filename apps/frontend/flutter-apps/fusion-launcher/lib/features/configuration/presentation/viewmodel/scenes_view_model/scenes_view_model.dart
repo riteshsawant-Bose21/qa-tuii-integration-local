@@ -210,6 +210,15 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
+  SceneModel? getSceneById({required String sceneId}) {
+    try {
+      return projectManager.getSceneById(sceneId);
+    } catch (e) {
+      throwError("Get Scene By Id Error  ${e.toString()}");
+      return null; // return empty scene model on error
+    }
+  }
+
   //Scene set
   void addNewSceneSet({required SceneSetModel sceneSet, bool autoSave = true}) {
     try {

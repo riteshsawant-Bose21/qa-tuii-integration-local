@@ -5,11 +5,13 @@ import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 class SnapshotHeaderWidget extends StatelessWidget {
   final VoidCallback onAdd;
   final VoidCallback onReorder;
+  final String snapshotName;
 
   const SnapshotHeaderWidget({
     super.key,
     required this.onAdd,
     required this.onReorder,
+    required this.snapshotName,
   });
 
   @override
@@ -32,7 +34,7 @@ class SnapshotHeaderWidget extends StatelessWidget {
           const SizedBox(width: 10),
           Expanded(
             child: FusionAppText(
-              text: "Snapshots",
+              text: snapshotName,
               style: context.textTheme.bodyMedium?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
               maxLine: 1,
             ),

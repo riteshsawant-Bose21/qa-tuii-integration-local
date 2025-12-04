@@ -124,6 +124,13 @@ extension SceneManager on ProjectManager {
     return projectService!.getAllScenes();
   }
 
+  SceneModel? getSceneById(String sceneId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getSceneById(sceneId);
+  }
+
   //scene sets
   void addNewSceneSet(SceneSetModel sceneSet) {
     if (projectService == null) {

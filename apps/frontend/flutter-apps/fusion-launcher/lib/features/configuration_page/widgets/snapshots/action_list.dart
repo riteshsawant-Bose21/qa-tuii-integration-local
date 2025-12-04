@@ -68,11 +68,15 @@ class ActionList extends StatelessWidget {
               if (selectedSnapshotId == null) {
                 return const SizedBox.shrink();
               }
+
+              /// get selected snapshot name
+              final SceneModel? selectedScene = _projectViewModel.getSceneById(sceneId: selectedSnapshotId);
               return Expanded(
                 child: Column(
                   children: <Widget>[
                     /// Snapshot Header Widget
                     SnapshotHeaderWidget(
+                      snapshotName: selectedScene?.name ?? "",
                       onAdd: () {
                         final SceneActionModel action = SceneActionModel();
                         _projectViewModel.addSceneActionToScene(sceneId: selectedSnapshotId, action: action);

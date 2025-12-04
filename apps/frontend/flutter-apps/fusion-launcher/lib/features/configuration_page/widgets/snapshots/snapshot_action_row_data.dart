@@ -40,7 +40,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
         color: colorScheme.white,
         border: Border(
           bottom: BorderSide(
-            color: colorScheme.grey.withOpacity(0.15),
+            color: colorScheme.grey,
             width: 1,
           ),
         ),
@@ -102,7 +102,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                 if (action.item != null && itemList.isNotEmpty) {
                   selectedItem = itemList.where((SceneItemDropdown e) => e.id == action.item!.itemId).firstOrNull;
 
-                  // If item not found in the current list, clear it
+                  /// If item not found in the current list, clear it
                   if (selectedItem == null) {
                     action.item = null;
                   }
