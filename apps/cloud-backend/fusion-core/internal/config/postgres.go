@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 )
@@ -12,6 +13,7 @@ type Postgres struct {
 	User     string
 	Password string
 	Database string
+	SSLMode  string
 }
 
 // Server holds the configuration settings for server binding.
@@ -69,12 +71,18 @@ func (p *Service) Postgres() (*Postgres, error) {
 		return nil, err
 	}
 
+	sslMode, err := p.store.ReqString(keyPostgresSSLMode)
+	if err != nil {
+		return nil, fmt.Errorf("POSTGRES_SSL_MODE environment variable is required")
+	}
+
 	return &Postgres{
 		Host:     host,
 		Port:     port,
 		User:     user,
 		Password: password,
 		Database: database,
+		SSLMode:  sslMode,
 	}, nil
 }
 
@@ -82,17 +90,17 @@ func (p *Service) Postgres() (*Postgres, error) {
 func (p *Service) Server() (*Server, error) {
 	apiHost, err := p.store.ReqString(keyAPIHost)
 	if err != nil {
-		apiHost = defaultAPIHost
+		return nil, fmt.Errorf("API_HOST environment variable is required")
 	}
 
 	apiPort, err := p.store.ReqString(keyAPIPort)
 	if err != nil {
-		apiPort = defaultAPIPort
+		return nil, fmt.Errorf("API_PORT environment variable is required")
 	}
 
 	syncPort, err := p.store.ReqString(keySyncPort)
 	if err != nil {
-		syncPort = defaultSyncPort
+		return nil, fmt.Errorf("SYNC_PORT environment variable is required")
 	}
 
 	return &Server{
@@ -106,12 +114,12 @@ func (p *Service) Server() (*Server, error) {
 func (p *Service) AWS() (*AWS, error) {
 	region, err := p.store.ReqString(keyAWSRegion)
 	if err != nil {
-		region = defaultAWSRegion
+		return nil, fmt.Errorf("AWS_REGION environment variable is required")
 	}
 
 	profile, err := p.store.ReqString(keyAWSProfile)
 	if err != nil {
-		profile = defaultAWSProfile
+		return nil, fmt.Errorf("AWS_PROFILE environment variable is required")
 	}
 
 	return &AWS{
@@ -124,17 +132,17 @@ func (p *Service) AWS() (*AWS, error) {
 func (p *Service) Validation() (*Validation, error) {
 	supportedVersions, err := p.store.ReqString(keySupportedVersions)
 	if err != nil {
-		supportedVersions = defaultSupportedVersions
+		return nil, fmt.Errorf("SUPPORTED_VERSIONS environment variable is required")
 	}
 
 	requireVersion, err := p.store.ReqString(keyRequireVersion)
 	if err != nil {
-		requireVersion = defaultRequireVersion
+		return nil, fmt.Errorf("REQUIRE_VERSION environment variable is required")
 	}
 
 	defaultVersionStr, err := p.store.ReqString(keyDefaultVersion)
 	if err != nil {
-		defaultVersionStr = defaultVersion
+		return nil, fmt.Errorf("DEFAULT_VERSION environment variable is required")
 	}
 
 	// Clean up the supported versions
@@ -154,37 +162,37 @@ func (p *Service) Validation() (*Validation, error) {
 func (p *Service) Processing() (*Processing, error) {
 	maxWorkers, err := p.store.ReqString(keyMaxWorkers)
 	if err != nil {
-		maxWorkers = defaultMaxWorkers
+		return nil, fmt.Errorf("MAX_WORKERS environment variable is required")
 	}
 
 	batchSize, err := p.store.ReqString(keyBatchSize)
 	if err != nil {
-		batchSize = defaultBatchSize
+		return nil, fmt.Errorf("BATCH_SIZE environment variable is required")
 	}
 
 	retryAttempts, err := p.store.ReqString(keyRetryAttempts)
 	if err != nil {
-		retryAttempts = defaultRetryAttempts
+		return nil, fmt.Errorf("RETRY_ATTEMPTS environment variable is required")
 	}
 
 	retryDelay, err := p.store.ReqString(keyRetryDelay)
 	if err != nil {
-		retryDelay = defaultRetryDelay
+		return nil, fmt.Errorf("RETRY_DELAY environment variable is required")
 	}
 
-	maxWorkersInt, _ := strconv.Atoi(maxWorkers)
-	if maxWorkersInt <= 0 {
-		maxWorkersInt = defaultMaxWorkersInt
+	maxWorkersInt, err := strconv.Atoi(maxWorkers)
+	if err != nil || maxWorkersInt <= 0 {
+		return nil, fmt.Errorf("MAX_WORKERS must be a positive integer, got: %s", maxWorkers)
 	}
 
-	batchSizeInt, _ := strconv.Atoi(batchSize)
-	if batchSizeInt <= 0 {
-		batchSizeInt = defaultBatchSizeInt
+	batchSizeInt, err := strconv.Atoi(batchSize)
+	if err != nil || batchSizeInt <= 0 {
+		return nil, fmt.Errorf("BATCH_SIZE must be a positive integer, got: %s", batchSize)
 	}
 
-	retryAttemptsInt, _ := strconv.Atoi(retryAttempts)
-	if retryAttemptsInt < 0 {
-		retryAttemptsInt = defaultRetryAttemptsInt
+	retryAttemptsInt, err := strconv.Atoi(retryAttempts)
+	if err != nil || retryAttemptsInt < 0 {
+		return nil, fmt.Errorf("RETRY_ATTEMPTS must be a non-negative integer, got: %s", retryAttempts)
 	}
 
 	return &Processing{
@@ -195,40 +203,6 @@ func (p *Service) Processing() (*Processing, error) {
 	}, nil
 }
 
-// DO WE NEED DEFAULTS?
-// const (
-// 	defaultPostgresHost string = "127.0.0.1"
-// 	defaultPostgresPort string = "5432"
-// )
-
-// Default configuration values
-const (
-	// Server defaults
-	defaultAPIHost  = "localhost"
-	defaultAPIPort  = "8080"
-	defaultSyncPort = "8080"
-
-	// AWS defaults
-	defaultAWSRegion  = "us-east-2"
-	defaultAWSProfile = ""
-
-	// Validation defaults
-	defaultSupportedVersions = "1.0,1.1,2.0"
-	defaultRequireVersion    = "true"
-	defaultVersion           = "1.0"
-
-	// Processing defaults
-	defaultMaxWorkers    = "5"
-	defaultBatchSize     = "50"
-	defaultRetryAttempts = "3"
-	defaultRetryDelay    = "2"
-
-	// Processing integer defaults
-	defaultMaxWorkersInt    = 5
-	defaultBatchSizeInt     = 50
-	defaultRetryAttemptsInt = 3
-)
-
 // Environment variable keys
 const (
 	keyPostgresHost     string = "POSTGRES_HOST"
@@ -236,6 +210,7 @@ const (
 	keyPostgresUser     string = "POSTGRES_USER"
 	keyPostgresPass     string = "POSTGRES_PASS"
 	keyPostgresInstance string = "POSTGRES_INSTANCE"
+	keyPostgresSSLMode  string = "POSTGRES_SSL_MODE"
 
 	// Server configuration keys
 	keyAPIHost  string = "API_HOST"

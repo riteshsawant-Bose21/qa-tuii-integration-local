@@ -53,6 +53,7 @@ func main() {
 	port := flag.String("port", "8081", "HTTP server port (only used with -server)")
 	envFile := flag.String("c", ".env", "config environment file")
 	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
+	useSecretsManager := flag.Bool("secrets", false, "use AWS Secrets Manager for configuration (overrides USE_SECRETS_MANAGER env var)")
 
 	// CLI mode flags
 	syncType := flag.String("type", "", "Sync type: 'product' or 'price' (required)")
@@ -63,19 +64,43 @@ func main() {
 	region := flag.String("region", "", "AWS region (optional, uses config default)")
 	flag.Parse()
 
-	// Initialize environment
-	env := environment.New(environment.DefaultLoadLookuper)
-	logger.Info("Loading environment file", zap.String("file", *envFile))
-	if *envName == "local" {
-		if err := env.Load(*envFile); err != nil {
-			logger.Fatal("error loading environment vars", zap.String("file", *envName), zap.Error(err))
-		}
-	}
+	// Determine if we should use secrets manager
+	useSecrets := *useSecretsManager || config.ParseUseSecretsManagerFlag()
 
-	// Initialize configuration service
-	configSVC, err := config.NewService(env)
-	if err != nil {
-		logger.Fatal("Failed to initialize config service", zap.Error(err))
+	var configSVC *config.Service
+	if useSecrets {
+		logger.Info("Using AWS Secrets Manager for configuration (pure secrets mode)")
+
+		// Always load .env file to get secret names and AWS region for secrets manager
+		env := environment.New(environment.DefaultLoadLookuper)
+		logger.Info("Loading environment file for secret names", zap.String("file", *envFile))
+		if err := env.Load(*envFile); err != nil {
+			logger.Warn("Failed to load environment file for secret names", zap.String("file", *envFile), zap.Error(err))
+		}
+
+		configSVC, err = config.NewWithSecretsManager(true, "")
+		if err != nil {
+			logger.Fatal("Failed to initialize config service with secrets manager", zap.Error(err))
+		}
+	} else {
+		// Pure local environment variable loading
+		env := environment.New(environment.DefaultLoadLookuper)
+
+		// Only load .env file in local environment
+		if *envName == "local" {
+			logger.Info("Using local environment configuration (pure local mode)", zap.String("file", *envFile))
+			if err := env.Load(*envFile); err != nil {
+				logger.Fatal("error loading environment vars", zap.String("file", *envFile), zap.Error(err))
+			}
+		} else {
+			logger.Info("Using environment variables (production mode without secrets)", zap.String("env", *envName))
+		}
+
+		// Initialize configuration service
+		configSVC, err = config.NewService(env)
+		if err != nil {
+			logger.Fatal("Failed to initialize config service", zap.Error(err))
+		}
 	}
 
 	// Load Sync configuration
@@ -92,6 +117,7 @@ func main() {
 		syncCfg.Postgres.User,
 		syncCfg.Postgres.Password,
 		syncCfg.Postgres.Database,
+		syncCfg.Postgres.SSLMode,
 	)
 	if err != nil {
 		logger.Fatal("Failed to connect to the database", zap.Error(err))

@@ -78,6 +78,7 @@ func SetupHTTPServer(host, port string, logger *zap.Logger) error {
 		syncCfg.Postgres.User,
 		syncCfg.Postgres.Password,
 		syncCfg.Postgres.Database,
+		syncCfg.Postgres.SSLMode,
 	)
 	if err != nil {
 		return fmt.Errorf("failed to connect to the database: %w", err)

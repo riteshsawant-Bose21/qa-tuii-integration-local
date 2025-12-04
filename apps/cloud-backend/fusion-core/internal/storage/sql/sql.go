@@ -8,13 +8,13 @@ import (
 // New creates a new SQL database connection.
 func New(
 	opener Opener,
-	host, port, user, password, instance string,
+	host, port, user, password, instance, sslMode string,
 ) (*sql.DB, error) {
 	dataSourceName := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		host, port, user, password, instance,
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		host, port, user, password, instance, sslMode,
 	)
-	// IMPORTANT: No SSL mode is specified, so it defaults to "disable".
+	// SSL mode is set to "require" for AWS RDS compatibility
 	db, err := opener.Open(dataSourceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open postgres database connection: %w", err)
