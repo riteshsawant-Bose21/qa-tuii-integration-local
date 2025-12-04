@@ -23,11 +23,14 @@ import (
 )
 
 const (
-	bucketAudio        = "audio"
-	bucketDevice       = "device"
-	bucketFusion       = "fusion"
-	bucketSnapshots    = "snapshots"
-	bucketTasks        = "tasks"
+	bucketActive    = "active"
+	bucketAudio     = "audio"
+	bucketDevice    = "device"
+	bucketFusion    = "fusion"
+	bucketSnapshots = "snapshots"
+	bucketTasks     = "tasks"
+
+	keyActiveState     = "state"
 	keyDefaultSnapshot = "default"
 	keyDeviceInfo      = "info"
 	keyMetadata        = "metadata"
@@ -104,14 +107,12 @@ func (p *Persistence) MarkDirty() {
 	}
 }
 
-// SaveState persists the current state using the active snapshot key.
+// SaveState persists the current state as the live "active" state.
 func (p *Persistence) SaveState() error {
 	p.mutex.Lock()
 	defer p.mutex.Unlock()
 
-	snapshotKey := p.getActiveSnapshotKey()
-
-	ps, err := p.persistState(snapshotKey)
+	ps, err := p.persistActiveState()
 	if err != nil {
 		return err
 	}
@@ -129,8 +130,8 @@ func (p *Persistence) SaveState() error {
 		return fmt.Errorf("failed to update metadata: %w", err)
 	}
 
-	logging.GetLogger().Debug("State saved (version: %v, checksum: %s) under snapshot '%s'",
-		ps.Version, ps.Checksum, snapshotKey)
+	logging.GetLogger().Debug("State saved (version: %v, checksum: %s) to active state",
+		ps.Version, ps.Checksum)
 
 	return nil
 }
@@ -247,9 +248,9 @@ func (p *Persistence) ImportData(importData map[string]any) error {
 	return nil
 }
 
-// persistState saves the current state under the given snapshot key.
-// Note that it does not update lastSave; the caller should update lastSave as needed.
-func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
+// persistStateToBucket saves the current state into the given bucket/key.
+// Used by both snapshot persistence and active state persistence.
+func (p *Persistence) persistStateToBucket(bucketName, key string) (*PersistentState, error) {
 	state := p.stateManager.GetFullState()
 
 	// Ensure we always have a checksum
@@ -275,14 +276,14 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 	}
 
 	err = p.db.Update(func(tx *bbolt.Tx) error {
-		bucket := tx.Bucket([]byte(bucketSnapshots))
+		bucket := tx.Bucket([]byte(bucketName))
 		if bucket == nil {
-			return fmt.Errorf("snapshots bucket not found")
+			return fmt.Errorf("%s bucket not found", bucketName)
 		}
-		return bucket.Put([]byte(snapshotKey), data)
+		return bucket.Put([]byte(key), data)
 	})
 	if err != nil {
-		return nil, fmt.Errorf("failed to save state: %w", err)
+		return nil, fmt.Errorf("failed to save state to %s/%s: %w", bucketName, key, err)
 	}
 
 	if err := p.updateHash(); err != nil {
@@ -290,6 +291,18 @@ func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error)
 	}
 
 	return ps, nil
+}
+
+// persistState saves the current state under the given snapshot key
+// in the snapshots bucket. This is ONLY for explicit snapshot creation.
+func (p *Persistence) persistState(snapshotKey string) (*PersistentState, error) {
+	return p.persistStateToBucket(bucketSnapshots, snapshotKey)
+}
+
+// persistActiveState saves the current state as the live "active" state.
+// This is what SaveState() uses instead of mutating snapshots.
+func (p *Persistence) persistActiveState() (*PersistentState, error) {
+	return p.persistStateToBucket(bucketActive, keyActiveState)
 }
 
 // loadMetadata retrieves and unmarshals the api.DatabaseMetadata from the database.
@@ -374,7 +387,8 @@ func (p *Persistence) initializeDatabase() error {
 	return p.db.Update(func(tx *bbolt.Tx) error {
 
 		// Bail out if buckets exist
-		if tx.Bucket([]byte(bucketAudio)) != nil &&
+		if tx.Bucket([]byte(bucketActive)) != nil &&
+			tx.Bucket([]byte(bucketAudio)) != nil &&
 			tx.Bucket([]byte(bucketFusion)) != nil &&
 			tx.Bucket([]byte(bucketDevice)) != nil &&
 			tx.Bucket([]byte(bucketTasks)) != nil &&
@@ -383,7 +397,13 @@ func (p *Persistence) initializeDatabase() error {
 		}
 
 		// Otherwise create any missing buckets
-		for _, bucket := range []string{bucketAudio, bucketDevice, bucketFusion, bucketTasks, bucketSnapshots} {
+		for _, bucket := range []string{
+			bucketActive,
+			bucketAudio,
+			bucketDevice,
+			bucketFusion,
+			bucketTasks,
+			bucketSnapshots} {
 			if err := createBucketIfNotExists(tx, bucket); err != nil {
 				return err
 			}
@@ -397,6 +417,12 @@ func (p *Persistence) initializeDatabase() error {
 
 		fusionBucket := tx.Bucket([]byte(bucketFusion))
 		if err := p.initializeMetadata(fusionBucket); err != nil {
+			return err
+		}
+
+		// Seed the active state with whatever is in the default snapshot
+		activeBucket := tx.Bucket([]byte(bucketActive))
+		if err := p.initializeActiveState(activeBucket); err != nil {
 			return err
 		}
 
@@ -444,6 +470,30 @@ func (p *Persistence) replaceBucketData(bucketName string, data map[string]any) 
 	})
 
 	return err
+}
+
+func (p *Persistence) initializeActiveState(bucket *bbolt.Bucket) error {
+
+	if existing := bucket.Get([]byte(keyActiveState)); existing != nil {
+		return nil
+	}
+
+	state := p.stateManager.GetFullState()
+
+	ps := PersistentState{
+		Version:   p.stateManager.GetVersion(),
+		Timestamp: time.Now().UTC(),
+		Checksum:  state.Checksum,
+		State:     deepCopyState(state.State),
+	}
+	data, err := json.Marshal(ps)
+	if err != nil {
+		return fmt.Errorf("failed to marshal initial active state: %w", err)
+	}
+	if err := bucket.Put([]byte(keyActiveState), data); err != nil {
+		return fmt.Errorf("failed to save initial active state: %w", err)
+	}
+	return nil
 }
 
 func (p *Persistence) initializeDefaultSnapshot(bucket *bbolt.Bucket) error {
