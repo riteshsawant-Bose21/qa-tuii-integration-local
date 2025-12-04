@@ -44,12 +44,12 @@ class LocalProjectManager {
     /// check for the token
     /// if not exists then do not load projects
 
-    final String? accessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
-
-    if ((accessToken == null || accessToken.isEmpty) && !isAdminLogin) {
-      FusionLogger.log(tag: LogTag.project, message: "No access token found. Skipping project load.");
-      return ResponseCallback.failure('No access token found. Please log in.');
-    }
+    // final String? accessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
+    //
+    // if ((accessToken == null || accessToken.isEmpty) && !isAdminLogin) {
+    //   FusionLogger.log(tag: LogTag.project, message: "No access token found. Skipping project load.");
+    //   return ResponseCallback.failure('No access token found. Please log in.');
+    // }
 
     try {
       /// Load local project_data.json files

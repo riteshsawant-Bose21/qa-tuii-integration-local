@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
@@ -239,10 +240,12 @@ class _FusionSidebarState extends State<FusionSidebar> {
           content: const FusionAppText(text: "Are you sure you want to sign out?"),
           actions: <Widget>[
             NeumorphicDarkButton(
-              onTap: () {
-                UserSessionManager.logout();
-                Navigator.pop(ctx);
-                Navigator.pushReplacementNamed(context, '/welcome');
+              onTap: () async {
+                await serviceLocator<AuthViewModel>().logout();
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                  Navigator.pushReplacementNamed(context, '/welcome');
+                }
               },
               height: 32,
               borderRadius: 8,

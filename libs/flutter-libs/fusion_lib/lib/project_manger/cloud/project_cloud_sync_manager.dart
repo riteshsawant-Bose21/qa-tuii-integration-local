@@ -7,16 +7,17 @@ class ProjectCloudSyncManager {
 
   Future<ResponseCallback<List<ProjectData>?>> loadProjects() async {
     try {
-      final ResponseCallback<List<ProjectData>?> response = await networkClient.get(
-        api: FusionApiEndpoint.projects,
-        fromJson: (data) => (data as List<dynamic>).map((json) => ProjectData.fromJson(json as Map<String, dynamic>)).toList(),
-      );
-
-      if (response.success && response.data != null) {
-        //SAve to Local folder
-        await localProjectManager.saveProjects(response.data!);
-      }
-      return response;
+      // final ResponseCallback<List<ProjectData>?> response = await networkClient.get(
+      //   api: FusionApiEndpoint.projects,
+      //   fromJson: (data) => (data as List<dynamic>).map((json) => ProjectData.fromJson(json as Map<String, dynamic>)).toList(),
+      // );
+      //
+      // if (response.success && response.data != null) {
+      //   //SAve to Local folder
+      //   await localProjectManager.saveProjects(response.data!);
+      // }
+      // return response;
+      return ResponseCallback.success(<ProjectData>[]);
     } catch (e) {
       return ResponseCallback.failure("Error loading projects: $e");
     }

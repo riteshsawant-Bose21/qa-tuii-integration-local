@@ -1,11 +1,9 @@
-import 'dart:convert';
 import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import '../../features/user_account_setup/domain/entity/login_response_entity.dart';
+import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
 class UserSessionManager {
   static final UserSessionManager _instance = UserSessionManager._internal();
@@ -18,18 +16,18 @@ class UserSessionManager {
 
   /// Checks if the user is signed in by verifying if the access token exists
   static String? getSignedInUserEmail() {
-    final String? userDetailsJson = serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.userDetails);
-
-    if (userDetailsJson != null) {
-      try {
-        final Map<String, dynamic> jsonMap = jsonDecode(userDetailsJson);
-        final LoginResponseEntity userDetails = LoginResponseEntity.fromJson(jsonMap);
-        return userDetails.user.email;
-      } catch (e) {
-        log('Error decoding user details: $e');
-        return null;
-      }
-    }
+    // final String? userDetailsJson = serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.userDetails);
+    //
+    // if (userDetailsJson != null) {
+    //   try {
+    //     final Map<String, dynamic> jsonMap = jsonDecode(userDetailsJson);
+    //     final LoginResponseEntity userDetails = LoginResponseEntity.fromJson(jsonMap);
+    //     return userDetails.user.email;
+    //   } catch (e) {
+    //     log('Error decoding user details: $e');
+    //     return null;
+    //   }
+    // }
     return null;
   }
 
@@ -50,8 +48,8 @@ class UserSessionManager {
     log('User logged out and session cleared.');
   }
 
-  static bool isUserLoggedIn() {
-    final bool? isLoggedIn = serviceLocator<SharedPreferencesHandler>().getBool(SharedPreferenceKeys.isLoggedIn);
-    return isLoggedIn ?? false;
+  static Future<bool> isUserLoggedIn() async {
+    final String? idToken = await serviceLocator<FusionAuthService>().getIdToken();
+    return idToken != null;
   }
 }

@@ -1,15 +1,8 @@
-import 'dart:developer';
-
-import 'package:auth0_flutter/auth0_flutter.dart';
-import 'package:auth0_flutter/auth0_flutter_web.dart';
-import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
-import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -17,134 +10,37 @@ import '../../core/service_locator.dart';
 import '../../core/utils/fusion_utils.dart';
 import '../user_account_setup/presentation/widgets/account_creation_success_popup.dart';
 
-enum FusionAuth0Env {
-  domain("id-dev.boseprofessional.com"),
-  clientId("Il2hl1ZQHO4ZFIDtuSLgdaqAlK5mhjLb"),
-  customScheme("fusion"),
-  redirectUrlWeb("http://localhost:3000"),
-  redirectUrlNative("com.bosepro.fusion://id-dev.boseprofessional.com/macos/com.bosepro.fusion/callback");
-
-  final String value;
-  const FusionAuth0Env(this.value);
-}
-
-class LauncherSignInPage extends StatefulWidget {
+class LauncherSignInPage extends StatelessWidget {
   const LauncherSignInPage({super.key});
 
   @override
-  State<LauncherSignInPage> createState() => _LauncherSignInPageState();
+  Widget build(BuildContext context) {
+    return const _LauncherSignInPageView();
+  }
 }
 
-class _LauncherSignInPageState extends State<LauncherSignInPage> {
-  UserProfile? _user;
-
-  late Auth0 auth0;
-  late Auth0Web auth0Web;
-
-  @override
-  void initState() {
-    super.initState();
-    auth0 = Auth0(FusionAuth0Env.domain.value, FusionAuth0Env.clientId.value);
-    auth0Web = Auth0Web(FusionAuth0Env.domain.value, FusionAuth0Env.clientId.value);
-
-    // Listen for the redirect callback on web.
-    if (kIsWeb) auth0Web.onLoad().then(onSuccess);
-  }
-
-  Future<void> login() async {
-    try {
-      if (kIsWeb) return auth0Web.loginWithRedirect(redirectUrl: FusionAuth0Env.redirectUrlWeb.value);
-
-      // Use a Universal Link callback URL on iOS 17.4+ / macOS 14.4+. 'useHTTPS' is ignored on Android.
-      final Credentials credentials = await auth0
-          .webAuthentication(scheme: FusionAuth0Env.customScheme.value)
-          .login(useHTTPS: false, redirectUrl: FusionAuth0Env.redirectUrlNative.value);
-
-      onSuccess(credentials);
-    } catch (e) {
-      // print(e);
-    }
-  }
-
-  Future<void> logout() async {
-    try {
-      if (kIsWeb) {
-        await auth0Web.logout(returnToUrl: FusionAuth0Env.redirectUrlWeb.value);
-      } else {
-        // Use a Universal Link logout URL on iOS 17.4+ / macOS 14.4+. 'useHTTPS' is ignored on Android
-        await auth0.webAuthentication(scheme: FusionAuth0Env.customScheme.value).logout(useHTTPS: false, returnTo: FusionAuth0Env.redirectUrlNative.value);
-        setState(() => _user = null);
-      }
-    } catch (e) {
-      // print(e);
-    }
-  }
-
-  Future<void> onSuccess(Credentials? credentials) async {
-    _user = credentials?.user;
-    log("email: ${credentials?.user.email..toString()}");
-    log("address: ${credentials?.user.address.toString()}");
-    log("accessToken: ${credentials!.accessToken.toString()}");
-    log("idToken: ${credentials.idToken.toString()}");
-    log("refreshToken: ${credentials.refreshToken.toString()}");
-    setState(() {});
-
-    final DioClient dioClient = serviceLocator<DioClient>();
-
-    // log("Credentials: ${credentials.toString()}");
-
-    // Call get user details API
-    final String basedUrl = "http://fusionapi.cloud-dev-external-bpro.in:8080/api/v1";
-    final String apiUrl = "$basedUrl/user/me/authorization";
-
-    final Response<dynamic> response = await dioClient.dioInstance.get(
-      apiUrl,
-      options: Options(
-        headers: <String, dynamic>{
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${credentials.idToken}',
-        },
-      ),
-    );
-
-    // if (response.statusCode == 200) {
-    //   log("Response: ${jsonEncode(response.data)}");
-    // } else {
-    //   log("Failed to fetch user details. Status code: ${response.statusCode}");
-    // }
-
-    // /// Normal API flow
-    // final ResponseCallback<LoginResponseEntity> responseCallback = await repository.signInWithEmailAndPassword(email: email, password: password);
-
-    // await prefs.setString(SharedPreferenceKeys.userDetails, jsonEncode(responseCallback.data?.toJson()));
-    // await prefs.setString(SharedPreferenceKeys.accessToken, responseCallback.data!.accessToken);
-    // await prefs.setString(SharedPreferenceKeys.refreshToken, responseCallback.data!.refreshToken);
-    // await prefs.setString(SharedPreferenceKeys.expiry, responseCallback.data!.expiry.toString());
-    // await prefs.setBool(SharedPreferenceKeys.isLoggedIn, true);
-    // await prefs.setBool(SharedPreferenceKeys.adminLogin, false);
-  }
+class _LauncherSignInPageView extends StatelessWidget {
+  const _LauncherSignInPageView();
 
   @override
   Widget build(BuildContext context) {
-    // Make it scalable for larger screens
     final double headlineFontSize = MediaQuery.of(context).size.width * 0.07;
     final double subHeadingFontSize = MediaQuery.of(context).size.width * 0.02;
 
     return Scaffold(
-      body: BlocConsumer<AuthBloc, AuthState>(
-        listener: (BuildContext context, AuthState state) {
-          if (state is AuthInProgress) {
+      body: BlocConsumer<AuthViewModel, AuthViewModelState>(
+        listener: (BuildContext context, AuthViewModelState state) {
+          if (state is AuthLoading) {
             FusionUiUtils.showLoader(context);
           } else {
             FusionUiUtils.hideLoader(context);
           }
-          if (state is AuthFailure) {
+
+          if (state is AuthError) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.message),
-              ),
+              SnackBar(content: Text(state.message)),
             );
-          } else if (state is AuthSuccess) {
+          } else if (state is Authenticated) {
             if (!context.mounted) return;
             showSuccessPopup(
               context,
@@ -159,7 +55,9 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
             );
           }
         },
-        builder: (BuildContext context, AuthState state) {
+        builder: (BuildContext context, AuthViewModelState state) {
+          final bool isAuthenticated = state is Authenticated;
+
           return Padding(
             padding: const EdgeInsets.all(40.0),
             child: Column(
@@ -192,30 +90,28 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                     ),
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 500),
-
                       child: Column(
                         spacing: 10,
                         children: <Widget>[
                           NeumorphicDarkButton(
-                            onTap: () {
-                              _user == null ? login() : logout();
-                            },
+                            onTap: () => _handleAuthAction(context, isAuthenticated),
                             height: 60,
                             child: Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12.0,
+                              ),
                               child: Row(
                                 spacing: 10,
                                 children: <Widget>[
                                   Expanded(
                                     child: FusionAppText(
-                                      text: 'Log in',
+                                      text: isAuthenticated ? 'Log out' : 'Log in',
                                       style: context.textTheme.labelLarge?.copyWith(
                                         fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ),
-
                                   Container(
                                     height: double.infinity,
                                     width: 47,
@@ -224,8 +120,8 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
                                       color: FusionDarkColorPallette.green20,
                                       borderRadius: BorderRadius.circular(6),
                                     ),
-                                    child: const Icon(
-                                      LucideIcons.arrowRight,
+                                    child: Icon(
+                                      isAuthenticated ? LucideIcons.logOut : LucideIcons.arrowRight,
                                       color: Colors.white,
                                       size: 12,
                                     ),
@@ -245,6 +141,16 @@ class _LauncherSignInPageState extends State<LauncherSignInPage> {
         },
       ),
     );
+  }
+
+  void _handleAuthAction(BuildContext context, bool isAuthenticated) {
+    final AuthViewModel authViewModel = serviceLocator<AuthViewModel>();
+
+    if (isAuthenticated) {
+      authViewModel.logout();
+    } else {
+      authViewModel.login();
+    }
   }
 }
 
@@ -394,10 +300,9 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
   }
 }
 
-
 // clean arhitecture - presentation - bloc pattern - auth bloc - login event - login state - login page - login widget
 // Authentication Feature
-// -- features 
+// -- features
 //  -- data
 //    -- models
 //      -- user_model.dart
@@ -406,5 +311,3 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
 //    -- usecases
 //      -- sign_in_usecase.dart
 // -- domain
-
-
