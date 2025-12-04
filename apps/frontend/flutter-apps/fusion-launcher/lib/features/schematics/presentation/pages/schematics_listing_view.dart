@@ -191,7 +191,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final double normalColumnWidth = availableWidth * _normalColumnWidthRatio;
 
         return SemanticHelper.container(
-          testId: SemanticHelper.createTestId(SemanticTypes.container, "sources_and_endpoints_section"),
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "schematic_listing_view_area"),
           child: Container(
             color: Colors.white,
             child: Row(

@@ -273,94 +273,184 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.none,
-      width: widget.width,
-      height: widget.height,
-      decoration: BoxDecoration(
-        color: widget.backgroundColor,
-        border: Border(
-          right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_container_${widget.title.toLowerCase()}"),
+      child: Container(
+        clipBehavior: Clip.none,
+        width: widget.width,
+        height: widget.height,
+        decoration: BoxDecoration(
+          color: widget.backgroundColor,
+          border: Border(
+            right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          ),
         ),
-      ),
-      child: Column(
-        children: <Widget>[
-          /// section Header
-          Container(
-            width: widget.width,
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+        child: Column(
+          children: <Widget>[
+            /// section Header
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_header_container_${widget.title.toLowerCase()}"),
+              child: Container(
+                width: widget.width,
+                height: 44,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  border: Border(
+                    bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                  ),
+                ),
+                child: AnimatedBuilder(
+                  animation: _searchAnimation,
+                  builder: (BuildContext context, Widget? child) {
+                    return Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: <Widget>[
+                        /// Title and search field with smooth transition
+                        Expanded(
+                          child: Stack(
+                            children: <Widget>[
+                              /// Title - fades out when search is visible
+                              Opacity(
+                                opacity: 1.0 - _searchAnimation.value,
+                                child: Row(
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: FusionAppText(
+                                        text: widget.title,
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                        maxLine: 1,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 4),
+
+                                    /// Add button with listening areas support
+                                    AddDeviceExpandablePopupMenuWidget(
+                                      sectionTitle: widget.title,
+                                      onTapAddDevice: widget.onTapAddDevice,
+                                      listeningAreas: widget.listeningAreas,
+                                      // zones: widget.zones,
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              /// Search field - slides in when visible
+                              if (_searchAnimation.value > 0)
+                                Opacity(
+                                  opacity: _searchAnimation.value,
+                                  child: Transform.translate(
+                                    offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: Theme.of(context).colorScheme.greyLight,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      height: 36,
+                                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: SemanticHelper.formControl(
+                                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
+                                              child: FusionTextField(
+                                                controller: searchController,
+                                                hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
+                                                focusNode: _searchFocusNode,
+                                                onChanged: (String value) {
+                                                  setState(() {});
+                                                  widget.onSearchChanged?.call(value.trim());
+                                                  if (isSearchVisible) {
+                                                    widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
+                                                  }
+                                                },
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(width: 4),
+
+                        /// Animated search button
+                        AnimatedBuilder(
+                          animation: Listenable.merge(<Listenable?>[_iconScaleAnimation, _iconRotationAnimation]),
+                          builder: (BuildContext context, Widget? child) {
+                            return Transform.scale(
+                              scale: _iconScaleAnimation.value,
+                              child: Transform.rotate(
+                                angle: _iconRotationAnimation.value * 3.14159,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(12),
+                                    onTap: _onSearchIconPressed,
+                                    child: Container(
+                                      padding: const EdgeInsets.all(4),
+                                      child: SemanticHelper.button(
+                                        testId: SemanticHelper.createTestId(
+                                          SemanticTypes.button,
+                                          isSearchVisible ? "${widget.title.toLowerCase()}_search_close_icon" : "${widget.title.toLowerCase()}_search_icon",
+                                        ),
+                                        child: Icon(
+                                          isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
+                                          color: Theme.of(context).colorScheme.greyDark,
+                                          size: 17,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ],
+                    );
+                  },
+                ),
               ),
             ),
-            child: AnimatedBuilder(
-              animation: _searchAnimation,
-              builder: (BuildContext context, Widget? child) {
-                return Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: <Widget>[
-                    /// Title and search field with smooth transition
-                    Expanded(
-                      child: Stack(
+
+            /// Content with expandable support
+            Expanded(
+              child: SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "expandable_section_content_container_${widget.title.toLowerCase()}"),
+                child: SingleChildScrollView(
+                  child: SizedBox(
+                    width: widget.width,
+                    child: SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          /// Title - fades out when search is visible
-                          Opacity(
-                            opacity: 1.0 - _searchAnimation.value,
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: widget.title,
-                                    style: Theme.of(context).textTheme.bodySmall,
-                                    maxLine: 1,
-                                  ),
-                                ),
-                                const SizedBox(width: 4),
-
-                                /// Add button with listening areas support
-                                AddDeviceExpandablePopupMenuWidget(
-                                  sectionTitle: widget.title,
-                                  onTapAddDevice: widget.onTapAddDevice,
-                                  listeningAreas: widget.listeningAreas,
-                                  // zones: widget.zones,
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          /// Search field - slides in when visible
-                          if (_searchAnimation.value > 0)
-                            Opacity(
-                              opacity: _searchAnimation.value,
-                              child: Transform.translate(
-                                offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.greyLight,
-                                    borderRadius: BorderRadius.circular(4),
-                                  ),
-                                  height: 36,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Expanded(
-                                        child: SemanticHelper.formControl(
-                                          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "section_search_${widget.title.toLowerCase()}"),
-                                          child: FusionTextField(
-                                            controller: searchController,
-                                            hintText: widget.title == 'Speakers' ? 'Search zones' : 'Search devices',
-                                            focusNode: _searchFocusNode,
-                                            onChanged: (String value) {
-                                              setState(() {});
-                                              widget.onSearchChanged?.call(value.trim());
-                                              if (isSearchVisible) {
-                                                widget.onActiveExpandableSectionChanged?.call(_activeExpandableSectionTitle);
-                                              }
-                                            },
-                                          ),
+                          /// Search results message (only when active & query not empty)
+                          if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty))
+                            SemanticHelper.container(
+                              testId: SemanticHelper.createTestId(SemanticTypes.container, "search_results_message_container"),
+                              child: Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
+                                    children: <InlineSpan>[
+                                      TextSpan(
+                                        text: '${widget.searchResultCount ?? 0} results found for ',
+                                      ),
+                                      TextSpan(
+                                        text: '"${widget.searchQuery}"',
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w600,
+                                          backgroundColor: Colors.yellow[200],
+                                          color: Colors.black,
                                         ),
                                       ),
                                     ],
@@ -368,99 +458,18 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                 ),
                               ),
                             ),
+
+                          /// Original content (expandable / static)
+                          widget.enableExpandable ? _buildExpandableContent() : widget.sectionContent,
                         ],
                       ),
                     ),
-
-                    const SizedBox(width: 4),
-
-                    /// Animated search button
-                    AnimatedBuilder(
-                      animation: Listenable.merge(<Listenable?>[_iconScaleAnimation, _iconRotationAnimation]),
-                      builder: (BuildContext context, Widget? child) {
-                        return Transform.scale(
-                          scale: _iconScaleAnimation.value,
-                          child: Transform.rotate(
-                            angle: _iconRotationAnimation.value * 3.14159,
-                            child: Material(
-                              color: Colors.transparent,
-                              child: InkWell(
-                                borderRadius: BorderRadius.circular(12),
-                                onTap: _onSearchIconPressed,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  child: SemanticHelper.button(
-                                    testId: SemanticHelper.createTestId(
-                                      SemanticTypes.button,
-                                      isSearchVisible ? "${widget.title.toLowerCase()}_search_close_icon" : "${widget.title.toLowerCase()}_search_icon",
-                                    ),
-                                    child: Icon(
-                                      isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
-                                      color: Theme.of(context).colorScheme.greyDark,
-                                      size: 17,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-
-          /// Content with expandable support
-          Expanded(
-            child: SingleChildScrollView(
-              child: SizedBox(
-                width: widget.width,
-                child: SingleChildScrollView(
-                  physics: const ClampingScrollPhysics(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      /// Search results message (only when active & query not empty)
-                      if (isSearchVisible && (widget.searchQuery != null && widget.searchQuery!.isNotEmpty))
-                        SemanticHelper.container(
-                          testId: SemanticHelper.createTestId(SemanticTypes.container, "search_results_message_container"),
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
-                            child: RichText(
-                              text: TextSpan(
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11, color: Colors.black87),
-                                children: <InlineSpan>[
-                                  TextSpan(
-                                    text: '${widget.searchResultCount ?? 0} results found for ',
-                                  ),
-                                  TextSpan(
-                                    text: '"${widget.searchQuery}"',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      backgroundColor: Colors.yellow[200],
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      /// Original content (expandable / static)
-                      widget.enableExpandable ? _buildExpandableContent() : widget.sectionContent,
-                    ],
                   ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
