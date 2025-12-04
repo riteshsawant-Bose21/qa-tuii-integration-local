@@ -32,6 +32,11 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     /// Get item list based on selected action type
     final List<SceneItemDropdown> itemList = action.actionType != null ? _projectViewModel.getActionItemsByType(action.actionType!) : <SceneItemDropdown>[];
 
+    /// Determine if item dropdown should be enabled
+    /// Enable by default (when no action type is selected)
+    /// Disable only when action type is selected but has no items
+    final bool isItemDropdownEnabled = action.actionType == null || itemList.isNotEmpty;
+
     /// Get param list based on selected action type and item
     /// If no items available, load params directly from action type
     /// This is to handle cases where action type has params but no items (e.g., Global actions)
@@ -76,14 +81,18 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
               items: _projectViewModel.getSceneActionTypes(),
               display: (SceneActionType e) => e.displayName,
               onChanged: (SceneActionType? actionType) {
-                // Always clear param and value when action type changes
+                /// Always clear param and value when action type changes
                 action.actionType = actionType;
                 action.param = null;
                 action.value = null;
-                // Also clear item, and set to first if available
+
+                /// Also clear item, and set to first if available
                 final List<SceneItemDropdown> newItemList = actionType != null ? _projectViewModel.getActionItemsByType(actionType) : <SceneItemDropdown>[];
                 if (newItemList.isNotEmpty) {
-                  action.item = SceneItem(itemId: newItemList.first.id);
+                  /// Set to first item in the new list
+                  // action.item = SceneItem(itemId: newItemList.first.id);
+
+                  action.item = SceneItem(itemId: "");
                 } else {
                   action.item = null;
                 }
@@ -112,18 +121,24 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                   }
                 }
 
+                String hintText;
+                if (action.actionType == null) {
+                  hintText = "Select Action Item";
+                } else if (itemList.isEmpty) {
+                  hintText = "No items available";
+                } else {
+                  hintText = "Select Action Item";
+                }
+
                 return FusionDropdown<SceneItemDropdown>(
                   value: selectedItem,
                   items: itemList,
-                  hint: itemList.isEmpty ? "No items available" : "Select Action Item",
+                  hint: hintText,
                   display: (SceneItemDropdown e) => e.name,
-                  isEnabled: itemList.isNotEmpty,
+                  isEnabled: isItemDropdownEnabled,
                   onChanged:
-                      itemList.isEmpty
-                          ? null
-                          : (SceneItemDropdown? selected) {
-                            print('Selected Scene Item: ${selected?.name}');
-
+                      isItemDropdownEnabled
+                          ? (SceneItemDropdown? selected) {
                             action.item = selected == null ? null : SceneItem(itemId: selected.id);
 
                             action.param = null;
@@ -137,7 +152,8 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                             }
 
                             setState(() {});
-                          },
+                          }
+                          : null,
                 );
               },
             ),
@@ -198,6 +214,11 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                           ),
                       onChanged: (SceneValue newVal) {
                         action.value = newVal;
+                        // Update in ViewModel
+                        _projectViewModel.updateSceneActionValue(
+                          actionId: action.id,
+                          value: newVal,
+                        );
                         setState(() {});
                       },
                     )

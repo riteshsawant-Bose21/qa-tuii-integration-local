@@ -158,16 +158,20 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
 
       /// Text Input (simple string)
       case SceneParamValueType.textInput:
-        return TextFormField(
-          initialValue: value.value ?? "",
-          decoration: const InputDecoration(
-            border: OutlineInputBorder(),
-            isDense: true,
+        return Transform.scale(
+          alignment: Alignment.center,
+          scale: 0.7,
+          child: TextFormField(
+            initialValue: value.value ?? "",
+            decoration: const InputDecoration(
+              border: OutlineInputBorder(),
+              isDense: true,
+            ),
+            onChanged: (String v) {
+              final SceneValue updated = value.copyWith(value: v);
+              widget.onChanged(updated);
+            },
           ),
-          onChanged: (String v) {
-            final SceneValue updated = value.copyWith(value: v);
-            widget.onChanged(updated);
-          },
         );
 
       /// On/Off toggle → stored as "on" or "off"
