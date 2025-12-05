@@ -303,6 +303,12 @@ class FusionAppTheme {
   /// Returns a fully configured [ThemeData] for dark theme
   static ThemeData get darkTheme {
     final darkColorScheme = ColorScheme.fromSeed(
+      primary: Color(0xFF2F7554),
+      onPrimary: Colors.white,
+      surface: Color(0xFF1D1D1D),
+      
+      onSurface: Colors.white,
+      surfaceDim: Color(0xFFC0C0C0),
       seedColor: const Color(0xFF80C7FF), // Using your dark primary color
       brightness: Brightness.dark,
     );
@@ -310,6 +316,7 @@ class FusionAppTheme {
     return ThemeData(
       // Primary color scheme using custom dark primary color
       colorScheme: darkColorScheme,
+      scaffoldBackgroundColor: darkColorScheme.surface,
       fontFamily: GoogleFonts.montserrat().fontFamily,
 
       // Custom TextTheme with proper dark theme color assignments
@@ -360,6 +367,23 @@ class FusionAppTheme {
             fontWeight: FontWeight.w500,
           ),
         ),
+      ),
+
+      dividerTheme: DividerThemeData(
+        color: darkColorScheme.dividerColor,
+        thickness: 1,
+      ),
+
+      iconTheme: IconThemeData(
+        size: 16,
+        color: darkColorScheme.onSurface,
+      ),
+
+      dialogTheme: DialogThemeData(
+        barrierColor: Colors.black87,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        backgroundColor: darkColorScheme.surface,
+        elevation: 0,
       ),
 
       /// Tab bar styling with custom font and dark theme colors

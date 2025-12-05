@@ -36,3 +36,4 @@ export 'project_entities/non_processing/gpio_config.dart';
 export 'project_entities/non_processing/scene_model.dart';
 export 'project_entities/non_processing/scene_set_model.dart';
 export 'project_entities/non_processing/scheduler_config.dart';
+export 'fusion_auth/user_model.dart';
