@@ -70,12 +70,16 @@ dependencies:
 
   flutter_dotenv: ^6.0.0
 
+  calendar_date_picker2: ^2.0.1
+  date_picker_plus: ^4.2.0
+
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
     
   dartzmq:
     path:  ../../../../libs/flutter-libs/dartzmq
   recase: ^4.1.0
+
 
 dev_dependencies:
   flutter_test:
@@ -121,6 +125,7 @@ flutter:
     - assets/images/splash/
     - assets/icons/
     - assets/icons/wiring_ports/
+    - assets/icons/scheduler/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
 

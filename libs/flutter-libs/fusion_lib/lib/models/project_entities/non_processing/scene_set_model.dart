@@ -7,6 +7,17 @@ class SceneSetModel {
     required this.name,
   }) : id = id ?? "SCENESET${DateTime.now().millisecondsSinceEpoch}";
 
+  //copy with
+  SceneSetModel copyWith({
+    String? id,
+    String? name,
+  }) {
+    return SceneSetModel(
+      id: id ?? this.id,
+      name: name ?? this.name,
+    );
+  }
+
   factory SceneSetModel.fromJson(Map<String, dynamic> json) {
     return SceneSetModel(
       id: json['id'],
