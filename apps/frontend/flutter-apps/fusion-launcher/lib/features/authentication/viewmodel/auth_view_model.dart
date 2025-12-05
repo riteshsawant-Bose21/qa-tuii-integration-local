@@ -28,15 +28,11 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       final bool isAuthenticated = await _authService.isAuthenticated();
 
       if (isAuthenticated) {
-        final String? idToken = await _authService.getIdToken();
-        if (idToken != null) {
-          // Get user details from backend
-          // final Map<String, dynamic> authData = await _authService.getUserAuthorization(idToken);
-
-          // You might need to get user profile from stored data or API
-          // For now, emit authenticated state
+        final UserModel? savedProfile = await UserSessionManager.getSignedInUserProfile();
+        if (savedProfile != null) {
           emit(Authenticated());
         } else {
+          // If no saved profile, treat as unauthenticated
           emit(Unauthenticated());
         }
       } else {
@@ -53,7 +49,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Initialize error: $e');
       emit(AuthError('Failed to initialize: ${e.toString()}'));
-      emit(Unauthenticated());
     }
   }
 
@@ -74,7 +69,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
 
       FusionLogger.log(tag: LogTag.exceptions, message: 'Login error: $e');
       emit(AuthError('Login failed: ${e.toString()}'));
-      emit(Unauthenticated());
     }
   }
 
@@ -102,7 +96,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Get user authorization error: $e');
       emit(AuthError('Failed to get user details: ${e.toString()}'));
-      emit(Unauthenticated());
     }
   }
 
@@ -117,8 +110,6 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Logout error: $e');
       emit(AuthError('Logout failed: ${e.toString()}'));
-      // Still set to unauthenticated even if logout fails
-      emit(Unauthenticated());
     }
   }
 
@@ -139,7 +130,7 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       }
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Refresh auth error: $e');
-      emit(Unauthenticated());
+      emit(AuthError('Failed to refresh authentication: ${e.toString()}'));
     }
   }
 
