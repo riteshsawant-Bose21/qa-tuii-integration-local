@@ -26,19 +26,23 @@ func NewUserSettingsHandler(userSettingsSvc fusion.UserSettings) *UserSettingsHa
 // @Tags user/settings
 // @Accept json
 // @Produce json
-// @Param userID path string true "User ID"
+// @Security BearerAuth
 // @Success 200 {object} types.UserSettings "Successfully retrieved user settings"
 // @Failure 404 {object} object{error=string} "User settings not found / Invalid user ID format"
 // @Failure 500 {object} object{error=string} "Internal server error"
-// @Router /user/settings/{userID} [get]
+// @Router /user/settings [get]
 func (h *UserSettingsHandler) GetUserSettings(ctx *gin.Context) {
-	id := ctx.Param("userID")
-	if _, err := uuid.Parse(id); err != nil {
+
+	userAuth, _ := ctx.Get("user_auth")
+	auth := userAuth.(*types.UserAuthorizationResponse)
+	userID := auth.User.ID
+
+	if _, err := uuid.Parse(userID); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
 		return
 	}
 
-	settings, err := h.userSettings.GetUserSettings(ctx, id)
+	settings, err := h.userSettings.GetUserSettings(ctx, userID)
 	if err != nil {
 		if err.Error() == "user settings not found" || err.Error() == "sql: no rows in result set" {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "User settings not found"})
@@ -69,6 +73,16 @@ func (h *UserSettingsHandler) CreateUserSettings(ctx *gin.Context) {
 		return
 	}
 
+	if settings.UserID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required for creating settings"})
+		return
+	}
+
+	if _, err := uuid.Parse(settings.UserID); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id format: must be a valid UUID"})
+		return
+	}
+
 	if err := h.userSettings.CreateUserSettings(ctx, &settings); err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user settings: %v", err)})
 		return
@@ -83,6 +97,7 @@ func (h *UserSettingsHandler) CreateUserSettings(ctx *gin.Context) {
 // @Tags user/settings
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param settings body types.UserSettings true "User settings data"
 // @Success 200 {object} object{message=string,userID=string} "Successfully updated user settings"
 // @Failure 400 {object} object{error=string} "Invalid request body"
@@ -92,14 +107,58 @@ func (h *UserSettingsHandler) UpdateUserSettings(ctx *gin.Context) {
 	var settings types.UserSettings
 
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid JSON format: %v", err)})
+		return
+	}
+
+	if settings.ID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "id is required for updating settings"})
+		return
+	}
+
+	if _, err := uuid.Parse(settings.ID); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format: must be a valid UUID"})
+		return
+	}
+
+	if settings.UserID == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required for updating settings"})
+		return
+	}
+
+	if _, err := uuid.Parse(settings.UserID); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id format: must be a valid UUID"})
+		return
+	}
+
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		return
+	}
+
+	auth, ok := userAuth.(*types.UserAuthorizationResponse)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authentication context"})
+		return
+	}
+
+	authenticatedUserID := auth.User.ID
+
+	// This prevents users from updating other user's settings
+	if settings.UserID != authenticatedUserID {
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: You are not allowed to update this user's settings"})
 		return
 	}
 
 	if err := h.userSettings.UpdateUserSettings(ctx, &settings); err != nil {
+		if err.Error() == "user settings not found" {
+			ctx.JSON(http.StatusNotFound, gin.H{"error": "User settings not found"})
+			return
+		}
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to update user settings: %v", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "User settings updated successfully", "userID": settings.UserID})
+	ctx.JSON(http.StatusOK, gin.H{"message": "User settings updated successfully"})
 }

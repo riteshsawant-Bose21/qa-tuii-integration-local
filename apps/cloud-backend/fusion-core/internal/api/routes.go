@@ -63,7 +63,9 @@ func (a *API) registerRoutes() {
 	userProfile := user.Group("/profile")
 	userProfilehandler := handler.NewUserProfileHandler(a.userProfileSvc)
 	{
-		userProfile.GET("/:userID", userProfilehandler.GetUserProfile)
+		userProfile.Use(accessControl.GlobalAccessControlMiddleware())
+
+		userProfile.GET("", userProfilehandler.GetUserProfile)
 		userProfile.POST("", userProfilehandler.CreateUserProfile)
 		userProfile.PUT("", userProfilehandler.UpdateUserProfile)
 	}
@@ -72,7 +74,9 @@ func (a *API) registerRoutes() {
 	userSettings := user.Group("/settings")
 	userSettingsHandler := handler.NewUserSettingsHandler(a.userSettingsSvc)
 	{
-		userSettings.GET("/:userID", userSettingsHandler.GetUserSettings)
+		userSettings.Use(accessControl.GlobalAccessControlMiddleware())
+
+		userSettings.GET("", userSettingsHandler.GetUserSettings)
 		userSettings.POST("", userSettingsHandler.CreateUserSettings)
 		userSettings.PUT("", userSettingsHandler.UpdateUserSettings)
 	}

@@ -38,10 +38,6 @@ func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) 
 		return fmt.Errorf("userSettings cannot be nil")
 	}
 
-	if userSettings.UserID == "" {
-		return fmt.Errorf("userID cannot be empty")
-	}
-
 	// Create the user settings
 	row := &model.UserSetting{
 		UserID:    userSettings.UserID,
@@ -62,26 +58,22 @@ func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) 
 }
 
 func (s *Service) Update(ctx context.Context, userSettings *types.UserSettings) error {
-
-	// Validations
-	if userSettings.ID == "" {
-		return fmt.Errorf("id cannot be empty")
-	}
-
 	if userSettings == nil {
 		return fmt.Errorf("userSettings cannot be nil")
 	}
 
-	// Fetch the existing settings to get the database record ID
 	existingSettings, err := model.UserSettings(model.UserSettingWhere.ID.EQ(userSettings.ID)).One(ctx, s.db)
 	if err != nil {
-		if err.Error() == "user settings not found" || err.Error() == "sql: no rows in result set" {
-			return fmt.Errorf("user settings not found: %v", userSettings.ID)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user settings not found")
 		}
-		return fmt.Errorf("failed to get user settings by id: %v", err)
+		return fmt.Errorf("failed to fetch user settings: %v", err)
 	}
 
-	// Update the user settings in the database
+	if existingSettings.UserID != userSettings.UserID {
+		return fmt.Errorf("user settings do not belong to the specified user")
+	}
+
 	row := &model.UserSetting{
 		ID:        existingSettings.ID,
 		UserID:    userSettings.UserID,
@@ -94,5 +86,6 @@ func (s *Service) Update(ctx context.Context, userSettings *types.UserSettings) 
 	if err != nil {
 		return fmt.Errorf("failed to update user settings: %v", err)
 	}
+
 	return nil
 }

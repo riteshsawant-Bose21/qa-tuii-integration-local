@@ -39,14 +39,6 @@ func (s *Service) Insert(ctx context.Context, userProfile *types.UserProfile) er
 		return fmt.Errorf("userProfile cannot be nil")
 	}
 
-	if userProfile.UserID == "" {
-		return fmt.Errorf("userID cannot be empty")
-	}
-
-	if userProfile.Email == "" {
-		return fmt.Errorf("email cannot be empty")
-	}
-
 	linkedProfilesJSON, errLinkedProfiles := json.Marshal(userProfile.LinkedProfiles)
 	if errLinkedProfiles != nil {
 		return fmt.Errorf("failed to marshal linked profiles: %v", errLinkedProfiles)
@@ -98,12 +90,6 @@ func (s *Service) Insert(ctx context.Context, userProfile *types.UserProfile) er
 }
 
 func (s *Service) Update(ctx context.Context, userProfile *types.UserProfile) error {
-
-	// Validations
-	if userProfile.ID == "" {
-		return fmt.Errorf("userID cannot be empty")
-	}
-
 	if userProfile == nil {
 		return fmt.Errorf("userProfile cannot be nil")
 	}
@@ -118,16 +104,18 @@ func (s *Service) Update(ctx context.Context, userProfile *types.UserProfile) er
 		return fmt.Errorf("failed to marshal price list: %v", errPriceList)
 	}
 
-	// Fetch the existing profile to get the database record ID
 	existingProfile, err := model.UserProfiles(model.UserProfileWhere.ID.EQ(userProfile.ID)).One(ctx, s.db)
 	if err != nil {
-		if err.Error() == "user profile not found" || err.Error() == "sql: no rows in result set" {
-			return fmt.Errorf("user profile not found: %v", userProfile.ID)
+		if err == sql.ErrNoRows {
+			return fmt.Errorf("user profile not found")
 		}
-		return fmt.Errorf("failed to get user profile by id: %v", err)
+		return fmt.Errorf("failed to fetch user profile: %v", err)
 	}
 
-	// Update the user profile in the database
+	if existingProfile.UserID != userProfile.UserID {
+		return fmt.Errorf("user profile does not belong to the specified user")
+	}
+
 	row := &model.UserProfile{
 		ID:                    existingProfile.ID,
 		UserID:                userProfile.UserID,
@@ -154,11 +142,13 @@ func (s *Service) Update(ctx context.Context, userProfile *types.UserProfile) er
 		Currency:              null.NewString(userProfile.Currency, userProfile.Currency != ""),
 		NetsuiteCustomerID:    null.NewString(userProfile.NetsuiteCustomerID, userProfile.NetsuiteCustomerID != ""),
 		PriceList:             null.JSONFrom(PriceListJSON),
+		CreatedAt:             existingProfile.CreatedAt,
 	}
 
 	_, err = row.Update(ctx, s.db, boil.Infer())
 	if err != nil {
 		return fmt.Errorf("failed to update user profile: %v", err)
 	}
+
 	return nil
 }
