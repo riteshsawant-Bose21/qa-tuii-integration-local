@@ -10,14 +10,19 @@ import '../../viewmodel/scheduler_form_viewmodel.dart';
 import '../../viewmodel/scheduler_viewmodel.dart';
 
 class SchedulerForm extends StatelessWidget {
-  const SchedulerForm({super.key, required this.viewModel});
+  const SchedulerForm({super.key, required this.viewModel, this.initial});
   final SchedulerViewmodel viewModel;
+  final ScheduleConfig? initial;
   @override
   Widget build(BuildContext context) {
     return Dialog(
       insetPadding: const EdgeInsets.symmetric(horizontal: 200, vertical: 100),
       child: ChangeNotifierProvider<SchedulerFormViewModel>(
-        create: (BuildContext context) => SchedulerFormViewModel(viewModel: viewModel),
+        create:
+            (BuildContext context) => SchedulerFormViewModel(
+              viewModel: viewModel,
+              initial: initial,
+            ),
         child: Material(
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -30,7 +35,10 @@ class SchedulerForm extends StatelessWidget {
                     const SizedBox(
                       width: 10,
                     ),
-                    Text("Create Schedule", style: context.textTheme.titleMedium?.copyWith(color: Colors.white)),
+                    Text(
+                      initial == null ? "Create Schedule" : "Edit Schedule",
+                      style: context.textTheme.titleMedium?.copyWith(color: Colors.white),
+                    ),
                     const Spacer(),
                     IconButton(
                       icon: const Icon(
@@ -346,11 +354,11 @@ class SchedulerForm extends StatelessWidget {
     );
   }
 
-  static Future<void> show(BuildContext context, SchedulerViewmodel viewModel) async {
+  static Future<void> show(BuildContext context, SchedulerViewmodel viewModel, {ScheduleConfig? initial}) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return SchedulerForm(viewModel: viewModel);
+        return SchedulerForm(viewModel: viewModel, initial: initial);
       },
     );
   }

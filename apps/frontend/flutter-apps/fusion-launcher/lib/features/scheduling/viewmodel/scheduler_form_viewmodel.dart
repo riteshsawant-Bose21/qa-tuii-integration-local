@@ -8,6 +8,22 @@ class SchedulerFormViewModel extends ChangeNotifier {
   final TextEditingController name = TextEditingController();
 
   final SchedulerViewmodel viewModel;
+  final ScheduleConfig? initial;
+  SchedulerFormViewModel({required this.viewModel, required this.initial}) {
+    if (initial != null) {
+      name.text = initial!.name;
+      color = initial!.colorHex;
+      startDate = initial!.startDate;
+      endDate = initial!.endDate;
+      startTime = TimeOfDay(hour: initial!.time.hour, minute: initial!.time.minute);
+      endTime = TimeOfDay(hour: initial!.time.hour + 1, minute: initial!.time.minute);
+      recurrenceType = initial!.recurrence;
+      for (final int day in initial!.weeklyDays) {
+        recurrenceDays.add(RecurrenceDay.values.firstWhere((RecurrenceDay element) => element.value == day));
+      }
+    }
+  }
+
   String? _color;
 
   String? get color => _color;
@@ -55,7 +71,6 @@ class SchedulerFormViewModel extends ChangeNotifier {
 
   final List<RecurrenceDay> _recurrenceDays = <RecurrenceDay>[];
 
-  SchedulerFormViewModel({required this.viewModel});
   List<RecurrenceDay> get recurrenceDays => _recurrenceDays;
   void addRecurrenceDay(RecurrenceDay day) {
     if (!_recurrenceDays.contains(day)) {

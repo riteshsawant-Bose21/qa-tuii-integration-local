@@ -30,7 +30,10 @@ class _SchedulerSection extends StatelessWidget {
             (title: "", flex: 1),
           ],
           itemCount: state.schedules.length,
-          
+          onRowTap: (int value) {
+            final ScheduleConfig schedule = state.schedules[value];
+            SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: schedule);
+          },
           itemBuilder: (BuildContext context, int index) {
             final ScheduleConfig schedule = state.schedules[index];
             return <Widget>[
@@ -138,11 +141,19 @@ class _SchedulerSection extends StatelessWidget {
 }
 
 class FusionTable extends StatelessWidget {
-  const FusionTable({super.key, required this.headers, required this.itemCount, required this.itemBuilder, this.spacing = 10});
+  const FusionTable({
+    super.key,
+    required this.headers,
+    required this.itemCount,
+    required this.itemBuilder,
+    this.spacing = 10,
+    this.onRowTap,
+  });
   final List<({String title, int flex})> headers;
   final int itemCount;
   final List<Widget> Function(BuildContext context, int index) itemBuilder;
   final double spacing;
+  final ValueChanged<int>? onRowTap;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -185,13 +196,16 @@ class FusionTable extends StatelessWidget {
                         bottom: index != itemCount - 1 ? BorderSide(color: Colors.grey.withOpacity(0.3), width: 1) : BorderSide.none,
                       ),
                     ),
-                    child: Row(
-                      spacing: spacing,
-                      children: List<Widget>.generate(
-                        headers.length,
-                        (int i) => Expanded(
-                          flex: headers[i].flex,
-                          child: rowItems[i],
+                    child: InkWell(
+                      onTap: onRowTap != null ? () => onRowTap!(index) : null,
+                      child: Row(
+                        spacing: spacing,
+                        children: List<Widget>.generate(
+                          headers.length,
+                          (int i) => Expanded(
+                            flex: headers[i].flex,
+                            child: rowItems[i],
+                          ),
                         ),
                       ),
                     ),
