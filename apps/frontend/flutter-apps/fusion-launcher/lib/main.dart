@@ -5,16 +5,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/semantics.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/user_session_manager.dart';
-import 'package:fusion_launcher/features/onboarding/presentation/welcome_page.dart';
-import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
+import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
 
+import 'core/config/app_config.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
@@ -28,6 +28,8 @@ Future<void> main() async {
       DeviceOrientation.landscapeRight,
       DeviceOrientation.landscapeLeft,
     ]);
+
+    await AppConfig.initialize();
 
     await setupServiceLocator();
 
@@ -58,7 +60,9 @@ void _setupMacOSDeepLinkListener() {
   // Use MethodChannel to receive the URL from native code
   const MethodChannel channel = MethodChannel('custom_url_scheme_channel');
   channel.setMethodCallHandler((MethodCall call) async {
-    debugPrint('Received method call: ${call.method} with arguments: ${call.arguments}');
+    debugPrint(
+      'Received method call: ${call.method} with arguments: ${call.arguments}',
+    );
     if (call.method == 'onCustomUrlScheme') {
       final String url = call.arguments as String;
       // Handle the URL here
@@ -75,8 +79,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
-        BlocProvider<AuthBloc>(
-          create: (BuildContext context) => serviceLocator<AuthBloc>(),
+        BlocProvider<AuthViewModel>(
+          create: (BuildContext context) => serviceLocator<AuthViewModel>()..initialize(),
+          lazy: false,
         ),
         BlocProvider<PanelBloc>(
           create: (BuildContext context) => serviceLocator<PanelBloc>(),
@@ -99,9 +104,30 @@ class MyApp extends StatelessWidget {
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
             themeMode: mode,
-            home: Scaffold(
-              body: UserSessionManager.isUserLoggedIn() ? const HomePage() : const WelcomePage(),
+
+            home: BlocConsumer<AuthViewModel, AuthViewModelState>(
+              // Listener: Handle one-off events like errors (optional)
+              listener: (BuildContext context, AuthViewModelState state) {
+                if (state is AuthError) {
+                  // Show a snackbar if initialization fails seriously
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message)),
+                  );
+                }
+              },
+              buildWhen: (AuthViewModelState previous, AuthViewModelState current) {
+                return current is Unauthenticated || current is Authenticated;
+              },
+              // Builder: Determines WHICH page to show
+              builder: (BuildContext context, AuthViewModelState state) {
+                if (state is Unauthenticated) {
+                  return const LauncherSignInPage();
+                }
+
+                return const HomePage();
+              },
             ),
+
             navigatorKey: globalNavigatorKey,
             navigatorObservers: <NavigatorObserver>[
               AppNavigatorObserver(),
