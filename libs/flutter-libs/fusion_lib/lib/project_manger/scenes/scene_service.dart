@@ -1,15 +1,15 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension SceneService on ProjectService {
-  void addNewScene(SceneModel scene) {
-    scenes.add(scene.id, scene);
+  void addNewSnapshots(SnapshotsModel scene) {
+    snapshots.add(scene.id, scene);
   }
 
-  void updateScene(SceneModel scene) {
-    if (!scenes.exists(scene.id)) {
+  void updateSnapshots(SnapshotsModel scene) {
+    if (!snapshots.exists(scene.id)) {
       throw Exception("Scene with id ${scene.id} does not exist.");
     }
-    scenes.add(scene.id, scene);
+    snapshots.add(scene.id, scene);
   }
 
   void addNewSceneAction({required SceneActionModel action}) {
@@ -28,8 +28,8 @@ extension SceneService on ProjectService {
     }
   }
 
-  void addSceneActionToScene({required String sceneId, required SceneActionModel action}) {
-    final scene = scenes.get(sceneId);
+  void addSceneActionToSnapshot({required String sceneId, required SceneActionModel action}) {
+    final scene = snapshots.get(sceneId);
     if (scene == null) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
@@ -37,7 +37,7 @@ extension SceneService on ProjectService {
     relationships.link(RelationshipType.sceneActions, sceneId, action.id);
   }
 
-  void removeSceneActionFromScene({required String sceneId, required String actionId}) {
+  void removeSceneActionFromSnapshot({required String sceneId, required String actionId}) {
     if (!sceneActions.exists(actionId)) {
       throw Exception("Scene Action with id $actionId does not exist.");
     }
@@ -45,7 +45,7 @@ extension SceneService on ProjectService {
     sceneActions.remove(actionId);
   }
 
-  List<SceneActionModel> getSceneActionsForScene(String sceneId) {
+  List<SceneActionModel> getSceneActionsForSnapshot(String sceneId) {
     final actionIds = relationships.getChildren(RelationshipType.sceneActions, sceneId);
     return actionIds.map((id) => sceneActions.get(id)).whereType<SceneActionModel>().toList();
   }
@@ -91,8 +91,8 @@ extension SceneService on ProjectService {
     sceneActions.add(actionId, updatedScene);
   }
 
-  void deleteScene(String sceneId) {
-    if (!scenes.exists(sceneId)) {
+  void removeSnapshots(String sceneId) {
+    if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
 
@@ -100,14 +100,14 @@ extension SceneService on ProjectService {
     final actionIds = relationships.getChildren(RelationshipType.sceneActions, sceneId);
     final List<String> actionsToRemove = List.from(actionIds);
     for (var actionId in actionsToRemove) {
-      removeSceneActionFromScene(sceneId: sceneId, actionId: actionId);
+      removeSceneActionFromSnapshot(sceneId: sceneId, actionId: actionId);
     }
     //check if scene is in any scene set
     final parentSets = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
     if (parentSets != null) {
-      removeSceneFromSceneSet(sceneSetId: parentSets, sceneId: sceneId);
+      removeSnapshotFromSceneSet(sceneSetId: parentSets, sceneId: sceneId);
     }
-    scenes.remove(sceneId);
+    snapshots.remove(sceneId);
   }
 
   List<SceneActionType> getSceneActionTypes() {
@@ -309,11 +309,11 @@ extension SceneService on ProjectService {
     }
   }
 
-  List<SceneModel> getAllScenes() {
+  List<SnapshotsModel> getAllSnapshots() {
     //return scenes which are not in any scene set, where get parent is null
-    final List<SceneModel> allScenes = scenes.getAll();
+    final List<SnapshotsModel> allScenes = snapshots.getAll();
 
-    final List<SceneModel> standaloneScenes = allScenes.where((scene) {
+    final List<SnapshotsModel> standaloneScenes = allScenes.where((scene) {
       final parentSet = relationships.getParent(RelationshipType.sceneSetScenes, scene.id);
       return parentSet == null || parentSet.isEmpty;
     }).toList();
@@ -346,44 +346,44 @@ extension SceneService on ProjectService {
     return sceneSets.getAll();
   }
 
-  void addNewSceneToSceneSet({required String sceneSetId, required SceneModel scene}) {
+  void addNewSnapshotToSceneSet({required String sceneSetId, required SnapshotsModel scene}) {
     final sceneSet = sceneSets.get(sceneSetId);
     if (sceneSet == null) {
       throw Exception("Scene Set with id $sceneSetId does not exist.");
     }
-    addNewScene(scene);
+    addNewSnapshots(scene);
     relationships.link(RelationshipType.sceneSetScenes, sceneSetId, scene.id);
   }
 
-  void addSceneToSceneSet({required String sceneSetId, required String sceneId}) {
+  void addSnapshotToSceneSet({required String sceneSetId, required String sceneId}) {
     final sceneSet = sceneSets.get(sceneSetId);
     if (sceneSet == null) {
       throw Exception("Scene Set with id $sceneSetId does not exist.");
     }
-    if (!scenes.exists(sceneId)) {
+    if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
     relationships.link(RelationshipType.sceneSetScenes, sceneSetId, sceneId);
   }
 
-  void removeSceneFromSceneSet({required String sceneSetId, required String sceneId}) {
+  void removeSnapshotFromSceneSet({required String sceneSetId, required String sceneId}) {
     final sceneSet = sceneSets.get(sceneSetId);
     if (sceneSet == null) {
       throw Exception("Scene Set with id $sceneSetId does not exist.");
     }
-    if (!scenes.exists(sceneId)) {
+    if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
     relationships.unlink(RelationshipType.sceneSetScenes, sceneSetId, sceneId);
   }
 
-  List<SceneModel> getScenesInSceneSet(String sceneSetId) {
+  List<SnapshotsModel> getSnapshotInSceneSet(String sceneSetId) {
     final sceneIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId);
-    return sceneIds.map((id) => scenes.get(id)).whereType<SceneModel>().toList();
+    return sceneIds.map((id) => snapshots.get(id)).whereType<SnapshotsModel>().toList();
   }
 
   //Reorder Scenes in Scene Set
-  void reOrderScenesInSceneSet(String parentId, int oldIndex, int newIndex) {
+  void reOrderSnapshotInSceneSet(String parentId, int oldIndex, int newIndex) {
     final scenesInSceneSet = relationships.getChildren(RelationshipType.sceneSetScenes, parentId).toList();
 
     final item = scenesInSceneSet.removeAt(oldIndex);
@@ -392,7 +392,7 @@ extension SceneService on ProjectService {
     relationships.reOrder(RelationshipType.sceneSetScenes, parentId, scenesInSceneSet);
   }
 
-  void reOderSceneActionsInScene(String parentId, int oldIndex, int newIndex) {
+  void reOderSceneActionsInSnapshot(String parentId, int oldIndex, int newIndex) {
     final actionsInScene = relationships.getChildren(RelationshipType.sceneActions, parentId).toList();
 
     final item = actionsInScene.removeAt(oldIndex);
@@ -424,11 +424,11 @@ extension SceneService on ProjectService {
     return {for (var ss in items) ss.id: ss};
   }
 
-  Map<String, SceneModel> reOderScenes({
+  Map<String, SnapshotsModel> reOderSnapshots({
     required String sceneIdToMove,
     required String sceneAtNewIndexId,
   }) {
-    List<SceneModel> items = scenes.getAll();
+    List<SnapshotsModel> items = snapshots.getAll();
 
     // Find indices
     int fromIndex = items.indexWhere((s) => s.id == sceneIdToMove);
@@ -440,7 +440,7 @@ extension SceneService on ProjectService {
     }
 
     // Reorder using List operations
-    SceneModel item = items.removeAt(fromIndex);
+    SnapshotsModel item = items.removeAt(fromIndex);
     items.insert(toIndex, item);
 
     // Convert back to Map
@@ -465,8 +465,8 @@ extension SceneService on ProjectService {
     }
   }
 
-  void duplicateScene(String sceneId) {
-    final originalScene = scenes.get(sceneId);
+  void duplicateSnapshot(String sceneId) {
+    final originalScene = snapshots.get(sceneId);
     if (originalScene == null) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
@@ -476,7 +476,7 @@ extension SceneService on ProjectService {
       name: "${originalScene.name} Copy",
     );
 
-    scenes.add(duplicatedScene.id, duplicatedScene);
+    snapshots.add(duplicatedScene.id, duplicatedScene);
 
     final parentSetId = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
     if (parentSetId != null) {
@@ -511,7 +511,7 @@ extension SceneService on ProjectService {
 
     List<String> sceneIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId).toList();
     for (var sceneId in sceneIds) {
-      duplicateScene(sceneId);
+      duplicateSnapshot(sceneId);
     }
   }
 }

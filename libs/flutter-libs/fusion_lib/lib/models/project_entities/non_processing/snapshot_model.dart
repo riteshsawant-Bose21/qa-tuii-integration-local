@@ -225,17 +225,17 @@ class SceneValue {
   };
 }
 
-class SceneModel {
+class SnapshotsModel {
   final String id;
   final String name;
 
-  SceneModel({
+  SnapshotsModel({
     String? id,
     required this.name,
   }) : id = id ?? "SCENE${DateTime.now().millisecondsSinceEpoch}";
 
-  factory SceneModel.fromJson(Map<String, dynamic> json) {
-    return SceneModel(
+  factory SnapshotsModel.fromJson(Map<String, dynamic> json) {
+    return SnapshotsModel(
       id: json['id'],
       name: json['name'],
     );
@@ -246,12 +246,12 @@ class SceneModel {
     'name': name,
   };
 
-  SceneModel copyWith({
+  SnapshotsModel copyWith({
     String? id,
     String? name,
     List<SceneActionModel>? actions,
   }) {
-    return SceneModel(
+    return SnapshotsModel(
       id: id ?? this.id,
       name: name ?? this.name,
     );

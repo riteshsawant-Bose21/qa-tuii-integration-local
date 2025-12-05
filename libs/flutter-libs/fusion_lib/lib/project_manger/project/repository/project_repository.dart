@@ -110,8 +110,8 @@ class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
 
-class ScenesRepository extends Repository<SceneModel> {
-  ScenesRepository copyWith(Map<String, SceneModel> items) {
+class ScenesRepository extends Repository<SnapshotsModel> {
+  ScenesRepository copyWith(Map<String, SnapshotsModel> items) {
     final newRepo = ScenesRepository();
     newRepo._items.addAll(items);
     return newRepo;

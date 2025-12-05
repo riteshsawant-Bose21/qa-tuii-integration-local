@@ -2,12 +2,12 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension ScenesViewModel on ProjectViewModel {
-  void addNewScene({required SceneModel scene, bool autoSave = true}) {
+  void addNewSnapshots({required SnapshotsModel scene, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addNewScene(scene);
+      projectManager.addNewSnapshots(scene);
       if (autoSave) {
         saveProject();
       }
@@ -16,12 +16,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void updateScene({required SceneModel scene, bool autoSave = true}) {
+  void updateSnapshots({required SnapshotsModel scene, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateScene(scene);
+      projectManager.updateSnapshots(scene);
       if (autoSave) {
         saveProject();
       }
@@ -30,12 +30,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void removeScene({required String sceneId, bool autoSave = true}) {
+  void removeSnapshots({required String sceneId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.deleteScene(sceneId);
+      projectManager.removeSnapshots(sceneId);
       if (autoSave) {
         saveProject();
       }
@@ -72,12 +72,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void addSceneActionToScene({required String sceneId, required SceneActionModel action, bool autoSave = true}) {
+  void addSceneActionToSnapshot({required String sceneId, required SceneActionModel action, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addSceneActionToScene(sceneId: sceneId, action: action);
+      projectManager.addSceneActionToSnapshot(sceneId: sceneId, action: action);
       if (autoSave) {
         saveProject();
       }
@@ -86,12 +86,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void removeSceneActionFromScene({required String sceneId, required String actionId, bool autoSave = true}) {
+  void removeSceneActionFromSnapshot({required String sceneId, required String actionId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.removeSceneActionFromScene(sceneId: sceneId, actionId: actionId);
+      projectManager.removeSceneActionFromSnapshot(sceneId: sceneId, actionId: actionId);
       if (autoSave) {
         saveProject();
       }
@@ -100,9 +100,9 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneActionModel> getSceneActionsForScene(String sceneId) {
+  List<SceneActionModel> getSceneActionsForSnapshot(String sceneId) {
     try {
-      return projectManager.getSceneActionsForScene(sceneId);
+      return projectManager.getSceneActionsForSnapshot(sceneId);
     } catch (e) {
       throwError("Get Scene Actions For Scene Error  ${e.toString()}");
       return <SceneActionModel>[];
@@ -201,12 +201,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneModel> getAllScenes() {
+  List<SnapshotsModel> getAllSnapshots() {
     try {
-      return projectManager.getAllScenes();
+      return projectManager.getAllSnapshots();
     } catch (e) {
       throwError("Get All Scenes Error  ${e.toString()}");
-      return <SceneModel>[];
+      return <SnapshotsModel>[];
     }
   }
 
@@ -262,12 +262,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void addSceneToSceneSet({required String sceneSetId, required String sceneId, bool autoSave = true}) {
+  void addSnapshotToSceneSet({required String sceneSetId, required String sceneId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addSceneToSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
+      projectManager.addSnapshotToSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
       if (autoSave) {
         saveProject();
       }
@@ -276,12 +276,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void removeSceneFromSceneSet({required String sceneSetId, required String sceneId, bool autoSave = true}) {
+  void removeSnapshotFromSceneSet({required String sceneSetId, required String sceneId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.removeSceneFromSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
+      projectManager.removeSnapshotFromSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
       if (autoSave) {
         saveProject();
       }
@@ -290,12 +290,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void addNewSceneToSceneSet({required String sceneSetId, required SceneModel scene, bool autoSave = true}) {
+  void addNewSnapshotToSceneSet({required String sceneSetId, required SnapshotsModel scene, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addNewSceneToSceneSet(sceneSetId: sceneSetId, scene: scene);
+      projectManager.addNewSnapshotToSceneSet(sceneSetId: sceneSetId, scene: scene);
       if (autoSave) {
         saveProject();
       }
@@ -304,21 +304,21 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneModel> getScenesInSceneSet(String sceneSetId) {
+  List<SnapshotsModel> getSnapshotInSceneSet(String sceneSetId) {
     try {
-      return projectManager.getScenesInSceneSet(sceneSetId);
+      return projectManager.getSnapshotInSceneSet(sceneSetId);
     } catch (e) {
       throwError("Get Scenes In Scene Set Error  ${e.toString()}");
-      return <SceneModel>[];
+      return <SnapshotsModel>[];
     }
   }
 
-  void reOderScenesInSceneSet({required String sceneSetId, required int oldIndex, required int newIndex, bool autoSave = true}) {
+  void reOrderSnapshotInSceneSet({required String sceneSetId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.reOrderScenesInSceneSet(parentId: sceneSetId, oldIndex: oldIndex, newIndex: newIndex);
+      projectManager.reOrderSnapshotInSceneSet(parentId: sceneSetId, oldIndex: oldIndex, newIndex: newIndex);
       if (autoSave) {
         saveProject();
       }
@@ -341,12 +341,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void reOderSceneActionsInScene({required String sceneId, required int oldIndex, required int newIndex, bool autoSave = true}) {
+  void reOderSceneActionsInSnapshot({required String sceneId, required int oldIndex, required int newIndex, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.reOderSceneActionsInScene(sceneId: sceneId, oldIndex: oldIndex, newIndex: newIndex);
+      projectManager.reOderSceneActionsInSnapshot(sceneId: sceneId, oldIndex: oldIndex, newIndex: newIndex);
       if (autoSave) {
         saveProject();
       }
@@ -355,12 +355,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void reOderScenes({required String sceneIdToMove, required String sceneIdAtNewIndex, bool autoSave = true}) {
+  void reOderSnapshots({required String sceneIdToMove, required String sceneIdAtNewIndex, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.reOderScenes(sceneIdToMove: sceneIdToMove, sceneAtNewIndex: sceneIdAtNewIndex);
+      projectManager.reOderSnapshots(sceneIdToMove: sceneIdToMove, sceneAtNewIndex: sceneIdAtNewIndex);
       if (autoSave) {
         saveProject();
       }
@@ -369,12 +369,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void duplicateScene({required String sceneId, bool autoSave = true}) {
+  void duplicateSnapshot({required String sceneId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.duplicateScene(sceneId);
+      projectManager.duplicateSnapshot(sceneId);
       if (autoSave) {
         saveProject();
       }
