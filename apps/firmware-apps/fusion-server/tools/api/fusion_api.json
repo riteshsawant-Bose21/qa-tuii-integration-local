@@ -380,35 +380,6 @@
         },
         {
           "type": "http",
-          "name": "Get All Values copy",
-          "filename": "Get All Values copy.bru",
-          "seq": 8,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "192.168.64.4:8080/value",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
           "name": "Get All Values",
           "filename": "Get All Values.bru",
           "seq": 2,
@@ -481,13 +452,13 @@
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/value?key=zones",
+            "url": "{{api_url}}/value?key=settings",
             "method": "GET",
             "headers": [],
             "params": [
               {
                 "name": "key",
-                "value": "zones",
+                "value": "settings",
                 "type": "query",
                 "enabled": true
               }
@@ -553,49 +524,6 @@
         },
         {
           "type": "http",
-          "name": "Update Value copy",
-          "filename": "Update Value copy.bru",
-          "seq": 7,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/value",
-            "method": "PATCH",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "key",
-                "value": "settings",
-                "type": "query",
-                "enabled": false
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"test2\": \"5\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
           "name": "Update Value",
           "filename": "Update Value.bru",
           "seq": 5,
@@ -622,7 +550,7 @@
             ],
             "body": {
               "mode": "json",
-              "json": "{\n  \"destination_block\": \"17\"\n}",
+              "json": "{\n    \"test\":121\n}",
               "formUrlEncoded": [],
               "multipartForm": [],
               "file": []
@@ -770,6 +698,155 @@
               {
                 "name": "id",
                 "value": "1234",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Device",
+      "filename": "Device",
+      "seq": 7,
+      "examples": [],
+      "root": {
+        "meta": {
+          "name": "Device",
+          "seq": 7
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Get Devices Info",
+          "filename": "Get Devices Info.bru",
+          "seq": 2,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/devices",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get VIP",
+          "filename": "Get VIP.bru",
+          "seq": 4,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/devices/vip",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Set Device Info",
+          "filename": "Set Device Info.bru",
+          "seq": 1,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/devices/:id",
+            "method": "PATCH",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"id\":\"fusion1_new_id\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Set VIP",
+          "filename": "Set VIP.bru",
+          "seq": 3,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "http://192.168.2.38:8080/devices/vip/:vip",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "vip",
+                "value": "192.168.4.100",
                 "type": "path",
                 "enabled": true
               }
@@ -1192,84 +1269,6 @@
           "examples": [],
           "request": {
             "url": "{{metrics_url}}/metrics",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Sessions",
-      "filename": "Sessions",
-      "seq": 11,
-      "examples": [],
-      "root": {
-        "request": {
-          "auth": {
-            "mode": "inherit"
-          }
-        },
-        "meta": {
-          "name": "Sessions",
-          "seq": 11
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Get Session",
-          "filename": "Get Session.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/sessions/0.0.0.0:0",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get Sessions",
-          "filename": "Get Sessions.bru",
-          "seq": 5,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/sessions",
             "method": "GET",
             "headers": [],
             "params": [],
@@ -1741,6 +1740,43 @@
         },
         {
           "type": "http",
+          "name": "Update scheduled message",
+          "filename": "Update scheduled message.bru",
+          "seq": 15,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/pava/schedule/:id",
+            "method": "PATCH",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "Lunch Break",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"message_id\": \"01KAVZ68Q2QRBDC2135YCJZ4FH\",\n  \"cron_expr\": \"@every 1m\",\n  \"description\":\"Time For dinner\",\n  \"priority\":50,\n  \"zones\":\"hall\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
           "name": "Upload audio message",
           "filename": "Upload audio message.bru",
           "seq": 2,
@@ -1783,539 +1819,6 @@
                   "enabled": true
                 }
               ],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Update scheduled message",
-          "filename": "Update scheduled message.bru",
-          "seq": 15,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/pava/schedule/:id",
-            "method": "PATCH",
-            "headers": [],
-            "params": [
-              {
-                "name": "id",
-                "value": "Lunch Break",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"message_id\": \"01KAVZ68Q2QRBDC2135YCJZ4FH\",\n  \"cron_expr\": \"@every 1m\",\n  \"description\":\"Time For dinner\",\n  \"priorty\":50,\n  \"zones\":\"hall\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Snapshots",
-      "filename": "Snapshots",
-      "seq": 12,
-      "examples": [],
-      "root": {
-        "meta": {
-          "name": "Snapshots",
-          "seq": 12
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Activate",
-          "filename": "Activate.bru",
-          "seq": 5,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/snapshots/activate/:name",
-            "method": "POST",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "usb",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Create",
-          "filename": "Create.bru",
-          "seq": 3,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/snapshots/:name",
-            "method": "POST",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "analog",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Delete",
-          "filename": "Delete.bru",
-          "seq": 4,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/snapshots/:name",
-            "method": "DELETE",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get Active Snapshot Name",
-          "filename": "Get Active Snapshot Name.bru",
-          "seq": 6,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/snapshots/meta/active",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get",
-          "filename": "Get.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/snapshots/:name",
-            "method": "GET",
-            "headers": [],
-            "params": [
-              {
-                "name": "name",
-                "value": "usb",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "List",
-          "filename": "List.bru",
-          "seq": 1,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/snapshots",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "none",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Create Activate Snapshot Task",
-          "filename": "Create Activate Snapshot Task.bru",
-          "seq": 7,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/tasks",
-            "method": "POST",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"id\": \"usb-input\",\n  \"cron_expr\": \"@every 1s\",\n  \"description\": \"Change to usb input\",\n  \"type\": \"snapshot\",\n  \"params\": {\n    \"snapshot_id\": \"usb\"\n  }\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Update Activate Snapshot Task",
-          "filename": "Update Activate Snapshot Task.bru",
-          "seq": 8,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/tasks/:id",
-            "method": "PATCH",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [
-              {
-                "name": "id",
-                "value": "analog-input",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"cron_expr\": \"@every 1m\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Device",
-      "filename": "Device",
-      "seq": 7,
-      "examples": [],
-      "root": {
-        "meta": {
-          "name": "Device",
-          "seq": 7
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Get Devices Info",
-          "filename": "Get Devices Info.bru",
-          "seq": 2,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/devices",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Get VIP",
-          "filename": "Get VIP.bru",
-          "seq": 4,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/devices/vip",
-            "method": "GET",
-            "headers": [],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Set Device Info",
-          "filename": "Set Device Info.bru",
-          "seq": 1,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/devices/:id",
-            "method": "PATCH",
-            "headers": [],
-            "params": [
-              {
-                "name": "id",
-                "value": "",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "{\n  \"id\":\"fusion1_new_id\"\n}",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        },
-        {
-          "type": "http",
-          "name": "Set VIP",
-          "filename": "Set VIP.bru",
-          "seq": 3,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "http://192.168.2.38:8080/devices/vip/:vip",
-            "method": "POST",
-            "headers": [],
-            "params": [
-              {
-                "name": "vip",
-                "value": "192.168.4.100",
-                "type": "path",
-                "enabled": true
-              }
-            ],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
-              "file": []
-            },
-            "script": {},
-            "vars": {},
-            "assertions": [],
-            "tests": "",
-            "docs": "",
-            "auth": {
-              "mode": "none"
-            }
-          }
-        }
-      ]
-    },
-    {
-      "type": "folder",
-      "name": "Version",
-      "filename": "Version",
-      "seq": 14,
-      "examples": [],
-      "root": {
-        "meta": {
-          "name": "Version",
-          "seq": 14
-        }
-      },
-      "items": [
-        {
-          "type": "http",
-          "name": "Version",
-          "filename": "Version.bru",
-          "seq": 1,
-          "settings": {},
-          "tags": [],
-          "examples": [],
-          "request": {
-            "url": "{{api_url}}/version",
-            "method": "GET",
-            "headers": [
-              {
-                "name": "Content-Type",
-                "value": "application/json",
-                "enabled": true
-              }
-            ],
-            "params": [],
-            "body": {
-              "mode": "json",
-              "json": "",
-              "formUrlEncoded": [],
-              "multipartForm": [],
               "file": []
             },
             "script": {},
@@ -2387,7 +1890,79 @@
             "params": [
               {
                 "name": "id",
+                "value": "Config",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Disable",
+          "filename": "Disable.bru",
+          "seq": 7,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/tasks/:id/disable",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
                 "value": "analog-input",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Enable",
+          "filename": "Enable.bru",
+          "seq": 6,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/tasks/:id/enable",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "id",
+                "value": "usb0",
                 "type": "path",
                 "enabled": true
               }
@@ -2508,27 +2083,40 @@
               "mode": "none"
             }
           }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Sessions",
+      "filename": "Sessions",
+      "seq": 11,
+      "examples": [],
+      "root": {
+        "request": {
+          "auth": {
+            "mode": "inherit"
+          }
         },
+        "meta": {
+          "name": "Sessions",
+          "seq": 11
+        }
+      },
+      "items": [
         {
           "type": "http",
-          "name": "Enable",
-          "filename": "Enable.bru",
-          "seq": 6,
+          "name": "Get Session",
+          "filename": "Get Session.bru",
+          "seq": 2,
           "settings": {},
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/tasks/:id/enable",
-            "method": "POST",
+            "url": "{{api_url}}/sessions/0.0.0.0:0",
+            "method": "GET",
             "headers": [],
-            "params": [
-              {
-                "name": "id",
-                "value": "Lunch Break",
-                "type": "path",
-                "enabled": true
-              }
-            ],
+            "params": [],
             "body": {
               "mode": "none",
               "formUrlEncoded": [],
@@ -2547,24 +2135,17 @@
         },
         {
           "type": "http",
-          "name": "Disable",
-          "filename": "Disable.bru",
-          "seq": 7,
+          "name": "Get Sessions",
+          "filename": "Get Sessions.bru",
+          "seq": 5,
           "settings": {},
           "tags": [],
           "examples": [],
           "request": {
-            "url": "{{api_url}}/tasks/:id/disable",
-            "method": "POST",
+            "url": "{{api_url}}/sessions",
+            "method": "GET",
             "headers": [],
-            "params": [
-              {
-                "name": "id",
-                "value": "Lunch Break",
-                "type": "path",
-                "enabled": true
-              }
-            ],
+            "params": [],
             "body": {
               "mode": "none",
               "formUrlEncoded": [],
@@ -2582,9 +2163,356 @@
           }
         }
       ]
+    },
+    {
+      "type": "folder",
+      "name": "Snapshots",
+      "filename": "Snapshots",
+      "seq": 12,
+      "examples": [],
+      "root": {
+        "meta": {
+          "name": "Snapshots",
+          "seq": 12
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Activate",
+          "filename": "Activate.bru",
+          "seq": 5,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/activate/:name",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "epoch_test_1764203771702099000",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Create Activate Snapshot Task",
+          "filename": "Create Activate Snapshot Task.bru",
+          "seq": 7,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/tasks",
+            "method": "POST",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"id\": \"analog-input\",\n  \"cron_expr\": \"@every 2s\",\n  \"description\": \"Change to analog input\",\n  \"type\": \"snapshot\",\n  \"params\": {\n    \"snapshot_id\": \"analog\"\n  }\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Create",
+          "filename": "Create.bru",
+          "seq": 3,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/:name",
+            "method": "POST",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "bleep13",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Delete",
+          "filename": "Delete.bru",
+          "seq": 4,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/:name",
+            "method": "DELETE",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get Active Snapshot Name",
+          "filename": "Get Active Snapshot Name.bru",
+          "seq": 6,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/meta/active",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Get",
+          "filename": "Get.bru",
+          "seq": 2,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots/:name",
+            "method": "GET",
+            "headers": [],
+            "params": [
+              {
+                "name": "name",
+                "value": "persist_data_1764285558388908000",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "List",
+          "filename": "List.bru",
+          "seq": 1,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/snapshots",
+            "method": "GET",
+            "headers": [],
+            "params": [],
+            "body": {
+              "mode": "none",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        },
+        {
+          "type": "http",
+          "name": "Update Activate Snapshot Task",
+          "filename": "Update Activate Snapshot Task.bru",
+          "seq": 8,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/tasks/:id",
+            "method": "PATCH",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [
+              {
+                "name": "id",
+                "value": "Play",
+                "type": "path",
+                "enabled": true
+              }
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\n  \"cron_expr\": \"@every 1m\"\n}",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "folder",
+      "name": "Version",
+      "filename": "Version",
+      "seq": 14,
+      "examples": [],
+      "root": {
+        "meta": {
+          "name": "Version",
+          "seq": 14
+        }
+      },
+      "items": [
+        {
+          "type": "http",
+          "name": "Version",
+          "filename": "Version.bru",
+          "seq": 1,
+          "settings": {},
+          "tags": [],
+          "examples": [],
+          "request": {
+            "url": "{{api_url}}/version",
+            "method": "GET",
+            "headers": [
+              {
+                "name": "Content-Type",
+                "value": "application/json",
+                "enabled": true
+              }
+            ],
+            "params": [],
+            "body": {
+              "mode": "json",
+              "json": "",
+              "formUrlEncoded": [],
+              "multipartForm": [],
+              "file": []
+            },
+            "script": {},
+            "vars": {},
+            "assertions": [],
+            "tests": "",
+            "docs": "",
+            "auth": {
+              "mode": "none"
+            }
+          }
+        }
+      ]
     }
   ],
-  "activeEnvironmentUid": "VbJeju7vFly22Mtg0gEPM",
+  "activeEnvironmentUid": "NuA59EZe9jyRMKDaNQCaJ",
   "environments": [
     {
       "variables": [
@@ -2684,7 +2612,7 @@
       "node_modules",
       ".git"
     ],
-    "size": 0.05111122131347656,
-    "filesCount": 85
+    "size": 0.05140972137451172,
+    "filesCount": 86
   }
 }
