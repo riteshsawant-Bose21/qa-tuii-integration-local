@@ -105,14 +105,15 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
 
       ///  Dropdown → must read value.dropdownItems
       case SceneParamValueType.dropdownSingle:
-        // Check if label is valid before fetching items
+
+        /// Check if label is valid before fetching items
         if (value.label.isEmpty) {
           return const Text('No parameter selected');
         }
 
         final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(widget.actionId);
 
-        // Find selected value by matching the stored string value with item labels
+        /// Find selected value by matching the stored string value with item labels
         SceneValueDropdown? selectedValue;
         if (value.value != null && value.value!.isNotEmpty && items.isNotEmpty) {
           try {
@@ -120,28 +121,10 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
               (SceneValueDropdown item) => item.label == value.value || item.value == value.value,
             );
           } catch (e) {
-            // No exact match found, leave selectedValue as null
+            /// No exact match found, leave selectedValue as null
             selectedValue = null;
           }
         }
-
-        // return DropdownButton<SceneValueDropdown>(
-        //   isExpanded: true,
-        //   value: selectedValue,
-        //   hint: const Text("Select an option"),
-        //   items:
-        //       items.map<DropdownMenuItem<SceneValueDropdown>>((SceneValueDropdown v) {
-        //         return DropdownMenuItem<SceneValueDropdown>(
-        //           value: v,
-        //           child: Text(v.label),
-        //         );
-        //       }).toList(),
-        //   onChanged: (SceneValueDropdown? v) {
-        //     final SceneValue updated = value.copyWith(value: v?.label ?? v?.value);
-        //     widget.onChanged(updated);
-        //     setState(() {});
-        //   },
-        // );
 
         /// Using FusionDropdown widget
         return FusionDropdown<SceneValueDropdown>(
@@ -158,19 +141,22 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
 
       /// Text Input (simple string)
       case SceneParamValueType.textInput:
-        return Transform.scale(
-          alignment: Alignment.center,
-          scale: 0.7,
-          child: TextFormField(
-            initialValue: value.value ?? "",
-            decoration: const InputDecoration(
-              border: OutlineInputBorder(),
-              isDense: true,
+        return SizedBox(
+          height: 28,
+          child: Transform.scale(
+            alignment: Alignment.center,
+            scale: 0.9,
+            child: TextFormField(
+              initialValue: value.value ?? "",
+              decoration: const InputDecoration(
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+              onChanged: (String v) {
+                final SceneValue updated = value.copyWith(value: v);
+                widget.onChanged(updated);
+              },
             ),
-            onChanged: (String v) {
-              final SceneValue updated = value.copyWith(value: v);
-              widget.onChanged(updated);
-            },
           ),
         );
 
@@ -178,30 +164,33 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
       case SceneParamValueType.onOffButton:
         final bool isOn = value.value == "on";
 
-        return Transform.scale(
-          alignment: Alignment.center,
-          scale: 0.7,
-          child: Switch(
-            value: isOn,
-            padding: EdgeInsets.zero,
-            thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-              if (states.contains(MaterialState.selected)) {
-                return Theme.of(context).colorScheme.white;
-              }
-              return Theme.of(context).colorScheme.greyDark;
-            }),
-            trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
-              if (states.contains(MaterialState.selected)) {
-                return Theme.of(context).colorScheme.black;
-              }
-              return Theme.of(context).colorScheme.grey;
-            }),
-            trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
-            onChanged: (bool v) {
-              final SceneValue updated = value.copyWith(value: v ? "on" : "off");
-              widget.onChanged(updated);
-              setState(() {});
-            },
+        return SizedBox(
+          height: 12,
+          child: Transform.scale(
+            scale: 0.8,
+            child: Switch(
+              value: isOn,
+              padding: EdgeInsets.zero,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Theme.of(context).colorScheme.white;
+                }
+                return Theme.of(context).colorScheme.greyDark;
+              }),
+              trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
+                if (states.contains(MaterialState.selected)) {
+                  return Theme.of(context).colorScheme.black;
+                }
+                return Theme.of(context).colorScheme.grey;
+              }),
+              trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
+              onChanged: (bool v) {
+                final SceneValue updated = value.copyWith(value: v ? "on" : "off");
+                widget.onChanged(updated);
+                setState(() {});
+              },
+            ),
           ),
         );
     }

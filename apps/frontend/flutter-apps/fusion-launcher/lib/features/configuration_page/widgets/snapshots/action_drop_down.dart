@@ -35,19 +35,19 @@ class FusionDropdown<T> extends StatelessWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(
-            color: isEnabled ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyLight.withAlpha(100),
+            color: isEnabled ? Theme.of(context).colorScheme.greyDark.withAlpha(200) : Theme.of(context).colorScheme.greyLight.withAlpha(100),
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(
-            color: isEnabled ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyLight.withAlpha(100),
+            color: isEnabled ? Theme.of(context).colorScheme.greyDark.withAlpha(200) : Theme.of(context).colorScheme.greyLight.withAlpha(100),
           ),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.greyLight.withAlpha(100),
+            color: Theme.of(context).colorScheme.greyLight.withAlpha(200),
           ),
         ),
         isDense: true,
