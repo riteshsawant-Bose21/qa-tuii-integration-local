@@ -40,8 +40,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    final bool isAdmin = prefs.getBool(SharedPreferenceKeys.adminLogin) ?? false;
-    if (!isAdmin) userProfileManager.getUserProfile();
     loadProjects();
   }
 

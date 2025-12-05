@@ -1,5 +1,6 @@
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fusion_launcher/core/services/user_session_manager.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import 'package:auth0_flutter/auth0_flutter.dart';
@@ -89,7 +90,8 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
 
       FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
 
-      if (authDataResponse.success) {
+      if (authDataResponse.success && authDataResponse.data != null) {
+        UserSessionManager().saveUserProfile(authDataResponse.data!);
         emit(
           Authenticated(),
         );
