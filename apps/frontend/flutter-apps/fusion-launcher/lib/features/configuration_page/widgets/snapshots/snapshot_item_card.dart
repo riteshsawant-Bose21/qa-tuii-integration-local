@@ -93,9 +93,25 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                   message: 'Delete Snapshot',
                   child: GestureDetector(
                     onTap: () {
-                      if (widget.onDelete != null) {
-                        widget.onDelete!();
-                      }
+                      showDialog(
+                        context: context,
+                        builder:
+                            (_) => FusionDialog(
+                              title: 'Delete Snapshot?',
+                              description: "This will remove '${widget.snapShotData.name}' from the Snapshot list.",
+                              primaryButtonLabel: 'Delete',
+                              secondaryButtonLabel: 'Cancel',
+                              onSecondaryPressed: () {
+                                Navigator.of(context).pop();
+                              },
+                              onPrimaryPressed: () {
+                                if (widget.onDelete != null) {
+                                  widget.onDelete!();
+                                  Navigator.of(context).pop();
+                                }
+                              },
+                            ),
+                      );
                     },
                     child: const FusionImage.asset(
                       Assets.deleteIcon,

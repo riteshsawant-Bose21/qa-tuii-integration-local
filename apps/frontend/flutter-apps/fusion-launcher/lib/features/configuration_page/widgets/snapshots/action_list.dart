@@ -8,7 +8,6 @@ import 'package:fusion_lib/models/project_entities/non_processing/scene_model.da
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../search_bar_sources.dart';
 
 class ActionList extends StatelessWidget {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
@@ -28,40 +27,39 @@ class ActionList extends StatelessWidget {
       child: Column(
         children: <Widget>[
           /// Header with Search Bar
-          Container(
-            height: 44,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border(
-                bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-              ),
-            ),
-            child: Row(
-              children: <Widget>[
-                Container(
-                  alignment: Alignment.center,
-
-                  // width 30% of the parent width
-                  width: MediaQuery.of(context).size.width * 0.2,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    border: Border(
-                      right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
-                    ),
-                  ),
-                  child: SearchBarSources(
-                    searchController: TextEditingController(),
-                    isFromActionList: true,
-                    hasActiveFilters: () => false,
-                    onClearSearch: () {},
-                    onSearchChanged: (String value) {},
-                  ),
-                ),
-              ],
-            ),
-          ),
-
+          // Container(
+          //   height: 44,
+          //   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          //   decoration: BoxDecoration(
+          //     color: Colors.white,
+          //     border: Border(
+          //       bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          //     ),
+          //   ),
+          //   child: Row(
+          //     children: <Widget>[
+          //       Container(
+          //         alignment: Alignment.center,
+          //
+          //         // width 30% of the parent width
+          //         width: MediaQuery.of(context).size.width * 0.2,
+          //         decoration: BoxDecoration(
+          //           color: Colors.white,
+          //           border: Border(
+          //             right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          //           ),
+          //         ),
+          //         child: SearchBarSources(
+          //           searchController: TextEditingController(),
+          //           isFromActionList: true,
+          //           hasActiveFilters: () => false,
+          //           onClearSearch: () {},
+          //           onSearchChanged: (String value) {},
+          //         ),
+          //       ),
+          //     ],
+          //   ),
+          // ),
           BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
               final String? selectedSnapshotId = _projectViewModel.selectedSnapshotId;
@@ -79,6 +77,7 @@ class ActionList extends StatelessWidget {
                       snapshotName: selectedScene?.name ?? "",
                       onAdd: () {
                         final SceneActionModel action = SceneActionModel();
+
                         _projectViewModel.addSceneActionToScene(sceneId: selectedSnapshotId, action: action);
                       },
                       onReorder: () {},

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/value_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
@@ -233,11 +234,26 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             /// delete action from the scene
             GestureDetector(
               onTap: () {
-                _projectViewModel.removeSceneAction(
-                  actionId: action.id,
+                showDialog(
+                  context: context,
+                  builder:
+                      (_) => FusionDialog(
+                        title: 'Delete Action?',
+                        description: "This will remove action from the Action list.",
+                        primaryButtonLabel: 'Delete',
+                        secondaryButtonLabel: 'Cancel',
+                        onSecondaryPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        onPrimaryPressed: () {
+                          _projectViewModel.removeSceneAction(
+                            actionId: action.id,
+                          );
+                          Navigator.of(context).pop();
+                        },
+                      ),
                 );
               },
-              // fusion image delete icon
               child: const FusionImage.asset(
                 Assets.deleteIcon,
                 width: 20,

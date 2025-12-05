@@ -78,7 +78,7 @@ class SnapshotList extends StatelessWidget {
           feedback: Material(
             color: Colors.transparent,
             child: Container(
-              width: 200, // Fixed width for feedback
+              width: 200,
               constraints: const BoxConstraints(
                 minHeight: 36,
                 maxHeight: 36,

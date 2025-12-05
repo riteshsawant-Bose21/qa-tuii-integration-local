@@ -57,6 +57,14 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     );
     _projectViewModel.addNewScene(scene: newScene);
 
+    /// select the newly added snapshot
+    _projectViewModel.setSelectedSnapshotId(newScene.id);
+
+    /// Also add a default action to the new snapshot
+    final SceneActionModel action = SceneActionModel();
+
+    _projectViewModel.addSceneActionToScene(sceneId: newScene.id, action: action);
+
     /// Clear dialog and close popup
     _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
@@ -133,7 +141,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                               },
                               onCancel: () {
                                 /// Cancel inside popup: close only popup.
-                                // _clearSourceSetDialog(pop: true, popContext: context);
+                                _clearSourceSetDialog(pop: true, popContext: context);
                               },
                             ),
                           );
@@ -281,7 +289,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                               },
                               onCancel: () {
                                 /// Cancel inside popup: close only popup.
-                                _clearSourceSetDialog(pop: true, popContext: context);
+                                _clearSourceSetDialog(pop: true, popContext: context, isScene: true);
                               },
                             ),
                           );
@@ -449,7 +457,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
                   textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
 
                   label: "Create",
-                  // isActive: widget.nameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
+                  isActive: widget.nameController.text.trim().isNotEmpty,
                   onTap: () {
                     widget.onCreate.call();
                   },

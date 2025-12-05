@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/sn
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
@@ -250,7 +251,26 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                           Tooltip(
                             message: 'Delete Scenes',
                             child: GestureDetector(
-                              onTap: _confirmDeleteScenes,
+                              onTap: () {
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (_) => FusionDialog(
+                                        title: 'Delete Scenes?',
+                                        description:
+                                            "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
+                                        primaryButtonLabel: 'Delete',
+                                        secondaryButtonLabel: 'Cancel',
+                                        onSecondaryPressed: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        onPrimaryPressed: () {
+                                          widget.onSceneSetDelete(widget.sceneSetData.id);
+                                          Navigator.of(context).pop();
+                                        },
+                                      ),
+                                );
+                              },
                               child: const FusionImage.asset(
                                 Assets.deleteIcon,
                                 width: 17,
@@ -295,76 +315,6 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
               ],
             );
           },
-        );
-      },
-    );
-  }
-
-  /// Confirm delete scenes dialog
-  Future<void> _confirmDeleteScenes() async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: true,
-      builder: (BuildContext ctx) {
-        final ColorScheme scheme = Theme.of(ctx).colorScheme;
-        return Dialog(
-          backgroundColor: scheme.white,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 50),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  FusionAppText(
-                    text: "Delete Scenes?",
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  FusionAppText(
-                    text: "This will remove '${widget.sceneSetData.name}' from the Scenes.",
-                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontSize: 11),
-                  ),
-                  const SizedBox(height: 20),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 90,
-                        child: FusionOutlinedButton(
-                          label: "Cancel",
-                          textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(fontSize: 11),
-                          onTap: () => Navigator.of(ctx).pop(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      SizedBox(
-                        width: 90,
-                        child: FusionButton(
-                          label: "Delete",
-                          textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(
-                            fontSize: 11,
-                            color: scheme.fusionButtonTextColor,
-                          ),
-                          isActive: true,
-                          onTap: () {
-                            widget.onSceneSetDelete(widget.sceneSetData.id);
-                            Navigator.of(ctx).pop();
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
         );
       },
     );
