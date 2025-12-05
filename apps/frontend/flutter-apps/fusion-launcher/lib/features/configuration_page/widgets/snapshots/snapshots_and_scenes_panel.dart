@@ -94,6 +94,26 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     setState(() {});
   }
 
+  /// Handle reordering of snapshots
+  void _handleSnapshotReorder(int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    _projectViewModel.reOderScenes(sceneIdToMove: newIndex.toString(), sceneIdAtNewIndex: oldIndex.toString());
+  }
+
+  /// Handle reordering of scenes within a scene set
+  void _handleSceneSetReorder(String sceneSetId, int oldIndex, int newIndex) {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    _projectViewModel.reOderScenesInSceneSet(
+      sceneSetId: sceneSetId,
+      oldIndex: oldIndex,
+      newIndex: newIndex,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -107,8 +127,8 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
             title: 'Snapshots',
             trailing: PopupMenuButton<dynamic>(
               onCanceled: () {
-                // _clearSourceSetDialog();
-                // setState(() {});
+                _clearSourceSetDialog();
+                setState(() {});
               },
               tooltip: "Add Snapshot Set",
               padding: EdgeInsets.zero,
@@ -231,6 +251,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                         onSelect: (String sceneId) {
                           _projectViewModel.setSelectedSnapshotId(sceneId);
                         },
+                        onReorder: _handleSnapshotReorder,
                         onDragStarted: (String sceneId) {
                           setState(() {
                             _draggingSnapshotId = sceneId;
@@ -259,7 +280,10 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
           SectionHeader(
             title: 'Scenes',
             trailing: PopupMenuButton<dynamic>(
-              onCanceled: () {},
+              onCanceled: () {
+                _clearSourceSetDialog(isScene: true);
+                setState(() {});
+              },
               tooltip: "Add Scenes",
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(
@@ -353,6 +377,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                       onScenesSnapshotDelete: (String sceneId) {
                         _projectViewModel.removeScene(sceneId: sceneId);
                       },
+                      onReorderScenes: _handleSceneSetReorder,
                       onDragStarted: (String sceneId) {
                         setState(() {
                           _draggingSnapshotId = sceneId;

@@ -23,6 +23,7 @@ class ScenesExpandableCard extends StatefulWidget {
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
   final String? draggingFromSection;
+  final Function(String sceneSetId, int oldIndex, int newIndex)? onReorderScenes;
 
   const ScenesExpandableCard({
     this.isDragHovered = false,
@@ -36,6 +37,7 @@ class ScenesExpandableCard extends StatefulWidget {
     this.onDragEnd,
     this.draggingSnapshotId,
     this.draggingFromSection,
+    this.onReorderScenes,
   });
 
   @override
@@ -308,6 +310,11 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                               onSelect: widget.onSelect,
                               onDelete: (String sceneId) {
                                 widget.onScenesSnapshotDelete(sceneId);
+                              },
+                              onReorder: (int oldIndex, int newIndex) {
+                                if (widget.onReorderScenes != null) {
+                                  widget.onReorderScenes!(widget.sceneSetData.id, oldIndex, newIndex);
+                                }
                               },
                               onDragStarted: widget.onDragStarted,
                               onDragEnd: widget.onDragEnd,

@@ -10,6 +10,7 @@ class SnapshotItemCard extends StatefulWidget {
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final int index;
 
   const SnapshotItemCard({
     this.isDragging = false,
@@ -17,7 +18,8 @@ class SnapshotItemCard extends StatefulWidget {
     super.key,
     required this.snapShotData,
     this.onDelete,
-    this.onTap, // Add this
+    this.onTap,
+    required this.index, // Add this
   });
 
   @override
@@ -62,13 +64,16 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
           child: Row(
             children: <Widget>[
-              /// draggable icon
-              Opacity(
-                opacity: 0.4,
-                child: Icon(
-                  Icons.drag_handle,
-                  size: 16,
-                  color: Colors.grey[600],
+              /// snapshot item draggable icon
+              ReorderableDragStartListener(
+                index: widget.index,
+                child: Opacity(
+                  opacity: 0.4,
+                  child: Icon(
+                    Icons.drag_handle,
+                    size: 16,
+                    color: Colors.grey[600],
+                  ),
                 ),
               ),
               const SizedBox(width: 8),
