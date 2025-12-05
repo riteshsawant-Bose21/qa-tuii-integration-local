@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/routes"
 	"fusion/internal/tasks"
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	json "github.com/goccy/go-json"
 
@@ -29,11 +31,11 @@ func clearTasks(t *testing.T) {
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
-	var tasks []api.Task
-	err = json.NewDecoder(resp.Body).Decode(&tasks)
+	var tasksResp []api.Task
+	err = json.NewDecoder(resp.Body).Decode(&tasksResp)
 	require.NoError(t, err)
 
-	for _, task := range tasks {
+	for _, task := range tasksResp {
 		req, err := http.NewRequest(http.MethodDelete, tasksURL+"/"+task.ID, nil)
 		require.NoError(t, err)
 		respDel, err := http.DefaultClient.Do(req)
@@ -58,6 +60,33 @@ func createTask(t *testing.T) {
 	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(taskJSON))
 	require.NoError(t, err)
 	defer resp.Body.Close()
+}
+
+// clearHistory clears the execution history on the live server.
+func clearHistory(t *testing.T) {
+	req, err := http.NewRequest(http.MethodDelete, tasksServerURL+routes.TasksHistoryEndpoint, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+// fetchHistory fetches the current execution history.
+func fetchHistory(t *testing.T) []tasks.ExecutionRecord {
+	resp, err := http.Get(tasksServerURL + routes.TasksHistoryEndpoint)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var history []tasks.ExecutionRecord
+	err = json.NewDecoder(resp.Body).Decode(&history)
+	require.NoError(t, err)
+
+	return history
 }
 
 func TestTaskManagerEndpoints(t *testing.T) {
@@ -91,11 +120,11 @@ func TestTaskManagerEndpoints(t *testing.T) {
 
 		assert.Equal(t, http.StatusOK, resp.StatusCode, "Expected HTTP 200")
 
-		var tasks []api.Task
-		err = json.NewDecoder(resp.Body).Decode(&tasks)
+		var tasksResp []api.Task
+		err = json.NewDecoder(resp.Body).Decode(&tasksResp)
 		require.NoError(t, err, "Expected valid JSON response")
-		assert.Len(t, tasks, 1, "Expected 1 task in the list")
-		assert.Equal(t, testTaskId, tasks[0].ID, "Task ID should match")
+		assert.Len(t, tasksResp, 1, "Expected 1 task in the list")
+		assert.Equal(t, testTaskId, tasksResp[0].ID, "Task ID should match")
 	})
 
 	t.Run("UpdateTaskHandler", func(t *testing.T) {
@@ -140,10 +169,10 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		defer resp.Body.Close()
 
-		var tasks []api.Task
-		err = json.NewDecoder(resp.Body).Decode(&tasks)
+		var tasksResp []api.Task
+		err = json.NewDecoder(resp.Body).Decode(&tasksResp)
 		require.NoError(t, err, "Expected valid JSON response")
-		assert.Len(t, tasks, 0, "Expected 0 tasks in the list after removal")
+		assert.Len(t, tasksResp, 0, "Expected 0 tasks in the list after removal")
 	})
 
 	t.Run("ExecutionHistoryHandler", func(t *testing.T) {
@@ -165,7 +194,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		clearTasks(t)
 		createTask(t)
 
-		// --- Disable Task ---
+		// Disable Task
 		reqDisable, err := http.NewRequest(http.MethodPost, tasksURL+"/"+testTaskId+"/disable", nil)
 		require.NoError(t, err)
 		respDisable, err := http.DefaultClient.Do(reqDisable)
@@ -184,7 +213,7 @@ func TestTaskManagerEndpoints(t *testing.T) {
 		require.NoError(t, err)
 		assert.False(t, disabledTask.Enabled, "Task should be disabled")
 
-		// --- Enable Task ---
+		// Enable Task
 		reqEnable, err := http.NewRequest(http.MethodPost, tasksURL+"/"+testTaskId+"/enable", nil)
 		require.NoError(t, err)
 		respEnable, err := http.DefaultClient.Do(reqEnable)
@@ -363,4 +392,307 @@ func TestTasksEndpointErrorCases(t *testing.T) {
 
 		assert.Equal(t, http.StatusMethodNotAllowed, resp.StatusCode)
 	})
+}
+
+func TestTaskDoesNotScheduleBeforeStartAt(t *testing.T) {
+	clearTasks(t)
+
+	start := time.Now().Add(5 * time.Second)
+
+	task := api.Task{
+		ID:          "future-task",
+		CronExpr:    "* * * * *",
+		Description: "test future start window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		StartAt:     start,
+		Params:      map[string]any{api.SnapshotIDKey: "default"},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	resp, err = http.Get(tasksURL + "/future-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.True(t, ret.Enabled)
+	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be zero before StartAt")
+}
+
+func TestTaskAutoDisablesAfterEndAt(t *testing.T) {
+	clearTasks(t)
+
+	end := time.Now().Add(2 * time.Second)
+
+	task := api.Task{
+		ID:          "end-window-task",
+		CronExpr:    "* * * * *",
+		Description: "test end window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		EndAt:       end,
+		Params:      map[string]any{api.SnapshotIDKey: "default"},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	// Wait for EndAt + window manager evaluation
+	time.Sleep(35 * time.Second)
+
+	resp, err = http.Get(tasksURL + "/end-window-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.False(t, ret.Enabled, "Task must auto-disable after EndAt")
+	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after EndAt")
+}
+
+func TestUpdateTaskRespectsNewStartAt(t *testing.T) {
+	clearTasks(t)
+	createTask(t)
+
+	newStart := time.Now().Add(3 * time.Second)
+
+	patch := api.TaskSnapshopPatch{
+		StartAt: &newStart,
+	}
+
+	body, _ := json.Marshal(patch)
+
+	req, err := http.NewRequest(http.MethodPatch, tasksURL+"/test-task", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set(api.ContentType, api.JsonMIMEType)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	resp.Body.Close()
+
+	resp, err = http.Get(tasksURL + "/test-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.True(t, ret.Enabled)
+	assert.Equal(t, int64(0), int64(ret.CronEntryID), "CronEntryID must be cleared after updating StartAt into the future")
+}
+
+func TestTaskSchedulesAfterStartAt(t *testing.T) {
+	clearTasks(t)
+
+	snapID := fmt.Sprintf("test-snap-%d", time.Now().UnixNano())
+	createSnapshot(t, snapID)
+
+	start := time.Now().Add(2 * time.Second)
+
+	task := api.Task{
+		ID:          "start-window-task",
+		CronExpr:    "* * * * *",
+		Description: "test start window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		StartAt:     start,
+		Params: map[string]any{
+			api.SnapshotIDKey: snapID,
+		},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	time.Sleep(35 * time.Second)
+
+	resp, err = http.Get(tasksURL + "/start-window-task")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var ret api.Task
+	json.NewDecoder(resp.Body).Decode(&ret)
+
+	assert.True(t, ret.Enabled)
+}
+
+func createSnapshot(t *testing.T, id string) {
+	url := tasksServerURL + "/snapshots/" + id
+	req, err := http.NewRequest(http.MethodPost, url, nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusCreated, resp.StatusCode, "Snapshot must be created before scheduling tasks")
+}
+
+// ===== Recurrence tests =====
+
+// Test that a task with a recurring window that lies completely in the future
+// does not execute before the window opens (no history entries).
+func TestRecurringWindowSkipsOutsideTimeWindow(t *testing.T) {
+	clearTasks(t)
+	clearHistory(t)
+
+	now := time.Now()
+	start := now.Add(2 * time.Minute)
+	end := now.Add(4 * time.Minute)
+
+	recurrence := &api.RecurringWindow{
+		StartTime: fmt.Sprintf("%02d:%02d", start.Hour(), start.Minute()),
+		EndTime:   fmt.Sprintf("%02d:%02d", end.Hour(), end.Minute()),
+		Days:      []int{int(now.Weekday())},
+	}
+
+	snapID := fmt.Sprintf("recurrence-future-%d", now.UnixNano())
+	createSnapshot(t, snapID)
+
+	task := api.Task{
+		ID:          "recurrence-future-window",
+		CronExpr:    "*/5 * * * * *", // every 5 seconds (seconds field enabled in cron parser)
+		Description: "recurrence future window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		Recurrence:  recurrence,
+		Params: map[string]any{
+			api.SnapshotIDKey: snapID,
+		},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	// Wait long enough for several cron ticks, but still before the start time.
+	time.Sleep(70 * time.Second)
+
+	history := fetchHistory(t)
+	for _, rec := range history {
+		if rec.TaskID == task.ID {
+			t.Fatalf("task %s should not execute before recurring window opens, but history entry was found: %+v", task.ID, rec)
+		}
+	}
+}
+
+// Test that the day-of-week filter in RecurringWindow is respected.
+// We create a window that is "open" all day, but on the wrong weekday.
+func TestRecurringWindowRespectsDaysOfWeek(t *testing.T) {
+	clearTasks(t)
+	clearHistory(t)
+
+	now := time.Now()
+	// Choose a weekday that is NOT today.
+	wrongDay := (int(now.Weekday()) + 1) % 7
+
+	recurrence := &api.RecurringWindow{
+		StartTime: "00:00",
+		EndTime:   "23:59",
+		Days:      []int{wrongDay},
+	}
+
+	snapID := fmt.Sprintf("recurrence-wrong-day-%d", now.UnixNano())
+	createSnapshot(t, snapID)
+
+	task := api.Task{
+		ID:          "recurrence-wrong-day",
+		CronExpr:    "*/5 * * * * *", // every 5 seconds
+		Description: "recurrence wrong weekday",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		Recurrence:  recurrence,
+		Params: map[string]any{
+			api.SnapshotIDKey: snapID,
+		},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	// Even though the time-of-day window is open, the wrong day-of-week
+	// should prevent any executions.
+	time.Sleep(40 * time.Second)
+
+	history := fetchHistory(t)
+	for _, rec := range history {
+		if rec.TaskID == task.ID {
+			t.Fatalf("task %s should not execute on a non-matching weekday, but history entry was found: %+v", task.ID, rec)
+		}
+	}
+}
+
+// Test that a task with a recurring window that covers "now" actually executes
+// at least once while the window is open.
+func TestRecurringWindowAllowsExecutionInsideWindow(t *testing.T) {
+	clearTasks(t)
+	clearHistory(t)
+
+	now := time.Now()
+	startStr := fmt.Sprintf("%02d:%02d", now.Hour(), now.Minute())
+	end := now.Add(3 * time.Minute)
+	endStr := fmt.Sprintf("%02d:%02d", end.Hour(), end.Minute())
+
+	recurrence := &api.RecurringWindow{
+		StartTime: startStr,
+		EndTime:   endStr,
+		Days:      []int{int(now.Weekday())},
+	}
+
+	snapID := fmt.Sprintf("recurrence-active-%d", now.UnixNano())
+	createSnapshot(t, snapID)
+
+	task := api.Task{
+		ID:          "recurrence-active-window",
+		CronExpr:    "*/5 * * * * *", // every 5 seconds
+		Description: "recurrence active window",
+		Type:        api.TaskTypeSnapshot,
+		Enabled:     true,
+		Recurrence:  recurrence,
+		Params: map[string]any{
+			api.SnapshotIDKey: snapID,
+		},
+	}
+
+	body, _ := json.Marshal(task)
+	resp, err := http.Post(tasksURL, api.JsonMIMEType, bytes.NewReader(body))
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	// Wait long enough for several cron ticks while we are inside the window.
+	time.Sleep(70 * time.Second)
+
+	history := fetchHistory(t)
+	found := false
+	for _, rec := range history {
+		if rec.TaskID == task.ID {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		t.Fatalf("expected at least one execution for task %s inside recurring window, but none were found; history: %#v", task.ID, history)
+	}
 }

@@ -381,4 +381,69 @@ extension SceneService on ProjectService {
     final sceneIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId);
     return sceneIds.map((id) => scenes.get(id)).whereType<SceneModel>().toList();
   }
+
+  //Reorder Scenes in Scene Set
+  void reOrderScenesInSceneSet(String parentId, int oldIndex, int newIndex) {
+    final scenesInSceneSet = relationships.getChildren(RelationshipType.sceneSetScenes, parentId).toList();
+
+    final item = scenesInSceneSet.removeAt(oldIndex);
+    scenesInSceneSet.insert(newIndex, item);
+
+    relationships.reOrder(RelationshipType.sceneSetScenes, parentId, scenesInSceneSet);
+  }
+
+  void reOderSceneActionsInScene(String parentId, int oldIndex, int newIndex) {
+    final actionsInScene = relationships.getChildren(RelationshipType.sceneActions, parentId).toList();
+
+    final item = actionsInScene.removeAt(oldIndex);
+    actionsInScene.insert(newIndex, item);
+
+    relationships.reOrder(RelationshipType.sceneActions, parentId, actionsInScene);
+  }
+
+  Map<String, SceneSetModel> reOderSceneSets({
+    required String sceneSetIdToMove,
+    required String sceneSetAtNewIndexId,
+  }) {
+    List<SceneSetModel> items = sceneSets.getAll();
+
+    // Find indices
+    int fromIndex = items.indexWhere((ss) => ss.id == sceneSetIdToMove);
+    int toIndex = items.indexWhere((ss) => ss.id == sceneSetAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid SceneSet IDs');
+    }
+
+    // Reorder using List operations
+    SceneSetModel item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var ss in items) ss.id: ss};
+  }
+
+  Map<String, SceneModel> reOderScenes({
+    required String sceneIdToMove,
+    required String sceneAtNewIndexId,
+  }) {
+    List<SceneModel> items = scenes.getAll();
+
+    // Find indices
+    int fromIndex = items.indexWhere((s) => s.id == sceneIdToMove);
+    int toIndex = items.indexWhere((s) => s.id == sceneAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid Scene IDs');
+    }
+
+    // Reorder using List operations
+    SceneModel item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var s in items) s.id: s};
+  }
 }
