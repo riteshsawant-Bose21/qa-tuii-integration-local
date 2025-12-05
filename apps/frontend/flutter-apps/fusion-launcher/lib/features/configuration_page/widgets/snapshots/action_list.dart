@@ -135,18 +135,29 @@ class ActionList extends StatelessWidget {
 
                     /// show list of actions for the selected scene/snapshots
                     Expanded(
-                      child: SingleChildScrollView(
+                      child: ReorderableListView.builder(
+                        buildDefaultDragHandles: false,
                         physics: const ClampingScrollPhysics(),
-                        child: Column(
-                          children:
-                              actionsList
-                                  .map(
-                                    (SceneActionModel action) => SnapshotActionRowData(
-                                      action: action,
-                                    ),
-                                  )
-                                  .toList(),
-                        ),
+                        itemCount: actionsList.length,
+                        onReorder: (int oldIndex, int newIndex) {
+                          // Adjust newIndex when dragging down
+                          if (newIndex > oldIndex) {
+                            newIndex -= 1;
+                          }
+                          _projectViewModel.reOderSceneActionsInScene(
+                            sceneId: selectedSnapshotId,
+                            oldIndex: oldIndex,
+                            newIndex: newIndex,
+                          );
+                        },
+                        itemBuilder: (BuildContext context, int index) {
+                          final SceneActionModel action = actionsList[index];
+                          return SnapshotActionRowData(
+                            key: ValueKey<String>(action.id),
+                            action: action,
+                            index: index,
+                          );
+                        },
                       ),
                     ),
                   ],

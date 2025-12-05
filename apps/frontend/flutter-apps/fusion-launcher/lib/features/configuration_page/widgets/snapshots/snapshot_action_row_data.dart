@@ -12,10 +12,12 @@ import 'action_drop_down.dart';
 
 class SnapshotActionRowData extends StatefulWidget {
   final SceneActionModel action;
+  final int index;
 
   const SnapshotActionRowData({
     super.key,
     required this.action,
+    required this.index,
   });
 
   @override
@@ -62,15 +64,18 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
       child: Row(
         children: <Widget>[
           /// draggable icon
-          Container(
-            alignment: Alignment.centerLeft,
-            width: 30,
-            child: Opacity(
-              opacity: 0.4,
-              child: Icon(
-                Icons.drag_handle,
-                size: 16,
-                color: Colors.grey[600],
+          ReorderableDragStartListener(
+            index: widget.index,
+            child: Container(
+              alignment: Alignment.centerLeft,
+              width: 30,
+              child: Opacity(
+                opacity: 0.4,
+                child: Icon(
+                  Icons.drag_handle,
+                  size: 16,
+                  color: Colors.grey[600],
+                ),
               ),
             ),
           ),
