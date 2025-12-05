@@ -321,4 +321,60 @@ extension ScenesViewModel on ProjectViewModel {
       return <SceneModel>[];
     }
   }
+
+  void reOderScenesInSceneSet({required String sceneSetId, required int oldIndex, required int newIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderScenesInSceneSet(parentId: sceneSetId, oldIndex: oldIndex, newIndex: newIndex);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Reorder Scenes In Scene Set Error  ${e.toString()}");
+    }
+  }
+
+  void reOderSceneSets({required String sceneSetIdToMove, required String sceneSetAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderSceneSets(sceneSetIdToMove: sceneSetIdToMove, sceneSetAtNewIndex: sceneSetAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Reorder Scene Sets Error  ${e.toString()}");
+    }
+  }
+
+  void reOderSceneActionsInScene({required String sceneId, required int oldIndex, required int newIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOderSceneActionsInScene(sceneId: sceneId, oldIndex: oldIndex, newIndex: newIndex);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Reorder Scene Actions In Scene Error  ${e.toString()}");
+    }
+  }
+
+  void reOderScenes({required String sceneIdToMove, required String sceneIdAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOderScenes(sceneIdToMove: sceneIdToMove, sceneAtNewIndex: sceneIdAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Reorder Scenes Error  ${e.toString()}");
+    }
+  }
 }

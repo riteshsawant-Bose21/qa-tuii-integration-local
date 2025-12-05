@@ -187,4 +187,46 @@ extension SceneManager on ProjectManager {
     }
     return projectService!.getScenesInSceneSet(sceneSetId);
   }
+
+  void reOrderScenesInSceneSet({required String parentId, required int oldIndex, required int newIndex}) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.reOrderScenesInSceneSet(parentId, oldIndex, newIndex);
+  }
+
+  void reOderSceneActionsInScene({required String sceneId, required int oldIndex, required int newIndex}) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.reOderSceneActionsInScene(sceneId, oldIndex, newIndex);
+  }
+
+  void reOrderSceneSets({required String sceneSetIdToMove, required String sceneSetAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, SceneSetModel> reorderedList = projectService!.reOderSceneSets(
+      sceneSetIdToMove: sceneSetIdToMove,
+      sceneSetAtNewIndexId: sceneSetAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      sceneSetRepository: projectService!.sceneSets.copyWith(reorderedList),
+    );
+  }
+
+  void reOderScenes({required String sceneIdToMove, required String sceneAtNewIndex}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, SceneModel> reorderedList = projectService!.reOderScenes(
+      sceneIdToMove: sceneIdToMove,
+      sceneAtNewIndexId: sceneAtNewIndex,
+    );
+
+    projectService = projectService!.copyWith(
+      scenesRepository: projectService!.scenes.copyWith(reorderedList),
+    );
+  }
 }
