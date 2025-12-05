@@ -18,3 +18,4 @@ export 'fusion_widgets/others/fusion_reorderable_row.dart';
 export 'models/fusion_models.dart';
 export 'project_manger/fusion_project_manager.dart';
 export 'service/fusion_services.dart';
+export 'products/products.dart';
