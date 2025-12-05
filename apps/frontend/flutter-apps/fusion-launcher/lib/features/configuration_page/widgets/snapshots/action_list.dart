@@ -122,6 +122,10 @@ class ActionList extends StatelessWidget {
                     /// Snapshot Header Widget
                     SnapshotHeaderWidget(
                       snapshotName: selectedScene?.name ?? "",
+                      onNameChanged: (String newName) {
+                        final SceneModel scene = selectedScene!.copyWith(name: newName);
+                        _projectViewModel.updateScene(scene: scene);
+                      },
                       onAdd: () {
                         final SceneActionModel action = SceneActionModel();
 

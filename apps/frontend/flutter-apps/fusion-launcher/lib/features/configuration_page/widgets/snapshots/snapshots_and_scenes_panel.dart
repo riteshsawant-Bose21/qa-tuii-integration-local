@@ -8,6 +8,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
@@ -65,6 +66,8 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
     _projectViewModel.addSceneActionToScene(sceneId: newScene.id, action: action);
 
+    FusionToast.success(context, message: "Snapshot \"${newScene.name}\" created");
+
     /// Clear dialog and close popup
     _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
@@ -75,6 +78,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
       name: _scenesNameController.text.trim(),
     );
     _projectViewModel.addNewSceneSet(sceneSet: newSceneSet);
+    FusionToast.success(context, message: 'Scene "${newSceneSet.name}" created');
 
     /// Clear dialog and close popup
     _clearSourceSetDialog(pop: true, popContext: popupContext, isScene: true);
@@ -246,6 +250,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
                           /// clear on selected snapshot to avoid confusion after delete
                           _projectViewModel.setSelectedSnapshotId(null);
+                          FusionToast.success(context, message: "Snapshot deleted successfully");
                         },
                         selectedSnapshotId: _projectViewModel.selectedSnapshotId,
                         onSelect: (String sceneId) {
@@ -373,9 +378,14 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
                         /// clear selected snapshot to avoid confusion after delete
                         _projectViewModel.setSelectedSnapshotId(null);
+                        FusionToast.success(context, message: "Scenes deleted successfully");
                       },
                       onScenesSnapshotDelete: (String sceneId) {
                         _projectViewModel.removeScene(sceneId: sceneId);
+
+                        /// clear selected snapshot to avoid confusion after delete
+                        _projectViewModel.setSelectedSnapshotId(null);
+                        FusionToast.success(context, message: "Snapshot deleted successfully");
                       },
                       onReorderScenes: _handleSceneSetReorder,
                       onDragStarted: (String sceneId) {

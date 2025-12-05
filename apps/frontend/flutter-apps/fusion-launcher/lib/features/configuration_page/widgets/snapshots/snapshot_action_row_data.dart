@@ -3,6 +3,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/va
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -256,6 +257,8 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                               _projectViewModel.removeSceneAction(
                                 actionId: action.id,
                               );
+                              FusionToast.success(context, message: "Action deleted successfully");
+
                               Navigator.of(context).pop();
                             },
                           ),
