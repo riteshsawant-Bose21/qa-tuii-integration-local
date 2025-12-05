@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/sn
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_action_row_header.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
 
 import '../../../../core/service_locator.dart';
@@ -60,12 +61,58 @@ class ActionList extends StatelessWidget {
           //     ],
           //   ),
           // ),
+          /// Action List
           BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
               final String? selectedSnapshotId = _projectViewModel.selectedSnapshotId;
               if (selectedSnapshotId == null) {
-                return const SizedBox.shrink();
+                /// No snapshot selected
+                return Expanded(
+                  child: Center(
+                    child: Container(
+                      // 40%
+                      width: MediaQuery.of(context).size.width * 0.4,
+                      padding: const EdgeInsets.all(100.0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          FusionAppText(
+                            text: 'Select a Snapshot to view and manage its actions',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          FusionAppText(
+                            text:
+                                "Snapshots are predefined configurations that allow you to switch between different audio setups quickly. Each snapshot can contain multiple actions that define how audio sources are routed and managed within the system.",
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          FusionAppText(
+                            text:
+                                "To get started, select a snapshot from the list on the left. Once selected, you can add, edit, or remove actions associated with that snapshot using the controls provided in this panel.",
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w400,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
               }
+              final List<SceneActionModel> actionsList = _projectViewModel.getSceneActionsForScene(selectedSnapshotId);
 
               /// get selected snapshot name
               final SceneModel? selectedScene = _projectViewModel.getSceneById(sceneId: selectedSnapshotId);
@@ -92,8 +139,7 @@ class ActionList extends StatelessWidget {
                         physics: const ClampingScrollPhysics(),
                         child: Column(
                           children:
-                              _projectViewModel
-                                  .getSceneActionsForScene(selectedSnapshotId)
+                              actionsList
                                   .map(
                                     (SceneActionModel action) => SnapshotActionRowData(
                                       action: action,

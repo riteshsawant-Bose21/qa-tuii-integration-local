@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshots_and_scenes_panel.dart';
 
 import '../widgets/snapshots/action_list.dart';
@@ -11,6 +13,15 @@ class ConfigurationSnapshots extends StatefulWidget {
 }
 
 class _ConfigurationSnapshotsState extends State<ConfigurationSnapshots> {
+  ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
+
+  @override
+  void dispose() {
+    /// Clear selected snapshot when screen is disposed
+    _projectViewModel.setSelectedSnapshotId(null);
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(

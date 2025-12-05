@@ -223,6 +223,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                         snapShotList: snapShotList,
                         onDelete: (String sceneId) {
                           _projectViewModel.removeScene(sceneId: sceneId);
+
+                          /// clear on selected snapshot to avoid confusion after delete
+                          _projectViewModel.setSelectedSnapshotId(null);
                         },
                         selectedSnapshotId: _projectViewModel.selectedSnapshotId,
                         onSelect: (String sceneId) {
@@ -343,6 +346,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                       },
                       onSceneSetDelete: (String sceneSetId) {
                         _projectViewModel.removeSceneSet(sceneSetId: sceneSetId);
+
+                        /// clear selected snapshot to avoid confusion after delete
+                        _projectViewModel.setSelectedSnapshotId(null);
                       },
                       onScenesSnapshotDelete: (String sceneId) {
                         _projectViewModel.removeScene(sceneId: sceneId);

@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshots_and_scenes_panel.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -20,7 +18,7 @@ class ScenesExpandableCard extends StatefulWidget {
   final bool isDragHovered;
   final Function(String sceneId) onSceneSetDelete;
   final Function(String snapshotId) onScenesSnapshotDelete;
-  final Function(String sceneId)? onSelect; // Add this line
+  final Function(String sceneId)? onSelect;
   final Function(String sceneId)? onDragStarted;
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
@@ -71,6 +69,10 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
 
     /// expand the scene set to show the new item
     _isScenesExpanded.value = true;
+
+    final SceneActionModel action = SceneActionModel();
+
+    _projectViewModel.addSceneActionToScene(sceneId: newScene.id, action: action);
 
     /// make this snapshot selected
     _projectViewModel.setSelectedSnapshotId(newScene.id);

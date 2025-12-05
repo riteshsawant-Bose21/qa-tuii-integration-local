@@ -282,6 +282,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _engine?.dispose();
     _floorCanvasController.dispose();
 
+    /// Reset configuration menu mode to processing on dispose
+    _projectViewModel.setConfigurationMenuMode(ConfigurationMenuMode.processing);
+
     super.dispose();
   }
 
