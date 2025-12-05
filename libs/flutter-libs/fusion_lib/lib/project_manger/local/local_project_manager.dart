@@ -16,7 +16,7 @@ class LocalProjectManager {
   /// Adds a new project to the list.
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
-    final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
+    final String fusionDirPath = kFusionProjectDirName;
     Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
 
@@ -226,10 +226,6 @@ class LocalProjectManager {
 
   /// Deletes the Fusion project directory
   Future<ResponseCallback<bool>> deleteFusionProjectDirectory() async {
-    if (isAdminLogin) {
-      FusionLogger.log(tag: LogTag.project, message: 'Admin mode: Skipping deletion of Fusion project directory.');
-      return ResponseCallback.success(true);
-    }
     final Directory fusionDir = await fusionProjectDirectory;
 
     if (await fusionDir.exists()) {
@@ -299,11 +295,6 @@ class LocalProjectManager {
     } catch (e) {
       throw ('Error getting image from project: $e');
     }
-  }
-
-  // Is admin
-  bool get isAdminLogin {
-    return sharedPreferencesHandler.getBool(SharedPreferenceKeys.adminLogin) ?? false;
   }
 
   Future<Directory> _projectDirectory(String projectId) async {

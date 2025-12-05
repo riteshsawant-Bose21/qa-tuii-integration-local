@@ -1,7 +1,9 @@
+import 'dart:convert';
 import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
@@ -12,6 +14,36 @@ class UserSessionManager {
 
   factory UserSessionManager() {
     return _instance;
+  }
+
+  static UserModel? _cachedUserModel;
+
+  static Future<UserModel?> getSignedInUserProfile() async {
+    if (_cachedUserModel != null) {
+      return _cachedUserModel;
+    }
+
+    final String? userDetailsJson = await serviceLocator<FusionSecureStorage>().getToken(StorageKey.userProfile);
+
+    if (userDetailsJson != null) {
+      try {
+        final Map<String, dynamic> jsonMap = jsonDecode(userDetailsJson);
+        final UserModel userDetails = UserModel.fromJson(jsonMap);
+        _cachedUserModel = userDetails;
+
+        return userDetails;
+      } catch (e) {
+        log('Error decoding user details: $e');
+        return null;
+      }
+    }
+    return null;
+  }
+
+  void saveUserProfile(UserModel userModel) {
+    _cachedUserModel = userModel;
+    final String userDetailsJson = jsonEncode(userModel.toJson());
+    serviceLocator<FusionSecureStorage>().saveToken(StorageKey.userProfile, userDetailsJson);
   }
 
   /// Checks if the user is signed in by verifying if the access token exists
@@ -38,14 +70,12 @@ class UserSessionManager {
   }
 
   static Future<void> logout() async {
-    serviceLocator<ProjectManager>().deleteFusionProjectsDirectory();
+    await serviceLocator<AuthViewModel>().logout();
+    _cachedUserModel = null;
+    await serviceLocator<ProjectManager>().deleteFusionProjectsDirectory();
     serviceLocator<UserProfileManager>().clearUserProfile();
     final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
-    await prefs.setBool(SharedPreferenceKeys.adminLogin, false);
-    await prefs.setBool(SharedPreferenceKeys.isLoggedIn, false);
-    await prefs.remove(SharedPreferenceKeys.userDetails);
-    await prefs.remove(SharedPreferenceKeys.accessToken);
-    log('User logged out and session cleared.');
+    await prefs.clearAll();
   }
 
   static Future<bool> isUserLoggedIn() async {

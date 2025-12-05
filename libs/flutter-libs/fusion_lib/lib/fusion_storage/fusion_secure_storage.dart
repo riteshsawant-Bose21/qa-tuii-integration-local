@@ -12,6 +12,7 @@ enum StorageKey {
   expiredAt,
   userEmail,
   userName,
+  userProfile,
 }
 
 extension StorageKeyExtension on StorageKey {
@@ -29,6 +30,8 @@ extension StorageKeyExtension on StorageKey {
         return "user_email";
       case StorageKey.userName:
         return "user_name";
+      case StorageKey.userProfile:
+        return "user_profile";
     }
   }
 }

@@ -8,7 +8,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/core/services/user_session_manager.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -81,7 +80,8 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
         BlocProvider<AuthViewModel>(
-          create: (BuildContext context) => serviceLocator<AuthViewModel>(),
+          create: (BuildContext context) => serviceLocator<AuthViewModel>()..initialize(),
+          lazy: false,
         ),
         BlocProvider<PanelBloc>(
           create: (BuildContext context) => serviceLocator<PanelBloc>(),
@@ -104,25 +104,30 @@ class MyApp extends StatelessWidget {
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
             themeMode: mode,
-            home: Scaffold(
-              body: BlocBuilder<AuthViewModel, AuthViewModelState>(
-                buildWhen: (AuthViewModelState prevState, AuthViewModelState currentState) => currentState is Authenticated || currentState is Unauthenticated,
-                builder: (BuildContext context, AuthViewModelState state) {
-                  if (state is Unauthenticated) {
-                    return const LauncherSignInPage();
-                  }
-                  return FutureBuilder<bool>(
-                    future: UserSessionManager.isUserLoggedIn(),
-                    builder: (BuildContext context, AsyncSnapshot<bool> snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      return snapshot.data == true ? const HomePage() : const LauncherSignInPage();
-                    },
+
+            home: BlocConsumer<AuthViewModel, AuthViewModelState>(
+              // Listener: Handle one-off events like errors (optional)
+              listener: (BuildContext context, AuthViewModelState state) {
+                if (state is AuthError) {
+                  // Show a snackbar if initialization fails seriously
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.message)),
                   );
-                },
-              ),
+                }
+              },
+              buildWhen: (AuthViewModelState previous, AuthViewModelState current) {
+                return current is Unauthenticated || current is Authenticated;
+              },
+              // Builder: Determines WHICH page to show
+              builder: (BuildContext context, AuthViewModelState state) {
+                if (state is Unauthenticated) {
+                  return const LauncherSignInPage();
+                }
+
+                return const HomePage();
+              },
             ),
+
             navigatorKey: globalNavigatorKey,
             navigatorObservers: <NavigatorObserver>[
               AppNavigatorObserver(),

@@ -35,8 +35,6 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   List<Color> get projectColors => projectManager.getProjectColors();
 
-  bool get isAdminLogin => projectManager.isAdminLogin();
-
   int get currentFloorIndex => projectManager.getCurrentFloorIndex();
 
   //get sources by filtering only class type Source  in hardwareComponent
