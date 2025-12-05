@@ -129,7 +129,7 @@ func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusCreated)
 }
 
 // DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
