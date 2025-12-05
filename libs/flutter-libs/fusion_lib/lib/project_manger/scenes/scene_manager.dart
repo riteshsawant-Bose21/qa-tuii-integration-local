@@ -222,4 +222,25 @@ extension SceneManager on ProjectManager {
       scenesRepository: projectService!.scenes.copyWith(reorderedList),
     );
   }
+
+  void duplicateScene(String sceneId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.duplicateScene(sceneId);
+  }
+
+  void duplicateSceneSet(String sceneSetId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.duplicateSceneSet(sceneSetId);
+  }
+
+  void duplicateSceneAction(String actionId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.duplicateSceneAction(actionId);
+  }
 }

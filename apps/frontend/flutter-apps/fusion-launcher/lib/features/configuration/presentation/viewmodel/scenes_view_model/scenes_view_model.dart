@@ -368,4 +368,46 @@ extension ScenesViewModel on ProjectViewModel {
       throwError("Reorder Scenes Error  ${e.toString()}");
     }
   }
+
+  void duplicateScene({required String sceneId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.duplicateScene(sceneId);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Duplicate Scene Error  ${e.toString()}");
+    }
+  }
+
+  void duplicateSceneSet({required String sceneSetId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.duplicateSceneSet(sceneSetId);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Duplicate Scene Set Error  ${e.toString()}");
+    }
+  }
+
+  void duplicateSceneAction({required String actionId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.duplicateSceneAction(actionId);
+      if (autoSave) {
+        saveProject();
+      }
+    } catch (e) {
+      throwError("Duplicate Scene Action Error  ${e.toString()}");
+    }
+  }
 }

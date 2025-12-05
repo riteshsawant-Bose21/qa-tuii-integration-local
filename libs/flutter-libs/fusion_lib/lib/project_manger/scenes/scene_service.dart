@@ -446,4 +446,72 @@ extension SceneService on ProjectService {
     // Convert back to Map
     return {for (var s in items) s.id: s};
   }
+
+  void duplicateSceneAction(String actionId) {
+    final originalAction = sceneActions.get(actionId);
+    if (originalAction == null) {
+      throw Exception("Scene Action with id $actionId does not exist.");
+    }
+
+    final duplicatedAction = originalAction.copyWith(
+      id: "ACTION${FusionUtils.shortStringUUID()}",
+    );
+
+    sceneActions.add(duplicatedAction.id, duplicatedAction);
+
+    final parentId = relationships.getParent(RelationshipType.sceneActions, actionId);
+    if (parentId != null) {
+      relationships.link(RelationshipType.sceneActions, parentId, duplicatedAction.id);
+    }
+  }
+
+  void duplicateScene(String sceneId) {
+    final originalScene = scenes.get(sceneId);
+    if (originalScene == null) {
+      throw Exception("Scene with id $sceneId does not exist.");
+    }
+
+    final duplicatedScene = originalScene.copyWith(
+      id: "SCENE${FusionUtils.shortStringUUID()}",
+      name: "${originalScene.name} Copy",
+    );
+
+    scenes.add(duplicatedScene.id, duplicatedScene);
+
+    final parentSetId = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
+    if (parentSetId != null) {
+      relationships.link(RelationshipType.sceneSetScenes, parentSetId, duplicatedScene.id);
+    }
+
+    List<String> actionIds = relationships.getChildren(RelationshipType.sceneActions, sceneId).toList();
+    for (var actionId in actionIds) {
+      final originalAction = sceneActions.get(actionId);
+      if (originalAction != null) {
+        final duplicatedAction = originalAction.copyWith(
+          id: "ACTION${FusionUtils.shortStringUUID()}",
+        );
+        sceneActions.add(duplicatedAction.id, duplicatedAction);
+        relationships.link(RelationshipType.sceneActions, duplicatedScene.id, duplicatedAction.id);
+      }
+    }
+  }
+
+  void duplicateSceneSet(String sceneSetId) {
+    final originalSceneSet = sceneSets.get(sceneSetId);
+    if (originalSceneSet == null) {
+      throw Exception("Scene Set with id $sceneSetId does not exist.");
+    }
+
+    final duplicatedSceneSet = originalSceneSet.copyWith(
+      id: "SCENESET${FusionUtils.shortStringUUID()}",
+      name: "${originalSceneSet.name} Copy",
+    );
+
+    sceneSets.add(duplicatedSceneSet.id, duplicatedSceneSet);
+
+    List<String> sceneIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId).toList();
+    for (var sceneId in sceneIds) {
+      duplicateScene(sceneId);
+    }
+  }
 }
