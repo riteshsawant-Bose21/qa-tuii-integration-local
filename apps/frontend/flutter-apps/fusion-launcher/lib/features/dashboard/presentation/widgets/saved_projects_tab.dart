@@ -642,6 +642,8 @@ class CreateNewProjectDialog extends StatefulWidget {
 }
 
 class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
+  final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
+
   ValueNotifier<bool> shouldShowMoreDetailsNotifier = ValueNotifier<bool>(false);
   final TextEditingController projectNameController = TextEditingController();
 
@@ -694,333 +696,339 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                         child: SingleChildScrollView(
                           padding: const EdgeInsets.all(24),
                           physics: const ClampingScrollPhysics(),
-                          child: Column(
-                            spacing: 10,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              FusionAppText(
-                                text: "BASIC INFORMATION",
-                                maxLine: 2,
-                                style: context.textTheme.bodySmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: context.colorScheme.onSurface,
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              spacing: 10,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                FusionAppText(
+                                  text: "BASIC INFORMATION",
+                                  maxLine: 2,
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: context.colorScheme.onSurface,
+                                  ),
                                 ),
-                              ),
 
-                              Row(
-                                spacing: 10,
-                                children: <Widget>[
-                                  Expanded(
-                                    child: BorderedTextfield(
-                                      controller: projectNameController,
-                                      label: "Project File Name",
-                                      hintText: "Project Name",
-                                    ),
-                                  ),
-                                  const Expanded(
-                                    child: BorderedTextfield(
-                                      label: "File Version",
-                                      hintText: "Version Number",
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 5),
-                              const BorderedTextfield(
-                                label: "Project Tags or Categories",
-                                hintText: "Add tags or categories (separated by commas)",
-                              ),
-                              const SizedBox(height: 5),
-                              const Row(
-                                spacing: 10,
-                                children: <Widget>[
-                                  Expanded(
-                                    child: BorderedTextfield(
-                                      label: "Author Name",
-                                      hintText: "Full Name",
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: BorderedTextfield(
-                                      label: "Organization",
-                                      hintText: "Organization Name",
-                                    ),
-                                  ),
-                                ],
-                              ),
-
-                              // =============================================
-                              //  Add More Details Section
-                              // =============================================
-                              ValueListenableBuilder<bool>(
-                                valueListenable: shouldShowMoreDetailsNotifier,
-                                builder: (BuildContext context, bool value, Widget? child) {
-                                  return AnimatedCrossFade(
-                                    duration: const Duration(milliseconds: 250),
-                                    crossFadeState: shouldShowMoreDetailsNotifier.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
-                                    firstChild: Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 18).copyWith(top: 12),
-                                      child: InkWell(
-                                        onTap: () {
-                                          shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
+                                Row(
+                                  spacing: 10,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: BorderedTextfield(
+                                        controller: projectNameController,
+                                        label: "Project File Name",
+                                        hintText: "Project Name",
+                                        validator: (String? value) {
+                                          if (value?.isEmpty ?? true) return "Project name cannot be empty";
+                                          return null;
                                         },
-                                        splashColor: Colors.transparent,
-                                        child: FusionAppText(
-                                          text: "Add More Details",
-                                          style: context.textTheme.bodySmall?.copyWith(
-                                            fontWeight: FontWeight.w600,
-                                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                      ),
+                                    ),
+                                    const Expanded(
+                                      child: BorderedTextfield(
+                                        label: "File Version",
+                                        hintText: "Version Number",
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                const BorderedTextfield(
+                                  label: "Project Tags or Categories",
+                                  hintText: "Add tags or categories (separated by commas)",
+                                ),
+                                const SizedBox(height: 5),
+                                const Row(
+                                  spacing: 10,
+                                  children: <Widget>[
+                                    Expanded(
+                                      child: BorderedTextfield(
+                                        label: "Author Name",
+                                        hintText: "Full Name",
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: BorderedTextfield(
+                                        label: "Organization",
+                                        hintText: "Organization Name",
+                                      ),
+                                    ),
+                                  ],
+                                ),
+
+                                // =============================================
+                                //  Add More Details Section
+                                // =============================================
+                                ValueListenableBuilder<bool>(
+                                  valueListenable: shouldShowMoreDetailsNotifier,
+                                  builder: (BuildContext context, bool value, Widget? child) {
+                                    return AnimatedCrossFade(
+                                      duration: const Duration(milliseconds: 250),
+                                      crossFadeState: shouldShowMoreDetailsNotifier.value ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+                                      firstChild: Padding(
+                                        padding: const EdgeInsets.symmetric(horizontal: 18).copyWith(top: 12),
+                                        child: InkWell(
+                                          onTap: () {
+                                            shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
+                                          },
+                                          splashColor: Colors.transparent,
+                                          child: FusionAppText(
+                                            text: "Add More Details",
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                            ),
                                           ),
                                         ),
                                       ),
-                                    ),
-                                    secondChild: Padding(
-                                      padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
-                                      child: Column(
-                                        spacing: 10,
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                      secondChild: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 12).copyWith(bottom: 0),
+                                        child: Column(
+                                          spacing: 10,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: <Widget>[
+                                            // ===============================
+                                            //  ORGANIZATION DETAILS SECTION
+                                            // ===============================
+                                            FusionAppText(
+                                              text: "ORGANIZATION DETAILS",
+                                              maxLine: 2,
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: context.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 5),
+                                            const BorderedTextfield(
+                                              label: "Organization Name",
+                                              hintText: "Organization Name",
+                                            ),
+
+                                            const SizedBox(height: 5),
+                                            const Row(
+                                              spacing: 10,
+                                              children: <Widget>[
+                                                Expanded(
+                                                  child: BorderedTextfield(
+                                                    label: "Project State",
+                                                    hintText: "State",
+                                                  ),
+                                                ),
+
+                                                Expanded(
+                                                  child: BorderedTextfield(
+                                                    label: "Project Country",
+                                                    hintText: "Country",
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+
+                                            const SizedBox(height: 5),
+                                            const BorderedTextfield(
+                                              label: "Project Time Zone",
+                                              hintText: "Time Zone",
+                                            ),
+
+                                            const SizedBox(height: 5),
+                                            const BorderedTextfield(
+                                              label: "Primary Building Name",
+                                              hintText: "Primary Building Name",
+                                            ),
+
+                                            const SizedBox(height: 5),
+                                            // ===============================
+                                            //  BUDGET & OBJECTIVES SECTION
+                                            // ===============================
+                                            FusionAppText(
+                                              text: "BUDGET & OBJECTIVES",
+                                              maxLine: 2,
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: context.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Row(
+                                              spacing: 10,
+                                              children: <Widget>[
+                                                const Expanded(
+                                                  child: BorderedTextfield(
+                                                    label: "Target Budget",
+                                                    hintText: "Budget",
+                                                  ),
+                                                ),
+
+                                                Expanded(
+                                                  child: FusionDarkDropdown<CurrencyType>(
+                                                    title: "Currency",
+                                                    placeholder: "Select Currency",
+                                                    items: CurrencyType.values,
+                                                    labelBuilder: (CurrencyType value) => value.name.toUpperCase(),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+
+                                            // Project Time Zone
+                                            const SizedBox(height: 5),
+                                            const BorderedTextfield(
+                                              label: "Project Goals",
+                                              hintText: "Add project goals or objectives",
+                                            ),
+
+                                            // Primary Building Name
+                                            const SizedBox(height: 5),
+                                            const BorderedTextfield(
+                                              label: "Primary Building Name",
+                                              hintText: "Primary Building Name",
+                                            ),
+
+                                            const SizedBox(height: 5),
+
+                                            // ===============================
+                                            //  UNITS & GLOBAL SETTINGS SECTION
+                                            // ===============================
+                                            FusionAppText(
+                                              text: "UNITS & GLOBAL SETTINGS",
+                                              maxLine: 2,
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                color: context.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 5),
+                                            Row(
+                                              spacing: 10,
+                                              children: <Widget>[
+                                                Expanded(
+                                                  child: FusionDarkDropdown<MeasurementUnit>(
+                                                    title: "Measurement Units",
+                                                    placeholder: "Select",
+                                                    items: MeasurementUnit.values,
+                                                    labelBuilder: (MeasurementUnit value) => "${value.displayName} (${value.symbol})",
+                                                  ),
+                                                ),
+                                                Expanded(
+                                                  child: FusionDarkDropdown<String>(
+                                                    title: "Temperature",
+                                                    placeholder: "Select",
+                                                    items: <String>['Celsius', 'Fahrenheit'],
+                                                    labelBuilder: (String value) => value,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+
+                                            // Project Time Zone
+                                            const SizedBox(height: 5),
+                                            const BorderedTextfield(
+                                              label: "Regional Based Defaults",
+                                              hintText: "Add regional based default settings",
+                                            ),
+
+                                            //  ================================
+                                            //  Show Less Details Section
+                                            // ===============================
+                                            const SizedBox(height: 5),
+                                            Padding(
+                                              padding: const EdgeInsets.symmetric(horizontal: 18),
+                                              child: InkWell(
+                                                onTap: () {
+                                                  shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
+                                                },
+                                                splashColor: Colors.transparent,
+                                                child: FusionAppText(
+                                                  text: "Show Less Details",
+                                                  style: context.textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.w600,
+                                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+
+                                const SizedBox(height: 5),
+                                const BorderedTextfield(
+                                  label: "Notes",
+                                  hintText: "Add notes or comments",
+                                  minLines: 5,
+                                  maxLines: 10,
+                                ),
+                                const SizedBox(height: 5),
+
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: NeumorphicDarkButton(
+                                    onTap: () async {
+                                      final bool isFormFilled = _formKey.currentState?.validate() ?? false;
+                                      if (!isFormFilled) return;
+
+                                      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+                                      final String projectName = projectNameController.text.trim();
+
+                                      FusionUiUtils.showLoader(context);
+                                      final NewProjectDetails newProject = NewProjectDetails(name: projectName);
+                                      final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
+                                      if (context.mounted) FusionUiUtils.hideLoader(context);
+                                      projectViewModel.openProject(projectData!.id);
+
+                                      if (context.mounted) {
+                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
+                                        Navigator.of(context).pop();
+                                        // Navigator.pushNamed(context, Routes.projectPage);
+                                      }
+                                    },
+                                    width: 160,
+                                    child: Container(
+                                      height: 60,
+                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
                                         children: <Widget>[
-                                          // ===============================
-                                          //  ORGANIZATION DETAILS SECTION
-                                          // ===============================
-                                          FusionAppText(
-                                            text: "ORGANIZATION DETAILS",
-                                            maxLine: 2,
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: context.colorScheme.onSurface,
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: 'Continue',
+                                              style: context.textTheme.titleSmall?.copyWith(
+                                                fontWeight: FontWeight.w600,
+                                              ),
                                             ),
                                           ),
-                                          const SizedBox(height: 5),
-                                          const BorderedTextfield(
-                                            label: "Organization Name",
-                                            hintText: "Organization Name",
-                                          ),
-
-                                          const SizedBox(height: 5),
-                                          const Row(
-                                            spacing: 10,
-                                            children: <Widget>[
-                                              Expanded(
-                                                child: BorderedTextfield(
-                                                  label: "Project State",
-                                                  hintText: "State",
-                                                ),
+                                          MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: Container(
+                                              height: 28,
+                                              width: 47,
+                                              decoration: BoxDecoration(
+                                                color: FusionDarkColorPallette.green20,
+                                                borderRadius: BorderRadius.circular(6),
                                               ),
-
-                                              Expanded(
-                                                child: BorderedTextfield(
-                                                  label: "Project Country",
-                                                  hintText: "Country",
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-
-                                          const SizedBox(height: 5),
-                                          const BorderedTextfield(
-                                            label: "Project Time Zone",
-                                            hintText: "Time Zone",
-                                          ),
-
-                                          const SizedBox(height: 5),
-                                          const BorderedTextfield(
-                                            label: "Primary Building Name",
-                                            hintText: "Primary Building Name",
-                                          ),
-
-                                          const SizedBox(height: 5),
-                                          // ===============================
-                                          //  BUDGET & OBJECTIVES SECTION
-                                          // ===============================
-                                          FusionAppText(
-                                            text: "BUDGET & OBJECTIVES",
-                                            maxLine: 2,
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: context.colorScheme.onSurface,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Row(
-                                            spacing: 10,
-                                            children: <Widget>[
-                                              const Expanded(
-                                                child: BorderedTextfield(
-                                                  label: "Target Budget",
-                                                  hintText: "Budget",
-                                                ),
-                                              ),
-
-                                              Expanded(
-                                                child: FusionDarkDropdown<CurrencyType>(
-                                                  title: "Currency",
-                                                  placeholder: "Select Currency",
-                                                  items: CurrencyType.values,
-                                                  labelBuilder: (CurrencyType value) => value.name.toUpperCase(),
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-
-                                          // Project Time Zone
-                                          const SizedBox(height: 5),
-                                          const BorderedTextfield(
-                                            label: "Project Goals",
-                                            hintText: "Add project goals or objectives",
-                                          ),
-
-                                          // Primary Building Name
-                                          const SizedBox(height: 5),
-                                          const BorderedTextfield(
-                                            label: "Primary Building Name",
-                                            hintText: "Primary Building Name",
-                                          ),
-
-                                          const SizedBox(height: 5),
-
-                                          // ===============================
-                                          //  UNITS & GLOBAL SETTINGS SECTION
-                                          // ===============================
-                                          FusionAppText(
-                                            text: "UNITS & GLOBAL SETTINGS",
-                                            maxLine: 2,
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: context.colorScheme.onSurface,
-                                            ),
-                                          ),
-                                          const SizedBox(height: 5),
-                                          Row(
-                                            spacing: 10,
-                                            children: <Widget>[
-                                              Expanded(
-                                                child: FusionDarkDropdown<MeasurementUnit>(
-                                                  title: "Measurement Units",
-                                                  placeholder: "Select",
-                                                  items: MeasurementUnit.values,
-                                                  labelBuilder: (MeasurementUnit value) => "${value.displayName} (${value.symbol})",
-                                                ),
-                                              ),
-                                              Expanded(
-                                                child: FusionDarkDropdown<String>(
-                                                  title: "Temperature",
-                                                  placeholder: "Select",
-                                                  items: <String>['Celsius', 'Fahrenheit'],
-                                                  labelBuilder: (String value) => value,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-
-                                          // Project Time Zone
-                                          const SizedBox(height: 5),
-                                          const BorderedTextfield(
-                                            label: "Regional Based Defaults",
-                                            hintText: "Add regional based default settings",
-                                          ),
-
-                                          //  ================================
-                                          //  Show Less Details Section
-                                          // ===============================
-                                          const SizedBox(height: 5),
-                                          Padding(
-                                            padding: const EdgeInsets.symmetric(horizontal: 18),
-                                            child: InkWell(
-                                              onTap: () {
-                                                shouldShowMoreDetailsNotifier.value = !shouldShowMoreDetailsNotifier.value;
-                                              },
-                                              splashColor: Colors.transparent,
-                                              child: FusionAppText(
-                                                text: "Show Less Details",
-                                                style: context.textTheme.bodySmall?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                                ),
+                                              child: const Icon(
+                                                LucideIcons.arrowRight,
+                                                color: Colors.white,
+                                                size: 12,
                                               ),
                                             ),
                                           ),
                                         ],
                                       ),
                                     ),
-                                  );
-                                },
-                              ),
-
-                              const SizedBox(height: 5),
-                              const BorderedTextfield(
-                                label: "Notes",
-                                hintText: "Add notes or comments",
-                                minLines: 5,
-                                maxLines: 10,
-                              ),
-                              const SizedBox(height: 5),
-
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: NeumorphicDarkButton(
-                                  onTap: () async {
-                                    if (projectNameController.text.trim().isEmpty) {
-                                      FusionToast.error(context, message: "Project name cannot be empty");
-                                      return;
-                                    }
-
-                                    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-                                    final String projectName = projectNameController.text.trim();
-
-                                    FusionUiUtils.showLoader(context);
-                                    final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                                    final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
-                                    if (context.mounted) FusionUiUtils.hideLoader(context);
-                                    projectViewModel.openProject(projectData!.id);
-
-                                    if (context.mounted) {
-                                      serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
-                                      Navigator.of(context).pop();
-                                      // Navigator.pushNamed(context, Routes.projectPage);
-                                    }
-                                  },
-                                  width: 160,
-                                  child: Container(
-                                    height: 60,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                                    decoration: BoxDecoration(
-                                      color: context.colorScheme.surface,
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: Row(
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: FusionAppText(
-                                            text: 'Continue',
-                                            style: context.textTheme.titleSmall?.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                        ),
-                                        MouseRegion(
-                                          cursor: SystemMouseCursors.click,
-                                          child: Container(
-                                            height: 28,
-                                            width: 47,
-                                            decoration: BoxDecoration(
-                                              color: FusionDarkColorPallette.green20,
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: const Icon(
-                                              LucideIcons.arrowRight,
-                                              color: Colors.white,
-                                              size: 12,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
                                   ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
                         ),
                       ),
@@ -1042,6 +1050,7 @@ class BorderedTextfield extends StatefulWidget {
   final String label, hintText;
   final int minLines, maxLines;
   final bool isEnabled, isObscured;
+  final FormFieldValidator<String>? validator;
 
   const BorderedTextfield({
     super.key,
@@ -1053,6 +1062,7 @@ class BorderedTextfield extends StatefulWidget {
     this.maxLines = 1,
     this.isEnabled = true,
     this.isObscured = false,
+    this.validator,
   });
 
   @override
@@ -1106,6 +1116,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
           style: context.textTheme.labelLarge?.copyWith(
             color: context.colorScheme.onSurface,
           ),
+          validator: widget.validator,
           mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
           decoration: InputDecoration(
             hintText: widget.hintText,
