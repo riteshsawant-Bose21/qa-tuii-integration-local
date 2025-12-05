@@ -1,8 +1,7 @@
+import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
 part 'auth_view_model_state.dart';
@@ -80,23 +79,24 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   /// Handle login success
   Future<void> _handleLoginSuccess(Credentials credentials) async {
     try {
+      emit(Authenticated());
       // FusionLogger.log(tag: LogTag.exceptions, message: "Email: ${credentials.user.email}");
       // FusionLogger.log(tag: LogTag.exceptions, message: "Access Token: ${credentials.accessToken}");
       // FusionLogger.log(tag: LogTag.exceptions, message: "ID Token: ${credentials.idToken}");
 
       // Get user authorization from backend
-      final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
+      // final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
 
-      FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
+      // FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
 
-      if (authDataResponse.success) {
-        emit(
-          Authenticated(),
-        );
-      } else {
-        logout();
-        // emit(AuthError('Failed to get user details: ${authDataResponse.message}'));
-      }
+      // if (authDataResponse.success) {
+      //   emit(
+      //     Authenticated(),
+      //   );
+      // } else {
+      //   logout();
+      //   // emit(AuthError('Failed to get user details: ${authDataResponse.message}'));
+      // }
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Get user authorization error: $e');
       emit(AuthError('Failed to get user details: ${e.toString()}'));

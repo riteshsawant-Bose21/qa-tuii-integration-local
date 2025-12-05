@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
-import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/router/routes.dart';
@@ -212,8 +213,11 @@ class _SavedProjectListState extends State<_SavedProjectList> {
       listener: (BuildContext context, ProjectViewModelState state) {
         if (state is ProjectLoaded && context.mounted) {
           if (state.currentProject != null) {
+            FusionThemeController.setThemeMode(ThemeMode.light);
+
             FusionUiUtils.hideLoader(context);
             Navigator.pushNamed(context, Routes.projectPage).then((_) async {
+              FusionThemeController.setThemeMode(ThemeMode.dark);
               await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
             });
           }
@@ -639,10 +643,12 @@ class CreateNewProjectDialog extends StatefulWidget {
 
 class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
   ValueNotifier<bool> shouldShowMoreDetailsNotifier = ValueNotifier<bool>(false);
+  final TextEditingController projectNameController = TextEditingController();
 
   @override
   void dispose() {
     shouldShowMoreDetailsNotifier.dispose();
+    projectNameController.dispose();
     super.dispose();
   }
 
@@ -667,68 +673,12 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: <Widget>[
-                Row(
-                  spacing: 5,
-                  children: <Widget>[
-                    const Icon(Icons.circle, color: Colors.red),
-                    const Icon(Icons.circle, color: Colors.orange),
-                    const Icon(Icons.circle, color: Colors.green),
-                    const Spacer(),
-                    Badge(
-                      smallSize: 8, // ← tiny dot size
-                      alignment: Alignment.topRight,
-                      backgroundColor: Colors.red,
-                      child: InkWell(
-                        onTap: () {},
-                        splashColor: Colors.transparent,
-                        child: Container(
-                          height: 24,
-                          width: 24,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(6),
-                            color: context.colorScheme.onSurface.withValues(alpha: 0.3),
-                          ),
-                          child: const Icon(
-                            LucideIcons.bell,
-                            size: 12,
-                          ),
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () {},
-                      splashColor: Colors.transparent,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(6),
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.3),
-                        ),
-                        child: FusionAppText(
-                          text: "Help",
-                          style: context.textTheme.labelSmall?.copyWith(
-                            color: context.colorScheme.onSurface,
-                          ),
-                        ),
-                      ),
-                    ),
-                    InkWell(
-                      onTap: () {},
-                      splashColor: Colors.transparent,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: context.colorScheme.primary,
-                        ),
-                        child: Icon(
-                          LucideIcons.userRound,
-                          size: 16,
-                          color: context.colorScheme.onPrimary,
-                        ),
-                      ),
-                    ),
-                  ],
+                FusionAppText(
+                  text: "Create New Project",
+                  style: context.textTheme.titleMedium?.copyWith(
+                    color: context.colorScheme.onSurface,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Flexible(
                   child: Padding(
@@ -757,16 +707,17 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                                 ),
                               ),
 
-                              const Row(
+                              Row(
                                 spacing: 10,
                                 children: <Widget>[
                                   Expanded(
                                     child: BorderedTextfield(
+                                      controller: projectNameController,
                                       label: "Project File Name",
                                       hintText: "Project Name",
                                     ),
                                   ),
-                                  Expanded(
+                                  const Expanded(
                                     child: BorderedTextfield(
                                       label: "File Version",
                                       hintText: "Version Number",
@@ -1008,7 +959,28 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
                               Align(
                                 alignment: Alignment.centerRight,
                                 child: NeumorphicDarkButton(
-                                  onTap: () {},
+                                  onTap: () async {
+                                    if (projectNameController.text.trim().isEmpty) {
+                                      FusionToast.error(context, message: "Project name cannot be empty");
+                                      return;
+                                    }
+
+                                    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+                                    final String projectName = projectNameController.text.trim();
+
+                                    FusionUiUtils.showLoader(context);
+                                    final NewProjectDetails newProject = NewProjectDetails(name: projectName);
+                                    final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
+                                    if (context.mounted) FusionUiUtils.hideLoader(context);
+                                    projectViewModel.openProject(projectData!.id);
+
+                                    if (context.mounted) {
+                                      serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
+                                      Navigator.of(context).pop();
+                                      // Navigator.pushNamed(context, Routes.projectPage);
+                                    }
+                                  },
                                   width: 160,
                                   child: Container(
                                     height: 60,
@@ -1065,6 +1037,7 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
 }
 
 class BorderedTextfield extends StatefulWidget {
+  final TextEditingController? controller;
   final String? initialValue;
   final String label, hintText;
   final int minLines, maxLines;
@@ -1072,6 +1045,7 @@ class BorderedTextfield extends StatefulWidget {
 
   const BorderedTextfield({
     super.key,
+    this.controller,
     this.initialValue,
     required this.label,
     required this.hintText,
@@ -1123,6 +1097,7 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
         ),
         const SizedBox(height: 12),
         TextFormField(
+          controller: widget.controller,
           initialValue: widget.initialValue,
           minLines: widget.minLines,
           maxLines: widget.maxLines,

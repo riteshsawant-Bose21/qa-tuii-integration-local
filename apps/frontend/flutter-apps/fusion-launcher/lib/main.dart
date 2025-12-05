@@ -9,8 +9,8 @@ import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/user_session_manager.dart';
-import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
@@ -104,7 +104,6 @@ class MyApp extends StatelessWidget {
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
             themeMode: mode,
-
             home: Scaffold(
               body: BlocBuilder<AuthViewModel, AuthViewModelState>(
                 buildWhen: (AuthViewModelState prevState, AuthViewModelState currentState) => currentState is Authenticated || currentState is Unauthenticated,

@@ -39,7 +39,7 @@ class SettingsTabContent extends StatefulWidget {
 
 class _SettingsTabContentState extends State<SettingsTabContent> {
   FusionLanguages _selectedLanguage = FusionLanguages.english;
-  ThemeMode _selectedThemeMode = ThemeMode.system;
+  final ThemeMode _selectedThemeMode = ThemeMode.system;
   AppStartupBehavior _selectedAppStartupBehavior = AppStartupBehavior.openLastProject;
   NotificationPreference _selectedNotificationPreference = NotificationPreference.inAppAlerts;
 
@@ -86,61 +86,61 @@ class _SettingsTabContentState extends State<SettingsTabContent> {
           // =======================================
           //   Theme Section
           // =======================================
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            child: FusionAppText(
-              text: "Theme",
-              style: context.textTheme.labelMedium?.copyWith(
-                color: context.colorScheme.surfaceDim,
-              ),
-            ),
-          ),
+          // const SizedBox(height: 16),
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 12),
+          //   child: FusionAppText(
+          //     text: "Theme",
+          //     style: context.textTheme.labelMedium?.copyWith(
+          //       color: context.colorScheme.surfaceDim,
+          //     ),
+          //   ),
+          // ),
 
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: RadioGroup<ThemeMode>(
-              groupValue: _selectedThemeMode,
-              onChanged: (ThemeMode? value) {
-                if (value == null) return;
-                setState(() => _selectedThemeMode = value);
-              },
-              child: Row(
-                spacing: 10,
-                children: <Widget>[
-                  ...ThemeMode.values.map((ThemeMode mode) {
-                    final bool isSelected = _selectedThemeMode == mode;
+          // Padding(
+          //   padding: const EdgeInsets.symmetric(horizontal: 8),
+          //   child: RadioGroup<ThemeMode>(
+          //     groupValue: _selectedThemeMode,
+          //     onChanged: (ThemeMode? value) {
+          //       if (value == null) return;
+          //       setState(() => _selectedThemeMode = value);
+          //     },
+          //     child: Row(
+          //       spacing: 10,
+          //       children: <Widget>[
+          //         ...ThemeMode.values.map((ThemeMode mode) {
+          //           final bool isSelected = _selectedThemeMode == mode;
 
-                    return Row(
-                      spacing: 4,
-                      children: <Widget>[
-                        Radio<ThemeMode>(
-                          value: mode,
-                          activeColor: context.colorScheme.onSurface,
-                          overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
-                          backgroundColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
-                          fillColor: WidgetStatePropertyAll<Color>(
-                            context.colorScheme.onSurface.withValues(
-                              alpha: isSelected ? 0.8 : 0.3,
-                            ),
-                          ),
-                        ),
-                        GestureDetector(
-                          onTap: () => setState(() => _selectedThemeMode = mode),
-                          child: FusionAppText(
-                            text: mode.name[0].toUpperCase() + mode.name.substring(1),
-                            style: context.textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(alpha: 0.9),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ),
+          //           return Row(
+          //             spacing: 4,
+          //             children: <Widget>[
+          //               Radio<ThemeMode>(
+          //                 value: mode,
+          //                 activeColor: context.colorScheme.onSurface,
+          //                 overlayColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+          //                 backgroundColor: const WidgetStatePropertyAll<Color>(Colors.transparent),
+          //                 fillColor: WidgetStatePropertyAll<Color>(
+          //                   context.colorScheme.onSurface.withValues(
+          //                     alpha: isSelected ? 0.8 : 0.3,
+          //                   ),
+          //                 ),
+          //               ),
+          //               GestureDetector(
+          //                 onTap: () => setState(() => _selectedThemeMode = mode),
+          //                 child: FusionAppText(
+          //                   text: mode.name[0].toUpperCase() + mode.name.substring(1),
+          //                   style: context.textTheme.labelLarge?.copyWith(
+          //                     color: context.colorScheme.onSurface.withValues(alpha: 0.9),
+          //                   ),
+          //                 ),
+          //               ),
+          //             ],
+          //           );
+          //         }),
+          //       ],
+          //     ),
+          //   ),
+          // ),
           const SizedBox(height: 30),
 
           // =======================================
@@ -164,8 +164,8 @@ class _SettingsTabContentState extends State<SettingsTabContent> {
             child: RadioGroup<AppStartupBehavior>(
               groupValue: _selectedAppStartupBehavior,
               onChanged: (AppStartupBehavior? value) {
-                if (value == null) return;
-                setState(() => _selectedAppStartupBehavior = value);
+                // if (value == null) return;
+                // setState(() => _selectedAppStartupBehavior = value);
               },
               child: Column(
                 children: <Widget>[
