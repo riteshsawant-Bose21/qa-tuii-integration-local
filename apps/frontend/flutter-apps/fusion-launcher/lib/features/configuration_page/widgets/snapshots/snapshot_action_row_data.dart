@@ -62,8 +62,9 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
       child: Row(
         children: <Widget>[
           /// draggable icon
-          SizedBox(
-            width: 50,
+          Container(
+            alignment: Alignment.centerLeft,
+            width: 30,
             child: Opacity(
               opacity: 0.4,
               child: Icon(
@@ -229,39 +230,56 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
 
           /// Delete Action Button
           SizedBox(
-            width: 20,
-            child:
-            /// delete action from the scene
-            GestureDetector(
-              onTap: () {
-                showDialog(
-                  context: context,
-                  builder:
-                      (_) => FusionDialog(
-                        title: 'Delete Action?',
-                        description: "This will remove action from the Action list.",
-                        primaryButtonLabel: 'Delete',
-                        secondaryButtonLabel: 'Cancel',
-                        onSecondaryPressed: () {
-                          Navigator.of(context).pop();
-                        },
-                        onPrimaryPressed: () {
-                          _projectViewModel.removeSceneAction(
-                            actionId: action.id,
-                          );
-                          Navigator.of(context).pop();
-                        },
-                      ),
-                );
-              },
-              child: const FusionImage.asset(
-                Assets.deleteIcon,
-                width: 20,
-                height: 20,
-                fit: BoxFit.contain,
-              ),
+            width: 46,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: <Widget>[
+                GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder:
+                          (_) => FusionDialog(
+                            title: 'Delete Action?',
+                            description: "This will remove action from the Action list.",
+                            primaryButtonLabel: 'Delete',
+                            secondaryButtonLabel: 'Cancel',
+                            onSecondaryPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            onPrimaryPressed: () {
+                              _projectViewModel.removeSceneAction(
+                                actionId: action.id,
+                              );
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                    );
+                  },
+                  child: const FusionImage.asset(
+                    Assets.deleteIcon,
+                    width: 20,
+                    height: 20,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+                const SizedBox(width: 6),
+
+                const FusionImage.asset(
+                  Assets.duplicateIcon,
+                  width: 20,
+                  height: 20,
+                  fit: BoxFit.contain,
+                ),
+              ],
             ),
           ),
+          // SizedBox(
+          //   width: 20,
+          //   child:
+          //   /// delete action from the scene
+          //
+          // ),
         ],
       ),
     );

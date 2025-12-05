@@ -28,6 +28,8 @@ class Assets {
   /// configuration non-processing icons
   static const String eventsIcon = 'assets/icons/events_icon.png';
   static const String playIcon = 'assets/icons/play_icon.png';
+  static const String duplicateIcon = 'assets/icons/duplicate_icon.png';
+  static const String snapshotActionNameIcon = 'assets/icons/snapshot_action_name.png';
 
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';

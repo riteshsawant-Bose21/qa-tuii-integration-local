@@ -12,7 +12,7 @@ class SnapshotActionRowHeader extends StatelessWidget {
       color: Theme.of(context).colorScheme.grey.withAlpha(40),
       child: const Row(
         children: <Widget>[
-          SizedBox(width: 50),
+          SizedBox(width: 30),
           _HeaderCell("Action Type"),
           SizedBox(width: 16),
 
@@ -23,7 +23,7 @@ class SnapshotActionRowHeader extends StatelessWidget {
           SizedBox(width: 16),
 
           _HeaderCell("Value"),
-          SizedBox(width: 38),
+          SizedBox(width: 64),
         ],
       ),
     );
