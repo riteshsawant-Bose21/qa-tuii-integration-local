@@ -177,7 +177,7 @@ func (h *SyncHandler) HandleSync(c *gin.Context) {
 		s3Key = req.S3Key
 	}
 
-	jobID, err := h.syncService.CreateJob(syncOp, sourcePath, s3Bucket, s3Key)
+	jobID, err := h.syncService.CreateJob(syncOp, req.SyncType, "unknown", sourcePath, s3Bucket, s3Key)
 	if err != nil {
 		h.logger.Warn("Failed to create sync job", zap.Error(err))
 		jobID = ""

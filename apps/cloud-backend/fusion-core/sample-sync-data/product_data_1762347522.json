@@ -1,5 +1,5 @@
 {
-  "version" : "3.0", 
+  "version" : "1.0", 
   "title": "Bose Professional Product Data Schema",
   "description": "JSON Schema for Bose Professional audio products including speakers, amplifiers, DSPs, controllers, and I/O endpoints",
     "speakers": [

@@ -568,7 +568,7 @@ func testProductSyncJobsSelect(t *testing.T) {
 }
 
 var (
-	productSyncJobDBTypes = map[string]string{`ID`: `integer`, `JobID`: `uuid`, `SyncOperation`: `enum.sync_operation_enum('full_sync','manual_sync','scheduled_sync')`, `Status`: `enum.sync_status_enum('pending','in_progress','completed','failed')`, `S3Bucket`: `character varying`, `S3Key`: `character varying`, `FileSizeBytes`: `bigint`, `ErrorMessage`: `text`, `ValidationErrors`: `jsonb`, `TotalItems`: `integer`, `SuccessfulItems`: `integer`, `FailedItems`: `integer`, `StartedAt`: `timestamp without time zone`, `CompletedAt`: `timestamp without time zone`, `CreatedAt`: `timestamp without time zone`}
+	productSyncJobDBTypes = map[string]string{`ID`: `integer`, `JobID`: `uuid`, `SyncOperation`: `enum.sync_operation_enum('full_sync','manual_sync','scheduled_sync')`, `Status`: `enum.sync_status_enum('pending','in_progress','completed','failed')`, `S3Bucket`: `character varying`, `S3Key`: `character varying`, `FileSizeBytes`: `bigint`, `ErrorMessage`: `text`, `ValidationErrors`: `jsonb`, `TotalItems`: `integer`, `SuccessfulItems`: `integer`, `FailedItems`: `integer`, `StartedAt`: `timestamp without time zone`, `CompletedAt`: `timestamp without time zone`, `CreatedAt`: `timestamp without time zone`, `Version`: `character varying`, `SyncType`: `character varying`}
 	_                     = bytes.MinRead
 )
 

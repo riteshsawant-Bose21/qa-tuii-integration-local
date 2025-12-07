@@ -39,7 +39,7 @@ func NewJobService(db *Database, logger *zap.Logger) *JobService {
 }
 
 // Create creates a new sync job record
-func (s *JobService) Create(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error) {
+func (s *JobService) Create(syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string) (string, error) {
 	jobID := uuid.New().String()
 
 	// Create models.ProductSyncJob using SQLBoiler
@@ -47,6 +47,8 @@ func (s *JobService) Create(syncOperation, sourcePath, s3Bucket, s3Key string) (
 		JobID:           jobID,
 		SyncOperation:   syncOperation,
 		Status:          "pending",
+		SyncType:        null.StringFrom(syncType),
+		Version:         null.StringFrom(version),
 		S3Bucket:        s3Bucket,
 		S3Key:           s3Key,
 		TotalItems:      null.NewInt(0, false),
@@ -68,6 +70,8 @@ func (s *JobService) Create(syncOperation, sourcePath, s3Bucket, s3Key string) (
 	s.logger.Info("Created sync job",
 		zap.String("job_id", jobID),
 		zap.String("operation", syncOperation),
+		zap.String("sync_type", syncType),
+		zap.String("version", version),
 		zap.String("source_path", sourcePath),
 		zap.String("s3_bucket", s3Bucket),
 		zap.String("s3_key", s3Key),

@@ -27,7 +27,7 @@ func NewService(db *sql.DB) *Service {
 }
 
 // SelectByID retrieves a product by ID using SQLBoiler.
-func (s *Service) SelectByID(ctx context.Context, id string) (*types.SingleProductResponse, error) {
+func (s *Service) SelectByID(ctx context.Context, id string, version string) (*types.SingleProductResponse, error) {
 	// Convert id string to int
 	productID, err := strconv.Atoi(id)
 	if err != nil {
@@ -47,11 +47,11 @@ func (s *Service) SelectByID(ctx context.Context, id string) (*types.SingleProdu
 	}
 
 	// Transform to API response format
-	return s.transformToSingleProductResponse(product)
+	return s.transformToSingleProductResponse(product, version)
 }
 
 // SelectAll retrieves all products using SQLBoiler.
-func (s *Service) SelectAll(ctx context.Context) (*types.ProductResponse, error) {
+func (s *Service) SelectAll(ctx context.Context, version string) (*types.ProductResponse, error) {
 	// Query all products using SQLBoiler
 	products, err := models.Products(
 		qm.OrderBy(models.ProductColumns.ProductID),
@@ -62,6 +62,7 @@ func (s *Service) SelectAll(ctx context.Context) (*types.ProductResponse, error)
 	}
 
 	response := &types.ProductResponse{
+		Version:    version,
 		Speaker:    []types.ProductItemResponse{},
 		Amplifier:  []types.ProductItemResponse{},
 		Controller: []types.ProductItemResponse{},
@@ -129,7 +130,16 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 		priceDetails = append(priceDetails, priceDetail)
 	}
 
+	// Get the latest sync version for price data
+	version, err := s.GetLatestSyncVersion(ctx, "price")
+	if err != nil {
+		// If we can't get the version, log a warning but continue
+		// This ensures the API doesn't fail completely if version lookup fails
+		version = "unknown"
+	}
+
 	response := &types.PriceResponse{
+		Version:   version,
 		ProductID: productID,
 		Prices:    priceDetails,
 	}
@@ -138,7 +148,7 @@ func (s *Service) GetPricesByProductID(ctx context.Context, productID int, curre
 }
 
 // transformToSingleProductResponse transforms a SQLBoiler Product model to SingleProductResponse
-func (s *Service) transformToSingleProductResponse(product *models.Product) (*types.SingleProductResponse, error) {
+func (s *Service) transformToSingleProductResponse(product *models.Product, version string) (*types.SingleProductResponse, error) {
 	// Parse images JSON
 	var imagesData interface{}
 	if product.Images.Valid {
@@ -179,6 +189,7 @@ func (s *Service) transformToSingleProductResponse(product *models.Product) (*ty
 	switch product.ProductType {
 	case "speaker":
 		return &types.SingleProductResponse{
+			Version: version,
 			Speaker: &types.ProductItemResponse{
 				ProductID:      product.ProductID,
 				Assets:         imagesData,
@@ -191,6 +202,7 @@ func (s *Service) transformToSingleProductResponse(product *models.Product) (*ty
 
 	case "amplifier":
 		return &types.SingleProductResponse{
+			Version: version,
 			Amplifier: &types.ProductItemResponse{
 				ProductID:      product.ProductID,
 				Assets:         imagesData,
@@ -203,6 +215,7 @@ func (s *Service) transformToSingleProductResponse(product *models.Product) (*ty
 
 	case "dsp":
 		return &types.SingleProductResponse{
+			Version: version,
 			DSP: &types.ProductItemResponse{
 				ProductID:      product.ProductID,
 				Assets:         imagesData,
@@ -215,6 +228,7 @@ func (s *Service) transformToSingleProductResponse(product *models.Product) (*ty
 
 	case "controller":
 		return &types.SingleProductResponse{
+			Version: version,
 			Controller: &types.ProductItemResponse{
 				ProductID:      product.ProductID,
 				Assets:         imagesData,
@@ -227,6 +241,7 @@ func (s *Service) transformToSingleProductResponse(product *models.Product) (*ty
 
 	case "io_endpoint":
 		return &types.SingleProductResponse{
+			Version: version,
 			IOEndpoint: &types.ProductItemResponse{
 				ProductID:      product.ProductID,
 				Assets:         imagesData,
@@ -239,6 +254,7 @@ func (s *Service) transformToSingleProductResponse(product *models.Product) (*ty
 
 	case "accessory":
 		return &types.SingleProductResponse{
+			Version: version,
 			Accessory: &types.ProductItemResponse{
 				ProductID:      product.ProductID,
 				Assets:         imagesData,
@@ -365,4 +381,29 @@ func (s *Service) appendToProductResponse(response *types.ProductResponse, produ
 	}
 
 	return nil
+}
+
+// GetLatestSyncVersion retrieves the latest successful sync version for a given sync type
+func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string) (string, error) {
+	// Query the latest successful sync job for the given type
+	job, err := models.ProductSyncJobs(
+		models.ProductSyncJobWhere.SyncType.EQ(null.StringFrom(syncType)),
+		models.ProductSyncJobWhere.Status.EQ("completed"),
+		qm.OrderBy("completed_at DESC"),
+		qm.Limit(1),
+	).One(ctx, s.db)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return "", fmt.Errorf("no successful sync found for type: %s", syncType)
+		}
+		return "", fmt.Errorf("failed to get latest sync version: %w", err)
+	}
+
+	// Return the version if available
+	if job.Version.Valid {
+		return job.Version.String, nil
+	}
+
+	return "", fmt.Errorf("no version information found in sync job")
 }

@@ -132,7 +132,11 @@ func main() {
 	// }
 
 	//Initialize Product Service
-	productSVC := product.NewService(productDBSvc, idSVC)
+	validationCfg, err := configSVC.Validation()
+	if err != nil {
+		logger.Fatal("Failed to get validation config", zap.Error(err))
+	}
+	productSVC := product.NewService(productDBSvc, idSVC, validationCfg.DefaultVersion)
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}

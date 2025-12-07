@@ -21,6 +21,7 @@ type ProductItemResponse struct {
 
 // New API response structure matching the required schema
 type ProductResponse struct {
+	Version    string                `json:"version"`
 	Speaker    []ProductItemResponse `json:"speaker,omitempty"`
 	Amplifier  []ProductItemResponse `json:"amplifier,omitempty"`
 	Controller []ProductItemResponse `json:"controller,omitempty"`
@@ -31,6 +32,7 @@ type ProductResponse struct {
 
 // Individual product response when fetching by ID
 type SingleProductResponse struct {
+	Version    string               `json:"version"`
 	Speaker    *ProductItemResponse `json:"speaker,omitempty"`
 	Amplifier  *ProductItemResponse `json:"amplifier,omitempty"`
 	DSP        *ProductItemResponse `json:"dsp,omitempty"`
@@ -41,6 +43,7 @@ type SingleProductResponse struct {
 
 // Price API response types
 type PriceResponse struct {
+	Version   string        `json:"version"`
 	ProductID int           `json:"product_id"`
 	Prices    []PriceDetail `json:"prices"`
 }

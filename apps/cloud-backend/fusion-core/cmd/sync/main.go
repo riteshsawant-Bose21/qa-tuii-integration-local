@@ -2,8 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	inbuiltlog "log"
 	"os"
 	"time"
@@ -20,6 +22,31 @@ import (
 	syncSource "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/sync/source"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 )
+
+// extractVersionFromJSON reads a JSON file and extracts the version field
+func extractVersionFromJSON(filePath string) (string, error) {
+	data, err := ioutil.ReadFile(filePath)
+	if err != nil {
+		return "", fmt.Errorf("failed to read file: %w", err)
+	}
+
+	var jsonData map[string]interface{}
+	if err := json.Unmarshal(data, &jsonData); err != nil {
+		return "", fmt.Errorf("failed to parse JSON: %w", err)
+	}
+
+	version, ok := jsonData["version"]
+	if !ok {
+		return "unknown", nil // default version if not found
+	}
+
+	versionStr, ok := version.(string)
+	if !ok {
+		return "unknown", nil // default version if not a string
+	}
+
+	return versionStr, nil
+}
 
 type syncHandlerAdapter struct {
 	impl *syncSource.Service
@@ -206,6 +233,21 @@ func main() {
 	// Create sync job
 	startTime := time.Now().UTC()
 	syncOp := "manual_sync"
+
+	// Extract version from the source file if it's local, otherwise use default
+	var version string
+	if *sourceType == "local" && *filePath != "" {
+		extractedVersion, err := extractVersionFromJSON(*filePath)
+		if err != nil {
+			logger.Warn("Failed to extract version from JSON file, using default", zap.Error(err), zap.String("file", *filePath))
+			version = "1.0" // fallback to default
+		} else {
+			version = extractedVersion
+			logger.Info("Extracted version from JSON file", zap.String("version", version), zap.String("file", *filePath))
+		}
+	} else {
+		version = "1.0" // Default version for non-local sources
+	}
 	var sourcePath, s3Bucket, s3Key string
 	if *sourceType == "local" {
 		sourcePath = *filePath
@@ -214,7 +256,7 @@ func main() {
 		s3Key = *key
 	}
 
-	jobID, err := jobRepo.Create(syncOp, sourcePath, s3Bucket, s3Key)
+	jobID, err := jobRepo.Create(syncOp, *syncType, version, sourcePath, s3Bucket, s3Key)
 	if err != nil {
 		logger.Warn("Failed to create sync job", zap.Error(err))
 		jobID = ""

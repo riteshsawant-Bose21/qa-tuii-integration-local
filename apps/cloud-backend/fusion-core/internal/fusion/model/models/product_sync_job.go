@@ -39,6 +39,8 @@ type ProductSyncJob struct {
 	StartedAt        null.Time   `boil:"started_at" json:"started_at,omitempty" toml:"started_at" yaml:"started_at,omitempty"`
 	CompletedAt      null.Time   `boil:"completed_at" json:"completed_at,omitempty" toml:"completed_at" yaml:"completed_at,omitempty"`
 	CreatedAt        null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
+	Version          null.String `boil:"version" json:"version,omitempty" toml:"version" yaml:"version,omitempty"`
+	SyncType         null.String `boil:"sync_type" json:"sync_type,omitempty" toml:"sync_type" yaml:"sync_type,omitempty"`
 
 	R *productSyncJobR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L productSyncJobL  `boil:"-" json:"-" toml:"-" yaml:"-"`
@@ -60,6 +62,8 @@ var ProductSyncJobColumns = struct {
 	StartedAt        string
 	CompletedAt      string
 	CreatedAt        string
+	Version          string
+	SyncType         string
 }{
 	ID:               "id",
 	JobID:            "job_id",
@@ -76,6 +80,8 @@ var ProductSyncJobColumns = struct {
 	StartedAt:        "started_at",
 	CompletedAt:      "completed_at",
 	CreatedAt:        "created_at",
+	Version:          "version",
+	SyncType:         "sync_type",
 }
 
 var ProductSyncJobTableColumns = struct {
@@ -94,6 +100,8 @@ var ProductSyncJobTableColumns = struct {
 	StartedAt        string
 	CompletedAt      string
 	CreatedAt        string
+	Version          string
+	SyncType         string
 }{
 	ID:               "product_sync_job.id",
 	JobID:            "product_sync_job.job_id",
@@ -110,6 +118,8 @@ var ProductSyncJobTableColumns = struct {
 	StartedAt:        "product_sync_job.started_at",
 	CompletedAt:      "product_sync_job.completed_at",
 	CreatedAt:        "product_sync_job.created_at",
+	Version:          "product_sync_job.version",
+	SyncType:         "product_sync_job.sync_type",
 }
 
 // Generated where
@@ -206,6 +216,8 @@ var ProductSyncJobWhere = struct {
 	StartedAt        whereHelpernull_Time
 	CompletedAt      whereHelpernull_Time
 	CreatedAt        whereHelpernull_Time
+	Version          whereHelpernull_String
+	SyncType         whereHelpernull_String
 }{
 	ID:               whereHelperint{field: "\"product_sync_job\".\"id\""},
 	JobID:            whereHelperstring{field: "\"product_sync_job\".\"job_id\""},
@@ -222,6 +234,8 @@ var ProductSyncJobWhere = struct {
 	StartedAt:        whereHelpernull_Time{field: "\"product_sync_job\".\"started_at\""},
 	CompletedAt:      whereHelpernull_Time{field: "\"product_sync_job\".\"completed_at\""},
 	CreatedAt:        whereHelpernull_Time{field: "\"product_sync_job\".\"created_at\""},
+	Version:          whereHelpernull_String{field: "\"product_sync_job\".\"version\""},
+	SyncType:         whereHelpernull_String{field: "\"product_sync_job\".\"sync_type\""},
 }
 
 // ProductSyncJobRels is where relationship names are stored.
@@ -241,9 +255,9 @@ func (*productSyncJobR) NewStruct() *productSyncJobR {
 type productSyncJobL struct{}
 
 var (
-	productSyncJobAllColumns            = []string{"id", "job_id", "sync_operation", "status", "s3_bucket", "s3_key", "file_size_bytes", "error_message", "validation_errors", "total_items", "successful_items", "failed_items", "started_at", "completed_at", "created_at"}
+	productSyncJobAllColumns            = []string{"id", "job_id", "sync_operation", "status", "s3_bucket", "s3_key", "file_size_bytes", "error_message", "validation_errors", "total_items", "successful_items", "failed_items", "started_at", "completed_at", "created_at", "version", "sync_type"}
 	productSyncJobColumnsWithoutDefault = []string{"sync_operation", "s3_bucket", "s3_key"}
-	productSyncJobColumnsWithDefault    = []string{"id", "job_id", "status", "file_size_bytes", "error_message", "validation_errors", "total_items", "successful_items", "failed_items", "started_at", "completed_at", "created_at"}
+	productSyncJobColumnsWithDefault    = []string{"id", "job_id", "status", "file_size_bytes", "error_message", "validation_errors", "total_items", "successful_items", "failed_items", "started_at", "completed_at", "created_at", "version", "sync_type"}
 	productSyncJobPrimaryKeyColumns     = []string{"id"}
 	productSyncJobGeneratedColumns      = []string{}
 )

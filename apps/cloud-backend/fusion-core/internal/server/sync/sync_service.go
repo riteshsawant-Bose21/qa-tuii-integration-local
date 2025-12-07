@@ -42,7 +42,7 @@ type PriceDatabaseService interface {
 
 // JobDatabaseService defines the interface for job tracking database operations
 type JobDatabaseService interface {
-	Create(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error)
+	Create(syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string) (string, error)
 	UpdateStatus(jobID, status string, startedAt *time.Time, errorMsg *string) error
 	UpdateWithResults(jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
 	UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
@@ -109,8 +109,8 @@ type DBPrice struct {
 }
 
 // CreateJob creates a new sync job
-func (s *Service) CreateJob(syncOperation, sourcePath, s3Bucket, s3Key string) (string, error) {
-	return s.jobDBService.Create(syncOperation, sourcePath, s3Bucket, s3Key)
+func (s *Service) CreateJob(syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string) (string, error) {
+	return s.jobDBService.Create(syncOperation, syncType, version, sourcePath, s3Bucket, s3Key)
 }
 
 // UpdateJobStatus updates the status of a sync job
