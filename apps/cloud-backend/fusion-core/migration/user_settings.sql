@@ -8,3 +8,8 @@ CREATE TABLE user_settings (
 
     FOREIGN KEY (user_id) REFERENCES app_user(id)
 );
+
+-- Sample data for development/testing
+INSERT INTO user_settings (user_id, language, theme)
+VALUES ('39cfe695-5f7d-4870-b9da-31f024757a3e', 'en-US', 'system');
+    

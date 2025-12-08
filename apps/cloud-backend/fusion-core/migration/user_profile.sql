@@ -28,4 +28,8 @@ CREATE TABLE user_profile (
     updated_at timestamp,
     
     FOREIGN KEY (user_id) REFERENCES app_user(id)
-);  
+);
+
+-- Sample data for development/testing
+INSERT INTO user_profile (user_id, email, first_name, last_name, job_title, phone, address_line_1, city, state_province, country, zip_postal_code, gdpr_opt_out, privacy_policy_accepted, timezone, unit_system, customer_type, company_name, currency)
+VALUES ('39cfe695-5f7d-4870-b9da-31f024757a3e', 'test@domain.com', 'John', 'Doe', 'Audio Engineer', '+1-555-0101', '123 Main Street', 'New York', 'NY', 'USA', '10001', false, true, 'America/New_York', 'imperial', 'enterprise', 'Acme Corp', 'USD');
