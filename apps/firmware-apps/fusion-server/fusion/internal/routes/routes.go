@@ -82,7 +82,7 @@ const (
 	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
 	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
 	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
-	SnapshotsActivateEndpoint = SnapshotsNameEndpoint + "/activate"
+	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
 	SnapshotsUpdateEndpoint   = SnapshotsEndpoint + "/update/{name}"
 
 	TasksEndpoint          = "/tasks"
