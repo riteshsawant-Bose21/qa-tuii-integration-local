@@ -52,7 +52,7 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
-        $sourceEnv = "C:\Users\Administrator\Documents\.env"
+        $sourceEnv = "C:\Users\Administrator\Documents\env"
         $destEnv = ".\.env"
 
         if (Test-Path $sourceEnv) {
@@ -139,7 +139,7 @@ runs:
         robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
         cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
 
-        $sourceEnv = "C:\Users\Administrator\Documents\.env"
+        $sourceEnv = "C:\Users\Administrator\Documents\env"
         $destEnv = ".\.env"
 
         if (Test-Path $sourceEnv) {
