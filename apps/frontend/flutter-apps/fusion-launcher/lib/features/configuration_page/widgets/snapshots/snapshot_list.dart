@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_item_card.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A widget that displays a list of snapshot items in a reorderable list view.
-/// It takes a list of [SceneModel] objects and an optional background color.
+/// It takes a list of [SnapshotsModel] objects and an optional background color.
 /// The list view is non-scrollable and adapts its background color based on the provided color or defaults to a light grey with some transparency.
 ///
 /// Example usage:
@@ -16,14 +16,14 @@ import 'package:fusion_lib/models/project_entities/non_processing/scene_model.da
 /// ```
 ///
 /// Parameters:
-/// - [snapShotList]: A required list of [SceneModel] objects to be displayed.
+/// - [snapShotList]: A required list of [SnapshotsModel] objects to be displayed.
 /// - [backgroundColor]: An optional color for the background of the list.
 /// - [onReorder]: Callback function to handle reordering of items.
 /// /// Returns:
 /// A [Container] widget containing a [ReorderableListView] of snapshot items.
 
 class SnapshotList extends StatelessWidget {
-  final List<SceneModel> snapShotList;
+  final List<SnapshotsModel> snapShotList;
   final Color? backgroundColor;
   final Function(String sceneId) onDelete;
   final Function(String sceneId)? onSelect;
@@ -73,13 +73,13 @@ class SnapshotList extends StatelessWidget {
         }
       },
       itemBuilder: (BuildContext context, int index) {
-        final SceneModel snapShotData = snapShotList[index];
+        final SnapshotsModel snapShotData = snapShotList[index];
         final bool isDragging = draggingSnapshotId == snapShotData.id;
 
         return Container(
           key: ValueKey<String>(snapShotData.id),
           margin: const EdgeInsets.only(bottom: 4),
-          child: Draggable<SceneModel>(
+          child: Draggable<SnapshotsModel>(
             data: snapShotData,
             dragAnchorStrategy: pointerDragAnchorStrategy,
             onDragStarted: () {

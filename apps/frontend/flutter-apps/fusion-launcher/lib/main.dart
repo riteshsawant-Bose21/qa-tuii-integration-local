@@ -103,7 +103,7 @@ class MyApp extends StatelessWidget {
             debugShowCheckedModeBanner: false,
             theme: FusionAppTheme.lightTheme,
             darkTheme: FusionAppTheme.darkTheme,
-            themeMode: mode,
+            themeMode: ThemeMode.dark,
 
             home: BlocConsumer<AuthViewModel, AuthViewModelState>(
               // Listener: Handle one-off events like errors (optional)

@@ -4,7 +4,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
+import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../../../core/service_locator.dart';
@@ -273,11 +273,19 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
                 ),
                 const SizedBox(width: 6),
 
-                const FusionImage.asset(
-                  Assets.duplicateIcon,
-                  width: 20,
-                  height: 20,
-                  fit: BoxFit.contain,
+                GestureDetector(
+                  onTap: () {
+                    _projectViewModel.duplicateSceneAction(
+                      actionId: action.id,
+                    );
+                    FusionToast.success(context, message: "Action duplicated successfully");
+                  },
+                  child: const FusionImage.asset(
+                    Assets.duplicateIcon,
+                    width: 20,
+                    height: 20,
+                    fit: BoxFit.contain,
+                  ),
                 ),
               ],
             ),

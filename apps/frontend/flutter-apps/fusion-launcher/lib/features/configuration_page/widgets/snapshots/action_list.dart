@@ -5,7 +5,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/sn
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_header_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
+import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -112,10 +112,10 @@ class ActionList extends StatelessWidget {
                   ),
                 );
               }
-              final List<SceneActionModel> actionsList = _projectViewModel.getSceneActionsForScene(selectedSnapshotId);
+              final List<SceneActionModel> actionsList = _projectViewModel.getSceneActionsForSnapshot(selectedSnapshotId);
 
               /// get selected snapshot name
-              final SceneModel? selectedScene = _projectViewModel.getSceneById(sceneId: selectedSnapshotId);
+              final SnapshotsModel? selectedScene = _projectViewModel.getSnapshotById(sceneId: selectedSnapshotId);
               return Expanded(
                 child: Column(
                   children: <Widget>[
@@ -123,13 +123,13 @@ class ActionList extends StatelessWidget {
                     SnapshotHeaderWidget(
                       snapshotName: selectedScene?.name ?? "",
                       onNameChanged: (String newName) {
-                        final SceneModel scene = selectedScene!.copyWith(name: newName);
-                        _projectViewModel.updateScene(scene: scene);
+                        final SnapshotsModel scene = selectedScene!.copyWith(name: newName);
+                        _projectViewModel.updateSnapshots(scene: scene);
                       },
                       onAdd: () {
                         final SceneActionModel action = SceneActionModel();
 
-                        _projectViewModel.addSceneActionToScene(sceneId: selectedSnapshotId, action: action);
+                        _projectViewModel.addSceneActionToSnapshot(sceneId: selectedSnapshotId, action: action);
                       },
                       onReorder: () {},
                     ),
@@ -148,7 +148,7 @@ class ActionList extends StatelessWidget {
                           if (newIndex > oldIndex) {
                             newIndex -= 1;
                           }
-                          _projectViewModel.reOderSceneActionsInScene(
+                          _projectViewModel.reOderSceneActionsInSnapshot(
                             sceneId: selectedSnapshotId,
                             oldIndex: oldIndex,
                             newIndex: newIndex,

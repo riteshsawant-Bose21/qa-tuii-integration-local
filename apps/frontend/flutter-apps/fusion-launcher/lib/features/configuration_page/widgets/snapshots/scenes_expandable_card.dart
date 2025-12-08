@@ -5,7 +5,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
+import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -14,7 +14,7 @@ import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ScenesExpandableCard extends StatefulWidget {
   final SceneSetModel sceneSetData;
-  final List<SceneModel> snapShotList;
+  final List<SnapshotsModel> snapShotList;
   final bool isDragHovered;
   final Function(String sceneId) onSceneSetDelete;
   final Function(String snapshotId) onScenesSnapshotDelete;
@@ -64,17 +64,17 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   }
 
   void _addNewSceneToSceneSet(BuildContext popupContext) {
-    final SceneModel newScene = SceneModel(
+    final SnapshotsModel newScene = SnapshotsModel(
       name: _snapshotsNameController.text.trim(),
     );
-    _projectViewModel.addNewSceneToSceneSet(sceneSetId: widget.sceneSetData.id, scene: newScene);
+    _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: newScene);
 
     /// expand the scene set to show the new item
     _isScenesExpanded.value = true;
 
     final SceneActionModel action = SceneActionModel();
 
-    _projectViewModel.addSceneActionToScene(sceneId: newScene.id, action: action);
+    _projectViewModel.addSceneActionToSnapshot(sceneId: newScene.id, action: action);
 
     /// make this snapshot selected
     _projectViewModel.setSelectedSnapshotId(newScene.id);
@@ -105,44 +105,44 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
     return ValueListenableBuilder<bool>(
       valueListenable: _isScenesExpanded,
       builder: (BuildContext context, bool isExpanded, Widget? child) {
-        return DragTarget<SceneModel>(
-          onWillAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
+        return DragTarget<SnapshotsModel>(
+          onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
             /// Accept drops from snapshots section or from other scenes
             return widget.draggingFromSection == 'snapshots' ||
-                (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SceneModel scene) => scene.id == details.data.id));
+                (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id));
           },
-          onLeave: (SceneModel? data) {},
-          onAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
+          onLeave: (SnapshotsModel? data) {},
+          onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
             if (widget.draggingFromSection == 'snapshots') {
               /// Move from snapshots to this scene set
               /// First check if it's already in this scene set
-              final bool alreadyInSet = widget.snapShotList.any((SceneModel scene) => scene.id == details.data.id);
+              final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
 
               if (!alreadyInSet) {
                 /// Expand the scene set to show the new item
                 _isScenesExpanded.value = true;
 
                 // Try using the exact same scene object
-                _projectViewModel.addNewSceneToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
               }
             } else if (widget.draggingFromSection == 'scenes') {
               /// Move from another scene set to this one
-              final bool alreadyInSet = widget.snapShotList.any((SceneModel scene) => scene.id == details.data.id);
+              final bool alreadyInSet = widget.snapShotList.any((SnapshotsModel scene) => scene.id == details.data.id);
 
               if (!alreadyInSet) {
                 /// Expand the scene set to show the new item
                 _isScenesExpanded.value = true;
 
                 /// Add to this scene set first
-                _projectViewModel.addNewSceneToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
+                _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: details.data);
 
                 /// Remove from all other scene sets
                 final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
                 for (SceneSetModel sceneSet in allSceneSets) {
                   if (sceneSet.id != widget.sceneSetData.id) {
-                    final List<SceneModel> scenesInSet = _projectViewModel.getScenesInSceneSet(sceneSetId: sceneSet.id);
-                    if (scenesInSet.any((SceneModel scene) => scene.id == details.data.id)) {
-                      _projectViewModel.removeSceneFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
+                    final List<SnapshotsModel> scenesInSet = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSet.id);
+                    if (scenesInSet.any((SnapshotsModel scene) => scene.id == details.data.id)) {
+                      _projectViewModel.removeSnapshotFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
                     }
                   }
                 }
@@ -153,11 +153,11 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
               widget.onDragEnd!();
             }
           },
-          builder: (BuildContext context, List<SceneModel?> candidateData, List<dynamic> rejectedData) {
+          builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
             final bool isHovered =
                 candidateData.isNotEmpty &&
                 (widget.draggingFromSection == 'snapshots' ||
-                    (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SceneModel scene) => scene.id == candidateData.first?.id)));
+                    (widget.draggingFromSection == 'scenes' && !widget.snapShotList.any((SnapshotsModel scene) => scene.id == candidateData.first?.id)));
 
             return Column(
               children: <Widget>[

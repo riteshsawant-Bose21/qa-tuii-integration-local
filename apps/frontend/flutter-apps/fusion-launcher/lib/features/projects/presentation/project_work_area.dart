@@ -510,7 +510,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           builder: (BuildContext context, ProjectViewModelState state) {
             return switch (_projectViewModel.currentConfigurationMenuMode) {
               ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
-              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots()
+              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+              // add all othere
+              ConfigurationMenuMode.events => const Center(
+                child: FusionAppText(
+                  text: "Presets Configuration Page",
+                ),
+              ),
               ConfigurationMenuMode.gpio => const Center(
                 child: FusionAppText(
                   text: "Sources Configuration Page",

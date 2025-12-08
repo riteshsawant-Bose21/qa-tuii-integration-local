@@ -5,13 +5,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/section_head
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/scenes_expandable_card.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
-import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
-import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_model.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../drag_divider.dart';
@@ -53,10 +47,10 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
   /// Add new snapshots
   void _addNewSnapshots(BuildContext popupContext) {
-    final SceneModel newScene = SceneModel(
+    final SnapshotsModel newScene = SnapshotsModel(
       name: _snapshotsNameController.text.trim(),
     );
-    _projectViewModel.addNewScene(scene: newScene);
+    _projectViewModel.addNewSnapshots(scene: newScene);
 
     /// select the newly added snapshot
     _projectViewModel.setSelectedSnapshotId(newScene.id);
@@ -64,7 +58,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     /// Also add a default action to the new snapshot
     final SceneActionModel action = SceneActionModel();
 
-    _projectViewModel.addSceneActionToScene(sceneId: newScene.id, action: action);
+    _projectViewModel.addSceneActionToSnapshot(sceneId: newScene.id, action: action);
 
     FusionToast.success(context, message: "Snapshot \"${newScene.name}\" created");
 
@@ -103,7 +97,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
-    _projectViewModel.reOderScenes(sceneIdToMove: newIndex.toString(), sceneIdAtNewIndex: oldIndex.toString());
+    _projectViewModel.reOderSnapshots(sceneIdToMove: newIndex.toString(), sceneIdAtNewIndex: oldIndex.toString());
   }
 
   /// Handle reordering of scenes within a scene set
@@ -111,7 +105,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
     if (oldIndex < newIndex) {
       newIndex -= 1;
     }
-    _projectViewModel.reOderScenesInSceneSet(
+    _projectViewModel.reOrderSnapshotInSceneSet(
       sceneSetId: sceneSetId,
       oldIndex: oldIndex,
       newIndex: newIndex,
@@ -181,29 +175,29 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
           /// list of snapshots would go here, constrained to _sourcesHeight SnapshotItemCard
           /// Sources list with controlled height
-          DragTarget<SceneModel>(
-            onWillAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
+          DragTarget<SnapshotsModel>(
+            onWillAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
               // Only accept if dragging from scenes section, not from snapshots section
               return _draggingFromSection == 'scenes';
             },
-            onLeave: (SceneModel? data) {},
-            onAcceptWithDetails: (DragTargetDetails<SceneModel> details) {
+            onLeave: (SnapshotsModel? data) {},
+            onAcceptWithDetails: (DragTargetDetails<SnapshotsModel> details) {
               if (_draggingFromSection == 'scenes') {
                 /// First check if it already exists in snapshots to avoid duplicates
-                final List<SceneModel> existing = _projectViewModel.getAllScenes();
-                final bool alreadyInList = existing.any((SceneModel s) => s.id == details.data.id);
+                final List<SnapshotsModel> existing = _projectViewModel.getAllSnapshots();
+                final bool alreadyInList = existing.any((SnapshotsModel s) => s.id == details.data.id);
 
                 if (!alreadyInList) {
                   /// Add to snapshots section first
-                  _projectViewModel.addNewScene(scene: details.data);
+                  _projectViewModel.addNewSnapshots(scene: details.data);
                 }
 
                 /// Remove from all scene sets (since it's now in snapshots)
                 final List<SceneSetModel> allSceneSets = _projectViewModel.getAllSceneSets();
                 for (SceneSetModel sceneSet in allSceneSets) {
-                  final List<SceneModel> scenesInSet = _projectViewModel.getScenesInSceneSet(sceneSetId: sceneSet.id);
-                  if (scenesInSet.any((SceneModel scene) => scene.id == details.data.id)) {
-                    _projectViewModel.removeSceneFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
+                  final List<SnapshotsModel> scenesInSet = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSet.id);
+                  if (scenesInSet.any((SnapshotsModel scene) => scene.id == details.data.id)) {
+                    _projectViewModel.removeSnapshotFromSceneSet(sceneSetId: sceneSet.id, sceneId: details.data.id);
                   }
                 }
               }
@@ -212,7 +206,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                 _draggingFromSection = null;
               });
             },
-            builder: (BuildContext context, List<SceneModel?> candidateData, List<dynamic> rejectedData) {
+            builder: (BuildContext context, List<SnapshotsModel?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered = candidateData.isNotEmpty && _draggingFromSection == 'scenes';
               return Container(
                 decoration: BoxDecoration(
@@ -229,7 +223,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                 child: SingleChildScrollView(
                   child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                     builder: (BuildContext context, ProjectViewModelState state) {
-                      final List<SceneModel> snapShotList = _projectViewModel.getAllScenes();
+                      final List<SnapshotsModel> snapShotList = _projectViewModel.getAllSnapshots();
                       if (snapShotList.isEmpty) {
                         return Container(
                           width: double.infinity,
@@ -246,7 +240,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                       return SnapshotList(
                         snapShotList: snapShotList,
                         onDelete: (String sceneId) {
-                          _projectViewModel.removeScene(sceneId: sceneId);
+                          _projectViewModel.removeSnapshots(sceneId: sceneId);
 
                           /// clear on selected snapshot to avoid confusion after delete
                           _projectViewModel.setSelectedSnapshotId(null);
@@ -365,7 +359,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                   physics: const ClampingScrollPhysics(),
                   itemBuilder: (BuildContext context, int index) {
                     final SceneSetModel sceneSetData = scenesSetList[index];
-                    final List<SceneModel> associatedScenes = _projectViewModel.getScenesInSceneSet(sceneSetId: sceneSetData.id);
+                    final List<SnapshotsModel> associatedScenes = _projectViewModel.getSnapshotInSceneSet(sceneSetId: sceneSetData.id);
                     return ScenesExpandableCard(
                       sceneSetData: sceneSetData,
                       isDragHovered: false,
@@ -381,7 +375,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                         FusionToast.success(context, message: "Scenes deleted successfully");
                       },
                       onScenesSnapshotDelete: (String sceneId) {
-                        _projectViewModel.removeScene(sceneId: sceneId);
+                        _projectViewModel.removeSnapshots(sceneId: sceneId);
 
                         /// clear selected snapshot to avoid confusion after delete
                         _projectViewModel.setSelectedSnapshotId(null);

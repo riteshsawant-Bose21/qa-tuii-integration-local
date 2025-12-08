@@ -210,9 +210,9 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  SceneModel? getSceneById({required String sceneId}) {
+  SnapshotsModel? getSnapshotById({required String sceneId}) {
     try {
-      return projectManager.getSceneById(sceneId);
+      return projectManager.getSnapshotById(sceneId);
     } catch (e) {
       throwError("Get Scene By Id Error  ${e.toString()}");
       return null; // return empty scene model on error

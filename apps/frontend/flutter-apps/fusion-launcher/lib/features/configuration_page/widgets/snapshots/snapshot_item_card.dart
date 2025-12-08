@@ -5,7 +5,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import '../../../../core/constants/assets_constants.dart';
 
 class SnapshotItemCard extends StatefulWidget {
-  final SceneModel snapShotData;
+  final SnapshotsModel snapShotData;
   final bool isDragging;
   final bool isSelected;
   final VoidCallback? onDelete;

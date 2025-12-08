@@ -294,18 +294,18 @@ extension SceneService on ProjectService {
             .toList();
       case SceneParamType.recall:
         if (actionType == SceneActionType.scene) {
-          return getScenesInSceneSet(scene.item!.itemId)
+          return getSnapshotInSceneSet(scene.item!.itemId)
               .map(
-                (SceneModel scene) => SceneValueDropdown(
+                (SnapshotsModel scene) => SceneValueDropdown(
                   value: scene.id,
                   label: scene.name,
                 ),
               )
               .toList();
         } else if (actionType == SceneActionType.snapshot) {
-          return getAllScenes()
+          return getAllSnapshots()
               .map(
-                (SceneModel snapshot) => SceneValueDropdown(
+                (SnapshotsModel snapshot) => SceneValueDropdown(
                   value: snapshot.id,
                   label: snapshot.name,
                 ),
@@ -345,8 +345,8 @@ extension SceneService on ProjectService {
     return standaloneScenes;
   }
 
-  SceneModel? getSceneById(String sceneId) {
-    return scenes.get(sceneId);
+  SnapshotsModel? getSnapshotById(String sceneId) {
+    return snapshots.get(sceneId);
   }
 
   //Scene Sets
