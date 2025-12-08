@@ -47,6 +47,7 @@ runs:
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
         flutter pub get
+        cp /Users/devops/Documents/flutter-env/.env ./.env
         moon run flutter-apps:build-mac-ios-android
         codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/Frameworks/*
         codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
@@ -90,6 +91,7 @@ runs:
         flutter pub get
         rm -rf windows/flutter/ephemeral
         rm -rf build/
+        cp /Users/devops/Documents/flutter-env/.env ./.env
         moon run flutter-apps:macos-automation-build
         codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Profile/Fusion\ Launcher.app/Contents/Frameworks/*
         codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Profile/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
