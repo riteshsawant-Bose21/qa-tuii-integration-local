@@ -52,6 +52,17 @@ runs:
       shell: powershell
       working-directory: apps/frontend/flutter-apps/fusion-launcher
       run: |
+        $sourceEnv = "C:\Users\Administrator\Documents\env"
+        $destEnv = ".\.env"
+
+        if (Test-Path $sourceEnv) {
+            Copy-Item $sourceEnv $destEnv -Force
+            Write-Output ".env file copied from Administrator Documents."
+        } else {
+            Write-Output "ERROR: .env not found in Administrator Documents!"
+            exit 1
+        }
+
         flutter pub get
         moon run flutter-apps:build-win
         E:\'Program Files (x86)'\NSIS\makensis.exe .\windows\Installer\NSIS\fusion_launcher.nsi
@@ -127,6 +138,17 @@ runs:
       run: |
         robocopy C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\fusion-automation-build C:\Users\Administrator\Documents\fusion-monorepo /E /NFL /NDL /NJH /NJS /NC /NS | Out-Null
         cd C:\Users\Administrator\Documents\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher
+
+        $sourceEnv = "C:\Users\Administrator\Documents\env"
+        $destEnv = ".\.env"
+
+        if (Test-Path $sourceEnv) {
+            Copy-Item $sourceEnv $destEnv -Force
+            Write-Output ".env file copied to project root."
+        } else {
+            Write-Output "ERROR: .env not found!"
+            exit 1
+        }
 
         flutter pub get --suppress-analytics *> $null
         moon run flutter-apps:win-automation-build
