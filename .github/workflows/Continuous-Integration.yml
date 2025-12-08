@@ -102,6 +102,11 @@ jobs:
     steps:
       - name: Clone project
         uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            apps/frontend/flutter-apps/fusion-launcher
+            libs/
+          fetch-depth: 0
 
       - name: Build Apps
         uses: ./.github/reusable-actions/build-flutter-windows
