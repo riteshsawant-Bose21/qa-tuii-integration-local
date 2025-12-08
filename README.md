@@ -1,4 +1,4 @@
-# Fusion Apps Monorepo-trigger build
+# Fusion Apps Monorepo
 
 This is a Moon-powered fusion-monorepo that contains both frontend, backend & firmware applications, configured with a unified toolchain for consistent developer experience.
 Each project resides in its own dedicated folder and is maintained, tested, and deployed by it's respective workflow. After all applications are successfully built and tested, a Yocto image build is triggered to integrate the latest artifacts into a complete system image.
