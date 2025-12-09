@@ -1,18 +1,18 @@
 import 'package:fusion_lib/fusion_lib.dart';
 
 extension SceneManager on ProjectManager {
-  void addNewScene(SceneModel scene) {
+  void addNewSnapshots(SnapshotsModel scene) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.addNewScene(scene);
+    projectService!.addNewSnapshots(scene);
   }
 
-  void updateScene(SceneModel scene) {
+  void updateSnapshots(SnapshotsModel scene) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.updateScene(scene);
+    projectService!.updateSnapshots(scene);
   }
 
   void addNewSceneAction(SceneActionModel action) {
@@ -29,25 +29,25 @@ extension SceneManager on ProjectManager {
     projectService!.removeSceneAction(actionId);
   }
 
-  void addSceneActionToScene({required String sceneId, required SceneActionModel action}) {
+  void addSceneActionToSnapshot({required String sceneId, required SceneActionModel action}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.addSceneActionToScene(sceneId: sceneId, action: action);
+    projectService!.addSceneActionToSnapshot(sceneId: sceneId, action: action);
   }
 
-  void removeSceneActionFromScene({required String sceneId, required String actionId}) {
+  void removeSceneActionFromSnapshot({required String sceneId, required String actionId}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.removeSceneActionFromScene(sceneId: sceneId, actionId: actionId);
+    projectService!.removeSceneActionFromSnapshot(sceneId: sceneId, actionId: actionId);
   }
 
-  List<SceneActionModel> getSceneActionsForScene(String sceneId) {
+  List<SceneActionModel> getSceneActionsForSnapshot(String sceneId) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    return projectService!.getSceneActionsForScene(sceneId);
+    return projectService!.getSceneActionsForSnapshot(sceneId);
   }
 
   void updateSceneActionType({required String actionId, required SceneActionType actionType}) {
@@ -78,11 +78,11 @@ extension SceneManager on ProjectManager {
     projectService!.updateSceneActionValue(actionId: actionId, value: value);
   }
 
-  void deleteScene(String sceneId) {
+  void removeSnapshots(String sceneId) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.deleteScene(sceneId);
+    projectService!.removeSnapshots(sceneId);
   }
 
   List<SceneActionType> getSceneActionTypes() {
@@ -117,11 +117,18 @@ extension SceneManager on ProjectManager {
     return projectService!.getSceneActionValueDropdownItems(actionId);
   }
 
-  List<SceneModel> getAllScenes() {
+  List<SnapshotsModel> getAllSnapshots() {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    return projectService!.getAllScenes();
+    return projectService!.getAllSnapshots();
+  }
+
+  SnapshotsModel? getSnapshotById(String sceneId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getSnapshotById(sceneId);
   }
 
   //scene sets
@@ -153,46 +160,46 @@ extension SceneManager on ProjectManager {
     return projectService!.getAllSceneSets();
   }
 
-  void addSceneToSceneSet({required String sceneSetId, required String sceneId}) {
+  void addSnapshotToSceneSet({required String sceneSetId, required String sceneId}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.addSceneToSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
+    projectService!.addSnapshotToSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
   }
 
-  void removeSceneFromSceneSet({required String sceneSetId, required String sceneId}) {
+  void removeSnapshotFromSceneSet({required String sceneSetId, required String sceneId}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.removeSceneFromSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
+    projectService!.removeSnapshotFromSceneSet(sceneSetId: sceneSetId, sceneId: sceneId);
   }
 
-  void addNewSceneToSceneSet({required String sceneSetId, required SceneModel scene}) {
+  void addNewSnapshotToSceneSet({required String sceneSetId, required SnapshotsModel scene}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.addNewSceneToSceneSet(sceneSetId: sceneSetId, scene: scene);
+    projectService!.addNewSnapshotToSceneSet(sceneSetId: sceneSetId, scene: scene);
   }
 
-  List<SceneModel> getScenesInSceneSet(String sceneSetId) {
+  List<SnapshotsModel> getSnapshotInSceneSet(String sceneSetId) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    return projectService!.getScenesInSceneSet(sceneSetId);
+    return projectService!.getSnapshotInSceneSet(sceneSetId);
   }
 
-  void reOrderScenesInSceneSet({required String parentId, required int oldIndex, required int newIndex}) {
+  void reOrderSnapshotInSceneSet({required String parentId, required int oldIndex, required int newIndex}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.reOrderScenesInSceneSet(parentId, oldIndex, newIndex);
+    projectService!.reOrderSnapshotInSceneSet(parentId, oldIndex, newIndex);
   }
 
-  void reOderSceneActionsInScene({required String sceneId, required int oldIndex, required int newIndex}) {
+  void reOderSceneActionsInSnapshot({required String sceneId, required int oldIndex, required int newIndex}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.reOderSceneActionsInScene(sceneId, oldIndex, newIndex);
+    projectService!.reOderSceneActionsInSnapshot(sceneId, oldIndex, newIndex);
   }
 
   void reOrderSceneSets({required String sceneSetIdToMove, required String sceneSetAtNewIndex}) {
@@ -209,17 +216,38 @@ extension SceneManager on ProjectManager {
     );
   }
 
-  void reOderScenes({required String sceneIdToMove, required String sceneAtNewIndex}) {
+  void reOderSnapshots({required String sceneIdToMove, required String sceneAtNewIndex}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    Map<String, SceneModel> reorderedList = projectService!.reOderScenes(
+    Map<String, SnapshotsModel> reorderedList = projectService!.reOderSnapshots(
       sceneIdToMove: sceneIdToMove,
       sceneAtNewIndexId: sceneAtNewIndex,
     );
 
     projectService = projectService!.copyWith(
-      scenesRepository: projectService!.scenes.copyWith(reorderedList),
+      scenesRepository: projectService!.snapshots.copyWith(reorderedList),
     );
+  }
+
+  void duplicateSnapshot(String sceneId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.duplicateSnapshot(sceneId);
+  }
+
+  void duplicateSceneSet(String sceneSetId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.duplicateSceneSet(sceneSetId);
+  }
+
+  void duplicateSceneAction(String actionId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    projectService!.duplicateSceneAction(actionId);
   }
 }

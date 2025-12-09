@@ -18,14 +18,14 @@ class SelectedSource {
   SelectedSource({required this.id, required this.name});
 }
 
-class ConfigurationPage extends StatefulWidget {
-  const ConfigurationPage({super.key});
+class ConfigurationProcessingPage extends StatefulWidget {
+  const ConfigurationProcessingPage({super.key});
 
   @override
-  State<ConfigurationPage> createState() => _ConfigurationPageState();
+  State<ConfigurationProcessingPage> createState() => _ConfigurationProcessingPageState();
 }
 
-class _ConfigurationPageState extends State<ConfigurationPage> {
+class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPage> {
   final TextEditingController searchController = TextEditingController();
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
@@ -114,13 +114,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
       child: Column(
         children: <Widget>[
           // const PanelHeader(title: 'INPUT'),
-          SectionHeader(
+          const SectionHeader(
             title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
-            trailing: IconButton(
-              icon: const Icon(Icons.add, size: 20),
-              onPressed: () {},
-            ),
           ),
 
           /// Search bar with filters and sorting
@@ -473,13 +469,9 @@ class _ConfigurationPageState extends State<ConfigurationPage> {
           // const PanelHeader(title: 'OUTPUT'),
 
           /// Zones Section
-          SectionHeader(
+          const SectionHeader(
             title: 'Zones',
             assetPath: 'assets/images/zone_icon.png',
-            trailing: IconButton(
-              icon: const Icon(Icons.add, size: 20),
-              onPressed: () {},
-            ),
           ),
 
           /// Zones List
