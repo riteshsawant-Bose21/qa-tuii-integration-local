@@ -23,10 +23,6 @@
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <unistd.h>
 #include <iostream>
-#ifndef STM32H7S7xx
-#include "cmsis_os2.h"
-#include "PlatformInterface/stm32/OcaPlatformSTM32.h"
-#endif
 #include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants

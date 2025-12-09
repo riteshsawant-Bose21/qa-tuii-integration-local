@@ -178,7 +178,11 @@ bool ocaMain(std::string& customNodeId,
                                             fusionServerConn.messageHandler();
                                         }
                                         std::cout << " =========> IDENTIFIED SUCESSFULLY" << std::endl;
+#ifdef STM32H7S7xx
                                         OcaPlatform::Sleep(10);
+#else
+                                        sleep(1);
+#endif
 
                                         // Setup AES connection to the Device
                                         if (ControlPalSetupConnection(sessionId))
@@ -281,7 +285,11 @@ bool ocaMain(std::string& customNodeId,
                                     // Wait for Events from Device (Keep alives)
                                     ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
+#ifdef STM32H7S7xx
                                     OcaPlatform::Sleep(9000);
+#else
+                                        sleep(9);
+#endif
 
                                 }
 

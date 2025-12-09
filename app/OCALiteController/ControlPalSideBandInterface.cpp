@@ -286,21 +286,21 @@ bool SidebandInterface::sideBandConnect() {
             server_addr.sin_port = htons(7950); // TODO: Replace after device advertising
                                                 //       is enabled.
 
-            char *hostOrIp = selectedDevice.hostname.c_str();
+            const char *hostOrIp = selectedDevice.hostname.c_str();
             struct hostent *hostEntry = gethostbyname(hostOrIp);
             if (hostEntry == nullptr)
             {
                 // Try to treat it as an IP address directly
-                if (inet_aton(hostOrIp, &serverAddr.sin_addr) == 0)
+                if (inet_aton(hostOrIp, &server_addr.sin_addr) == 0)
                 {
-                    OCA_LOG_ERROR_PARAMS("Failed to resolve hostname: %s", hostOrIp);
+                    error("❌ Failed to resolve hostname: " + selectedDevice.hostname);
                     return false;
                 }
             }
             else
             {
                 // Use the first IP address from the host entry
-                memcpy(&serverAddr.sin_addr, hostEntry->h_addr_list[0], hostEntry->h_length);
+                memcpy(&server_addr.sin_addr, hostEntry->h_addr_list[0], hostEntry->h_length);
             }
 #else
             // Get discovered OCA service IP from mDNS

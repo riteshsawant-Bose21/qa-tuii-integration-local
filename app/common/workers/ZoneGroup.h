@@ -54,7 +54,6 @@ public:
 #endif
 private:
     static ::OcaLitePort dummy;
-    //static ::OcaLiteList<::OcaLitePort> s_emptyPorts; // no ports for grouping block
     ZoneGroup(const ZoneGroup &);
     ZoneGroup &operator=(const ZoneGroup &);
 };

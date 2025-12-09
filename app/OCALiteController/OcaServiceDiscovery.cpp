@@ -257,7 +257,7 @@ size_t OcaServiceDiscovery::WaitForDevices(uint32_t timeoutMs)
     return deviceCount;
 }
 
-#if OCA_DISCOVERY_ENABLED
+#ifndef STM32H7S7xx
 const OcaServiceDiscovery::DiscoveredDevice *OcaServiceDiscovery::GetDeviceByName(const std::string &name) const
 {
     auto it = std::find_if(m_discoveredDevices.begin(), m_discoveredDevices.end(),
