@@ -22,6 +22,9 @@ class SchedulerFormViewModel extends ChangeNotifier {
         recurrenceDays.add(RecurrenceDay.values.firstWhere((RecurrenceDay element) => element.value == day));
       }
     }
+    name.addListener(() {
+      notifyListeners();
+    });
   }
 
   String? _color;
