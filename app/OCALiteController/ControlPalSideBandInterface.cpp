@@ -36,7 +36,7 @@
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "ControlPalMsgInterface.h"
 #include "ControlPalSideBandInterface.h"
-#include "OcaServiceDiscovery.h"
+
 
 // C interface for mDNS service discovery
 extern "C" {
@@ -235,8 +235,6 @@ bool SidebandInterface::sideBandDiscovery(OcaServiceDiscovery &discovery) {
     bool retVal(false);
 
     // Start service discovery
-    OcaServiceDiscovery discovery;
-
     if (discovery.StartDiscovery())
     {
         // Wait for devices to be discovered
@@ -251,7 +249,7 @@ bool SidebandInterface::sideBandDiscovery(OcaServiceDiscovery &discovery) {
 
         if (deviceCount > 0)
             retVal = true;
-}
+    }
 
     return retVal;
 }

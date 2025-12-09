@@ -42,6 +42,7 @@
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #else
 #include "PlatformInterface/stm32/OcaPlatformSTM32.h"
+#include "dnssd.h"
 #endif
 
 #include "ControlPalSideBandInterface.h"

@@ -8,11 +8,13 @@
  *
  */
 
-#ifndef STM32H7S7xx
+
 // ---- Include system wide include files ----
 #include <arpa/inet.h>
 #include <HostInterfaceLite/OCA/OCP.1/ZeroConf/IOcp1LiteService.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+
+#ifndef STM32H7S7xx
 
 // Platform-specific DNS-SD includes
 #if defined(__APPLE__) || defined(FUSION)
@@ -36,13 +38,16 @@
 #define MAXIMUM_TXT_RECORD_LENGTH 255
 // ---- Class Implementation ----
 
-static DNSServiceRef m_dnsService = NULL;
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #ifndef STM32H7S7xx
+
+static DNSServiceRef m_dnsService = NULL;
+
 /**
  * Registration reply callback. Dummy implementation.
  */
@@ -51,7 +56,7 @@ static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFl
 }
 #endif
 
-#ifndef STM32H7S7xx
+#ifdef STM32H7S7xx
 bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registrationType,
                              UINT16 port, const std::vector<std::string> &txtRecordList, const std::string &domain)
 {
@@ -116,16 +121,16 @@ bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registr
 #endif
 
 
-#ifndef STM32H7S7xx
 void Ocp1LiteServiceDispose(void)
 {
+#ifndef STM32H7S7xx
     if (NULL != m_dnsService)
     {
         DNSServiceRefDeallocate(m_dnsService);
         m_dnsService = NULL;
     }
-}
 #endif
+}
 
 #ifdef __cplusplus
 }

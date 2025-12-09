@@ -883,7 +883,6 @@ bool Ocp1LiteNetwork::Disconnect(::OcaSessionID sessionID)
     return socketConnection;
 }
 
-#ifndef OCA_LITE_CONTROLLER
 ::OcaLiteStatus Ocp1LiteNetwork::SetIDAdvertisedAndTxtRecords(const ::Ocp1LiteNetworkNodeID &idAdvertised, const std::vector<std::string> &txtRecords)
 {
     m_txtRecordList = txtRecords;
@@ -1005,7 +1004,6 @@ void Ocp1LiteNetwork::HandleControllers(OcaSocketList &controllerList, const Ocf
         }
     }
 }
-#endif
 
 #ifdef OCA_LITE_CONTROLLER
 void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSelectableSet &readSet)
@@ -1113,7 +1111,6 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
     return rc;
 }
 
-#ifndef OCA_LITE_CONTROLLER
 ::OcaLiteStatus Ocp1LiteNetwork::RegisterRegistrationServices()
 {
     std::vector<std::string> txtRecords;
@@ -1136,7 +1133,6 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
 
     return rc;
 }
-#endif
 
 #ifdef __cplusplus
 }

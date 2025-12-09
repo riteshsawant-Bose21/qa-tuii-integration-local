@@ -39,7 +39,7 @@
 #include "ControlPalOcaUtils.h"
 #include "ControlPalSideBandInterface.h"
 #ifdef STM32H7S7xx
-#include "../PlatformInterface/stm32/OcaPlatformSTM32.h"
+#include "PlatformInterface/stm32/OcaPlatformSTM32.h"
 #else
 #include <sys/time.h>
 #endif

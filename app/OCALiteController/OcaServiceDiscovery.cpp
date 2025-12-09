@@ -10,6 +10,7 @@
 #include <cstring>
 #include <chrono>
 #include <thread>
+#include <iostream>
 #include <algorithm>
 #include <sys/select.h>
 #include <unistd.h>
@@ -24,11 +25,12 @@
 #include <netinet/in.h>
 #else
 #include "dnssd.h"
+#include "PlatformInterface/stm32/OcaPlatformSTM32.h"
 #endif
 
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
-#include "OcaServiceDiscovery.h"
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+#include "OcaServiceDiscovery.h"
 // ---- Helper functions ----
 
 /**

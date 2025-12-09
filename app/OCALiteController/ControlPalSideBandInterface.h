@@ -32,6 +32,7 @@
 #include <iomanip>
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "ControlPalMsgInterface.h"
+#include "OcaServiceDiscovery.h"
 
 #ifndef _CONTROLPAL_SIDEBAND_INTFC_H
 #define _CONTROLPAL_SIDEBAND_INTFC_H
