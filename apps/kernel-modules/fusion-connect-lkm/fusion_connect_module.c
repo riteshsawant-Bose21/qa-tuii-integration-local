@@ -2,9 +2,9 @@
 #include <linux/kernel.h>
 #include "fusion_connect_manager.h"
 
-static char *eth_iface = "lan3";
+static char *eth_iface = "lan1";
 module_param(eth_iface, charp, 0444);
-MODULE_PARM_DESC(eth_iface, "Ethernet interface for FusionConnect traffic (default: lan3)");
+MODULE_PARM_DESC(eth_iface, "Ethernet interface for FusionConnect traffic (default: lan1)");
 
 static bool debug = false;
 module_param(debug, bool, 0444);

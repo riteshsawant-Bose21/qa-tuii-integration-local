@@ -343,144 +343,6 @@ static bool nl_set_ptp_sync_raw(NetlinkClient& c, bool sync) {
     return reply.err == 0;
 }
 
-static bool set_ptp_sync(NetlinkClient& c)
-{
-    auto trim = [](std::string s){
-        const char* ws = " \t\r\n";
-        size_t a = s.find_first_not_of(ws);
-        size_t b = s.find_last_not_of(ws);
-        return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
-    };
-
-    // gmPresent poller: returns 1 if true, 0 if false, -1 if unknown/error
-    auto poll_gm_present = [&]() -> int {
-        FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
-        if (!fp) return -1;
-
-        char buf[512];
-        int result = -1;
-        while (fgets(buf, sizeof(buf), fp)) {
-            std::string line(buf);
-            auto pos = line.find("gmPresent");
-            if (pos != std::string::npos) {
-                std::string v = trim(line.substr(pos + std::strlen("gmPresent")));
-                for (char& ch : v) ch = (char)std::tolower((unsigned char)ch);
-                if (v.find("true") != std::string::npos)      result = 1;
-                else if (v.find("false") != std::string::npos) result = 0;
-                break;
-            }
-        }
-        pclose(fp);
-        return result;
-    };
-
-    // master_offset poller: returns true on success and fills ns (can be negative)
-    auto poll_master_offset_ns = [&](long long& ns_out) -> bool {
-        FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
-        if (!fp) return false;
-
-        bool ok = false;
-        char buf[512];
-        while (fgets(buf, sizeof(buf), fp)) {
-            std::string line(buf);
-            auto pos = line.find("master_offset");
-            if (pos != std::string::npos) {
-                std::string v = trim(line.substr(pos + std::strlen("master_offset")));
-                // v should be an integer (may have leading +/-, may be followed by junk-free newline)
-                // Be strict: parse continuous integer prefix only.
-                const char* s = v.c_str();
-                char* endp   = nullptr;
-                errno = 0;
-                long long val = std::strtoll(s, &endp, 10);
-                if (errno == 0 && endp != s) {
-                    ns_out = val;
-                    ok = true;
-                }
-                break;
-            }
-        }
-        pclose(fp);
-        return ok;
-    };
-
-    // --- Decide startup role using only gmPresent (unchanged) ---
-    constexpr int GM_FALSE_CONSEC = 25;  // you said you had to crank this up
-    constexpr int SAMPLE_MS       = 500;
-    constexpr int MAX_DECIDE_MS   = 15000;
-
-    int false_streak = 0;
-    int role_flag = -1; // 1=Follower, 0=GM, -1=unknown
-    for (int elapsed = 0; elapsed < MAX_DECIDE_MS; elapsed += SAMPLE_MS) {
-        const int r = poll_gm_present();
-        if (r == 1) { role_flag = 1; break; }                       // Follower on first TRUE
-        if (r == 0) { if (++false_streak >= GM_FALSE_CONSEC) { role_flag = 0; break; } }
-        std::this_thread::sleep_for(std::chrono::milliseconds(SAMPLE_MS));
-    }
-    if (role_flag == -1) role_flag = 1; // safer default → Follower
-    SPDLOG_INFO("PTP: startup role by gmPresent-only: {} false_streak {}",
-                role_flag == 0 ? "GM" : "Follower", false_streak);
-
-    // --- Main wait loop (now keyed only on master_offset) ---
-    constexpr long long OFFSET_OK_NS = 1000; // 1 µs window
-    const auto start = std::chrono::steady_clock::now();
-    auto last_reprobe = start;
-    int good = 0;
-
-    for (;;) {
-        // Re-probe gmPresent periodically to cope with late stabilization/role changes.
-        if (std::chrono::steady_clock::now() - last_reprobe > std::chrono::seconds(3)) {
-            const int r = poll_gm_present();
-            if (r == 1) { role_flag = 1; false_streak = 0; }
-            else if (r == 0) { if (role_flag != 0 && ++false_streak >= GM_FALSE_CONSEC) role_flag = 0; }
-            last_reprobe = std::chrono::steady_clock::now();
-        }
-        const bool i_am_gm = (role_flag == 0);
-
-        if (i_am_gm) {
-            SPDLOG_INFO("PTP: enabling in kernel (role=GM)");
-            if (!nl_set_ptp_sync_raw(c, true)) {
-                SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
-                return false;
-            }
-            SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
-            return true;
-        } else {
-            // Read master_offset
-            long long mo = 0;
-            bool have_mo = poll_master_offset_ns(mo);
-            long long best_abs = (have_mo && mo) ? std::llabs(mo) : LLONG_MAX;
-
-            // Detailed log (kept)
-            SPDLOG_DEBUG("PTP master_offset={} ns, best_abs={} ns, role={}",
-                        have_mo ? mo : 0, best_abs, i_am_gm ? "GM" : "Follower");
-
-            // Gate on master_offset only:
-            //  - Follower: need |master_offset| ≤ 200µs (servo settled to GM)
-            //  - GM:      TIME_STATUS_NP shows gmPresent=false and master_offset typically 0 → same gate
-            const bool good_now = (best_abs != LLONG_MAX) && (best_abs <= OFFSET_OK_NS);
-            good = good_now ? (good + 1) : 0;
-
-            if (good >= 3) {
-                SPDLOG_INFO("PTP: enabling in kernel (role=Follower, master_offset={} ns, window={} ns)",
-                            have_mo ? mo : 0, OFFSET_OK_NS);
-                if (!nl_set_ptp_sync_raw(c, true)) {
-                    SPDLOG_ERROR("PTP: criteria met but kernel refused SET_PTP_SYNC(true)");
-                    return false;
-                }
-                SPDLOG_INFO("PTP: kernel accepted SET_PTP_SYNC(true)");
-                return true;
-            }
-        }        
-
-        if (std::chrono::steady_clock::now() - start > std::chrono::seconds(120)) {
-            SPDLOG_WARN("PTP: criteria not met within 120 s");
-            return false;
-        }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
-    }
-}
-
 static bool get_all_metrics(NetlinkClient &client,
                             std::vector<fusion_cn_metrics_record> *out)
 {
@@ -697,7 +559,7 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""),
-      network_interface("lan3"), sap_announcer(get_system_ip()), announce_counter(0) {
+      network_interface("lan1"), sap_announcer(get_system_ip()), announce_counter(0) {
     system_ip = get_system_ip();
     if (system_ip.empty()) {
         SPDLOG_ERROR("Failed to initialize: No valid system IP found");
@@ -1132,11 +994,10 @@ void FusionConnectClient::audio_streams_update_func() {
 
 void FusionConnectClient::process() { 
     if (!ptp_synchronized) {
-        if (set_ptp_sync(client)) {
-            ptp_synchronized = 1;
+        if (!nl_set_ptp_sync_raw(c, true)) {
+            SPDLOG_ERROR("PTP: failed to set PTP sync over netlink");
         } else {
-            // Not synced yet—bail early, we’ll try again next tick
-            return;
+            ptp_synchronized = 1;
         }
     }
 
