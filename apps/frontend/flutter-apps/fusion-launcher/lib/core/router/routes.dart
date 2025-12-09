@@ -17,8 +17,10 @@ class Routes {
     switch (routeSettings.name) {
       /// Sign In Page
       case launcherSignInPage:
-        return CupertinoPageRoute<void>(
-          builder: (BuildContext context) => const LauncherSignInPage(),
+        return PageRouteBuilder<void>(
+          pageBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) => const LauncherSignInPage(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
           settings: const RouteSettings(name: launcherSignInPage),
         );
 
