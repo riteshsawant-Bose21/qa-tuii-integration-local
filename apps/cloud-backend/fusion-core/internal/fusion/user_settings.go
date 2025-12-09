@@ -10,4 +10,5 @@ type UserSettings interface {
 	GetUserSettings(ctx context.Context, userID string) (*types.UserSettings, error)
 	CreateUserSettings(ctx context.Context, settings *types.UserSettings) error
 	UpdateUserSettings(ctx context.Context, settings *types.UserSettings) error
+	CreateUserSettingsForRegistration(ctx context.Context, userID string) error
 }
