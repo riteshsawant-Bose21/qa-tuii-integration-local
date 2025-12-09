@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/processing_block/view/functions/widgets/priority_selection_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -61,155 +62,158 @@ class _SourceMixZoneControlPanelState extends State<SourceMixZoneControlPanel> {
   Widget build(BuildContext context) {
     final double controlScreenWidth = MediaQuery.sizeOf(context).width * 0.8;
 
-    return Dialog(
-      constraints: BoxConstraints(
-        maxWidth: controlScreenWidth,
-        maxHeight: MediaQuery.sizeOf(context).height * 0.45,
-      ),
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
-      child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-        listener: (BuildContext context, ProjectViewModelState state) {
-          zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
-        },
-        builder: (BuildContext context, ProjectViewModelState state) {
-          return ClipRRect(
-            borderRadius: const BorderRadius.all(Radius.circular(6)),
-            child: Stack(
-              children: <Widget>[
-                Container(
-                  color: Colors.black,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: <Widget>[
-                      const SizedBox(height: 35),
-                      Flexible(
-                        fit: FlexFit.loose,
-                        child: Container(
-                          color: const Color(0xFFF5F5F5),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              // Left scrollable section
-                              Flexible(
-                                fit: FlexFit.loose,
-                                child: SourceMixLeftWidget(
-                                  zoneID: widget.zoneID,
-                                  zoneFunctions: zoneFunction,
-                                ),
-                              ),
-
-                              const VerticalDivider(width: 1, color: Colors.black12),
-
-                              MixScenes(
-                                selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
-                                zoneId: widget.zoneID,
-                                onStoreTap: (String? value) {
-                                  if (value == null || value.isEmpty) {
-                                    return FusionToast.error(
-                                      context,
-                                      message: "Please enter a name for the mix scene",
-                                    );
-                                  } else {
-                                    projectViewModel.saveCurrentSettingsAsMixScene(
-                                      functionId: zoneFunction.id,
-                                      sceneName: value,
-                                    );
-                                  }
-                                },
-                                mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
-                                onMixSceneSelect: (String value) {
-                                  try {
-                                    final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
-                                    projectViewModel.applyMixSceneToFunction(
-                                      functionId: zoneFunction.id,
-                                      sceneId: scene.id,
-                                    );
-                                    log("Selected mix scene: ${scene.name}");
-                                  } catch (e) {
-                                    // We might get StateError if the scene is not found.
-                                  }
-                                },
-                                onDeleteTap: () {
-                                  final MixScene? scene = selectedMixScene(zoneFunction);
-                                  if (scene != null) {
-                                    projectViewModel.removeMixScene(
-                                      sceneId: scene.id,
-                                      functionId: zoneFunction.id,
-                                    );
-                                  }
-                                },
-                              ),
-
-                              const VerticalDivider(width: 1, color: Colors.black12),
-                              Container(
-                                color: Colors.white,
-                                child: PrioritySelectionWidget(zoneId: widget.zoneID),
-                              ),
-                              // const VerticalDivider(width: 1, color: Colors.black12),
-
-                              // Right side (only one widget)
-                              Flexible(
-                                fit: FlexFit.loose,
-                                child: ColoredBox(
-                                  color: Colors.white,
-                                  child: ZoneControlSliderBuilder(
+    return Theme(
+      data: FusionAppTheme.lightTheme,
+      child: Dialog(
+        constraints: BoxConstraints(
+          maxWidth: controlScreenWidth,
+          maxHeight: MediaQuery.sizeOf(context).height * 0.45,
+        ),
+        backgroundColor: Colors.white,
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(6))),
+        child: BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+          listener: (BuildContext context, ProjectViewModelState state) {
+            zoneFunction = projectViewModel.getZoneFunctionForZone(zoneId: widget.zoneID)!;
+          },
+          builder: (BuildContext context, ProjectViewModelState state) {
+            return ClipRRect(
+              borderRadius: const BorderRadius.all(Radius.circular(6)),
+              child: Stack(
+                children: <Widget>[
+                  Container(
+                    color: Colors.black,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        const SizedBox(height: 35),
+                        Flexible(
+                          fit: FlexFit.loose,
+                          child: Container(
+                            color: const Color(0xFFF5F5F5),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: <Widget>[
+                                // Left scrollable section
+                                Flexible(
+                                  fit: FlexFit.loose,
+                                  child: SourceMixLeftWidget(
                                     zoneID: widget.zoneID,
+                                    zoneFunctions: zoneFunction,
                                   ),
                                 ),
-                              ),
-                            ],
+
+                                const VerticalDivider(width: 1, color: Colors.black12),
+
+                                MixScenes(
+                                  selectedMixSceneName: selectedMixScene(zoneFunction)?.name,
+                                  zoneId: widget.zoneID,
+                                  onStoreTap: (String? value) {
+                                    if (value == null || value.isEmpty) {
+                                      return FusionToast.error(
+                                        context,
+                                        message: "Please enter a name for the mix scene",
+                                      );
+                                    } else {
+                                      projectViewModel.saveCurrentSettingsAsMixScene(
+                                        functionId: zoneFunction.id,
+                                        sceneName: value,
+                                      );
+                                    }
+                                  },
+                                  mixScenes: zoneFunction.mixScenes.map((MixScene e) => e.name).toList(),
+                                  onMixSceneSelect: (String value) {
+                                    try {
+                                      final MixScene scene = zoneFunction.mixScenes.firstWhere((MixScene scene) => scene.name == value);
+                                      projectViewModel.applyMixSceneToFunction(
+                                        functionId: zoneFunction.id,
+                                        sceneId: scene.id,
+                                      );
+                                      log("Selected mix scene: ${scene.name}");
+                                    } catch (e) {
+                                      // We might get StateError if the scene is not found.
+                                    }
+                                  },
+                                  onDeleteTap: () {
+                                    final MixScene? scene = selectedMixScene(zoneFunction);
+                                    if (scene != null) {
+                                      projectViewModel.removeMixScene(
+                                        sceneId: scene.id,
+                                        functionId: zoneFunction.id,
+                                      );
+                                    }
+                                  },
+                                ),
+
+                                const VerticalDivider(width: 1, color: Colors.black12),
+                                Container(
+                                  color: Colors.white,
+                                  child: PrioritySelectionWidget(zoneId: widget.zoneID),
+                                ),
+                                // const VerticalDivider(width: 1, color: Colors.black12),
+
+                                // Right side (only one widget)
+                                Flexible(
+                                  fit: FlexFit.loose,
+                                  child: ColoredBox(
+                                    color: Colors.white,
+                                    child: ZoneControlSliderBuilder(
+                                      zoneID: widget.zoneID,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // Used Stack to fit content according to content size.
+                  // HEADERS
+                  Positioned(
+                    left: 0,
+                    child: Container(
+                      height: 35,
+                      color: Colors.black,
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Text(
+                        "ZONE CONTROL PANEL - SOURCE MIX",
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.white,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  Positioned(
+                    right: 0,
+                    child: Container(
+                      height: 35,
+                      color: Colors.black,
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: Navigator.of(context).pop,
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                ),
-
-                // Used Stack to fit content according to content size.
-                // HEADERS
-                Positioned(
-                  left: 0,
-                  child: Container(
-                    height: 35,
-                    color: Colors.black,
-                    alignment: Alignment.centerLeft,
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: Text(
-                      "ZONE CONTROL PANEL - SOURCE MIX",
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
-                        fontSize: 11,
-                      ),
                     ),
                   ),
-                ),
-
-                Positioned(
-                  right: 0,
-                  child: Container(
-                    height: 35,
-                    color: Colors.black,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                    child: MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: Navigator.of(context).pop,
-                        child: const Icon(
-                          Icons.close,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          );
-        },
+                ],
+              ),
+            );
+          },
+        ),
       ),
     );
   }

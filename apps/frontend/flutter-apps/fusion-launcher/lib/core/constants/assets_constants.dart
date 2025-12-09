@@ -9,7 +9,7 @@ class Assets {
   static const String trashIcon = "assets/icons/trash.webp";
   static const String typeIcon = "assets/icons/type.webp";
 
-  /// configuration icons
+  /// configuration processing icons
   static const String configurationIcon = 'assets/icons/configuration_icon.png';
   static const String configurationFilledIcon = 'assets/icons/configuration_filled_icon.png';
   static const String processingBlocksFilledIcon = 'assets/icons/processing_blocks_filled_icon.png';
@@ -24,6 +24,12 @@ class Assets {
   static const String presetsIcon = 'assets/icons/presets_icon.png';
   static const String gpioIcon = 'assets/icons/gpio_icon.png';
   static const String schedulingIcon = 'assets/icons/scheduling_icon.png';
+
+  /// configuration non-processing icons
+  static const String eventsIcon = 'assets/icons/events_icon.png';
+  static const String playIcon = 'assets/icons/play_icon.png';
+  static const String duplicateIcon = 'assets/icons/duplicate_icon.png';
+  static const String snapshotActionNameIcon = 'assets/icons/snapshot_action_name.png';
 
   //Images
   static const String dmPendent = 'assets/images/speakers/DM_pendant.png';

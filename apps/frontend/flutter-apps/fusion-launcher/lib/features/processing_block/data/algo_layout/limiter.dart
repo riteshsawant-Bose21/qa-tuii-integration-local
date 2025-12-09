@@ -210,8 +210,8 @@ final Map<String, Object> _limiter = <String, Object>{
     },
     <String, Object?>{
       "id": "941262",
-      "x": 92.14,
-      "y": 4.18,
+      "x": 93.23,
+      "y": 4.08,
       "width": 17.48,
       "height": 7.28,
       "field": "bypass",
