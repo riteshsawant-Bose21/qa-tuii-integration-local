@@ -995,8 +995,9 @@ void FusionConnectClient::audio_streams_update_func() {
 void FusionConnectClient::process() { 
     if (!ptp_synchronized) {
         if (!nl_set_ptp_sync_raw(client, true)) {
-            SPDLOG_ERROR("PTP: failed to set PTP sync over netlink");
+            SPDLOG_ERROR("Failed to set PTP sync");
         } else {
+            SPDLOG_DEBUG("Successfully set PTP sync");
             ptp_synchronized = 1;
         }
     }
@@ -1005,6 +1006,7 @@ void FusionConnectClient::process() {
         fusion_cn_ctrl_msg reply{};
         if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
             if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
+                SPDLOG_DEBUG("Successfully started FC manager");
                 mgr_started = true;
             } else if (reply.err == -MGR_START_ERRNO_PTP) {
                 ptp_synchronized = 0;
