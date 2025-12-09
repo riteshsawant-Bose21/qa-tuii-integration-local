@@ -118,7 +118,21 @@ extension SceneService on ProjectService {
   List<SceneItemDropdown> getActionItemsByType(SceneActionType actionType) {
     switch (actionType) {
       case SceneActionType.zoneControl:
-        return zones.getAll().map((zone) => SceneItemDropdown(id: zone.id, name: zone.name)).toList();
+        List<Zone> zonesList = zones.getAll();
+
+        List<SubZone> subZonesList = subZones.getAll();
+
+        return [
+          ...zonesList.map((zone) => SceneItemDropdown(id: zone.id, name: zone.name)),
+          ...subZonesList.map(
+            (subZone) => SceneItemDropdown(
+              id: subZone.id,
+              name: "${getZoneForSubZone(subZoneId: subZone.id).name}/${subZone.name}",
+            ),
+          ),
+        ].toList();
+
+      // return zones.getAll().map((zone) => SceneItemDropdown(id: zone.id, name: zone.name)).toList();
       // case SceneActionType.sourceControl:
       //   return hardware.getAll().whereType<Source>().map((source) => SceneItemDropdown(id: source.id, name: source.name)).toList();
       case SceneActionType.deviceControl:
@@ -228,7 +242,7 @@ extension SceneService on ProjectService {
   // Main zone control logic
   List<SceneParam> _getZoneControlParams(SceneItem item) {
     final params = _getCommonZoneParams();
-    final zoneFunction = getZoneFunction(zoneId: item.itemId);
+    final zoneFunction = getZoneFunction(zoneOrSubZoneId: item.itemId);
 
     if (zoneFunction == null) return params;
 
@@ -270,7 +284,7 @@ extension SceneService on ProjectService {
 
     switch (param.type) {
       case SceneParamType.sourceSelect:
-        final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);
+        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
         if (zoneFunction == null) return [];
         final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: scene.item!.itemId);
         return sourcesInZone
@@ -282,7 +296,7 @@ extension SceneService on ProjectService {
             )
             .toList();
       case SceneParamType.mixScene:
-        final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);
+        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
         if (zoneFunction == null) return [];
         return zoneFunction.mixScenes
             .map(
@@ -317,7 +331,7 @@ extension SceneService on ProjectService {
 
       case SceneParamType.prioritySelect1:
       case SceneParamType.prioritySelect2:
-        final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);
+        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
         if (zoneFunction == null) return [];
         final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: scene.item!.itemId);
         return sourcesInZone
