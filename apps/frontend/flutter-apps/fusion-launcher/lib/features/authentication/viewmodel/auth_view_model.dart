@@ -27,16 +27,20 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       final bool isAuthenticated = await _authService.isAuthenticated();
 
       if (isAuthenticated) {
-        final UserModel? savedProfile = await UserSessionManager.getSignedInUserProfile();
-        if (savedProfile != null) {
-          emit(Authenticated());
-        } else {
-          // If no saved profile, treat as unauthenticated
-          emit(Unauthenticated());
-        }
-      } else {
-        emit(Unauthenticated());
+        emit(Authenticated());
       }
+
+      // if (isAuthenticated) {
+      //   final UserModel? savedProfile = await UserSessionManager.getSignedInUserProfile();
+      //   if (savedProfile != null) {
+      //     emit(Authenticated());
+      //   } else {
+      //     // If no saved profile, treat as unauthenticated
+      //     emit(Unauthenticated());
+      //   }
+      // } else {
+      //   emit(Unauthenticated());
+      // }
 
       // Listen for web redirect on web platform
       if (kIsWeb) {
@@ -81,9 +85,9 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
 
       // Get user authorization from backend
       // final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
-
+      //
       // FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
-
+      //
       // if (authDataResponse.success) {
       //   emit(
       //     Authenticated(),

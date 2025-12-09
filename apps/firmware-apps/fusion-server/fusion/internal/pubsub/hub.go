@@ -129,6 +129,11 @@ func (h *Hub) BroadcastToNodes(message *api.NotifyMessage) error {
 			return fmt.Errorf("error creating snapshot: %v", err)
 		}
 
+	case api.NotifyOpSnapSave:
+		if err := h.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
+			logger.Error("Error saving snapshot: %v", err)
+		}
+
 	case api.NotifyOpSnapDelete:
 		if err := h.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			return fmt.Errorf("error deleting snapshot: %v", err)

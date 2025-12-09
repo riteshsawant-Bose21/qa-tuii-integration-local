@@ -31,8 +31,19 @@ func (h *Handler) HandleCreateSnapshot(snapshot string) error {
 
 // HandleDeleteSnapshot removes the specified snapshot and notifies the cluster.
 func (h *Handler) HandleDeleteSnapshot(snapshot string) error {
+
+	// First, broadcast delete operation (this removes snapshot everywhere)
 	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapDelete); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleSaveSnapshot updates a snapshot and broadcasts it to the cluster with the current system state.
+func (h *Handler) HandleSaveSnapshot(snapshot string) error {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapSave); err != nil {
+		return fmt.Errorf("failed to handle snapshot save: %w", err)
 	}
 	return nil
 }

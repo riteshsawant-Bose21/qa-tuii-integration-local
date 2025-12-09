@@ -36,7 +36,7 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
-enum ConfigurationMenuMode { processing, presets, gpio, scheduling }
+enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling }
 
 enum SelectedItemType {
   source,
@@ -433,5 +433,13 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently open.");
       return null;
     }
+  }
+
+  /// Selected snapshot ID for actions panel
+  String? selectedSnapshotId;
+
+  void setSelectedSnapshotId(String? snapshotId) {
+    selectedSnapshotId = snapshotId;
+    emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
   }
 }

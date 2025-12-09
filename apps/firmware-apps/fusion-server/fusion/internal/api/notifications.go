@@ -19,6 +19,7 @@ const (
 	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete   NotifyOp = "snapshot_delete"
+	NotifyOpSnapSave     NotifyOp = "snapshot_save"
 	NotifyOpTaskCreate   NotifyOp = "task_create"
 	NotifyOpTaskDelete   NotifyOp = "task_delete"
 	NotifyOpTaskUpdate   NotifyOp = "task_update"

@@ -24,7 +24,11 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../configuration_page/pages/configuration_page.dart';
+import '../../configuration_page/pages/configuration_processing_page.dart';
+import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../configuration_page/pages/configuration_processing_page.dart';
+import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../scheduling/view/scheduling_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -282,6 +286,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _engine?.dispose();
     _floorCanvasController.dispose();
 
+    /// Reset configuration menu mode to processing on dispose
+    _projectViewModel.setConfigurationMenuMode(ConfigurationMenuMode.processing);
+
     super.dispose();
   }
 
@@ -502,8 +509,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             return switch (_projectViewModel.currentConfigurationMenuMode) {
-              ConfigurationMenuMode.processing => const ConfigurationPage(),
-              ConfigurationMenuMode.presets => const Center(
+              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+              // add all othere
+              ConfigurationMenuMode.events => const Center(
                 child: FusionAppText(
                   text: "Presets Configuration Page",
                 ),

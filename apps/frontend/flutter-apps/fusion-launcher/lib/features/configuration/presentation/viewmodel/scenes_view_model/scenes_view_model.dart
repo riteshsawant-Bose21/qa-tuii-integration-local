@@ -210,6 +210,15 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
+  SnapshotsModel? getSnapshotById({required String sceneId}) {
+    try {
+      return projectManager.getSnapshotById(sceneId);
+    } catch (e) {
+      throwError("Get Scene By Id Error  ${e.toString()}");
+      return null; // return empty scene model on error
+    }
+  }
+
   //Scene set
   void addNewSceneSet({required SceneSetModel sceneSet, bool autoSave = true}) {
     try {
@@ -304,7 +313,7 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SnapshotsModel> getSnapshotInSceneSet(String sceneSetId) {
+  List<SnapshotsModel> getSnapshotInSceneSet({required String sceneSetId}) {
     try {
       return projectManager.getSnapshotInSceneSet(sceneSetId);
     } catch (e) {

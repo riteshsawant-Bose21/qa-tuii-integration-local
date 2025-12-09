@@ -206,7 +206,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 			return
 		}
 
-		logger.Debug("[Delegate] SnapActivate on %s for %s (from=%s)",
+		logger.Info("[Delegate] SnapActivate on %s for %s (from=%s)",
 			d.appConfig.NodeName,
 			message.SnapshotOperation.Name,
 			message.Node,
@@ -224,6 +224,11 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpSnapDelete:
 		if err := d.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapSave:
+		if err := d.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
+			logger.Error("Error saving snapshot: %v", err)
 		}
 
 	case api.NotifyOpTaskCreate:
