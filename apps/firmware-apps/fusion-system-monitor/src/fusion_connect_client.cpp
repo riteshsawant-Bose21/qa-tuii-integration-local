@@ -994,7 +994,7 @@ void FusionConnectClient::audio_streams_update_func() {
 
 void FusionConnectClient::process() { 
     if (!ptp_synchronized) {
-        if (!nl_set_ptp_sync_raw(c, true)) {
+        if (!nl_set_ptp_sync_raw(client, true)) {
             SPDLOG_ERROR("PTP: failed to set PTP sync over netlink");
         } else {
             ptp_synchronized = 1;
