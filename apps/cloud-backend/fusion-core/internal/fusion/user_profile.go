@@ -10,5 +10,5 @@ type UserProfile interface {
 	GetUserProfile(ctx context.Context, userID string) (*types.UserProfile, error)
 	CreateUserProfile(ctx context.Context, userProfileDetails *types.UserProfile) error
 	UpdateUserProfile(ctx context.Context, userProfileDetails *types.UserProfile) error
-	CreateUserProfileForRegistration(ctx context.Context, userID string) error
+	CreateUserProfileForRegistration(ctx context.Context, profileData *types.UserProfile) error
 }
