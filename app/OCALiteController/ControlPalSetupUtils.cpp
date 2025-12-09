@@ -23,6 +23,10 @@
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <unistd.h>
 #include <iostream>
+#ifndef STM32H7S7xx
+#include "cmsis_os2.h"
+#include "PlatformInterface/stm32/OcaPlatformSTM32.h"
+#endif
 #include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
@@ -30,9 +34,10 @@
 #include "workers/ControlPalGainActuator.h"
 #include "workers/ControlPalMuteActuator.h"
 #include "workers/ControlPalSwitchActuator.h"
+#include "ControlPalOcaUtils.h"
 #include "ControlPalSetupUtils.h"
 
-
+#ifndef STM32H7S7xx
 // Helper functions
 void DisplayDiscoveredDevices(
         const std::vector<OcaServiceDiscovery::DiscoveredDevice> &devices)
@@ -54,6 +59,7 @@ void DisplayDiscoveredDevices(
     }
     OCA_LOG_INFO("===============================");
 }
+#endif
 
 ::OcaBoolean ConnectToDevice(
                      const OcaServiceDiscovery::DiscoveredDevice &device,
@@ -83,22 +89,32 @@ void DisplayDiscoveredDevices(
     return rc;
 }
 
+void DisconnectFromDevice(::OcaSessionID& sessionId, ::OcaONo networkONo)
+{
+    OCA_LOG_INFO("Disconnecting  from device ...");
+
+    // Attempt disconnection
+    ::OcaLiteCommandHandlerController::GetInstance().Disconnect(sessionId, networkONo);
+
+}
+
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
                                     FusionProxy& proxy,
                                     Controller& controllerCfg)
 {
-    Controller newController;
     OCA_LOG_INFO_PARAMS("Using controller ID: %s",
                         controllerId.GetString().c_str());
 
     ::OcaLiteString configData;
+
     OCA_LOG_INFO_PARAMS("Calling OcaControllerConfigManager_GetConfigDetails with ONO %u...", CONTROLLER_CONFIG_MANAGER_ONO);
+
+    OCA_LOG_INFO("Checking for Configuration ..");
     OcaLiteStatus status =
         proxy.OcaControllerConfigManager_GetConfigDetails(
                                         CONTROLLER_CONFIG_MANAGER_ONO,
                                         controllerId,
                                         configData);
-
     if (OCASTATUS_OK == status)
     {
         OCA_LOG_INFO_PARAMS("✓ Successfully retrieved configuration data (%zu characters):", configData.GetString().length());
@@ -116,7 +132,8 @@ void DisplayDiscoveredDevices(
         OCA_LOG_INFO("=== End Configuration JSON ===");
 
         // Deserialize the JSON using ZoneConfigBuilder
-        std::shared_ptr<Controller> newController = JsonStringToWallController(jsonStr);
+        std::shared_ptr<Controller> newController =
+                            JsonStringToWallController(jsonStr);
 
         // Check if requested ID matches received data
         if (newController && (newController->id == controllerId.GetString()))
@@ -156,30 +173,6 @@ void DisplayDiscoveredDevices(
             status = OCASTATUS_PARAMETER_ERROR;
             OCA_LOG_WARNING("✗ Failed to parse JSON configuration data");
         }
-    }
-    else
-    {
-        OCA_LOG_ERROR_PARAMS("✗ Failed to retrieve configuration data, status: %u (0x%X)", status, status);
-        if (status == OCASTATUS_PROCESSING_FAILED)
-            OCA_LOG_ERROR("Status OCASTATUS_PROCESSING_FAILED");
-        else if (status == OCASTATUS_BAD_FORMAT)
-            OCA_LOG_ERROR("Status OCASTATUS_BAD_FORMAT");
-        else if (status == OCASTATUS_BAD_ONO)
-            OCA_LOG_ERROR("Status OCASTATUS_BAD_ONO");
-        else if (status == OCASTATUS_PARAMETER_ERROR)
-            OCA_LOG_ERROR("Status OCASTATUS_PARAMETER_ERROR");
-        else if (status == OCASTATUS_PARAMETER_OUT_OF_RANGE)
-            OCA_LOG_ERROR("Status OCASTATUS_PARAMETER_OUT_OF_RANGE");
-        else if (status == OCASTATUS_NOT_IMPLEMENTED)
-            OCA_LOG_ERROR("Status OCASTATUS_NOT_IMPLEMENTED");
-        else if (status == OCASTATUS_INVALID_REQUEST)
-            OCA_LOG_ERROR("Status OCASTATUS_INVALID_REQUEST");
-        else if (status == OCASTATUS_LOCKED)
-            OCA_LOG_ERROR("Status OCASTATUS_LOCKED");
-        else if (status == OCASTATUS_BAD_METHOD)
-            OCA_LOG_ERROR("Status OCASTATUS_BAD_METHOD");
-        else
-            OCA_LOG_ERROR_PARAMS("Status %u: Unknown error code", status);
     }
 
     return status;
@@ -346,8 +339,12 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
                                      newGainObj->GetObjectNumber(),
                                      gainVal);
 
+        // Send Min & Max gain value for block
+        newGainObj->SendConfiguration();
+
         // Also sends updated value to front-end
         newGainObj->SetGain(gainVal);
+        newGainObj->SendValue();  // Force send, incase of no change from prev
 
         // Get & Set Mute state
         ::OcaLiteMuteState state;
@@ -388,15 +385,6 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         size_t deviceCount(0);
         uint8_t retry_cnt(0);
 
-        // NOTE: In the case of a retry after a Device disconnect,
-        //       discovery could find the service and resolve the address
-        //       even if the Device is down. This is due to records not
-        //       getting cleared from the DNS server.
-        //       It will however fail to establish connection when it tries
-        //       to connect. This can be mitigated to some extent if aging
-        //       and scavenging are enabled on the DNS server.
-        deviceCount = discovery.WaitForDevices(1000);
-
         // Retry loop
         while ( (deviceCount <= 0 ) && (retry_cnt++ < 10))
         {
@@ -407,7 +395,9 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         {
             auto discoveredDevices = discovery.GetDiscoveredDevices();
 
+#ifndef STM32H7S7xx
             DisplayDiscoveredDevices(discoveredDevices);
+#endif
 
             // Connect to the first discovered device
             const auto &selectedDevice = discoveredDevices[0];
@@ -426,6 +416,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
     {
         OCA_LOG_INFO("✓ Service discovery and connection successful!");
     }
+
     return retVal;
 }
 
@@ -436,6 +427,10 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
                                         std::vector<::OcaONo>& zoneONo)
 {
     ::OcaBoolean bSuccess(false);
+#ifdef STM32H7S7xx
+    extern osSemaphoreId_t guiStartSemaphoreId;
+#endif
+
     Controller controllerCfg;
 
     if (OCASTATUS_OK == GetControllerConfig(controllerId,
@@ -444,6 +439,10 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
     {
         if (controllerCfg.zones.size() > 0)
         {
+#ifdef STM32H7S7xx
+            osSemaphoreRelease(guiStartSemaphoreId);
+#endif
+
             ControlPal_MsgQueue<ControllerCmdIntfc> *ocaQue =
                 static_cast<ControlPal_MsgQueue<ControllerCmdIntfc>*>(commandQueue);
             ControllerCmdIntfc cfgCmd;

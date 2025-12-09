@@ -23,7 +23,7 @@ class ControlPalConnectionMonitor :
 {
     public:
 
-        ControlPalConnectionMonitor(::OcaONo objectNumber) :
+        ControlPalConnectionMonitor(::OcaONo objectNumber, ::OcaLiteList< ::OcaLitePort> &mgr_ports) :
             ::OcaLiteBooleanActuator(
                     objectNumber, static_cast<::OcaBoolean> (true),
                     static_cast<const ::OcaLiteString>("ConnectionMonitor"),
@@ -47,8 +47,5 @@ class ControlPalConnectionMonitor :
             // Signal connection Lost
             SetSetting(static_cast<::OcaBoolean>(false));
         }
-
-    private:
-        const ::OcaLiteList< ::OcaLitePort> mgr_ports;
 };
 #endif // CONTROL_PAL_CONNECTION_MGR_H_

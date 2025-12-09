@@ -4,7 +4,7 @@
 #include "ZoneGroup.h"
 
 // No additional logic yet; placeholder for future aggregation/event features.
-::OcaLiteList<::OcaLitePort> ZoneGroup::s_emptyPorts;
+//::OcaLiteList<::OcaLitePort> ZoneGroup::s_emptyPorts;
 
 #ifdef OCA_LITE_CONTROLLER
 void ZoneGroup::SendValue()

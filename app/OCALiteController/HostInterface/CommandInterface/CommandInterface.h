@@ -17,12 +17,15 @@ typedef enum commands  : uint32_t
     CTRL_CMD_SOURCE_3_SET,     // "name" (CMD_INTFC_MAX_STRING_LENGTH chars)
     CTRL_CMD_SOURCE_4_SET,     // "name" (CMD_INTFC_MAX_STRING_LENGTH chars)
     CTRL_CMD_SOURCE_5_SET,     // "name" (CMD_INTFC_MAX_STRING_LENGTH chars)
+    CTRL_CMD_GAIN_MIN_VAL,     // <float>
+    CTRL_CMD_GAIN_MAX_VAL,     // <float>
     CTRL_CMD_GAIN_GET,         // none
     CTRL_CMD_MUTE_GET,         // none
     CTRL_CMD_SOURCE_GET,       // <uint32> (Current position) 
     CTRL_CMD_GAIN_SET,         // <float>, delta value (+x incr., -x decr.)
     CTRL_CMD_MUTE_SET,         // <uint32> (state=1/2)
     CTRL_CMD_SOURCE_SET,       // <uint32> (New Position) 
+    // Sideband  Commands start here
     CTRL_CMD_WINK_SET,         // <uint32> (on/off)
     CTRL_CMD_REV_WINK_SET,     // <uint32> (on/off)
     CTRL_CMD_MAX

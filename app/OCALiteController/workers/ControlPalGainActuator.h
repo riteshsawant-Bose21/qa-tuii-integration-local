@@ -73,21 +73,35 @@ public:
     }
 
     void SendValue();
+    void SendConfiguration();
 
     ::OcaDB LastGainGet()
     {
         return m_lastGainSet;
     }
 
+    ::OcaDB LastUIGainGet()
+    {
+        return m_lastUIGainSet;
+    }
+
     void LastGainSet(::OcaDB val)
     {
+        m_gainSetCount++;
         m_lastGainSet = GAIN_VALUE_ROUND(val);
+        m_lastUIGainSet = GAIN_VALUE_ROUND(val);
     }
 
     bool UpdatesDone()
     {
         return (m_lastGainSet == static_cast<::OcaDB>(GAIN_UPDATE_SENTINEL));
     }
+
+    void ClearSentCount()
+    {
+        m_gainSetCount = 0;
+    }
+
 protected:
     /**
      * Set the value of the Gain property. This method performs the actual
@@ -105,7 +119,14 @@ private:
     // ONo of the ZoneBlock
     ::OcaONo    m_zoneONo;
 
-    ::OcaDB     m_lastGainSet;
+    ::OcaDB     m_lastGainSet;   // The is use to store the last gain set.
+                                 // This is used to compute the delta.
+
+    ::OcaDB     m_lastUIGainSet; // This is the Gain that the UI
+                                 // is currently set to.
+
+    uint32_t    m_gainSetCount;  // Used to track the UI commands and
+                                 // ACKs from Device match
 
     /** private copy constructor, no copying of object allowed */
     ControlPalGainActuator(const ControlPalGainActuator &);

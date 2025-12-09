@@ -37,19 +37,20 @@
 #include "ControlPalConnectionMonitor.h"
 #include "ControlPalCommandHandler.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
+
+#ifndef STM32H7S7xx
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#else
+#include "PlatformInterface/stm32/OcaPlatformSTM32.h"
+#endif
+
 #include "ControlPalSideBandInterface.h"
 
 #define OCA_RUN_TIMEOUT_MSEC    500
 
-#ifdef OCA_RUN
 extern void Ocp1LiteServiceRun();
-#else
-extern void Ocp1LiteServiceRunWithFdSet(fd_set *readSet);
-extern int Ocp1LiteServiceGetSocket();
-#endif
 
-extern bool terminateFlag;  // Defined in ControllerMenu.cpp
+bool terminateFlag(false);
 
 bool ocaMain(std::string& customNodeId,
                 std::vector<ControlPal_MsgQueue<ControllerCmdIntfc>*> msgQues)
@@ -77,7 +78,7 @@ bool ocaMain(std::string& customNodeId,
 
         // Initialize network manager
         bSuccess =
-         static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
+            static_cast<bool>(::OcaLiteNetworkManager::GetInstance().Initialize());
 
         if (bSuccess)
         {
@@ -85,7 +86,7 @@ bool ocaMain(std::string& customNodeId,
 
             // Create a controller network object (no server port)
             Ocp1LiteNetworkSystemInterfaceID interfaceId =
-               ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
+                ::Ocp1LiteNetworkSystemInterfaceID(static_cast<::OcaUint32>(0));
             std::vector<std::string> txtRecords; // Empty for controller
 
             // Use custom node ID if provided, otherwise use auto-generated
@@ -94,12 +95,13 @@ bool ocaMain(std::string& customNodeId,
             {
                 nodeId = ::OcaLiteString(customNodeId);
                 OCA_LOG_INFO_PARAMS("Using custom node ID: %s",
-                                     customNodeId.c_str());
+                        customNodeId.c_str());
             }
             else
             {
                 nodeId = ::OcaLiteString("OCALiteController@" + OcfLiteConfigureGetDeviceName());
-                OCA_LOG_INFO_PARAMS("Using auto-generated node ID: %s", nodeId.GetString().c_str());
+                OCA_LOG_INFO_PARAMS("Using auto-generated node ID: %s",
+                                           nodeId.GetString().c_str());
             }
 
             // Create network with port 0 (no server socket)
@@ -127,10 +129,13 @@ bool ocaMain(std::string& customNodeId,
 
                     if (bSuccess)
                     {
+                        ::OcaLitePort dummy;
+                        ::OcaLiteList< ::OcaLitePort> mgr_ports(0, &dummy);
+
                         // Create Connection Monitor Object
                         ControlPalConnectionMonitor *connMonitor =
-                                          new ControlPalConnectionMonitor(
-                                                   FUSION_CONNECTION_MON_ONO);
+                            new ControlPalConnectionMonitor(
+                                    FUSION_CONNECTION_MON_ONO, mgr_ports);
                         if (connMonitor)
                         {
                             if (::OcaLiteBlock::GetRootBlock().AddObject(*connMonitor))
@@ -145,9 +150,9 @@ bool ocaMain(std::string& customNodeId,
                                 // read from Flash config partition
 
                                 ::OcaLiteString controllerId =
-                                            customNodeId.empty() ?
-                                            ::OcaLiteString("ctrl1") :
-                                            ::OcaLiteString(customNodeId);
+                                    customNodeId.empty() ?
+                                    ::OcaLiteString("ctrl1") :
+                                    ::OcaLiteString(customNodeId);
 
                                 // TODO: Should be set at discovery
                                 //std::string fservHost("192.168.0.167");
@@ -156,94 +161,127 @@ bool ocaMain(std::string& customNodeId,
 
                                 // Create SidebandInterface object
                                 SidebandInterface fusionServerConn(
-                                                           controllerId.GetString(),
-                                                           fservHost,
-                                                           fservPort,
-                                                           static_cast<void *>(ocaMsgQueue));
+                                        controllerId.GetString(),
+                                        fservHost,
+                                        fservPort,
+                                        static_cast<void *>(ocaMsgQueue));
 
                                 while(!terminateFlag)
                                 {
-                                  // Establish Fusion server sideband connection
-                                  if (fusionServerConn.connect())
-                                  {
-                                      // Wait for side-band 'identity' request
-                                      while (!fusionServerConn.IsIdentified())
-                                      {
-                                          fusionServerConn.messageHandler();
-                                      }
-                                      std::cout << " =========> IDENTIFIED SUCESSFULLY" << std::endl;
+                                    // Establish Fusion server sideband connection
+                                    if (fusionServerConn.sideBandConnect())
+                                    {
+                                        // Wait for side-band 'identity' request
+                                        while (!fusionServerConn.IsIdentified())
+                                        {
+                                            fusionServerConn.messageHandler();
+                                        }
+                                        std::cout << " =========> IDENTIFIED SUCESSFULLY" << std::endl;
+                                        OcaPlatform::Sleep(10);
 
-                                      // Setup AES connection to the Device
-                                      if (ControlPalSetupConnection(sessionId))
-                                      {
-                                          // Set connected status to true
-                                          connMonitor->SetSetting(static_cast<OcaBoolean>(true));
+                                        // Setup AES connection to the Device
+                                        if (ControlPalSetupConnection(sessionId))
+                                        {
+                                            // Set connected status to true
+                                            connMonitor->SetSetting(static_cast<OcaBoolean>(true));
 
-                                          ::GeneralProxy proxy(
-                                                  sessionId,
-                                                  ocp1Network->GetObjectNumber());
-                                          OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u",
-                                                  sessionId, ocp1Network->GetObjectNumber());
+                                            ::GeneralProxy proxy(
+                                                    sessionId,
+                                                    ocp1Network->GetObjectNumber());
+                                            OCA_LOG_INFO_PARAMS("Created proxy with session ID: %u, network ONO: %u",
+                                                    sessionId, ocp1Network->GetObjectNumber());
 
-                                          // Holds ONo of each zone assigned
-                                          // to the controller
-                                          std::vector<::OcaONo> zoneONos;
+                                            // Holds ONo of each zone assigned
+                                            // to the controller
+                                            std::vector<::OcaONo> zoneONos;
 
-                                          FusionProxy fusion_proxy(
-                                                  sessionId,
-                                                  ocp1Network->GetObjectNumber());
+                                            FusionProxy fusion_proxy(
+                                                    sessionId,
+                                                    ocp1Network->GetObjectNumber());
 
-                                          // Create and setup control objects
-                                          if (ControlPalSetupControls(
-                                                      controllerId,
-                                                      proxy,
-                                                      fusion_proxy,
-                                                      static_cast<void *>(ocaMsgQueue),
-                                                      zoneONos))
-                                          {
-                                              ::OcaBoolean connectStatus(true);
+                                            // Create and setup control objects
+                                            ::OcaBoolean connectStatus(true);
 
-                                              while (connectStatus  && !terminateFlag)
-                                              {
-                                                  // Wait for Events from Device
-                                                  ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+                                            if (ControlPalSetupControls(
+                                                        controllerId,
+                                                        proxy,
+                                                        fusion_proxy,
+                                                        static_cast<void *>(ocaMsgQueue),
+                                                        zoneONos))
+                                            {
 
-                                                  // Check side-band for messages
-                                                  fusionServerConn.messageHandler();
+                                                while (connectStatus  && !terminateFlag)
+                                                {
+                                                    // Wait for Events from Device
+                                                    ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
-                                                  //Check for local UI command
-                                                  {
-                                                      ControlPalUICommandHandler(
-                                                              uiMsgQueue,
-                                                              zoneONos,
-                                                              fusion_proxy,
-                                                              fusionServerConn);
-                                                  }
+                                                    // Check side-band for messages
+                                                    fusionServerConn.messageHandler();
 
-                                                  // Check Connection status
-                                                  connMonitor->GetSetting(
-                                                          connectStatus);
-                                              }
+                                                    //Check for local UI command
+                                                    {
+                                                        ControlPalUICommandHandler(
+                                                                uiMsgQueue,
+                                                                zoneONos,
+                                                                fusion_proxy,
+                                                                fusionServerConn);
+                                                    }
 
-                                              // Connection lost, teardown all
-                                              // the control objects
-                                              ControlPalTeardownControls(
-                                                      zoneONos);
-                                          }
-                                          else
-                                          {
-                                              OCA_LOG_ERROR("✗ SetupControls failed");
-                                          }
-                                      }
-                                      else
-                                      {
-                                          OCA_LOG_ERROR("✗ Failed to Setup Connection");
-                                      }
-                                  }
-                                  else
-                                  {
-                                      OCA_LOG_ERROR("✗ Failed Fusion Server Connection (SB)");
-                                  }
+                                                    // Check Connection status
+                                                    connMonitor->GetSetting(
+                                                            connectStatus);
+                                                }
+
+                                                // Connection lost, teardown all
+                                                // the control objects
+                                                ControlPalTeardownControls(
+                                                        zoneONos);
+                                            }
+                                            else
+                                            {
+                                                OCA_LOG_ERROR("✗ SetupControls failed");
+                                                while (connectStatus &&
+                                                        !terminateFlag)
+                                                {
+                                                    // Wait for Events from Device
+                                                    ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+
+                                                    // Check Connection status
+                                                    connMonitor->GetSetting(
+                                                            connectStatus);
+                                                }
+                                            }
+
+                                            // OCA disconnect
+                                            DisconnectFromDevice(
+                                                    sessionId,
+                                                    FUSION_NETWORK_ONO);
+
+                                        }
+                                        else
+                                        {
+                                            OCA_LOG_ERROR("✗ Failed to Setup Connection");
+                                        }
+
+#ifdef STM32H7S7xx
+                                        // Reset discovery
+                                        reset_oca_service_discovery();
+#endif
+
+                                        // Sideband disconnect
+                                        fusionServerConn.sideBandDisconnect();
+
+                                    }
+                                    else
+                                    {
+                                        OCA_LOG_ERROR("✗ Failed Fusion (Sideband) Server Connection ");
+                                    }
+
+                                    // Wait for Events from Device (Keep alives)
+                                    ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
+
+                                    OcaPlatform::Sleep(9000);
+
                                 }
 
                             }

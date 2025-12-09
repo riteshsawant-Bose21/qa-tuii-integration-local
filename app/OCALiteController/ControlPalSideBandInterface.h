@@ -27,9 +27,6 @@
 #include <vector>
 #include <signal.h>
 #include <unistd.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <netdb.h>
 #include <cstring>
 #include <iomanip>
@@ -74,7 +71,7 @@ class SidebandInterface : public ControlPalMsgInterface<ControllerCmdIntfc>
             }
 
         ~SidebandInterface() {
-            disconnect();
+            sideBandDisconnect();
         }
 
         bool sendMessage(const std::string& json);
@@ -109,9 +106,11 @@ class SidebandInterface : public ControlPalMsgInterface<ControllerCmdIntfc>
     public:
         void messageHandler();
 
-        bool connect();
+        bool sideBandDiscovery(OcaServiceDiscovery &discovery);
 
-        void disconnect();
+        bool sideBandConnect();
+
+        void sideBandDisconnect();
 
         bool IsIdentified()
         {

@@ -12,7 +12,11 @@
 // ---- Include system wide include files ----
 
 // ---- Include local include files ----
+#ifdef STM32H7S7xx
+#include "PlatformInterface/stm32/OcaPlatformSTM32.h"
+#else
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#endif
 
 // ---- Referenced classes and types ----
 

@@ -78,12 +78,14 @@ inline std::shared_ptr<Controller> JsonStringToWallController(const std::string 
 
     if (!reader.parse(jsonString, root))
     {
-        throw std::runtime_error("Failed to parse JSON: " + reader.getFormattedErrorMessages());
+        OCA_LOG_ERROR_PARAMS("Failed to parse JSON: %s", reader.getFormattedErrorMessages());
+        return NULL;
     }
 
     if (!root.isObject())
     {
-        throw std::runtime_error("JSON root must be an object");
+        OCA_LOG_ERROR("JSON root must be an object");
+        return NULL;
     }
 
     auto controller = std::make_shared<Controller>();

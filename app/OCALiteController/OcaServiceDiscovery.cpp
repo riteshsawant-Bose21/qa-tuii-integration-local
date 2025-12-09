@@ -15,19 +15,26 @@
 #include <unistd.h>
 
 // ---- Include local include files ----
+
+#include <sys/socket.h>
+#include <arpa/inet.h>
+
+#ifndef STM32H7S7xx
+#include <netdb.h>
+#include <netinet/in.h>
+#else
+#include "dnssd.h"
+#endif
+
+#include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 #include "OcaServiceDiscovery.h"
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
-#include <netdb.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
-#include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
-
 // ---- Helper functions ----
 
 /**
  * Convert DNS-SD error code to string
  */
+#ifndef STM32H7S7xx
 static const char *DNSServiceErrorToString(DNSServiceErrorType error)
 {
     switch (error)
@@ -82,11 +89,16 @@ static const char *DNSServiceErrorToString(DNSServiceErrorType error)
         return "Unknown DNS-SD Error";
     }
 }
+#endif
 
 // ---- Class Implementation ----
 
 OcaServiceDiscovery::OcaServiceDiscovery()
+#ifndef STM32H7S7xx
     : m_isDiscovering(false), m_browseService(nullptr), m_listLocked(false)
+#else
+    : m_isDiscovering(false), m_listLocked(false)
+#endif
 {
     OCA_LOG_INFO("OcaServiceDiscovery created");
 }
@@ -110,6 +122,7 @@ bool OcaServiceDiscovery::StartDiscovery()
     // Clear any previous discoveries
     m_discoveredDevices.clear();
 
+#ifndef STM32H7S7xx
     // Start browsing for _oca._tcp services
     DNSServiceErrorType error = DNSServiceBrowse(&m_browseService,
                                                  0, // flags
@@ -121,9 +134,13 @@ bool OcaServiceDiscovery::StartDiscovery()
 
     if (error != kDNSServiceErr_NoError)
     {
-        OCA_LOG_ERROR_PARAMS("Failed to start DNS-SD browse: %s", DNSServiceErrorToString(error));
+        OCA_LOG_ERROR_PARAMS("Failed to start DNS-SD browse: %s",
+                                    DNSServiceErrorToString(error));
         return false;
     }
+#else
+    send_oca_service_discovery();
+#endif
 
     m_isDiscovering = true;
     OCA_LOG_INFO_PARAMS("Successfully started browsing for %s services", OCA_SERVICE_TYPE);
@@ -133,6 +150,7 @@ bool OcaServiceDiscovery::StartDiscovery()
 
 void OcaServiceDiscovery::StopDiscovery()
 {
+#ifndef STM32H7S7xx
     if (!m_isDiscovering)
     {
         return;
@@ -162,14 +180,17 @@ void OcaServiceDiscovery::StopDiscovery()
 
     m_isDiscovering = false;
     OCA_LOG_INFO("Service discovery stopped");
+#endif
 }
 
 std::vector<OcaServiceDiscovery::DiscoveredDevice> OcaServiceDiscovery::GetDiscoveredDevices() const
 {
+#ifndef STM32H7S7xx
     while (m_listLocked)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+#endif
     return m_discoveredDevices;
 }
 
@@ -186,18 +207,55 @@ size_t OcaServiceDiscovery::WaitForDevices(uint32_t timeoutMs)
     auto startTime = std::chrono::steady_clock::now();
     auto timeoutDuration = std::chrono::milliseconds(timeoutMs);
 
+    size_t deviceCount = 0;
     while (std::chrono::steady_clock::now() - startTime < timeoutDuration)
     {
+#ifndef STM32H7S7xx
         ProcessEvents();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+#else
+        ProcessUDPData();
+
+        // TODO: Check if discovered
+        if (is_oca_service_discovery_complete())
+        {
+            // TODO: This has to be cleaned up and more cleanly integrated
+            DiscoveredDevice newDevice;
+            oca_service_info_t serviceInfo;
+
+            get_oca_service_info(&serviceInfo);
+
+            newDevice.name = serviceInfo.service_name;
+            //newDevice.name = std::string(serviceInfo.service_name);
+            newDevice.hostname = serviceInfo.ip_address;
+            newDevice.port = serviceInfo.port;
+            newDevice.protocolVersion = 1;
+            newDevice.isValid = true;
+
+            AddDiscoveredDevice(newDevice);
+            deviceCount = 1; // Currently, only single device is handled.
+
+            break;
+        }
+
+       // Not found. Retry.
+        if (ERR_OK != send_oca_service_discovery())
+        {
+            std::cout << "Failed to send Discovery Messagea ERR: " << std::endl;
+        }
+        OcaPlatform::Sleep(100);
+#endif
     }
 
-    size_t deviceCount = m_discoveredDevices.size();
+#ifndef STM32H7S7xx
+    deviceCount = m_discoveredDevices.size();
+#endif
     OCA_LOG_INFO_PARAMS("Discovery completed. Found %zu OCA device(s)", deviceCount);
 
     return deviceCount;
 }
 
+#if OCA_DISCOVERY_ENABLED
 const OcaServiceDiscovery::DiscoveredDevice *OcaServiceDiscovery::GetDeviceByName(const std::string &name) const
 {
     auto it = std::find_if(m_discoveredDevices.begin(), m_discoveredDevices.end(),
@@ -333,6 +391,7 @@ void OcaServiceDiscovery::StartResolve(const std::string &serviceName,
 
     m_resolveServices[serviceName] = resolveService;
 }
+#endif
 
 std::map<std::string, std::string> OcaServiceDiscovery::ParseTXTRecords(const unsigned char *txtRecord, uint16_t txtLen)
 {
@@ -441,13 +500,16 @@ void OcaServiceDiscovery::AddDiscoveredDevice(const DiscoveredDevice &device)
 
     m_listLocked = false;
 
+#ifndef STM32H7S7xx
     // Call callback if set
     if (m_deviceFoundCallback)
     {
         m_deviceFoundCallback(device);
     }
+#endif
 }
 
+#ifndef STM32H7S7xx
 void OcaServiceDiscovery::RemoveDevice(const std::string &serviceName)
 {
     m_listLocked = true;
@@ -574,3 +636,4 @@ std::string OcaServiceDiscovery::ResolveHostnameToIP(const std::string &hostname
     OCA_LOG_TRACE_PARAMS("Resolved %s to %s", hostname.c_str(), ipAddress.c_str());
     return ipAddress;
 }
+#endif

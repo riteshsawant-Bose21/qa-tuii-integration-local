@@ -28,7 +28,6 @@
 #include <OCC/ControlDataTypes/OcaLiteMethod.h>
 #include <unistd.h>
 #include <iostream>
-#include <sys/time.h>
 #include "../common/models/Models.h"  // For deserializing JSON configuration
 #include "../common/models/WallControllerConfigParser.h"  // For deserializing JSON configuration
 #include "../common/FusionOCAConstants.h" // For custom ONO constants
@@ -39,6 +38,11 @@
 #include "ControlPalCommandHandler.h"
 #include "ControlPalOcaUtils.h"
 #include "ControlPalSideBandInterface.h"
+#ifdef STM32H7S7xx
+#include "../PlatformInterface/stm32/OcaPlatformSTM32.h"
+#else
+#include <sys/time.h>
+#endif
 
 bool CheckNewMessages(ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
                       ControllerCmdIntfc& newCmd)
@@ -92,21 +96,20 @@ void ProcessOcaCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                 ::ControlPalGainActuator *gainObj =
                     static_cast<::ControlPalGainActuator*>(target);
 
+                // Get min & max Gain
+                    static_cast<::ControlPalGainActuator*>(target)->GetGain(
+                            currGain,   //Throwaway
+                            minGain,
+                            maxGain);
+
                 // Verify no gain updates are currently in progress
                 if (gainObj->UpdatesDone())
                 {
-                    // Get current Gain
-                    static_cast<::ControlPalGainActuator*>(target)->GetGain(
-                            currGain,
-                            minGain,
-                            maxGain);
-                }
-                else
-                {
-                    currGain = gainObj->LastGainGet();
+                    // All acks received
+                    gainObj->ClearSentCount();
                 }
 
-                currGain += newCmd.val.flt_val;
+                currGain = newCmd.val.flt_val;
 
                 // Clamp gain value
                 if (currGain < minGain)
@@ -118,11 +121,14 @@ void ProcessOcaCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                     currGain = maxGain;
                 }
 
-                gainObj->LastGainSet(currGain);
+                if (gainObj->LastUIGainGet() != currGain)
+		{
+			gainObj->LastGainSet(currGain);
 
-                // Send message to Device
-                fusion_proxy.ConcreteGainActuator_SetGain(
-                        target->GetObjectNumber(), currGain);
+			// Send message to Device
+			fusion_proxy.ConcreteGainActuator_SetGain(
+				target->GetObjectNumber(), currGain);
+		}
             }
             break;
 
@@ -158,13 +164,22 @@ void ProcessOcaCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                 ::OcaUint16 newPos, minPos, maxPos;
                 static_cast<::ControlPalSwitchActuator*>(target)->GetPosition(
                                                     newPos, minPos, maxPos);
-
+#ifdef STM32H7S7xx
+                if ( (newCmd.val.int_val <= maxPos) &&
+                     (newCmd.val.int_val >= minPos) )
+                {
+                    // Send message to Device
+                    fusion_proxy.ConcreteSwitchActuator_SetSwitch(
+                            target->GetObjectNumber(), newCmd.val.int_val);
+                }
+#else
                 // Move to next position
                 newPos = (newPos +1) % (maxPos - minPos + 1);
 
                 // Send message to Device
                 fusion_proxy.ConcreteSwitchActuator_SetSwitch(
                          target->GetObjectNumber(), newPos);
+#endif
             }
             break;
 
@@ -225,7 +240,7 @@ void ControlPalUICommandHandler(
 {
     ControllerCmdIntfc newCmd;
 
-    if (CheckNewMessages(cmdQueue, newCmd))
+    while (CheckNewMessages(cmdQueue, newCmd))
     {
         // Check if Sideband message
         if ((newCmd.cmd >= CTRL_CMD_REV_WINK_SET) &&

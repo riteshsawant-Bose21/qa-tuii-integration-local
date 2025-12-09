@@ -18,7 +18,7 @@ bool input_received = false;
 
 void read_input_thread(void *arg);
 void *readThread;
-bool terminateFlag(false);
+extern bool terminateFlag;
 
 ControllerMenu::ControllerMenu(std::string title, void *cmdQueue):
     ControlPalMsgInterface(cmdQueue),
