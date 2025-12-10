@@ -5,8 +5,6 @@
 #include "../../../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #include "../../../HostInterface/CommandInterface/CommandInterface.h"
 
-#define VIEW_GAIN_INCREMENT_STEP 1.0f    //0.5f
-
 extern bool terminateFlag; // Defined in ControllerMenu.cpp
 
 void GetNewMessages(ControlPal_MsgQueue<ControllerCmdIntfc> *cmdQueue,
@@ -25,14 +23,14 @@ void ViewIncreaseGain(ControllerCmdIntfc &msg)
 {
     // NOTE: ONo set in the calling fuction
     msg.cmd = CTRL_CMD_GAIN_SET;
-    msg.val.flt_val = VIEW_GAIN_INCREMENT_STEP;
+    msg.val.flt_val += VIEW_GAIN_INCREMENT_STEP;
 }
 
 void ViewDecreaseGain(ControllerCmdIntfc &msg)
 {
     // NOTE: ONo set in the calling fuction
     msg.cmd = CTRL_CMD_GAIN_SET;
-    msg.val.flt_val = -1.0 * VIEW_GAIN_INCREMENT_STEP;
+    msg.val.flt_val -= VIEW_GAIN_INCREMENT_STEP;
 }
 
 void ViewToggleMute(ControllerCmdIntfc &msg)
@@ -60,7 +58,7 @@ void ViewProcessMessages(ControllerMenu &m, ControllerCmdIntfc& newCmd)
 {
     // Handle configuration messages
     switch (newCmd.cmd)
-    { 
+    {
         case CTRL_CMD_GAIN_SET:
             m.setGain(newCmd.ono, newCmd.val.flt_val);
             break;
@@ -131,7 +129,7 @@ void ControllerViewProc(void *queue)
 
         // Handle configuration messages
         switch (newCmd.cmd)
-        { 
+        {
             case CTRL_CMD_ZONE_NAME_SET:
                 if ((currZoneONo !=0) && (currZoneONo != newCmd.ono))
                 {

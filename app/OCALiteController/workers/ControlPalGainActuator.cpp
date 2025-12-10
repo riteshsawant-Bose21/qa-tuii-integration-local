@@ -94,18 +94,17 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         double linearGain = dbToLinear(gain);
 
         // Call fn. to send GAIN value command to frontend task
-
         if ((m_gainSetCount == 0) || (m_lastGainSet == GAIN_UPDATE_SENTINEL))
         {
             SendValue();
         }
         else
         {
-        if (GAIN_VALUE_ROUND(gain) == LastGainGet())
-        {
-            // All gain notifications received, reset LastGain
-            m_lastGainSet = GAIN_UPDATE_SENTINEL;
-        }
+            if (GAIN_VALUE_ROUND(gain) == LastGainGet())
+            {
+                // All gain notifications received, reset LastGain
+                m_lastGainSet = GAIN_UPDATE_SENTINEL;
+            }
 
             m_gainSetCount--;
         }
