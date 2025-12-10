@@ -37,6 +37,11 @@ class ProjectService {
   final ZoneFunctionRepository zoneFunctions;
   final PrioritySourceDataRepository prioritySourceData;
   final EquipLocationRepository equipLocations;
+  final ScenesRepository snapshots;
+  final SceneActionRepository sceneActions;
+  final SceneSetRepository sceneSets;
+  final GPIORepository gpioConfigs;
+  final SchedulerRepository schedulerConfig;
 
   final RelationshipManager relationships;
 
@@ -79,6 +84,11 @@ class ProjectService {
     ZoneFunctionRepository? zoneFunctions,
     PrioritySourceDataRepository? prioritySourceData,
     EquipLocationRepository? equipLocations,
+    ScenesRepository? scenesRepository,
+    SceneActionRepository? sceneActionRepository,
+    SceneSetRepository? sceneSetRepository,
+    GPIORepository? gpioRepository,
+    SchedulerRepository? schedulerConfig,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -95,6 +105,12 @@ class ProjectService {
        relationships = relationships ?? RelationshipManager(),
        prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
        equipLocations = equipLocations ?? EquipLocationRepository();
+       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
+       snapshots = scenesRepository ?? ScenesRepository(),
+       sceneActions = sceneActionRepository ?? SceneActionRepository(),
+       sceneSets = sceneSetRepository ?? SceneSetRepository(),
+       gpioConfigs = gpioRepository ?? GPIORepository(),
+       schedulerConfig = schedulerConfig ?? SchedulerRepository();
 
   ProjectService copyWith({
     String? id,
@@ -127,6 +143,11 @@ class ProjectService {
     bool? isInHardwareMode,
     PrioritySourceDataRepository? prioritySourceData,
     EquipLocationRepository? equipLocations,
+    ScenesRepository? scenesRepository,
+    SceneActionRepository? sceneActionRepository,
+    SceneSetRepository? sceneSetRepository,
+    GPIORepository? gpioRepository,
+    SchedulerRepository? schedulerConfig,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -159,6 +180,11 @@ class ProjectService {
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
       equipLocations: equipLocations ?? this.equipLocations,
+      scenesRepository: scenesRepository ?? snapshots,
+      sceneActionRepository: sceneActionRepository ?? sceneActions,
+      sceneSetRepository: sceneSetRepository ?? sceneSets,
+      gpioRepository: gpioRepository ?? gpioConfigs,
+      schedulerConfig: schedulerConfig ?? this.schedulerConfig,
     );
 
     // Preserve undo/redo stacks
@@ -213,6 +239,11 @@ class ProjectService {
       "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
       "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
       'equipLocations': equipLocations.toJson((el) => el.toJson()),
+      "snapshots": snapshots.toJson((s) => s.toJson()),
+      "sceneActions": sceneActions.toJson((sa) => sa.toJson()),
+      "sceneSets": sceneSets.toJson((ss) => ss.toJson()),
+      "gpioConfig": gpioConfigs.toJson((g) => g.toJson()),
+      "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
     };
   }
 
@@ -272,6 +303,12 @@ class ProjectService {
     service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
     service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
     service.equipLocations.fromJsonList(json['equipLocations'], (m) => EquipLocation.fromJson(m), 'id');
+    service.snapshots.fromJsonList(json["snapshots"], (m) => SnapshotsModel.fromJson(m), "id");
+    service.sceneActions.fromJsonList(json["sceneActions"], (m) => SceneActionModel.fromJson(m), "id");
+    service.sceneSets.fromJsonList(json["sceneSets"], (m) => SceneSetModel.fromJson(m), "id");
+    service.gpioConfigs.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
+    service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
+
     service.relationships.fromJson(json["relationships"]);
 
     return service;

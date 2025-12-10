@@ -10,7 +10,15 @@ enum CurrencyType {
   cny, // Chinese Yuan
   aud, // Australian Dollar
   cad, // Canadian Dollar
-  custom, // For any custom currency symbol
+  custom; // For any custom currency symbol
+
+  static CurrencyType? fromString(String value) {
+    try {
+      return CurrencyType.values.firstWhere((CurrencyType element) => element.name == value);
+    } catch (e) {
+      return null;
+    }
+  }
 }
 
 /// A customizable text widget for the Fusion design system.

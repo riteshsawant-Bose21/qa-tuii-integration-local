@@ -162,6 +162,14 @@ extension ZoneService on ProjectService {
     return {for (var zone in items) zone.id: zone};
   }
 
+  List<Zone> getZonesWithoutSubzones() {
+    final allZones = zones.getAll();
+    return allZones.where((zone) {
+      final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zone.id);
+      return subZoneIds.isEmpty;
+    }).toList();
+  }
+
   //Zone Sources
   void addSourceToZone(String sourceId, String zoneId) {
     if (!hardware.exists(sourceId)) throw Exception('Source $sourceId not found');

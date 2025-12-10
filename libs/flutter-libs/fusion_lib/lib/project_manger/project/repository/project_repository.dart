@@ -110,6 +110,34 @@ class WiringConnectionRepository extends Repository<WiringConnectionModel> {}
 
 class ProcessingBlockRepository extends Repository<ProcessingBlockModel> {}
 
+class ScenesRepository extends Repository<SnapshotsModel> {
+  ScenesRepository copyWith(Map<String, SnapshotsModel> items) {
+    final newRepo = ScenesRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+class SceneActionRepository extends Repository<SceneActionModel> {
+  SceneActionRepository copyWith(Map<String, SceneActionModel> items) {
+    final newRepo = SceneActionRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+class SceneSetRepository extends Repository<SceneSetModel> {
+  SceneSetRepository copyWith(Map<String, SceneSetModel> items) {
+    final newRepo = SceneSetRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
+
+class GPIORepository extends Repository<GpioConfig> {}
+
+class SchedulerRepository extends Repository<ScheduleConfig> {}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {

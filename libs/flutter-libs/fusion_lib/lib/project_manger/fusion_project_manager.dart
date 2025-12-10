@@ -62,3 +62,15 @@ export 'mix_scenes/mix_scenes_service.dart';
 //equip location
 export 'equip_location/equip_location_manager.dart';
 export 'equip_location/equip_location_service.dart';
+
+//scenes
+export 'scenes/scene_manager.dart';
+export 'scenes/scene_service.dart';
+
+//scheduler
+export 'scheduler/scheduler_manager.dart';
+export 'scheduler/scheduler_service.dart';
+
+//GPIO
+export 'gpio/gpio_manager.dart';
+export 'gpio/gpio_service.dart';

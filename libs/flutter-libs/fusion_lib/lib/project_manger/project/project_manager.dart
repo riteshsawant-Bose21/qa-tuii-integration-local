@@ -21,11 +21,6 @@ class ProjectManager {
     return projects.firstWhere((project) => project.id == projectId);
   }
 
-  /// check if Admin login
-  bool isAdminLogin() {
-    return localProjectManager.isAdminLogin;
-  }
-
   //Load projects from cloud
   Future<ResponseCallback<List<ProjectData>?>> loadProjectsFromCloud() async {
     final ResponseCallback<List<ProjectData>?> response = await projectCloudSyncManager.loadProjects();

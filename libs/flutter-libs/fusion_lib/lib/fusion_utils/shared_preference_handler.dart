@@ -65,50 +65,17 @@ class SharedPreferencesHandler {
 }
 
 enum SharedPreferenceKeys {
-  fusionIpAddress,
-  droIpAddress,
   appSettings, //TODO: need to rename this key
   themeMode,
-  onboardingStatus,
-  bleDeviceId,
-  fusionLocations,
-  userDetails,
-  accessToken,
-  refreshToken,
-  expiry,
-  isLoggedIn,
-  adminLogin, // This is for local admin login
 }
 
 extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
   String get key {
     switch (this) {
-      case SharedPreferenceKeys.fusionIpAddress:
-        return 'fusion_ip_address';
-      case SharedPreferenceKeys.droIpAddress:
-        return 'dro_ip_address';
       case SharedPreferenceKeys.appSettings:
         return 'app_settings';
       case SharedPreferenceKeys.themeMode:
         return 'theme_mode';
-      case SharedPreferenceKeys.onboardingStatus:
-        return "onboarding_status";
-      case SharedPreferenceKeys.bleDeviceId:
-        return "ble_remote_id";
-      case SharedPreferenceKeys.fusionLocations:
-        return "fusion_locations";
-      case SharedPreferenceKeys.userDetails:
-        return "user_details";
-      case SharedPreferenceKeys.accessToken:
-        return "access_token";
-      case SharedPreferenceKeys.refreshToken:
-        return "refresh_token";
-      case SharedPreferenceKeys.expiry:
-        return "expiry";
-      case SharedPreferenceKeys.isLoggedIn:
-        return "is_logged_in";
-      case SharedPreferenceKeys.adminLogin:
-        return "admin_login";
     }
   }
 }

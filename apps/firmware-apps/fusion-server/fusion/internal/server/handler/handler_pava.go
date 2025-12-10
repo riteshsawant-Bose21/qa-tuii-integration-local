@@ -287,7 +287,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 			api.WithAudioSync(update),
 		)
 
-		if err := h.broadcastMessage(msg); err != nil {
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
 			logger.Error("Error broadcasting audio sync: %v", err)
 		}
 	}()
@@ -439,7 +439,7 @@ func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
 			api.WithAudioRemove(update),
 		)
 
-		if err := h.broadcastMessage(msg); err != nil {
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
 			logger.Error("Error broadcasting audio delete: %v", err)
 		}
 	}()

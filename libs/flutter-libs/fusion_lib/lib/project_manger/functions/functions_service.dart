@@ -21,8 +21,12 @@ extension ZoneFunctionService on ProjectService {
     relationships.removeAllRelationships(functionId);
   }
 
-  ZoneFunctions? getZoneFunction({required String zoneId}) {
-    final zoneFunctions = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+  ZoneFunctions? getZoneFunction({required String zoneOrSubZoneId}) {
+    // final zoneId = zones.exists(zoneOrSubZoneId)
+    //     ? zoneOrSubZoneId
+    //     : relationships.getParent(RelationshipType.zoneSubZones, zoneOrSubZoneId)!;
+
+    final zoneFunctions = relationships.getChildren(RelationshipType.zoneFunctions, zoneOrSubZoneId);
     if (zoneFunctions.isEmpty) {
       return null;
     }

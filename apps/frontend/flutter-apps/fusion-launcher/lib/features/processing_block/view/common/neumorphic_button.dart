@@ -5,9 +5,9 @@ List<BoxShadow> getNeumorphismBoxShadows({bool inner = false, Color? color}) {
   color ??= const Color(0xFFF5F5F5);
   return <BoxShadow>[
     if (inner) ...<BoxShadow>[
-      const BoxShadow(color: Colors.black12, blurRadius: 1, offset: Offset(-4, -4)),
-      const BoxShadow(color: Colors.white, blurRadius: 1, offset: Offset(4, 4)),
-      BoxShadow(color: color, blurRadius: 4),
+      const BoxShadow(color: Colors.black12, blurRadius: 0),
+      // const BoxShadow(color: Colors.white, spreadRadius: -2, offset: Offset(2, 2)),
+      BoxShadow(color: color, blurRadius: 4, offset: const Offset(3, 3)),
     ] else ...<BoxShadow>[
       const BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(2, 2)),
       const BoxShadow(color: Colors.white, blurRadius: 2, offset: Offset(-2, -2)),
