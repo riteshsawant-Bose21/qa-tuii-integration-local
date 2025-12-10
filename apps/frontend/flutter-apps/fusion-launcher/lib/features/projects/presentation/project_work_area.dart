@@ -13,6 +13,7 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/spl_calculation/mace_calculation_manager.dart';
 import '../../../../core/spl_calculation/mace_engine_provider.dart';
@@ -110,7 +111,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   Future<void> _initMace() async {
     if (Platform.isMacOS || Platform.isIOS || Platform.isWindows) {
       WidgetsFlutterBinding.ensureInitialized();
-      _engine = await MaceEngine.create();
+      _engine = await MaceEngine.create(
+        basePath: await MaceEngine.getLibPath(),
+        bsfBasePath: (await getApplicationSupportDirectory()).path,
+      );
 
       FusionLogger.log(
         message: "Mace engine initialized ",

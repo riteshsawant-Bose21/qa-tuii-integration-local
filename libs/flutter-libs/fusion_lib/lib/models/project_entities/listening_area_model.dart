@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../fusion_utils/fusion_utilities.dart';
 
@@ -255,6 +255,19 @@ class SplData {
 
   SplData({required this.surfaceId, required this.fieldPoints, required this.splValues})
     : assert(fieldPoints.length == splValues.length, 'fieldPoints(${fieldPoints.length}) and splValues(${splValues.length}) must match');
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SplData && other.surfaceId == surfaceId && listEquals(other.fieldPoints, fieldPoints) && listEquals(other.splValues, splValues);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    surfaceId,
+    Object.hashAll(fieldPoints),
+    Object.hashAll(splValues),
+  );
 }
 
 class _Edge {
