@@ -13,6 +13,10 @@
 // ---- Include system wide include files ----
 #include <PlatformDataTypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ---- Include local include files ----
 
 // ---- Referenced classes and types ----
@@ -115,4 +119,7 @@ bool OcfLiteConfigureSetSerialNumber(std::string& serial);
  */
 bool OcfLiteConfigureSetDeviceName(std::string& name);
 
+#ifdef __cplusplus
+}
+#endif
 #endif // IOCFLITECONFIGURE_H

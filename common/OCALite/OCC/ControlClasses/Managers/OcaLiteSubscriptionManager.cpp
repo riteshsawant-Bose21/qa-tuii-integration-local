@@ -725,6 +725,7 @@ OcaLiteStatus OcaLiteSubscriptionManager::OcaEventController::RemovePropertyChan
 
 void OcaLiteSubscriptionManager::OcaEventController::OnEvent(const ::OcaLiteEventData& eventData)
 {
+#ifndef OCA_LITE_CONTROLLER
     OcaEventDestinationList::iterator ed_iter(m_eventDestinations.begin());
     while (ed_iter != m_eventDestinations.end())
     {
@@ -754,10 +755,12 @@ void OcaLiteSubscriptionManager::OcaEventController::OnEvent(const ::OcaLiteEven
     }
 
     static_cast<void>(RemoveEventSubscription());
+#endif
 }
 
 void OcaLiteSubscriptionManager::OcaEventController::OnEvent(const ::OcaLiteEventData& eventData, const ::OcaLitePropertyID& propertyID)
 {
+#ifndef OCA_LITE_CONTROLLER
     OcaEventDestinationList::iterator ed_iter(m_eventDestinations.begin());
     while (ed_iter != m_eventDestinations.end())
     {
@@ -796,6 +799,7 @@ void OcaLiteSubscriptionManager::OcaEventController::OnEvent(const ::OcaLiteEven
     }
 
     static_cast<void>(RemoveEventSubscription());
+#endif
 }
 
 void OcaLiteSubscriptionManager::OcaEventController::SessionLost(::OcaSessionID sessionID)

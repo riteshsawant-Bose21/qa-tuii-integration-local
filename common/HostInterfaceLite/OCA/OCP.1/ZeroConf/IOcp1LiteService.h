@@ -16,6 +16,10 @@
 // ---- Include local include files ----
 #include "../Ocp1LiteHostInterfaceDataTypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ---- Referenced classes and types ----
 
 // ---- Helper types and constants ----
@@ -53,5 +57,8 @@ bool Ocp1LiteServiceRegister(const std::string& name, const std::string& registr
  */
 void Ocp1LiteServiceDispose(void);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // IOCP1LITESERVICE_H

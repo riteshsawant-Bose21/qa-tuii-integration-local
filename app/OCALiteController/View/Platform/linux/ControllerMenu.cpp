@@ -18,7 +18,7 @@ bool input_received = false;
 
 void read_input_thread(void *arg);
 void *readThread;
-bool terminateFlag(false);
+extern bool terminateFlag;
 
 ControllerMenu::ControllerMenu(std::string title, void *cmdQueue):
     ControlPalMsgInterface(cmdQueue),
@@ -132,7 +132,7 @@ void ControllerMenu::addZone(uint32_t &ONo, std::string &name, float &gain,
     zProperty->sourceNames = sourceNames;
 
     // Add to map
-    m_zoneMap.insert(std::make_pair(ONo, std::move(zProperty))); 
+    m_zoneMap.insert(std::make_pair(ONo, std::move(zProperty)));
 
     // Make the first zone the current active zone
     if (m_zoneMap.size() == 1)
@@ -170,13 +170,37 @@ void ControllerMenu::run()
                     break;
 
                 case 1:
-                    // Increase Gain
-                    m_uiMsg.ono = m_activeZone->ONo;
+                    // Inrease Gain
+                    {
+                        float curGain = 0.0;
+
+                        m_uiMsg.ono = m_activeZone->ONo;
+                        if (getGain(m_activeZone->ONo, curGain))
+                        {
+                            m_uiMsg.val.flt_val = curGain;
+
+                            // Update UI display value
+                            setGain(m_activeZone->ONo,
+                                    (curGain + VIEW_GAIN_INCREMENT_STEP));
+                        }
+                    }
                     break;
 
                 case 2:
                     // Decrease Gain
-                    m_uiMsg.ono = m_activeZone->ONo;
+                    {
+                        float curGain = 0.0;
+
+                        m_uiMsg.ono = m_activeZone->ONo;
+                        if (getGain(m_activeZone->ONo, curGain))
+                        {
+                            m_uiMsg.val.flt_val = curGain;
+
+                            // Update UI  display value
+                            setGain(m_activeZone->ONo,
+                                    (curGain - VIEW_GAIN_INCREMENT_STEP));
+                        }
+                    }
                     break;
 
                 case 3:
@@ -246,6 +270,20 @@ void ControllerMenu::setGain(uint32_t ONo, float gain)
     {
         obj->gain = gain;
     }
+}
+
+bool ControllerMenu::getGain(uint32_t ONo, float &gain)
+{
+    bool retVal(false);
+    std::unique_ptr<zoneProperties> &obj = findObject(ONo);
+
+    if (obj)
+    {
+        gain = obj->gain;
+        retVal = true;
+    }
+
+    return retVal;
 }
 
 void ControllerMenu::setMute(uint32_t ONo, uint32_t mute)

@@ -3,9 +3,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "../workers/ConcreteGainActuator.h"
-#include "../workers/ConcreteMuteActuator.h"
-#include "../workers/ConcreteSwitchActuator.h"
 #include "../workers/FusionBlock.h"
 #include "../workers/ZoneGroup.h"
 
@@ -79,16 +76,3 @@ public:
     ControlSystemConfig &operator=(ControlSystemConfig &&) noexcept = default;
 };
 
-// struct ZoneOCAObjects
-// {
-//     std::unique_ptr<FusionBlock> group;         // may be null if creation failed
-//     std::unique_ptr<ConcreteGainActuator> gain; // optional
-//     std::unique_ptr<ConcreteMuteActuator> mute; // optional
-//     std::unique_ptr<ConcreteSwitchActuator> sw; // optional
-// };
-
-// struct BuiltZones
-// {
-//     std::unique_ptr<ZoneGroup> zonesContainer; // Top level container
-//     std::vector<ZoneOCAObjects> zones;         // One entry per parsed zone
-// };

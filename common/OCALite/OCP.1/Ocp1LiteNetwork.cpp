@@ -41,7 +41,6 @@ const std::string Ocp1LiteNetwork::LOCAL_REGISTRATION_DOMAIN(OCA_LOCAL_REGISTRAT
 // ---- Local data ----
 
 // ---- Class Implementation ----
-
 Ocp1LiteNetwork::Ocp1LiteNetwork(::OcaONo objectNumber,
                                  ::OcaBoolean lockable,
                                  const ::OcaLiteString &role,
@@ -226,6 +225,7 @@ void Ocp1LiteNetwork::Teardown()
 {
     ::OcaLiteStatus rc(OCASTATUS_OK);
 
+#ifndef OCA_LITE_CONTROLLER
     if (OCANETWORKSTATUS_STOPPED == m_status)
     {
         m_status = OCANETWORKSTATUS_STARTING_UP;
@@ -306,6 +306,7 @@ void Ocp1LiteNetwork::Teardown()
         // Invalid state
         rc = OCASTATUS_PROCESSING_FAILED;
     }
+#endif
     return rc;
 }
 
@@ -313,6 +314,7 @@ void Ocp1LiteNetwork::Teardown()
 {
     ::OcaLiteStatus rc(OCASTATUS_OK);
 
+#ifndef OCA_LITE_CONTROLLER
     if (OCANETWORKSTATUS_READY == m_status)
     {
         Ocp1LiteServiceDispose();
@@ -349,6 +351,7 @@ void Ocp1LiteNetwork::Teardown()
         rc = OCASTATUS_PROCESSING_FAILED;
     }
 
+#endif
     return rc;
 }
 
@@ -530,6 +533,7 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList &sessions)
 {
     ::OcaLiteStatus status(OCASTATUS_PARAMETER_ERROR);
 
+#ifndef OCA_LITE_CONTROLLER
     if (OCANOTIFICATIONDELIVERYMODE_RELIABLE == deliveryMode)
     {
         // Use the socket connection to send this message
@@ -578,6 +582,7 @@ void Ocp1LiteNetwork::GetReceivedKeepAlives(::OcaSessionList &sessions)
         }
     }
 
+#endif
     return status;
 }
 
@@ -779,8 +784,8 @@ OcaSessionID Ocp1LiteNetwork::Connect(const ::OcaLiteConnectParameters &connectP
         OCA_LOG_INFO("✓ Cast to Ocp1LiteConnectParameters succeeded");
         ::OcaSessionID newSessionID(::OcaLiteCommandHandler::GetInstance().CreateSessionID());
         OCA_LOG_INFO_PARAMS("✓ Created new session ID: %u", newSessionID);
-        
-        ::Ocp1LiteSocketConnection *sConnection(new ::Ocp1LiteSocketConnection(*this, static_cast<::OcaUint32>(OCA_BUFFER_SIZE)));
+
+        ::Ocp1LiteSocketConnection *sConnection(new ::Ocp1LiteSocketConnection(*this, static_cast<::OcaUint32>(OCA_RX_BUFFER_SIZE)));
         sConnection->SetSocketConnectionParameters(newSessionID,
                                                    ocp1ConnectParameters->GetKeepAliveTimeout(),
                                                    ocp1ConnectParameters->GetbKeepAliveTimeoutInMs());
@@ -797,7 +802,7 @@ OcaSessionID Ocp1LiteNetwork::Connect(const ::OcaLiteConnectParameters &connectP
             sessionId = newSessionID;
             // Run, this forces a keep alive
             ::OcaBoolean bReceivedKeepAlive;
-            static_cast<void>(sConnection->Run(false, static_cast<::OcaUint32>(OCA_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive));
+            static_cast<void>(sConnection->Run(false, static_cast<::OcaUint32>(OCA_RX_BUFFER_SIZE), m_pDataBuffer, bReceivedKeepAlive));
             m_ocaDeviceSocketList[newSessionID] = sConnection;
             m_newConnections.push_back(newSessionID);
             OCA_LOG_INFO_PARAMS("✓ Connection established successfully! Session ID: %u", sessionId);
@@ -1124,3 +1129,4 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
 
     return rc;
 }
+

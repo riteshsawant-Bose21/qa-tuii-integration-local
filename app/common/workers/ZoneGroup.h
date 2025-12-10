@@ -27,7 +27,10 @@ public:
               const ::OcaLiteString &name,
               void  *cmdQueue,
 #endif
-              ::OcaONo blockType = static_cast<::OcaONo>(0)) :
+              ::OcaONo blockType = static_cast<::OcaONo>(0),
+              ::OcaLiteList<::OcaLitePort> s_emptyPorts =
+                   ::OcaLiteList<::OcaLitePort> (0,&dummy)
+              ) :
 #ifdef OCA_LITE_CONTROLLER
         ControlPalMsgInterface(cmdQueue),
 #endif
@@ -50,7 +53,7 @@ public:
     ::OcaLiteString m_name;  // Zone name
 #endif
 private:
-    static ::OcaLiteList<::OcaLitePort> s_emptyPorts; // no ports for grouping block
+    static ::OcaLitePort dummy;
     ZoneGroup(const ZoneGroup &);
     ZoneGroup &operator=(const ZoneGroup &);
 };

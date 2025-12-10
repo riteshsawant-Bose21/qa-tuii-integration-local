@@ -21,6 +21,10 @@
 // ---- Helper types and constants ----
 
 // ---- Helper functions ----
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef OCA_DISABLE_LOG_MACROS
 
 #ifndef OCA_DISABLE_OCA_LOG_ERROR
@@ -207,5 +211,9 @@ bool OcfLiteHostInterfaceInitialize(void);
  * @param[in] timeout       The timeout in ms.
  */
 INT32 OcfLiteHostInterfaceSelect(INT32 highest, OcfLiteSelectableSet& readset,  OcfLiteSelectableSet& writeset, OcfLiteSelectableSet& exceptset, INT32 timeout);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // OCFLITEHOSTINTERFACE_H

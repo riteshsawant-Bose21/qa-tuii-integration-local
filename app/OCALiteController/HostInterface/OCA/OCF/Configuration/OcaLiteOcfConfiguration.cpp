@@ -33,6 +33,10 @@ static std::string OcfFriendlyNameManufacturer("Manufacturer");
 static std::string OcfFriendlyNameModel("Model Name");
 static std::string OcfFriendlyNameVersion("Version string");
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ---- Class Implementation ----
 bool OcfLiteConfigureInitialize(void)
 {
@@ -59,14 +63,16 @@ bool OcfLiteConfigureGetModelDescription(std::string& manufacturer, std::string&
 std::string OcfLiteConfigureGetSerialNumber(void)
 {
     char hostname[128] = "";
-    gethostname(hostname, sizeof(hostname));
+    // TODO: get serial#
+    //gethostname(hostname, sizeof(hostname));
     return std::string(hostname);
 }
 
 std::string OcfLiteConfigureGetDeviceName(void)
 {
     char hostname[128] = "";
-    gethostname(hostname, sizeof(hostname));
+    // TODO: get name
+    //gethostname(hostname, sizeof(hostname));
     return std::string(hostname);
 }
 
@@ -98,3 +104,6 @@ bool OcfLiteConfigureSetModelDescription(std::string& manufacturer, std::string&
 
 	return true;
 }
+#ifdef __cplusplus
+}
+#endif

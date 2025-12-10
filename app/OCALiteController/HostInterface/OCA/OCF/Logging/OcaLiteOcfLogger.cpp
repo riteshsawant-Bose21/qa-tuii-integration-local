@@ -12,6 +12,7 @@
 // ---- Include system wide include files ----
 #include <stdarg.h>
 #include <algorithm>
+#include <iostream>
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
 
 // ---- Include local include files ----
@@ -73,11 +74,13 @@ void OcfLiteLogLogMessage(UINT8 logLevel, const char* type, const char* file, UI
 
                 if (m_fullLogMessage[0] == '.')
                 {
-                    printf("%s%s", &m_fullLogMessage[1], bAddCarrageReturn? "\r\n": "");
+                    //printf("%s%s", &m_fullLogMessage[1], bAddCarrageReturn? "\r\n": "");
+                    std::cout << &m_fullLogMessage[1] << (bAddCarrageReturn ? "\r\n" : "") << std::endl;
                 }
                 else
                 {
-                    printf("%*s%s%s", m_indent, "", m_fullLogMessage, bAddCarrageReturn? "\r\n": "");
+                    //printf("%*s%s%s", m_indent, "", m_fullLogMessage, bAddCarrageReturn? "\r\n": "");
+                    std::cout << m_indent << "" << m_fullLogMessage << (bAddCarrageReturn ? "\r\n" : "") <<  std::endl;
                 }
 
                 // Increase message indent

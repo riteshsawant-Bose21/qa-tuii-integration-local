@@ -11,13 +11,18 @@
 #include "OcaServiceDiscovery.h"
 #include "../common/FusionProxy.h"
 
+#ifndef STM32H7S7xx
 // Helper functions
 void DisplayDiscoveredDevices(
          const std::vector<OcaServiceDiscovery::DiscoveredDevice> &devices);
 
+#endif
+
 ::OcaBoolean ConnectToDevice(
                      const OcaServiceDiscovery::DiscoveredDevice &device,
                      ::OcaSessionID& sessionId);
+
+void DisconnectFromDevice(::OcaSessionID& sessionId, ::OcaONo networkONo);
 
 ::OcaLiteStatus GetControllerConfig(::OcaLiteString& controllerId,
                                     FusionProxy& proxy,

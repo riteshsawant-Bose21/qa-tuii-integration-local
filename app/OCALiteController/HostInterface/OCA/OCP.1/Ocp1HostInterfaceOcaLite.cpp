@@ -37,7 +37,14 @@
 #define ntohl htonl
 #define ntohll htonll
 #else
+
+#ifndef STM32H7S7xx
 #include <netinet/in.h>
+#else
+#include <def.h>  //DEBUG
+#include "lwip/sockets.h"
+#include "lwip/inet.h"
+#endif
 
 #ifndef htonll
 #define htonll(A)(A)

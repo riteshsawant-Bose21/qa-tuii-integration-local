@@ -8,16 +8,21 @@
  *
  */
 
+
 // ---- Include system wide include files ----
 #include <arpa/inet.h>
 #include <HostInterfaceLite/OCA/OCP.1/ZeroConf/IOcp1LiteService.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
+
+#ifndef STM32H7S7xx
 
 // Platform-specific DNS-SD includes
 #if defined(__APPLE__) || defined(FUSION)
 #include <dns_sd.h>
 #else
 #include <avahi-compat-libdns_sd/dns_sd.h>
+#endif
+
 #endif
 
 // ---- FileInfo Macro ----
@@ -33,6 +38,14 @@
 #define MAXIMUM_TXT_RECORD_LENGTH 255
 // ---- Class Implementation ----
 
+
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+#ifndef STM32H7S7xx
+
 static DNSServiceRef m_dnsService = NULL;
 
 /**
@@ -41,6 +54,16 @@ static DNSServiceRef m_dnsService = NULL;
 static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFlags flags, DNSServiceErrorType errorCode, const char *name, const char *regtype, const char *domain, void *context)
 {
 }
+#endif
+
+#ifdef STM32H7S7xx
+bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registrationType,
+                             UINT16 port, const std::vector<std::string> &txtRecordList, const std::string &domain)
+{
+	return true;
+}
+
+#else
 
 bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registrationType,
                              UINT16 port, const std::vector<std::string> &txtRecordList, const std::string &domain)
@@ -95,62 +118,20 @@ bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registr
     }
     return (kDNSServiceErr_NoError == error) ? true : false;
 }
+#endif
 
-int Ocp1LiteServiceGetSocket()
-{
-    int socketFd = -1;
-    if (NULL != m_dnsService)
-    {
-        socketFd = static_cast<int>(::DNSServiceRefSockFD(m_dnsService));
-    }
-    return socketFd;
-}
-
-void Ocp1LiteServiceRunWithFdSet(fd_set *readSet)
-{
-    if (NULL != m_dnsService)
-    {
-        int dnsServiceSocket(static_cast<int>(::DNSServiceRefSockFD(m_dnsService)));
-
-        if (FD_ISSET(dnsServiceSocket, readSet))
-        {
-            DNSServiceErrorType error(::DNSServiceProcessResult(m_dnsService));
-            if (error != kDNSServiceErr_NoError)
-            {
-                OCA_LOG_ERROR_PARAMS("Failed to process dns service. Result %d", error);
-            }
-        }
-    }
-}
-
-void Ocp1LiteServiceRun()
-{
-    if (NULL != m_dnsService)
-    {
-        fd_set readFds;
-        struct timeval tv = {0, 0};
-        int dnsServiceSocket(static_cast<int>(::DNSServiceRefSockFD(m_dnsService)));
-
-        FD_ZERO(&readFds);
-        FD_SET(dnsServiceSocket, &readFds);
-
-        int result = ::select(0, &readFds, NULL, NULL, &tv);
-        if (1 == result)
-        {
-            DNSServiceErrorType error(::DNSServiceProcessResult(m_dnsService));
-            if (error != kDNSServiceErr_NoError)
-            {
-                OCA_LOG_ERROR_PARAMS("Failed to process dns service. Result %d", error);
-            }
-        }
-    }
-}
 
 void Ocp1LiteServiceDispose(void)
 {
+#ifndef STM32H7S7xx
     if (NULL != m_dnsService)
     {
         DNSServiceRefDeallocate(m_dnsService);
         m_dnsService = NULL;
     }
+#endif
 }
+
+#ifdef __cplusplus
+}
+#endif

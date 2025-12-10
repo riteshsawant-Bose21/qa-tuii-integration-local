@@ -9,7 +9,11 @@
 #include <iostream>
 #include "ControlPalSwitchActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#ifndef STM32H7S7xx
 #include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#else
+#include "../PlatformInterface/stm32/OcaPlatformSTM32.h"
+#endif
 #include "../ControlPalOcaUtils.h"
 
 ControlPalSwitchActuator::ControlPalSwitchActuator(::OcaONo objectNumber,

@@ -9,6 +9,8 @@
 #include "../../../HostInterface/CommandInterface/CommandInterface.h"
 #include "../../../ControlPalMsgInterface.h"
 
+#define VIEW_GAIN_INCREMENT_STEP 0.5f
+
 typedef struct zProp 
 {
     uint32_t            ONo;
@@ -48,6 +50,7 @@ public:
     void setExitLabel(const std::string& label);
 
     void setGain(uint32_t ONo, float gain);
+    bool getGain(uint32_t ONo, float &gain);
     void setMute(uint32_t ONo, uint32_t mute);
     void setSource(uint32_t ONo, uint32_t pos);
 

@@ -28,7 +28,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <sys/socket.h>
-#include <netinet/in.h>
+//#include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <cstring>
@@ -36,6 +36,14 @@
 #include "HostInterface/CommandInterface/CommandInterface.h"
 #include "ControlPalMsgInterface.h"
 #include "ControlPalSideBandInterface.h"
+
+
+// C interface for mDNS service discovery
+extern "C" {
+#ifdef STM32H7S7xx
+#include "dnssd.h"
+#endif
+}
 
 bool SidebandInterface::sendMessage(const std::string& json)
 {
@@ -220,73 +228,121 @@ void SidebandInterface::messageHandler() {
     } catch (const std::exception& e) {
         error("❌ Message handler error: " + std::string(e.what()));
     }
-
-    //disconnect();
 }
 
-bool SidebandInterface::connect() {
-    try {
-        // Create socket
-        socket_fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (socket_fd < 0) {
-            error("❌ Failed to create socket: " + std::string(strerror(errno)));
-            return false;
+bool SidebandInterface::sideBandDiscovery(OcaServiceDiscovery &discovery) {
+
+    bool retVal(false);
+
+    // Start service discovery
+    if (discovery.StartDiscovery())
+    {
+        // Wait for devices to be discovered
+        size_t deviceCount(0);
+        uint8_t retry_cnt(0);
+
+        // Retry loop
+        while ( (deviceCount <= 0 ) && (retry_cnt++ < 100))
+        {
+            deviceCount = discovery.WaitForDevices(100);
         }
 
-        // Set socket timeout
-        struct timeval timeout;
-        timeout.tv_sec = 10;
-        timeout.tv_usec = 0;
-        setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
-        setsockopt(socket_fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
-
-        // Resolve hostname
-#if 0   // TODO: Resolve support needed
-        struct hostent* server = gethostbyname(host.c_str());
-        if (server == nullptr) {
-            error("❌ Failed to resolve hostname: " + host);
-            close(socket_fd);
-            return false;
-        }
-#endif
-
-
-        // Setup server address
-        struct sockaddr_in server_addr;
-        memset(&server_addr, 0, sizeof(server_addr));
-        server_addr.sin_family = AF_INET;
-        server_addr.sin_port = htons(port);
-        //memcpy(&server_addr.sin_addr.s_addr, server->h_addr, server->h_length);
-        server_addr.sin_addr.s_addr = inet_addr("192.168.0.167");
-
-        info("Connecting to Fusion Server at " + host + ":" + std::to_string(port) + "...");
-
-        // Connect
-        if (::connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
-            error("❌ Failed to connect: " + std::string(strerror(errno)));
-            close(socket_fd);
-            return false;
-        }
-
-        connected = true;
-        running = true;
-        info("✅ Connected to Fusion Server successfully!");
-
-#if 0
-        // Start message handler thread
-        std::thread handler_thread(&SidebandInterface::messageHandler, this);
-        handler_thread.detach();
-#endif
-
-        return true;
-
-    } catch (const std::exception& e) {
-        error("❌ Failed to connect: " + std::string(e.what()));
-        return false;
+        if (deviceCount > 0)
+            retVal = true;
     }
+
+    return retVal;
 }
 
-void SidebandInterface::disconnect() {
+bool SidebandInterface::sideBandConnect() {
+
+    OcaServiceDiscovery discovery;
+
+    if (sideBandDiscovery(discovery)) {
+        try {
+            // Create socket
+            socket_fd = socket(AF_INET, SOCK_STREAM, 0);
+            if (socket_fd < 0) {
+                error("❌ Failed to create socket: " + std::string(strerror(errno)));
+                return false;
+            }
+
+            // Set socket timeout
+            struct timeval timeout;
+            timeout.tv_sec = 10;
+            timeout.tv_usec = 0;
+            setsockopt(socket_fd, SOL_SOCKET, SO_RCVTIMEO, &timeout, sizeof(timeout));
+            setsockopt(socket_fd, SOL_SOCKET, SO_SNDTIMEO, &timeout, sizeof(timeout));
+
+            // Setup server address
+            struct sockaddr_in server_addr;
+            memset(&server_addr, 0, sizeof(server_addr));
+            server_addr.sin_family = AF_INET;
+
+#ifndef STM32H7S7xx
+            auto discoveredDevices = discovery.GetDiscoveredDevices();
+            const auto &selectedDevice = discoveredDevices[0];
+            //server_addr.sin_port = htons(selectedDevice.port); // TODO: Replace after device advertising
+            server_addr.sin_port = htons(7950); // TODO: Replace after device advertising
+                                                //       is enabled.
+
+            const char *hostOrIp = selectedDevice.hostname.c_str();
+            struct hostent *hostEntry = gethostbyname(hostOrIp);
+            if (hostEntry == nullptr)
+            {
+                // Try to treat it as an IP address directly
+                if (inet_aton(hostOrIp, &server_addr.sin_addr) == 0)
+                {
+                    error("❌ Failed to resolve hostname: " + selectedDevice.hostname);
+                    return false;
+                }
+            }
+            else
+            {
+                // Use the first IP address from the host entry
+                memcpy(&server_addr.sin_addr, hostEntry->h_addr_list[0], hostEntry->h_length);
+            }
+#else
+            // Get discovered OCA service IP from mDNS
+            oca_service_info_t service_info;
+            if (get_oca_service_info(&service_info)) {
+                server_addr.sin_addr.s_addr = inet_addr(service_info.ip_address);
+                server_addr.sin_port = htons(7950); // TODO: Replace after device advertising
+                                                    //       is enabled.
+                //server_addr.sin_port = htons(service_info.port); // Use discovered port
+                host = std::string(service_info.ip_address);
+                info("Using mDNS discovered service: " + host + ":" + std::to_string(port));
+            } else {
+                // Fallback to hardcoded IP if mDNS discovery not complete
+                server_addr.sin_addr.s_addr = inet_addr("192.168.0.167");
+                info("mDNS not complete, using fallback: " + host + ":" + std::to_string(port));
+            }
+#endif
+
+            discovery.StopDiscovery();
+            info("Connecting to Fusion Server at " + host + ":" + std::to_string(port) + "...");
+
+            // Connect
+            if (::connect(socket_fd, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
+                error("❌ Failed to connect: " + std::string(strerror(errno)));
+                close(socket_fd);
+                return false;
+            }
+
+            connected = true;
+            running = true;
+            info("✅ Connected to Fusion Server successfully!");
+
+        } catch (const std::exception& e) {
+            error("❌ Failed to connect: " + std::string(e.what()));
+            return false;
+        }
+        return true;
+    }
+    return false;
+}
+
+void SidebandInterface::sideBandDisconnect() {
     running = false;
     connected = false;
 
@@ -296,28 +352,4 @@ void SidebandInterface::disconnect() {
         socket_fd = -1;
     }
 }
-
-#if 0
-bool run() {
-    if (!connect()) {
-        return false;
-    }
-
-    try {
-        info("🎯 Controller simulator running. Press Ctrl+C to exit...");
-
-        // Keep the main thread alive
-        while (running && connected) {
-            std::this_thread::sleep_for(std::chrono::seconds(1));
-        }
-
-    } catch (const std::exception& e) {
-        error("❌ Runtime error: " + std::string(e.what()));
-    }
-
-    disconnect();
-    return true;
-}
-#endif
-
 

@@ -237,6 +237,7 @@ void OcaLiteCommandHandler::HandleNetworks(::OcaUint32 timeout)
 {
     bool bSuccess(false);
 
+#ifndef OCA_LITE_CONTROLLER
     ::OcaLiteList< ::OcaONo> networks;
     if (OCASTATUS_OK == ::OcaLiteNetworkManager::GetInstance().GetNetworks(networks))
     {
@@ -270,6 +271,7 @@ void OcaLiteCommandHandler::HandleNetworks(::OcaUint32 timeout)
         }
     }
     
+#endif
     return static_cast< ::OcaBoolean>(bSuccess);
 }
 

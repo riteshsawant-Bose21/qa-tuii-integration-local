@@ -121,6 +121,7 @@ inline ControlSystemConfig MakeControlSystemModelFromJson(const Json::Value &roo
     return model;
 }
 
+#ifndef OCA_LITE_CONTROLLER
 inline std::unique_ptr<ZoneGroup> MakeZoneGroupFromControlSystemConfig(const ControlSystemConfig &config)
 {
     static ::OcaLiteList<::OcaLitePort> s_emptyPorts;
@@ -241,3 +242,4 @@ inline std::unique_ptr<ZoneGroup> MakeZoneGroupFromControlSystemConfig(const Con
 
     return zonesContainer;
 }
+#endif

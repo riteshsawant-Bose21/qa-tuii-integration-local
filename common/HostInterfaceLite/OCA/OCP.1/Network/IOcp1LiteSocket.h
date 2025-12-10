@@ -10,6 +10,10 @@
 #ifndef IOCP1LITESOCKET_H
 #define IOCP1LITESOCKET_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ---- Include system wide include files ----
 
 // ---- Include local include files ----
@@ -178,5 +182,9 @@ bool Ocp1LiteSocketShutdown(INT32 socket);
  * @return Indicates whether the socket was succesfully closed.
  */
 bool Ocp1LiteSocketClose(INT32 socket);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif // IOCP1LITESOCKET_H

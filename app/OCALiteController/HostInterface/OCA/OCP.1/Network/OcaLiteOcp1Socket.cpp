@@ -24,13 +24,23 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <string.h>
+
+#ifndef STM32H7S7xx
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 #include <fcntl.h>
+#else
+#include <lwip/tcp.h>
+#include <lwip/inet.h>
 #include <string.h>
+#include <socket.h>
+#include <netdb.h>
+#endif
+
 #endif
 
 // ---- FileInfo Macro ----
@@ -53,6 +63,10 @@ int err;
 #endif
 // ---- Class Implementation ----
 
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 INT32 OcfLiteHostInterfaceSelect(INT32 highest, OcfLiteSelectableSet &readset, OcfLiteSelectableSet &writeset, OcfLiteSelectableSet &exceptset, INT32 timeout)
 {
     struct timeval timeValue = {0};
@@ -96,6 +110,8 @@ INT32 Ocp1LiteHostInterfaceRetrieveSocket(::SocketNetworkProtocolType networkPro
             }
         }
 
+#ifndef OCA_LITE_CONTROLLER // Not used for controller
+
         // Set the TTL for UDP sockets
         if ((0 == result) &&
             (PROTOCOL_UDP == transportProtocolType))
@@ -110,6 +126,7 @@ INT32 Ocp1LiteHostInterfaceRetrieveSocket(::SocketNetworkProtocolType networkPro
                                      errno);
             }
         }
+#endif
     }
     return socketFd;
 }
@@ -428,3 +445,6 @@ bool Ocp1LiteSocketConnect(const char *hostOrIp, UINT16 port, INT32 &newSocket)
 
 }
 #endif // OCA_LITE_CONTROLLER
+#ifdef __cplusplus
+}
+#endif

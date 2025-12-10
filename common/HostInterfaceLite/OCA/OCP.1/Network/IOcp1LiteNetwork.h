@@ -17,6 +17,10 @@
 #include "../Ocp1LiteHostInterfaceConstants.h"
 #include "../Ocp1LiteHostInterfaceDataTypes.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ---- Referenced classes and types ----
 
 // ---- Helper types and constants ----
@@ -85,5 +89,8 @@ bool Ocp1LiteNetworkGetMACAddress(UINT8* pBuffer, UINT8 bufferSize);
 bool Ocp1LiteNetworkGetNetworkConfiguration(IPParametersType& ipParametersType, std::string& ipAddress, UINT8& subnetMaskLength,
                                             std::string& defaultGateway, std::string& dnsServer, std::string& domainName, UINT64& networkSpeed, bool& isUp);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif // IOCP1LITENETWORK_H

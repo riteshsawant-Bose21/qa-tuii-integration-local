@@ -16,7 +16,11 @@
 // ---- Include local include files ----
 #include "ControlPalGainActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
+#ifndef STM32H7S7xx
 #include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
+#else
+#include "../PlatformInterface/stm32/OcaPlatformSTM32.h"
+#endif
 #include "../ControlPalOcaUtils.h"
 
 // ---- Helper types and constants ----
@@ -54,7 +58,8 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
                                            void *cmdQueue)
     : ::OcaLiteGain(objectNumber, lockable, role, ports, minGain, maxGain),
       ControlPalMsgInterface(cmdQueue),
-      m_gainID(gainID), m_zoneONo(zoneONo), m_lastGainSet(GAIN_UPDATE_SENTINEL)
+      m_gainID(gainID), m_zoneONo(zoneONo),
+      m_lastGainSet(GAIN_UPDATE_SENTINEL), m_lastUIGainSet(50.0), m_gainSetCount(0)
 {
     // Enhanced logging with dynamic information
     OCA_LOG_INFO("=== ControlPalGainActuator Created ===");
@@ -89,12 +94,19 @@ ControlPalGainActuator::ControlPalGainActuator(::OcaONo objectNumber,
         double linearGain = dbToLinear(gain);
 
         // Call fn. to send GAIN value command to frontend task
-        SendValue();
-
-        if (GAIN_VALUE_ROUND(gain) == LastGainGet())
+        if ((m_gainSetCount == 0) || (m_lastGainSet == GAIN_UPDATE_SENTINEL))
         {
-            // All gain notifications received, reset LastGain
-            m_lastGainSet = GAIN_UPDATE_SENTINEL;
+            SendValue();
+        }
+        else
+        {
+            if (GAIN_VALUE_ROUND(gain) == LastGainGet())
+            {
+                // All gain notifications received, reset LastGain
+                m_lastGainSet = GAIN_UPDATE_SENTINEL;
+            }
+
+            m_gainSetCount--;
         }
 
         OCA_LOG_INFO_PARAMS("[GAIN] ✓ Gain successfully set to %.2f dB (linear: %.6f) (Gain ID: %s)",
@@ -115,10 +127,31 @@ void ControlPalGainActuator::SendValue()
     ControllerCmdIntfc setGainCmd;
 
     GetGain(gainVal, minVal, maxVal);
+
+    m_lastUIGainSet = gainVal;
+
     setGainCmd.cmd = CTRL_CMD_GAIN_SET;
     setGainCmd.ono = m_zoneONo;
     setGainCmd.val.flt_val = gainVal;
 
+    PushToMsgQueue(setGainCmd);
+}
+
+void ControlPalGainActuator::SendConfiguration()
+{
+    ::OcaDB gainVal, minVal, maxVal;
+    ControllerCmdIntfc setGainCmd;
+
+    GetGain(gainVal, minVal, maxVal);
+
+    setGainCmd.cmd = CTRL_CMD_GAIN_MIN_VAL;
+    setGainCmd.ono = m_zoneONo;
+    setGainCmd.val.flt_val = minVal;
+    PushToMsgQueue(setGainCmd);
+
+    setGainCmd.cmd = CTRL_CMD_GAIN_MAX_VAL;
+    setGainCmd.ono = m_zoneONo;
+    setGainCmd.val.flt_val = maxVal;
     PushToMsgQueue(setGainCmd);
 }
 

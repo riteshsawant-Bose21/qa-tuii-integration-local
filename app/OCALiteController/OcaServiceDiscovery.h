@@ -13,13 +13,17 @@
 #include <string>
 #include <vector>
 #include <map>
-#include <functional>
 #include <memory>
+
+#ifndef STM32H7S7xx
+#include <functional>
 
 #if defined(__APPLE__) || defined(FUSION)
 #include <dns_sd.h>
 #else
 #include <avahi-compat-libdns_sd/dns_sd.h>
+#endif
+
 #endif
 
 // ---- Include local include files ----
@@ -53,10 +57,12 @@ public:
         DiscoveredDevice() : port(0), protocolVersion(0), isValid(false) {}
     };
 
+#ifndef STM32H7S7xx
     /**
      * Callback function type for device discovery events
      */
     using DeviceCallback = std::function<void(const DiscoveredDevice &)>;
+#endif
 
     /**
      * Constructor
@@ -98,6 +104,7 @@ public:
      */
     size_t WaitForDevices(uint32_t timeoutMs = OCA_DISCOVERY_TIMEOUT_MS);
 
+#ifndef STM32H7S7xx
     /**
      * Set callback for when a new device is found
      * @param callback Function to call when device is discovered
@@ -109,6 +116,7 @@ public:
      * @param callback Function to call when device is lost
      */
     void SetDeviceLostCallback(DeviceCallback callback) { m_deviceLostCallback = callback; }
+#endif
 
     /**
      * Get a specific device by name
@@ -118,6 +126,7 @@ public:
     const DiscoveredDevice *GetDeviceByName(const std::string &name) const;
 
 private:
+#ifndef STM32H7S7xx
     /**
      * DNS-SD browse callback (static)
      */
@@ -161,6 +170,7 @@ private:
                                uint16_t port,
                                uint16_t txtLen,
                                const unsigned char *txtRecord);
+#endif
 
     /**
      * Start resolving a discovered service
@@ -195,22 +205,25 @@ private:
      */
     void ProcessEvents();
 
+#ifndef STM32H7S7xx
     /**
      * Resolve hostname to IP address
      * @param hostname The hostname to resolve
      * @return IP address string, or empty string if resolution fails
      */
     std::string ResolveHostnameToIP(const std::string &hostname);
+#endif
 
 private:
     bool m_isDiscovering;
-    DNSServiceRef m_browseService;
     std::vector<DiscoveredDevice> m_discoveredDevices;
+#ifndef STM32H7S7xx
+    DNSServiceRef m_browseService;
     std::map<std::string, DNSServiceRef> m_resolveServices;
 
     DeviceCallback m_deviceFoundCallback;
     DeviceCallback m_deviceLostCallback;
-
+#endif
     // Thread safety (basic protection)
     mutable bool m_listLocked;
 };
