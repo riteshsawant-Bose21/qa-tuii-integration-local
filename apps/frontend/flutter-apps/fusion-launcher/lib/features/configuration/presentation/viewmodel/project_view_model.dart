@@ -22,6 +22,7 @@ export 'functions/functions_view_model.dart';
 export 'mix_scenes/mix_scenes_view_model.dart';
 export 'scenes_view_model/scenes_view_model.dart';
 export 'schedule/schedule_view_model.dart';
+export 'events/events_view_model.dart';
 
 part 'project_view_model_state.dart';
 

@@ -47,8 +47,8 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     final List<SceneParam> paramList =
         action.actionType != null
             ? (itemList.isEmpty
-                ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, SceneItem(itemId: ''))
-                : (action.item != null ? _projectViewModel.getParamsByActionTypeAndItem(action.actionType!, action.item!) : <SceneParam>[]))
+                ? _projectViewModel.getParamsByActionTypeAndItem(actionType: action.actionType!, item: SceneItem(itemId: ''))
+                : (action.item != null ? _projectViewModel.getParamsByActionTypeAndItem(actionType: action.actionType!, item: action.item!) : <SceneParam>[]))
             : <SceneParam>[];
 
     return Container(

@@ -41,6 +41,7 @@ class ProjectService {
   final SceneSetRepository sceneSets;
   final GPIORepository gpioConfigs;
   final SchedulerRepository schedulerConfig;
+  final EventsRepository events;
 
   final RelationshipManager relationships;
 
@@ -87,6 +88,7 @@ class ProjectService {
     SceneSetRepository? sceneSetRepository,
     GPIORepository? gpioRepository,
     SchedulerRepository? schedulerConfig,
+    EventsRepository? events,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -106,7 +108,8 @@ class ProjectService {
        sceneActions = sceneActionRepository ?? SceneActionRepository(),
        sceneSets = sceneSetRepository ?? SceneSetRepository(),
        gpioConfigs = gpioRepository ?? GPIORepository(),
-       schedulerConfig = schedulerConfig ?? SchedulerRepository();
+       schedulerConfig = schedulerConfig ?? SchedulerRepository(),
+       events = events ?? EventsRepository();
 
   ProjectService copyWith({
     String? id,
@@ -143,6 +146,7 @@ class ProjectService {
     SceneSetRepository? sceneSetRepository,
     GPIORepository? gpioRepository,
     SchedulerRepository? schedulerConfig,
+    EventsRepository? events,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -179,6 +183,7 @@ class ProjectService {
       sceneSetRepository: sceneSetRepository ?? sceneSets,
       gpioRepository: gpioRepository ?? gpioConfigs,
       schedulerConfig: schedulerConfig ?? this.schedulerConfig,
+      events: events ?? this.events,
     );
 
     // Preserve undo/redo stacks
@@ -237,6 +242,7 @@ class ProjectService {
       "sceneSets": sceneSets.toJson((ss) => ss.toJson()),
       "gpioConfig": gpioConfigs.toJson((g) => g.toJson()),
       "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
+      "events": events.toJson((e) => e.toJson()),
     };
   }
 
@@ -300,6 +306,7 @@ class ProjectService {
     service.sceneSets.fromJsonList(json["sceneSets"], (m) => SceneSetModel.fromJson(m), "id");
     service.gpioConfigs.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
     service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
+    service.events.fromJsonList(json["events"], (m) => FusionEvent.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 

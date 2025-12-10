@@ -70,3 +70,7 @@ export 'scheduler/scheduler_service.dart';
 //GPIO
 export 'gpio/gpio_manager.dart';
 export 'gpio/gpio_service.dart';
+
+//Events
+export 'events/events_manager.dart';
+export 'events/events_service.dart';

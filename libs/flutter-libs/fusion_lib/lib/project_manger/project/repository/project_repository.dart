@@ -138,6 +138,8 @@ class GPIORepository extends Repository<GpioConfig> {}
 
 class SchedulerRepository extends Repository<ScheduleConfig> {}
 
+class EventsRepository extends Repository<FusionEvent> {}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {
