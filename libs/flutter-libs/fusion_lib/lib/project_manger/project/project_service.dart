@@ -104,8 +104,7 @@ class ProjectService {
        zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
        relationships = relationships ?? RelationshipManager(),
        prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
-       equipLocations = equipLocations ?? EquipLocationRepository();
-       prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
+       equipLocations = equipLocations ?? EquipLocationRepository(),
        snapshots = scenesRepository ?? ScenesRepository(),
        sceneActions = sceneActionRepository ?? SceneActionRepository(),
        sceneSets = sceneSetRepository ?? SceneSetRepository(),
