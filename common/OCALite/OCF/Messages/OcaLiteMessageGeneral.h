@@ -23,8 +23,8 @@
 // ---- Helper types and constants ----
 #ifndef OCA_BUFFER_SIZE
 #ifdef OCA_LITE_CONTROLLER
-#define OCA_BUFFER_SIZE (128) //(512)
-#define OCA_RX_BUFFER_SIZE (1024) //(512)
+#define OCA_BUFFER_SIZE (128)
+#define OCA_RX_BUFFER_SIZE (1024)
 #else
 #define OCA_BUFFER_SIZE (4*1024)
 #endif

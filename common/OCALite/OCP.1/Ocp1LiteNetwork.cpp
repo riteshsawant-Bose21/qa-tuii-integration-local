@@ -41,10 +41,6 @@ const std::string Ocp1LiteNetwork::LOCAL_REGISTRATION_DOMAIN(OCA_LOCAL_REGISTRAT
 // ---- Local data ----
 
 // ---- Class Implementation ----
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 Ocp1LiteNetwork::Ocp1LiteNetwork(::OcaONo objectNumber,
                                  ::OcaBoolean lockable,
                                  const ::OcaLiteString &role,
@@ -1134,6 +1130,3 @@ void Ocp1LiteNetwork::HandleDevices(OcaSocketList &deviceList, const OcfLiteSele
     return rc;
 }
 
-#ifdef __cplusplus
-}
-#endif

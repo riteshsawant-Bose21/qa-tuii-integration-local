@@ -119,8 +119,7 @@ private:
     // ONo of the ZoneBlock
     ::OcaONo    m_zoneONo;
 
-    ::OcaDB     m_lastGainSet;   // The is use to store the last gain set.
-                                 // This is used to compute the delta.
+    ::OcaDB     m_lastGainSet;   // Used to store the last gain set.
 
     ::OcaDB     m_lastUIGainSet; // This is the Gain that the UI
                                  // is currently set to.

@@ -177,7 +177,7 @@ bool ocaMain(std::string& customNodeId,
                                         {
                                             fusionServerConn.messageHandler();
                                         }
-                                        std::cout << " =========> IDENTIFIED SUCESSFULLY" << std::endl;
+                                        std::cout << " =========> IDENTIFIED SUCCESSFULLY" << std::endl;
 #ifdef STM32H7S7xx
                                         OcaPlatform::Sleep(10);
 #else
