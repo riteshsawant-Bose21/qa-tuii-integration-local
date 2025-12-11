@@ -14,7 +14,7 @@
 #include <HostInterfaceLite/OCA/OCP.1/ZeroConf/IOcp1LiteService.h>
 #include <HostInterfaceLite/OCA/OCF/OcfLiteHostInterface.h>
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 
 // Platform-specific DNS-SD includes
 #if defined(__APPLE__) || defined(FUSION)
@@ -44,7 +44,7 @@
 extern "C" {
 #endif
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 
 static DNSServiceRef m_dnsService = NULL;
 
@@ -56,7 +56,7 @@ static void DNSSD_API DNSServiceRegisterReply2(DNSServiceRef sdRef, DNSServiceFl
 }
 #endif
 
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
 bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registrationType,
                              UINT16 port, const std::vector<std::string> &txtRecordList, const std::string &domain)
 {
@@ -123,7 +123,7 @@ bool Ocp1LiteServiceRegister(const std::string &name, const std::string &registr
 
 void Ocp1LiteServiceDispose(void)
 {
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     if (NULL != m_dnsService)
     {
         DNSServiceRefDeallocate(m_dnsService);

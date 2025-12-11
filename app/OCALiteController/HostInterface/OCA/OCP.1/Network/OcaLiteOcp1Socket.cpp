@@ -26,7 +26,7 @@
 #include <errno.h>
 #include <string.h>
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>

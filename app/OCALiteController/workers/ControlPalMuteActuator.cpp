@@ -15,7 +15,7 @@
 // ---- Include local include files ----
 #include "ControlPalMuteActuator.h"
 #include <HostInterfaceLite/OCA/OCF/Logging/IOcfLiteLog.h>
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 #include "../PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #else
 #include "../PlatformInterface/stm32/OcaPlatformSTM32.h"

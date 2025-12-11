@@ -38,7 +38,7 @@
 #define ntohll htonll
 #else
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 #include <netinet/in.h>
 #else
 #include <def.h>  //DEBUG

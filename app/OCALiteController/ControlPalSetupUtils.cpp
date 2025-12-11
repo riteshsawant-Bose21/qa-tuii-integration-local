@@ -33,7 +33,7 @@
 #include "ControlPalOcaUtils.h"
 #include "ControlPalSetupUtils.h"
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 // Helper functions
 void DisplayDiscoveredDevices(
         const std::vector<OcaServiceDiscovery::DiscoveredDevice> &devices)
@@ -391,7 +391,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
         {
             auto discoveredDevices = discovery.GetDiscoveredDevices();
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
             DisplayDiscoveredDevices(discoveredDevices);
 #endif
 
@@ -423,7 +423,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
                                         std::vector<::OcaONo>& zoneONo)
 {
     ::OcaBoolean bSuccess(false);
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
     extern osSemaphoreId_t guiStartSemaphoreId;
 #endif
 
@@ -435,7 +435,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
     {
         if (controllerCfg.zones.size() > 0)
         {
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
             osSemaphoreRelease(guiStartSemaphoreId);
 #endif
 
