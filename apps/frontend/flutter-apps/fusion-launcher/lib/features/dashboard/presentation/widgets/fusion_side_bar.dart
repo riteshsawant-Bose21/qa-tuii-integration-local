@@ -53,30 +53,30 @@ class _FusionSidebarState extends State<FusionSidebar> {
             ),
             const SizedBox(height: 6),
             // Replaced nav items with _HoverNavItem
-            _HoverNavItem(
-              icon: Icons.home_filled,
-              title: 'Home',
-              isSelected: widget.selectedTab == 'Home',
-              onTap: () => widget.onTabChanged?.call('Home'),
-            ),
-            _HoverNavItem(
-              icon: Icons.person_sharp,
-              title: 'Profile',
-              isSelected: widget.selectedTab == 'Profile',
-              onTap: () => widget.onTabChanged?.call('Profile'),
-            ),
-            _HoverNavItem(
-              icon: Icons.settings_sharp,
-              title: 'Settings',
-              isSelected: widget.selectedTab == 'Settings',
-              onTap: () => widget.onTabChanged?.call('Settings'),
-            ),
-            _HoverNavItem(
-              icon: Icons.public,
-              title: 'Community',
-              isSelected: widget.selectedTab == 'Community',
-              onTap: () => widget.onTabChanged?.call('Community'),
-            ),
+            // _HoverNavItem(
+            //   icon: Icons.home_filled,
+            //   title: 'Home',
+            //   isSelected: widget.selectedTab == 'Home',
+            //   onTap: () => widget.onTabChanged?.call('Home'),
+            // ),
+            // _HoverNavItem(
+            //   icon: Icons.person_sharp,
+            //   title: 'Profile',
+            //   isSelected: widget.selectedTab == 'Profile',
+            //   onTap: () => widget.onTabChanged?.call('Profile'),
+            // ),
+            // _HoverNavItem(
+            //   icon: Icons.settings_sharp,
+            //   title: 'Settings',
+            //   isSelected: widget.selectedTab == 'Settings',
+            //   onTap: () => widget.onTabChanged?.call('Settings'),
+            // ),
+            // _HoverNavItem(
+            //   icon: Icons.public,
+            //   title: 'Community',
+            //   isSelected: widget.selectedTab == 'Community',
+            //   onTap: () => widget.onTabChanged?.call('Community'),
+            // ),
             // show only in debug mode
             // if (kDebugMode)
               _HoverNavItem(
@@ -90,17 +90,17 @@ class _FusionSidebarState extends State<FusionSidebar> {
               thickness: 1,
               color: Theme.of(context).colorScheme.borderColorL,
             ),
-            GuideShowcaseWrapper(
-              step: GuideShowCaseSteps.myProjects,
-              onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
-              child: _HoverNavItem(
-                icon: Icons.folder_sharp,
-                title: 'Add New Project',
-                isBold: true,
-                trailing: Icons.add_sharp,
-                onTap: () => _showNewProjectDialog(context),
-              ),
-            ),
+            // GuideShowcaseWrapper(
+            //   step: GuideShowCaseSteps.myProjects,
+            //   onHighlightedSpotTap: (TapDownDetails details) => _showNewProjectDialog(context),
+            //   child: _HoverNavItem(
+            //     icon: Icons.folder_sharp,
+            //     title: 'Add New Project',
+            //     isBold: true,
+            //     trailing: Icons.add_sharp,
+            //     onTap: () => _showNewProjectDialog(context),
+            //   ),
+            // ),
             const SizedBox(width: 5),
             // _buildProjectList(),
           ],

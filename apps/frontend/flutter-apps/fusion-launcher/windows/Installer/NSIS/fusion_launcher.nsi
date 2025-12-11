@@ -7,7 +7,7 @@ SetCompressor /SOLID lzma
 !include "x64.nsh"
 
 !define FILE_VERSION "1.0.0.0"
-!define PRODUCT_NAME "Fusion Launcher"
+!define PRODUCT_NAME "Fusion Algorithms"
 !define PRODUCT_PUBLISHER "Bose Professional"
 !define PRODUCT_ID "{39c63eca-6dd3-4db7-86b4-f607e8eaf6b3}"
 !define PRODUCT_VERSION "1.0.0"
