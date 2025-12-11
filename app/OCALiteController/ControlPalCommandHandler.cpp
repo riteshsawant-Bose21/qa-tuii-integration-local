@@ -38,7 +38,7 @@
 #include "ControlPalCommandHandler.h"
 #include "ControlPalOcaUtils.h"
 #include "ControlPalSideBandInterface.h"
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
 #include "PlatformInterface/stm32/OcaPlatformSTM32.h"
 #else
 #include <sys/time.h>
@@ -164,7 +164,7 @@ void ProcessOcaCommand(ControllerCmdIntfc& newCmd, FusionProxy& fusion_proxy)
                 ::OcaUint16 newPos, minPos, maxPos;
                 static_cast<::ControlPalSwitchActuator*>(target)->GetPosition(
                                                     newPos, minPos, maxPos);
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
                 if ( (newCmd.val.int_val <= maxPos) &&
                      (newCmd.val.int_val >= minPos) )
                 {

@@ -38,7 +38,7 @@
 #include "ControlPalCommandHandler.h"
 #include "HostInterface/CommandInterface/CommandInterface.h"
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 #include "PlatformInterface/linux/OcaLiteOcfMsgQueue.h"
 #else
 #include "PlatformInterface/stm32/OcaPlatformSTM32.h"
@@ -178,7 +178,7 @@ bool ocaMain(std::string& customNodeId,
                                             fusionServerConn.messageHandler();
                                         }
                                         std::cout << " =========> IDENTIFIED SUCCESSFULLY" << std::endl;
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
                                         OcaPlatform::Sleep(10);
 #else
                                         sleep(1);
@@ -268,7 +268,7 @@ bool ocaMain(std::string& customNodeId,
                                             OCA_LOG_ERROR("✗ Failed to Setup Connection");
                                         }
 
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
                                         // Reset discovery
                                         reset_oca_service_discovery();
 #endif
@@ -285,7 +285,7 @@ bool ocaMain(std::string& customNodeId,
                                     // Wait for Events from Device (Keep alives)
                                     ::OcaLiteCommandHandler::GetInstance().RunWithTimeout(OCA_RUN_TIMEOUT_MSEC);
 
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
                                     OcaPlatform::Sleep(9000);
 #else
                                         sleep(9);

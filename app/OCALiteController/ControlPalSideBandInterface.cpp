@@ -40,7 +40,7 @@
 
 // C interface for mDNS service discovery
 extern "C" {
-#ifdef STM32H7S7xx
+#if defined(STM32H7S7xx) || defined(STM32N657xx)
 #include "dnssd.h"
 #endif
 }
@@ -279,7 +279,7 @@ bool SidebandInterface::sideBandConnect() {
             memset(&server_addr, 0, sizeof(server_addr));
             server_addr.sin_family = AF_INET;
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
             auto discoveredDevices = discovery.GetDiscoveredDevices();
             const auto &selectedDevice = discoveredDevices[0];
             //server_addr.sin_port = htons(selectedDevice.port); // TODO: Replace after device advertising

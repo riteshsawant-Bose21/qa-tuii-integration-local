@@ -15,7 +15,7 @@
 #include <map>
 #include <memory>
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 #include <functional>
 
 #if defined(__APPLE__) || defined(FUSION)
@@ -57,7 +57,7 @@ public:
         DiscoveredDevice() : port(0), protocolVersion(0), isValid(false) {}
     };
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     /**
      * Callback function type for device discovery events
      */
@@ -104,7 +104,7 @@ public:
      */
     size_t WaitForDevices(uint32_t timeoutMs = OCA_DISCOVERY_TIMEOUT_MS);
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     /**
      * Set callback for when a new device is found
      * @param callback Function to call when device is discovered
@@ -126,7 +126,7 @@ public:
     const DiscoveredDevice *GetDeviceByName(const std::string &name) const;
 
 private:
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     /**
      * DNS-SD browse callback (static)
      */
@@ -205,7 +205,7 @@ private:
      */
     void ProcessEvents();
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     /**
      * Resolve hostname to IP address
      * @param hostname The hostname to resolve
@@ -217,7 +217,7 @@ private:
 private:
     bool m_isDiscovering;
     std::vector<DiscoveredDevice> m_discoveredDevices;
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     DNSServiceRef m_browseService;
     std::map<std::string, DNSServiceRef> m_resolveServices;
 

@@ -11,7 +11,7 @@
 #include "OcaServiceDiscovery.h"
 #include "../common/FusionProxy.h"
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 // Helper functions
 void DisplayDiscoveredDevices(
          const std::vector<OcaServiceDiscovery::DiscoveredDevice> &devices);

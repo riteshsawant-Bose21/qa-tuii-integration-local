@@ -20,7 +20,7 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 #include <netdb.h>
 #include <netinet/in.h>
 #else
@@ -36,7 +36,7 @@
 /**
  * Convert DNS-SD error code to string
  */
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 static const char *DNSServiceErrorToString(DNSServiceErrorType error)
 {
     switch (error)
@@ -96,7 +96,7 @@ static const char *DNSServiceErrorToString(DNSServiceErrorType error)
 // ---- Class Implementation ----
 
 OcaServiceDiscovery::OcaServiceDiscovery()
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     : m_isDiscovering(false), m_browseService(nullptr), m_listLocked(false)
 #else
     : m_isDiscovering(false), m_listLocked(false)
@@ -124,7 +124,7 @@ bool OcaServiceDiscovery::StartDiscovery()
     // Clear any previous discoveries
     m_discoveredDevices.clear();
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     // Start browsing for _oca._tcp services
     DNSServiceErrorType error = DNSServiceBrowse(&m_browseService,
                                                  0, // flags
@@ -152,7 +152,7 @@ bool OcaServiceDiscovery::StartDiscovery()
 
 void OcaServiceDiscovery::StopDiscovery()
 {
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     if (!m_isDiscovering)
     {
         return;
@@ -187,7 +187,7 @@ void OcaServiceDiscovery::StopDiscovery()
 
 std::vector<OcaServiceDiscovery::DiscoveredDevice> OcaServiceDiscovery::GetDiscoveredDevices() const
 {
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     while (m_listLocked)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
@@ -212,7 +212,7 @@ size_t OcaServiceDiscovery::WaitForDevices(uint32_t timeoutMs)
     size_t deviceCount = 0;
     while (std::chrono::steady_clock::now() - startTime < timeoutDuration)
     {
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
         ProcessEvents();
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
 #else
@@ -249,7 +249,7 @@ size_t OcaServiceDiscovery::WaitForDevices(uint32_t timeoutMs)
 #endif
     }
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     deviceCount = m_discoveredDevices.size();
 #endif
     OCA_LOG_INFO_PARAMS("Discovery completed. Found %zu OCA device(s)", deviceCount);
@@ -257,7 +257,7 @@ size_t OcaServiceDiscovery::WaitForDevices(uint32_t timeoutMs)
     return deviceCount;
 }
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 const OcaServiceDiscovery::DiscoveredDevice *OcaServiceDiscovery::GetDeviceByName(const std::string &name) const
 {
     auto it = std::find_if(m_discoveredDevices.begin(), m_discoveredDevices.end(),
@@ -502,7 +502,7 @@ void OcaServiceDiscovery::AddDiscoveredDevice(const DiscoveredDevice &device)
 
     m_listLocked = false;
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     // Call callback if set
     if (m_deviceFoundCallback)
     {
@@ -511,7 +511,7 @@ void OcaServiceDiscovery::AddDiscoveredDevice(const DiscoveredDevice &device)
 #endif
 }
 
-#ifndef STM32H7S7xx
+#if !defined(STM32H7S7xx) && !defined(STM32N657xx)
 void OcaServiceDiscovery::RemoveDevice(const std::string &serviceName)
 {
     m_listLocked = true;
