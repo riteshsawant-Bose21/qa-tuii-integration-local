@@ -31,12 +31,7 @@ func (s *Service) SelectByUserID(ctx context.Context, userID string) (*types.Use
 }
 
 // Insert a new user settings in the database
-func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) error {
-
-	// Validations
-	if userSettings == nil {
-		return fmt.Errorf("userSettings cannot be nil")
-	}
+func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) (string, error) {
 
 	// Create the user settings
 	row := &model.UserSetting{
@@ -49,40 +44,20 @@ func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) 
 	// Insert the user settings into the database
 	err := row.Insert(ctx, s.db, boil.Infer())
 	if err != nil {
-		return fmt.Errorf("failed to insert User Settings: %v", err)
+		return "", fmt.Errorf("failed to insert User Settings: %v", err)
 	}
 
-	// Populate the ID from the inserted row
-	userSettings.ID = row.ID
-	return nil
+	return row.ID, nil
 }
 
 func (s *Service) Update(ctx context.Context, userSettings *types.UserSettings) error {
-	if userSettings == nil {
-		return fmt.Errorf("userSettings cannot be nil")
-	}
-
-	existingSettings, err := model.UserSettings(model.UserSettingWhere.ID.EQ(userSettings.ID)).One(ctx, s.db)
-	if err != nil {
-		if err == sql.ErrNoRows {
-			return fmt.Errorf("user settings not found")
-		}
-		return fmt.Errorf("failed to fetch user settings: %v", err)
-	}
-
-	if existingSettings.UserID != userSettings.UserID {
-		return fmt.Errorf("user settings do not belong to the specified user")
-	}
-
 	row := &model.UserSetting{
-		ID:        existingSettings.ID,
-		UserID:    userSettings.UserID,
-		Language:  null.NewString(userSettings.Language, userSettings.Language != ""),
-		Theme:     null.NewString(userSettings.Theme, userSettings.Theme != ""),
-		CreatedAt: existingSettings.CreatedAt,
+		ID:       userSettings.ID,
+		UserID:   userSettings.UserID,
+		Language: null.StringFrom(userSettings.Language),
+		Theme:    null.StringFrom(userSettings.Theme),
 	}
-
-	_, err = row.Update(ctx, s.db, boil.Infer())
+	_, err := row.Update(ctx, s.db, boil.Infer())
 	if err != nil {
 		return fmt.Errorf("failed to update user settings: %v", err)
 	}

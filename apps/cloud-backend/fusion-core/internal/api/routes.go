@@ -67,7 +67,7 @@ func (a *API) registerRoutes() {
 
 		userProfile.GET("", userProfilehandler.GetUserProfile)
 		userProfile.POST("", userProfilehandler.CreateUserProfile)
-		userProfile.PUT("", userProfilehandler.UpdateUserProfile)
+		userProfile.PUT("/:profileID", userProfilehandler.UpdateUserProfile)
 	}
 
 	// user settings management routes (/user/settings/*)
@@ -78,7 +78,7 @@ func (a *API) registerRoutes() {
 
 		userSettings.GET("", userSettingsHandler.GetUserSettings)
 		userSettings.POST("", userSettingsHandler.CreateUserSettings)
-		userSettings.PUT("", userSettingsHandler.UpdateUserSettings)
+		userSettings.PUT("/:settingsID", userSettingsHandler.UpdateUserSettings)
 	}
 
 	// Additional user management routes

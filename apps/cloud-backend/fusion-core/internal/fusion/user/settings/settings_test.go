@@ -29,7 +29,7 @@ func (m *MockDatabaseService) SelectByUserID(ctx context.Context, userID string)
 	return args.Get(0).(*types.UserSettings), args.Error(1)
 }
 
-func (m *MockDatabaseService) Update(ctx context.Context, settings *types.UserSettings) error {
+func (m *MockDatabaseService) Update(ctx context.Context, settings *types.UpdateUserSettingsRequest, settingsID string) error {
 	args := m.Called(ctx, settings)
 	return args.Error(0)
 }
@@ -282,7 +282,7 @@ func TestCreateUserSettings(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := service.CreateUserSettings(ctx, tt.settingsDetails)
+			_, err := service.CreateUserSettings(ctx, tt.settingsDetails)
 
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -353,7 +353,7 @@ func TestUpdateUserSettings(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := service.UpdateUserSettings(ctx, tt.settingsDetails)
+			err := service.UpdateUserSettings(ctx, tt.settingsDetails, tt.settingsDetails.ID)
 
 			if tt.wantErr {
 				assert.Error(t, err)

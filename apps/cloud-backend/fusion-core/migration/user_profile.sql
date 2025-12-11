@@ -1,6 +1,6 @@
 CREATE TABLE user_profile (
 	id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    user_id UUID UNIQUE NOT NULL,
+    user_id UUID UNIQUE NOT NULL REFERENCES app_user(id),
     email VARCHAR(255) UNIQUE NOT NULL,
     first_name VARCHAR(100),
     last_name VARCHAR(100),
@@ -25,9 +25,7 @@ CREATE TABLE user_profile (
     netsuite_customer_id VARCHAR(255),
     price_list JSONB,
     created_at timestamp NOT NULL DEFAULT now(),
-    updated_at timestamp,
-    
-    FOREIGN KEY (user_id) REFERENCES app_user(id)
+    updated_at timestamp
 );
 
 -- Sample data for development/testing

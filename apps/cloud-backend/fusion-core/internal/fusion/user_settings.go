@@ -8,7 +8,7 @@ import (
 
 type UserSettings interface {
 	GetUserSettings(ctx context.Context, userID string) (*types.UserSettings, error)
-	CreateUserSettings(ctx context.Context, settings *types.UserSettings) error
-	UpdateUserSettings(ctx context.Context, settings *types.UserSettings) error
-	CreateUserSettingsForRegistration(ctx context.Context, userID string) error
+	CreateUserSettings(ctx context.Context, settings *types.UserSettings) (string, error)
+	UpdateUserSettings(ctx context.Context, settings *types.UpdateUserSettingsRequest, settingsID string, userID string) error
+	CreateUserSettingsForRegistration(ctx context.Context, userID string) (string, error)
 }

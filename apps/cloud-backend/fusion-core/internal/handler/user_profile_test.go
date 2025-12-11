@@ -29,9 +29,9 @@ func (m *MockUserProfileService) GetUserProfile(ctx context.Context, userID stri
 	return args.Get(0).(*types.UserProfile), args.Error(1)
 }
 
-func (m *MockUserProfileService) CreateUserProfile(ctx context.Context, profileDetails *types.UserProfile) error {
+func (m *MockUserProfileService) CreateUserProfile(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
 	args := m.Called(ctx, profileDetails)
-	return args.Error(0)
+	return args.Get(0).(string), args.Error(1)
 }
 
 func (m *MockUserProfileService) UpdateUserProfile(ctx context.Context, profileDetails *types.UserProfile) error {

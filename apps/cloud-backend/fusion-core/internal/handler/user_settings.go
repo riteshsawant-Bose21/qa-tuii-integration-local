@@ -28,8 +28,8 @@ func NewUserSettingsHandler(userSettingsSvc fusion.UserSettings) *UserSettingsHa
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.UserSettings "Successfully retrieved user settings"
-// @Failure 404 {object} object{error=string} "User settings not found / Invalid user ID format"
-// @Failure 500 {object} object{error=string} "Internal server error"
+// @Failure 404 {object} types.StatusNotFound "User settings not found / Invalid user ID format"
+// @Failure 500 {object} types.StatusInternalServerError "Internal server error"
 // @Router /user/settings [get]
 func (h *UserSettingsHandler) GetUserSettings(ctx *gin.Context) {
 
@@ -38,7 +38,7 @@ func (h *UserSettingsHandler) GetUserSettings(ctx *gin.Context) {
 	userID := auth.User.ID
 
 	if _, err := uuid.Parse(userID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
+		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
 		return
 	}
 
@@ -61,9 +61,9 @@ func (h *UserSettingsHandler) GetUserSettings(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param settings body types.UserSettings true "User settings data"
-// @Success 201 {object} object{message=string,id=string} "Successfully created user settings"
-// @Failure 400 {object} object{error=string} "Invalid request body"
-// @Failure 500 {object} object{error=string} "Internal server error"
+// @Success 201 {object} types.CreateUserSettings_statusOk "Successfully created user settings"
+// @Failure 400 {object} types.StatusBadRequest "Invalid request body"
+// @Failure 500 {object} types.StatusInternalServerError "Internal server error"
 // @Router /user/settings [post]
 func (h *UserSettingsHandler) CreateUserSettings(ctx *gin.Context) {
 	var settings types.UserSettings
@@ -83,12 +83,13 @@ func (h *UserSettingsHandler) CreateUserSettings(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.userSettings.CreateUserSettings(ctx, &settings); err != nil {
+	userSettingsID, err := h.userSettings.CreateUserSettings(ctx, &settings)
+	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user settings: %v", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"message": "User settings created successfully", "id": settings.ID})
+	ctx.JSON(http.StatusCreated, gin.H{"id": userSettingsID})
 }
 
 // UpdateUserSettings updates an existing user settings.
@@ -98,36 +99,24 @@ func (h *UserSettingsHandler) CreateUserSettings(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param settings body types.UserSettings true "User settings data"
-// @Success 200 {object} object{message=string,userID=string} "Successfully updated user settings"
-// @Failure 400 {object} object{error=string} "Invalid request body"
-// @Failure 500 {object} object{error=string} "Internal server error"
-// @Router /user/settings [put]
+// @Param profileID path string true "Profile ID"
+// @Param settings body types.UpdateUserSettingsRequest true "User settings data"
+// @Success 200 {object} types.UpdateUserSettings_statusOk "Successfully updated user settings"
+// @Failure 400 {object} types.UpdateUserSettings_statusBadRequest "Invalid request body"
+// @Failure 404 {object} types.StatusNotFound "User settings not found"
+// @Failure 500 {object} types.StatusInternalServerError_UpdateUserSettings "Internal server error"
+// @Router /user/settings/:settingsID [put]
 func (h *UserSettingsHandler) UpdateUserSettings(ctx *gin.Context) {
-	var settings types.UserSettings
+	var settings types.UpdateUserSettingsRequest
+	settingsID := ctx.Param("settingsID")
 
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid JSON format: %v", err)})
 		return
 	}
 
-	if settings.ID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "id is required for updating settings"})
-		return
-	}
-
-	if _, err := uuid.Parse(settings.ID); err != nil {
+	if _, err := uuid.Parse(settingsID); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format: must be a valid UUID"})
-		return
-	}
-
-	if settings.UserID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required for updating settings"})
-		return
-	}
-
-	if _, err := uuid.Parse(settings.UserID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id format: must be a valid UUID"})
 		return
 	}
 
@@ -143,15 +132,9 @@ func (h *UserSettingsHandler) UpdateUserSettings(ctx *gin.Context) {
 		return
 	}
 
-	authenticatedUserID := auth.User.ID
+	authUserID := auth.User.ID
 
-	// This prevents users from updating other user's settings
-	if settings.UserID != authenticatedUserID {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized: You are not allowed to update this user's settings"})
-		return
-	}
-
-	if err := h.userSettings.UpdateUserSettings(ctx, &settings); err != nil {
+	if err := h.userSettings.UpdateUserSettings(ctx, &settings, settingsID, authUserID); err != nil {
 		if err.Error() == "user settings not found" {
 			ctx.JSON(http.StatusNotFound, gin.H{"error": "User settings not found"})
 			return

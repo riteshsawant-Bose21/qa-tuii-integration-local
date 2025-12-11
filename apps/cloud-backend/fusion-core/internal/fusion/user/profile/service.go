@@ -15,7 +15,7 @@ type Service struct {
 type DatabaseService interface {
 	SelectByUserID(ctx context.Context, userID string) (*types.UserProfile, error)
 	Update(ctx context.Context, settings *types.UserProfile) error
-	Insert(ctx context.Context, userProfile *types.UserProfile) error
+	Insert(ctx context.Context, userProfile *types.UserProfile) (string, error)
 }
 
 // NewService creates a new user settings service.

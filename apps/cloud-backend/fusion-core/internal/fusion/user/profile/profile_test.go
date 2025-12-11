@@ -292,7 +292,7 @@ func TestCreateUserProfile(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := service.CreateUserProfile(ctx, tt.profileDetails)
+			_, err := service.CreateUserProfile(ctx, tt.profileDetails)
 
 			if tt.wantErr {
 				assert.Error(t, err)

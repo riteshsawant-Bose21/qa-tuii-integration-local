@@ -57,7 +57,7 @@ func SetupUserProfilePermissions(acc *AccessControlConfig) {
 	// User Profile endpoints
 	acc.RegisterPermission("GET", "/api/v1/user/profile", UserProfileRead, PermissionRead, "View user profile")
 	acc.RegisterPermission("POST", "/api/v1/user/profile", UserProfileCreate, PermissionWrite, "Create user profile")
-	acc.RegisterPermission("PUT", "/api/v1/user/profile", UserProfileUpdate, PermissionWrite, "Update user profile")
+	acc.RegisterPermission("PUT", "/api/v1/user/profile/:profileID", UserProfileUpdate, PermissionWrite, "Update user profile")
 }
 
 // SetupUserSettingsPermissions configures access control permissions for user settings endpoints
@@ -65,7 +65,7 @@ func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 	// User Settings endpoints
 	acc.RegisterPermission("GET", "/api/v1/user/settings", UserSettingsRead, PermissionRead, "View user settings")
 	acc.RegisterPermission("POST", "/api/v1/user/settings", UserSettingsCreate, PermissionWrite, "Create user settings")
-	acc.RegisterPermission("PUT", "/api/v1/user/settings", UserSettingsUpdate, PermissionWrite, "Update user settings")
+	acc.RegisterPermission("PUT", "/api/v1/user/settings/:settingsID", UserSettingsUpdate, PermissionWrite, "Update user settings")
 }
 
 // SetupCommonPermissions configures common permission patterns

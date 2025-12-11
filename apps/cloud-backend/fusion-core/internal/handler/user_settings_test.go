@@ -29,9 +29,9 @@ func (m *MockUserSettingsService) GetUserSettings(ctx context.Context, userID st
 	return args.Get(0).(*types.UserSettings), args.Error(1)
 }
 
-func (m *MockUserSettingsService) CreateUserSettings(ctx context.Context, settingsDetails *types.UserSettings) error {
+func (m *MockUserSettingsService) CreateUserSettings(ctx context.Context, settingsDetails *types.UserSettings) (string, error) {
 	args := m.Called(ctx, settingsDetails)
-	return args.Error(0)
+	return args.Get(0).(string), args.Error(1)
 }
 
 func (m *MockUserSettingsService) UpdateUserSettings(ctx context.Context, settingsDetails *types.UserSettings) error {
