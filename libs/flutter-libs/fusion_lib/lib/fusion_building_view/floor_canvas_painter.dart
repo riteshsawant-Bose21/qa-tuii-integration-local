@@ -146,10 +146,11 @@ class FloorCanvasPainter extends CustomPainter {
     if (!showSpl) return;
 
     final _HeatmapSignature currentSig = _computeHeatmapSignature();
-    final ui.Picture? pic = _HeatmapCache.instance.getOrBuild(currentSig, () => _buildHeatmapPicture(paintSize));
-    if (pic != null) {
-      canvas.drawPicture(pic);
-    }
+    _HeatmapCache.instance.checkWithSignature(currentSig);
+    // if (pic != null) {
+    //   canvas.drawPicture(pic);
+    // }
+    _buildHeatmapPicture(paintSize, canvas);
   }
 
   _HeatmapSignature _computeHeatmapSignature() {
@@ -177,13 +178,7 @@ class FloorCanvasPainter extends CustomPainter {
     );
   }
 
-  ui.Picture _buildHeatmapPicture(Size paintSize) {
-    final ui.PictureRecorder recorder = ui.PictureRecorder();
-    final Canvas offCanvas = Canvas(recorder);
-
-    // Note: paint() already applies pan/zoom transforms before calling this.
-    // We draw in world-space on the offCanvas without additional transforms.
-
+  void _buildHeatmapPicture(Size paintSize, Canvas canvas) {
     final List<HeatMapData> heatMapData = _buildSortedHeatMapEntries();
     final double pointSize = gridSize / 2;
 
@@ -196,24 +191,49 @@ class FloorCanvasPainter extends CustomPainter {
       // Clip to listening area polygon once
       tmpPath.reset();
       tmpPath.addPolygon(listeningArea.vertices, true);
-      offCanvas.save();
-      offCanvas.clipPath(tmpPath);
+      final bounds = tmpPath.getBounds();
 
-      // Draw all points for that listening area
-      for (final HeatMapData data in heatMapData.where((HeatMapData e) => e.listeningArea == listeningArea)) {
-        final double v = data.value.clamp(splMin, splMax);
-        final Color color = _colorFromLegend(v);
+      // Skip if bounds are invalid
+      if (bounds.width <= 0 || bounds.height <= 0) continue;
 
-        final ui.Paint paint = Paint()
-          ..color = color
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+      final ui.Image pic = _HeatmapCache.instance.getOrBuild(
+        _AreaSplSummary(
+          id: listeningArea.id,
+          splRef: spl,
+          fieldPointsLen: spl.fieldPoints.length,
+          splValuesLen: spl.splValues.length,
+        ),
+        () {
+          final ui.PictureRecorder areaRecorder = ui.PictureRecorder();
+          final Canvas areaCanvas = Canvas(areaRecorder);
 
-        offCanvas.drawRect(Rect.fromCenter(center: data.point, width: pointSize, height: pointSize), paint);
-      }
-      offCanvas.restore();
+          // Translate canvas so the picture's origin aligns with bounds.topLeft
+          areaCanvas.translate(-bounds.left, -bounds.top);
+          areaCanvas.save();
+          areaCanvas.clipPath(tmpPath);
+
+          // Draw all points for that listening area
+          for (final HeatMapData data in heatMapData.where((HeatMapData e) => e.listeningArea == listeningArea)) {
+            final double v = data.value.clamp(splMin, splMax);
+            final Color color = _colorFromLegend(v);
+
+            final ui.Paint paint = Paint()
+              ..color = color
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+
+            areaCanvas.drawRect(Rect.fromCenter(center: data.point, width: pointSize, height: pointSize), paint);
+          }
+          areaCanvas.restore();
+          final pic = areaRecorder.endRecording();
+          return pic.toImageSync(bounds.width.toInt(), bounds.height.toInt());
+        },
+      );
+
+      // Draw the cached image using explicit src/dst rects to ensure correct placement
+      final Rect src = Rect.fromLTWH(0, 0, pic.width.toDouble(), pic.height.toDouble());
+      final Rect dst = bounds;
+      canvas.drawImageRect(pic, src, dst, Paint());
     }
-
-    return recorder.endRecording();
   }
 
   void _drawFloorPlanImage(Canvas canvas) {
@@ -804,19 +824,28 @@ class _AreaSplSummary {
 class _HeatmapCache {
   _HeatmapCache._();
   static final _HeatmapCache instance = _HeatmapCache._();
+  _HeatmapSignature? _currentSignature;
 
-  final Map<_HeatmapSignature, ui.Picture> _cache = <_HeatmapSignature, ui.Picture>{};
+  void checkWithSignature(_HeatmapSignature sig) {
+    if (_currentSignature != sig) {
+      print('[HeatmapCache] Signature changed, clearing cache');
+      clear();
+      _currentSignature = sig;
+    }
+  }
 
-  ui.Picture? getOrBuild(_HeatmapSignature key, ui.Picture Function() builder) {
-    final ui.Picture? existing = _cache[key];
+  final Map<_AreaSplSummary, ui.Image> _cache = <_AreaSplSummary, ui.Image>{};
+
+  ui.Image getOrBuild(_AreaSplSummary key, ui.Image Function() builder) {
+    final ui.Image? existing = _cache[key];
     if (existing != null) {
-      print('[HeatmapCache] Using cached picture for signature');
+      print('[HeatmapCache] Using cached Image for signature');
       return existing;
     }
-    print('[HeatmapCache] Building new picture for signature');
-    final ui.Picture pic = builder();
-    _cache[key] = pic;
-    return pic;
+    print('[HeatmapCache] Building new Image for signature');
+    final ui.Image img = builder();
+    _cache[key] = img;
+    return img;
   }
 
   void clear() => _cache.clear();
