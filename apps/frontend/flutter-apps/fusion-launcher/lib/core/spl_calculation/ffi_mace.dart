@@ -3,6 +3,7 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
@@ -14,6 +15,8 @@ Future<MaceEngine> createMaceEngine({required String basePath, required String b
 
 /// Load the dylib from the app bundle’s Frameworks folder
 late DynamicLibrary _mace;
+// Cache base path for locating bundled assets without relying on rootBundle in isolates
+String? _bundleBasePath;
 void _maceInitializer(String basePath) {
   if (Platform.isMacOS) {
     // return DynamicLibrary.process();
@@ -22,6 +25,7 @@ void _maceInitializer(String basePath) {
     // final String bundleContents = File(exe).parent.parent.path;
 
     final String bundleContents = basePath;
+    _bundleBasePath = bundleContents;
     final String frameworksDir = p.join(bundleContents, 'Frameworks');
     _mace = DynamicLibrary.open(p.join(frameworksDir, 'libMaceAPI.dylib'));
   } else if (Platform.isIOS) {
@@ -32,9 +36,10 @@ void _maceInitializer(String basePath) {
     final String exeDir = basePath;
     final String dllPath = p.join(exeDir, 'MaceAPI.dll');
 
-    print('DLL path: $dllPath');
-    print('DLL exists: ${File(dllPath).existsSync()}');
+    debugPrint('DLL path: $dllPath');
+    debugPrint('DLL exists: ${File(dllPath).existsSync()}');
 
+    _bundleBasePath = exeDir;
     _mace = DynamicLibrary.open(dllPath);
   } else {
     throw UnsupportedError('This platform is not supported');
@@ -216,12 +221,53 @@ Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
     'assets/Loudspeakers/MSA12X.bsf',
   ];
 
+  // Determine on-disk Flutter assets location to avoid rootBundle in isolates
+  String? assetsRoot;
+  try {
+    // macOS: <bundle>/Frameworks/App.framework/Resources/flutter_assets
+    if (Platform.isMacOS && _bundleBasePath != null) {
+      assetsRoot = p.join(_bundleBasePath!, 'Frameworks', 'App.framework', 'Resources', 'flutter_assets');
+    }
+    // Windows desktop: assets copied near exe at data/flutter_assets (typical structure)
+    else if (Platform.isWindows && _bundleBasePath != null) {
+      // Try common locations used by Flutter desktop
+      final String candidate1 = p.join(_bundleBasePath!, 'data', 'flutter_assets');
+      final String candidate2 = p.join(_bundleBasePath!, 'flutter_assets');
+      if (Directory(candidate1).existsSync()) {
+        assetsRoot = candidate1;
+      } else if (Directory(candidate2).existsSync()) {
+        assetsRoot = candidate2;
+      }
+    }
+  } catch (_) {
+    // ignore; we'll fallback to rootBundle
+  }
+
   for (final String assetPath in bsfs) {
-    final ByteData data = await rootBundle.load(assetPath);
     final String filename = p.basename(assetPath); // e.g. "MSA12X.bsf"
     final File outFile = File(p.join(lsDir.path, filename));
-    if (!await outFile.exists()) {
+    if (await outFile.exists()) {
+      // Already copied
+      continue;
+    }
+
+    // Prefer copying from disk when assetsRoot is known
+    if (assetsRoot != null) {
+      final String srcPath = p.join(assetsRoot, assetPath);
+      final File srcFile = File(srcPath);
+      if (await srcFile.exists()) {
+        await srcFile.copy(outFile.path);
+        continue;
+      }
+    }
+
+    // Fallback: use rootBundle if available in this isolate
+    try {
+      final ByteData data = await rootBundle.load(assetPath);
       await outFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+    } catch (e) {
+      // If both disk copy and rootBundle fail, surface a helpful error once
+      throw Exception('Failed to prepare loudspeaker asset "$filename". Checked disk (assetsRoot=$assetsRoot) and rootBundle. Error: $e');
     }
   }
 
@@ -358,7 +404,7 @@ class MaceEngine extends BaseMaceEngine {
 
     //getAllSplJson(fph); and print the result for debugging
     final Map<String, dynamic> splJson = getAllSplJson(fph);
-    print('ALL SPL JSON: $splJson');
+    debugPrint('ALL SPL JSON: $splJson');
 
     return res;
   }

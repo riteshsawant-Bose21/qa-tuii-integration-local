@@ -72,6 +72,7 @@ class FloorCanvasPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
+    print("Floor Canvas Painer SPL $splPanelData");
     canvas.save();
     canvas.translate(panOffset.dx, panOffset.dy);
     canvas.scale(zoomScale);
@@ -147,6 +148,7 @@ class FloorCanvasPainter extends CustomPainter {
 
     for (final ListeningArea listeningArea in listeningAreas) {
       final SplData? spl = listeningArea.splData;
+      print("Listening Area SPL Data: $spl");
       if (spl == null) continue;
 
       // 1) compute clipPath once
@@ -154,7 +156,7 @@ class FloorCanvasPainter extends CustomPainter {
       tmpPath.addPolygon(listeningArea.vertices, true);
       canvas.save();
       canvas.clipPath(tmpPath);
-
+      print("HEatMap Data Length: ${heatMapData.length}");
       // 2) draw *all* points for that listeningArea
       for (final HeatMapData data in heatMapData.where((HeatMapData e) => e.listeningArea == listeningArea)) {
         final double v = data.value.clamp(splMin, splMax);
@@ -383,7 +385,7 @@ class FloorCanvasPainter extends CustomPainter {
         return Offset(start!, y - stepY);
       }
     }
-    if (inside && start != null) return Offset(start!, bounds.bottom - stepY);
+    if (inside && start != null) return Offset(start, bounds.bottom - stepY);
     return null;
   }
 
