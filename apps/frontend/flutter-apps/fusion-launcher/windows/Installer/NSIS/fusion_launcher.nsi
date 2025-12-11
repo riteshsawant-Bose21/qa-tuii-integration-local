@@ -92,7 +92,7 @@ Section "Install"
 	!define BUILD_DIR "${__FILE__}"
 	!searchparse /noerrors "${BUILD_DIR}" "\" fusion_launcher.nsi" "" $0
 	DetailPrint "DEBUG: \$0 is $0"
-	File /r "C:\Users\Administrator\actions-runner\_work\fusion-monorepo\fusion-monorepo\apps\frontend\flutter-apps\fusion-launcher\build\windows\x64\runner\Release\*"
+	File /r "C:\Users\Administrator\Documents\fusion-monorepo-build\apps\frontend\flutter-apps\fusion-launcher\build\windows\x64\runner\Release\*"
 
 	; Start menu shortcut always created
 	SetShellVarContext all
@@ -107,14 +107,14 @@ Section "Install"
 	${GetSize} "$INSTDIR" "/S=0K" $estimatedSize $0 $1
 	IntFmt $estimatedSize "0x%08X" $estimatedSize
 
-	WriteRegStr HKLM "$ProductUninstallKey" "DisplayName" "${PRODUCT_NAME}"
-	WriteRegStr HKLM "$ProductUninstallKey" "UninstallString" "$INSTDIR\uninstall.exe"
-	WriteRegStr HKLM "$ProductUninstallKey" "InstallLocation" "$INSTDIR"
-	WriteRegStr HKLM "$ProductUninstallKey" "Publisher" "${PRODUCT_PUBLISHER}"
-	WriteRegStr HKLM "$ProductUninstallKey" "DisplayVersion" "${PRODUCT_VERSION}"
-	WriteRegStr HKLM "$ProductUninstallKey" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
-	WriteRegDWORD HKLM "$ProductUninstallKey" "EstimatedSize" $estimatedSize
-	WriteRegStr HKLM "$ProductUninstallKey" "DisplayIcon" "$INSTDIR\fusion_design_tool_prototype.exe"
+	WriteRegStr HKCU "$ProductUninstallKey" "DisplayName" "${PRODUCT_NAME}"
+	WriteRegStr HKCU "$ProductUninstallKey" "UninstallString" "$INSTDIR\uninstall.exe"
+	WriteRegStr HKCU "$ProductUninstallKey" "InstallLocation" "$INSTDIR"
+	WriteRegStr HKCU "$ProductUninstallKey" "Publisher" "${PRODUCT_PUBLISHER}"
+	WriteRegStr HKCU "$ProductUninstallKey" "DisplayVersion" "${PRODUCT_VERSION}"
+	WriteRegStr HKCU "$ProductUninstallKey" "URLInfoAbout" "${PRODUCT_WEB_SITE}"
+	WriteRegDWORD HKCU "$ProductUninstallKey" "EstimatedSize" $estimatedSize
+	WriteRegStr HKCU "$ProductUninstallKey" "DisplayIcon" "$INSTDIR\fusion_design_tool_prototype.exe"
 
 SectionEnd
 
@@ -157,6 +157,6 @@ Section "Uninstall"
 	Delete "$INSTDIR\uninstall.exe"
 
 	; Remove from registry
-	DeleteRegKey HKLM "$ProductUninstallKey"
+	DeleteRegKey HKCU "$ProductUninstallKey"
 
 SectionEnd

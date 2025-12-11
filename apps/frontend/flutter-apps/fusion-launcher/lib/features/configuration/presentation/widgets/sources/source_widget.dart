@@ -181,7 +181,7 @@ class _SourceWidgetState extends State<SourceWidget> {
             //       ],
             //     ),
             //   ),
-            if (widget.source.type == SourceType.aes67input) ...<Widget>[
+            if (widget.source.connectionType == SourceConnectionType.aes67input) ...<Widget>[
               const SizedBox(height: 12),
               IPAddressField(
                 initialValue: widget.source.ipAddress,

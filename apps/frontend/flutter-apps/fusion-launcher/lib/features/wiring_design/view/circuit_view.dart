@@ -40,7 +40,7 @@ class CircuitView extends StatelessWidget {
                 port.position,
               );
               Offset resultedPosition = transformedPos;
-              final double width = 200; //* controller.canvasScale;
+              final double width = 250; //* controller.canvasScale;
               final double padding = 30 * controller.canvasState.scale;
               if (port.relativePosition.dx < port.parent.size.width * 0.1) {
                 resultedPosition = transformedPos + Offset(-width - padding, 0);

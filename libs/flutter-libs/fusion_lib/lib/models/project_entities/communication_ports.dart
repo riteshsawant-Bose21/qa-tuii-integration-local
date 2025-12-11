@@ -18,10 +18,18 @@ enum PortType {
   networkSwitchIn('Ethernet'),
   networkSwitchOut('Ethernet'),
   usb('Usb'),
+  usbIn('Usb'),
+  usbOut('Usb'),
   serial('Serial'),
   ble('Ble'),
   wifi('Wifi'),
   hdmi('Hdmi'),
+  bleIn('Ble'),
+  bleOut('Ble'),
+  wifiIn('Wifi'),
+  wifiOut('Wifi'),
+  hdmiIn('Hdmi'),
+  hdmiOut('Hdmi'),
   audioJack('Audio Jack'),
   amplifierInput('Input'),
   amplifierOutput('Output'),
@@ -77,9 +85,7 @@ class PortData {
       ),
       portNumber: json['portNumber'] as int,
       type: PortType.values.firstWhere((e) => e.name == json['type']),
-      compatibleTypes: (json['compatibleTypes'] as List<dynamic>)
-          .map((e) => PortType.values.firstWhere((pt) => pt.name == e))
-          .toList(),
+      compatibleTypes: (json['compatibleTypes'] as List<dynamic>).map((e) => PortType.values.firstWhere((pt) => pt.name == e)).toList(),
     );
   }
 

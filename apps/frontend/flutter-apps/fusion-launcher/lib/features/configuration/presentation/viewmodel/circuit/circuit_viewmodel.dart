@@ -26,7 +26,7 @@ extension CircuitViewmodel on ProjectViewModel {
         name: "${hardware.hardwareName} ${count == 0 ? "" : count + 1}",
         speakerSKU: (hardware as Speaker).speakerSKU,
       );
-      projectManager.addCircuit(newCircuit);
+      addCircuit(circuit: newCircuit, autoSave: false);
       projectManager.addHardwareToCircuit(hardware.id, newCircuit.id);
 
       if (subzone != null) {
@@ -61,6 +61,19 @@ extension CircuitViewmodel on ProjectViewModel {
         recordSnapshot();
       }
       projectManager.addCircuit(circuit);
+      for (final String algo in <String>[
+        "peq",
+        'limiter',
+        "delay",
+      ]) {
+        addProcessingBlockToParent(
+          processingBlock: ProcessingBlockModel.circuitBlocks.firstWhere(
+            (ProcessingBlockModel element) => element.algorithmId == algo,
+          ),
+          parentId: circuit.id,
+          autoSave: false,
+        );
+      }
       if (autoSave) {
         saveProject();
       }
@@ -192,6 +205,26 @@ extension CircuitViewmodel on ProjectViewModel {
     }
   }
 
+  SubZone? getSubZoneForCircuit({required String circuitId}) {
+    try {
+      return projectManager.getSubZoneForCircuit(circuitId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sub zone for circuit: $e");
+      throwError("Failed to get sub zone for circuit: $e");
+      return null;
+    }
+  }
+
+  Zone? getZoneForCircuit({required String circuitId}) {
+    try {
+      return projectManager.getZoneForCircuit(circuitId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get zone for circuit: $e");
+      throwError("Failed to get zone for circuit: $e");
+      return null;
+    }
+  }
+
   void createCircuitWithSpeakers({
     required ProductQueryModel speakerData,
     required String listeningAreaId,
@@ -249,6 +282,41 @@ extension CircuitViewmodel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder circuit in zone: $e");
       throwError("Failed to reorder circuit in zone: $e");
+    }
+  }
+
+  void moveCircuitsFromZoneToSubZone({
+    required String zoneId,
+    required String subZoneId,
+    bool autoSave = true,
+  }) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      // Get all circuits in the zone before any operations
+      final List<CircuitModel> zoneCircuits = getCircuitsInZone(zoneId);
+
+      FusionLogger.log(tag: LogTag.project, message: "Moving ${zoneCircuits.length} circuits from zone $zoneId to subzone $subZoneId");
+
+      // Move each circuit from zone to subzone
+      // Note: This should typically be handled automatically when listening areas are moved
+      // but we're doing this as a fallback to ensure circuits are properly assigned
+      for (final CircuitModel circuit in zoneCircuits) {
+        // Remove from zone first
+        removeCircuitFromZone(circuitId: circuit.id, zoneId: zoneId, autoSave: false);
+        // Then add to subzone
+        addCircuitToSubZone(circuitId: circuit.id, subZoneId: subZoneId, autoSave: false);
+      }
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to move circuits from zone to subzone: $e");
+      throwError("Failed to move circuits from zone to subzone: $e");
     }
   }
 

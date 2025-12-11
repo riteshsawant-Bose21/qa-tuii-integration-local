@@ -50,3 +50,23 @@ export 'wiring_connection/wiring_connection_service.dart';
 //Processing blocks
 export 'processing_block/processing_block_manager.dart';
 export 'processing_block/processing_block_service.dart';
+
+//functions
+export 'functions/functions_manager.dart';
+export 'functions/functions_service.dart';
+
+//mix scenes
+export 'mix_scenes/mix_scenes_manager.dart';
+export 'mix_scenes/mix_scenes_service.dart';
+
+//scenes
+export 'scenes/scene_manager.dart';
+export 'scenes/scene_service.dart';
+
+//scheduler
+export 'scheduler/scheduler_manager.dart';
+export 'scheduler/scheduler_service.dart';
+
+//GPIO
+export 'gpio/gpio_manager.dart';
+export 'gpio/gpio_service.dart';

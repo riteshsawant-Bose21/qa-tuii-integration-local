@@ -152,7 +152,7 @@ func (mc *MetricsCollector) collect() {
 		ws := mc.wsConnCount
 
 		// Populate JSON-backed metrics struct
-		state := mc.stateManager.GetFullStateDeepCopy().State
+		state := mc.stateManager.GetFullState().State
 		stateSummary := make(map[string]string, len(state))
 		valueTypes := make(map[string]int)
 		for k, v := range state {

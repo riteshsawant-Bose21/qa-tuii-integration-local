@@ -10,7 +10,7 @@ class DockItemConfig {
   final bool isCollapsibleSection;
   final ExpansibleController? controller;
 
-  final Widget Function() dockItemWidget;
+  final Widget dockItemWidget;
 
   const DockItemConfig({
     required this.id,

@@ -9,11 +9,11 @@ import (
 
 // ResolveListenUDP binds a UDP socket on the given address.
 func ResolveListenUDP(bind string) (*net.UDPConn, error) {
-	udpAddr, err := net.ResolveUDPAddr("udp", bind)
+	udpAddr, err := net.ResolveUDPAddr("udp4", bind)
 	if err != nil {
 		return nil, fmt.Errorf("resolve %q: %w", bind, err)
 	}
-	conn, err := net.ListenUDP("udp", udpAddr)
+	conn, err := net.ListenUDP("udp4", udpAddr)
 	if err != nil {
 		return nil, fmt.Errorf("listen %q: %w", bind, err)
 	}
@@ -38,7 +38,7 @@ func JoinMulticastGroups(conn *net.UDPConn, groups []string, port string) error 
 
 		for _, group := range groups {
 			hostPort := net.JoinHostPort(group, port)
-			groupAddr, err := net.ResolveUDPAddr("udp", hostPort)
+			groupAddr, err := net.ResolveUDPAddr("udp4", hostPort)
 			if err != nil {
 				return fmt.Errorf("resolve group %q: %w", groupAddr, err)
 			}

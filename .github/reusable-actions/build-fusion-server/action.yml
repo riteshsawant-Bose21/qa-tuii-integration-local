@@ -19,16 +19,22 @@ inputs:
   nexus_url:
     description: 'Nexus repository URL'
     required: true
+outputs:
+  fusion_server_version:
+    description: "Fusion Server version built"
+    value: ${{ steps.build-fusion-server.outputs.fusion_server_version }}
         
 runs:
   using: "composite"
   steps:
     - name: Build Fusion Server
+      id: build-fusion-server
       shell: bash
       working-directory: apps/firmware-apps/fusion-server
       run: |
         moon run fusion-server:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        echo "fusion_server_version=${VERSION}" >> $GITHUB_OUTPUT
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/fusion-server_*.tar.gz ${{ inputs.nexus_url }}/Fusion-Server/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-server/$VERSION/fusion-server-$VERSION.tar.gz
         echo "Fusion Server build uploaded to Nexus successfully!"
         echo "fusion-server: ${{ inputs.nexus_url }}/Fusion-Server/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-server/$VERSION/fusion-server-$VERSION.tar.gz"

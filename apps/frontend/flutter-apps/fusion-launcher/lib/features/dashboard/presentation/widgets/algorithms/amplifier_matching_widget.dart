@@ -1,6 +1,7 @@
 // ignore_for_file: always_specify_types
 
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/api_data/speakers/speaker_types.dart';
 import 'package:fusion_lib/fusion_algorithms/amplifier_matching/amplifier_matching.dart';
 import 'package:fusion_lib/api_data/speakers/speakers.dart';
 import 'package:fusion_lib/api_data/amplifiers/amplifier_catalog.dart';
@@ -146,7 +147,7 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
           strategy: PowerAllocationStrategy.asymmetrical,
           enableLogging: true, // Enable detailed logging like test file
         );
-        
+
         setState(() {
           symmetricalResult = symmetrical;
           asymmetricalResult = asymmetrical;
@@ -489,13 +490,14 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
 
             // Speaker model selection
             DropdownButtonFormField<String>(
-              value: circuit.selectedModel,
-              items: availableSpeakerModels.map((String model) {
-                return DropdownMenuItem<String>(
-                  value: model,
-                  child: Text(model),
-                );
-              }).toList(),
+              initialValue: circuit.selectedModel,
+              items:
+                  availableSpeakerModels.map((String model) {
+                    return DropdownMenuItem<String>(
+                      value: model,
+                      child: Text(model),
+                    );
+                  }).toList(),
               onChanged: (String? value) {
                 setState(() {
                   circuit.selectedModel = value;
@@ -3586,5 +3588,4 @@ class _AmplifierMatchingWidgetCleanState extends State<AmplifierMatchingWidgetCl
       ),
     );
   }
-
 }

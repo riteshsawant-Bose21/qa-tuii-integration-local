@@ -28,30 +28,30 @@ extension SourceSetViewModel on ProjectViewModel {
     }
   }
 
-  void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
-    try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      final List<Source> currentSources = getSourcesInSourceSet(sourceSetId: sourceSetId);
-      final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
-      final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
-      final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
-      for (final String id in toRemove) {
-        projectManager.removeSourceFromSourceSet(id, sourceSetId);
-      }
-      for (final String id in toAdd) {
-        projectManager.addSourceToSourceSet(id, sourceSetId);
-      }
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
-      throwError("Failed to update sources for source set: $e");
-    }
-  }
+  // void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
+  //   try {
+  //     if (autoSave) {
+  //       recordSnapshot();
+  //     }
+  //     final List<Source> currentSources = getSourcesInSourceSet(sourceSetId: sourceSetId);
+  //     final List<String> currentSourceIds = currentSources.map((Source e) => e.id).toList();
+  //     final List<String> toRemove = currentSourceIds.where((String id) => !sourceIds.contains(id)).toList();
+  //     final List<String> toAdd = sourceIds.where((String id) => !currentSourceIds.contains(id)).toList();
+  //     for (final String id in toRemove) {
+  //       projectManager.removeSourceFromSourceSet(id, sourceSetId);
+  //     }
+  //     for (final String id in toAdd) {
+  //       projectManager.addSourceToSourceSet(id, sourceSetId);
+  //     }
+  //     if (autoSave) {
+  //       saveProject();
+  //     }
+  //     updateProject();
+  //   } catch (e) {
+  //     FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
+  //     throwError("Failed to update sources for source set: $e");
+  //   }
+  // }
 
   void addSourceSet({required SourceSet sourceSet, bool autoSave = true}) {
     try {
@@ -103,6 +103,52 @@ extension SourceSetViewModel on ProjectViewModel {
     }
   }
 
+  // /// get sources and source set count
+  // int getSourceCountInZone({required String zoneId}) {
+  //   try {
+  //     pr
+  //     return projectManager.getSourcesInZone(zoneId).length + projectManager.getSourceSetsInZone(zoneId).length;
+  //   } catch (e) {
+  //     FusionLogger.log(tag: LogTag.project, message: "Failed to get source count in zone: $e");
+  //     return 0;
+  //   }
+  // }
+
+  List<Source> getSourcesWithoutSourceSet() {
+    try {
+      return projectManager.getSourcesWithoutSourceSet();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources without source set: $e");
+      return <Source>[];
+    }
+  }
+
+  SourceSet? getSourceSetForSource({required String sourceId}) {
+    try {
+      return projectManager.getSourceSetForSource(sourceId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get source set for source: $e");
+      return null;
+    }
+  }
+
+  void updateSourcesInSourceSet({required String sourceSetId, required List<String> sourceIds, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+
+      projectManager.updateSourcesInSourceSet(sourceSetId, sourceIds);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update sources for source set: $e");
+      throwError("Failed to update sources for source set: $e");
+    }
+  }
+
   //Add Source to SourceSet
   void addSourceToSourceSet({required String sourceId, required String sourceSetId, bool autoSave = true}) {
     try {
@@ -150,6 +196,111 @@ extension SourceSetViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to reorder sources in source set: $e");
       throwError("Failed to reorder sources in source set: $e");
+    }
+  }
+
+  bool canLinkSourceSet({required String sourceSetId}) {
+    try {
+      return projectManager.canLinkSourceSet(sourceSetId: sourceSetId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to check if source set can be linked: $e");
+      return false;
+    }
+  }
+
+  void addProcessingBlockToSource({required String sourceId, required ProcessingBlockModel processingBlock, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.addProcessingBlockToSource(sourceId: sourceId, processingBlock: processingBlock);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add processing block to source: $e");
+      throwError("Failed to add processing block to source: $e");
+    }
+  }
+
+  void removeProcessingBlockFromSource({required String sourceId, required String processingBlockId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.removeProcessingBlockFromSource(sourceId: sourceId, processingBlockId: processingBlockId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to remove processing block from source: $e");
+      throwError("Failed to remove processing block from source: $e");
+    }
+  }
+
+  void updateProcessingBlockInSource({required String sourceId, required ProcessingBlockModel processingBlock, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updateProcessingBlockInSource(sourceId: sourceId, processingBlock: processingBlock);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update processing block in source: $e");
+      throwError("Failed to update processing block in source: $e");
+    }
+  }
+
+  void linkSourceSet({required String sourceSetId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.linkSourceSet(sourceSetId: sourceSetId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to link source set: $e");
+      throwError("Failed to link source set: $e");
+    }
+  }
+
+  void unlinkSourceSet({required String sourceSetId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.unlinkSourceSet(sourceSetId: sourceSetId);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to unlink source set: $e");
+      throwError("Failed to unlink source set: $e");
+    }
+  }
+
+  void reOrderSourceSet({required String sourceSetIdToMove, required String sourceSetAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderSourceSetsInProject(sourceSetIdToMove: sourceSetIdToMove, sourceSetAtNewIndex: sourceSetAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to reorder source sets in project: $e");
+      throwError("Failed to reorder source sets in project: $e");
     }
   }
 }

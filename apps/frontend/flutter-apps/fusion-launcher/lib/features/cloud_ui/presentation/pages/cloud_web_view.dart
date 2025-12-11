@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_lib/fusion_utils/app_settings.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 
 class FusionCloudWebView extends StatefulWidget {
   final String? pageToRedirect;
@@ -25,7 +24,7 @@ class FusionCloudWebView extends StatefulWidget {
 class _FusionCloudWebViewState extends State<FusionCloudWebView> {
   String webUiUrl = " ";
 
-  WebViewController? controller;
+  // WebViewController? controller;
   bool isLoading = true;
   double loadingProgress = 0.0;
   bool isSubPageRequested = false;
@@ -53,40 +52,40 @@ class _FusionCloudWebViewState extends State<FusionCloudWebView> {
     debugPrint("Web UI URL: $webUiUrl");
     isSubPageRequested = false;
     // Initialize the controller
-    controller =
-        WebViewController()
-          ..setJavaScriptMode(JavaScriptMode.unrestricted)
-          ..setNavigationDelegate(
-            NavigationDelegate(
-              onProgress: (int progress) {
-                setState(() {
-                  loadingProgress = progress / 100;
-                });
-              },
-              onPageStarted: (String url) {
-                setState(() {
-                  isLoading = true;
-                });
-              },
-              onPageFinished: (String url) {
-                // if (!isSubPageRequested && widget.pageToRedirect != null) {
-                //   Future<void>.delayed(const Duration(seconds: 1), () {
-                //     final String redirectUrl = "http://${serviceLocator<AppSettings>().cloudWebUrl}${widget.pageToRedirect}";
-                //     print("Redirecting to: $redirectUrl");
-                //     controller?.loadRequest(Uri.parse(redirectUrl));
-                //     isSubPageRequested = true;
-                //   });
-                // }
-                setState(() {
-                  isLoading = false;
-                });
-              },
-              onWebResourceError: (WebResourceError error) {
-                debugPrint('WebView error: ${error.description}');
-              },
-            ),
-          )
-          ..loadRequest(Uri.parse(webUiUrl));
+    // controller =
+    //     WebViewController()
+    //       ..setJavaScriptMode(JavaScriptMode.unrestricted)
+    //       ..setNavigationDelegate(
+    //         NavigationDelegate(
+    //           onProgress: (int progress) {
+    //             setState(() {
+    //               loadingProgress = progress / 100;
+    //             });
+    //           },
+    //           onPageStarted: (String url) {
+    //             setState(() {
+    //               isLoading = true;
+    //             });
+    //           },
+    //           onPageFinished: (String url) {
+    //             // if (!isSubPageRequested && widget.pageToRedirect != null) {
+    //             //   Future<void>.delayed(const Duration(seconds: 1), () {
+    //             //     final String redirectUrl = "http://${serviceLocator<AppSettings>().cloudWebUrl}${widget.pageToRedirect}";
+    //             //     print("Redirecting to: $redirectUrl");
+    //             //     controller?.loadRequest(Uri.parse(redirectUrl));
+    //             //     isSubPageRequested = true;
+    //             //   });
+    //             // }
+    //             setState(() {
+    //               isLoading = false;
+    //             });
+    //           },
+    //           onWebResourceError: (WebResourceError error) {
+    //             debugPrint('WebView error: ${error.description}');
+    //           },
+    //         ),
+    //       )
+    //       ..loadRequest(Uri.parse(webUiUrl));
   }
 
   @override
@@ -105,11 +104,11 @@ class _FusionCloudWebViewState extends State<FusionCloudWebView> {
             ),
 
           // WebView
-          Expanded(
-            child: WebViewWidget(
-              controller: controller!,
-            ),
-          ),
+          // Expanded(
+          //   child: Webview(
+          //     url: webUiUrl,
+          //   ),
+          // ),
         ],
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.endTop,

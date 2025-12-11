@@ -96,7 +96,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       padding: const EdgeInsets.only(left: 14, right: 14),
       height: 36,
       decoration: BoxDecoration(
-        color: isHovered ? widget.bgColor.withAlpha(150) : widget.bgColor.withAlpha(190),
+        color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
         border: Border.all(
           color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
         ),
@@ -198,7 +198,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
 
                         final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                         final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
-                        return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU && incoming.id != circuitData.id;
+
+                        final Zone? incomingZone = _projectViewModel.getZoneForCircuit(circuitId: incoming.id);
+
+                        return incomingSpeakers.first.speakerSKU == currentData.first.speakerSKU &&
+                            incoming.id != circuitData.id &&
+                            incomingZone != null &&
+                            incomingZone.id == widget.zoneId;
                       },
                       onAccept: (CircuitModel incoming) {
                         /// Add speaker to target circuit

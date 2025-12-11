@@ -110,6 +110,7 @@ class _SourcesColumnState extends State<SourcesColumn> {
                   name: selectedBlock.name,
                   pos: null,
                   type: selectedBlock.type,
+                  connectionType: selectedBlock.connectionType,
                   assetImagePath: selectedBlock.assetPath,
                   locationEntity: LocationModel(),
                   sku: selectedBlock.id,
