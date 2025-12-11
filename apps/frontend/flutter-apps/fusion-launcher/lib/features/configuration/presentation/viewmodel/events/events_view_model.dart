@@ -252,4 +252,13 @@ extension EventsViewModel on ProjectViewModel {
       return <SceneActionModel>[];
     }
   }
+
+  FusionEvent getEventById(String eventId) {
+    try {
+      return projectManager.getEventById(eventId);
+    } catch (ex) {
+      throwError("Failed to retrieve event by id: $ex");
+      rethrow;
+    }
+  }
 }

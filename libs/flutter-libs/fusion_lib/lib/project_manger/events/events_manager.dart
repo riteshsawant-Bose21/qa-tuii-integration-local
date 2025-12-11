@@ -146,4 +146,11 @@ extension EventsManager on ProjectManager {
     }
     return projectService!.getEventActionsForEvent(eventId);
   }
+
+  FusionEvent getEventById(String eventId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getEventById(eventId: eventId);
+  }
 }

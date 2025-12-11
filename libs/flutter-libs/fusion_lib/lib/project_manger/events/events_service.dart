@@ -271,4 +271,11 @@ extension EventsService on ProjectService {
     final actionIds = relationships.getChildren(RelationshipType.eventActions, eventId);
     return actionIds.map((id) => sceneActions.get(id)!).toList();
   }
+
+  FusionEvent getEventById({required String eventId}) {
+    if (!events.exists(eventId)) {
+      throw Exception("Event with id $eventId does not exist.");
+    }
+    return events.get(eventId)!;
+  }
 }
