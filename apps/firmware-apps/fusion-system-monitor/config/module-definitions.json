@@ -147,32 +147,31 @@
             "name": "bdif_client",
             "properties": [
                 {
-                    "name": "num_gain_chs",
-                    "value_type": "integer",
-                    "default_value": 1,
-                    "minimum_value": 1,
-                    "maximum_value": 16
+                    "name": "uart_device",
+                    "value_type": "string",
+                    "default_value": "/dev/ttymxc3"
                 },
                 {
-                    "name": "num_php_chs",
+                    "name": "num_amps",
                     "value_type": "integer",
-                    "default_value": 1,
-                    "minimum_value": 1,
-                    "maximum_value": 16
+                    "default_value": 4
                 }
             ],
             "parameters": [
                 {
-                    "name": "gain",
-                    "value_type": "integer",
-                    "default_value": 0,
-                    "dimensions": ["num_gain_chs"]
+                    "name": "set",
+                    "value_type": "string",
+                    "default_value": ""
                 },
                 {
-                    "name": "php",
-                    "value_type": "bool",
-                    "default_value": false,
-                    "dimensions": ["num_php_chs"]
+                    "name": "get",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "setget",
+                    "value_type": "string",
+                    "default_value": ""
                 }
             ]
         }

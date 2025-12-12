@@ -3,9 +3,12 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
+#include <deque>
+#include <sstream>
 #include <mutex>
 #include <string>
 #include <vector>
@@ -19,21 +22,54 @@
 
 namespace {
 
-constexpr char kUartDevice[] = "/dev/ttymxc2";
+constexpr char kUartDevice[] = "/dev/ttymxc3";
+
 constexpr uint8_t kPreambleMsb = 0xB0;
 constexpr uint8_t kPreambleLsb = 0x5E;
+
 constexpr uint8_t kProtocolTypeBscp = 0x10;
 constexpr uint8_t kProtocolVersion = 0x00;
 
-constexpr uint8_t kBlockProtocol = 0x00;
-constexpr uint8_t kBlockAudio = 0x02;
+/* Function IDs */
+constexpr uint8_t kBlockProtocol        = 0x00;
+constexpr uint8_t kBlockPlatform        = 0x01;
+constexpr uint8_t kBlockAudio           = 0x02;
+constexpr uint8_t kBlockManufacturing   = 0x04;
 
+/* Protocol Function IDs */
+constexpr uint16_t kPropertyProtocolVersion =
+    static_cast<uint16_t>((kBlockProtocol << 8) | 0x00);
 constexpr uint16_t kPropertyProtocolHeartbeat =
     static_cast<uint16_t>((kBlockProtocol << 8) | 0x01);
-constexpr uint16_t kPropertyAudioGain =
-    static_cast<uint16_t>((kBlockAudio << 8) | 0x00);
-constexpr uint16_t kPropertyAudioPhantom =
-    static_cast<uint16_t>((kBlockAudio << 8) | 0x06);
+
+/* Platform Function IDs */
+constexpr uint16_t kPropertyPlatformFirmwareVersion =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0100);
+constexpr uint16_t kPropertyPlatformHardwareVersion =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0102);
+constexpr uint16_t kPropertyPlatformReset =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0104);
+constexpr uint16_t kPropertyPlatformAmpTemp =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x0105);
+constexpr uint16_t kPropertyPlatformAmpStatus =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x010B);
+constexpr uint16_t kPropertyPlatformSMCUStatus =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x010C);
+constexpr uint16_t kPropertyPlatformBootComplete =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x010D);
+constexpr uint16_t kPropertyPlatformPMCUStatus =
+    static_cast<uint16_t>((kBlockPlatform << 8) | 0x010E);
+
+/* Audio Function IDs */
+constexpr uint16_t kPropertyAudioAmpNumber =
+    static_cast<uint16_t>((kBlockAudio << 8) | 0x209);
+constexpr uint16_t kPropertyAudioAmpMute =
+    static_cast<uint16_t>((kBlockAudio << 8) | 0x20A);
+
+constexpr uint8_t kIndexAmpA = 0x01;
+constexpr uint8_t kIndexAmpB = 0x02;
+constexpr uint8_t kIndexAmpC = 0x04;
+constexpr uint8_t kIndexAmpD = 0x08;
 
 constexpr std::chrono::milliseconds kHeartbeatPeriod{2000};
 constexpr std::chrono::milliseconds kHeartbeatTimeout{6000};
@@ -101,25 +137,30 @@ public:
         close();
     }
 
+    void set_device(const std::string &device)
+    {
+        device_path_ = device;
+    }
+
     bool open()
     {
         if (fd_ >= 0) {
             return true;
         }
 
-        fd_ = ::open(kUartDevice, O_RDWR | O_NOCTTY | O_NONBLOCK);
+        fd_ = ::open(device_path_.c_str(), O_RDWR | O_NOCTTY | O_NONBLOCK);
         if (fd_ < 0) {
-            SPDLOG_ERROR("BDIF: failed to open {}: {}", kUartDevice, strerror(errno));
+            SPDLOG_ERROR("BDIF: failed to open {}: {}", device_path_, strerror(errno));
             return false;
         }
 
         if (!configure()) {
-            SPDLOG_ERROR("BDIF: failed to configure {}", kUartDevice);
+            SPDLOG_ERROR("BDIF: failed to configure {}", device_path_);
             close();
             return false;
         }
 
-        SPDLOG_INFO("BDIF: opened {}", kUartDevice);
+        SPDLOG_INFO("BDIF: opened {}", device_path_);
         return true;
     }
 
@@ -213,6 +254,7 @@ private:
     }
 
     int fd_{-1};
+    std::string device_path_{kUartDevice};
 };
 
 } // namespace
@@ -230,18 +272,30 @@ public:
 private:
     using Clock = std::chrono::steady_clock;
 
+    // UART handling
     bool ensure_port();
-    void poll_port();
-    void drain_frames();
-    void handle_frame(const std::vector<uint8_t> &frame);
+    void poll_rx_port();
+    void drain_rx_frames();
+    void handle_rx_frame(const std::vector<uint8_t> &frame);
 
+    // Send helpers
     bool send_frame(Operator op, uint16_t property_id, const std::vector<uint8_t> &value);
-    bool send_channel_level(uint16_t property_id, int channel, int value);
-    bool send_switch_state(uint16_t property_id, int channel, bool enabled);
+
+    bool enqueue_tx(Operator op, uint16_t property_id, const std::vector<uint8_t> &value);
+    void drain_tx_queue();
+
     void maybe_send_heartbeat();
 
-    void change_gain_post_func(int index);
-    void change_php_post_func(int index);
+    void handle_set_post_func();
+    void handle_get_post_func();
+    void handle_setget_post_func();
+
+    bool parse_command(const std::string &cmd, uint16_t &property_id, std::vector<uint8_t> &value);
+    bool send_command_from_param(const std::string &cmd, Operator op);
+    bool build_named_command(const std::string &name, const std::vector<std::string> &args,
+                             Operator op, uint16_t &property_id, std::vector<uint8_t> &value);
+    static std::string to_lower(const std::string &s);
+    static bool parse_bool_token(const std::string &token, bool &out);
 
     template <typename T>
     static std::vector<uint8_t> to_big_endian(T value)
@@ -255,11 +309,28 @@ private:
         return out;
     }
 
-    bosepro::DspParamMemory<int_fast32_t[]> gain_;
-    bosepro::DspParamMemory<bool[]> php_;
+    // Protocol parameters
+    std::string protocol_ver;
 
-    int num_gain_chs_{0};
-    int num_php_chs_{0};
+    // Platform parameters
+    std::string platform_fw_ver;
+    int_fast32_t platform_hw_ver;
+    std::vector<int_fast32_t> platform_amp_temp;
+    std::vector<int_fast32_t> platform_amp_status;
+    int_fast32_t platform_smcu_status;
+    int_fast32_t platform_get_pmcu_status;
+
+    // Audio parameters
+    int_fast32_t audio_amp_number;
+    std::vector<bool> audio_amp_mute;
+
+    // Command parameters (observer-driven)
+    std::string set_cmd_;
+    std::string get_cmd_;
+    std::string setget_cmd_;
+
+    int num_amps{0};
+    std::string uart_device_;
 
     SerialPort port_;
     std::mutex tx_mutex_;
@@ -272,6 +343,17 @@ private:
     Clock::time_point last_heartbeat_ack_{};
     uint32_t heartbeat_counter_{0};
     bool link_ready_{false};
+    bool boot_complete_acked_{false};
+
+    struct TxRequest {
+        Operator op;
+        uint16_t property_id;
+        std::vector<uint8_t> value;
+    };
+
+    static constexpr size_t kMaxTxQueue = 64;
+    static constexpr size_t kDrainBatch = 8;
+    std::deque<TxRequest> tx_queue_;
 
     MODULE_DECLARE(BDIFClient);
 };
@@ -281,11 +363,18 @@ MODULE_REGISTER(BDIFClient, "bdif_client");
 BDIFClient::BDIFClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration)
 {
-    get_property("num_gain_chs", num_gain_chs_);
-    get_property("num_php_chs", num_php_chs_);
+    get_property("uart_device", uart_device_);
+    get_property("num_amps", num_amps);
+    port_.set_device(uart_device_);
+    SPDLOG_INFO("BDIF: configured uart_device='{}' num_amps={}", uart_device_, num_amps);
 
-    assign_parameter("gain", gain_, POST_FUNCTION_VECTOR(change_gain_post_func));
-    assign_parameter("php", php_, POST_FUNCTION_VECTOR(change_php_post_func));
+    platform_amp_temp.resize(static_cast<size_t>(std::max(0, num_amps)));
+    platform_amp_status.resize(static_cast<size_t>(std::max(0, num_amps)));
+    audio_amp_mute.resize(static_cast<size_t>(std::max(0, num_amps)));
+
+    assign_parameter("set", &set_cmd_, POST_FUNCTION_SCALAR(handle_set_post_func));
+    assign_parameter("get", &get_cmd_, POST_FUNCTION_SCALAR(handle_get_post_func));
+    assign_parameter("setget", &setget_cmd_, POST_FUNCTION_SCALAR(handle_setget_post_func));
 }
 
 bool BDIFClient::ensure_port()
@@ -300,11 +389,12 @@ bool BDIFClient::ensure_port()
     heartbeat_counter_ = 0;
     last_heartbeat_sent_ = Clock::now();
     last_heartbeat_ack_ = Clock::time_point{};
+    boot_complete_acked_ = false;
 
     return port_.open();
 }
 
-void BDIFClient::poll_port()
+void BDIFClient::poll_rx_port()
 {
     if (!port_.is_open()) {
         return;
@@ -318,11 +408,11 @@ void BDIFClient::poll_port()
         }
 
         rx_buffer_.insert(rx_buffer_.end(), buffer.begin(), buffer.begin() + nread);
-        drain_frames();
+        drain_rx_frames();
     }
 }
 
-void BDIFClient::drain_frames()
+void BDIFClient::drain_rx_frames()
 {
     bool progress = true;
     while (progress) {
@@ -360,7 +450,7 @@ void BDIFClient::drain_frames()
                 continue;
             }
 
-            handle_frame(frame);
+            handle_rx_frame(frame);
         }
 
         if (rx_offset_ > 0) {
@@ -375,13 +465,8 @@ void BDIFClient::drain_frames()
     }
 }
 
-void BDIFClient::handle_frame(const std::vector<uint8_t> &frame)
+void BDIFClient::handle_rx_frame(const std::vector<uint8_t> &frame)
 {
-    if (frame.size() < 10) {
-        SPDLOG_WARN("BDIF: short frame {}", hex_string(frame.data(), frame.size()));
-        return;
-    }
-
     const uint8_t protocol = frame[3];
     if (protocol != kProtocolTypeBscp) {
         SPDLOG_WARN("BDIF: unsupported protocol type 0x{:02x}", protocol);
@@ -394,21 +479,11 @@ void BDIFClient::handle_frame(const std::vector<uint8_t> &frame)
     const uint16_t property = static_cast<uint16_t>((frame[6] << 8) | frame[7]);
     const uint8_t *value_ptr = frame.data() + 8;
     const size_t value_len = frame.size() - 10;
+    
+    uint32_t heartbeat_ack = 0; 
 
     if (version != kProtocolVersion) {
         SPDLOG_WARN("BDIF: version mismatch {} != {}", version, kProtocolVersion);
-    }
-
-    if (property == kPropertyProtocolHeartbeat &&
-        op == Operator::kSetGetResponse && result == 0 && value_len == sizeof(uint32_t)) {
-        uint32_t heartbeat = 0;
-        for (size_t i = 0; i < sizeof(uint32_t); ++i) {
-            heartbeat = static_cast<uint32_t>((heartbeat << 8) | value_ptr[i]);
-        }
-        last_heartbeat_ack_ = Clock::now();
-        link_ready_ = true;
-        SPDLOG_TRACE("BDIF: heartbeat ack {}", heartbeat);
-        return;
     }
 
     if (is_response(op) && result != 0) {
@@ -419,10 +494,375 @@ void BDIFClient::handle_frame(const std::vector<uint8_t> &frame)
     if (op == Operator::kEvent) {
         SPDLOG_INFO("BDIF: event property 0x{:04x} payload {}", property,
                     hex_string(value_ptr, value_len));
-    } else {
-        SPDLOG_DEBUG("BDIF: op {} property 0x{:04x} payload {}", static_cast<int>(op),
-                     property, hex_string(value_ptr, value_len));
+        return;
     }
+
+    SPDLOG_TRACE("BDIF: op {} property 0x{:04x} payload {}", static_cast<int>(op),
+                 property, hex_string(value_ptr, value_len));
+
+    auto read_u32 = [&](size_t offset, size_t count) -> uint32_t {
+        uint32_t v = 0;
+        for (size_t i = 0; i < count && offset + i < value_len; ++i) {
+            v = static_cast<uint32_t>((v << 8) | value_ptr[offset + i]);
+        }
+        return v;
+    };
+
+    const bool value_valid = (op == Operator::kGetResponse || op == Operator::kSetGetResponse);
+
+    switch (property) {
+    case kPropertyProtocolHeartbeat:
+        if (value_valid && value_len >= sizeof(uint32_t)) {
+            for (size_t i = 0; i < sizeof(uint32_t); ++i) {
+                heartbeat_ack = static_cast<uint32_t>((heartbeat_ack << 8) | value_ptr[i]);
+            }
+            last_heartbeat_ack_ = Clock::now();
+            link_ready_ = true;
+            SPDLOG_DEBUG("BDIF: heartbeat ack {}", heartbeat_ack);
+        } else {
+            SPDLOG_DEBUG("BDIF: heartbeat ack");
+        }
+        break;
+    case kPropertyProtocolVersion:
+        if (value_valid) {
+            protocol_ver = std::string(reinterpret_cast<const char*>(value_ptr), value_len);
+            SPDLOG_DEBUG("BDIF: ack protocol version '{}'", protocol_ver);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack protocol version");
+        }
+        break;
+    case kPropertyPlatformFirmwareVersion:
+        if (value_valid) {
+            platform_fw_ver = std::string(reinterpret_cast<const char*>(value_ptr), value_len);
+            SPDLOG_DEBUG("BDIF: ack platform fw '{}'", platform_fw_ver);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack platform fw");
+        }
+        break;
+    case kPropertyPlatformHardwareVersion:
+        if (value_valid) {
+            platform_hw_ver = read_u32(0, value_len);
+            SPDLOG_DEBUG("BDIF: ack platform hw 0x{:08x}", platform_hw_ver);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack platform hw");
+        }
+        break;
+    case kPropertyPlatformAmpTemp:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            if (idx >= 0 && idx < num_amps) {
+                platform_amp_temp[idx] = static_cast<int_fast32_t>(read_u32(1, value_len - 1));
+                SPDLOG_DEBUG("BDIF: ack amp temp[{}]={}", idx, platform_amp_temp[idx]);
+            }
+        } else {
+            SPDLOG_DEBUG("BDIF: ack amp temp");
+        }
+        break;
+    case kPropertyPlatformAmpStatus:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            if (idx >= 0 && idx < num_amps) {
+                platform_amp_status[idx] = static_cast<int_fast32_t>(read_u32(1, value_len - 1));
+                SPDLOG_DEBUG("BDIF: ack amp status[{}]=0x{:08x}", idx, platform_amp_status[idx]);
+            }
+        } else {
+            SPDLOG_DEBUG("BDIF: ack amp status");
+        }
+        break;
+    case kPropertyPlatformSMCUStatus:
+        if (value_valid) {
+            platform_smcu_status = read_u32(0, value_len);
+            SPDLOG_DEBUG("BDIF: ack smcu status 0x{:08x}", platform_smcu_status);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack smcu status");
+        }
+        break;
+    case kPropertyPlatformBootComplete:
+        if (value_valid) {
+            boot_complete_acked_ = value_len > 0 ? value_ptr[0] != 0 : false;
+            SPDLOG_DEBUG("BDIF: ack boot complete {}", boot_complete_acked_);
+        } else {
+            boot_complete_acked_ = true; // Treat SET ack as success without value.
+            SPDLOG_DEBUG("BDIF: ack boot complete");
+        }
+        break;
+    case kPropertyPlatformPMCUStatus:
+        if (value_valid) {
+            platform_get_pmcu_status = read_u32(0, value_len);
+            SPDLOG_DEBUG("BDIF: ack pmcu status 0x{:08x}", platform_get_pmcu_status);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack pmcu status");
+        }
+        break;
+    case kPropertyAudioAmpNumber:
+        if (value_valid) {
+            audio_amp_number = read_u32(0, value_len);
+            SPDLOG_DEBUG("BDIF: ack amp number {}", audio_amp_number);
+        } else {
+            SPDLOG_DEBUG("BDIF: ack amp number");
+        }
+        break;
+    case kPropertyAudioAmpMute:
+        if (value_valid && value_len >= 2) {
+            const int idx = static_cast<int>(value_ptr[0]) - 1;
+            if (idx >= 0 && idx < num_amps) {
+                audio_amp_mute[idx] = value_ptr[1] != 0;
+                const bool mute = static_cast<bool>(audio_amp_mute[idx]);
+                SPDLOG_DEBUG("BDIF: ack amp mute[{}]={}", idx, mute);
+            }
+        } else {
+            SPDLOG_DEBUG("BDIF: ack amp mute");
+        }
+        break;
+    default:
+        break;
+    }
+}
+
+bool BDIFClient::enqueue_tx(Operator op, uint16_t property_id, const std::vector<uint8_t> &value)
+{
+    if (tx_queue_.size() >= kMaxTxQueue) {
+        SPDLOG_WARN("BDIF: tx queue full ({}), dropping property 0x{:04x}", tx_queue_.size(), property_id);
+        return false;
+    }
+    tx_queue_.push_back(TxRequest{op, property_id, value});
+    return true;
+}
+
+void BDIFClient::drain_tx_queue()
+{
+    size_t sent = 0;
+    while (!tx_queue_.empty() && sent < kDrainBatch) {
+        const auto &req = tx_queue_.front();
+        if (!send_frame(req.op, req.property_id, req.value)) {
+            SPDLOG_WARN("BDIF: failed to send property 0x{:04x}; will retry", req.property_id);
+            break;
+        }
+        tx_queue_.pop_front();
+        ++sent;
+    }
+}
+
+bool BDIFClient::parse_command(const std::string &cmd, uint16_t &property_id, std::vector<uint8_t> &value)
+{
+    std::istringstream iss(cmd);
+    std::string token;
+    if (!(iss >> token)) {
+        return false;
+    }
+
+    std::vector<std::string> tokens;
+    tokens.push_back(token);
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+
+    // If first token is alphabetic, delegate to named command builder (caller will resend with op).
+    // The caller (send_command_from_param) will re-tokenize and call build_named_command.
+    // Fallback to numeric form here.
+    try {
+        property_id = static_cast<uint16_t>(std::stoul(tokens[0], nullptr, 0));
+    } catch (const std::exception &) {
+        SPDLOG_WARN("BDIF: failed to parse property id from '{}'", tokens[0]);
+        return false;
+    }
+
+    value.clear();
+    for (size_t i = 1; i < tokens.size(); ++i) {
+        try {
+            const auto byte = std::stoul(tokens[i], nullptr, 0);
+            if (byte > 0xFF) {
+                SPDLOG_WARN("BDIF: payload byte '{}' out of range", tokens[i]);
+                return false;
+            }
+            value.push_back(static_cast<uint8_t>(byte));
+        } catch (const std::exception &) {
+            SPDLOG_WARN("BDIF: failed to parse payload byte '{}'", tokens[i]);
+            return false;
+        }
+    }
+
+    return true;
+}
+
+bool BDIFClient::send_command_from_param(const std::string &cmd, Operator op)
+{
+    uint16_t property_id = 0;
+    std::vector<uint8_t> payload;
+    if (cmd.empty()) {
+        return false;
+    }
+    std::istringstream iss(cmd);
+    std::string token;
+    std::vector<std::string> tokens;
+    while (iss >> token) {
+        tokens.push_back(token);
+    }
+    if (tokens.empty()) {
+        return false;
+    }
+
+    if (std::isalpha(tokens[0][0])) {
+        if (!build_named_command(tokens[0], std::vector<std::string>(tokens.begin() + 1, tokens.end()),
+                                op, property_id, payload)) {
+            return false;
+        }
+    } else {
+        if (!parse_command(cmd, property_id, payload)) {
+            return false;
+        }
+    }
+    return enqueue_tx(op, property_id, payload);
+}
+
+std::string BDIFClient::to_lower(const std::string &s)
+{
+    std::string out;
+    out.reserve(s.size());
+    for (char c : s) {
+        out.push_back(static_cast<char>(std::tolower(static_cast<unsigned char>(c))));
+    }
+    return out;
+}
+
+bool BDIFClient::parse_bool_token(const std::string &token, bool &out)
+{
+    const auto t = to_lower(token);
+    if (t == "1" || t == "true" || t == "on" || t == "yes") {
+        out = true;
+        return true;
+    }
+    if (t == "0" || t == "false" || t == "off" || t == "no") {
+        out = false;
+        return true;
+    }
+    return false;
+}
+
+bool BDIFClient::build_named_command(const std::string &name, const std::vector<std::string> &args,
+                                     Operator op, uint16_t &property_id, std::vector<uint8_t> &value)
+{
+    enum class ArgKind { kNone, kIndex, kBool, kIndexBool };
+
+    struct Spec {
+        const char *name;
+        uint16_t property;
+        ArgKind get_args;
+        ArgKind set_args;
+        ArgKind setget_args;
+    };
+
+    static const Spec kSpecs[] = {
+        {"protocolversion", kPropertyProtocolVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+        {"platformfwversion", kPropertyPlatformFirmwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+        {"platformhwversion", kPropertyPlatformHardwareVersion, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+        {"platformampstatus", kPropertyPlatformAmpStatus, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
+        {"platformamptemp", kPropertyPlatformAmpTemp, ArgKind::kIndex, ArgKind::kIndex, ArgKind::kIndex},
+        {"platformsmcustatus", kPropertyPlatformSMCUStatus, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+        {"platformpmcustatus", kPropertyPlatformPMCUStatus, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+        {"platformreset", kPropertyPlatformReset, ArgKind::kNone, ArgKind::kBool, ArgKind::kBool},
+        {"audioampnumber", kPropertyAudioAmpNumber, ArgKind::kNone, ArgKind::kNone, ArgKind::kNone},
+        {"audioampmute", kPropertyAudioAmpMute, ArgKind::kIndex, ArgKind::kIndexBool, ArgKind::kIndexBool},
+    };
+
+    const auto name_lc = to_lower(name);
+    const Spec *spec = nullptr;
+    for (const auto &s : kSpecs) {
+        if (name_lc == s.name) {
+            spec = &s;
+            break;
+        }
+    }
+
+    if (spec == nullptr) {
+        SPDLOG_WARN("BDIF: unknown command '{}'", name);
+        return false;
+    }
+
+    auto arg_kind_for_op = [&](Operator oper) -> ArgKind {
+        switch (oper) {
+        case Operator::kGet: return spec->get_args;
+        case Operator::kSet: return spec->set_args;
+        case Operator::kSetGet: return spec->setget_args;
+        default: return ArgKind::kNone;
+        }
+    };
+
+    const ArgKind kind = arg_kind_for_op(op);
+    property_id = spec->property;
+    value.clear();
+
+    auto parse_index = [&](const std::string &tok, uint8_t &out_idx) -> bool {
+        try {
+            const auto v = std::stoul(tok, nullptr, 0);
+            if (v == 0 || v > 0xFF) {
+                SPDLOG_WARN("BDIF: index '{}' out of range", tok);
+                return false;
+            }
+            out_idx = static_cast<uint8_t>(v);
+            return true;
+        } catch (const std::exception &) {
+            SPDLOG_WARN("BDIF: failed to parse index '{}'", tok);
+            return false;
+        }
+    };
+
+    switch (kind) {
+    case ArgKind::kNone:
+        if (!args.empty()) {
+            SPDLOG_WARN("BDIF: command '{}' takes no args", name);
+            return false;
+        }
+        break;
+    case ArgKind::kIndex: {
+        if (args.size() != 1) {
+            SPDLOG_WARN("BDIF: command '{}' expects index arg", name);
+            return false;
+        }
+        uint8_t idx = 0;
+        if (!parse_index(args[0], idx)) {
+            return false;
+        }
+        value.push_back(idx);
+        break;
+    }
+    case ArgKind::kBool: {
+        if (args.size() != 1) {
+            SPDLOG_WARN("BDIF: command '{}' expects bool arg", name);
+            return false;
+        }
+        bool b = false;
+        if (!parse_bool_token(args[0], b)) {
+            SPDLOG_WARN("BDIF: command '{}' expects bool arg, got '{}'", name, args[0]);
+            return false;
+        }
+        value.push_back(static_cast<uint8_t>(b ? 1 : 0));
+        break;
+    }
+    case ArgKind::kIndexBool: {
+        if (args.size() != 2) {
+            SPDLOG_WARN("BDIF: command '{}' expects <index> <bool>", name);
+            return false;
+        }
+        uint8_t idx = 0;
+        if (!parse_index(args[0], idx)) {
+            return false;
+        }
+        bool b = false;
+        if (!parse_bool_token(args[1], b)) {
+            SPDLOG_WARN("BDIF: command '{}' expects bool arg, got '{}'", name, args[1]);
+            return false;
+        }
+        value.push_back(idx);
+        value.push_back(static_cast<uint8_t>(b ? 1 : 0));
+        break;
+    }
+    default:
+        SPDLOG_WARN("BDIF: unsupported arg kind for '{}'", name);
+        return false;
+    }
+
+    return true;
 }
 
 bool BDIFClient::send_frame(Operator op, uint16_t property_id,
@@ -465,26 +905,7 @@ bool BDIFClient::send_frame(Operator op, uint16_t property_id,
         return false;
     }
 
-    SPDLOG_DEBUG("BDIF: tx {}", hex_string(frame.data(), frame.size()));
     return true;
-}
-
-bool BDIFClient::send_channel_level(uint16_t property_id, int channel, int value)
-{
-    std::vector<uint8_t> payload = {
-        static_cast<uint8_t>(channel & 0xFF),
-        static_cast<uint8_t>(value & 0xFF),
-    };
-    return send_frame(Operator::kSet, property_id, payload);
-}
-
-bool BDIFClient::send_switch_state(uint16_t property_id, int channel, bool enabled)
-{
-    std::vector<uint8_t> payload = {
-        static_cast<uint8_t>(channel & 0xFF),
-        static_cast<uint8_t>(enabled ? 1 : 0),
-    };
-    return send_frame(Operator::kSet, property_id, payload);
 }
 
 void BDIFClient::maybe_send_heartbeat()
@@ -507,31 +928,24 @@ void BDIFClient::maybe_send_heartbeat()
     }
 }
 
-void BDIFClient::change_gain_post_func(int index)
+void BDIFClient::handle_set_post_func()
 {
-    if (index < 0 || index >= num_gain_chs_) {
-        SPDLOG_ERROR("BDIF: gain index {} out of range", index);
-        return;
-    }
-
-    int value = gain_[index];
-    if (value < 0) value = 0;
-    if (value > 3) value = 3;
-
-    if (!send_channel_level(kPropertyAudioGain, index + 1, value)) {
-        SPDLOG_ERROR("BDIF: failed to send gain channel {}", index);
+    if (!send_command_from_param(set_cmd_, Operator::kSet)) {
+        SPDLOG_WARN("BDIF: failed to enqueue set command '{}'", set_cmd_);
     }
 }
 
-void BDIFClient::change_php_post_func(int index)
+void BDIFClient::handle_get_post_func()
 {
-    if (index < 0 || index >= num_php_chs_) {
-        SPDLOG_ERROR("BDIF: php index {} out of range", index);
-        return;
+    if (!send_command_from_param(get_cmd_, Operator::kGet)) {
+        SPDLOG_WARN("BDIF: failed to enqueue get command '{}'", get_cmd_);
     }
+}
 
-    if (!send_switch_state(kPropertyAudioPhantom, index + 1, php_[index])) {
-        SPDLOG_ERROR("BDIF: failed to send phantom channel {}", index);
+void BDIFClient::handle_setget_post_func()
+{
+    if (!send_command_from_param(setget_cmd_, Operator::kSetGet)) {
+        SPDLOG_WARN("BDIF: failed to enqueue setget command '{}'", setget_cmd_);
     }
 }
 
@@ -541,16 +955,33 @@ void BDIFClient::process()
         return;
     }
 
-    poll_port();
+    poll_rx_port();
+
+    if (!boot_complete_acked_) {
+        std::vector<uint8_t> payload = {1};
+        send_frame(Operator::kSet, kPropertyPlatformBootComplete, payload);
+    }
+
     maybe_send_heartbeat();
 
     const auto now = Clock::now();
-    if (link_ready_ && last_heartbeat_ack_.time_since_epoch().count() > 0) {
-        if (now - last_heartbeat_ack_ > kHeartbeatTimeout) {
-            SPDLOG_WARN("BDIF: heartbeat timeout");
-            link_ready_ = false;
-        }
+    // Detect missing heartbeat ACK even if we haven't yet marked link_ready_.
+    const bool ack_missing = (last_heartbeat_sent_ > last_heartbeat_ack_) &&
+                             (now - last_heartbeat_sent_ > kHeartbeatTimeout);
+    if (ack_missing || (link_ready_ && last_heartbeat_ack_.time_since_epoch().count() > 0 &&
+                        now - last_heartbeat_ack_ > kHeartbeatTimeout)) {
+        SPDLOG_ERROR("BDIF: heartbeat timeout");
+        tx_queue_.clear();
+        last_heartbeat_sent_ = Clock::now();
+        last_heartbeat_ack_ = Clock::time_point{};
+        link_ready_ = false;
     }
+
+    if (!boot_complete_acked_ || !link_ready_) {
+        return;
+    }
+
+    drain_tx_queue();
 }
 
 } // namespace

@@ -47,10 +47,6 @@ public:
             block_map[bc->get_name()] = blocks.back().get();
         }
 
-        for (auto &b : blocks) {
-            b->initialize_parameters();
-        }
-
         region_manager.close_region();
     }
 
