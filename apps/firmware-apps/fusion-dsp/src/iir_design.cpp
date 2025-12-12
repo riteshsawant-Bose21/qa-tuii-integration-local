@@ -246,4 +246,44 @@ static void iir_design_hpf_cs(filter::IirFilter *iir, int section,
 
 IIR_DESIGN_BAND_REGISTER(hpf_cs, iir_design_hpf_cs);
 
+// Design a low-frequency band-pass filter using the RBJ cookbook formula.
+// Fixed at 30Hz with Q=1.0 at 48kHz sample rate.
+static void iir_design_lf_bpf(filter::IirFilter *iir, int section,
+                               float /* frequency */, float /* q */,
+                               float /* gain_db */, float /* sample_rate */)
+{
+    double b0 = 0.001959643;
+    double b1 = 0.0 * b0;          // Un-normalized: 0.0
+    double b2 = -1.0 * b0;         // Un-normalized: -0.001959643
+    double a0 = 1.0;
+    double a1 = -1.996065324;
+    double a2 = 0.996080715;
+
+    iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
+    SPDLOG_DEBUG("IIR_COEFF [LF_BPF_30Hz_Q1.0] sec{}: b0={:.17g} b1={:.17g} b2={:.17g} a0={:.17g} a1={:.17g} a2={:.17g}",
+                 section, b0, b1, b2, a0, a1, a2);
+}
+
+IIR_DESIGN_BAND_REGISTER(lf_bpf, iir_design_lf_bpf);
+
+// Design a high-frequency band-pass filter using the RBJ cookbook formula.
+// Fixed at 3.4kHz with Q=1.1 at 48kHz sample rate.
+static void iir_design_hf_bpf(filter::IirFilter *iir, int section,
+                               float /* frequency */, float /* q */,
+                               float /* gain_db */, float /* sample_rate */)
+{
+    double b0 = 0.163660628;
+    double b1 = 0.0 * b0;          // Un-normalized
+    double b2 = -1.0 * b0;         // Un-normalized: -0.163660628
+    double a0 = 1.0;
+    double a1 = -1.509735221;
+    double a2 = 0.672678745;
+
+    iir->set_section_coeffs(section, b0, b1, b2, a0, a1, a2);
+    SPDLOG_DEBUG("IIR_COEFF [HF_BPF_3400Hz_Q1.1] sec{}: b0={:.17g} b1={:.17g} b2={:.17g} a0={:.17g} a1={:.17g} a2={:.17g}",
+                 section, b0, b1, b2, a0, a1, a2);
+}
+
+IIR_DESIGN_BAND_REGISTER(hf_bpf, iir_design_hf_bpf);
+
 } // namespace

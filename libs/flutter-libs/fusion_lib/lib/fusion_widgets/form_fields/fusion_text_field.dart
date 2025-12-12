@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 /// A customizable and reusable text field for the Fusion design system.
 ///
@@ -61,6 +62,16 @@ class FusionTextField extends StatelessWidget {
   /// Border for the text field (default: transparent).
   final InputBorder? border;
 
+  /// Focus node for managing focus.
+  final FocusNode? focusNode;
+
+  /// Maximum length of input text.
+  final int maxLength;
+
+  final List<TextInputFormatter>? inputFormatters;
+
+  final bool autofocus;
+
   const FusionTextField({
     super.key,
     required this.hintText,
@@ -76,6 +87,10 @@ class FusionTextField extends StatelessWidget {
     this.decoration,
     this.textAlign = TextAlign.start,
     this.border,
+    this.focusNode,
+    this.maxLength = 24,
+    this.inputFormatters,
+    this.autofocus = false,
   });
 
   @override
@@ -87,6 +102,7 @@ class FusionTextField extends StatelessWidget {
       hintStyle: hintStyle ?? theme.inputDecorationTheme.hintStyle,
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
+      counterText: '',
       border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
@@ -95,13 +111,17 @@ class FusionTextField extends StatelessWidget {
     );
 
     return TextField(
+      maxLength: maxLength,
       controller: controller,
+      focusNode: focusNode,
       obscureText: obscureText,
       keyboardType: keyboardType,
       onChanged: onChanged,
       enabled: enabled,
+      autofocus: autofocus,
       style: style ?? theme.textTheme.bodySmall,
       textAlign: textAlign,
+      inputFormatters: inputFormatters,
       decoration: decoration ?? defaultDecoration,
     );
   }

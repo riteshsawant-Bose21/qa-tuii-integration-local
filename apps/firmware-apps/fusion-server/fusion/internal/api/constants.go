@@ -1,18 +1,31 @@
 package api
 
+import "time"
+
 const (
-	AdminPort       = "9090"
-	HTTPPort        = "8080"
-	SAPPort         = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
-	UDPPort         = "7947"
-	VIPNotifierPort = 7948
+	AudioFilesLocation = "/var/lib/fusion/audio"
+
+	AdminPort          = "9090"
+	ControllerPort     = "7950"
+	HTTPPort           = "8080"
+	MessageTriggerPort = 7949
+	SAPPort            = "9875" // As defined: https://datatracker.ietf.org/doc/html/rfc2974
+	UDPPort            = "7947"
+	VIPNotifierPort    = 7948
 
 	ContentType  = "Content-Type"
 	JsonMIMEType = "application/json"
 	Protocol     = "http://"
 
-	AudioFilesLocation = "/var/lib/fusion/audio"
+	FusionEpoch   = "_fusion_epoch"
+	FusionVersion = "_fusion_version"
 
-	MessageIDKey  = "message_id"
+	HTTPTimeout = 5 * time.Second
+
+	MessageIDKey        = "id"
+	MessagePriorityKey  = "priority"
+	MessageTimestampKey = "timestamp"
+	MessageZonesKey     = "zones"
+
 	SnapshotIDKey = "snapshot_id"
 )

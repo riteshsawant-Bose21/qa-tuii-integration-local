@@ -1,7 +1,25 @@
 /// -------------------
 /// Relationship Manager
 /// -------------------
-enum RelationshipType { floorListening, zoneListening, zoneSourceSet, hardwareLocation }
+enum RelationshipType {
+  floorAreas,
+  zoneAreas,
+  zoneSourceSet,
+  zoneSources,
+  zoneSubZones,
+  sourceSetSources,
+  hardwareLocation,
+  hardwareFloor,
+  circuitHardware,
+  zoneCircuits,
+  wireConnection,
+  processingBlock,
+  zonePriorities,
+  zoneFunctions,
+  sourcePriorityData,
+  sceneSetScenes,
+  sceneActions,
+}
 
 class RelationshipManager {
   final Map<RelationshipType, Map<String, Set<String>>> _parentToChildren = {};
@@ -16,6 +34,13 @@ class RelationshipManager {
   void unlink(RelationshipType type, String parentId, String childId) {
     _parentToChildren[type]?[parentId]?.remove(childId);
     _childToParents[type]?[childId]?.remove(parentId);
+  }
+
+  void reOrder(RelationshipType type, String parentId, List<String> newOrder) {
+    if (!_parentToChildren.containsKey(type)) return;
+    if (!_parentToChildren[type]!.containsKey(parentId)) return;
+
+    _parentToChildren[type]?[parentId] = Set<String>.from(newOrder);
   }
 
   Set<String> getChildren(RelationshipType type, String parentId) => _parentToChildren[type]?[parentId] ?? {};

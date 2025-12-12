@@ -1,11 +1,11 @@
 #pragma once
 
 #include "pffft.h"
-
 #include <spdlog/spdlog.h>
 
 #include <cstdint>
 #include <memory>
+#include <bosepro/algorithm.h>
 
 
 // NOTE: PFFFT requires its input array, output array, and workspace to all be

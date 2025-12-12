@@ -3,9 +3,9 @@ import 'dart:developer';
 
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import '../../features/user_account_setup/domain/entity/login_response_entity.dart';
+import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
 class UserSessionManager {
   static final UserSessionManager _instance = UserSessionManager._internal();
@@ -16,20 +16,50 @@ class UserSessionManager {
     return _instance;
   }
 
-  /// Checks if the user is signed in by verifying if the access token exists
-  static String? getSignedInUserEmail() {
-    final String? userDetailsJson = serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.userDetails);
+  static UserModel? _cachedUserModel;
+
+  static Future<UserModel?> getSignedInUserProfile() async {
+    if (_cachedUserModel != null) {
+      return _cachedUserModel;
+    }
+
+    final String? userDetailsJson = await serviceLocator<FusionSecureStorage>().getToken(StorageKey.userProfile);
 
     if (userDetailsJson != null) {
       try {
         final Map<String, dynamic> jsonMap = jsonDecode(userDetailsJson);
-        final LoginResponseEntity userDetails = LoginResponseEntity.fromJson(jsonMap);
-        return userDetails.user.email;
+        final UserModel userDetails = UserModel.fromJson(jsonMap);
+        _cachedUserModel = userDetails;
+
+        return userDetails;
       } catch (e) {
         log('Error decoding user details: $e');
         return null;
       }
     }
+    return null;
+  }
+
+  void saveUserProfile(UserModel userModel) {
+    _cachedUserModel = userModel;
+    final String userDetailsJson = jsonEncode(userModel.toJson());
+    serviceLocator<FusionSecureStorage>().saveToken(StorageKey.userProfile, userDetailsJson);
+  }
+
+  /// Checks if the user is signed in by verifying if the access token exists
+  static String? getSignedInUserEmail() {
+    // final String? userDetailsJson = serviceLocator<SharedPreferencesHandler>().getString(SharedPreferenceKeys.userDetails);
+    //
+    // if (userDetailsJson != null) {
+    //   try {
+    //     final Map<String, dynamic> jsonMap = jsonDecode(userDetailsJson);
+    //     final LoginResponseEntity userDetails = LoginResponseEntity.fromJson(jsonMap);
+    //     return userDetails.user.email;
+    //   } catch (e) {
+    //     log('Error decoding user details: $e');
+    //     return null;
+    //   }
+    // }
     return null;
   }
 
@@ -40,18 +70,16 @@ class UserSessionManager {
   }
 
   static Future<void> logout() async {
-    serviceLocator<ProjectManager>().deleteFusionProjectsDirectory();
+    await serviceLocator<AuthViewModel>().logout();
+    _cachedUserModel = null;
+    await serviceLocator<ProjectManager>().deleteFusionProjectsDirectory();
     serviceLocator<UserProfileManager>().clearUserProfile();
     final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
-    await prefs.setBool(SharedPreferenceKeys.adminLogin, false);
-    await prefs.setBool(SharedPreferenceKeys.isLoggedIn, false);
-    await prefs.remove(SharedPreferenceKeys.userDetails);
-    await prefs.remove(SharedPreferenceKeys.accessToken);
-    log('User logged out and session cleared.');
+    await prefs.clearAll();
   }
 
-  static bool isUserLoggedIn() {
-    final bool? isLoggedIn = serviceLocator<SharedPreferencesHandler>().getBool(SharedPreferenceKeys.isLoggedIn);
-    return isLoggedIn ?? false;
+  static Future<bool> isUserLoggedIn() async {
+    final String? idToken = await serviceLocator<FusionAuthService>().getIdToken();
+    return idToken != null;
   }
 }

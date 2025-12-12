@@ -2,10 +2,12 @@ package network
 
 import (
 	"fmt"
+	"maps"
 	"math/rand"
 	"net"
 	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	json "github.com/goccy/go-json"
@@ -38,7 +40,9 @@ type UDPServer struct {
 	numWorkers int
 
 	// ACK handling
-	pending sync.Map
+	pending              sync.Map
+	lastBroadcastEpoch   atomic.Uint64
+	lastBroadcastVersion atomic.Uint64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -77,16 +81,17 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 
 // enqueuePacket is called from the I/O goroutine. Keep it very fast.
 func (s *UDPServer) enqueuePacket(data []byte, addr *net.UDPAddr) {
+
+	// Copy to prevent concurrent buffer reuse corruption
+	buf := make([]byte, len(data))
+	copy(buf, data)
+
 	select {
-	case s.queue <- packet{data, addr}:
+	case s.queue <- packet{buf, addr}:
 	default:
-		// Drop packet if queue full
-
-		// Log ~0.1% of drops
 		if rand.Intn(1000) == 0 {
-			logging.GetLogger().Warn("UDP queue full; dropping packet from %s", addr)
+			logging.GetLogger().Warn("UDP queue full. Dropping packet from %s", addr)
 		}
-
 	}
 }
 
@@ -135,47 +140,60 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 }
 
 func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+
 	if !msg.IsPublic() {
 		return nil
 	}
 
-	data, err := json.Marshal(msg.ConfigUpdate.Data)
-	if err != nil {
-		return fmt.Errorf("marshal update: %w", err)
-	}
-
 	logger := logging.GetLogger()
 
-	// Limit the number of concurrent writes
-	sem := make(chan struct{}, maxConcurrent)
-	var wg sync.WaitGroup
+	if msg.Operation == api.NotifyOpSnapActivate {
 
-	s.clients.Range(func(k, v any) bool {
-		addr, ok := v.(*net.UDPAddr)
-		if !ok || addr == nil {
-			return true
+		// Load the snapshot data
+		sm := s.handler.StateManager
+		snapshotState := sm.GetFullState()
+		snapshotFlat := snapshotState.Flatten()
+
+		payload, err := s.buildJSONPayload(snapshotFlat, sm.GetVersion())
+		if err != nil {
+			return err
 		}
 
-		wg.Add(1)
+		s.broadcast(payload)
 
-		// Acquire a slot
-		sem <- struct{}{}
-		go func(k string, addr *net.UDPAddr) {
-			defer wg.Done()
-			defer func() {
-				// Release the slot
-				<-sem
-			}()
+		return nil
+	}
 
-			if _, err := s.conn.WriteToUDP(data, addr); err != nil {
-				logger.Warn("broadcast to %s failed: %v", k, err)
-				s.clients.Delete(k)
-			}
-		}(k.(string), addr)
-		return true
-	})
+	// Normal config updates: apply Lamport version gating
+	if msg.Operation == api.NotifyOpConfigUpdate &&
+		msg.ConfigUpdate != nil {
 
-	wg.Wait()
+		v := msg.ConfigUpdate.Version
+
+		last := api.Version{
+			Epoch:   s.lastBroadcastEpoch.Load(),
+			Counter: s.lastBroadcastVersion.Load(),
+		}
+
+		if v.Less(last) {
+			logger.Debug(
+				"udp broadcast: skipping stale/duplicate config_update version=%v (last=%v)",
+				v, last,
+			)
+			return nil
+		}
+
+		s.lastBroadcastEpoch.Store(v.Epoch)
+		s.lastBroadcastVersion.Store(v.Counter)
+	}
+
+	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
+	if err != nil {
+		return err
+	}
+
+	s.broadcast(payload)
+
 	return nil
 }
 
@@ -183,4 +201,37 @@ func (s *UDPServer) Close() error {
 	close(s.queue)
 	s.wg.Wait()
 	return s.conn.Close()
+}
+
+// buildPayload creates a JSON byte stream including authoritative Lamport version
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) ([]byte, error) {
+
+	payload := make(map[string]any, len(data)+2)
+	maps.Copy(payload, data)
+	payload[api.FusionVersion] = version.Counter
+	payload[api.FusionEpoch] = version.Epoch
+
+	json, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return json, nil
+}
+
+func (s *UDPServer) broadcast(payload []byte) {
+
+	s.clients.Range(func(k, v any) bool {
+		addr, ok := v.(*net.UDPAddr)
+		if !ok || addr == nil {
+			return true
+		}
+
+		if _, err := s.conn.WriteToUDP(payload, addr); err != nil {
+			logging.GetLogger().Warn("udp broadcast to %s failed: %v", k, err)
+			s.clients.Delete(k)
+		}
+
+		return true
+	})
 }

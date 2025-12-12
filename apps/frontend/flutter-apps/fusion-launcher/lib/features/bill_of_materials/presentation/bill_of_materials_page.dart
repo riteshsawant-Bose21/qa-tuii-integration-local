@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
 import 'package:fusion_lib/models/fusion_models.dart';
 
 import '../../../core/service_locator.dart';
@@ -29,7 +28,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
   List<HardwareComponent> controllers = <HardwareComponent>[];
   List<HardwareComponent> racks = <HardwareComponent>[];
   List<Amplifier> amplifiers = <Amplifier>[];
-  List<FusionDevice> fusionDevices = <FusionDevice>[];
+  List<FusionDsp> fusionDevices = <FusionDsp>[];
   List<HardwareComponent> others = <HardwareComponent>[];
 
   @override
@@ -129,7 +128,7 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
     }
 
     // Add fusion devices
-    for (FusionDevice device in fusionDevices) {
+    for (FusionDsp device in fusionDevices) {
       rawItems.add(
         BOMItem(
           id: device.id ?? '',
@@ -193,24 +192,25 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
   }
 
   double _calculateTotalPrice() {
-    return _getAllItems().fold(0.0, (double sum, BOMItem item) => sum + (item.unitPrice * item.quantity));
+    return _getAllItems().fold(
+      0.0,
+      (double sum, BOMItem item) => sum + (item.unitPrice * item.quantity),
+    );
   }
 
   loadData() {
     speakers = serviceLocator<ProjectViewModel>().hardwareComponents.whereType<Speaker>().toList();
     sources = serviceLocator<ProjectViewModel>().hardwareComponents.whereType<Source>().toList();
-    controllers =
-        serviceLocator<ProjectViewModel>().hardwareComponents
-            .whereType<GenericHardwareComponent>()
-            .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.controller)
-            .toList();
+    controllers = serviceLocator<ProjectViewModel>().fusionControllers;
     racks =
         serviceLocator<ProjectViewModel>().hardwareComponents
             .whereType<GenericHardwareComponent>()
-            .where((GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack)
+            .where(
+              (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+            )
             .toList();
     amplifiers = <Amplifier>[];
-    fusionDevices = <FusionDevice>[];
+    fusionDevices = <FusionDsp>[];
     others =
         serviceLocator<ProjectViewModel>().hardwareComponents
             .where(
@@ -229,7 +229,10 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
         },
         builder: (BuildContext context, ProjectViewModelState state) {
           final List<BOMItem> filteredItems = _getFilteredItems();
-          final double totalPrice = _getAllItems().fold(0.0, (double sum, BOMItem item) => sum + item.unitPrice * item.quantity);
+          final double totalPrice = _getAllItems().fold(
+            0.0,
+            (double sum, BOMItem item) => sum + item.unitPrice * item.quantity,
+          );
           final double vatAmount = totalPrice * 0.0161; // 1.61%
           const double orgDiscount = 400.0;
           final double grandTotal = totalPrice + vatAmount - orgDiscount;
@@ -273,9 +276,15 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                 decoration: const InputDecoration(
                                   hintText: 'Search',
                                   hintStyle: TextStyle(color: secondaryText),
-                                  prefixIcon: Icon(Icons.search, color: secondaryText),
+                                  prefixIcon: Icon(
+                                    Icons.search,
+                                    color: secondaryText,
+                                  ),
                                   border: InputBorder.none,
-                                  contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 8,
+                                  ),
                                 ),
                               ),
                             ),
@@ -303,13 +312,76 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                 ),
                                 child: const Row(
                                   children: <Widget>[
-                                    SizedBox(width: 60, child: Text('', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
-                                    Expanded(flex: 2, child: Text('Item', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
-                                    Expanded(flex: 2, child: Text('Model/Variant', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
-                                    SizedBox(width: 100, child: Text('Unit Price', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
-                                    SizedBox(width: 80, child: Text('Quantity', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
-                                    SizedBox(width: 100, child: Text('Price', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
-                                    SizedBox(width: 60, child: Text('Action', style: TextStyle(fontWeight: FontWeight.w600, color: secondaryText))),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        '',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Item',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                    Expanded(
+                                      flex: 2,
+                                      child: Text(
+                                        'Model/Variant',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 100,
+                                      child: Text(
+                                        'Unit Price',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 80,
+                                      child: Text(
+                                        'Quantity',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 100,
+                                      child: Text(
+                                        'Price',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
+                                    SizedBox(
+                                      width: 60,
+                                      child: Text(
+                                        'Action',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.w600,
+                                          color: secondaryText,
+                                        ),
+                                      ),
+                                    ),
                                   ],
                                 ),
                               ),
@@ -317,13 +389,18 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                               Expanded(
                                 child: ListView.builder(
                                   itemCount: filteredItems.length,
-                                  itemBuilder: (BuildContext context, int index) {
+                                  itemBuilder: (
+                                    BuildContext context,
+                                    int index,
+                                  ) {
                                     final BOMItem item = filteredItems[index];
                                     return Container(
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
                                         border: Border(
-                                          bottom: BorderSide(color: borderColor.withOpacity(0.5)),
+                                          bottom: BorderSide(
+                                            color: borderColor.withOpacity(0.5),
+                                          ),
                                         ),
                                       ),
                                       child: Row(
@@ -335,10 +412,17 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                             child:
                                                 item.imageUrl != null
                                                     ? ClipRRect(
-                                                      borderRadius: BorderRadius.circular(4),
-                                                      child: Image.asset(item.imageUrl!),
+                                                      borderRadius: BorderRadius.circular(
+                                                        4,
+                                                      ),
+                                                      child: Image.asset(
+                                                        item.imageUrl!,
+                                                      ),
                                                     )
-                                                    : const Icon(Icons.device_unknown, color: secondaryText),
+                                                    : const Icon(
+                                                      Icons.device_unknown,
+                                                      color: secondaryText,
+                                                    ),
                                           ),
                                           const SizedBox(width: 20),
                                           // Item Name
@@ -592,7 +676,10 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     onPressed: () {
                                       // Handle print action
                                     },
-                                    icon: const Icon(Icons.print_outlined, size: 14),
+                                    icon: const Icon(
+                                      Icons.print_outlined,
+                                      size: 14,
+                                    ),
                                     label: const Text(
                                       'Print',
                                       style: TextStyle(
@@ -602,7 +689,9 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: secondaryText,
-                                      side: const BorderSide(color: borderColor),
+                                      side: const BorderSide(
+                                        color: borderColor,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
@@ -615,7 +704,10 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     onPressed: () {
                                       // Handle export BOM action
                                     },
-                                    icon: const Icon(Icons.file_download_outlined, size: 14),
+                                    icon: const Icon(
+                                      Icons.file_download_outlined,
+                                      size: 14,
+                                    ),
                                     label: const Text(
                                       'Export BOM',
                                       style: TextStyle(
@@ -625,7 +717,9 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     style: OutlinedButton.styleFrom(
                                       foregroundColor: secondaryText,
-                                      side: const BorderSide(color: borderColor),
+                                      side: const BorderSide(
+                                        color: borderColor,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),

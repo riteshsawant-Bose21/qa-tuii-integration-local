@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 class GradientActionButton extends StatelessWidget {
   /// Width of the button. Defaults to 240.
@@ -50,7 +52,8 @@ class GradientActionButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final List<BoxShadow> shadows = boxShadow ??
+    final List<BoxShadow> shadows =
+        boxShadow ??
         <BoxShadow>[
           BoxShadow(
             color: gradientColors.last.withValues(alpha: 0.5),
@@ -74,19 +77,22 @@ class GradientActionButton extends StatelessWidget {
         ),
         child: Material(
           color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(borderRadius),
-            onTap: onTap,
-            child: Center(
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Text(label, style: textStyle),
-                  if (trailing != null) ...<Widget>[
-                    const SizedBox(width: 12),
-                    trailing!,
+          child: SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, label),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(borderRadius),
+              onTap: onTap,
+              child: Center(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Text(label, style: textStyle),
+                    if (trailing != null) ...<Widget>[
+                      const SizedBox(width: 12),
+                      trailing!,
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),

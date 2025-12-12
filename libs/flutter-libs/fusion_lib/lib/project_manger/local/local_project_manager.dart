@@ -1,11 +1,8 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
-import 'package:path_provider/path_provider.dart';
 
 const String kFusionProjectDirName = '/FusionProject';
 const String kAdminFusionProjectDirName = '/AdminFusionProject';
@@ -19,9 +16,11 @@ class LocalProjectManager {
   /// Adds a new project to the list.
   /// If the project already exists, it will be replaced.
   Future<Directory> get fusionProjectDirectory async {
-    final String fusionDirPath = isAdminLogin ? kFusionProjectDirName : kFusionProjectDirName;
-    final Directory appDocDir = await getApplicationDocumentsDirectory();
+    final String fusionDirPath = kFusionProjectDirName;
+    Directory appDocDir = await FusionUtils.getFusionAppDirectory();
     final Directory fusionDir = Directory('${appDocDir.path}$fusionDirPath');
+
+    // print("Fusion Project Directory: ${fusionDir.path}");
 
     if (!await fusionDir.exists()) {
       await fusionDir.create(recursive: true);
@@ -45,12 +44,12 @@ class LocalProjectManager {
     /// check for the token
     /// if not exists then do not load projects
 
-    final String? accessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
-
-    if ((accessToken == null || accessToken.isEmpty) && !isAdminLogin) {
-      FusionLogger.log(tag: LogTag.project, message: "No access token found. Skipping project load.");
-      return ResponseCallback.failure('No access token found. Please log in.');
-    }
+    // final String? accessToken = sharedPreferencesHandler.getString(SharedPreferenceKeys.accessToken);
+    //
+    // if ((accessToken == null || accessToken.isEmpty) && !isAdminLogin) {
+    //   FusionLogger.log(tag: LogTag.project, message: "No access token found. Skipping project load.");
+    //   return ResponseCallback.failure('No access token found. Please log in.');
+    // }
 
     try {
       /// Load local project_data.json files
@@ -72,6 +71,12 @@ class LocalProjectManager {
     }
   }
 
+  Future<Directory> getProjectDirectoryById(String projectId) async {
+    final Directory fusionDir = await fusionProjectDirectory;
+    final Directory projectDir = Directory('${fusionDir.path}/$projectId');
+    return projectDir;
+  }
+
   /// Creates a new project folder
   /// with the given name.
   /// inside the Fusion project directory.
@@ -83,6 +88,8 @@ class LocalProjectManager {
     try {
       final Directory fusionDir = await fusionProjectDirectory;
       final Directory projectDir = Directory('${fusionDir.path}/$projectId');
+
+      print('Creating new project directory at: ${projectDir.path}');
 
       /// Check if folder already exists
       if (await projectDir.exists()) {
@@ -103,11 +110,17 @@ class LocalProjectManager {
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
         "floors": [
-          {"id": FusionUtils.shortStringUUID(), 'name': "Floor 1", 'floorPlan': FloorPlanModel.defaultFloorPlan, 'listeningAreas': []},
+          {
+            "id": "FLOOR${FusionUtils.shortStringUUID()}",
+            'name': "Floor 1",
+            'floorPlan': FloorPlanModel.defaultFloorPlan,
+          },
         ],
         "listeningAreas": [],
         "zones": [],
         "sourceSet": [],
+        "circuits": [],
+        "wiringConnection": [],
         "hardwareComponents": [],
         "fusionDevices": [],
         "suggestedFusionDevices": [],
@@ -213,10 +226,6 @@ class LocalProjectManager {
 
   /// Deletes the Fusion project directory
   Future<ResponseCallback<bool>> deleteFusionProjectDirectory() async {
-    if (isAdminLogin) {
-      FusionLogger.log(tag: LogTag.project, message: 'Admin mode: Skipping deletion of Fusion project directory.');
-      return ResponseCallback.success(true);
-    }
     final Directory fusionDir = await fusionProjectDirectory;
 
     if (await fusionDir.exists()) {
@@ -286,11 +295,6 @@ class LocalProjectManager {
     } catch (e) {
       throw ('Error getting image from project: $e');
     }
-  }
-
-  // Is admin
-  bool get isAdminLogin {
-    return sharedPreferencesHandler.getBool(SharedPreferenceKeys.adminLogin) ?? false;
   }
 
   Future<Directory> _projectDirectory(String projectId) async {

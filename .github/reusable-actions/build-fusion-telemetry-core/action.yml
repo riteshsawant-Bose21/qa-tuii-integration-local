@@ -19,16 +19,22 @@ inputs:
   nexus_url:
     description: 'Nexus repository URL'
     required: true
+outputs:
+  fusion_telemetry_core_version:
+    description: "URL to the uploaded Fusion Telemetry Core build in Nexus"
+    value: ${{ steps.build-fusion-telemetry-core.outputs.fusion_telemetry_core_version }}
         
 runs:
   using: "composite"
   steps:
     - name: Build with WAF
+      id: build-fusion-telemetry-core
       shell: bash
       working-directory: apps/firmware-apps/fusion-telemetry-core
       run: |
         moon run fusion-telemetry-core:build
         VERSION="$(./Jenkins/SetVersionProperty.sh)-${GITHUB_RUN_NUMBER}+$(git rev-parse --short HEAD)"
+        echo "fusion_telemetry_core_version=${VERSION}" >> $GITHUB_OUTPUT
         curl -k --ssl-no-revoke -f -u github-actions-uploader:${{ inputs.nexus_password }} -T ./build/telemetry_core ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION
         echo "Fusion Telemetry Core build uploaded to Nexus successfully!"
         echo "fusion-telemetry-core: ${{ inputs.nexus_url }}/Fusion-Telemetry-Core/Continuous/${GITHUB_HEAD_REF:-${GITHUB_REF_NAME}}/fusion-telemetry-core/$VERSION/fusion-telemetry-core-$VERSION"

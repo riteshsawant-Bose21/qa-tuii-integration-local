@@ -1,17 +1,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/api_data/speakers/speaker_catalog.dart';
-import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
-import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
-import '../api_data/speakers/speaker_types.dart';
 import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
-import '../models/project_entities/floor_plan_model.dart';
-import '../models/project_entities/hardware_component_model.dart';
-import '../models/project_entities/listening_area_model.dart';
-import '../models/project_entities/speaker_model.dart';
 
 class FloorCanvasPainter extends CustomPainter {
   final double gridSize, zoomScale;
@@ -34,8 +27,18 @@ class FloorCanvasPainter extends CustomPainter {
   final bool listeningAreaSelectionActive;
   final List<String> selectedListeningAreaIds;
   final List<Zone> zones;
+  final List<SubZone> subZones;
   Zone? currentlySelectingZone;
+  SubZone? currentlySelectingSubZone;
   final SplPanelData splPanelData;
+
+  //key value pair for listening area and its zone
+  final Map<String, String> listeningAreaToZoneMap;
+  final Map<String, String> subZoneToZoneMap;
+  final Map<String, String> listeningAreaToSubZoneMap;
+
+  // Mode state
+  final bool isAcousticsMode;
 
   FloorCanvasPainter({
     required this.gridSize,
@@ -43,6 +46,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.panOffset,
     required this.listeningAreas,
     required this.zones,
+    required this.subZones,
     required this.current,
     required this.showSpl,
     required this.floorPlanImageSelected,
@@ -53,12 +57,17 @@ class FloorCanvasPainter extends CustomPainter {
     required this.listeningAreaSelectionActive,
     required this.selectedListeningAreaIds,
     required this.currentlySelectingZone,
+    required this.currentlySelectingSubZone,
     required this.splMax,
     required this.splMin,
+    required this.isAcousticsMode,
     this.previewPoint,
     this.highlightedIndex,
     this.selectedHardwareComponentId,
     required this.splPanelData,
+    required this.listeningAreaToZoneMap,
+    required this.listeningAreaToSubZoneMap,
+    required this.subZoneToZoneMap,
   });
 
   @override
@@ -210,25 +219,32 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size size) {
-    final ui.Paint pg = Paint()
-      ..color = Colors.grey.shade300.withValues(alpha: 0.5)
-      ..strokeWidth = 1 / zoomScale;
-    final double sx = -panOffset.dx / zoomScale, sy = -panOffset.dy / zoomScale;
-    final int cols = (size.width / zoomScale).ceil() + 2;
-    final int rows = (size.height / zoomScale).ceil() + 2;
+    const double dotRadius = 10;
 
-    for (int i = -1; i < cols; i++) {
-      final double x = (sx / gridSize).floor() * gridSize + i * gridSize;
-      canvas.drawLine(Offset(x, sy - gridSize), Offset(x, sy + rows * gridSize), pg);
-    }
-    for (int j = -1; j < rows; j++) {
-      final double y = (sy / gridSize).floor() * gridSize + j * gridSize;
-      canvas.drawLine(Offset(sx - gridSize, y), Offset(sx + cols * gridSize, y), pg);
+    final Paint paint = Paint()
+      ..color = Colors.grey.shade300.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill;
+
+    // Find visible bounds in world coordinates
+    final double left = -panOffset.dx / zoomScale;
+    final double top = -panOffset.dy / zoomScale;
+    final double right = left + size.width / zoomScale;
+    final double bottom = top + size.height / zoomScale;
+
+    // Snap to grid so it always looks infinite
+    final double spacing = gridSize;
+    final double startX = (left ~/ spacing) * spacing;
+    final double startY = (top ~/ spacing) * spacing;
+
+    for (double x = startX; x < right; x += spacing) {
+      for (double y = startY; y < bottom; y += spacing) {
+        final double r = (dotRadius / zoomScale).clamp(6.0, 8.0); // clamp to avoid oversized dots
+        canvas.drawCircle(Offset(x, y), r, paint);
+      }
     }
   }
 
   /// Draw all listening areas on the canvas
-
   void _drawListeningAreas(Canvas canvas) {
     for (int i = 0; i < listeningAreas.length; i++) {
       final List<ui.Offset> poly = listeningAreas[i].vertices;
@@ -236,11 +252,34 @@ class FloorCanvasPainter extends CustomPainter {
 
       bool selected = false;
 
-      late Zone? parentZone;
-      try {
-        parentZone = zones.firstWhere((Zone z) => z.listeningAreasIds.contains(listeningAreas[i].id));
-      } catch (e) {
-        parentZone = null;
+      // Determine if listening area belongs to a subzone or zone
+      SubZone? parentSubZone;
+      Zone? parentZone;
+
+      final String? subZoneId = listeningAreaToSubZoneMap[listeningAreas[i].id];
+      if (subZoneId != null) {
+        // Listening area belongs to a subzone
+        try {
+          parentSubZone = subZones.firstWhere((SubZone sz) => sz.id == subZoneId);
+          // Get the parent zone for color
+          final String? zoneId = subZoneToZoneMap[subZoneId];
+          if (zoneId != null) {
+            parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          }
+        } catch (e) {
+          parentSubZone = null;
+          parentZone = null;
+        }
+      } else {
+        // Listening area belongs directly to a zone
+        final String? zoneId = listeningAreaToZoneMap[listeningAreas[i].id];
+        if (zoneId != null) {
+          try {
+            parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          } catch (e) {
+            parentZone = null;
+          }
+        }
       }
 
       Color zoneColor = parentZone != null ? ColorUtils.hexToColor(parentZone.zoneColor) : defaultListeningAreaColor;
@@ -286,13 +325,23 @@ class FloorCanvasPainter extends CustomPainter {
       canvas.drawPath(path, selected ? strokeSelected : stroke);
 
       for (final ui.Offset p in poly) {
-        if (selected) {
+        if (selected && isAcousticsMode) {
           canvas.drawCircle(p, vertexSize, vertexPaint);
         }
       }
 
       final anchor = _leftMostVertex(poly, zoomScale);
-      final label = listeningAreas[i].name ?? listeningAreas[i].name ?? 'Area ${i + 1}';
+      String label = listeningAreas[i].name ?? 'Area ${i + 1}';
+
+      // Add zone/subzone information to the label
+      if (parentSubZone != null) {
+        // Listening area belongs to a subzone
+        label = '$label (${parentSubZone.name})';
+      } else if (parentZone != null) {
+        // Listening area belongs directly to a zone
+        label = '$label (${parentZone.name})';
+      }
+
       _drawBadgeAtLeftMostVertexAuto(
         canvas: canvas,
         path: path,
@@ -430,6 +479,11 @@ class FloorCanvasPainter extends CustomPainter {
     for (int i = 0; i < hardwareComponents.length; i++) {
       final HardwareComponent comp = hardwareComponents[i];
 
+      // In acoustics mode, only draw speakers and skip other hardware components
+      if (isAcousticsMode && comp is! Speaker) {
+        continue;
+      }
+
       final Rect dst = Rect.fromCenter(
         center: comp.pos,
         width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
@@ -495,8 +549,8 @@ class FloorCanvasPainter extends CustomPainter {
         }
       }
 
-      // draw selection border
-      if (comp.id == selectedHardwareComponentId) {
+      // draw selection border - in acoustics mode, only show selection for speakers
+      if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
         canvas.drawRect(
           Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
           Paint()
@@ -606,6 +660,8 @@ class FloorCanvasPainter extends CustomPainter {
         old.zoomScale != zoomScale ||
         old.panOffset != panOffset ||
         old.listeningAreas != listeningAreas ||
+        old.zones != zones ||
+        old.subZones != subZones ||
         old.current != current ||
         old.previewPoint != previewPoint ||
         old.highlightedIndex != highlightedIndex ||
@@ -614,7 +670,11 @@ class FloorCanvasPainter extends CustomPainter {
         old.showSpl != showSpl ||
         old.hardwareComponents != hardwareComponents ||
         old.hardwareImages != hardwareImages ||
-        old.selectedHardwareComponentId != selectedHardwareComponentId;
+        old.selectedHardwareComponentId != selectedHardwareComponentId ||
+        old.listeningAreaToZoneMap != listeningAreaToZoneMap ||
+        old.listeningAreaToSubZoneMap != listeningAreaToSubZoneMap ||
+        old.subZoneToZoneMap != subZoneToZoneMap ||
+        old.isAcousticsMode != isAcousticsMode;
   }
 }
 

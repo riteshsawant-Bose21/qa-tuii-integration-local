@@ -52,24 +52,46 @@ dependencies:
   fluttertoast: ^8.2.12
   google_fonts: ^6.2.1
   archive: ^4.0.7
+  share_plus: ^12.0.1
   file_picker: ^10.2.0
-  webview_flutter: ^4.13.0
+  webview_all: ^0.5.2
   photo_view: ^0.15.0
   pretty_qr_code: ^3.4.0
   nested: ^1.0.0
   bloc: ^9.0.0
   equatable: ^2.0.7
   flutter_svg: ^2.2.1
+  lucide_icons_flutter: ^3.1.6
+  flutter_secure_storage: ^9.2.4
+
+
+  # Authentication
+  auth0_flutter: ^1.14.0
+
+  flutter_dotenv: ^6.0.0
+
+  calendar_date_picker2: ^2.0.1
+  date_picker_plus: ^4.2.0
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
     
   dartzmq:
     path:  ../../../../libs/flutter-libs/dartzmq
+  recase: ^4.1.0
+
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  appium_flutter_server: 
+    git:
+      url: https://github.com/Preetham-BoseProfessional/appium-flutter-server-x.git
+      ref: main
+      path: server
+  integration_test:
+    sdk: flutter
+  permission_handler: ^11.0.1
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -91,6 +113,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - .env
     - assets/
     - assets/images/
     - assets/images/speakers/
@@ -101,6 +124,9 @@ flutter:
     - assets/Loudspeakers/
     - assets/images/splash/
     - assets/icons/
+    - assets/icons/wiring_ports/
+    - assets/icons/scheduler/
+    # - packages/fusion_lib/lib/assets/
     - assets/svg/
 
 

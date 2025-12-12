@@ -81,7 +81,7 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
   std::istringstream iss(pattern);
   std::string token;
 
-  auto pushKey = [&](const std::string& key) {
+  auto pushKey = [&](const std::string &key) {
     if (!key.empty()) {
       PatternComponent pc;
       pc.key = key;
@@ -89,7 +89,8 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
     }
   };
 
-  auto parseBracket = [&](const std::string& inside, const std::string& wholeToken) {
+  auto parseBracket = [&](const std::string &inside,
+                          const std::string &wholeToken) {
     PatternComponent pcArr;
     pcArr.isArrayAccess = true;
 
@@ -100,24 +101,27 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
       pcArr.isSlice = true;
       const size_t colonPos = inside.find(':');
       const std::string startStr = inside.substr(0, colonPos);
-      const std::string endStr   = inside.substr(colonPos + 1);
+      const std::string endStr = inside.substr(colonPos + 1);
       try {
         pcArr.sliceStart = std::stoi(startStr);
-        pcArr.sliceEnd   = std::stoi(endStr);
+        pcArr.sliceEnd = std::stoi(endStr);
       } catch (...) {
-        throw std::runtime_error("Invalid slice indices in pattern: " + wholeToken);
+        throw std::runtime_error("Invalid slice indices in pattern: " +
+                                 wholeToken);
       }
     } else {
       // Literal numeric index
       for (char c : inside) {
         if (!std::isdigit(static_cast<unsigned char>(c))) {
-          throw std::runtime_error("Invalid array index in pattern: " + wholeToken);
+          throw std::runtime_error("Invalid array index in pattern: " +
+                                   wholeToken);
         }
       }
       try {
         pcArr.index = std::stoi(inside);
       } catch (...) {
-        throw std::runtime_error("Invalid array index in pattern: " + wholeToken);
+        throw std::runtime_error("Invalid array index in pattern: " +
+                                 wholeToken);
       }
     }
 
@@ -126,7 +130,8 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
 
   // Split the pattern on '.'
   while (std::getline(iss, token, '.')) {
-    if (token.empty()) continue;
+    if (token.empty())
+      continue;
 
     // Special-case token that is exactly "[*]"
     if (token == "[*]") {
@@ -157,7 +162,8 @@ inline std::vector<PatternComponent> parsePattern(const std::string &pattern) {
     // Parse a chain of bracket groups
     while (pos < token.size()) {
       if (token[pos] != '[') {
-        throw std::runtime_error("Unexpected character in pattern token: " + token);
+        throw std::runtime_error("Unexpected character in pattern token: " +
+                                 token);
       }
       size_t close = token.find(']', pos);
       if (close == std::string::npos) {
@@ -221,8 +227,7 @@ getJsonValueAtPath(const Json::Value &root,
  */
 inline bool tryGetJsonValueAtPath(const Json::Value &root,
                                   const std::vector<PathComponent> &pathParts,
-                                  Json::Value *out,
-                                  bool verbose = false) {
+                                  Json::Value *out, bool verbose = false) {
   const Json::Value *current = &root;
   for (const auto &part : pathParts) {
     if (part.isArrayAccess) {
@@ -292,6 +297,58 @@ inline bool patternMatchesPath(const std::vector<PatternComponent> &pattern,
   return (pIdx == pattern.size() && pathIdx == path.size());
 }
 
+/**
+ * @brief Determine whether an incoming update should be accepted based on
+ *        Lamport epoch+counter ordering.
+ *
+ * Rules:
+ *   1. New epoch always wins.
+ *   2. Within the same epoch, counter must increase.
+ *   3. Older epoch is rejected.
+ */
+static bool
+shouldAcceptUpdate(long long incomingEpoch, long long incomingVersion,
+                   long long &lastEpoch, long long &lastCounter, bool verbose,
+                   const std::function<void(const std::string &)> &log) {
+  // New epoch: always accept
+  if (incomingEpoch > lastEpoch) {
+    if (verbose) {
+      log("Accepting update: new epoch " + std::to_string(incomingEpoch) +
+          " (old=" + std::to_string(lastEpoch) + ")");
+    }
+    lastEpoch = incomingEpoch;
+    lastCounter = incomingVersion;
+    return true;
+  }
+
+  // Same epoch: Accept only if counter increases
+  if (incomingEpoch == lastEpoch) {
+    if (incomingVersion > lastCounter) {
+      if (verbose) {
+        log("Accepting update: counter " + std::to_string(lastCounter) + " → " +
+            std::to_string(incomingVersion));
+      }
+      lastCounter = incomingVersion;
+      return true;
+    } else {
+      if (verbose) {
+        log("Rejecting stale update: epoch=" + std::to_string(incomingEpoch) +
+            " counter=" + std::to_string(incomingVersion) +
+            " lastCounter=" + std::to_string(lastCounter));
+      }
+      return false;
+    }
+  }
+
+  // Older epoch: reject
+  if (verbose) {
+    log("Rejecting update with older epoch: incoming=" +
+        std::to_string(incomingEpoch) +
+        " < lastEpoch=" + std::to_string(lastEpoch));
+  }
+  return false;
+}
+
 // -----------------------------------------------------------------------------
 // Class: JsonMonitor
 // -----------------------------------------------------------------------------
@@ -344,26 +401,28 @@ public:
     pattern_watchers_[pattern].push_back(callback);
   }
 
-  void watchMatrixCell(JsonMonitor& jm, const std::string& base, int r, int c,
+  void watchMatrixCell(JsonMonitor &jm, const std::string &base, int r, int c,
                        JsonMonitor::ChangeCallback cb) {
-        jm.watch(base + "[" + std::to_string(r) + "][" + std::to_string(c) + "]", std::move(cb));
+    jm.watch(base + "[" + std::to_string(r) + "][" + std::to_string(c) + "]",
+             std::move(cb));
   }
 
-  void watchMatrixRow(JsonMonitor& jm, const std::string& base, int r,
+  void watchMatrixRow(JsonMonitor &jm, const std::string &base, int r,
                       JsonMonitor::ChangeCallback cb) {
     jm.watchPattern(base + "[" + std::to_string(r) + "][*]", std::move(cb));
   }
 
-  void watchMatrixCol(JsonMonitor& jm, const std::string& base, int c,
+  void watchMatrixCol(JsonMonitor &jm, const std::string &base, int c,
                       JsonMonitor::ChangeCallback cb) {
     jm.watchPattern(base + "[*][" + std::to_string(c) + "]", std::move(cb));
   }
 
-  void watchMatrixRegion(JsonMonitor& jm, const std::string& base,
-    int r0, int r1, int c0, int c1,
-                        JsonMonitor::ChangeCallback cb) {
-    jm.watchPattern(base + "[" + std::to_string(r0) + ":" + std::to_string(r1) + "]"
-                          + "[" + std::to_string(c0) + ":" + std::to_string(c1) + "]",
+  void watchMatrixRegion(JsonMonitor &jm, const std::string &base, int r0,
+                         int r1, int c0, int c1,
+                         JsonMonitor::ChangeCallback cb) {
+    jm.watchPattern(base + "[" + std::to_string(r0) + ":" + std::to_string(r1) +
+                        "]" + "[" + std::to_string(c0) + ":" +
+                        std::to_string(c1) + "]",
                     std::move(cb));
   }
 
@@ -461,8 +520,8 @@ public:
   /**
    * @brief Process an external JSON update for a given path.
    *
-   * Updates internal state and notifies registered watchers (exact, pattern, root)
-   * if the state has changed.
+   * Updates internal state and notifies registered watchers (exact, pattern,
+   * root) if the state has changed.
    *
    * @param path The concrete JSON path that has been updated.
    * @param new_state The new JSON state for that path.
@@ -504,7 +563,8 @@ public:
         const auto &callbacks = kv.second;
         const auto &tokens = getParsedPattern(subscription);
         if (patternMatchesPath(tokens, splitP)) {
-          patternCbs.insert(patternCbs.end(), callbacks.begin(), callbacks.end());
+          patternCbs.insert(patternCbs.end(), callbacks.begin(),
+                            callbacks.end());
         }
       }
       roots = root_watchers_;
@@ -529,7 +589,8 @@ public:
   }
 
   /**
-   * @brief Retrieves the parsed pattern for the given subscription, using a cache.
+   * @brief Retrieves the parsed pattern for the given subscription, using a
+   * cache.
    */
   const std::vector<PatternComponent> &
   getParsedPattern(const std::string &pattern) {
@@ -723,7 +784,9 @@ public:
     }
   }
 
-  Json::Value get(const std::string &path) const { return jsonMonitor_.get(path); }
+  Json::Value get(const std::string &path) const {
+    return jsonMonitor_.get(path);
+  }
 
 private:
   void log(const std::string &message) const {
@@ -807,9 +870,33 @@ private:
     }
   }
 
-  void handleUpdateMessage(const Json::Value &update) {
+  void handleUpdateMessage(const Json::Value &update, bool useVersion = true) {
     if (verbose_)
       log("Processing incoming JSON update: " + update.toStyledString());
+
+    static long long lastEpoch = -1;
+    static long long lastCounter = -1;
+
+    if (useVersion) {
+      if (!update.isMember("_fusion_epoch")) {
+        log("Ignoring update without epoch");
+        return;
+      }
+
+      if (!update.isMember("_fusion_version")) {
+        log("Ignoring update without version");
+        return;
+      }
+
+      long long incomingEpoch = update["_fusion_epoch"].asInt64();
+      long long incomingVersion = update["_fusion_version"].asInt64();
+
+      if (!shouldAcceptUpdate(incomingEpoch, incomingVersion, lastEpoch,
+                              lastCounter, verbose_,
+                              [this](const std::string &msg) { log(msg); })) {
+        return;
+      }
+    }
 
     for (const auto &path : targetPaths_) {
       if (path.find('*') != std::string::npos) {
@@ -879,7 +966,7 @@ private:
           if (response.isMember("status") && response.isMember("data")) {
             if (verbose_)
               log("Processing initial state response");
-            handleUpdateMessage(response["data"]);
+            handleUpdateMessage(response["data"], false);
           } else {
             if (verbose_)
               log("Processing update message");

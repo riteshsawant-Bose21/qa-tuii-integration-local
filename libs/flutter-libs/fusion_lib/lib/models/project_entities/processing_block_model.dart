@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-
-import '../algorithm/property_settings.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class ProcessingBlockModel {
   /// Input processing blocks
@@ -15,111 +14,104 @@ class ProcessingBlockModel {
   /// Output processing blocks
   /// "peq", "gain", "delay", "limiter"
 
-  static final List<ProcessingBlockModel> inputBlocks = <ProcessingBlockModel>[
+  static final List<ProcessingBlockModel> sourceBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
-      id: 'gain',
-      name: 'Gain',
-      algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
-    ),
-    ProcessingBlockModel(
-      id: 'peq',
-      name: 'PEQ',
-      algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
-    ),
-    ProcessingBlockModel(
-      id: 'compressor',
-      name: 'Compressor',
-      algorithmId: "compressor",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
-    ),
-    ProcessingBlockModel(
-      id: 'ducker',
-      name: 'Ducker',
-      algorithmId: "ducker",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
+      id: 'delay',
+      name: 'Delay',
+      algorithmId: "delay",
     ),
     ProcessingBlockModel(
       id: 'agc',
       name: 'AGC',
       algorithmId: "agc",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
-    ),
-    ProcessingBlockModel(
-      id: 'gate',
-      name: 'Gate',
-      algorithmId: "gate",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
-    ),
-    ProcessingBlockModel(
-      id: 'tone_control',
-      name: 'Tone Control',
-      algorithmId: "tone_control",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
-    ),
-  ];
-
-  static final List<ProcessingBlockModel> zoneBlocks = <ProcessingBlockModel>[
-    ProcessingBlockModel(
-      id: 'gate',
-      name: 'Gate',
-      algorithmId: "gate",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
-      id: 'tone_control',
-      name: 'Tone Control',
-      algorithmId: "tone_control",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
+      id: 'limiter',
+      name: 'Limiter',
+      algorithmId: "limiter",
+    ),
+    ProcessingBlockModel(
+      id: 'gate',
+      name: 'Gate',
+      algorithmId: "gate",
     ),
     ProcessingBlockModel(
       id: 'graphic_eq',
       name: 'Graphic EQ',
       algorithmId: "graphic_eq",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
-    // ProcessingBlockEntity(
-    //   id: 'feedback_elimination',
-    //   name: 'Feedback Elimination',
-    //   icon: Icons.hearing,
-    //   algorithmId: "feedback_elimination",
-    //   properties: <PropertySetting>[
-    //     PropertySetting(name: 'channels', value: 1),
-    //   ],
-    // ),
     ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
     ),
     ProcessingBlockModel(
-      id: 'delay',
-      name: 'Delay',
-      algorithmId: "delay",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'max_delay', value: 4800),
-      ],
+      id: 'tone_control',
+      name: 'Tone Control',
+      algorithmId: "tone_control",
+    ),
+    ProcessingBlockModel(
+      id: 'feedback_suppression',
+      name: 'Feedback Suppression',
+      algorithmId: "feedback_suppression",
     ),
     ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
+    ),
+  ];
+
+  static final List<ProcessingBlockModel> zoneBlocks = <ProcessingBlockModel>[
+    ProcessingBlockModel(
+      id: 'delay',
+      name: 'Delay',
+      algorithmId: "delay",
+    ),
+    ProcessingBlockModel(
+      id: 'agc',
+      name: 'AGC',
+      algorithmId: "agc",
+    ),
+    ProcessingBlockModel(
+      id: 'compressor',
+      name: 'Compressor',
+      algorithmId: "compressor",
+    ),
+    ProcessingBlockModel(
+      id: 'limiter',
+      name: 'Limiter',
+      algorithmId: "limiter",
+    ),
+    ProcessingBlockModel(
+      id: 'graphic_eq',
+      name: 'Graphic EQ',
+      algorithmId: "graphic_eq",
+    ),
+    ProcessingBlockModel(
+      id: 'peq',
+      name: 'PEQ',
+      algorithmId: "peq",
+    ),
+    ProcessingBlockModel(
+      id: 'tone_control',
+      name: 'Tone Control',
+      algorithmId: "tone_control",
+    ),
+    ProcessingBlockModel(
+      id: 'feedback_suppression',
+      name: 'Feedback Suppression',
+      algorithmId: "feedback_suppression",
+    ),
+    ProcessingBlockModel(
+      id: 'gain',
+      name: 'Gain',
+      algorithmId: "gain",
     ),
   ];
 
@@ -128,82 +120,79 @@ class ProcessingBlockModel {
       id: 'agc',
       name: 'AGC',
       algorithmId: "agc",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'gate',
       name: 'Gate',
       algorithmId: "gate",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'compressor',
       name: 'Compressor',
       algorithmId: "compressor",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'ducker',
       name: 'Ducker',
       algorithmId: "ducker",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'tone_control',
       name: 'Tone Control',
       algorithmId: "tone_control",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
     ProcessingBlockModel(
       id: 'peq',
       name: 'PEQ',
       algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
     ),
     ProcessingBlockModel(
       id: 'gain',
       name: 'Gain',
       algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
     ),
   ];
 
-  static final List<ProcessingBlockModel> outputBlocks = <ProcessingBlockModel>[
-    ProcessingBlockModel(
-      id: 'peq',
-      name: 'PEQ',
-      algorithmId: "peq",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'bands', value: 1),
-      ],
-    ),
-    ProcessingBlockModel(
-      id: 'gain',
-      name: 'Gain',
-      algorithmId: "gain",
-      properties: <PropertySetting>[PropertySetting(name: 'channels', value: 1)],
-    ),
+  static final List<ProcessingBlockModel> circuitBlocks = <ProcessingBlockModel>[
     ProcessingBlockModel(
       id: 'delay',
       name: 'Delay',
       algorithmId: "delay",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'max_delay', value: 4800),
-      ],
+    ),
+    ProcessingBlockModel(
+      id: 'compressor',
+      name: 'Compressor',
+      algorithmId: "compressor",
     ),
     ProcessingBlockModel(
       id: 'limiter',
       name: 'Limiter',
       algorithmId: "limiter",
-      properties: <PropertySetting>[
-        PropertySetting(name: 'channels', value: 1),
-        PropertySetting(name: 'max_delay', value: 4800),
-      ],
+    ),
+    ProcessingBlockModel(
+      id: 'graphic_eq',
+      name: 'Graphic EQ',
+      algorithmId: "graphic_eq",
+    ),
+    ProcessingBlockModel(
+      id: 'peq',
+      name: 'PEQ',
+      algorithmId: "peq",
+    ),
+    ProcessingBlockModel(
+      id: 'tone_control',
+      name: 'Tone Control',
+      algorithmId: "tone_control",
+    ),
+    ProcessingBlockModel(
+      id: 'feedback_suppression',
+      name: 'Feedback Suppression',
+      algorithmId: "feedback_suppression",
+    ),
+    ProcessingBlockModel(
+      id: 'gain',
+      name: 'Gain',
+      algorithmId: "gain",
     ),
   ];
 
@@ -212,19 +201,60 @@ class ProcessingBlockModel {
   final String algorithmId;
   List<PropertySetting> properties;
 
-  ProcessingBlockModel({required this.name, required this.id, required this.algorithmId, List<PropertySetting>? properties})
-    : properties = properties ?? <PropertySetting>[];
+  ProcessingBlockModel({
+    required this.name,
+    String? id,
+    required this.algorithmId,
+    List<PropertySetting>? properties,
+  }) : properties = properties ?? <PropertySetting>[],
+       id = id ?? "${algorithmId.toUpperCase().replaceAll('_', '')}${FusionUtils.shortStringUUID()}";
 
   IconData get icon {
     return _iconNameMap[algorithmId] ?? Icons.memory;
   }
 
-  copyWith({String? name, String? id, String? algorithmId, List<PropertySetting>? properties}) {
+  String get iconAsset {
+    return "packages/fusion_lib/lib/${_algoIconMap[algorithmId] ?? 'assets/icons/processing_blocks/pb_1.png'}";
+  }
+
+  ProcessingBlockModel copyWith({String? name, String? id, String? algorithmId, List<PropertySetting>? properties}) {
     return ProcessingBlockModel(
       name: name ?? this.name,
       id: id ?? this.id,
       algorithmId: algorithmId ?? this.algorithmId,
       properties: properties ?? this.properties,
+    );
+  }
+
+  ProcessingBlockModel updateProperties(List<PropertySetting> newProperties) {
+    properties = newProperties;
+    return this;
+  }
+
+  ProcessingBlockModel updateProperty(PropertySetting newProperty) {
+    final int index = properties.indexWhere((PropertySetting p) => p.name == newProperty.name && p.dimension == newProperty.dimension);
+    if (index != -1) {
+      properties[index] = newProperty;
+    } else {
+      properties.add(newProperty);
+    }
+    return this;
+  }
+
+  ProcessingBlockModel clone() {
+    return ProcessingBlockModel(
+      name: name,
+      algorithmId: algorithmId,
+      properties: properties,
+    );
+  }
+
+  ProcessingBlockModel copyProperties({required ProcessingBlockModel model}) {
+    return ProcessingBlockModel(
+      id: id,
+      name: name,
+      algorithmId: algorithmId,
+      properties: model.properties,
     );
   }
 
@@ -255,5 +285,19 @@ class ProcessingBlockModel {
     'graphic_eq': Icons.equalizer,
     'delay': Icons.timer,
     'limiter': Icons.stop,
+  };
+
+  /// Lookup table for JSON “iconName” (e.g. algorithmId) → const IconData
+  static const Map<String, String> _algoIconMap = <String, String>{
+    'gain': 'assets/icons/processing_blocks/pb_1.png',
+    'peq': 'assets/icons/processing_blocks/pb_2.png',
+    'compressor': 'assets/icons/processing_blocks/pb_3.png',
+    'ducker': 'assets/icons/processing_blocks/pb_4.png',
+    'agc': 'assets/icons/processing_blocks/pb_5.png',
+    'gate': 'assets/icons/processing_blocks/pb_1.png',
+    'tone_control': 'assets/icons/processing_blocks/pb_2.png',
+    'graphic_eq': 'assets/icons/processing_blocks/pb_3.png',
+    'delay': 'assets/icons/processing_blocks/pb_4.png',
+    'limiter': 'assets/icons/processing_blocks/pb_5.png',
   };
 }
