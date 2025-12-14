@@ -31,17 +31,17 @@ func (m *MockUserProfileService) GetUserProfile(ctx context.Context, userID stri
 
 func (m *MockUserProfileService) CreateUserProfile(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
 	args := m.Called(ctx, profileDetails)
-	return args.Get(0).(string), args.Error(1)
+	return args.String(0), args.Error(1)
 }
 
-func (m *MockUserProfileService) UpdateUserProfile(ctx context.Context, profileDetails *types.UserProfile) error {
-	args := m.Called(ctx, profileDetails)
+func (m *MockUserProfileService) UpdateUserProfile(ctx context.Context, profileDetails *types.UserProfileUpdateRequest, profileID string, userID string) error {
+	args := m.Called(ctx, profileDetails, profileID, userID)
 	return args.Error(0)
 }
 
-func (m *MockUserProfileService) CreateUserProfileForRegistration(ctx context.Context, profileData *types.UserProfile) error {
+func (m *MockUserProfileService) CreateUserProfileForRegistration(ctx context.Context, profileData *types.UserProfile) (string, error) {
 	args := m.Called(ctx, profileData)
-	return args.Error(0)
+	return args.String(0), args.Error(1)
 }
 
 // TestGetUserProfile tests the GetUserProfile handler endpoint
@@ -189,11 +189,12 @@ func TestCreateUserProfile(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	validUUID := uuid.New().String()
+	generatedID := uuid.New().String()
 
 	tests := []struct {
 		name              string
 		requestBody       interface{}
-		mockCreateProfile func(ctx context.Context, profileDetails *types.UserProfile) error
+		mockCreateProfile func(ctx context.Context, profileDetails *types.UserProfile) (string, error)
 		expectedStatus    int
 		expectedError     string
 	}{
@@ -203,8 +204,8 @@ func TestCreateUserProfile(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockCreateProfile: func(ctx context.Context, profileDetails *types.UserProfile) error {
-				return nil
+			mockCreateProfile: func(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
+				return generatedID, nil
 			},
 			expectedStatus: http.StatusCreated,
 		},
@@ -245,8 +246,8 @@ func TestCreateUserProfile(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockCreateProfile: func(ctx context.Context, profileDetails *types.UserProfile) error {
-				return errors.New("database error")
+			mockCreateProfile: func(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
+				return "", errors.New("database error")
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  "Failed to create user profile",
@@ -289,6 +290,13 @@ func TestCreateUserProfile(t *testing.T) {
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}
+
+			// verify returned ID for success
+			if tt.expectedStatus == http.StatusCreated {
+				var response map[string]interface{}
+				json.Unmarshal(w.Body.Bytes(), &response)
+				assert.Equal(t, generatedID, response["id"])
+			}
 		})
 	}
 }
@@ -298,30 +306,38 @@ func TestUpdateUserProfile(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
 	validUUID := uuid.New().String()
-	anotherUUID := uuid.New().String()
+	validID := uuid.New().String()
+
+	newEmail := "updated@example.com"
 
 	tests := []struct {
 		name              string
 		requestBody       interface{}
 		authenticatedUser string
 		setupAuth         bool
-		mockUpdateProfile func(ctx context.Context, profileDetails *types.UserProfile) error
+		mockVerify        func(args mock.Arguments)
+		mockReturnError   error
 		expectedStatus    int
 		expectedError     string
 	}{
 		{
 			name: "successful update",
-			requestBody: types.UserProfile{
-				ID:     validUUID,
-				UserID: validUUID,
-				Email:  "updated@example.com",
+			requestBody: types.UserProfileUpdateRequest{
+				Email: &newEmail,
 			},
 			authenticatedUser: validUUID,
 			setupAuth:         true,
-			mockUpdateProfile: func(ctx context.Context, profileDetails *types.UserProfile) error {
-				return nil
+			mockVerify: func(args mock.Arguments) {
+				profileDetails := args.Get(1).(*types.UserProfileUpdateRequest)
+				profileID := args.Get(2).(string)
+				userID := args.Get(3).(string)
+
+				assert.Equal(t, validID, profileID)
+				assert.Equal(t, validUUID, userID)
+				assert.Equal(t, newEmail, *profileDetails.Email)
 			},
-			expectedStatus: http.StatusOK,
+			mockReturnError: nil,
+			expectedStatus:  http.StatusOK,
 		},
 		{
 			name:           "invalid JSON format",
@@ -331,65 +347,16 @@ func TestUpdateUserProfile(t *testing.T) {
 			expectedError:  "Invalid JSON format",
 		},
 		{
-			name: "missing ID",
-			requestBody: map[string]interface{}{
-				"user_id": validUUID,
-				"email":   "test@example.com",
-			},
-			setupAuth:      true,
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "id is required for updating profile",
-		},
-		{
-			name: "invalid ID format",
-			requestBody: types.UserProfile{
-				ID:     "invalid-uuid",
-				UserID: validUUID,
-				Email:  "test@example.com",
-			},
+			name:           "invalid ID format",
+			requestBody:    types.UserProfileUpdateRequest{},
 			setupAuth:      true,
 			expectedStatus: http.StatusBadRequest,
 			expectedError:  "Invalid ID format: must be a valid UUID",
 		},
 		{
-			name: "missing user_id",
-			requestBody: map[string]interface{}{
-				"id":    validUUID,
-				"email": "test@example.com",
-			},
-			setupAuth:      true,
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "user_id is required for updating profile",
-		},
-		{
-			name: "invalid user_id format",
-			requestBody: types.UserProfile{
-				ID:     validUUID,
-				UserID: "invalid",
-				Email:  "test@example.com",
-			},
-			setupAuth:      true,
-			expectedStatus: http.StatusBadRequest,
-			expectedError:  "Invalid user_id format: must be a valid UUID",
-		},
-		{
-			name: "unauthorized - different user",
-			requestBody: types.UserProfile{
-				ID:     validUUID,
-				UserID: anotherUUID,
-				Email:  "test@example.com",
-			},
-			authenticatedUser: validUUID,
-			setupAuth:         true,
-			expectedStatus:    http.StatusUnauthorized,
-			expectedError:     "Unauthorized: You are not allowed to update this user's profile",
-		},
-		{
 			name: "missing authentication",
-			requestBody: types.UserProfile{
-				ID:     validUUID,
-				UserID: validUUID,
-				Email:  "test@example.com",
+			requestBody: types.UserProfileUpdateRequest{
+				Email: &newEmail,
 			},
 			setupAuth:      false,
 			expectedStatus: http.StatusUnauthorized,
@@ -397,42 +364,44 @@ func TestUpdateUserProfile(t *testing.T) {
 		},
 		{
 			name: "profile not found",
-			requestBody: types.UserProfile{
-				ID:     validUUID,
-				UserID: validUUID,
-				Email:  "test@example.com",
+			requestBody: types.UserProfileUpdateRequest{
+				Email: &newEmail,
 			},
 			authenticatedUser: validUUID,
 			setupAuth:         true,
-			mockUpdateProfile: func(ctx context.Context, profileDetails *types.UserProfile) error {
-				return errors.New("user profile not found")
-			},
-			expectedStatus: http.StatusNotFound,
-			expectedError:  "User profile not found",
+			mockReturnError:   errors.New("user profile not found"),
+			expectedStatus:    http.StatusNotFound,
+			expectedError:     "User profile not found",
 		},
 		{
 			name: "database error",
-			requestBody: types.UserProfile{
-				ID:     validUUID,
-				UserID: validUUID,
-				Email:  "test@example.com",
+			requestBody: types.UserProfileUpdateRequest{
+				Email: &newEmail,
 			},
 			authenticatedUser: validUUID,
 			setupAuth:         true,
-			mockUpdateProfile: func(ctx context.Context, profileDetails *types.UserProfile) error {
-				return errors.New("database connection failed")
-			},
-			expectedStatus: http.StatusInternalServerError,
-			expectedError:  "Failed to update user profile",
+			mockReturnError:   errors.New("database connection failed"),
+			expectedStatus:    http.StatusInternalServerError,
+			expectedError:     "Failed to update user profile",
 		},
 	}
 
 	for _, tt := range tests {
+		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := &MockUserProfileService{}
 
-			if tt.mockUpdateProfile != nil {
-				mockService.On("UpdateUserProfile", mock.Anything, mock.AnythingOfType("*types.UserProfile")).Return(tt.mockUpdateProfile(context.Background(), &types.UserProfile{}))
+			// Only setup mock if we expect the service to be called
+			shouldCallService := tt.expectedStatus != http.StatusBadRequest && tt.expectedStatus != http.StatusUnauthorized
+
+			if shouldCallService {
+				call := mockService.On("UpdateUserProfile", mock.Anything, mock.AnythingOfType("*types.UserProfileUpdateRequest"), mock.AnythingOfType("string"), mock.AnythingOfType("string"))
+
+				if tt.mockVerify != nil {
+					call.Run(tt.mockVerify)
+				}
+
+				call.Return(tt.mockReturnError)
 			}
 
 			handler := NewUserProfileHandler(mockService)
@@ -447,9 +416,20 @@ func TestUpdateUserProfile(t *testing.T) {
 				bodyBytes, _ = json.Marshal(tt.requestBody)
 			}
 
-			req, _ := http.NewRequest(http.MethodPut, "/user/profile", bytes.NewBuffer(bodyBytes))
+			// Add ID to URL param
+			param := ""
+			if tt.name != "invalid ID format" {
+				param = validID
+			} else {
+				param = "invalid-uuid"
+			}
+
+			req, _ := http.NewRequest(http.MethodPut, "/user/profile/"+param, bytes.NewBuffer(bodyBytes))
 			req.Header.Set("Content-Type", "application/json")
 			c.Request = req
+
+			// Manually set param since we're using mock context
+			c.Params = gin.Params{gin.Param{Key: "profileID", Value: param}}
 
 			if tt.setupAuth {
 				authUserID := tt.authenticatedUser

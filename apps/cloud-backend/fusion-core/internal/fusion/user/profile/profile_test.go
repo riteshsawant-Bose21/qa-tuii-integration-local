@@ -2,36 +2,40 @@ package userprofile
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"testing"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/google/uuid"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 // MockDatabaseService is a mock implementation of the database service for testing
 type MockDatabaseService struct {
-	mock.Mock
+	InsertFunc         func(ctx context.Context, profile *types.UserProfile) (string, error)
+	SelectByUserIDFunc func(ctx context.Context, userID string) (*types.UserProfile, error)
+	UpdateFunc         func(ctx context.Context, profile *types.UserProfile) error
 }
 
-func (m *MockDatabaseService) Insert(ctx context.Context, profile *types.UserProfile) error {
-	args := m.Called(ctx, profile)
-	return args.Error(0)
+func (m *MockDatabaseService) Insert(ctx context.Context, profile *types.UserProfile) (string, error) {
+	if m.InsertFunc != nil {
+		return m.InsertFunc(ctx, profile)
+	}
+	return "", nil
 }
 
 func (m *MockDatabaseService) SelectByUserID(ctx context.Context, userID string) (*types.UserProfile, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
+	if m.SelectByUserIDFunc != nil {
+		return m.SelectByUserIDFunc(ctx, userID)
 	}
-	return args.Get(0).(*types.UserProfile), args.Error(1)
+	return nil, nil
 }
 
 func (m *MockDatabaseService) Update(ctx context.Context, profile *types.UserProfile) error {
-	args := m.Called(ctx, profile)
-	return args.Error(0)
+	if m.UpdateFunc != nil {
+		return m.UpdateFunc(ctx, profile)
+	}
+	return nil
 }
 
 // TestCreateUserProfileForRegistration tests the CreateUserProfileForRegistration function with all edge cases
@@ -39,11 +43,12 @@ func TestCreateUserProfileForRegistration(t *testing.T) {
 	t.Parallel()
 
 	validUUID := uuid.New().String()
+	generatedID := uuid.New().String()
 
 	tests := []struct {
 		name        string
 		profileData *types.UserProfile
-		mockInsert  func(ctx context.Context, profile *types.UserProfile) error
+		mockInsert  func(ctx context.Context, profile *types.UserProfile) (string, error)
 		wantErr     bool
 		errContains string
 	}{
@@ -53,8 +58,8 @@ func TestCreateUserProfileForRegistration(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockInsert: func(ctx context.Context, profile *types.UserProfile) error {
-				return nil
+			mockInsert: func(ctx context.Context, profile *types.UserProfile) (string, error) {
+				return generatedID, nil
 			},
 			wantErr: false,
 		},
@@ -100,8 +105,8 @@ func TestCreateUserProfileForRegistration(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockInsert: func(ctx context.Context, profile *types.UserProfile) error {
-				return errors.New("database connection failed")
+			mockInsert: func(ctx context.Context, profile *types.UserProfile) (string, error) {
+				return "", errors.New("database connection failed")
 			},
 			wantErr:     true,
 			errContains: "database connection failed",
@@ -115,8 +120,8 @@ func TestCreateUserProfileForRegistration(t *testing.T) {
 				LastName:  "Doe",
 				Phone:     "+1234567890",
 			},
-			mockInsert: func(ctx context.Context, profile *types.UserProfile) error {
-				return nil
+			mockInsert: func(ctx context.Context, profile *types.UserProfile) (string, error) {
+				return generatedID, nil
 			},
 			wantErr: false,
 		},
@@ -128,10 +133,8 @@ func TestCreateUserProfileForRegistration(t *testing.T) {
 			t.Parallel()
 
 			// Create mock database service
-			mockDB := &MockDatabaseService{}
-
-			if tt.mockInsert != nil {
-				mockDB.On("Insert", mock.Anything, tt.profileData).Return(tt.mockInsert(context.Background(), tt.profileData))
+			mockDB := &MockDatabaseService{
+				InsertFunc: tt.mockInsert,
 			}
 
 			// Create service with mock
@@ -141,16 +144,24 @@ func TestCreateUserProfileForRegistration(t *testing.T) {
 
 			// Execute the function
 			ctx := context.Background()
-			err := service.CreateUserProfileForRegistration(ctx, tt.profileData)
+			id, err := service.CreateUserProfileForRegistration(ctx, tt.profileData)
 
 			// Verify results
 			if tt.wantErr {
-				assert.Error(t, err)
-				if tt.errContains != "" {
-					assert.Contains(t, err.Error(), tt.errContains)
+				if err == nil {
+					t.Errorf("CreateUserProfileForRegistration() expected error but got nil")
+					return
+				}
+				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("CreateUserProfileForRegistration() error = %v, want error containing %q", err, tt.errContains)
 				}
 			} else {
-				assert.NoError(t, err)
+				if err != nil {
+					t.Errorf("CreateUserProfileForRegistration() unexpected error = %v", err)
+				}
+				if id != generatedID {
+					t.Errorf("CreateUserProfileForRegistration() returned id = %v, want %v", id, generatedID)
+				}
 			}
 		})
 	}
@@ -186,7 +197,7 @@ func TestGetUserProfile(t *testing.T) {
 			name:   "profile not found",
 			userID: validUUID,
 			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
-				return nil, errors.New("sql: no rows in result set")
+				return nil, sql.ErrNoRows
 			},
 			wantErr:     true,
 			wantProfile: false,
@@ -207,11 +218,8 @@ func TestGetUserProfile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockDB := &MockDatabaseService{}
-
-			if tt.mockSelect != nil {
-				result, err := tt.mockSelect(context.Background(), tt.userID)
-				mockDB.On("SelectByUserID", mock.Anything, tt.userID).Return(result, err)
+			mockDB := &MockDatabaseService{
+				SelectByUserIDFunc: tt.mockSelect,
 			}
 
 			service := &Service{
@@ -222,19 +230,20 @@ func TestGetUserProfile(t *testing.T) {
 			profile, err := service.GetUserProfile(ctx, tt.userID)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				if err == nil {
+					t.Errorf("GetUserProfile() expected error but got nil")
+				}
 			} else {
-				assert.NoError(t, err)
+				if err != nil {
+					t.Errorf("GetUserProfile() unexpected error = %v", err)
+				}
 			}
 
-			if tt.wantProfile {
-				assert.NotNil(t, profile)
-			} else {
-				assert.Nil(t, profile)
+			if tt.wantProfile && profile == nil {
+				t.Errorf("GetUserProfile() expected profile but got nil")
 			}
-
-			if tt.mockSelect != nil {
-				mockDB.AssertExpectations(t)
+			if !tt.wantProfile && profile != nil {
+				t.Errorf("GetUserProfile() expected nil profile but got %v", profile)
 			}
 		})
 	}
@@ -245,11 +254,12 @@ func TestCreateUserProfile(t *testing.T) {
 	t.Parallel()
 
 	validUUID := uuid.New().String()
+	generatedID := uuid.New().String()
 
 	tests := []struct {
 		name           string
 		profileDetails *types.UserProfile
-		mockInsert     func(ctx context.Context, profile *types.UserProfile) error
+		mockInsert     func(ctx context.Context, profile *types.UserProfile) (string, error)
 		wantErr        bool
 	}{
 		{
@@ -258,8 +268,8 @@ func TestCreateUserProfile(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockInsert: func(ctx context.Context, profile *types.UserProfile) error {
-				return nil
+			mockInsert: func(ctx context.Context, profile *types.UserProfile) (string, error) {
+				return generatedID, nil
 			},
 			wantErr: false,
 		},
@@ -269,8 +279,8 @@ func TestCreateUserProfile(t *testing.T) {
 				UserID: validUUID,
 				Email:  "test@example.com",
 			},
-			mockInsert: func(ctx context.Context, profile *types.UserProfile) error {
-				return errors.New("insert failed")
+			mockInsert: func(ctx context.Context, profile *types.UserProfile) (string, error) {
+				return "", errors.New("insert failed")
 			},
 			wantErr: true,
 		},
@@ -281,10 +291,8 @@ func TestCreateUserProfile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockDB := &MockDatabaseService{}
-
-			if tt.mockInsert != nil {
-				mockDB.On("Insert", mock.Anything, tt.profileDetails).Return(tt.mockInsert(context.Background(), tt.profileDetails))
+			mockDB := &MockDatabaseService{
+				InsertFunc: tt.mockInsert,
 			}
 
 			service := &Service{
@@ -292,16 +300,16 @@ func TestCreateUserProfile(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			_, err := service.CreateUserProfile(ctx, tt.profileDetails)
+			id, err := service.CreateUserProfile(ctx, tt.profileDetails)
 
-			if tt.wantErr {
-				assert.Error(t, err)
-			} else {
-				assert.NoError(t, err)
+			if tt.wantErr && err == nil {
+				t.Errorf("CreateUserProfile() expected error but got nil")
 			}
-
-			if tt.mockInsert != nil {
-				mockDB.AssertExpectations(t)
+			if !tt.wantErr && err != nil {
+				t.Errorf("CreateUserProfile() unexpected error = %v", err)
+			}
+			if !tt.wantErr && id != generatedID {
+				t.Errorf("CreateUserProfile() returned id = %v, want %v", id, generatedID)
 			}
 		})
 	}
@@ -312,36 +320,110 @@ func TestUpdateUserProfile(t *testing.T) {
 	t.Parallel()
 
 	validUUID := uuid.New().String()
+	profileID := uuid.New().String()
+
+	newEmail := "updated@example.com"
+	newFirstName := "Updated"
 
 	tests := []struct {
 		name           string
-		profileDetails *types.UserProfile
+		profileDetails *types.UserProfileUpdateRequest
+		profileID      string
+		userID         string
+		mockSelect     func(ctx context.Context, userID string) (*types.UserProfile, error)
 		mockUpdate     func(ctx context.Context, profile *types.UserProfile) error
 		wantErr        bool
+		errContains    string
 	}{
 		{
 			name: "successful update",
-			profileDetails: &types.UserProfile{
-				ID:     validUUID,
-				UserID: validUUID,
-				Email:  "updated@example.com",
+			profileDetails: &types.UserProfileUpdateRequest{
+				Email:     &newEmail,
+				FirstName: &newFirstName,
+			},
+			profileID: profileID,
+			userID:    validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return &types.UserProfile{
+					ID:        profileID,
+					UserID:    userID,
+					Email:     "old@example.com",
+					FirstName: "Old",
+				}, nil
 			},
 			mockUpdate: func(ctx context.Context, profile *types.UserProfile) error {
+				if profile.Email != "old@example.com" {
+					t.Errorf("Expected email to remain %v, got %v", "old@example.com", profile.Email)
+				}
+				if profile.FirstName != newFirstName {
+					t.Errorf("Expected first name to be updated to %v, got %v", newFirstName, profile.FirstName)
+				}
 				return nil
 			},
 			wantErr: false,
 		},
 		{
-			name: "database error",
-			profileDetails: &types.UserProfile{
-				ID:     validUUID,
-				UserID: validUUID,
-				Email:  "test@example.com",
+			name:           "user profile not found",
+			profileDetails: &types.UserProfileUpdateRequest{},
+			profileID:      profileID,
+			userID:         validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return nil, sql.ErrNoRows
+			},
+			wantErr:     true,
+			errContains: "user profile not found",
+		},
+		{
+			name:           "database select error",
+			profileDetails: &types.UserProfileUpdateRequest{},
+			profileID:      profileID,
+			userID:         validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return nil, errors.New("connection failed")
+			},
+			wantErr:     true,
+			errContains: "failed to fetch user profile",
+		},
+		{
+			name:           "profile ID mismatch",
+			profileDetails: &types.UserProfileUpdateRequest{},
+			profileID:      profileID,
+			userID:         validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return &types.UserProfile{
+					ID:     "different-id",
+					UserID: userID,
+				}, nil
+			},
+			wantErr:     true,
+			errContains: "user profile does not belong to the specified user",
+		},
+		{
+			name: "database update error",
+			profileDetails: &types.UserProfileUpdateRequest{
+				Email: &newEmail,
+			},
+			profileID: profileID,
+			userID:    validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return &types.UserProfile{
+					ID:     profileID,
+					UserID: userID,
+					Email:  "old@example.com",
+				}, nil
 			},
 			mockUpdate: func(ctx context.Context, profile *types.UserProfile) error {
 				return errors.New("update failed")
 			},
 			wantErr: true,
+		},
+		{
+			name:           "nil request",
+			profileDetails: nil,
+			profileID:      profileID,
+			userID:         validUUID,
+			wantErr:        true,
+			errContains:    "userProfile cannot be nil",
 		},
 	}
 
@@ -350,10 +432,9 @@ func TestUpdateUserProfile(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			mockDB := &MockDatabaseService{}
-
-			if tt.mockUpdate != nil {
-				mockDB.On("Update", mock.Anything, tt.profileDetails).Return(tt.mockUpdate(context.Background(), tt.profileDetails))
+			mockDB := &MockDatabaseService{
+				UpdateFunc:         tt.mockUpdate,
+				SelectByUserIDFunc: tt.mockSelect,
 			}
 
 			service := &Service{
@@ -361,17 +442,36 @@ func TestUpdateUserProfile(t *testing.T) {
 			}
 
 			ctx := context.Background()
-			err := service.UpdateUserProfile(ctx, tt.profileDetails)
+			err := service.UpdateUserProfile(ctx, tt.profileDetails, tt.profileID, tt.userID)
 
 			if tt.wantErr {
-				assert.Error(t, err)
+				if err == nil {
+					t.Errorf("UpdateUserProfile() expected error but got nil")
+					return
+				}
+				if tt.errContains != "" && !contains(err.Error(), tt.errContains) {
+					t.Errorf("UpdateUserProfile() error = %v, want error containing %q", err, tt.errContains)
+				}
 			} else {
-				assert.NoError(t, err)
-			}
-
-			if tt.mockUpdate != nil {
-				mockDB.AssertExpectations(t)
+				if err != nil {
+					t.Errorf("UpdateUserProfile() unexpected error = %v", err)
+				}
 			}
 		})
 	}
+}
+
+// contains is a helper function to check if a string contains a substring.
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		(len(s) > 0 && len(substr) > 0 && stringContains(s, substr)))
+}
+
+func stringContains(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
 }
