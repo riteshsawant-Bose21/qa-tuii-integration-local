@@ -26,6 +26,7 @@ export 'others/fusion_expandable_tile_widget.dart';
 export 'others/fusion_drop_down.dart';
 export 'others/fusion_horizontal_resizable_widget.dart';
 export 'others/fusion_toast.dart';
+export 'others/fusion_switch.dart';
 
 /// text views
 export 'text_views/fusion_app_text.dart';
