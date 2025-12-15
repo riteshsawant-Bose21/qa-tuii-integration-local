@@ -28,6 +28,9 @@ class GpioViewmodel extends Cubit<GpioState> {
 
   void removeGpio(GpioConfig gpio) {
     projectViewModel.removeGPIOConfig(gpioConfigId: gpio.id);
-    loadGpios();
+  }
+
+  void updateGpio(GpioConfig gpio) {
+    projectViewModel.updateGPIOConfig(config: gpio);
   }
 }
