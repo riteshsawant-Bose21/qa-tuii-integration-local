@@ -1,4 +1,4 @@
-name: Create Monorepo Branch From Commit Hash reported in field issues/bugs
+name: Checkout-Monorepo-Commit
 
 on:
   workflow_dispatch:
