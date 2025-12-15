@@ -115,9 +115,10 @@ extension EventsService on ProjectService {
     final event = events.get(eventId)!;
     if (event.triggerType == EventTriggerType.schedule) {
       return [EventActionType.timedEvent];
-    } else {
+    } else if (event.triggerType == EventTriggerType.gpi) {
       return [EventActionType.analog, EventActionType.digital];
     }
+    return [];
   }
 
   void updateEventAction({required String eventId, required EventActionType newAction}) {
@@ -145,13 +146,17 @@ extension EventsService on ProjectService {
     final event = events.get(eventId)!;
     if (event.action == EventActionType.timedEvent) {
       return [];
-    } else {
+    } else if (event.action == EventActionType.analog) {
       return [
         EventConditionType.stateChange,
+      ];
+    } else if (event.action == EventActionType.digital) {
+      return [
         EventConditionType.threshold,
         EventConditionType.valueChange,
       ];
     }
+    return [];
   }
 
   EventCondition getEventConditionForType({required EventConditionType conditionType}) {
