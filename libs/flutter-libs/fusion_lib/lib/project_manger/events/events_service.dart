@@ -148,12 +148,12 @@ extension EventsService on ProjectService {
       return [];
     } else if (event.action == EventActionType.analog) {
       return [
-        EventConditionType.stateChange,
+        EventConditionType.threshold,
+        EventConditionType.valueChange,
       ];
     } else if (event.action == EventActionType.digital) {
       return [
-        EventConditionType.threshold,
-        EventConditionType.valueChange,
+        EventConditionType.stateChange,
       ];
     }
     return [];
