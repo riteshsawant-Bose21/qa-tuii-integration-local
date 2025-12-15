@@ -3,6 +3,7 @@ package userprofile
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -399,6 +400,40 @@ func TestUpdateUserProfile(t *testing.T) {
 			errContains: "user profile does not belong to the specified user",
 		},
 		{
+			name: "invalid_JSON_format_primitive_-_validation_error",
+			profileDetails: &types.UserProfileUpdateRequest{
+				PriceList:      parseRawMessage(t, `"invalid"`),
+				LinkedProfiles: parseRawMessage(t, `123`),
+			},
+			profileID: profileID,
+			userID:    validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return &types.UserProfile{ID: profileID, UserID: userID}, nil
+			},
+			mockUpdate:  nil,
+			wantErr:     true,
+			errContains: "price_list must be a valid JSON object",
+		},
+		{
+			name: "valid_JSON_object_-_success",
+			profileDetails: &types.UserProfileUpdateRequest{
+				PriceList:      parseRawMessage(t, `{"item": "price"}`),
+				LinkedProfiles: parseRawMessage(t, `{"profile": "linked"}`),
+			},
+			profileID: profileID,
+			userID:    validUUID,
+			mockSelect: func(ctx context.Context, userID string) (*types.UserProfile, error) {
+				return &types.UserProfile{ID: profileID, UserID: userID, Email: "old@example.com", FirstName: "Old"}, nil
+			},
+			mockUpdate: func(ctx context.Context, profile *types.UserProfile) error {
+				if string(profile.PriceList) != `{"item": "price"}` {
+					t.Errorf("Expected price list to be updated")
+				}
+				return nil
+			},
+			wantErr: false,
+		},
+		{
 			name: "database update error",
 			profileDetails: &types.UserProfileUpdateRequest{
 				Email: &newEmail,
@@ -474,4 +509,9 @@ func stringContains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+func parseRawMessage(t *testing.T, s string) *json.RawMessage {
+	rm := json.RawMessage(s)
+	return &rm
 }
