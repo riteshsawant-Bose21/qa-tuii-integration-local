@@ -1,0 +1,53 @@
+name: Create Monorepo Branch From Commit Hash reported in field issues/bugs
+
+on:
+  workflow_dispatch:
+    inputs:
+      commit_hash:
+        description: 'Monorepo commit hash to create branch from'
+        required: true
+      branch_name:
+        description: 'Name of the new branch'
+        required: true
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-agent
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Validate commit exists
+        run: |
+          if ! git cat-file -e "${{ inputs.commit_hash }}^{commit}"; then
+            echo "❌ Commit ${{ inputs.commit_hash }} does not exist"
+            exit 1
+          fi
+
+      - name: Check branch does not already exist
+        run: |
+          if git show-ref --verify --quiet "refs/heads/${{ inputs.branch_name }}"; then
+            echo "❌ Branch '${{ inputs.branch_name }}' already exists locally"
+            exit 1
+          fi
+
+          if git ls-remote --exit-code --heads origin "${{ inputs.branch_name }}"; then
+            echo "❌ Branch '${{ inputs.branch_name }}' already exists on remote"
+            exit 1
+          fi
+
+      - name: Create branch from commit
+        run: |
+          git branch "${{ inputs.branch_name }}" "${{ inputs.commit_hash }}"
+
+      - name: Push branch to origin
+        run: |
+          git push origin "${{ inputs.branch_name }}"
