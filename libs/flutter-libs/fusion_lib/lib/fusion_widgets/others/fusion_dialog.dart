@@ -75,6 +75,8 @@ class FusionDialog extends StatelessWidget {
   /// Description text style. Defaults to `bodyMedium` from the theme.
   final TextStyle? descriptionTextStyle;
 
+  final double primaryButtonWidth;
+
   /// Creates a [FusionDialog].
   const FusionDialog({
     super.key,
@@ -91,6 +93,7 @@ class FusionDialog extends StatelessWidget {
     this.backgroundColor,
     this.titleTextStyle,
     this.descriptionTextStyle,
+    this.primaryButtonWidth = 90,
   });
 
   @override
@@ -149,7 +152,7 @@ class FusionDialog extends StatelessWidget {
                       const SizedBox(width: 8),
                     ],
                     SizedBox(
-                      width: 90,
+                      width: primaryButtonWidth,
                       child: FusionButton(
                         label: primaryButtonLabel,
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(

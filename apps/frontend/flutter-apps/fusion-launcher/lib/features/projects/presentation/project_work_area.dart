@@ -26,9 +26,7 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
-import '../../configuration_page/pages/configuration_processing_page.dart';
-import '../../configuration_page/pages/configuration_snapshots.dart';
-import '../../scheduling/view/scheduling_page.dart';
+import '../../gpio/view/gpio_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -517,11 +515,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                   text: "Presets Configuration Page",
                 ),
               ),
-              ConfigurationMenuMode.gpio => const Center(
-                child: FusionAppText(
-                  text: "Sources Configuration Page",
-                ),
-              ),
+              ConfigurationMenuMode.gpio => const GpioPage(),
               ConfigurationMenuMode.scheduling => const SchedulingPage(),
             };
             // return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing

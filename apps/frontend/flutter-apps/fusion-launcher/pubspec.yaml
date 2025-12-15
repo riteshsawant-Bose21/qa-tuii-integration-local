@@ -126,6 +126,7 @@ flutter:
     - assets/icons/
     - assets/icons/wiring_ports/
     - assets/icons/scheduler/
+    - assets/icons/gpio/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
 
