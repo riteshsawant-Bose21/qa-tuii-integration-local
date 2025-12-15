@@ -113,4 +113,28 @@ class GpioConfig {
       status: status ?? this.status,
     );
   }
+
+  GpioConfig removeGpiAction() {
+    return GpioConfig(
+      id: id,
+      name: name,
+      direction: direction,
+      gpiAction: null,
+      gpoAction: gpoAction,
+      invert: invert,
+      status: status,
+    );
+  }
+
+  GpioConfig removeGpoAction() {
+    return GpioConfig(
+      id: id,
+      name: name,
+      direction: direction,
+      gpiAction: gpiAction,
+      gpoAction: null,
+      invert: invert,
+      status: status,
+    );
+  }
 }

@@ -9,7 +9,10 @@ extension GpioService on ProjectService {
     if (!gpioConfigs.exists(config.id)) {
       throw Exception("GPIO Pin with ID ${config.id} does not exist.");
     }
-    gpioConfigs.add(config.id, config);
+
+    final updatedConfig = config.direction == GpioDirection.input ? config.removeGpoAction() : config.removeGpiAction();
+
+    gpioConfigs.add(updatedConfig.id, updatedConfig);
   }
 
   List<GpiAction> getGPIActions() {
