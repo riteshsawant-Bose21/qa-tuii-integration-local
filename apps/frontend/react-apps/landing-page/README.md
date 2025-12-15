@@ -104,7 +104,7 @@ The application integrates with backend services through a centralized API clien
 - **Real-time Status**: Connection status monitoring
 
 ### Endpoints
-- `GET /api/v1/user/me/authorization` - User roles and permissions
+- `GET /api/v1/users/authorization` - User roles and permissions
 
 ### Usage Example
 ```typescript

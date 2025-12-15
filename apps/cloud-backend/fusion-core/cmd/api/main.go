@@ -125,13 +125,6 @@ func main() {
 	}
 	logger.Info("Initialized User DB Service.")
 
-	// Initialize Role Management Service
-	roleManagementSvc := userdb.NewRoleManagementService(pgs)
-	if roleManagementSvc == nil {
-		logger.Fatal("Failed to initialize role management service")
-	}
-	logger.Info("Initialized Role Management Service.")
-
 	//Initialize Product Service
 	// productSVC := product.NewService(productDBSvc, idSVC)
 	// if productSVC == nil {

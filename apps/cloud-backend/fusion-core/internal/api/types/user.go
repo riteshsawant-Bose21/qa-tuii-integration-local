@@ -4,13 +4,13 @@ import "time"
 
 // User represents a user in the system
 type User struct {
-	ID                string     `json:"id" db:"id" example:"usr_123456789"`
-	Email             string     `json:"email" db:"email" example:"john.doe@company.com"`
-	FullName          string     `json:"full_name" db:"full_name" example:"John Doe"`
-	AccountTypeRoleID int        `json:"account_type_role_id" db:"account_type_role_id" example:"1"`
-	AccountID         string     `json:"account_id" db:"account_id" example:"acc_987654321"`
-	CreatedAt         time.Time  `json:"created_at" db:"created_at" example:"2023-01-15T10:30:00Z"`
-	UpdatedAt         *time.Time `json:"updated_at" db:"updated_at" example:"2023-06-20T14:45:00Z"`
+	ID                string    `json:"id" db:"id" example:"usr_123456789"`
+	Email             string    `json:"email" db:"email" example:"john.doe@company.com"`
+	FullName          string    `json:"full_name" db:"full_name" example:"John Doe"`
+	AccountTypeRoleID int       `json:"account_type_role_id" db:"account_type_role_id" example:"1"`
+	AccountID         string    `json:"account_id" db:"account_id" example:"acc_987654321"`
+	CreatedAt         time.Time `json:"created_at" db:"created_at" example:"2023-01-15T10:30:00Z"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at" example:"2023-06-20T14:45:00Z"`
 }
 
 // AccountType represents the type of account
@@ -68,10 +68,10 @@ type FeaturePermission struct {
 
 // UserAuthorizationResponse represents the complete user authorization information
 type UserAuthorizationResponse struct {
-	User        UserInfo          `json:"user" example:"{\"id\":\"usr_123456789\",\"email\":\"john.doe@company.com\"}"`
-	Account     AccountInfo       `json:"account" example:"{\"id\":\"acc_987654321\",\"name\":\"Acme Corporation\",\"description\":\"Leading technology company\",\"type\":\"Enterprise\"}"`
-	Role        RoleInfo          `json:"role" example:"{\"id\":1,\"role_name\":\"Admin\"}"`
-	Permissions map[string]string `json:"permissions" example:"{\"launcher.project.create\":\"full\",\"launcher.project.read\":\"full\",\"launcher.user.manage\":\"admin\"}"`
+	User        UserInfo          `json:"user"`
+	Account     AccountInfo       `json:"account"`
+	Role        RoleInfo          `json:"role"`
+	Permissions map[string]string `json:"permissions"`
 }
 
 // UserInfo represents simplified user information for the response

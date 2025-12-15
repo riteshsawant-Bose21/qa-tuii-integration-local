@@ -125,6 +125,15 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 	}
 	a.cacheMu.RUnlock()
 
+	// Acquire write lock to prevent race conditions
+	a.cacheMu.Lock()
+	defer a.cacheMu.Unlock()
+
+	// Double-check if another goroutine cached the key while we were waiting for the lock
+	if key, exists := a.jwksCache[kid]; exists && time.Since(a.cacheTime) < a.cacheExp {
+		return key, nil
+	}
+
 	// Fetch JWKS from Auth0
 	jwks, err := a.fetchJWKS()
 	if err != nil {
@@ -134,16 +143,19 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 	// Find the key with matching kid
 	for _, key := range jwks.Keys {
 		if key.Kid == kid {
+			// Verify key type is RSA
+			if key.Kty != "RSA" {
+				return nil, fmt.Errorf("key with kid %s has unsupported key type: %s, expected RSA", kid, key.Kty)
+			}
+
 			publicKey, err := a.jwkToRSAPublicKey(key)
 			if err != nil {
 				return nil, err
 			}
 
 			// Cache the key
-			a.cacheMu.Lock()
 			a.jwksCache[kid] = publicKey
 			a.cacheTime = time.Now()
-			a.cacheMu.Unlock()
 
 			return publicKey, nil
 		}
