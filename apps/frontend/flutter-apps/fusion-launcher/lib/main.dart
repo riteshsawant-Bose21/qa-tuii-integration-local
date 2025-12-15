@@ -8,8 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/router/navigation_observer.dart';
 import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
@@ -79,10 +79,14 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
+        BlocProvider<SessionViewModel>(
+          create: (BuildContext context) => serviceLocator<SessionViewModel>(),
+        ),
         BlocProvider<AuthViewModel>(
           create: (BuildContext context) => serviceLocator<AuthViewModel>()..initialize(),
           lazy: false,
         ),
+
         BlocProvider<PanelBloc>(
           create: (BuildContext context) => serviceLocator<PanelBloc>(),
         ),
@@ -105,26 +109,29 @@ class MyApp extends StatelessWidget {
             darkTheme: FusionAppTheme.darkTheme,
             themeMode: ThemeMode.dark,
 
-            home: BlocConsumer<AuthViewModel, AuthViewModelState>(
+            home: BlocConsumer<SessionViewModel, SessionViewModelState>(
               // Listener: Handle one-off events like errors (optional)
-              listener: (BuildContext context, AuthViewModelState state) {
-                if (state is AuthError) {
-                  // Show a snackbar if initialization fails seriously
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.message)),
+              listener: (BuildContext context, SessionViewModelState state) {
+                if (state is SessionExpired) {
+                  // USAGE: Use the Global Key to navigate
+                  // pushNamedAndRemoveUntil ensures the user can't go 'back' to the protected page
+                  globalNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+                    Routes.launcherSignInPage,
+                    (Route<dynamic> route) => false, // Remove all previous routes
                   );
                 }
               },
-              buildWhen: (AuthViewModelState previous, AuthViewModelState current) {
-                return current is Unauthenticated || current is Authenticated;
-              },
               // Builder: Determines WHICH page to show
-              builder: (BuildContext context, AuthViewModelState state) {
-                if (state is Unauthenticated) {
-                  return const LauncherSignInPage();
+              builder: (BuildContext context, SessionViewModelState state) {
+                if (state is SessionValid) {
+                  return const HomePage();
+                } else {
+                  return const Scaffold(
+                    body: Center(
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
                 }
-
-                return const HomePage();
               },
             ),
 

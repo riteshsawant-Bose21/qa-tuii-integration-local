@@ -206,10 +206,13 @@ class ProcessingChainView extends StatelessWidget {
                                       .push(
                                         MaterialPageRoute<void>(
                                           builder:
-                                              (BuildContext context) => Scaffold(
-                                                appBar: AppBar(),
-                                                body: ProcessingBlockCustomizer(
-                                                  selectedAlgorithmId: state.selectedBlock.algorithmId,
+                                              (BuildContext context) => Theme(
+                                                data: FusionAppTheme.lightTheme,
+                                                child: Scaffold(
+                                                  appBar: AppBar(),
+                                                  body: ProcessingBlockCustomizer(
+                                                    selectedAlgorithmId: state.selectedBlock.algorithmId,
+                                                  ),
                                                 ),
                                               ),
                                         ),
@@ -229,8 +232,11 @@ class ProcessingChainView extends StatelessWidget {
                         ),
                         const Divider(),
                         Flexible(
-                          child: ProcessingBlockPage(
-                            processingBlock: state.selectedBlock,
+                          child: Theme(
+                            data: FusionAppTheme.lightTheme,
+                            child: ProcessingBlockPage(
+                              processingBlock: state.selectedBlock,
+                            ),
                           ),
                         ),
                       ],

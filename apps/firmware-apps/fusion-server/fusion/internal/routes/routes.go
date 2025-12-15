@@ -79,10 +79,11 @@ const (
 	SessionsIdEndpoint = SessionsEndpoint + "/{id}"
 
 	SnapshotsEndpoint         = "/snapshots"
-	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
 	SnapshotsMetaEndpoint     = SnapshotsEndpoint + "/meta"
 	SnapshotsActiveEndpoint   = SnapshotsMetaEndpoint + "/active"
+	SnapshotsNameEndpoint     = SnapshotsEndpoint + "/{name}"
 	SnapshotsActivateEndpoint = SnapshotsEndpoint + "/activate/{name}"
+	SnapshotsUpdateEndpoint   = SnapshotsEndpoint + "/update/{name}"
 
 	TasksEndpoint          = "/tasks"
 	TasksHistoryEndpoint   = TasksEndpoint + "/history"

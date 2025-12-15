@@ -16,6 +16,7 @@ import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
 import '../features/dashboard/domain/usecases/create_project_usecase.dart';
 import '../features/dashboard/domain/usecases/delete_project_usecase.dart';
@@ -177,8 +178,15 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerSingleton<ProjectManager>(pm);
 
   serviceLocator.registerLazySingleton<ProjectViewModel>(() => ProjectViewModel(serviceLocator<ProjectManager>()));
+  serviceLocator.registerLazySingleton<SessionViewModel>(
+    () => SessionViewModel(),
+  );
   serviceLocator.registerLazySingleton<AuthViewModel>(
-    () => AuthViewModel(authService: serviceLocator<FusionAuthService>(), networkClient: serviceLocator<FusionNetworkClient>()),
+    () => AuthViewModel(
+      authService: serviceLocator<FusionAuthService>(),
+      networkClient: serviceLocator<FusionNetworkClient>(),
+      sessionViewModel: serviceLocator<SessionViewModel>(),
+    ),
   );
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
