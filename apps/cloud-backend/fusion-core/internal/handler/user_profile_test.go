@@ -16,33 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockUserProfileService is a mock implementation of the fusion.UserProfile interface
-type MockUserProfileService struct {
-	mock.Mock
-}
-
-func (m *MockUserProfileService) GetUserProfile(ctx context.Context, userID string) (*types.UserProfile, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*types.UserProfile), args.Error(1)
-}
-
-func (m *MockUserProfileService) CreateUserProfile(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
-	args := m.Called(ctx, profileDetails)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockUserProfileService) UpdateUserProfile(ctx context.Context, profileDetails *types.UserProfileUpdateRequest, profileID string, userID string) error {
-	args := m.Called(ctx, profileDetails, profileID, userID)
-	return args.Error(0)
-}
-
-func (m *MockUserProfileService) CreateUserProfileForRegistration(ctx context.Context, profileData *types.UserProfile) (string, error) {
-	args := m.Called(ctx, profileData)
-	return args.String(0), args.Error(1)
-}
+// MockUserService is defined in mock_user_service_test.go
 
 // TestGetUserProfile tests the GetUserProfile handler endpoint
 func TestGetUserProfile(t *testing.T) {
@@ -125,15 +99,17 @@ func TestGetUserProfile(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create mock service
-			mockService := &MockUserProfileService{}
+			mockService := &MockUserService{}
 
 			if tt.mockGetProfile != nil {
-				result, err := tt.mockGetProfile(context.Background(), tt.userID)
-				mockService.On("GetUserProfile", mock.Anything, tt.userID).Return(result, err)
+				// Don't setup expectation for invalid user ID format as the handler returns error before calling service
+				if tt.name != "invalid user ID format" {
+					mockService.On("GetUserProfile", mock.Anything, tt.userID).Return(tt.mockGetProfile(context.Background(), tt.userID))
+				}
 			}
 
 			// Create handler
-			handler := NewUserProfileHandler(mockService)
+			handler := NewUserHandler(mockService)
 
 			// Setup Gin test context
 			w := httptest.NewRecorder()
@@ -153,7 +129,7 @@ func TestGetUserProfile(t *testing.T) {
 			}
 
 			// Execute handler
-			handler.GetUserProfile(c)
+			handler.GetUserProfileDetails(c)
 
 			// Verify status code
 			assert.Equal(t, tt.expectedStatus, w.Code)
@@ -177,7 +153,7 @@ func TestGetUserProfile(t *testing.T) {
 				assert.Equal(t, "test@example.com", profile.Email)
 			}
 
-			if tt.mockGetProfile != nil {
+			if tt.mockGetProfile != nil && tt.name != "invalid user ID format" {
 				mockService.AssertExpectations(t)
 			}
 		})
@@ -256,13 +232,13 @@ func TestCreateUserProfile(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := &MockUserProfileService{}
+			mockService := &MockUserService{}
 
 			if tt.mockCreateProfile != nil {
 				mockService.On("CreateUserProfile", mock.Anything, mock.AnythingOfType("*types.UserProfile")).Return(tt.mockCreateProfile(context.Background(), &types.UserProfile{}))
 			}
 
-			handler := NewUserProfileHandler(mockService)
+			handler := NewUserHandler(mockService)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -389,7 +365,7 @@ func TestUpdateUserProfile(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := &MockUserProfileService{}
+			mockService := &MockUserService{}
 
 			// Only setup mock if we expect the service to be called
 			shouldCallService := tt.expectedStatus != http.StatusBadRequest && tt.expectedStatus != http.StatusUnauthorized
@@ -404,7 +380,7 @@ func TestUpdateUserProfile(t *testing.T) {
 				call.Return(tt.mockReturnError)
 			}
 
-			handler := NewUserProfileHandler(mockService)
+			handler := NewUserHandler(mockService)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)

@@ -10,8 +10,6 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
-	userprofile "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/profile"
-	usersettings "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/settings"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"github.com/gin-gonic/gin"
 )
@@ -24,8 +22,6 @@ type API struct {
 	project               fusion.Project
 	user                  fusion.User
 	roleManagementService *userdb.RoleManagementService
-	userProfileSvc        *userprofile.Service
-	userSettingsSvc       *usersettings.Service
 	authMiddleware        middleware.AuthMiddleware
 }
 
@@ -43,8 +39,6 @@ func New(cfg *Config,
 	userSvc fusion.User,
 	userDBSvc *userdb.Service,
 	roleManagementSvc *userdb.RoleManagementService,
-	userProfileSvc *userprofile.Service,
-	userSettingsSvc *usersettings.Service,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -70,15 +64,6 @@ func New(cfg *Config,
 	if userSvc == nil {
 		return nil, errors.New("missing user service")
 	}
-
-	if userProfileSvc == nil {
-		return nil, errors.New("missing user profile service")
-	}
-
-	if userSettingsSvc == nil {
-		return nil, errors.New("missing user settings service")
-	}
-
 	// Initialize Auth0 validator and middleware
 	if cfg.Auth0Domain == "" {
 		return nil, errors.New("Auth0Domain is required for authentication")
@@ -96,8 +81,6 @@ func New(cfg *Config,
 		// project:               projectSvc,
 		user:                  userSvc,
 		roleManagementService: roleManagementSvc,
-		userProfileSvc:        userProfileSvc,
-		userSettingsSvc:       userSettingsSvc,
 		authMiddleware:        authMiddleware,
 	}
 

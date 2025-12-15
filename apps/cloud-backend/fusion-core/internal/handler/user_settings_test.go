@@ -16,33 +16,7 @@ import (
 	"github.com/stretchr/testify/mock"
 )
 
-// MockUserSettingsService is a mock implementation of the fusion.UserSettings interface
-type MockUserSettingsService struct {
-	mock.Mock
-}
-
-func (m *MockUserSettingsService) GetUserSettings(ctx context.Context, userID string) (*types.UserSettings, error) {
-	args := m.Called(ctx, userID)
-	if args.Get(0) == nil {
-		return nil, args.Error(1)
-	}
-	return args.Get(0).(*types.UserSettings), args.Error(1)
-}
-
-func (m *MockUserSettingsService) CreateUserSettings(ctx context.Context, settingsDetails *types.UserSettings) (string, error) {
-	args := m.Called(ctx, settingsDetails)
-	return args.String(0), args.Error(1)
-}
-
-func (m *MockUserSettingsService) UpdateUserSettings(ctx context.Context, settingsDetails *types.UpdateUserSettingsRequest, settingsID string, userID string) error {
-	args := m.Called(ctx, settingsDetails, settingsID, userID)
-	return args.Error(0)
-}
-
-func (m *MockUserSettingsService) CreateUserSettingsForRegistration(ctx context.Context, userID string) (string, error) {
-	args := m.Called(ctx, userID)
-	return args.String(0), args.Error(1)
-}
+// MockUserService is defined in mock_user_service_test.go
 
 // TestGetUserSettings tests the GetUserSettings handler endpoint
 func TestGetUserSettings(t *testing.T) {
@@ -126,7 +100,7 @@ func TestGetUserSettings(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := &MockUserSettingsService{}
+			mockService := &MockUserService{}
 
 			if tt.mockGetSettings != nil {
 				// Don't setup expectation for invalid user ID format as the handler returns error before calling service
@@ -135,7 +109,7 @@ func TestGetUserSettings(t *testing.T) {
 				}
 			}
 
-			handler := NewUserSettingsHandler(mockService)
+			handler := NewUserHandler(mockService)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -263,7 +237,7 @@ func TestUpdateUserSettings(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := &MockUserSettingsService{}
+			mockService := &MockUserService{}
 
 			// Only setup mock if we expect the service to be called
 			// Service is called if authn is OK and validation passes.
@@ -280,7 +254,7 @@ func TestUpdateUserSettings(t *testing.T) {
 				call.Return(tt.mockReturnError)
 			}
 
-			handler := NewUserSettingsHandler(mockService)
+			handler := NewUserHandler(mockService)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
@@ -405,13 +379,13 @@ func TestCreateUserSettings(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mockService := &MockUserSettingsService{}
+			mockService := &MockUserService{}
 
 			if tt.mockCreateSettings != nil {
 				mockService.On("CreateUserSettings", mock.Anything, mock.AnythingOfType("*types.UserSettings")).Return(tt.mockCreateSettings(context.Background(), &types.UserSettings{}))
 			}
 
-			handler := NewUserSettingsHandler(mockService)
+			handler := NewUserHandler(mockService)
 
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)

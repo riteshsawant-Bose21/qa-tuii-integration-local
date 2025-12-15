@@ -2,26 +2,17 @@ package db
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 )
 
-type Service struct {
-	db *sql.DB
-}
-
-// NewService initializes the DB service
-func NewService(db *sql.DB) *Service {
-	return &Service{db: db}
-}
-
-// SelectByUserID fetches user settings for a specific userID
-func (s *Service) SelectByUserID(ctx context.Context, userID string) (*types.UserSettings, error) {
+// SelectUserSettingsByUserID fetches user settings for a specific userID
+func (s *Service) SelectUserSettingsByUserID(ctx context.Context, userID string) (*types.UserSettings, error) {
 	row, err := model.UserSettings(model.UserSettingWhere.UserID.EQ(userID)).One(ctx, s.db)
 	if err != nil {
 		return nil, err
@@ -30,8 +21,17 @@ func (s *Service) SelectByUserID(ctx context.Context, userID string) (*types.Use
 	return newUserSettings(row)
 }
 
-// Insert a new user settings in the database
-func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) (string, error) {
+func newUserSettings(row *model.UserSetting) (*types.UserSettings, error) {
+	return &types.UserSettings{
+		ID:       row.ID,
+		UserID:   row.UserID,
+		Language: row.Language.String,
+		Theme:    row.Theme.String,
+	}, nil
+}
+
+// InsertUserSettings inserts a new user settings in the database
+func (s *Service) InsertUserSettings(ctx context.Context, userSettings *types.UserSettings) (string, error) {
 
 	// Create the user settings
 	row := &model.UserSetting{
@@ -50,7 +50,8 @@ func (s *Service) Insert(ctx context.Context, userSettings *types.UserSettings) 
 	return row.ID, nil
 }
 
-func (s *Service) Update(ctx context.Context, userSettings *types.UserSettings) error {
+// UpdateUserSettings updates existing user settings in the database
+func (s *Service) UpdateUserSettings(ctx context.Context, userSettings *types.UserSettings) error {
 	row := &model.UserSetting{
 		ID:       userSettings.ID,
 		UserID:   userSettings.UserID,

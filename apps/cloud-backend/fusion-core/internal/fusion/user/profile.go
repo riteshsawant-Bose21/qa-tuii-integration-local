@@ -1,4 +1,4 @@
-package userprofile
+package user
 
 import (
 	"context"
@@ -11,20 +11,23 @@ import (
 	"github.com/google/uuid"
 )
 
+// GetUserProfile fetches a user profile by user ID
 func (s *Service) GetUserProfile(ctx context.Context, userID string) (*types.UserProfile, error) {
-	return s.dbService.SelectByUserID(ctx, userID)
+	return s.dbService.SelectUserProfileByUserID(ctx, userID)
 }
 
+// CreateUserProfile creates a new user profile
 func (s *Service) CreateUserProfile(ctx context.Context, profileDetails *types.UserProfile) (string, error) {
-	return s.dbService.Insert(ctx, profileDetails)
+	return s.dbService.InsertUserProfile(ctx, profileDetails)
 }
 
+// UpdateUserProfile updates an existing user profile
 func (s *Service) UpdateUserProfile(ctx context.Context, profileDetails *types.UserProfileUpdateRequest, profileID string, userID string) error {
 	if profileDetails == nil {
 		return fmt.Errorf("userProfile cannot be nil")
 	}
 
-	existingProfile, err := s.dbService.SelectByUserID(ctx, userID)
+	existingProfile, err := s.dbService.SelectUserProfileByUserID(ctx, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user profile not found")
@@ -72,11 +75,10 @@ func (s *Service) UpdateUserProfile(ctx context.Context, profileDetails *types.U
 		existingProfile.LinkedProfiles = *profileDetails.LinkedProfiles
 	}
 
-	return s.dbService.Update(ctx, existingProfile)
+	return s.dbService.UpdateUserProfile(ctx, existingProfile)
 }
 
 // CreateUserProfileForRegistration creates a profile during user registration process
-// This is called internally, not from HTTP handlers
 func (s *Service) CreateUserProfileForRegistration(ctx context.Context, profileData *types.UserProfile) (string, error) {
 	// Validate required fields for registration
 	if profileData.UserID == "" {
@@ -91,5 +93,5 @@ func (s *Service) CreateUserProfileForRegistration(ctx context.Context, profileD
 		return "", fmt.Errorf("email is required")
 	}
 
-	return s.dbService.Insert(ctx, profileData)
+	return s.dbService.InsertUserProfile(ctx, profileData)
 }

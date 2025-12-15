@@ -1,4 +1,4 @@
-package usersettings
+package user
 
 import (
 	"context"
@@ -10,21 +10,23 @@ import (
 	"github.com/google/uuid"
 )
 
+// GetUserSettings fetches user settings by user ID
 func (s *Service) GetUserSettings(ctx context.Context, userID string) (*types.UserSettings, error) {
-	return s.dbService.SelectByUserID(ctx, userID)
+	return s.dbService.SelectUserSettingsByUserID(ctx, userID)
 }
 
+// CreateUserSettings creates new user settings
 func (s *Service) CreateUserSettings(ctx context.Context, settingsDetails *types.UserSettings) (string, error) {
-	return s.dbService.Insert(ctx, settingsDetails)
+	return s.dbService.InsertUserSettings(ctx, settingsDetails)
 }
 
+// UpdateUserSettings updates existing user settings
 func (s *Service) UpdateUserSettings(ctx context.Context, settingsDetails *types.UpdateUserSettingsRequest, settingsID string, userID string) error {
-
 	if settingsDetails == nil {
 		return fmt.Errorf("settingsDetails cannot be nil")
 	}
 
-	existingSettings, err := s.dbService.SelectByUserID(ctx, userID)
+	existingSettings, err := s.dbService.SelectUserSettingsByUserID(ctx, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user settings not found")
@@ -32,7 +34,7 @@ func (s *Service) UpdateUserSettings(ctx context.Context, settingsDetails *types
 		return fmt.Errorf("failed to fetch user settings: %v", err)
 	}
 
-	if existingSettings.UserID != userID {
+	if existingSettings.ID != settingsID {
 		return fmt.Errorf("user settings do not belong to the specified user")
 	}
 
@@ -40,11 +42,10 @@ func (s *Service) UpdateUserSettings(ctx context.Context, settingsDetails *types
 	ptr.AssignIfNotNull(&existingSettings.Language, settingsDetails.Language)
 	ptr.AssignIfNotNull(&existingSettings.Theme, settingsDetails.Theme)
 
-	return s.dbService.Update(ctx, existingSettings)
+	return s.dbService.UpdateUserSettings(ctx, existingSettings)
 }
 
 // CreateUserSettingsForRegistration creates settings during user registration process
-// This is called internally, not from HTTP handlers
 func (s *Service) CreateUserSettingsForRegistration(ctx context.Context, userID string) (string, error) {
 	if userID == "" {
 		return "", fmt.Errorf("userID is required")
@@ -63,5 +64,5 @@ func (s *Service) CreateUserSettingsForRegistration(ctx context.Context, userID 
 		Theme:    defaultTheme,
 	}
 
-	return s.dbService.Insert(ctx, settings)
+	return s.dbService.InsertUserSettings(ctx, settings)
 }

@@ -56,29 +56,27 @@ func (a *API) registerRoutes() {
 
 	{
 		user.GET("/me/authorization", userHandler.GetUserAuthorization)
-		user.GET("/me/profile", userHandler.GetUserProfile)
+		user.GET("/me/profile", userHandler.GetUserProfileDetails)
 	}
 
 	// user profile management routes (/user/profile/*)
 	userProfile := user.Group("/profile")
-	userProfilehandler := handler.NewUserProfileHandler(a.userProfileSvc)
 	{
 		userProfile.Use(accessControl.GlobalAccessControlMiddleware())
 
-		userProfile.GET("", userProfilehandler.GetUserProfile)
-		userProfile.POST("", userProfilehandler.CreateUserProfile)
-		userProfile.PUT("/:profileID", userProfilehandler.UpdateUserProfile)
+		userProfile.GET("", userHandler.GetUserProfileDetails)
+		userProfile.POST("", userHandler.CreateUserProfile)
+		userProfile.PUT("/:profileID", userHandler.UpdateUserProfile)
 	}
 
 	// user settings management routes (/user/settings/*)
 	userSettings := user.Group("/settings")
-	userSettingsHandler := handler.NewUserSettingsHandler(a.userSettingsSvc)
 	{
 		userSettings.Use(accessControl.GlobalAccessControlMiddleware())
 
-		userSettings.GET("", userSettingsHandler.GetUserSettings)
-		userSettings.POST("", userSettingsHandler.CreateUserSettings)
-		userSettings.PUT("/:settingsID", userSettingsHandler.UpdateUserSettings)
+		userSettings.GET("", userHandler.GetUserSettings)
+		userSettings.POST("", userHandler.CreateUserSettings)
+		userSettings.PUT("/:settingsID", userHandler.UpdateUserSettings)
 	}
 
 	// Additional user management routes

@@ -21,4 +21,16 @@ type User interface {
 
 	// UpdateUser updates an existing user
 	UpdateUser(ctx context.Context, userID string, req *types.UpdateUserRequest) (*types.User, error)
+
+	// User Profile Methods
+	GetUserProfile(ctx context.Context, userID string) (*types.UserProfile, error)
+	CreateUserProfile(ctx context.Context, userProfile *types.UserProfile) (string, error)
+	UpdateUserProfile(ctx context.Context, profileDetails *types.UserProfileUpdateRequest, profileID string, userID string) error
+	CreateUserProfileForRegistration(ctx context.Context, profileData *types.UserProfile) (string, error)
+
+	// User Settings Methods
+	GetUserSettings(ctx context.Context, userID string) (*types.UserSettings, error)
+	CreateUserSettings(ctx context.Context, userSettings *types.UserSettings) (string, error)
+	UpdateUserSettings(ctx context.Context, settingsDetails *types.UpdateUserSettingsRequest, settingsID string, userID string) error
+	CreateUserSettingsForRegistration(ctx context.Context, userID string) (string, error)
 }
