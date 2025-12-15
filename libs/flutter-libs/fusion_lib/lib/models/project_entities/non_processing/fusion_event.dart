@@ -246,6 +246,7 @@ class FusionEvent {
   final EventActionType? action;
   final EventCondition? condition;
   final List<EventStates>? states;
+  final EventStates? selectedState;
 
   bool get isComplete {
     if (triggerType == null || item == null || action == null) {
@@ -271,6 +272,7 @@ class FusionEvent {
     this.action,
     this.condition,
     this.states,
+    this.selectedState,
   }) : id = id ?? "FUSIONEVENT${FusionUtils.shortStringUUID()}";
 
   factory FusionEvent.fromJson(Map<String, dynamic> json) {
@@ -289,6 +291,7 @@ class FusionEvent {
             }
           : null,
       states: json['states'] != null ? (json['states'] as List).map((e) => EventStates.fromJson(e)).toList() : null,
+      selectedState: json['selectedState'] != null ? EventStates.fromJson(json['selectedState']) : null,
     );
   }
 
@@ -308,6 +311,7 @@ class FusionEvent {
           }
         : null,
     'states': states?.map((e) => e.toJson()).toList(),
+    'selectedState': selectedState?.toJson(),
   };
 
   FusionEvent copyWith({
@@ -319,6 +323,7 @@ class FusionEvent {
     EventActionType? action,
     EventCondition? condition,
     List<EventStates>? states,
+    EventStates? selectedState,
   }) {
     return FusionEvent(
       id: id ?? this.id,
@@ -329,6 +334,7 @@ class FusionEvent {
       action: action ?? this.action,
       condition: condition ?? this.condition,
       states: states ?? this.states,
+      selectedState: selectedState ?? this.selectedState,
     );
   }
 
@@ -342,6 +348,7 @@ class FusionEvent {
       action: action,
       condition: null,
       states: null,
+      selectedState: null,
     );
   }
 
@@ -355,6 +362,7 @@ class FusionEvent {
       action: action,
       condition: null,
       states: null,
+      selectedState: null,
     );
   }
 
@@ -368,6 +376,23 @@ class FusionEvent {
       action: null,
       condition: null,
       states: null,
+      selectedState: null,
+    );
+  }
+
+  FusionEvent updateCondition({required EventCondition condition, required List<EventStates>? states}) {
+    return FusionEvent(
+      id: id,
+      name: name,
+      isEnabled: isEnabled,
+      triggerType: triggerType,
+      item: item,
+      action: action,
+      condition: condition,
+      states: states,
+      selectedState: (selectedState != null && states != null)
+          ? states.firstWhere((s) => s.stateType == selectedState!.stateType, orElse: () => states.first)
+          : null,
     );
   }
 }

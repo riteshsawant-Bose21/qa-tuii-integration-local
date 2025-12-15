@@ -200,7 +200,7 @@ extension EventsService on ProjectService {
 
     List<EventStates>? states = getEventStatesForConditionType(conditionType: conditionType);
 
-    final updatedEvent = event.copyWith(
+    final updatedEvent = event.updateCondition(
       condition: condition,
       states: states,
     );
