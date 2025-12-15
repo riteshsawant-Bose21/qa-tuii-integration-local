@@ -10,7 +10,6 @@ import (
 const (
 	testProjectName    = "Test Project"
 	testApplication    = "Test App"
-	testAccountID      = "123"
 	updatedProjectName = "Updated Project"
 )
 
