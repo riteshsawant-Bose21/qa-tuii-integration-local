@@ -20,6 +20,9 @@ export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
 export 'functions/functions_view_model.dart';
 export 'mix_scenes/mix_scenes_view_model.dart';
+export 'equip_location/equip_location_view_model.dart';
+export 'scenes_view_model/scenes_view_model.dart';
+export 'schedule/schedule_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -34,7 +37,7 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
-enum ConfigurationMenuMode { processing, presets, gpio, scheduling }
+enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling }
 
 enum SelectedItemType {
   source,
@@ -431,5 +434,13 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently open.");
       return null;
     }
+  }
+
+  /// Selected snapshot ID for actions panel
+  String? selectedSnapshotId;
+
+  void setSelectedSnapshotId(String? snapshotId) {
+    selectedSnapshotId = snapshotId;
+    emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
   }
 }

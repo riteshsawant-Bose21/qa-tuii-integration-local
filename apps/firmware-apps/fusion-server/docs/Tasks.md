@@ -3,30 +3,35 @@ A deterministic, window-aware cron scheduler for Fusion Server
 
 The **TaskManager** is the scheduling engine responsible for running timed tasks inside the Fusion Server.  
 It manages creation, persistence, execution, enabling/disabling, and lifecycle rules for scheduled tasks.  
-It supports cron expressions, optional time-window constraints (`StartAt` and `EndAt`), snapshot activation tasks, and audio message playback tasks.
+It supports cron expressions, optional time-window constraints (`StartAt`, `EndAt`), *recurring time windows*, snapshot activation tasks, and audio message playback tasks.
 
 ---
 
 ## Features
 
 - Cron-based scheduling using **robfig/cron/v3** (standard **5-field** cron syntax)
-- Optional **StartAt** timestamp — delays scheduling until the window opens
-- Optional **EndAt** timestamp — automatically disables the task once expired
-- Periodic window-evaluation loop to attach/detach cron entries appropriately
-- Automatic removal of expired tasks
+- **Absolute time windows**
+  - **StartAt** — delay scheduling until this time  
+  - **EndAt** — auto-disable task after this time  
+- **Recurring time windows**
+  - Daily/weekly allowed execution periods  
+  - Time-of-day windows (e.g., 09:00–17:00)  
+  - Day-of-week restrictions (e.g., Mon–Fri)  
+  - Overnight windows (e.g., 22:00–06:00)  
 - Persistent task storage and execution history
+- Periodic window-evaluation loop to attach/detach cron entries
 - Panic-safe execution wrapper
-- HTTP API for CRUD, enable/disable, and task-type-specific operations
+- HTTP API for CRUD operations and task control
 - Supports:
   - **Snapshot tasks** (activates stored snapshots)
   - **Message tasks** (trigger audio playback)
-- Works correctly in distributed cluster deployments
+- Operates autonomously on each node; integrates with cluster snapshot system
 
 ---
 
 # Cron Expression Support
 
-The TaskManager supports **standard robfig/cron/v3 5-field cron syntax**:
+The TaskManager supports **5-field** cron expressions:
 
 ```
 MINUTE HOUR DOM MONTH DOW
@@ -41,41 +46,26 @@ Examples:
 15 10 * * *      # every day at 10:15
 ```
 
-Seconds-precision cron (`*/1 * * * * *`) is **not supported**.
+Seconds-based cron (`*/1 * * * * *`) is **not supported**.
 
 ---
 
 # StartAt and EndAt Semantics
 
-Each task may optionally define **StartAt** and **EndAt** timestamps.  
-These modify *when* the cron job is allowed to run.
+Absolute time windows define when scheduling becomes active or inactive.
 
-## StartAt Behavior
+### StartAt
+- If unset → schedule immediately.  
+- If in the future → task stays enabled but unscheduled (`CronEntryID = 0`).  
+- Once StartAt passes → cron is attached.
 
-- If **StartAt is unset** (`time.Time{}`):
-  - Task is scheduled immediately.
+### EndAt
+- If unset → task never auto-disables.  
+- If set → after EndAt passes:
+  - Task auto-disables  
+  - Cron entry removed  
 
-- If **StartAt is in the future**:
-  - Task is enabled but **not scheduled**
-  - `CronEntryID = 0`
-  - Task does not run
-  - Once the server time passes StartAt:
-    - The window manager attaches the cron entry
-    - Task then follows its cron schedule
-
-## EndAt Behavior
-
-- If **EndAt is unset**:
-  - Task never auto-disables.
-
-- If **EndAt is set**:
-  - Task runs normally until EndAt
-  - After EndAt passes:
-    - Task is automatically disabled
-    - Cron entry is removed
-    - Task will not run again unless explicitly re-enabled
-
-## Combined Window Behavior
+### Combined Behavior
 
 | StartAt | EndAt | Before StartAt | Between Window | After EndAt |
 |---------|--------|----------------|----------------|--------------|
@@ -86,73 +76,80 @@ These modify *when* the cron job is allowed to run.
 
 ---
 
+# Recurring Time Windows (Daily/Weekly)
+
+A task may also define *recurring* allowable execution windows:
+
+```json
+"recurrence": {
+  "start_time": "09:00",
+  "end_time": "17:00",
+  "days": [1,2,3,4,5]
+}
+```
+
+### Supported behavior:
+- Time-of-day window enforcement  
+- Day-of-week restrictions (0=Sun…6=Sat)  
+- Overnight windows (22:00–06:00)  
+- Applies **in addition to** StartAt/EndAt  
+- Checked at execution time inside `wrapTask`
+
+Cron still determines *when attempts occur*; recurrence determines *whether they can execute*.
+
+---
+
 # Internal Architecture
 
-The TaskManager consists of three cooperating systems:
+### 1. Cron Scheduler
+Schedules events based on cron expressions only.
 
-## 1. Cron Scheduler (robfig/cron)
+### 2. Window Manager
+Runs every 30 seconds:
+- Attaches cron after StartAt  
+- Removes cron after EndAt  
 
-- Schedules task execution based on cron expressions  
-- Does not consider StartAt/EndAt; time windows are enforced externally  
-
-## 2. Window Manager
-
-A background goroutine periodically evaluates all tasks:
-
-- Attaches cron entries when StartAt becomes valid
-- Removes cron entries after EndAt passes
-- Ensures correct scheduling even after server restarts
-
-## 3. Execution Wrapper (`wrapTask`)
-
-Every cron execution passes through a wrapper that:
-
-- Rejects task execution before StartAt
-- Disables task when EndAt has passed
-- Logs execution history
-- Recovers from panics
-- Ensures failures do not stop the scheduler
+### 3. wrapTask Execution Wrapper
+On each cron event:
+- Skip before StartAt  
+- Auto-disable after EndAt  
+- Skip if outside recurring window  
+- Execute task function if allowed  
+- Recover from panics  
+- Append execution history  
 
 ---
 
 # Task Lifecycle
 
 ### Creation
-- Task is validated and persisted.
-- If StartAt <= now → cron entry is created immediately.
-- If StartAt > now → cron entry deferred until window opens.
+- Validated and persisted  
+- Cron attached based on StartAt
 
 ### Execution
-- Cron fires according to schedule.
-- Execution is gated by wrapTask to enforce the time window.
+- wrapTask enforces all window constraints  
+- Records execution history
 
 ### Update
-- Old cron entry removed.
-- New cron entry attached if inside valid window.
-- StartAt/EndAt changes immediately affect scheduling.
+- Handles updated CronExpr, StartAt, EndAt, Recurrence  
+- Re-schedules appropriately
 
-### Disable
-- Cron entry removed.
-- Task.Enabled = false (persisted).
-
-### Enable
-- Task.Enabled = true
-- Cron entry attached if inside window.
+### Disable / Enable
+- Disable removes cron entry  
+- Enable reattaches cron if inside window
 
 ---
 
 # Persistence
 
-The TaskManager stores:
-
+TaskManager persists:
 - Task definitions  
-- Enabled/disabled state  
 - StartAt / EndAt  
-- CronExpr  
-- Task type and parameters  
-- Execution history (rotated log)
+- Recurrence  
+- Enabled/disabled state  
+- Execution history (rotated)
 
-CronEntryID is **never persisted**; it is restored automatically on startup.
+CronEntryID is **not** stored and is rebuilt on startup.
 
 ---
 
@@ -160,104 +157,79 @@ CronEntryID is **never persisted**; it is restored automatically on startup.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/tasks` | List all tasks |
-| POST | `/tasks` | Create a new task |
-| GET | `/tasks/:id` | Retrieve a task |
-| PATCH | `/tasks/:id` | Update a task |
-| DELETE | `/tasks/:id` | Delete a task |
-| POST | `/tasks/:id/enable` | Enable a task |
-| POST | `/tasks/:id/disable` | Disable a task |
+| GET | `/tasks` | List tasks |
+| POST | `/tasks` | Create task |
+| GET | `/tasks/:id` | Retrieve task |
+| PATCH | `/tasks/:id` | Update task |
+| DELETE | `/tasks/:id` | Delete task |
+| POST | `/tasks/:id/enable` | Enable task |
+| POST | `/tasks/:id/disable` | Disable task |
 | GET | `/tasks/history` | Retrieve execution history |
-
-Snapshot and message tasks have additional type-specific endpoints.
 
 ---
 
 # Task Types
 
-## Snapshot Task
-
-Triggers a snapshot activation:
-
+### Snapshot Task
 ```
-type: "snapshot"
-params: {
-    "snapshot_id": "<id>"
-}
+"type": "snapshot",
+"params": { "snapshot_id": "<id>" }
 ```
+Activates the specified snapshot.
 
-Snapshot ID **must exist** for the task to be scheduled.
-
-## Message Task
-
-Triggers audio message playback:
-
+### Message Task
 ```
-type: "message"
-params: {
-    "message": "<audio id>",
+"type": "message",
+"params": {
+    "message_id": "<id>",
     "priority": 50,
     "zones": "all"
 }
 ```
-
-Used internally by the audio subsystem to coordinate timed message playback.
-
----
-
-# Execution History
-
-The TaskManager records:
-
-- Task ID  
-- Status: `"success"` or `"failed"`  
-- Timestamp  
-- Description  
-
-History is persisted and rotated at `MaxHistory`.
+Triggers audio playback.
 
 ---
 
 # Limitations
 
-- Cron granularity is limited to **minutes**
-- StartAt/EndAt window enforcement depends on periodic evaluation
-- Snapshot tasks cannot be scheduled if the snapshot does not exist
-- All nodes must have synchronized clocks (chrony or ntpd recommended)
+- Granularity = minutes  
+- Window manager polling = 30s  
+- Snapshot tasks require valid snapshot metadata  
+- Node clocks must be synchronized  
+- Missed events are not replayed  
 
 ---
 
-# Operational Notes
+# TaskManager Scheduling Flow (Mermaid Diagram)
 
-These design considerations remain important for production:
+This diagram visualizes the execution flow of the Fusion TaskManager:
+- How StartAt, EndAt, and recurring windows interact with cron scheduling.
+- How tasks are attached, skipped, executed, or disabled.
+- How wrapTask enforces all window logic.
 
-### Node Time Synchronization
+```mermaid
+flowchart TD
 
-Because scheduling is time-based, nodes must maintain tight clock sync (chrony/ntpd).  
-This is especially important for distributed audio or scheduled snapshot activations.
+    A[Task Created] --> B{StartAt Set?}
+    B -->|No| C[Attach Cron Immediately]
+    B -->|Yes| D{Now >= StartAt?}
+    D -->|No| E[Do Not Attach Cron<br/>CronEntryID = 0]
+    D -->|Yes| C[Attach Cron Immediately]
 
-### Missed-Windows Behavior (“Catch-Up”)
+    C --> F[Cron Fires Event]
+    E --> F
 
-Currently, if a node is offline during a window:
+    F --> G{EndAt Passed?}
+    G -->|Yes| H[Auto-Disable Task<br/>Remove CronEntryID<br/>Enabled=false]
+    G -->|No| I{Inside Recurring Window?}
 
-- It does **not** replay missed events  
-- This is intentional: Fusion operates under an “autonomous real-time node” model
+    I -->|No| J[Skip Execution<br/>No History Entry]
+    I -->|Yes| K[Execute Task Function]
 
-A future enhancement could make this configurable per-task.
+    K --> L[Record Execution History]
+    J --> M[Next Cron Event]
+    H --> M
+    L --> M
 
-### Node Selector Rules (Future Feature)
-
-It may be useful to allow tasks to target only certain node roles:
-
+    M --> F
 ```
-role=player
-site=lobby
-```
-
-This is not yet implemented.
-
----
-
-# Conclusion
-
-The TaskManager is a full-featured, window-aware scheduling subsystem that reliably executes, persists, and controls tasks in a distributed audio environment. Its behavior is governed by cron expressions plus optional time windows, ensuring predictable and safe operation across restarts and cluster events.

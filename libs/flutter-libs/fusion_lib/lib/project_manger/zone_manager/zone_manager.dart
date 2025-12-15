@@ -206,4 +206,11 @@ extension ZoneManager on ProjectManager {
     }
     return projectService!.getPrioritySourceDataById(priorityDataId: priorityDataId);
   }
+
+  List<Zone> getZonesWithoutSubZones() {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZonesWithoutSubzones();
+  }
 }

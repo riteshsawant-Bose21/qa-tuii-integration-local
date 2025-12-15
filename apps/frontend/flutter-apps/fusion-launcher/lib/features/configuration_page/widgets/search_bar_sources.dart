@@ -8,6 +8,7 @@ class SearchBarSources extends StatelessWidget {
   final bool Function() hasActiveFilters;
   final Widget? activeFiltersChipsRow;
   final ValueChanged<String>? onSearchChanged;
+  final bool isFromActionList;
 
   const SearchBarSources({
     super.key,
@@ -16,79 +17,86 @@ class SearchBarSources extends StatelessWidget {
     this.activeFiltersChipsRow,
     this.onClearSearch,
     this.onSearchChanged,
+    this.isFromActionList = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      clipBehavior: Clip.hardEdge,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
-          // top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
-        ),
-      ),
-      child: Column(
-        children: <Widget>[
-          /// Search + filter + sort row
-          SizedBox(
-            height: 32,
-            child: Row(
-              children: <Widget>[
-                /// Search box
-                Expanded(
-                  child: FusionTextField(
-                    controller: searchController,
-                    hintText: 'Search sources',
-                    prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
-                    onChanged: (String value) {
-                      if (value.isEmpty) {
-                        onClearSearch?.call();
-                      }
-                      onSearchChanged?.call(value);
-                    },
-                    suffixIcon:
-                        searchController.text.isNotEmpty
-                            ? IconButton(
-                              icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
-                              onPressed: onClearSearch,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            )
-                            : null,
+    return SizedBox(
+      width: double.infinity,
+      child: Container(
+        clipBehavior: Clip.hardEdge,
+        decoration: BoxDecoration(
+          border:
+              isFromActionList
+                  ? null
+                  : Border(
+                    bottom: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 1),
                   ),
-                ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: <Widget>[
+            /// Search + filter + sort row
+            SizedBox(
+              height: 32,
+              child: Row(
+                children: <Widget>[
+                  /// Search box
+                  Expanded(
+                    child: FusionTextField(
+                      controller: searchController,
+                      hintText: 'Search sources',
+                      prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
+                      onChanged: (String value) {
+                        if (value.isEmpty) {
+                          onClearSearch?.call();
+                        }
+                        onSearchChanged?.call(value);
+                      },
+                      suffixIcon:
+                          searchController.text.isNotEmpty
+                              ? IconButton(
+                                icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
+                                onPressed: onClearSearch,
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              )
+                              : null,
+                    ),
+                  ),
 
-                // /// Filter Dropdown
-                // _buildDropdownButton(
-                //   context: context,
-                //   image: "assets/images/filter.png",
-                //   tooltip: 'Filter',
-                //   hasActiveFilters: false,
-                //   dropdownBuilder: (BuildContext context) => const SizedBox(),
-                // ),
-                // const SizedBox(width: 8),
-                //
-                // /// Sort Dropdown
-                // _buildDropdownButton(
-                //   context: context,
-                //   image: "assets/images/sort_descending.png",
-                //   tooltip: 'Sort',
-                //   hasActiveFilters: false, // Show active state when sort is selected
-                //   dropdownBuilder:
-                //       (BuildContext context) => SortDropdownContent(
-                //         selectedSortOption: selectedSortOption,
-                //         onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {},
-                //       ),
-                // ),
-                // const SizedBox(width: 8),
-              ],
+                  // /// Filter Dropdown
+                  // _buildDropdownButton(
+                  //   context: context,
+                  //   image: "assets/images/filter.png",
+                  //   tooltip: 'Filter',
+                  //   hasActiveFilters: false,
+                  //   dropdownBuilder: (BuildContext context) => const SizedBox(),
+                  // ),
+                  // const SizedBox(width: 8),
+                  //
+                  // /// Sort Dropdown
+                  // _buildDropdownButton(
+                  //   context: context,
+                  //   image: "assets/images/sort_descending.png",
+                  //   tooltip: 'Sort',
+                  //   hasActiveFilters: false, // Show active state when sort is selected
+                  //   dropdownBuilder:
+                  //       (BuildContext context) => SortDropdownContent(
+                  //         selectedSortOption: selectedSortOption,
+                  //         onSortOptionChanged: onSortOptionChanged ?? (SortOption? option) {},
+                  //       ),
+                  // ),
+                  // const SizedBox(width: 8),
+                ],
+              ),
             ),
-          ),
 
-          // /// Active filters chips row
-          // if (hasActiveFilters()) activeFiltersChipsRow ?? const SizedBox.shrink(),
-        ],
+            // /// Active filters chips row
+            // if (hasActiveFilters()) activeFiltersChipsRow ?? const SizedBox.shrink(),
+          ],
+        ),
       ),
     );
   }

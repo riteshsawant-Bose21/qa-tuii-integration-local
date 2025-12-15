@@ -150,9 +150,8 @@ type RemoteStateSnapshot struct {
 
 // SnapshotOperation represents a snapshot operation broadcast across the cluster.
 type SnapshotOperation struct {
-	Name      string         `json:"name"`
-	Data      map[string]any `json:"data,omitempty"`
-	Timestamp time.Time      `json:"timestamp"`
+	Name      string    `json:"name"`
+	Timestamp time.Time `json:"timestamp"`
 }
 
 // TaskType represents scheduled task

@@ -9,6 +9,7 @@ enum RelationshipType {
   zoneSubZones,
   sourceSetSources,
   hardwareLocation,
+  equipLocation,
   hardwareFloor,
   circuitHardware,
   zoneCircuits,
@@ -17,6 +18,8 @@ enum RelationshipType {
   zonePriorities,
   zoneFunctions,
   sourcePriorityData,
+  sceneSetScenes,
+  sceneActions,
 }
 
 class RelationshipManager {

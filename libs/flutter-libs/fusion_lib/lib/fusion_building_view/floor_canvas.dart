@@ -462,7 +462,7 @@ class FloorCanvasState extends State<FloorCanvas> {
 
         // simplest circular hit‐test:
         final double hitRadius = widget.gridSize * 0.3;
-        if ((worldPos - sp.pos).distance < hitRadius) {
+        if ((worldPos - sp.pos!).distance < hitRadius) {
           _stopListeningAreaSelection();
           widget.onSelectedHardwareComponentIdChanged(sp.id);
           print(
@@ -882,7 +882,7 @@ class FloorCanvasState extends State<FloorCanvas> {
 
   void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
     // Find the listening area at the component’s position (if any)
-    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos);
+    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos!);
 
     // Determine the new listeningAreaId (use empty string when none)
     final String newListeningAreaId = hit?.id ?? '';
@@ -917,7 +917,7 @@ class FloorCanvasState extends State<FloorCanvas> {
   List<HardwareComponent> _getHardwareComponentsInListeningAreas(ListeningArea area) {
     final result = <HardwareComponent>[];
     for (final hw in widget.hardwareComponents) {
-      if (_isPointInsidePolygon(hw.pos, area.vertices)) {
+      if (_isPointInsidePolygon(hw.pos!, area.vertices)) {
         result.add(hw);
       }
     }
