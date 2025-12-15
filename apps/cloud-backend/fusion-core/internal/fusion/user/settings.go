@@ -26,16 +26,12 @@ func (s *Service) UpdateUserSettings(ctx context.Context, settingsDetails *types
 		return fmt.Errorf("settingsDetails cannot be nil")
 	}
 
-	existingSettings, err := s.dbService.SelectUserSettingsByUserID(ctx, userID)
+	existingSettings, err := s.dbService.SelectUserSettingsBySettingsIDAndUserID(ctx, settingsID, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user settings not found")
 		}
 		return fmt.Errorf("failed to fetch user settings: %v", err)
-	}
-
-	if existingSettings.ID != settingsID {
-		return fmt.Errorf("user settings do not belong to the specified user")
 	}
 
 	// Update the settings only if the fields are present in the request payload and is not null

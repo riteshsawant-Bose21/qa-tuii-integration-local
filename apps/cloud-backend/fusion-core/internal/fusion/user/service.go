@@ -19,11 +19,13 @@ type DatabaseService interface {
 
 	// Profile DB Methods
 	SelectUserProfileByUserID(ctx context.Context, userID string) (*types.UserProfile, error)
+	SelectUserProfileByProfileIDAndUserID(ctx context.Context, profileID string, userID string) (*types.UserProfile, error)
 	InsertUserProfile(ctx context.Context, userProfile *types.UserProfile) (string, error)
 	UpdateUserProfile(ctx context.Context, profile *types.UserProfile) error
 
 	// Settings DB Methods
 	SelectUserSettingsByUserID(ctx context.Context, userID string) (*types.UserSettings, error)
+	SelectUserSettingsBySettingsIDAndUserID(ctx context.Context, settingsID string, userID string) (*types.UserSettings, error)
 	InsertUserSettings(ctx context.Context, userSettings *types.UserSettings) (string, error)
 	UpdateUserSettings(ctx context.Context, settings *types.UserSettings) error
 }

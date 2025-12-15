@@ -23,6 +23,15 @@ func (s *Service) SelectUserProfileByUserID(ctx context.Context, userID string) 
 	return newUserProfile(row)
 }
 
+func (s *Service) SelectUserProfileByProfileIDAndUserID(ctx context.Context, profileID string, userID string) (*types.UserProfile, error) {
+	row, err := model.UserProfiles(model.UserProfileWhere.ID.EQ(profileID), model.UserProfileWhere.UserID.EQ(userID)).One(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return newUserProfile(row)
+}
+
 func newUserProfile(row *model.UserProfile) (*types.UserProfile, error) {
 	var linkedProfiles json.RawMessage
 	if row.LinkedProfiles.Valid {

@@ -27,16 +27,12 @@ func (s *Service) UpdateUserProfile(ctx context.Context, profileDetails *types.U
 		return fmt.Errorf("userProfile cannot be nil")
 	}
 
-	existingProfile, err := s.dbService.SelectUserProfileByUserID(ctx, userID)
+	existingProfile, err := s.dbService.SelectUserProfileByProfileIDAndUserID(ctx, profileID, userID)
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return fmt.Errorf("user profile not found")
 		}
 		return fmt.Errorf("failed to fetch user profile: %v", err)
-	}
-
-	if existingProfile.ID != profileID {
-		return fmt.Errorf("user profile does not belong to the specified user")
 	}
 
 	// update only the fields which are present in the request payload and are not null

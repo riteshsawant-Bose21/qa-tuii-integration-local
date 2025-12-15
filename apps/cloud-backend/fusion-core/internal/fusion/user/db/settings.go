@@ -21,6 +21,15 @@ func (s *Service) SelectUserSettingsByUserID(ctx context.Context, userID string)
 	return newUserSettings(row)
 }
 
+func (s *Service) SelectUserSettingsBySettingsIDAndUserID(ctx context.Context, settingsID string, userID string) (*types.UserSettings, error) {
+	row, err := model.UserSettings(model.UserSettingWhere.ID.EQ(settingsID), model.UserSettingWhere.UserID.EQ(userID)).One(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
+
+	return newUserSettings(row)
+}
+
 func newUserSettings(row *model.UserSetting) (*types.UserSettings, error) {
 	return &types.UserSettings{
 		ID:       row.ID,
