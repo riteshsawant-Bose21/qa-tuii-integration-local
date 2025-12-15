@@ -26,14 +26,12 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
-import '../../configuration_page/pages/configuration_processing_page.dart';
-import '../../configuration_page/pages/configuration_snapshots.dart';
-import '../../scheduling/view/scheduling_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
 import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
+import '../widget/building/side_panel_widgets/product_query_popup.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
@@ -379,6 +377,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             setState(() {});
           },
         ),
+      ),
+      const DockItemConfig(
+        id: "20",
+        title: "SPEAKERS",
+        side: "left",
+        allowUndock: false,
+        isCollapsibleSection: false,
+        dockItemWidget: ProductQueryPopup(),
       ),
     ];
   }
