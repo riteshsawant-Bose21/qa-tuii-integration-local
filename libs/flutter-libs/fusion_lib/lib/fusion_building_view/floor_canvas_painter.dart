@@ -166,6 +166,7 @@ class FloorCanvasPainter extends CustomPainter {
           splRef: s,
           fieldPointsLen: s?.fieldPoints.length ?? -1,
           splValuesLen: s?.splValues.length ?? -1,
+          vertices: a.vertices,
         ),
       );
     }
@@ -202,6 +203,7 @@ class FloorCanvasPainter extends CustomPainter {
           splRef: spl,
           fieldPointsLen: spl.fieldPoints.length,
           splValuesLen: spl.splValues.length,
+          vertices: listeningArea.vertices,
         ),
         () {
           final ui.PictureRecorder areaRecorder = ui.PictureRecorder();
@@ -801,23 +803,38 @@ class _AreaSplSummary {
   final Object? splRef; // identity only
   final int fieldPointsLen;
   final int splValuesLen;
+  final List<Offset> vertices; // listening area points
 
   const _AreaSplSummary({
     required this.id,
     required this.splRef,
     required this.fieldPointsLen,
     required this.splValuesLen,
+    required this.vertices,
   });
 
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
     if (other is! _AreaSplSummary) return false;
-    return id == other.id && identical(splRef, other.splRef) && fieldPointsLen == other.fieldPointsLen && splValuesLen == other.splValuesLen;
+    return id == other.id &&
+        identical(splRef, other.splRef) &&
+        fieldPointsLen == other.fieldPointsLen &&
+        splValuesLen == other.splValuesLen &&
+        _listEquals(vertices, other.vertices);
   }
 
   @override
-  int get hashCode => id.hashCode ^ identityHashCode(splRef) ^ fieldPointsLen.hashCode ^ splValuesLen.hashCode;
+  int get hashCode => id.hashCode ^ identityHashCode(splRef) ^ fieldPointsLen.hashCode ^ splValuesLen.hashCode ^ Object.hashAll(vertices);
+
+  // Helper method to compare lists of Offsets
+  bool _listEquals(List<Offset> a, List<Offset> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
 }
 
 // Global/static heatmap cache keyed by signature, survives painter instance recreation
