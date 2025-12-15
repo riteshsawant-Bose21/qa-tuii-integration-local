@@ -1,5 +1,5 @@
 {
-    "version": "0.1.11",
+    "version": "0.1.12",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -1944,6 +1944,73 @@
                     "dimensions": ["channels"],
                     "value_type": "float",
                     "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "tilt_filter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "coefficients_file",
+                    "value_type": "string",
+                    "default_value": "config/tilt_filter_coefficients.json",
+                    "maximum_length": 256
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "tilt",
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -6.0,
+                    "maximum_value": 6.0
+                },
+                {
+                    "name": "out_gain",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -30.0,
                     "minimum_value": -60.0,
                     "maximum_value": 12.0
                 },
