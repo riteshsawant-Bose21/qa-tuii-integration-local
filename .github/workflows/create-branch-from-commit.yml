@@ -28,19 +28,19 @@ jobs:
       - name: Validate commit exists
         run: |
           if ! git cat-file -e "${{ inputs.commit_hash }}^{commit}"; then
-            echo "❌ Commit ${{ inputs.commit_hash }} does not exist"
+            echo "Commit ${{ inputs.commit_hash }} does not exist"
             exit 1
           fi
 
       - name: Check branch does not already exist
         run: |
           if git show-ref --verify --quiet "refs/heads/${{ inputs.branch_name }}"; then
-            echo "❌ Branch '${{ inputs.branch_name }}' already exists locally"
+            echo "Branch '${{ inputs.branch_name }}' already exists locally"
             exit 1
           fi
 
           if git ls-remote --exit-code --heads origin "${{ inputs.branch_name }}"; then
-            echo "❌ Branch '${{ inputs.branch_name }}' already exists on remote"
+            echo "Branch '${{ inputs.branch_name }}' already exists on remote"
             exit 1
           fi
 
