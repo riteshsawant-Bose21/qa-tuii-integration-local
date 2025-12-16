@@ -1,8 +1,6 @@
 package middleware
 
 import (
-	"context"
-
 	"github.com/gin-gonic/gin"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
@@ -75,8 +73,6 @@ func (a *Auth0MiddlewareImpl) Middleware() gin.HandlerFunc {
 		if email, err := auth.ExtractUserEmail(claims); err == nil {
 			c.Set("email", email)
 			c.Set("user_email", email) // Set the key expected by access control middleware
-			// Set the email in the context for the role management handlers
-			c.Request = c.Request.WithContext(context.WithValue(c.Request.Context(), "user_email", email))
 		}
 
 		// Continue with the request

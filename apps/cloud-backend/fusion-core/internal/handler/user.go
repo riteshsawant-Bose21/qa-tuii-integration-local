@@ -32,10 +32,10 @@ func NewUserHandler(userSvc fusion.User) *UserHandler {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.UserAuthorizationResponse "Successfully retrieved user authorization details"
-// @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
-// @Failure 404 {object} map[string]string "User not found in the system"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /user/me/authorization [get]
+// @Failure 401 {object} types.UnauthorizedResponse "Unauthorized - User email not found in token"
+// @Failure 404 {object} types.NotFoundResponse "User not found in the system"
+// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Router /users/authorization [get]
 func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 	// Get user email from JWT token (set by Auth0 middleware)
 	email, exists := ctx.Get("user_email")
@@ -77,10 +77,10 @@ func (h *UserHandler) GetUserAuthorization(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.User "Successfully retrieved user profile"
-// @Failure 401 {object} map[string]string "Unauthorized - User email not found in token"
-// @Failure 404 {object} map[string]string "User not found in the system"
-// @Failure 500 {object} map[string]string "Internal server error"
-// @Router /user/me/profile [get]
+// @Failure 401 {object} types.UnauthorizedResponse "Unauthorized - User email not found in token"
+// @Failure 404 {object} types.NotFoundResponse "User not found in the system"
+// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
+// @Router /users/profile [get]
 func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 	// Get user email from JWT token (set by Auth0 middleware)
 	email, exists := ctx.Get("user_email")
@@ -123,8 +123,8 @@ func (h *UserHandler) GetUserProfile(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param user body types.CreateUserRequest true "User creation details"
 // @Success 201 {object} types.User "Successfully created user"
-// @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} types.BadRequestResponse "Bad request - Invalid JSON payload"
+// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
 // @Router /users [post]
 func (h *UserHandler) CreateUser(ctx *gin.Context) {
 	var req types.CreateUserRequest
@@ -151,8 +151,8 @@ func (h *UserHandler) CreateUser(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param email path string true "User email address"
 // @Success 200 {object} types.User "Successfully retrieved user"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 404 {object} types.NotFoundResponse "User not found"
+// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
 // @Router /users/{email} [get]
 func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 	email := ctx.Param("email")
@@ -186,9 +186,9 @@ func (h *UserHandler) GetUserByEmail(ctx *gin.Context) {
 // @Param userID path string true "User ID"
 // @Param user body types.UpdateUserRequest true "Updated user details"
 // @Success 200 {object} types.User "Successfully updated user"
-// @Failure 400 {object} map[string]string "Bad request - Invalid JSON payload"
-// @Failure 404 {object} map[string]string "User not found"
-// @Failure 500 {object} map[string]string "Internal server error"
+// @Failure 400 {object} types.BadRequestResponse "Bad request - Invalid JSON payload"
+// @Failure 404 {object} types.NotFoundResponse "User not found"
+// @Failure 500 {object} types.InternalServerErrorResponse "Internal server error"
 // @Router /users/{userID} [patch]
 func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 	userID := ctx.Param("userID")
@@ -225,8 +225,8 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{} "User is authenticated"
-// @Failure 401 {object} map[string]string "User is not authenticated"
+// @Success 200 {object} types.AuthStatusSuccessResponse "User is authenticated"
+// @Failure 401 {object} types.UnauthorizedResponse "User is not authenticated"
 // @Router /auth/status [get]
 func (h *UserHandler) CheckAuthStatus(ctx *gin.Context) {
 	// Get user email from JWT token (set by Auth0 middleware)

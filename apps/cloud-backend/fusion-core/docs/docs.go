@@ -46,17 +46,13 @@ const docTemplate = `{
                     "200": {
                         "description": "User is authenticated",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/types.AuthStatusSuccessResponse"
                         }
                     },
                     "401": {
                         "description": "User is not authenticated",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.UnauthorizedResponse"
                         }
                     }
                 }
@@ -828,98 +824,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/me/authorization": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get authorization details including user info, account, role, and permissions for the current authenticated user",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "auth"
-                ],
-                "summary": "Get user authorization details",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved user authorization details",
-                        "schema": {
-                            "$ref": "#/definitions/types.UserAuthorizationResponse"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/user/me/profile": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get the current authenticated user's profile information",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get user profile",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved user profile",
-                        "schema": {
-                            "$ref": "#/definitions/types.User"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/users": {
             "post": {
                 "security": [
@@ -959,19 +863,105 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid JSON payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/authorization": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get authorization details including user info, account, role, and permissions for the current authenticated user",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get user authorization details",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user authorization details",
+                        "schema": {
+                            "$ref": "#/definitions/types.UserAuthorizationResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current authenticated user's profile information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user profile",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
+                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -1014,19 +1004,13 @@ const docTemplate = `{
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -1078,28 +1062,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid JSON payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -1111,13 +1086,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "key": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "full"
                 },
                 "label": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Full Access"
                 }
             }
         },
@@ -1125,16 +1103,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Leading technology company"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "acc_987654321"
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Acme Corporation"
                 },
                 "type": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Enterprise"
                 }
             }
         },
@@ -1183,10 +1165,38 @@ const docTemplate = `{
             ],
             "properties": {
                 "role_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "user_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 123
+                }
+            }
+        },
+        "types.AuthStatusSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Authentication status retrieved successfully"
+                }
+            }
+        },
+        "types.BadRequestResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Bad Request"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Invalid JSON payload"
                 }
             }
         },
@@ -1211,12 +1221,14 @@ const docTemplate = `{
                 "description": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 10
+                    "minLength": 10,
+                    "example": "Role for managing projects and team members"
                 },
                 "name": {
                     "type": "string",
                     "maxLength": 50,
-                    "minLength": 3
+                    "minLength": 3,
+                    "example": "Project Manager"
                 }
             }
         },
@@ -1230,16 +1242,20 @@ const docTemplate = `{
             ],
             "properties": {
                 "account_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "acc_987654321"
                 },
                 "account_type_role_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "jane.smith@company.com"
                 },
                 "full_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Jane Smith"
                 }
             }
         },
@@ -1435,13 +1451,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Permission to create new projects"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "launcher.project.create"
                 }
             }
         },
@@ -1449,19 +1468,50 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "access_label": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Full Access"
                 },
                 "access_level": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "full"
                 },
                 "access_level_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "feature_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "feature_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "launcher.project.create"
+                }
+            }
+        },
+        "types.InternalServerErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Internal Server Error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Internal server error"
+                }
+            }
+        },
+        "types.NotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Not Found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User not found in the system"
                 }
             }
         },
@@ -1488,7 +1538,8 @@ const docTemplate = `{
             ],
             "properties": {
                 "access_level_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "action": {
                     "type": "string",
@@ -1496,10 +1547,12 @@ const docTemplate = `{
                         "add",
                         "update",
                         "remove"
-                    ]
+                    ],
+                    "example": "update"
                 },
                 "feature_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 }
             }
         },
@@ -1566,10 +1619,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "role_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Admin"
                 }
             }
         },
@@ -1606,16 +1661,20 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "created_at": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
                 },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Administrator with full system access"
                 },
                 "id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Admin"
                 },
                 "permissions": {
                     "type": "array",
@@ -1624,7 +1683,8 @@ const docTemplate = `{
                     }
                 },
                 "user_count": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5
                 }
             }
         },
@@ -1727,17 +1787,33 @@ const docTemplate = `{
         "types.SyncProjectRequest": {
             "type": "object"
         },
+        "types.UnauthorizedResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Unauthorized"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User email not found in token"
+                }
+            }
+        },
         "types.UpdateUserRequest": {
             "type": "object",
             "properties": {
                 "account_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "acc_111222333"
                 },
                 "account_type_role_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 },
                 "full_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John Smith"
                 }
             }
         },
@@ -1745,25 +1821,32 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "account_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "acc_987654321"
                 },
                 "account_type_role_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "created_at": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
                 },
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "john.doe@company.com"
                 },
                 "full_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John Doe"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "usr_123456789"
                 },
                 "updated_at": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-06-20T14:45:00Z"
                 }
             }
         },
@@ -1791,19 +1874,24 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "john.doe@company.com"
                 },
                 "full_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John Doe"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "usr_123456789"
                 },
                 "role_id": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
                 },
                 "role_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Admin"
                 }
             }
         },
@@ -1811,10 +1899,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "john.doe@company.com"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "usr_123456789"
                 }
             }
         },
@@ -1822,23 +1912,28 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "john.doe@company.com"
                 },
                 "full_name": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "John Doe"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "usr_123456789"
                 },
                 "joined_at": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2023-01-15T10:30:00Z"
                 },
                 "role": {
                     "$ref": "#/definitions/types.RoleInfo"
                 },
                 "status": {
                     "description": "active, pending, suspended",
-                    "type": "string"
+                    "type": "string",
+                    "example": "active"
                 }
             }
         },

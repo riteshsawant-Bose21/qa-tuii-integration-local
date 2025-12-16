@@ -49,12 +49,7 @@ func (s *Service) GetUserByEmail(ctx context.Context, email string) (*types.User
 		AccountTypeRoleID: appUser.AccountTypeRoleID,
 		AccountID:         appUser.AccountID,
 		CreatedAt:         appUser.CreatedAt.Time, // Convert null.Time to time.Time
-		UpdatedAt:         nil,                    // Convert null.Time to *time.Time
-	}
-
-	// Handle nullable UpdatedAt field
-	if appUser.UpdatedAt.Valid {
-		user.UpdatedAt = &appUser.UpdatedAt.Time
+		UpdatedAt:         appUser.UpdatedAt.Time, // Convert null.Time to time.Time
 	}
 
 	return user, nil
@@ -216,12 +211,7 @@ func (s *Service) CreateUser(ctx context.Context, req *types.CreateUserRequest) 
 		AccountTypeRoleID: appUser.AccountTypeRoleID,
 		AccountID:         appUser.AccountID,
 		CreatedAt:         appUser.CreatedAt.Time,
-		UpdatedAt:         nil,
-	}
-
-	// Handle nullable UpdatedAt field
-	if appUser.UpdatedAt.Valid {
-		user.UpdatedAt = &appUser.UpdatedAt.Time
+		UpdatedAt:         appUser.UpdatedAt.Time,
 	}
 
 	return user, nil
@@ -271,12 +261,7 @@ func (s *Service) UpdateUser(ctx context.Context, userID string, req *types.Upda
 		AccountTypeRoleID: appUser.AccountTypeRoleID,
 		AccountID:         appUser.AccountID,
 		CreatedAt:         appUser.CreatedAt.Time,
-		UpdatedAt:         nil,
-	}
-
-	// Handle nullable UpdatedAt field
-	if appUser.UpdatedAt.Valid {
-		user.UpdatedAt = &appUser.UpdatedAt.Time
+		UpdatedAt:         appUser.UpdatedAt.Time,
 	}
 
 	return user, nil
