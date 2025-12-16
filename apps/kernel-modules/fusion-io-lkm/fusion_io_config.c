@@ -29,13 +29,78 @@ const enum io_card_type default_ic_types[] = {
 const struct io_card *default_ics[] = {
     &ic_empty
 };
-/*    */
-
 
 // Default base devices
 const struct base_device bd_empty = {
     .data = {
         .type = BD_TYPE_NONE
+    }
+};
+
+const struct base_device bd_fusion_powersmart = {
+    .data = {
+        .model = "powersmart",
+        .sn = "tbd",
+        .type = BD_TYPE_FUSION_POWERSMART
+    },
+    .num_gpios = 9,
+    .gpios = (struct endpoint_gpio[]) {
+        {
+            .name = "gpio_GPIO1_IO1",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 1 // GPIO1_IO1
+        },
+        {
+            .name = "gpio_GPIO1_IO5",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 5 // GPIO1_IO5
+        },
+        {
+            .name = "gpio_GPIO1_IO6",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 6 // GPIO1_IO6
+        },
+        {
+            .name = "gpio_GPIO1_IO7",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 7 // GPIO1_IO7
+        },
+        {
+            .name = "gpio_amp_rstn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 8 // GPIO1_IO8
+        },
+        {
+            .name = "gpio_amp_mute",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 10 // GPIO1_IO10
+        },
+        {
+            .name = "gpio_amp_net_wake",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 11, // GPIO1_IO11
+            .dir = EP_GPIO_DIR_I
+        },
+        {
+            .name = "GPIO1_IO14",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 14 // GPIO1_IO14
+        },
+        {
+            .name = "gpio_uv_warn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 129, // GPIO5_IO5
+            .dir = EP_GPIO_DIR_I
+        }
     }
 };
 
@@ -1886,6 +1951,7 @@ const struct base_device bd_fusion_fm8y = {
 };
 
 const enum base_device_type default_bd_types[] = {
+    BD_TYPE_FUSION_POWERSMART,
     BD_TYPE_FUSION_C1_EVK,
     BD_TYPE_FUSION_FM6,
     BD_TYPE_FUSION_FM8Y,
@@ -1893,6 +1959,7 @@ const enum base_device_type default_bd_types[] = {
 };
 
 const struct base_device *default_bds[] = {
+    &bd_fusion_powersmart,
     &bd_fusion_c1_evk,
     &bd_fusion_fm6,
     &bd_fusion_fm8y
