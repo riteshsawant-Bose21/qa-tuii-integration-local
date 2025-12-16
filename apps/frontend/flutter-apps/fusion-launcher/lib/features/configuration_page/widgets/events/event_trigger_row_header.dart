@@ -7,6 +7,17 @@ import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../snapshots/action_drop_down.dart';
 
+/// Event Trigger Row Header Widget
+/// This widget displays the header row for event triggers, including dropdowns for selecting trigger type, item, action, condition, and value.
+/// Example:
+/// ```dart
+/// EventTriggerRowHeader(eventId: 'event123')
+/// ```
+/// Parameters:
+/// - [eventId]: The ID of the event for which the trigger row header is displayed
+/// Returns:
+/// - A [Widget] representing the event trigger row header
+
 class EventTriggerRowHeader extends StatefulWidget {
   final String eventId;
 
@@ -22,26 +33,32 @@ class _EventTriggerRowHeaderState extends State<EventTriggerRowHeader> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
       color: Theme.of(context).colorScheme.grey.withAlpha(40),
       child: Row(
         children: <Widget>[
-          const SizedBox(width: 30),
+          // const SizedBox(width: 30),
+
+          /// Trigger Type Dropdown
           _TriggerTypeDropdown(eventId: widget.eventId, projectViewModel: _projectViewModel),
           const SizedBox(width: 16),
 
+          /// Trigger Item Dropdown
           _TriggerItemDropdown(
             eventId: widget.eventId,
             projectViewModel: _projectViewModel,
           ),
           const SizedBox(width: 16),
 
+          /// Trigger Action Dropdown
           _ActionTypeDropdown(eventId: widget.eventId, projectViewModel: _projectViewModel),
           const SizedBox(width: 16),
 
+          /// Trigger Condition Dropdown
           _ConditionDropdown(eventId: widget.eventId, projectViewModel: _projectViewModel),
           const SizedBox(width: 16),
 
+          /// Value Column
           _ValueColumn(eventId: widget.eventId, projectViewModel: _projectViewModel),
         ],
       ),
@@ -183,7 +200,7 @@ class _ActionTypeDropdown extends StatelessWidget {
             display: (EventActionType e) => e.displayName,
             onChanged: (EventActionType? actionType) {
               if (actionType != null) {
-                // Clear item selection when action type changes to schedule
+                /// Clear item selection when action type changes to schedule
                 if (actionType.displayName.toLowerCase() == 'schedule') {
                   projectViewModel.updateEventTriggerItem(
                     eventId: eventId,
@@ -244,25 +261,18 @@ class _ConditionDropdown extends StatelessWidget {
   }
 }
 
-class _ValueColumn extends StatefulWidget {
+class _ValueColumn extends StatelessWidget {
   final String eventId;
   final ProjectViewModel projectViewModel;
 
-  const _ValueColumn({required this.eventId, required this.projectViewModel});
-
-  @override
-  State<_ValueColumn> createState() => _ValueColumnState();
-}
-
-class _ValueColumnState extends State<_ValueColumn> {
-  double _minValue = 0;
-  double _maxValue = 100;
-  double _thresholdValue = 50;
+  const _ValueColumn({
+    required this.eventId,
+    required this.projectViewModel,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final FusionEvent selectedEvent = widget.projectViewModel.getEventById(widget.eventId);
-
+    final FusionEvent selectedEvent = projectViewModel.getEventById(eventId);
     final EventCondition? condition = selectedEvent.condition;
 
     return Expanded(
@@ -279,68 +289,75 @@ class _ValueColumnState extends State<_ValueColumn> {
             maxLine: 1,
           ),
           const SizedBox(height: 8),
-          _buildCondition(condition),
+          _buildCondition(context, condition),
         ],
       ),
     );
   }
 
-  Widget _buildCondition(EventCondition? condition) {
+  Widget _buildCondition(
+    BuildContext context,
+    EventCondition? condition,
+  ) {
     if (condition is StateChangeCondition) {
-      return Container(height: 28);
+      return const SizedBox(height: 28);
     } else if (condition is ValueChangeCondition) {
-      return _buildRangeSelector();
+      return _buildRangeSelector(context, condition);
     } else if (condition is ThresholdCondition) {
-      return _buildThresholdSlider();
+      return _buildThresholdSlider(context, condition);
     } else {
-      return Container(height: 28);
+      return const SizedBox(height: 28);
     }
   }
 
-  Widget _buildRangeSelector() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            rangeThumbShape: const RoundRangeSliderThumbShape(
-              enabledThumbRadius: 6,
-            ),
-            overlayShape: const RoundSliderOverlayShape(
-              overlayRadius: 4,
-            ),
-            trackHeight: 2,
-            thumbColor: Theme.of(context).colorScheme.black,
-            activeTrackColor: Theme.of(context).colorScheme.greyDark,
-            inactiveTrackColor: Theme.of(context).colorScheme.grey,
-          ),
-          child: RangeSlider(
-            values: RangeValues(_minValue, _maxValue),
-            min: 0,
-            max: 100,
-            divisions: 100,
-            padding: EdgeInsets.zero,
-            activeColor: Theme.of(context).colorScheme.greyDark,
-            inactiveColor: Theme.of(context).colorScheme.grey,
-            labels: RangeLabels(
-              _minValue.toInt().toString(),
-              _maxValue.toInt().toString(),
-            ),
-            onChanged: (RangeValues values) {
-              setState(() {
-                _minValue = values.start;
-                _maxValue = values.end;
-              });
-            },
-          ),
+  /// -------------------- Range Selector --------------------
+  Widget _buildRangeSelector(
+    BuildContext context,
+    ValueChangeCondition condition,
+  ) {
+    final double minValue = condition.min;
+    final double maxValue = condition.max;
+
+    return SliderTheme(
+      data: SliderTheme.of(context).copyWith(
+        rangeThumbShape: const RoundRangeSliderThumbShape(enabledThumbRadius: 6),
+        overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
+        trackHeight: 2,
+        thumbColor: Theme.of(context).colorScheme.black,
+        activeTrackColor: Theme.of(context).colorScheme.greyDark,
+        inactiveTrackColor: Theme.of(context).colorScheme.grey,
+      ),
+      child: RangeSlider(
+        values: RangeValues(minValue, maxValue),
+        min: 0,
+        max: 100,
+        divisions: 100,
+        padding: EdgeInsets.zero,
+        labels: RangeLabels(
+          minValue.toInt().toString(),
+          maxValue.toInt().toString(),
         ),
-      ],
+        onChanged: (RangeValues values) {
+          final ValueChangeCondition updatedCondition = condition.copyWith(
+            min: values.start,
+            max: values.end,
+          );
+
+          projectViewModel.updateEventCondition(
+            eventId: eventId,
+            newCondition: updatedCondition,
+          );
+        },
+      ),
     );
   }
 
-  /// Threshold Slider
-  Widget _buildThresholdSlider() {
-    final double currentValue = double.tryParse("50") ?? 50;
+  /// -------------------- Threshold Slider --------------------
+  Widget _buildThresholdSlider(
+    BuildContext context,
+    ThresholdCondition condition,
+  ) {
+    final double thresholdValue = condition.threshold;
 
     return Row(
       children: <Widget>[
@@ -353,26 +370,28 @@ class _ValueColumnState extends State<_ValueColumn> {
               thumbColor: Theme.of(context).colorScheme.black,
             ),
             child: Slider(
-              value: currentValue,
-              padding: EdgeInsets.zero,
-              activeColor: Theme.of(context).colorScheme.greyDark,
-              inactiveColor: Theme.of(context).colorScheme.grey,
+              value: thresholdValue,
               min: 0,
               max: 100,
               divisions: 100,
-
-              label: currentValue.toStringAsFixed(0),
+              padding: EdgeInsets.zero,
+              label: thresholdValue.toStringAsFixed(0),
+              activeColor: Theme.of(context).colorScheme.greyDark,
+              inactiveColor: Theme.of(context).colorScheme.grey,
               onChanged: (double value) {
-                // final SceneValue updated = value.copyWith(value: v.toString());
-                // widget.onChanged(updated);
-                setState(() {});
+                final ThresholdCondition updatedCondition = condition.copyWith(
+                  threshold: value,
+                );
+
+                projectViewModel.updateEventCondition(
+                  eventId: eventId,
+                  newCondition: updatedCondition,
+                );
               },
             ),
           ),
         ),
-
         const SizedBox(width: 16),
-
         Container(
           alignment: Alignment.center,
           padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
@@ -380,7 +399,10 @@ class _ValueColumnState extends State<_ValueColumn> {
             color: Theme.of(context).colorScheme.greyLight,
             borderRadius: BorderRadius.circular(2),
           ),
-          child: FusionAppText(text: currentValue.toStringAsFixed(0), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9)),
+          child: FusionAppText(
+            text: thresholdValue.toStringAsFixed(0),
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+          ),
         ),
       ],
     );

@@ -144,17 +144,11 @@ class _EventsPanelState extends State<EventsPanel> {
                     _projectViewModel.setSelectedEventId(eventId);
                   },
                   onReorder: (_, _) {},
-                  onDragStarted: (String eventId) {
-                    setState(() {
-                      // _draggingSnapshotId = sceneId;
-                      // _draggingFromSection = 'snapshots';
-                    });
-                  },
-                  onDragEnd: () {
-                    setState(() {
-                      // _draggingSnapshotId = null;
-                      // _draggingFromSection = null;
-                    });
+                  onSwitchChanged: (String eventId) {
+                    /// Fetch event, create updated copy and update
+                    final FusionEvent event = _projectViewModel.getEventById(eventId);
+                    final FusionEvent updatedEvent = event.copyWith(isEnabled: !event.isEnabled);
+                    _projectViewModel.updateEvent(event: updatedEvent);
                   },
                 );
               },

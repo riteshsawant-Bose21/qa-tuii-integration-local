@@ -3,6 +3,25 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 
+/// A widget that displays an event header with an editable snapshot name.
+/// The header includes an icon and allows the user to tap on the snapshot name to edit it.
+/// When the user finishes editing, the new name is validated and a callback is triggered if the name has changed.
+/// Example usage:
+/// ```dart
+/// EventHeaderWidget(
+///   snapshotName: 'My Event',
+///   onNameChanged: (newName) {
+///     // Handle name change
+///   },
+/// );
+/// ```
+/// Parameters:
+/// - [snapshotName]: The current name of the snapshot to be displayed.
+/// - [onNameChanged]: A callback function that is triggered when the snapshot name is changed.
+/// Returns:
+/// A [Container] widget containing the event header with editable snapshot name.
+///
+
 class EventHeaderWidget extends StatefulWidget {
   final String snapshotName;
   final Function(String)? onNameChanged;
@@ -79,7 +98,8 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
         children: <Widget>[
           const Icon(Icons.layers, size: 16),
           const SizedBox(width: 10),
-          Expanded(
+          SizedBox(
+            width: MediaQuery.of(context).size.width * 0.25,
             child:
                 _isEditing
                     ? TextField(

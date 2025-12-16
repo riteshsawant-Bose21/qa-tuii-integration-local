@@ -9,6 +9,7 @@ class EventItemCard extends StatefulWidget {
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final Function(String eventId)? onSwitchChanged;
   final int index;
 
   const EventItemCard({
@@ -17,7 +18,8 @@ class EventItemCard extends StatefulWidget {
     required this.eventData,
     this.onDelete,
     this.onTap,
-    required this.index, // Add this
+    required this.index,
+    this.onSwitchChanged,
   });
 
   @override
@@ -87,7 +89,11 @@ class _EventItemCardState extends State<EventItemCard> {
               const SizedBox(width: 8),
               FusionSwitch(
                 value: widget.eventData.isEnabled,
-                onChanged: (bool value) {},
+                onChanged: (bool value) {
+                  if (widget.onSwitchChanged != null) {
+                    widget.onSwitchChanged!(widget.eventData.id);
+                  }
+                },
               ),
               const SizedBox(width: 12),
 

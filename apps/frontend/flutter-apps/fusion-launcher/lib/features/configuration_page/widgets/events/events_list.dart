@@ -7,10 +7,10 @@ class EventList extends StatelessWidget {
   final List<FusionEvent> eventList;
   final Function(String eventId) onDelete;
   final Function(String eventId)? onSelect;
+  final Function(String eventId)? onSwitchChanged;
+
   final String? selectedEventId;
   final Function(int oldIndex, int newIndex)? onReorder;
-  final Function(String eventId)? onDragStarted;
-  final VoidCallback? onDragEnd;
 
   const EventList({
     super.key,
@@ -19,8 +19,7 @@ class EventList extends StatelessWidget {
     this.onSelect,
     this.selectedEventId,
     this.onReorder,
-    this.onDragStarted,
-    this.onDragEnd,
+    this.onSwitchChanged,
   });
 
   @override
@@ -55,79 +54,23 @@ class EventList extends StatelessWidget {
         return Container(
           key: ValueKey<String>(eventData.id),
           margin: const EdgeInsets.only(bottom: 4),
-          child: Draggable<FusionEvent>(
-            data: eventData,
-            dragAnchorStrategy: pointerDragAnchorStrategy,
-            onDragStarted: () {
-              if (onDragStarted != null) {
-                onDragStarted!(eventData.id);
+          child: EventItemCard(
+            index: index,
+            eventData: eventData,
+            isSelected: selectedEventId == eventData.id,
+            onSwitchChanged: (String eventId) {
+              if (onSwitchChanged != null) {
+                onSwitchChanged!(eventData.id);
               }
             },
-            onDraggableCanceled: (_, __) {
-              if (onDragEnd != null) {
-                onDragEnd!();
+            onDelete: () {
+              onDelete(eventData.id);
+            },
+            onTap: () {
+              if (onSelect != null) {
+                onSelect!(eventData.id);
               }
             },
-            onDragEnd: (_) {
-              if (onDragEnd != null) {
-                onDragEnd!();
-              }
-            },
-            feedback: Material(
-              color: Colors.transparent,
-              child: Container(
-                width: 200,
-                constraints: const BoxConstraints(
-                  minHeight: 36,
-                  maxHeight: 36,
-                ),
-                child: Opacity(
-                  opacity: 0.8,
-                  child: EventItemCard(
-                    index: index,
-                    eventData: eventData,
-                    isSelected: selectedEventId == eventData.id,
-                    onDelete: () {
-                      onDelete(eventData.id);
-                    },
-                    onTap: () {
-                      if (onSelect != null) {
-                        onSelect!(eventData.id);
-                      }
-                    },
-                  ),
-                ),
-              ),
-            ),
-            childWhenDragging: Opacity(
-              opacity: 0.3,
-              child: EventItemCard(
-                index: index,
-                eventData: eventData,
-                isSelected: selectedEventId == eventData.id,
-                onDelete: () {
-                  onDelete(eventData.id);
-                },
-                onTap: () {
-                  if (onSelect != null) {
-                    onSelect!(eventData.id);
-                  }
-                },
-              ),
-            ),
-            child: EventItemCard(
-              index: index,
-              eventData: eventData,
-              isSelected: selectedEventId == eventData.id,
-              onDelete: () {
-                onDelete(eventData.id);
-              },
-              onTap: () {
-                if (onSelect != null) {
-                  onSelect!(eventData.id);
-                }
-              },
-            ),
           ),
         );
       },

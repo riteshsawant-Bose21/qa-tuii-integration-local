@@ -80,8 +80,8 @@ class TriggerPanel extends StatelessWidget {
                 );
               }
               final FusionEvent selectedEvent = _projectViewModel.getEventById(selectedEventId);
+              print('Selected isComplete: ${selectedEvent.isComplete}');
               final List<SceneActionModel> eventActionsList = _projectViewModel.getEventActionsForEvent(selectedEventId);
-              print("isCompleted =${selectedEvent.isComplete} ");
               return Expanded(
                 child: Column(
                   children: <Widget>[

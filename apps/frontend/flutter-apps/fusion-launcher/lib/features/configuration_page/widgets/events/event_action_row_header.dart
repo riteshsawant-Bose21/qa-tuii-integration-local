@@ -1,10 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/fusion_event.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -17,8 +15,7 @@ class EventActionRowHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double responsivePadding = screenWidth * 0.12; // Responsive calculation instead of hardcoded 170
-
+    final double responsivePadding = screenWidth * 0.12;
     return Column(
       children: <Widget>[
         Container(
@@ -38,11 +35,12 @@ class EventActionRowHeader extends StatelessWidget {
                 text: "Actions",
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
+                  fontSize: 12,
                   color: Theme.of(context).colorScheme.fusionTextViewColor,
                 ),
               ),
-              // add actions
+
+              /// add actions
               GestureDetector(
                 onTap: () {
                   final String eventId = _projectViewModel.selectedEventId!;
@@ -60,23 +58,72 @@ class EventActionRowHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          alignment: Alignment.centerRight,
-          padding: EdgeInsets.only(top: 8, bottom: 8, right: responsivePadding),
-          child: CupertinoSlidingSegmentedControl<bool>(
-            children: <bool, Widget>{
-              true: const Text(
-                "Yes",
+        BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            final String? selectedEventId = _projectViewModel.selectedEventId;
+
+            if (selectedEventId == null) {
+              return const SizedBox.shrink();
+            }
+
+            final FusionEvent selectedEvent = _projectViewModel.getEventById(selectedEventId);
+
+            final List<EventStates>? states = selectedEvent.states;
+
+            /// Hide if null or not exactly 2 states
+            if (states == null || states.length != 2) {
+              return const SizedBox.shrink();
+            }
+
+            /// Maintain order as provided by backend
+            final EventStates left = states.first;
+            final EventStates right = states.last;
+
+            final Map<bool, Widget> sliderChildren = <bool, Widget>{
+              true: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: FusionAppText(
+                  text: left.name,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  ),
+                ),
               ),
-              false: const Text(
-                "No",
+              false: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: FusionAppText(
+                  text: right.name,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 13,
+                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  ),
+                ),
               ),
-            },
-            onValueChanged: (_) {
-              // onValueChangedhandler?.onValueChanged(item, !((handler?.getValue(item) ?? true) as bool));
-            },
-            groupValue: true,
-          ),
+            };
+
+            return Container(
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.only(
+                bottom: 20,
+                right: responsivePadding,
+              ),
+              child: CupertinoSlidingSegmentedControl<bool>(
+                children: sliderChildren,
+                groupValue: true, // replace with actual value from ViewModel
+
+                onValueChanged: (bool? value) {
+                  if (value == null) return;
+
+                  /// TODO: update ViewModel with selected state
+                  // _projectViewModel.updateStateValue(
+                  //   selectedEventId,
+                  //   value ? left.stateType : right.stateType,
+                  // );
+                },
+              ),
+            );
+          },
         ),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
