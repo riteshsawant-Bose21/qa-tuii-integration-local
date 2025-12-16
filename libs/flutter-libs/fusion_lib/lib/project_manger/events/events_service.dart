@@ -148,12 +148,12 @@ extension EventsService on ProjectService {
       return [];
     } else if (event.action == EventActionType.analog) {
       return [
-        EventConditionType.stateChange,
+        EventConditionType.threshold,
+        EventConditionType.valueChange,
       ];
     } else if (event.action == EventActionType.digital) {
       return [
-        EventConditionType.threshold,
-        EventConditionType.valueChange,
+        EventConditionType.stateChange,
       ];
     }
     return [];
@@ -200,7 +200,7 @@ extension EventsService on ProjectService {
 
     List<EventStates>? states = getEventStatesForConditionType(conditionType: conditionType);
 
-    final updatedEvent = event.copyWith(
+    final updatedEvent = event.updateCondition(
       condition: condition,
       states: states,
     );
