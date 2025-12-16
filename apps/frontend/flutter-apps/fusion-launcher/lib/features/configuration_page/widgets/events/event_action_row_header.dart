@@ -58,6 +58,8 @@ class EventActionRowHeader extends StatelessWidget {
             ],
           ),
         ),
+
+        /// State Selector for 2-state events
         BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
             final String? selectedEventId = _projectViewModel.selectedEventId;
@@ -102,6 +104,9 @@ class EventActionRowHeader extends StatelessWidget {
               ),
             };
 
+            /// Determine current group value based on event.selectedState
+            final bool groupValue = (selectedEvent.selectedState?.stateType == left.stateType);
+
             return Container(
               alignment: Alignment.centerRight,
               padding: EdgeInsets.only(
@@ -110,16 +115,14 @@ class EventActionRowHeader extends StatelessWidget {
               ),
               child: CupertinoSlidingSegmentedControl<bool>(
                 children: sliderChildren,
-                groupValue: true, // replace with actual value from ViewModel
-
+                groupValue: groupValue,
                 onValueChanged: (bool? value) {
                   if (value == null) return;
-
-                  /// TODO: update ViewModel with selected state
-                  // _projectViewModel.updateStateValue(
-                  //   selectedEventId,
-                  //   value ? left.stateType : right.stateType,
-                  // );
+                  final EventStates newSelected = value ? left : right;
+                  _projectViewModel.updateEventSelectedState(
+                    eventId: selectedEventId,
+                    selectedState: newSelected,
+                  );
                 },
               ),
             );
