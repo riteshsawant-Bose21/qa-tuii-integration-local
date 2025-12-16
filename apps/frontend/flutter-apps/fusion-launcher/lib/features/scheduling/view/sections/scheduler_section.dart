@@ -1,7 +1,7 @@
 part of '../scheduling_page.dart';
 
 class _SchedulerSection extends StatelessWidget {
-  const _SchedulerSection({super.key});
+  const _SchedulerSection();
 
   @override
   Widget build(BuildContext context) {
@@ -19,15 +19,15 @@ class _SchedulerSection extends StatelessWidget {
         }
         return FusionTable(
           spacing: 20,
-          headers: <({String title, int flex})>[
-            (title: "Name", flex: 3),
-            (title: "Occurrence", flex: 2),
-            (title: "", flex: 4),
-            (title: "Time", flex: 2),
-            (title: "Status", flex: 1),
-            (title: "", flex: 1),
-            (title: "", flex: 1),
-            (title: "", flex: 1),
+          headers: <FusionTableHeader>[
+            FusionTableHeader(title: "Name", flex: 3),
+            FusionTableHeader(title: "Occurrence", flex: 2),
+            FusionTableHeader(title: "", flex: 4),
+            FusionTableHeader(title: "Time", flex: 2),
+            FusionTableHeader(title: "Status", flex: 1),
+            FusionTableHeader(title: "", flex: 1),
+            FusionTableHeader(title: "", flex: 1),
+            FusionTableHeader(title: "", flex: 1),
           ],
           itemCount: state.schedules.length,
           onRowTap: (int value) {
@@ -149,11 +149,12 @@ class FusionTable extends StatelessWidget {
     this.spacing = 10,
     this.onRowTap,
   });
-  final List<({String title, int flex})> headers;
+  final List<FusionTableHeader> headers;
   final int itemCount;
   final List<Widget> Function(BuildContext context, int index) itemBuilder;
   final double spacing;
   final ValueChanged<int>? onRowTap;
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -167,11 +168,14 @@ class FusionTable extends StatelessWidget {
               children:
                   headers
                       .map(
-                        (final ({String title, int flex}) e) => Expanded(
+                        (final FusionTableHeader e) => Expanded(
                           flex: e.flex,
-                          child: Text(
-                            e.title,
-                            style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                          child: Align(
+                            alignment: e.aligment,
+                            child: Text(
+                              e.title,
+                              style: context.textTheme.labelLarge?.copyWith(fontWeight: FontWeight.bold),
+                            ),
                           ),
                         ),
                       )
@@ -204,7 +208,7 @@ class FusionTable extends StatelessWidget {
                           headers.length,
                           (int i) => Expanded(
                             flex: headers[i].flex,
-                            child: rowItems[i],
+                            child: Align(alignment: headers[i].aligment, child: rowItems[i]),
                           ),
                         ),
                       ),
@@ -218,4 +222,12 @@ class FusionTable extends StatelessWidget {
       ),
     );
   }
+}
+
+class FusionTableHeader {
+  final String title;
+  final int flex;
+  final Alignment aligment;
+
+  FusionTableHeader({required this.title, required this.flex, this.aligment = Alignment.centerLeft});
 }
