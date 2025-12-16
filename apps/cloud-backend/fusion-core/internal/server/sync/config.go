@@ -15,6 +15,15 @@ type SyncConfig struct {
 	Processing *config.Processing
 }
 
+// SyncConfigService defines the methods required to fetch configuration settings.
+type SyncConfigService interface {
+	Postgres() (*config.Postgres, error)
+	Server() (*config.Server, error)
+	Validation() (*config.Validation, error)
+	AWS() (*config.AWS, error)
+	Processing() (*config.Processing, error)
+}
+
 // NewSyncConfig initializes and returns the Sync configuration by loading necessary settings.
 func NewSyncConfig(svc SyncConfigService) (*SyncConfig, error) {
 	cfg := &SyncConfig{}
@@ -54,13 +63,4 @@ func NewSyncConfig(svc SyncConfigService) (*SyncConfig, error) {
 	cfg.Processing = processingConfig
 
 	return cfg, nil
-}
-
-// SyncConfigService defines the methods required to fetch configuration settings.
-type SyncConfigService interface {
-	Postgres() (*config.Postgres, error)
-	Server() (*config.Server, error)
-	Validation() (*config.Validation, error)
-	AWS() (*config.AWS, error)
-	Processing() (*config.Processing, error)
 }

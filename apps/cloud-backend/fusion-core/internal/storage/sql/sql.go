@@ -14,7 +14,7 @@ func New(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
 		host, port, user, password, instance, sslMode,
 	)
-	// SSL mode is set to "require" for AWS RDS compatibility
+	// IMPORTANT: No SSL mode is specified, so it defaults to "disable".
 	db, err := opener.Open(dataSourceName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to open postgres database connection: %w", err)

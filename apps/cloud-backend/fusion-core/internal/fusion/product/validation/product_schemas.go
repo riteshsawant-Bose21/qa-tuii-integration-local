@@ -96,11 +96,16 @@ type Accessory struct {
 	SKUsRequired []any `json:"skus" validate:"optional,type:array" description:"Associated SKU numbers (required for accessories)"`
 }
 
-// PriceData defines price data fields
-// PriceContainer represents the top-level price data structure with variants
+// PriceContainer represents price data with variants
 type PriceContainer struct {
-	SKU      int         `json:"sku" validate:"optional,type:number,positive" description:"Product SKU identifier"`
-	Variants []PriceData `json:"variants" validate:"optional,type:array" description:"Price variants array"`
+	Version string     `json:"version,omitempty"`
+	RRPData []RRPEntry `json:"rrp_data,omitempty"`
+}
+
+// RRPEntry represents a product with multiple price variants
+type RRPEntry struct {
+	SKU      int         `json:"sku"`
+	Variants []PriceData `json:"variants"`
 }
 
 // PriceData represents an individual price record

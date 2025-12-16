@@ -45,7 +45,6 @@ func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
 	l.zap.Warn(msg, fields...)
 }
 
-// Zap returns the underlying zap.Logger for compatibility with code expecting *zap.Logger
-func (l *Logger) Zap() *zap.Logger {
+func (l *Logger) JobSyncLog() *zap.Logger {
 	return l.zap
 }

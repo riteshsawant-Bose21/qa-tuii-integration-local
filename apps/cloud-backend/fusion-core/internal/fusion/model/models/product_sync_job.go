@@ -39,8 +39,8 @@ type ProductSyncJob struct {
 	StartedAt        null.Time   `boil:"started_at" json:"started_at,omitempty" toml:"started_at" yaml:"started_at,omitempty"`
 	CompletedAt      null.Time   `boil:"completed_at" json:"completed_at,omitempty" toml:"completed_at" yaml:"completed_at,omitempty"`
 	CreatedAt        null.Time   `boil:"created_at" json:"created_at,omitempty" toml:"created_at" yaml:"created_at,omitempty"`
-	Version          null.String `boil:"version" json:"version,omitempty" toml:"version" yaml:"version,omitempty"`
-	SyncType         null.String `boil:"sync_type" json:"sync_type,omitempty" toml:"sync_type" yaml:"sync_type,omitempty"`
+	Version          string      `boil:"version" json:"version,omitempty" toml:"version" yaml:"version,omitempty"`
+	SyncType         string      `boil:"sync_type" json:"sync_type,omitempty" toml:"sync_type" yaml:"sync_type,omitempty"`
 
 	R *productSyncJobR `boil:"-" json:"-" toml:"-" yaml:"-"`
 	L productSyncJobL  `boil:"-" json:"-" toml:"-" yaml:"-"`

@@ -1,10 +1,10 @@
-//	@title			Fusion Cloud Backend API
-//	@version		1.0
-//	@description	This is the Fusion Cloud Backend API server.
+// @title Fusion Cloud Backend API
+// @version 1.0
+// @description This is the Fusion Cloud Backend API server.
 
-// @host		localhost:8080
-// @BasePath	/api/v1
-// @schemes	http https
+// @host localhost:8080
+// @BasePath /api/v1
+// @schemes http https
 package main
 
 import (
@@ -17,20 +17,17 @@ import (
 	"syscall"
 	"time"
 
-	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
-	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
-
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"go.uber.org/zap"
 
-	// "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	// projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
 
 	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
@@ -48,46 +45,28 @@ func main() {
 	// Parse the flags
 	envFile := flag.String("c", ".env", "config environment file")
 	envName := flag.String("e", "local", "application environment (e.g. local, dev, staging, prod)")
-	useSecretsManager := flag.Bool("secrets", false, "use AWS Secrets Manager for configuration (overrides USE_SECRETS_MANAGER env var)")
 	flag.Parse()
 
-	// Determine if we should use secrets manager
-	useSecrets := *useSecretsManager || config.ParseUseSecretsManagerFlag()
+	// Determine environment configuration
+	envFileName := *envFile
+	logger.Info("Environment selected", zap.String("environment", *envName), zap.String("config_file", envFileName))
 
-	var configSVC *config.Service
-	if useSecrets {
-		logger.Info("Using AWS Secrets Manager for configuration (pure secrets mode)")
+	// Configure secrets manager based on environment
+	environment.AutoConfigureSecretsManager(*envName, logger)
 
-		// Always load .env file to get secret names and AWS region for secrets manager
-		env := environment.New(environment.DefaultLoadLookuper)
-		logger.Info("Loading environment file for secret names", zap.String("file", *envFile))
-		if err := env.Load(*envFile); err != nil {
-			logger.Warn("Failed to load environment file for secret names", zap.String("file", *envFile), zap.Error(err))
-		}
+	// Use the configured DefaultLoadLookuper - it now handles both sources
+	logger.Info("Initializing environment",
+		zap.String("file", envFileName),
+		zap.String("environment", *envName))
+	env := environment.New(environment.DefaultLoadLookuper)
+	if err := env.Load(envFileName); err != nil {
+		logger.Fatal("error loading configuration", zap.Error(err))
+	}
 
-		configSVC, err = config.NewWithSecretsManager(true, "")
-		if err != nil {
-			logger.Fatal("Failed to initialize config service with secrets manager", zap.Error(err))
-		}
-	} else {
-		// Pure local environment variable loading
-		env := environment.New(environment.DefaultLoadLookuper)
-
-		// Only load .env file in local environment
-		if *envName == "local" {
-			logger.Info("Using local environment configuration (pure local mode)", zap.String("file", *envFile))
-			if err := env.Load(*envFile); err != nil {
-				logger.Fatal("error loading environment vars", zap.String("file", *envFile), zap.Error(err))
-			}
-		} else {
-			logger.Info("Using environment variables (production mode without secrets)", zap.String("env", *envName))
-		}
-
-		// Initialize configuration service
-		configSVC, err = config.NewService(env)
-		if err != nil {
-			logger.Fatal("Failed to initialize config service", zap.Error(err))
-		}
+	// Initialize configuration service
+	configSVC, err := config.NewService(env)
+	if err != nil {
+		logger.Fatal("Failed to initialize config service", zap.Error(err))
 	}
 
 	// Load API configuration
@@ -104,7 +83,7 @@ func main() {
 		cfg.Postgres.User,     // user
 		cfg.Postgres.Password, // password
 		cfg.Postgres.Database, // instance (example: database name)
-		cfg.Postgres.SSLMode,  // ssl mode
+		cfg.Postgres.SSLMode,  // sslmode
 	)
 	if err != nil {
 		logger.Fatal("Failed to connect to the database", zap.Error(err))
@@ -112,14 +91,8 @@ func main() {
 
 	logger.Info("Database connection established successfully")
 
-	// Initialize ID Service
-	idSVC := id.NewService()
-	if idSVC == nil {
-		logger.Fatal("Failed to initialize ID service")
-	}
-	logger.Info("Initialized ID Service.")
 	//Initialize Product DB Service
-	productDBSvc := productdb.NewService(pgs)
+	productDBSvc := productdb.NewService(pgs, logger.JobSyncLog())
 	if productDBSvc == nil {
 		logger.Fatal("Failed to initialize product database service")
 	}
@@ -131,12 +104,18 @@ func main() {
 	// 	logger.Fatal("Failed to initialize project service")
 	// }
 
-	//Initialize Product Service
 	validationCfg, err := configSVC.Validation()
 	if err != nil {
 		logger.Fatal("Failed to get validation config", zap.Error(err))
 	}
-	productSVC := product.NewService(productDBSvc, idSVC, validationCfg.DefaultVersion)
+
+	processingCfg, err := configSVC.Processing()
+	if err != nil {
+		logger.Fatal("Failed to get processing config", zap.Error(err))
+	}
+
+	//Initialize Product Service (now includes sync functionality)
+	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg)
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}
@@ -149,17 +128,15 @@ func main() {
 	// }
 	// logger.Info("Initialized Project Service.")
 
-	// Initialize API Server (with configurable host and port)
+	// Initialize API Server
 	server, err := api.New(&api.Config{
 		Host: cfg.Server.APIHost,
 		Port: cfg.Server.APIPort,
-	}, productSVC, nil)
+	}, productSVC /*, projectSVC --- IGNORE --- */)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}
-	logger.Info("Initialized the API.",
-		zap.String("host", cfg.Server.APIHost),
-		zap.String("port", cfg.Server.APIPort))
+	logger.Info("Initialized the API.")
 
 	// Setup graceful shutdown
 	ctx, cancel := context.WithCancel(context.Background())
@@ -184,7 +161,7 @@ func main() {
 		cancel()
 
 		// Give server time to shutdown gracefully
-		shutdownTimeout := time.NewTimer(2 * time.Second)
+		shutdownTimeout := time.NewTimer(1 * time.Second)
 		defer shutdownTimeout.Stop()
 
 		select {

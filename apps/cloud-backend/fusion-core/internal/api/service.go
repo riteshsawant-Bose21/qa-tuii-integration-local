@@ -17,7 +17,6 @@ type API struct {
 	server  *http.Server
 	product fusion.Product
 	project fusion.Project
-	sync    fusion.Sync
 }
 
 type Config struct {
@@ -29,7 +28,6 @@ type Config struct {
 // New returns a new API from the given services.
 func New(cfg *Config,
 	productSvc fusion.Product,
-	projectSvc fusion.Project,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -48,6 +46,7 @@ func New(cfg *Config,
 		return nil, errors.New("missing product service")
 	}
 
+	// Project service is optional for now since models are not generated
 	// if projectSvc == nil {
 	// 	return nil, errors.New("missing project service")
 	// }
@@ -55,7 +54,7 @@ func New(cfg *Config,
 	api := &API{
 		engine:  engine,
 		product: productSvc,
-		project: projectSvc,
+		// project: projectSvc,
 	}
 
 	api.registerRoutes()

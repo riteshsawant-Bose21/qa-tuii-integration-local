@@ -5,7 +5,8 @@ CREATE TYPE product_type_enum AS ENUM (
     'dsp', 
     'controller', 
     'io_endpoint', 
-    'accessory'
+    'accessory',
+    'unknown'
 );
 
 -- Main product table with ENUM

@@ -22,18 +22,16 @@ func (a *API) registerRoutes() {
 		products.GET("/:id/prices", productHandler.GetProductPrices)
 	}
 
-	// Project routes
-	// if a.project != nil {
-	// 	projectHandler := handler.NewProjectHandler(a.project)
-	// 	projects := v1.Group("/projects")
-	// 	{
-	// 		projects.POST("", projectHandler.CreateProject)
-	// 		projects.GET("/:id", projectHandler.GetProjectByID)
-	// 		projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
-	// 		projects.PATCH("/:id", projectHandler.UpdateProject)
-	// 		projects.DELETE("/:id", projectHandler.DeleteProject)
+	// // Project routes
+	// projectHandler := handler.NewProjectHandler(a.project)
+	// projects := v1.Group("/projects")
+	// {
+	// 	projects.POST("", projectHandler.CreateProject)
+	// 	projects.GET("/:id", projectHandler.GetProjectByID)
+	// 	projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
+	// 	projects.PATCH("/:id", projectHandler.UpdateProject)
+	// 	projects.DELETE("/:id", projectHandler.DeleteProject)
 
-	// 		projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
-	// 	}
+	// 	projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
 	// }
 }
