@@ -6,8 +6,11 @@
 #include <cctype>
 #include <chrono>
 #include <cstdint>
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
+#include <fstream>
 #include <sstream>
 #include <mutex>
 #include <string>
@@ -261,6 +264,183 @@ private:
 
 namespace {
 
+enum class GpioType { kNone, kSysfs, kGpiod };
+
+struct GpioPin {
+    GpioType type{GpioType::kNone};
+    std::string label;
+    std::string path;   // sysfs path or gpiod chip
+    int offset{0};      // gpiod line offset
+};
+
+std::string trim(const std::string &s)
+{
+    const auto begin = s.find_first_not_of(" \t\r\n");
+    if (begin == std::string::npos) {
+        return {};
+    }
+    const auto end = s.find_last_not_of(" \t\r\n");
+    return s.substr(begin, end - begin + 1);
+}
+
+GpioPin parse_gpio_pin(const std::string &spec, const std::string &label)
+{
+    GpioPin pin;
+    pin.label = label;
+
+    if (spec.empty()) {
+        return pin;
+    }
+
+    const std::string prefix = "gpiod:";
+    if (spec.compare(0, prefix.size(), prefix) == 0) {
+        const auto rest = spec.substr(prefix.size());
+        const auto sep = rest.rfind(':');
+        if (sep == std::string::npos) {
+            SPDLOG_WARN("BDIF: invalid gpiod spec '{}' for {}", spec, label);
+            return pin;
+        }
+        const auto offset_str = rest.substr(sep + 1);
+        try {
+            const auto off = std::stol(offset_str, nullptr, 0);
+            if (off < 0 || off > 0xFFFF) {
+                SPDLOG_WARN("BDIF: gpiod offset '{}' out of range for {}", offset_str, label);
+                return pin;
+            }
+            pin.offset = static_cast<int>(off);
+            pin.type = GpioType::kGpiod;
+            pin.path = rest.substr(0, sep);
+        } catch (const std::exception &) {
+            SPDLOG_WARN("BDIF: invalid gpiod offset '{}' for {}", offset_str, label);
+        }
+        return pin;
+    }
+
+    pin.type = GpioType::kSysfs;
+    pin.path = spec;
+    return pin;
+}
+
+bool run_command(const std::string &cmd, std::string *output)
+{
+    std::array<char, 128> buffer{};
+    if (output) {
+        output->clear();
+    }
+
+    FILE *pipe = ::popen(cmd.c_str(), "r");
+    if (pipe == nullptr) {
+        SPDLOG_ERROR("BDIF: failed to run '{}': {}", cmd, strerror(errno));
+        return false;
+    }
+
+    while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe) != nullptr) {
+        if (output) {
+            output->append(buffer.data());
+        }
+    }
+    const int status = ::pclose(pipe);
+    if (status != 0) {
+        SPDLOG_ERROR("BDIF: command '{}' exited with {}", cmd, status);
+        return false;
+    }
+
+    return true;
+}
+
+bool read_sysfs_gpio(const std::string &path, bool &value)
+{
+    std::ifstream in(path);
+    if (!in.is_open()) {
+        SPDLOG_ERROR("BDIF: failed to open GPIO sysfs path '{}'", path);
+        return false;
+    }
+    int v = 0;
+    in >> v;
+    if (in.fail()) {
+        SPDLOG_ERROR("BDIF: failed to read GPIO sysfs value from '{}'", path);
+        return false;
+    }
+    value = v != 0;
+    return true;
+}
+
+bool write_sysfs_gpio(const std::string &path, bool value)
+{
+    std::ofstream out(path);
+    if (!out.is_open()) {
+        SPDLOG_ERROR("BDIF: failed to open GPIO sysfs path '{}'", path);
+        return false;
+    }
+    out << (value ? 1 : 0) << std::endl;
+    if (out.fail()) {
+        SPDLOG_ERROR("BDIF: failed to write GPIO sysfs value to '{}'", path);
+        return false;
+    }
+    return true;
+}
+
+bool read_gpiod_gpio(const GpioPin &pin, bool &value)
+{
+    const std::string &chip = pin.path;
+    std::ostringstream cmd;
+    cmd << "gpioget --chip " << chip << ' ' << pin.offset;
+
+    std::string output;
+    if (!run_command(cmd.str(), &output)) {
+        return false;
+    }
+
+    const auto cleaned = trim(output);
+    if (cleaned == "1") {
+        value = true;
+        return true;
+    }
+    if (cleaned == "0") {
+        value = false;
+        return true;
+    }
+
+    SPDLOG_ERROR("BDIF: unexpected gpioget output '{}' for {}", cleaned, pin.label);
+    return false;
+}
+
+bool write_gpiod_gpio(const GpioPin &pin, bool value)
+{
+    const std::string &chip = pin.path;
+    std::ostringstream cmd;
+    cmd << "gpioset --mode=exit --chip " << chip << ' ' << pin.offset << '=' << (value ? 1 : 0);
+    return run_command(cmd.str(), nullptr);
+}
+
+[[maybe_unused]] bool get_gpio_value(const GpioPin &pin, bool &value)
+{
+    switch (pin.type) {
+    case GpioType::kSysfs:
+        return read_sysfs_gpio(pin.path, value);
+    case GpioType::kGpiod:
+        return read_gpiod_gpio(pin, value);
+    case GpioType::kNone:
+    default:
+        SPDLOG_DEBUG("BDIF: GPIO '{}' not configured", pin.label);
+        return false;
+    }
+}
+
+[[maybe_unused]] bool set_gpio_value(const GpioPin &pin, bool value)
+{
+    switch (pin.type) {
+    case GpioType::kSysfs:
+        return write_sysfs_gpio(pin.path, value);
+    case GpioType::kGpiod:
+        return write_gpiod_gpio(pin, value);
+    case GpioType::kNone:
+    default:
+        SPDLOG_DEBUG("BDIF: GPIO '{}' not configured", pin.label);
+        return false;
+    }
+}
+
 class BDIFClient : public bosepro::Module
 {
 public:
@@ -324,6 +504,11 @@ private:
     int_fast32_t audio_amp_number;
     std::vector<bool> audio_amp_mute;
 
+    // GPIO controls
+    GpioPin reset_pin_;
+    GpioPin mute_pin_;
+    GpioPin boot_pin_;
+
     // Command parameters (observer-driven)
     std::string set_cmd_;
     std::string get_cmd_;
@@ -363,10 +548,23 @@ MODULE_REGISTER(BDIFClient, "bdif_client");
 BDIFClient::BDIFClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration)
 {
+    std::string reset_pin_spec;
+    std::string mute_pin_spec;
+    std::string boot_pin_spec;
+
     get_property("uart_device", uart_device_);
     get_property("num_amps", num_amps);
+    get_property("reset_pin", reset_pin_spec);
+    get_property("mute_pin", mute_pin_spec);
+    get_property("boot_pin", boot_pin_spec);
+
+    reset_pin_ = parse_gpio_pin(reset_pin_spec, "reset_pin");
+    mute_pin_ = parse_gpio_pin(mute_pin_spec, "mute_pin");
+    boot_pin_ = parse_gpio_pin(boot_pin_spec, "boot_pin");
+
     port_.set_device(uart_device_);
-    SPDLOG_INFO("BDIF: configured uart_device='{}' num_amps={}", uart_device_, num_amps);
+    SPDLOG_INFO("BDIF: configured uart_device='{}' num_amps={} reset_pin='{}' mute_pin='{}' boot_pin='{}'",
+                uart_device_, num_amps, reset_pin_spec, mute_pin_spec, boot_pin_spec);
 
     platform_amp_temp.resize(static_cast<size_t>(std::max(0, num_amps)));
     platform_amp_status.resize(static_cast<size_t>(std::max(0, num_amps)));

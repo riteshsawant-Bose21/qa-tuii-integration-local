@@ -149,12 +149,27 @@
                 {
                     "name": "uart_device",
                     "value_type": "string",
-                    "default_value": "/dev/ttymxc3"
+                    "default_value": "/dev/ttymxc2"
                 },
                 {
                     "name": "num_amps",
                     "value_type": "integer",
                     "default_value": 4
+                },
+                {
+                    "name": "reset_pin",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "mute_pin",
+                    "value_type": "string",
+                    "default_value": ""
+                },
+                {
+                    "name": "boot_pin",
+                    "value_type": "string",
+                    "default_value": ""
                 }
             ],
             "parameters": [
