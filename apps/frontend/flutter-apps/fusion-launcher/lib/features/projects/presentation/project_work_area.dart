@@ -5,6 +5,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
@@ -13,11 +14,12 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/spl_calculation/mace_calculation_manager.dart';
-import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
 import '../../../core/spl_calculation/ffi_constants.dart';
+import '../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/utils/broadcast_controllers.dart';
 import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
@@ -57,7 +59,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final SplRangeController _splRangeController = SplRangeController();
   final FloorCanvasController _floorCanvasController = FloorCanvasController();
   MaceEngine? _engine;
-
+  bool useIsolateEngine = true;
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   final List<Widget> _tabs = const <Widget>[
@@ -108,9 +110,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   Future<void> _initMace() async {
+    await IsolatedMaceCalculationManager.instance.start();
+
     if (Platform.isMacOS || Platform.isIOS || Platform.isWindows) {
       WidgetsFlutterBinding.ensureInitialized();
-      _engine = await MaceEngine.create();
+      _engine = await MaceEngine.create(
+        basePath: await MaceEngine.getLibPath(),
+        bsfBasePath: (await getApplicationSupportDirectory()).path,
+      );
 
       FusionLogger.log(
         message: "Mace engine initialized ",
@@ -144,6 +151,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb);
       serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb);
       updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+
       setState(() {}); // <-- Trigger rebuild
     }
   }
@@ -173,10 +181,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   Future<void> calculateSPL() async {
-    if (_engine == null) {
-      debugPrint('calculateSPL: _engine is null');
-      return;
-    }
+    // if (_engine == null) {
+    //   debugPrint('calculateSPL: _engine is null');
+    //   return;
+    // }
     if (!_floorCanvasController.isShowingSpl.value) {
       debugPrint('calculateSPL: isShowingSpl is false');
       return;
@@ -198,13 +206,20 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
       floorId: currentFloor.id,
     );
-
-    await SPLCalculationManager.calculateSpl(
-      _engine!,
-      speakers,
-      surfaces,
-      _lastPanelData!.getResolutionSpacing(),
-    );
+    if (!useIsolateEngine) {
+      await SPLCalculationManager.calculateSpl(
+        _engine!,
+        speakers,
+        surfaces,
+        _lastPanelData!.getResolutionSpacing(),
+      );
+    } else {
+      await IsolatedMaceCalculationManager.instance.calculateSpl(
+        speakers: speakers,
+        surfaces: surfaces,
+        resolutionSpacing: _lastPanelData!.getResolutionSpacing(),
+      );
+    }
 
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     final Bandwidth maceBandwidth = _mapToMaceBandwidth(
@@ -226,7 +241,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     Weighting weighting,
     bool relative,
   ) async {
-    if (_engine == null) return;
+    // if (_engine == null) return;
     if (!_floorCanvasController.isShowingSpl.value) return;
 
     final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
@@ -239,21 +254,33 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
-    final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
+
+    final Iterable<SPLCalculation> currentCalcs =
+        useIsolateEngine ? await IsolatedMaceCalculationManager.instance.currentCalculations() : SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
       if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
+      final List<SPLCalculation> updated =
+          useIsolateEngine
+              ? await IsolatedMaceCalculationManager.instance.getSplAt(
+                fph: sc.fphHandle,
+                bandwidth: bw,
+                freqHz: (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+                weighting: weighting,
+                relative: relative,
+                resolutionSpacing: _lastPanelData?.getResolutionSpacing() ?? 20.0,
+              )
+              : SPLCalculationManager.getSplAt(
+                _engine!,
+                sc.fphHandle,
+                bw,
+                (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+                weighting,
+                relative,
+                _lastPanelData?.getResolutionSpacing() ?? 20.0,
+              );
 
-      final List<SPLCalculation> updated = SPLCalculationManager.getSplAt(
-        _engine!,
-        sc.fphHandle,
-        bw,
-        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
-        weighting,
-        relative,
-        _lastPanelData?.getResolutionSpacing() ?? 20.0,
-      );
-
+      print("[isolate] updateSpl: updated length ${updated.map((SPLCalculation e) => e.spl.length)}");
       toApply.addAll(updated);
     }
 
@@ -261,8 +288,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       final List<ui.Offset> pts = calc.surface.getFieldPoints(
         _lastPanelData?.getResolutionSpacing() ?? 20.0,
       );
-      calc.surface.setSplData(pts, calc.spl);
+      floorListeningAreas.firstWhere((ListeningArea area) => area.id == calc.surface.id).setSplData(pts, calc.spl);
+      // calc.surface.setSplData(pts, calc.spl);
     }
+    setState(() {});
   }
 
   /// Clear input fields
@@ -282,6 +311,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     zoneAreaController.dispose();
     _splRangeController.dispose();
     _engine?.dispose();
+    IsolatedMaceCalculationManager.instance.stop();
     _floorCanvasController.dispose();
 
     /// Reset configuration menu mode to processing on dispose
