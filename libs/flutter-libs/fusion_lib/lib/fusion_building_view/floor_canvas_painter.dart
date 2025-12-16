@@ -840,12 +840,13 @@ class _AreaSplSummary {
 // Global/static heatmap cache keyed by signature, survives painter instance recreation
 class _HeatmapCache {
   _HeatmapCache._();
+  final bool log = false;
   static final _HeatmapCache instance = _HeatmapCache._();
   _HeatmapSignature? _currentSignature;
 
   void checkWithSignature(_HeatmapSignature sig) {
     if (_currentSignature != sig) {
-      print('[HeatmapCache] Signature changed, clearing cache');
+      if (log) print('[HeatmapCache] Signature changed, clearing cache');
       clear();
       _currentSignature = sig;
     }
@@ -856,10 +857,10 @@ class _HeatmapCache {
   ui.Image getOrBuild(_AreaSplSummary key, ui.Image Function() builder) {
     final ui.Image? existing = _cache[key];
     if (existing != null) {
-      print('[HeatmapCache] Using cached Image for signature');
+      if (log) print('[HeatmapCache] Using cached Image for signature');
       return existing;
     }
-    print('[HeatmapCache] Building new Image for signature');
+    if (log) print('[HeatmapCache] Building new Image for signature');
     final ui.Image img = builder();
     _cache[key] = img;
     return img;
