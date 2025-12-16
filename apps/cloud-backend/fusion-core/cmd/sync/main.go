@@ -40,20 +40,15 @@ func main() {
 	region := flag.String("region", "", "AWS region (optional, uses config default)")
 	flag.Parse()
 
-	// Determine environment configuration
-	envFileName := *envFile
-	logger.Info("Environment selected", zap.String("environment", *envName), zap.String("config_file", envFileName))
+	// Parse the flags
+	flag.Parse()
 
-	// Configure secrets manager based on environment
-	environment.AutoConfigureSecretsManager(*envName, logger)
-
-	// Use the configured DefaultLoadLookuper - it now handles both sources
-	logger.Info("Initializing environment",
-		zap.String("file", envFileName),
-		zap.String("environment", *envName))
 	env := environment.New(environment.DefaultLoadLookuper)
-	if err := env.Load(envFileName); err != nil {
-		logger.Fatal("error loading configuration", zap.Error(err))
+	logger.Info("Loading environment file", zap.String("file", *envFile))
+	if *envName == "local" {
+		if err := env.Load(*envFile); err != nil {
+			logger.Fatal("error loading environment vars", zap.String("file", *envName), zap.Error(err))
+		}
 	}
 
 	// Initialize configuration service
