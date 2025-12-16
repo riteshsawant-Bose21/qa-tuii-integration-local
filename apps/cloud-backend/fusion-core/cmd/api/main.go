@@ -149,7 +149,7 @@ func main() {
 		Host:        "localhost",
 		Port:        "8080",
 		Auth0Domain: cfg.Auth0.Domain, // Auth0 domain
-	}, userSVC, userDBSvc, roleManagementSvc)
+	}, userSVC, userDBSvc)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

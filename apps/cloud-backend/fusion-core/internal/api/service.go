@@ -38,7 +38,6 @@ func New(cfg *Config,
 	// projectSvc fusion.Project,
 	userSvc fusion.User,
 	userDBSvc *userdb.Service,
-	roleManagementSvc *userdb.RoleManagementService,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -79,9 +78,8 @@ func New(cfg *Config,
 		engine: engine,
 		// product:               productSvc,
 		// project:               projectSvc,
-		user:                  userSvc,
-		roleManagementService: roleManagementSvc,
-		authMiddleware:        authMiddleware,
+		user:           userSvc,
+		authMiddleware: authMiddleware,
 	}
 
 	api.registerRoutes()
