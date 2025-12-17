@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
@@ -119,9 +117,6 @@ func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID str
 
 // CreateProject adds a new project to the database.
 func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectCreateResponse, error) {
-
-	// Generate ID
-	project.ID = uuid.New().String()
 
 	db := s.dbService.GetDB(ctx)
 

@@ -342,6 +342,9 @@ definitions:
         allOf:
         - $ref: '#/definitions/types.ProjectPhase'
         example: Proposal
+      projectId:
+        example: 50000001-0000-4000-8000-000000000008
+        type: string
       venue:
         example: Building A - Conference Room 101
         maxLength: 255
@@ -350,6 +353,7 @@ definitions:
     - application
     - environment_type
     - name
+    - projectId
     type: object
   types.ProjectCreateResponse:
     properties:

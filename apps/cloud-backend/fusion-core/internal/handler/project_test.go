@@ -11,6 +11,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -170,7 +171,9 @@ func TestCreateProject(t *testing.T) {
 	r, mockSvc := setupTest()
 
 	t.Run("successfully creates project", func(t *testing.T) {
+		projectID := uuid.New().String()
 		project := &types.ProjectCreateRequest{
+			ID:              projectID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Application:     "test-app",
@@ -182,7 +185,7 @@ func TestCreateProject(t *testing.T) {
 		}
 
 		expectedResponse := &types.ProjectCreateResponse{
-			ID: "123e4567-e89b-12d3-a456-426614174000",
+			ID: projectID,
 		}
 
 		// Mock should expect the request after validation, which sets default project phase
@@ -197,6 +200,9 @@ func TestCreateProject(t *testing.T) {
 
 		r.ServeHTTP(w, req)
 
+		if w.Code != http.StatusCreated {
+			t.Logf("Response status: %d, body: %s", w.Code, w.Body.String())
+		}
 		assert.Equal(t, http.StatusCreated, w.Code)
 		mockSvc.AssertExpectations(t)
 	})
@@ -215,7 +221,9 @@ func TestCreateProject(t *testing.T) {
 		// Setup fresh router and mock for this test
 		r, mockSvc := setupTest()
 
+		projectID := uuid.New().String()
 		project := &types.ProjectCreateRequest{
+			ID:              projectID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Application:     "test-app",
@@ -244,7 +252,9 @@ func TestCreateProject(t *testing.T) {
 	t.Run("returns validation error on missing required fields", func(t *testing.T) {
 		// Missing Application and Budget currency invalid
 		r, mockSvc := setupTest()
+		projectID := uuid.New().String()
 		project := &types.ProjectCreateRequest{
+			ID:              projectID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -266,7 +276,9 @@ func TestCreateProject(t *testing.T) {
 
 	t.Run("returns validation error on negative budget amount", func(t *testing.T) {
 		r, mockSvc := setupTest()
+		projectID := uuid.New().String()
 		project := &types.ProjectCreateRequest{
+			ID:              projectID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Application:     "test-app",
@@ -296,7 +308,9 @@ func TestCreateProject(t *testing.T) {
 		handler := NewProjectHandler(mockSvc)
 		r.POST(projectsEndpoint, handler.CreateProject)
 
+		projectID := uuid.New().String()
 		project := &types.ProjectCreateRequest{
+			ID:              projectID,
 			Name:            testProjectName,
 			Description:     testProjectDesc,
 			Application:     "test-app",

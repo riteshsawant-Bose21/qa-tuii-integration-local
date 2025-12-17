@@ -27,6 +27,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -49,7 +50,7 @@ type ProjectIntegrationTestSuite struct {
 
 // testProject represents a test project for testing
 type testProject struct {
-	ID                        string                `json:"id"`
+	ID                        string                `json:"projectId"`
 	Name                      string                `json:"name"`
 	Description               string                `json:"description"`
 	Application               string                `json:"application"`
@@ -169,6 +170,7 @@ func (suite *ProjectIntegrationTestSuite) seedTestData() error {
 	// Define test projects for creation during tests (these will be new projects)
 	suite.testProjects = []testProject{
 		{
+			ID:              uuid.New().String(),
 			Name:            "Integration Test Conference Room",
 			Description:     "Integration test project for conference room audio system",
 			Application:     "Corporate Conference Room",
@@ -183,6 +185,7 @@ func (suite *ProjectIntegrationTestSuite) seedTestData() error {
 			IsProjectThumbnailCreated: true,
 		},
 		{
+			ID:              uuid.New().String(),
 			Name:            "Integration Test Auditorium",
 			Description:     "Integration test project for auditorium sound system",
 			Application:     "Educational Facility",
@@ -426,6 +429,7 @@ func (suite *ProjectIntegrationTestSuite) makeRequestWithUser(method, path strin
 func (suite *ProjectIntegrationTestSuite) TestCreateProject() {
 	suite.T().Run("should create project successfully", func(t *testing.T) {
 		project := suite.testProjects[0]
+		project.ID = uuid.New().String() // Generate fresh ID for this test
 
 		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 		require.NoError(t, err)
@@ -439,13 +443,11 @@ func (suite *ProjectIntegrationTestSuite) TestCreateProject() {
 		assert.NotEmpty(t, response.ID)
 		// In test environment, upload URLs may be nil when no S3 presigner is configured
 		// In production, these would be populated when IsProjectFileCreated/IsProjectThumbnailCreated are true
-
-		// Store the created project ID for later tests
-		suite.testProjects[0].ID = response.ID
 	})
 
 	suite.T().Run("should fail with invalid project data", func(t *testing.T) {
 		invalidProject := testProject{
+			ID:   uuid.New().String(),
 			Name: "", // Missing required name
 		}
 
@@ -468,6 +470,7 @@ func (suite *ProjectIntegrationTestSuite) TestCreateProject() {
 
 		// Try to create project with invalid data that should cause validation failure and rollback
 		projectWithInvalidData := types.ProjectCreateRequest{
+			ID:              uuid.New().String(),
 			Name:            "", // Empty name should cause validation failure
 			Description:     "This should fail validation and rollback the transaction",
 			Application:     "Test Application",
@@ -510,6 +513,7 @@ func (suite *ProjectIntegrationTestSuite) TestCreateProject() {
 func (suite *ProjectIntegrationTestSuite) TestGetAllProjects() {
 	// Create a test project for this test
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -517,7 +521,6 @@ func (suite *ProjectIntegrationTestSuite) TestGetAllProjects() {
 	var createResponse types.ProjectCreateResponse
 	err = json.Unmarshal(w.Body.Bytes(), &createResponse)
 	require.NoError(suite.T(), err)
-	suite.testProjects[0].ID = createResponse.ID
 
 	suite.T().Run("should get all projects", func(t *testing.T) {
 		w, err := suite.makeRequest("GET", "/api/v1/projects", nil)
@@ -554,6 +557,7 @@ func (suite *ProjectIntegrationTestSuite) TestGetAllProjects() {
 func (suite *ProjectIntegrationTestSuite) TestUpdateProject() {
 	// Create a project for this test
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -637,6 +641,7 @@ func (suite *ProjectIntegrationTestSuite) TestDeleteProject() {
 func (suite *ProjectIntegrationTestSuite) TestAssignUserToProject() {
 	// Create a project for this test
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -667,6 +672,7 @@ func (suite *ProjectIntegrationTestSuite) TestAssignUserToProject() {
 func (suite *ProjectIntegrationTestSuite) TestRemoveUserFromProject() {
 	// Create a project and assign a user
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -694,6 +700,7 @@ func (suite *ProjectIntegrationTestSuite) TestRemoveUserFromProject() {
 func (suite *ProjectIntegrationTestSuite) TestUpdateProjectStar() {
 	// Create a project for this test
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -728,6 +735,7 @@ func (suite *ProjectIntegrationTestSuite) TestUpdateProjectStar() {
 func (suite *ProjectIntegrationTestSuite) TestUpdateProjectArchive() {
 	// Create a project for this test
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -781,6 +789,7 @@ func (suite *ProjectIntegrationTestSuite) TestUpdateProjectArchive() {
 func (suite *ProjectIntegrationTestSuite) TestUpdateProjectLock() {
 	// Create a project for this test
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -835,6 +844,7 @@ func (suite *ProjectIntegrationTestSuite) TestProjectWorkflow() {
 	suite.T().Run("complete project lifecycle", func(t *testing.T) {
 		// 1. Create project
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Workflow Test Project",
 			Description:     "End-to-end workflow test",
 			Application:     "Test Application",
@@ -946,6 +956,7 @@ func (suite *ProjectIntegrationTestSuite) TestErrorScenarios() {
 	suite.T().Run("should handle missing required fields", func(t *testing.T) {
 		// Test create project with missing required fields
 		incompleteProject := testProject{
+			ID: uuid.New().String(),
 			// Missing Name which is required
 			Description: "Test description",
 		}
@@ -1054,6 +1065,7 @@ func (suite *ProjectIntegrationTestSuite) TestEdgeCases() {
 func (suite *ProjectIntegrationTestSuite) TestLockConflicts() {
 	// Create a project for lock testing
 	project := testProject{
+		ID:              uuid.New().String(),
 		Name:            "Lock Test Project",
 		Description:     "Project for testing lock conflicts",
 		Application:     "Test Application",
@@ -1140,6 +1152,7 @@ func (suite *ProjectIntegrationTestSuite) TestLockConflicts() {
 func (suite *ProjectIntegrationTestSuite) TestArchivedProjectRestrictions() {
 	// Create and archive a project
 	project := testProject{
+		ID:              uuid.New().String(),
 		Name:            "Archive Test Project",
 		Description:     "Project for testing archive restrictions",
 		Application:     "Test Application",
@@ -1235,6 +1248,7 @@ func (suite *ProjectIntegrationTestSuite) TestUnauthorizedUserOperations() {
 	// Create a project using admin@bose.com (suite.testUsers[0]) - this will set primary_owner_account_id to Bose Corporation account
 	// Then test with user from different account (prof.operator@university.edu - suite.testUsers[2])
 	project := suite.testProjects[0]
+	project.ID = uuid.New().String() // Generate fresh ID for this test
 	w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 	require.NoError(suite.T(), err)
 	require.Equal(suite.T(), http.StatusCreated, w.Code)
@@ -1275,6 +1289,7 @@ func (suite *ProjectIntegrationTestSuite) TestUnauthorizedUserOperations() {
 
 		// Create a project with this admin user
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Admin Account Test Project",
 			Description:     "Project for testing admin account access",
 			Application:     "Corporate Conference Room",
@@ -1328,6 +1343,7 @@ func (suite *ProjectIntegrationTestSuite) TestUnauthorizedUserOperations() {
 func (suite *ProjectIntegrationTestSuite) TestConcurrentOperations() {
 	// Create a project for concurrent testing
 	project := testProject{
+		ID:              uuid.New().String(),
 		Name:            "Concurrent Test Project",
 		Description:     "Project for testing concurrent operations",
 		Application:     "Test Application",
@@ -1419,6 +1435,7 @@ func (suite *ProjectIntegrationTestSuite) TestDataValidation() {
 	suite.T().Run("should validate project creation data", func(t *testing.T) {
 		// Test with invalid budget amount
 		invalidProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Valid Name",
 			Description:     "Valid Description",
 			Application:     "Valid Application",
@@ -1457,6 +1474,7 @@ func (suite *ProjectIntegrationTestSuite) TestDataValidation() {
 	suite.T().Run("should validate update data", func(t *testing.T) {
 		// Create a valid project for this test
 		project := suite.testProjects[0]
+		project.ID = uuid.New().String() // Generate fresh ID for this test
 		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, w.Code)
@@ -1480,6 +1498,7 @@ func (suite *ProjectIntegrationTestSuite) TestDataValidation() {
 	suite.T().Run("should validate email formats", func(t *testing.T) {
 		// Create a project for this test
 		project := suite.testProjects[0]
+		project.ID = uuid.New().String() // Generate fresh ID for this test
 		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, w.Code)
@@ -1523,6 +1542,7 @@ func (suite *ProjectIntegrationTestSuite) TestBoundaryConditions() {
 
 	suite.T().Run("should handle special characters in project data", func(t *testing.T) {
 		specialProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Test Project with Special Characters: !@#$%^&*()",
 			Description:     "Description with unicode: 你好世界 🌍",
 			Application:     "Application with symbols: <>&\"'",
@@ -1559,6 +1579,7 @@ func (suite *ProjectIntegrationTestSuite) TestEnvironmentTypeValidation() {
 
 		for _, envType := range validTypes {
 			project := testProject{
+				ID:              uuid.New().String(),
 				Name:            fmt.Sprintf("Test Project - %s", envType),
 				Description:     "Test project for environment type validation",
 				Application:     "Test Application",
@@ -1581,6 +1602,7 @@ func (suite *ProjectIntegrationTestSuite) TestEnvironmentTypeValidation() {
 
 	suite.T().Run("should reject invalid environment type", func(t *testing.T) {
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Invalid Environment Test",
 			Description:     "Test project with invalid environment type",
 			Application:     "Test Application",
@@ -1612,6 +1634,7 @@ func (suite *ProjectIntegrationTestSuite) TestProjectPhaseValidation() {
 
 		for _, phase := range validPhases {
 			project := testProject{
+				ID:              uuid.New().String(),
 				Name:            fmt.Sprintf("Test Project - %s", phase),
 				Description:     "Test project for phase validation",
 				Application:     "Test Application",
@@ -1634,6 +1657,7 @@ func (suite *ProjectIntegrationTestSuite) TestProjectPhaseValidation() {
 
 	suite.T().Run("should reject invalid project phase", func(t *testing.T) {
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Invalid Phase Test",
 			Description:     "Test project with invalid phase",
 			Application:     "Test Application",
@@ -1661,6 +1685,7 @@ func (suite *ProjectIntegrationTestSuite) TestBudgetCurrencyValidation() {
 
 		for _, currency := range validCurrencies {
 			project := testProject{
+				ID:              uuid.New().String(),
 				Name:            fmt.Sprintf("Test Project - %s", currency),
 				Description:     "Test project for currency validation",
 				Application:     "Test Application",
@@ -1686,6 +1711,7 @@ func (suite *ProjectIntegrationTestSuite) TestBudgetCurrencyValidation() {
 
 		for _, currency := range invalidCurrencies {
 			project := testProject{
+				ID:              uuid.New().String(),
 				Name:            fmt.Sprintf("Invalid Currency Test - %s", currency),
 				Description:     "Test project with invalid currency",
 				Application:     "Test Application",
@@ -1712,6 +1738,7 @@ func (suite *ProjectIntegrationTestSuite) TestFieldLengthValidation() {
 	suite.T().Run("should reject excessively long project name", func(t *testing.T) {
 		longName := strings.Repeat("a", 256) // Over 255 character limit
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            longName,
 			Description:     "Test project with long name",
 			Application:     "Test Application",
@@ -1734,6 +1761,7 @@ func (suite *ProjectIntegrationTestSuite) TestFieldLengthValidation() {
 	suite.T().Run("should reject excessively long description", func(t *testing.T) {
 		longDescription := strings.Repeat("a", 1001) // Over 1000 character limit
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Test Project",
 			Description:     longDescription,
 			Application:     "Test Application",
@@ -1759,6 +1787,7 @@ func (suite *ProjectIntegrationTestSuite) TestFieldLengthValidation() {
 		maxVenue := strings.Repeat("a", 255)        // Exactly 255 characters
 
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            maxName,
 			Description:     maxDescription,
 			Application:     "Test Application",
@@ -1783,6 +1812,7 @@ func (suite *ProjectIntegrationTestSuite) TestFieldLengthValidation() {
 func (suite *ProjectIntegrationTestSuite) TestBudgetAmountValidation() {
 	suite.T().Run("should reject negative budget amount", func(t *testing.T) {
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Negative Budget Test",
 			Description:     "Test project with negative budget",
 			Application:     "Test Application",
@@ -1807,6 +1837,7 @@ func (suite *ProjectIntegrationTestSuite) TestBudgetAmountValidation() {
 
 	suite.T().Run("should accept zero budget amount", func(t *testing.T) {
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Zero Budget Test",
 			Description:     "Test project with zero budget",
 			Application:     "Test Application",
@@ -1880,6 +1911,7 @@ func (suite *ProjectIntegrationTestSuite) TestAdvancedQueryParameterValidation()
 func (suite *ProjectIntegrationTestSuite) TestMinimalProjectCreation() {
 	suite.T().Run("should create project with minimal required fields", func(t *testing.T) {
 		minimalProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Minimal Test Project",
 			Application:     "Minimal App",
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -1907,6 +1939,7 @@ func (suite *ProjectIntegrationTestSuite) TestMinimalProjectCreation() {
 func (suite *ProjectIntegrationTestSuite) TestContentTypeHandling() {
 	suite.T().Run("should reject requests without content type", func(t *testing.T) {
 		project := suite.testProjects[0]
+		project.ID = uuid.New().String() // Generate fresh ID for this test
 		bodyBytes, err := json.Marshal(project)
 		require.NoError(t, err)
 
@@ -1959,6 +1992,7 @@ func (suite *ProjectIntegrationTestSuite) TestEmptyRequestBodyHandling() {
 	suite.T().Run("should reject null request body for update", func(t *testing.T) {
 		// Create a project for this test
 		project := suite.testProjects[0]
+		project.ID = uuid.New().String() // Generate fresh ID for this test
 		w, err := suite.makeRequest("POST", "/api/v1/projects", project)
 		require.NoError(t, err)
 		require.Equal(t, http.StatusCreated, w.Code)
@@ -1990,6 +2024,7 @@ func (suite *ProjectIntegrationTestSuite) TestDuplicateProjectNames() {
 
 		// Create project for first user
 		project1 := testProject{
+			ID:              uuid.New().String(),
 			Name:            projectName,
 			Description:     "First project with this name",
 			Application:     "Test Application",
@@ -2010,6 +2045,7 @@ func (suite *ProjectIntegrationTestSuite) TestDuplicateProjectNames() {
 
 		// Create project with same name for different user
 		project2 := project1
+		project2.ID = uuid.New().String() // Generate fresh ID for second project
 		project2.Description = "Second project with same name"
 		project2.Venue = "Test Venue 2"
 
@@ -2033,6 +2069,7 @@ func (suite *ProjectIntegrationTestSuite) TestDuplicateProjectNames() {
 		projectName := "Same User Duplicate Test"
 
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            projectName,
 			Description:     "Original project",
 			Application:     "Test Application",
@@ -2054,6 +2091,7 @@ func (suite *ProjectIntegrationTestSuite) TestDuplicateProjectNames() {
 
 		// Try to create another project with same name and user
 		project.Description = "Duplicate attempt"
+		project.ID = uuid.New().String() // Generate fresh ID for the duplicate attempt
 		w2, err := suite.makeRequest("POST", "/api/v1/projects", project)
 		require.NoError(t, err)
 		// Depending on business logic, might be allowed (201) or rejected (409/400)
@@ -2162,6 +2200,7 @@ func (suite *ProjectIntegrationTestSuite) TestAdvancedProjectFiltering() {
 func (suite *ProjectIntegrationTestSuite) TestConcurrentUserOperations() {
 	// Create a project and assign multiple users
 	project := testProject{
+		ID:              uuid.New().String(),
 		Name:            "Concurrent Operations Test",
 		Description:     "Test project for concurrent operations",
 		Application:     "Test Application",
@@ -2262,6 +2301,7 @@ func (suite *ProjectIntegrationTestSuite) TestLargePayloadHandling() {
 		}
 
 		largeProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            largeName,
 			Description:     largeDescription,
 			Application:     largeApplication,
@@ -2286,6 +2326,7 @@ func (suite *ProjectIntegrationTestSuite) TestLargePayloadHandling() {
 func (suite *ProjectIntegrationTestSuite) TestErrorResponseFormats() {
 	suite.T().Run("should return consistent error format for validation errors", func(t *testing.T) {
 		invalidProject := testProject{
+			ID: uuid.New().String(),
 			// Missing required fields
 		}
 
@@ -2334,6 +2375,7 @@ func (suite *ProjectIntegrationTestSuite) TestAuthenticationEdgeCases() {
 
 	suite.T().Run("should handle malformed authorization header", func(t *testing.T) {
 		project := suite.testProjects[0]
+		project.ID = uuid.New().String() // Generate fresh ID for this test
 		bodyBytes, err := json.Marshal(project)
 		require.NoError(t, err)
 
@@ -2362,6 +2404,7 @@ func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
 
 		// Try to create project with invalid data (should fail validation)
 		invalidUserProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            "", // Empty name should cause validation failure
 			Description:     "This project creation should fail validation",
 			Application:     "Test Application",
@@ -2398,6 +2441,7 @@ func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
 
 		// Create project with invalid budget currency (should fail validation)
 		invalidBudgetProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Invalid Budget Test Project",
 			Description:     "This project should fail due to invalid currency",
 			Application:     "Test Application",
@@ -2443,6 +2487,7 @@ func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
 		for i := 0; i < numConcurrentRequests; i++ {
 			go func(index int) {
 				invalidProject := testProject{
+					ID:              uuid.New().String(),
 					Name:            fmt.Sprintf("Concurrent Invalid Project %d", index),
 					Description:     "This should fail",
 					Application:     "Test Application",
@@ -2486,6 +2531,7 @@ func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
 	suite.T().Run("should maintain data integrity after failed project creation attempts", func(t *testing.T) {
 		// Create a valid project first
 		validProject := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Valid Project Before Failures",
 			Description:     "This project should be created successfully",
 			Application:     "Test Application",
@@ -2517,6 +2563,7 @@ func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
 		// Now try several invalid project creations that should all fail validation
 		invalidAttempts := []testProject{
 			{
+				ID:              uuid.New().String(),
 				Name:            "", // Empty name should fail
 				Description:     "",
 				Application:     "Test App",
@@ -2526,6 +2573,7 @@ func (suite *ProjectIntegrationTestSuite) TestTransactionRollback() {
 				Budget:          types.Budget{Amount: 1000, Currency: "USD"},
 			},
 			{
+				ID:              uuid.New().String(),
 				Name:            "Invalid Environment Project",
 				Description:     "",
 				Application:     "Test App",
@@ -2637,6 +2685,7 @@ func (suite *ProjectIntegrationTestSuite) TestAPIResponseConsistency() {
 	suite.T().Run("should return consistent success response format", func(t *testing.T) {
 		// Create a project first
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Response Format Test Project",
 			Application:     "Test Application",
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -2741,6 +2790,7 @@ func (suite *ProjectIntegrationTestSuite) TestProjectPermissions() {
 
 	// Create project with admin user
 	adminProject := testProject{
+		ID:              uuid.New().String(),
 		Name:            "Admin Project",
 		Description:     "Project owned by admin user",
 		Application:     "Admin Application",
@@ -2834,6 +2884,7 @@ func (suite *ProjectIntegrationTestSuite) TestProjectListingAndFiltering() {
 	// Create several projects with different states
 	projects := []testProject{
 		{
+			ID:              uuid.New().String(),
 			Name:            "Active Project 1",
 			Description:     "Active project for testing",
 			Application:     "Test Application",
@@ -2846,6 +2897,7 @@ func (suite *ProjectIntegrationTestSuite) TestProjectListingAndFiltering() {
 			},
 		},
 		{
+			ID:              uuid.New().String(),
 			Name:            "Active Project 2",
 			Description:     "Another active project",
 			Application:     "Test Application",
@@ -2955,6 +3007,7 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 			{
 				name: "valid project",
 				project: testProject{
+					ID:              uuid.New().String(),
 					Name:            "Valid Project",
 					Application:     "Valid Application",
 					EnvironmentType: types.EnvironmentTypeIndoor,
@@ -2968,6 +3021,7 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 			{
 				name: "missing name",
 				project: testProject{
+					ID:              uuid.New().String(),
 					Application:     "Valid Application",
 					EnvironmentType: types.EnvironmentTypeIndoor,
 					Budget: types.Budget{
@@ -2980,6 +3034,7 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 			{
 				name: "missing application",
 				project: testProject{
+					ID:              uuid.New().String(),
 					Name:            "Valid Project",
 					EnvironmentType: types.EnvironmentTypeIndoor,
 					Budget: types.Budget{
@@ -2992,6 +3047,7 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 			{
 				name: "missing environment type",
 				project: testProject{
+					ID:          uuid.New().String(),
 					Name:        "Valid Project",
 					Application: "Valid Application",
 					Budget: types.Budget{
@@ -3004,6 +3060,8 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 			{
 				name: "invalid currency",
 				project: testProject{
+
+					ID:              uuid.New().String(),
 					Name:            "Valid Project",
 					Application:     "Valid Application",
 					EnvironmentType: types.EnvironmentTypeIndoor,
@@ -3033,6 +3091,7 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 	suite.T().Run("should validate project update requests", func(t *testing.T) {
 		// First create a valid project
 		project := testProject{
+			ID:              uuid.New().String(),
 			Name:            "Update Test Project",
 			Application:     "Test Application",
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -3103,6 +3162,7 @@ func (suite *ProjectIntegrationTestSuite) TestComprehensiveValidation() {
 func (suite *ProjectIntegrationTestSuite) TestProjectLifecycleTransitions() {
 	// Create a project for lifecycle testing
 	project := testProject{
+		ID:              uuid.New().String(),
 		Name:            "Lifecycle Test Project",
 		Description:     "Project for testing lifecycle transitions",
 		Application:     "Test Application",

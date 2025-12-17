@@ -24,6 +24,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "valid request with project phase",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174001",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -40,6 +41,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "valid request with empty project phase - should default to Proposal",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174002",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -56,6 +58,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "valid request without project phase - should default to Proposal",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174003",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -78,6 +81,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "invalid request - missing name",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174004",
 				Name:            "", // Missing name
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -94,12 +98,45 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "invalid request - negative budget",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174005",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    types.ProjectPhaseProposal,
 				Budget: types.Budget{
 					Amount:   -100.0, // Negative budget
+					Currency: "USD",
+				},
+			},
+			expectedErr: true,
+			checkPhase:  false,
+		},
+		{
+			name: "invalid request - missing ID",
+			request: &types.ProjectCreateRequest{
+				// ID field missing - should fail validation
+				Name:            testProjectName,
+				Application:     testApplication,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				ProjectPhase:    types.ProjectPhaseProposal,
+				Budget: types.Budget{
+					Amount:   1000.0,
+					Currency: "USD",
+				},
+			},
+			expectedErr: true,
+			checkPhase:  false,
+		},
+		{
+			name: "invalid request - invalid UUID format",
+			request: &types.ProjectCreateRequest{
+				ID:              "not-a-valid-uuid", // Invalid UUID format
+				Name:            testProjectName,
+				Application:     testApplication,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				ProjectPhase:    types.ProjectPhaseProposal,
+				Budget: types.Budget{
+					Amount:   1000.0,
 					Currency: "USD",
 				},
 			},
@@ -198,6 +235,7 @@ const (
 func TestProjectPhaseDefaulting(t *testing.T) {
 	t.Run("project phase defaults to Proposal when empty", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174006",
 			Name:            phaseTestProjectName,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -221,6 +259,7 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 
 	t.Run("project phase is not changed when already set", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174007",
 			Name:            phaseTestProjectName,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -241,6 +280,7 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 
 	t.Run("project phase defaults when field is uninitialized", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174008",
 			Name:            phaseTestProjectName,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -439,6 +479,7 @@ func TestValidateProjectSortField(t *testing.T) {
 func TestValidateProjectCreateRequest_EdgeCases(t *testing.T) {
 	t.Run("whitespace-only name should fail", func(t *testing.T) {
 		req := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174009",
 			Name:            "   ", // Only whitespace
 			Application:     testApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -453,6 +494,7 @@ func TestValidateProjectCreateRequest_EdgeCases(t *testing.T) {
 
 	t.Run("zero budget amount should pass", func(t *testing.T) {
 		req := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174010",
 			Name:            testProjectName,
 			Application:     testApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -467,6 +509,7 @@ func TestValidateProjectCreateRequest_EdgeCases(t *testing.T) {
 
 	t.Run("maximum valid currency length", func(t *testing.T) {
 		req := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174011",
 			Name:            testProjectName,
 			Application:     testApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
