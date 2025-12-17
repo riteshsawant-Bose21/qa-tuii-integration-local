@@ -172,8 +172,18 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
     }
     write_sequnlock(&g->ticks_sl);
 
-    if (sr & SR_IF1) { (void)rdl(g, GPT_ICR1); clr |= SR_IF1; }
-    if (sr & SR_IF2) { (void)rdl(g, GPT_ICR2); clr |= SR_IF2; }
+    if (sr & SR_IF1) {
+        (void)rdl(g, GPT_ICR1);
+        clr |= SR_IF1;
+        pr_info_ratelimited("fusion-gpt: capture1 (1PPS) at cnt=0x%08x\n",
+                            g->last32);
+    }
+    if (sr & SR_IF2) {
+        (void)rdl(g, GPT_ICR2);
+        clr |= SR_IF2;
+        pr_info_ratelimited("fusion-gpt: capture2 (48k frame sync) at cnt=0x%08x\n",
+                            g->last32);
+    }
 
     if (sr & SR_OF1) {
         gpt_program_next_compare(g);
@@ -193,7 +203,7 @@ static int gpt_start(struct fusion_gpt *g)
     wrl(g, 0, GPT_CR);
     wrl(g, 0, GPT_PR);
     wrl(g, SR_OF1 | SR_IF1 | SR_IF2, GPT_SR);
-    wrl(g, IR_OF1IE /* | IR_IF1IE | IR_IF2IE */, GPT_IR);
+    wrl(g, IR_OF1IE | IR_IF1IE | IR_IF2IE, GPT_IR);
 
     cr = CR_ENMOD | CR_FRR | CR_CLKSRC_EXT | CR_DBGEN | CR_WAITEN;
     wrl(g, cr, GPT_CR);
