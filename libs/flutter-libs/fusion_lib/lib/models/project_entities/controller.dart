@@ -21,6 +21,7 @@ class FusionController extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    required super.addedFromBuildingPage,
   }) : sku = sku ?? name,
        super(
          hardwareName: hardwareName ?? name,
@@ -44,6 +45,7 @@ class FusionController extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   }) {
     return FusionController(
       id: id ?? this.id,
@@ -60,6 +62,7 @@ class FusionController extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
 
@@ -67,7 +70,7 @@ class FusionController extends HardwareComponent {
     return <String, dynamic>{
       'id': id,
       'name': name,
-      'pos': {'x': pos.dx, 'y': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? {'x': wiringPos!.dx, 'y': wiringPos!.dy} : null,
       'zAxis': zAxis,
       'assetImagePath': assetImagePath,
@@ -80,6 +83,7 @@ class FusionController extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'addedFromBuildingPage': addedFromBuildingPage,
     };
   }
 
@@ -87,7 +91,7 @@ class FusionController extends HardwareComponent {
     return FusionController(
       id: json['id'] as String?,
       name: json['name'] as String,
-      pos: Offset((json['pos']['x'] as num).toDouble(), (json['pos']['y'] as num).toDouble()),
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['x'] as num).toDouble(), (json['wiringPos']['y'] as num).toDouble()) : null,
       zAxis: (json['zAxis'] as num?)?.toDouble() ?? 0.0,
       assetImagePath: json['assetImagePath'] as String,
@@ -100,6 +104,7 @@ class FusionController extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
     );
   }
 }

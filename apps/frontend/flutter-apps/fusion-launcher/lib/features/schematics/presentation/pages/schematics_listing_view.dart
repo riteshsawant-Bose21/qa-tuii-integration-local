@@ -265,6 +265,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                       name: item.name,
                       pos: null,
                       type: item.type,
+                      addedFromBuildingPage: false,
                       connectionType: connectType,
                       assetImagePath: item.assetPath,
                       locationEntity: LocationModel(
@@ -308,7 +309,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
-                      pos: Offset.zero,
+                      isFromBuildingPage: false,
                     );
 
                     serviceLocator<ProjectViewModel>().addHardware(
@@ -394,7 +395,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
-                      pos: Offset.zero,
+                      isFromBuildingPage: false,
                     );
                     if (item.type == ProductType.dsps) {
                       serviceLocator<ProjectViewModel>().addHardware(
@@ -470,7 +471,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
-                      pos: Offset.zero,
+                      isFromBuildingPage: false,
                     );
 
                     serviceLocator<ProjectViewModel>().addHardware(
@@ -549,10 +550,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         floorId: floorId,
                       ),
                       name: item.name,
-                      pos: Offset.zero,
                       assetImagePath: item.assetPath,
                       price: item.price,
                       hardwareName: item.name,
+                      addedFromBuildingPage: false,
                     );
                     serviceLocator<ProjectViewModel>().addHardware(
                       hardware: hardwareRack,
@@ -567,8 +568,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
+                      addedFromBuildingPage: false,
                       name: item.name,
-                      pos: Offset.zero,
                       assetImagePath: item.assetPath,
                       price: item.price,
                       hardwareName: item.name,

@@ -201,9 +201,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (floorListeningAreas.isEmpty) return;
 
     final List<Speaker> speakers = List<Speaker>.from(
-      serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: currentFloor.id).whereType<Speaker>(),
+      serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(floorId: currentFloor.id).whereType<Speaker>(),
     );
-    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
       floorId: currentFloor.id,
     );
     if (!useIsolateEngine) {

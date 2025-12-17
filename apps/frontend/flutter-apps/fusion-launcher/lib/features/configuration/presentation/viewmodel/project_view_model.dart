@@ -20,6 +20,7 @@ export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
 export 'functions/functions_view_model.dart';
 export 'mix_scenes/mix_scenes_view_model.dart';
+export 'equip_location/equip_location_view_model.dart';
 export 'scenes_view_model/scenes_view_model.dart';
 export 'schedule/schedule_view_model.dart';
 

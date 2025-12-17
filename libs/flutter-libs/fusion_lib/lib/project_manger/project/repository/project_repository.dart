@@ -251,3 +251,5 @@ class PrioritySourceDataRepository extends Repository<PrioritySourceData> {
     }
   }
 }
+
+class EquipLocationRepository extends Repository<EquipLocation> {}
