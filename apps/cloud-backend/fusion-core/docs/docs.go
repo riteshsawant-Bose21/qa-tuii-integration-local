@@ -1868,7 +1868,8 @@ const docTemplate = `{
             "required": [
                 "application",
                 "environment_type",
-                "name"
+                "name",
+                "projectId"
             ],
             "properties": {
                 "application": {
@@ -1906,6 +1907,10 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 1,
                     "example": "Conference Room Audio Setup"
+                },
+                "projectId": {
+                    "type": "string",
+                    "example": "50000001-0000-4000-8000-000000000008"
                 },
                 "project_phase": {
                     "allOf": [
