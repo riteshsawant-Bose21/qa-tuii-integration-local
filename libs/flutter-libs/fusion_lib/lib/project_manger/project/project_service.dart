@@ -36,6 +36,7 @@ class ProjectService {
   final ProcessingBlockRepository processingBlocks;
   final ZoneFunctionRepository zoneFunctions;
   final PrioritySourceDataRepository prioritySourceData;
+  final EquipLocationRepository equipLocations;
   final ScenesRepository snapshots;
   final SceneActionRepository sceneActions;
   final SceneSetRepository sceneSets;
@@ -83,6 +84,7 @@ class ProjectService {
     RelationshipManager? relationships,
     ZoneFunctionRepository? zoneFunctions,
     PrioritySourceDataRepository? prioritySourceData,
+    EquipLocationRepository? equipLocations,
     ScenesRepository? scenesRepository,
     SceneActionRepository? sceneActionRepository,
     SceneSetRepository? sceneSetRepository,
@@ -104,6 +106,7 @@ class ProjectService {
        zoneFunctions = zoneFunctions ?? ZoneFunctionRepository(),
        relationships = relationships ?? RelationshipManager(),
        prioritySourceData = prioritySourceData ?? PrioritySourceDataRepository(),
+       equipLocations = equipLocations ?? EquipLocationRepository(),
        snapshots = scenesRepository ?? ScenesRepository(),
        sceneActions = sceneActionRepository ?? SceneActionRepository(),
        sceneSets = sceneSetRepository ?? SceneSetRepository(),
@@ -141,6 +144,7 @@ class ProjectService {
     ZoneFunctionRepository? zoneFunctions,
     bool? isInHardwareMode,
     PrioritySourceDataRepository? prioritySourceData,
+    EquipLocationRepository? equipLocations,
     ScenesRepository? scenesRepository,
     SceneActionRepository? sceneActionRepository,
     SceneSetRepository? sceneSetRepository,
@@ -178,6 +182,7 @@ class ProjectService {
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
+      equipLocations: equipLocations ?? this.equipLocations,
       scenesRepository: scenesRepository ?? snapshots,
       sceneActionRepository: sceneActionRepository ?? sceneActions,
       sceneSetRepository: sceneSetRepository ?? sceneSets,
@@ -237,6 +242,7 @@ class ProjectService {
       "relationships": relationships.toJson(),
       "zoneFunctions": zoneFunctions.toJson((f) => f.toJson()),
       "prioritySourceData": prioritySourceData.toJson((psd) => psd.toJson()),
+      'equipLocations': equipLocations.toJson((el) => el.toJson()),
       "snapshots": snapshots.toJson((s) => s.toJson()),
       "sceneActions": sceneActions.toJson((sa) => sa.toJson()),
       "sceneSets": sceneSets.toJson((ss) => ss.toJson()),
@@ -301,6 +307,7 @@ class ProjectService {
     service.processingBlocks.fromJsonList(json["processingBlocks"], (m) => ProcessingBlockModel.fromJson(m), "id");
     service.zoneFunctions.fromJsonList(json["zoneFunctions"], (m) => ZoneFunctions.fromJson(m), "id");
     service.prioritySourceData.fromJsonList(json["prioritySourceData"], (m) => PrioritySourceData.fromJson(m), "id");
+    service.equipLocations.fromJsonList(json['equipLocations'], (m) => EquipLocation.fromJson(m), 'id');
     service.snapshots.fromJsonList(json["snapshots"], (m) => SnapshotsModel.fromJson(m), "id");
     service.sceneActions.fromJsonList(json["sceneActions"], (m) => SceneActionModel.fromJson(m), "id");
     service.sceneSets.fromJsonList(json["sceneSets"], (m) => SceneSetModel.fromJson(m), "id");

@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-
-import '../../../../../core/constants/assets_constants.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ListeningAreasPanel extends StatefulWidget {
   const ListeningAreasPanel({super.key});
@@ -118,7 +117,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
 
     // Get speakers for this listening area
     final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id);
-    final List<Speaker> speakers = allHardware.whereType<Speaker>().toList();
+    final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos != null).toList();
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -151,17 +150,12 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     ),
                   ),
                   const SizedBox(width: 4),
-                  // Listening area icon
-                  SvgPicture.asset(
-                    Assets.listeningAreaSvg,
-                    width: 14,
-                    height: 14,
-                    colorFilter: const ColorFilter.mode(
-                      Colors.black87,
-                      BlendMode.srcIn,
-                    ),
+                  Icon(
+                    LucideIcons.maximize200,
+                    size: 12,
+                    color: context.colorScheme.onSurface,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 4),
                   Expanded(
                     child: FusionAppText(
                       text: "$floorName / ${area.name}",

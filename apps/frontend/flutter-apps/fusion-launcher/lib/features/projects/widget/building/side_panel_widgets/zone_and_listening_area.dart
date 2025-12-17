@@ -1153,6 +1153,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final CircuitModel newCircuit = CircuitModel(
       name: '${speaker.hardwareName} ${existingCircuits.length + 1}',
       speakerSKU: speaker.speakerSKU,
+      addedInBuildingPage: true,
     );
 
     // Add the circuit to the project

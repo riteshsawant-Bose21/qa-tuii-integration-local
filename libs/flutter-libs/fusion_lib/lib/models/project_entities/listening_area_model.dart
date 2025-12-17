@@ -16,6 +16,7 @@ class ListeningArea {
   final double minSPL;
   final double maxSPL;
   final double customListeningAreaHeight;
+  final bool isDrawn;
 
   ListeningArea({
     String? id,
@@ -28,7 +29,9 @@ class ListeningArea {
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}";
+    bool? isDrawn,
+  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}",
+       isDrawn = isDrawn ?? vertices.isNotEmpty;
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
     if (vertices.isEmpty) return <Offset>[];
@@ -138,6 +141,7 @@ class ListeningArea {
     'minSPL': minSPL,
     'maxSPL': maxSPL,
     'customListeningAreaHeight': customListeningAreaHeight,
+    'isDrawn': isDrawn,
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -164,6 +168,7 @@ class ListeningArea {
       customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
+      isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
     );
   }
 
