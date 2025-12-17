@@ -359,7 +359,8 @@ class _SavedProjectListState extends State<_SavedProjectList> {
                         } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
                           return Center(
                             child: FusionAppText(
-                              text: "No Projects Saved Yet",
+                              text: "No Projects Saved Yet. Create a new project to get started!",
+                              textAlign: TextAlign.center,
                               style: context.textTheme.labelLarge?.copyWith(
                                 fontSize: 16,
                                 color: context.colorScheme.onSurface.withValues(alpha: 0.4),

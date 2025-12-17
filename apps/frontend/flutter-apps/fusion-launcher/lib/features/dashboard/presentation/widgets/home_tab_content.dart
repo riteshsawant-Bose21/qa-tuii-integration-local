@@ -200,16 +200,15 @@ class _RecentProjects extends StatelessWidget {
               }
             },
             builder: (BuildContext context, ProjectViewModelState state) {
-              if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+              if (!serviceLocator<ProjectViewModel>().hasProjects) {
                 return Center(
                   child: SizedBox(
-                    width: 262,
                     height: 166,
                     child: Center(
                       child: FusionAppText(
-                        text: "No Projects Available",
+                        text: "No recent projects found.\nCreate a new project to get started!",
+                        textAlign: TextAlign.center,
                         style: context.textTheme.labelLarge?.copyWith(
-                          fontSize: 16,
                           color: context.colorScheme.onSurface.withValues(alpha: 0.4),
                         ),
                       ),

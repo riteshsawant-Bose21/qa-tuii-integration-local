@@ -174,6 +174,7 @@ class FusionAppTheme {
   /// Returns a fully configured [ThemeData] for light theme
   static ThemeData get lightTheme {
     final lightColorScheme = ColorScheme.fromSeed(
+      primary: Color(0xFF2F7554),
       seedColor: const Color(0xFF146C94), // Using your primary color
       brightness: Brightness.light,
     );
@@ -182,7 +183,7 @@ class FusionAppTheme {
       // Primary color scheme using custom primary color
       colorScheme: lightColorScheme,
       fontFamily: GoogleFonts.montserrat().fontFamily,
-
+      primaryColor: Color(0xFF2F7554),
       // Custom TextTheme with proper color assignments
       textTheme: _createTextTheme(lightColorScheme),
 
@@ -306,7 +307,7 @@ class FusionAppTheme {
       primary: Color(0xFF2F7554),
       onPrimary: Colors.white,
       surface: Color(0xFF1D1D1D),
-      
+
       onSurface: Colors.white,
       surfaceDim: Color(0xFFC0C0C0),
       seedColor: const Color(0xFF80C7FF), // Using your dark primary color
@@ -318,6 +319,7 @@ class FusionAppTheme {
       colorScheme: darkColorScheme,
       scaffoldBackgroundColor: darkColorScheme.surface,
       fontFamily: GoogleFonts.montserrat().fontFamily,
+      primaryColor: Color(0xFF2F7554),
 
       // Custom TextTheme with proper dark theme color assignments
       textTheme: _createTextTheme(darkColorScheme),

@@ -140,6 +140,7 @@ class ProjectCard extends StatelessWidget {
                     return <PopupMenuEntry<String>>[
                       const PopupMenuItem<String>(
                         value: 'delete',
+                        height: 36,
                         child: Row(
                           children: <Widget>[
                             Icon(LucideIcons.trash),

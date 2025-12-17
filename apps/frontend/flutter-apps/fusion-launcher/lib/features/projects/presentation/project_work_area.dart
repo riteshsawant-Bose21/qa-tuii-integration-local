@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/side_speaker_section.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -32,7 +33,6 @@ import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
 import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
-import '../widget/building/side_panel_widgets/product_query_popup.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
@@ -385,7 +385,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         side: "left",
         allowUndock: false,
         isCollapsibleSection: false,
-        dockItemWidget: ProductQueryPopup(),
+        dockItemWidget: SpeakerSelectionWidget(),
       ),
     ];
   }
