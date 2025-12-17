@@ -3,10 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/event_value_widget.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
-import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 import '../../../../core/service_locator.dart';
@@ -66,7 +62,6 @@ class _EventActionRowDataState extends State<EventActionRowData> {
   void _updateActionParam(SceneParam? selected) {
     if (selected != null) {
       _projectViewModel.updateSceneActionParam(actionId: widget.action.id, param: selected, eventId: widget.eventId);
-      setState(() {});
     }
   }
 
@@ -212,7 +207,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
 
     // Check if this event has states (2-state events)
     // final bool eventHasStates = event.states != null && event.states!.length == 2;
-    final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.on;
+    final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.off;
     print("stateType: event.selectedState?.stateType == $stateType");
 
     return Expanded(
@@ -229,8 +224,21 @@ class _EventActionRowDataState extends State<EventActionRowData> {
               // hasStates: eventHasStates,
             ),
         onChanged: (SceneValue value) {
-          /// The EventValueWidget already handles state logic and provides the correct updated value
+          // The EventValueWidget already handles state logic and provides the correct updated value
           _updateActionValue(value);
+
+          // if (action.value != null && action.value!.hasStates) {
+          //   print("has state => ${action.value!.hasStates}");
+          //   final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
+          //   final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.on;
+          //   final SceneValue updatedSceneValue = value.updateStateValue(newValue: value.value ?? '', stateType: stateType);
+          //   _updateActionValue(updatedSceneValue);
+          // } else {
+          //   // final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.on;
+          //   // final SceneValue updatedSceneValue = value.updateStateValue(newValue: value.value ?? '', stateType: stateType);
+          //
+          //   _updateActionValue(value);
+          // }
         },
       ),
     );

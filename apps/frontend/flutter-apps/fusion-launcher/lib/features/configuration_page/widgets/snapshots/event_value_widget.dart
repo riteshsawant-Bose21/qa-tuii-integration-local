@@ -31,16 +31,6 @@ class _EventValueWidgetState extends State<EventValueWidget> {
   Widget build(BuildContext context) {
     final SceneValue value = widget.value;
 
-    // Debug: Print current state information
-    print('=== EventValueWidget Debug ===');
-    print('StateType: ${widget.stateType}');
-    print('HasStates: ${value.hasStates}');
-    print('Current Value: ${value.getValue(stateType: widget.stateType)}');
-    print('States Value1: ${value.states?.value1}');
-    print('States Value2: ${value.states?.value2}');
-    print('Regular Value: ${value.value}');
-    print('=============================');
-
     switch (value.valueType) {
       /// Mute / Unmute (stored as "mute" or "unmute")
       case SceneParamValueType.muteUnmute:
@@ -53,12 +43,12 @@ class _EventValueWidgetState extends State<EventValueWidget> {
             SceneValue updated;
 
             if (value.hasStates) {
-              // If this is the first time setting a state value and states are empty,
-              // initialize with appropriate defaults
+              /// If this is the first time setting a state value and states are empty,
+              /// initialize with appropriate defaults
               if (value.states == null) {
-                // Initialize both states with different defaults
-                // Above state gets "unmute", Below state gets "mute" by default
-                // The current state gets the new value the user is setting
+                /// Initialize both states with different defaults
+                /// Above state gets "unmute", Below state gets "mute" by default
+                /// The current state gets the new value the user is setting
                 final String value1 = widget.stateType == EventStateTypes.above ? newValue : "unmute";
                 final String value2 = widget.stateType == EventStateTypes.below ? newValue : "mute";
 
@@ -77,7 +67,6 @@ class _EventValueWidgetState extends State<EventValueWidget> {
             }
 
             widget.onChanged(updated);
-            setState(() {});
           },
           child: Row(
             children: <Widget>[
@@ -123,11 +112,11 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                     SceneValue updated;
 
                     if (value.hasStates) {
-                      // If this is the first time setting a state value and states are empty,
-                      // initialize with appropriate defaults
+                      /// If this is the first time setting a state value and states are empty,
+                      /// initialize with appropriate defaults
                       if (value.states == null) {
-                        // Above state gets higher volume (80), Below state gets lower volume (20) by default
-                        // The current state gets the new value the user is setting
+                        /// Above state gets higher volume (80), Below state gets lower volume (20) by default
+                        /// The current state gets the new value the user is setting
                         final String value1 = widget.stateType == EventStateTypes.above ? v.toString() : "80";
                         final String value2 = widget.stateType == EventStateTypes.below ? v.toString() : "20";
 
@@ -146,7 +135,6 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                     }
 
                     widget.onChanged(updated);
-                    setState(() {});
                   },
                 ),
               ),
@@ -224,7 +212,6 @@ class _EventValueWidgetState extends State<EventValueWidget> {
             }
 
             widget.onChanged(updated);
-            setState(() {});
           },
         );
 
@@ -326,7 +313,6 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                 }
 
                 widget.onChanged(updated);
-                setState(() {});
               },
             ),
           ),
