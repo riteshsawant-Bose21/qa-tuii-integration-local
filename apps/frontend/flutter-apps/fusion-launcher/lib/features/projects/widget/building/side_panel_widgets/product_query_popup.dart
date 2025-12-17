@@ -1,9 +1,14 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
+import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
+import 'package:fusion_launcher/features/projects/widget/building/widgets/grid_view.dart';
+import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
@@ -192,7 +197,7 @@ class _PopUpWidget extends StatefulWidget {
 class _PopUpWidgetState extends State<_PopUpWidget> {
   Speaker? selectedSpeaker;
 
-  final Products productsApi = Products(baseUrl: 'http://localhost:8080');
+  final Products productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl);
   _MountingType? _selectedMountingType;
   _LowFrequency? _selectedLowFrequency;
   _Color? _selectedColor;
@@ -412,10 +417,12 @@ class _PopUpWidgetState extends State<_PopUpWidget> {
                 Builder(
                   builder: (BuildContext context) {
                     if (speakers == null) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
+                      return const Expanded(
+                        child: Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CupertinoActivityIndicator(),
+                          ),
                         ),
                       );
                     } else if (speakers!.isEmpty) {
@@ -580,7 +587,7 @@ class _PopUpWidgetState extends State<_PopUpWidget> {
                                                                 }),
                                                               ];
 
-                                                              return _CustomGrid(children: children);
+                                                              return BuildingPageGridView(children: children);
                                                             },
                                                           ),
                                                         ],
@@ -702,154 +709,6 @@ class _PopUpWidgetState extends State<_PopUpWidget> {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _DropDown extends StatefulWidget {
-  final String? value;
-  final String? hintText;
-  final List<String> options;
-  final ValueChanged<String> onSelect;
-
-  const _DropDown({
-    this.value,
-    this.hintText,
-    this.options = const <String>[],
-    required this.onSelect,
-  });
-
-  @override
-  State<_DropDown> createState() => __DropDownState();
-}
-
-class __DropDownState extends State<_DropDown> {
-  bool isFocused = false;
-  late FocusNode _focusNode;
-
-  @override
-  void initState() {
-    super.initState();
-    _focusNode = FocusNode();
-    _focusNode.addListener(() {
-      setState(() {
-        isFocused = _focusNode.hasFocus;
-      });
-    });
-  }
-
-  @override
-  void dispose() {
-    _focusNode.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 32,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        color: context.colorScheme.surface,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Theme(
-        data: Theme.of(context).copyWith(
-          popupMenuTheme: const PopupMenuThemeData(
-            color: Color(0xFFF5F5F5),
-            elevation: 0,
-            shadowColor: Colors.transparent,
-            surfaceTintColor: Colors.transparent,
-          ),
-          splashColor: Colors.transparent, // Disable ripple
-          highlightColor: Colors.transparent, // Disable tap highlight
-          hoverColor: Colors.transparent, // Disable hover color
-        ),
-        child: PopupMenuButton<String>(
-          color: context.colorScheme.surfaceContainer,
-          shadowColor: Colors.transparent,
-          position: PopupMenuPosition.under,
-          tooltip: '',
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          offset: const Offset(0, 10),
-          padding: EdgeInsets.zero,
-          menuPadding: EdgeInsets.zero,
-          clipBehavior: Clip.none,
-          itemBuilder: (BuildContext context) {
-            return <PopupMenuEntry<String>>[
-              PopupMenuItem<String>(
-                enabled: false,
-                height: 50,
-                padding: const EdgeInsets.all(8).copyWith(right: 0),
-                child: Builder(
-                  builder: (BuildContext context) {
-                    if (widget.options.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: FusionAppText(
-                          text: "No options available",
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            color: context.colorScheme.onSurface.withValues(alpha: 0.5),
-                          ),
-                        ),
-                      );
-                    }
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        ...widget.options.map(
-                          (String value) => GestureDetector(
-                            onTap: () {
-                              widget.onSelect(value);
-                              Navigator.of(context).pop();
-                            },
-                            behavior: HitTestBehavior.translucent,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                              child: FusionAppText(
-                                text: value,
-                                style: Theme.of(context).textTheme.labelMedium,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
-              ),
-            ];
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: FusionAppText(
-                      text: widget.value ?? widget.hintText ?? 'Select',
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
-                        fontWeight: FontWeight.normal,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  color: Colors.grey[600],
-                  size: 16,
-                ),
-              ],
-            ),
-          ),
-        ),
       ),
     );
   }
@@ -1103,7 +962,7 @@ class _ListeningAreaPropertiesState extends State<_ListeningAreaProperties> {
                           // Show custom listening height text field if "Custom" is selected
                           if (isCustomListeningHeight) ...<Widget>[
                             const SizedBox(height: 5),
-                            _BuildTextField(
+                            BuildingPageTextField(
                               label: "Custom Height",
                               controller: customListeningHeightController,
                               hintText: "e.g. 4.5",
@@ -1160,7 +1019,7 @@ class _ListeningAreaPropertiesState extends State<_ListeningAreaProperties> {
                             ),
                           ],
                           const SizedBox(height: 5),
-                          _BuildTextField(
+                          BuildingPageTextField(
                             label: "Ceiling Ht",
                             controller: ceilingHeightController,
                             hintText: "e.g., 10 ft",
@@ -1435,7 +1294,7 @@ class _ListeningAreaPropertiesState extends State<_ListeningAreaProperties> {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: _DropDown(
+          child: BuildingPageDronDown(
             value: value,
             hintText: "Select type",
             options: options,
@@ -1464,153 +1323,6 @@ class _ListeningAreaPropertiesState extends State<_ListeningAreaProperties> {
     } else {
       return "Background Music"; // Default fallback
     }
-  }
-}
-
-class _BuildTextField extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final String? hintText;
-  final List<TextInputFormatter>? inputFormatters;
-  final ValueChanged<String>? onChanged;
-  final FormFieldValidator<String>? validator;
-  final ValueChanged<String>? onFieldSubmitted;
-
-  const _BuildTextField({
-    required this.label,
-    required this.controller,
-    this.hintText,
-    this.inputFormatters,
-    this.onChanged,
-    this.validator,
-    this.onFieldSubmitted,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: <Widget>[
-        Expanded(
-          child: FusionAppText(
-            text: label,
-            style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.onSurface,
-              fontWeight: FontWeight.normal,
-            ),
-          ),
-        ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
-            decoration: InputDecoration(
-              isDense: true,
-              contentPadding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
-              hintText: hintText,
-              hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-              fillColor: context.colorScheme.surface,
-              filled: true,
-              border: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-              errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(6)),
-            ),
-            inputFormatters: inputFormatters,
-            validator: validator,
-            onChanged: onChanged,
-            onFieldSubmitted: onFieldSubmitted,
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class FusionRadio<T> extends StatelessWidget {
-  final T? selected;
-  final List<T> options;
-  final ValueChanged<T>? onChanged;
-  final Widget Function(T option) labelBuilder;
-
-  const FusionRadio({
-    super.key,
-    required this.selected,
-    required this.options,
-    required this.labelBuilder,
-    this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      alignment: WrapAlignment.start,
-      runAlignment: WrapAlignment.start,
-      crossAxisAlignment: WrapCrossAlignment.start,
-      children: <Widget>[
-        ...options.map((T option) {
-          final bool isSelected = selected == option;
-
-          return MouseRegion(
-            cursor: SystemMouseCursors.click,
-            child: GestureDetector(
-              onTap: () => onChanged?.call(option),
-              behavior: HitTestBehavior.translucent,
-              child: Row(
-                spacing: 4,
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  Icon(
-                    isSelected ? Icons.radio_button_checked : Icons.radio_button_off,
-                    size: 16,
-                    color: context.colorScheme.onSurface,
-                  ),
-
-                  labelBuilder(option),
-                ],
-              ),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-}
-
-class _CustomGrid extends StatelessWidget {
-  const _CustomGrid({required this.children});
-
-  final List<Widget> children;
-
-  @override
-  Widget build(BuildContext context) {
-    const double itemWidth = 120;
-    const double spacing = 8;
-
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        final int itemsPerRow = (constraints.maxWidth / itemWidth).floor().clamp(1, 100);
-
-        final double actualWidth = (constraints.maxWidth - (itemsPerRow - 1) * spacing) / itemsPerRow;
-
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: <Widget>[
-            ...children.map((Widget child) {
-              return SizedBox(
-                width: actualWidth,
-                child: child,
-              );
-            }),
-          ],
-        );
-      },
-    );
   }
 }
 

@@ -28,6 +28,7 @@ export 'others/fusion_horizontal_resizable_widget.dart';
 export 'others/fusion_toast.dart';
 export 'others/fusion_svg_icon.dart';
 export 'others/fusion_arrow_popup.dart';
+export 'others/fusion_radio.dart';
 
 /// text views
 export 'text_views/fusion_app_text.dart';
