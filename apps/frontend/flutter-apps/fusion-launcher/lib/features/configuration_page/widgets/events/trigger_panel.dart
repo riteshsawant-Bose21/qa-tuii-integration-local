@@ -110,17 +110,7 @@ class TriggerPanel extends StatelessWidget {
                           buildDefaultDragHandles: false,
                           physics: const ClampingScrollPhysics(),
                           itemCount: eventActionsList.length,
-                          onReorder: (int oldIndex, int newIndex) {
-                            // Adjust newIndex when dragging down
-                            // if (newIndex > oldIndex) {
-                            //   newIndex -= 1;
-                            // }
-                            // _projectViewModel.reOderSceneActionsInEvent(
-                            //   eventId: selectedEventId,
-                            //   oldIndex: oldIndex,
-                            //   newIndex: newIndex,
-                            // );
-                          },
+                          onReorder: (int oldIndex, int newIndex) {},
                           itemBuilder: (BuildContext context, int index) {
                             final SceneActionModel action = eventActionsList[index];
                             return EventActionRowData(

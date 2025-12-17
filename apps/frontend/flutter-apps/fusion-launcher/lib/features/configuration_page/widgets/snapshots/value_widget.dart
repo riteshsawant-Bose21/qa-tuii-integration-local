@@ -111,12 +111,15 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
           return const Text('No parameter selected');
         }
 
+        print('Fetching dropdown items for actionId: ${widget.actionId}');
+
         final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(widget.actionId);
 
         /// Find selected value by matching the stored string value with item labels
         SceneValueDropdown? selectedValue;
         if (value.value != null && value.value!.isNotEmpty && items.isNotEmpty) {
           try {
+            print('Finding selected value for: ${value.value}');
             selectedValue = items.firstWhere(
               (SceneValueDropdown item) => item.label == value.value || item.value == value.value,
             );
