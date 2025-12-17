@@ -81,7 +81,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
             secondaryButtonLabel: 'Cancel',
             onSecondaryPressed: () => Navigator.of(context).pop(),
             onPrimaryPressed: () {
-              _projectViewModel.removeSceneAction(actionId: widget.action.id);
+              _projectViewModel.removeActionFromEvent(actionId: widget.action.id, eventId: widget.eventId);
               FusionToast.success(context, message: "Action deleted successfully");
               Navigator.of(context).pop();
             },
@@ -90,7 +90,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
   }
 
   void _duplicateAction() {
-    _projectViewModel.duplicateSceneAction(actionId: widget.action.id);
+    _projectViewModel.duplicateActionInEvent(eventId: widget.eventId, actionId: widget.action.id);
     FusionToast.success(context, message: "Action duplicated successfully");
   }
 
