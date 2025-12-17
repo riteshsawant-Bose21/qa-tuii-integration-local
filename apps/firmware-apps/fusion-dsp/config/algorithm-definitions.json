@@ -1,5 +1,5 @@
 {
-    "version": "0.1.12",
+    "version": "0.1.13",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -380,6 +380,111 @@
                     "maximum_value": 0.0,
                     "telemetry_type": "meter",
                     "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "fir_hybrid",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "num_taps",
+                    "value_type": "integer",
+                    "default_value": 512,
+                    "minimum_value": 32,
+                    "maximum_value": 98304
+                },
+                {
+                    "name": "direct_taps",
+                    "value_type": "integer",
+                    "default_value": 128,
+                    "minimum_value": 0,
+                    "maximum_value": 1024
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "coefficients",
+                    "value_type": "float",
+                    "dimensions": ["num_taps"],
+                    "default_value": 0.0,
+                    "minimum_value": -10.0,
+                    "maximum_value": 10.0
+                }
+            ]
+        },
+        {
+            "name": "fir_direct",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "num_taps",
+                    "value_type": "integer",
+                    "default_value": 512,
+                    "minimum_value": 32,
+                    "maximum_value": 98304
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "coefficients",
+                    "value_type": "float",
+                    "dimensions": ["num_taps"],
+                    "default_value": 0.0,
+                    "minimum_value": -10.0,
+                    "maximum_value": 10.0
                 }
             ]
         },
