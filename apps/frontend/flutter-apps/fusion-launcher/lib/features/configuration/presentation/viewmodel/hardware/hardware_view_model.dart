@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/models/project_entities/controller.dart';
 import 'package:fusion_lib/models/project_entities/endpoints.dart';
+import 'package:fusion_lib/product_data/models/speaker_product.dart';
 
 extension HardwareViewModel on ProjectViewModel {
   //get Hardware by id
@@ -378,6 +379,39 @@ extension HardwareViewModel on ProjectViewModel {
       );
       clearSelectedProduct();
     }
+  }
+
+  Speaker fromSpeakerProductModel(
+    String assetImagePath,
+    SpeakerProduct product,
+    LocationModel locationEntity,
+    bool isFromBuildingPage,
+  ) {
+    return Speaker(
+      locationEntity: locationEntity,
+      name: product.modelFamily,
+      pos: null,
+      zAxis: 300.0,
+      speakerSKU: product.skus.first.toString(),
+      gain: 0.0,
+      addedFromBuildingPage: isFromBuildingPage,
+      assetImagePath: assetImagePath,
+      type: OutputType.analogOutput,
+      price: 300,
+      // price: product.price, // TODO: add price
+      pitch: product.mountType == "pendant" || product.mountType == "ceiling" ? 90.0 : 0.0,
+      inputPortsData: <PortData>[
+        PortData(
+          name: "In",
+          position: PortPosition.bottomRight,
+          portNumber: 1,
+          compatibleTypes: <PortType>[PortType.amplifierOutput],
+          type: PortType.analogInput,
+          description: PortType.analogInput.description,
+        ),
+      ],
+      outputPortsData: <PortData>[],
+    );
   }
 
   HardwareComponent fromProductQueryModel(
