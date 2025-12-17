@@ -31,6 +31,7 @@ import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/equipment_location/equipment_location_section.dart';
 import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/product_query_popup.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
@@ -386,6 +387,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         allowUndock: false,
         isCollapsibleSection: false,
         dockItemWidget: ProductQueryPopup(),
+      ),
+      // if (toolbarMode == ToolbarMode.system)
+      DockItemConfig(
+        id: "21",
+        title: "EQUIPMENT LOCATIONS",
+        side: "left",
+        allowUndock: false,
+        isCollapsibleSection: false,
+        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
       ),
     ];
   }
