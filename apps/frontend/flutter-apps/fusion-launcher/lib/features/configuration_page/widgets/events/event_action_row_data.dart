@@ -212,13 +212,14 @@ class _EventActionRowDataState extends State<EventActionRowData> {
 
     // Check if this event has states (2-state events)
     // final bool eventHasStates = event.states != null && event.states!.length == 2;
-    print("stateType: event.selectedState!.stateType ==${event.selectedState!.stateType}");
+    final EventStateTypes stateType = event.selectedState?.stateType ?? EventStateTypes.on;
+    print("stateType: event.selectedState?.stateType == $stateType");
 
     return Expanded(
       child: EventValueWidget(
         key: ValueKey<String>(action.id),
         actionId: action.id,
-        stateType: event.selectedState!.stateType,
+        stateType: stateType,
         value:
             action.value ??
             SceneValue(
@@ -228,19 +229,8 @@ class _EventActionRowDataState extends State<EventActionRowData> {
               // hasStates: eventHasStates,
             ),
         onChanged: (SceneValue value) {
-          // The EventValueWidget already handles state logic and provides the correct updated value
+          /// The EventValueWidget already handles state logic and provides the correct updated value
           _updateActionValue(value);
-
-          // if (action.value != null && action.value!.hasStates) {
-          //   print("has state => ${action.value!.hasStates}");
-          //   final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
-          //   final SceneValue updatedSceneValue = value.updateStateValue(newValue: value.value ?? '', stateType: event.selectedState!.stateType);
-          //   _updateActionValue(updatedSceneValue);
-          // } else {
-          //   // final SceneValue updatedSceneValue = value.updateStateValue(newValue: value.value ?? '', stateType: event.selectedState!.stateType);
-          //
-          //   _updateActionValue(value);
-          // }
         },
       ),
     );
