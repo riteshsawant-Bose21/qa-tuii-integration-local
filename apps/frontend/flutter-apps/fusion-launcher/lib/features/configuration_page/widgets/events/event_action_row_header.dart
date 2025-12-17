@@ -15,7 +15,7 @@ class EventActionRowHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
-    final double responsivePadding = screenWidth * 0.12;
+    final double responsivePadding = screenWidth * 0.09;
     return Column(
       children: <Widget>[
         Container(
@@ -132,21 +132,20 @@ class EventActionRowHeader extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           color: Theme.of(context).colorScheme.grey.withAlpha(40),
           child: Row(
+            spacing: screenWidth * 0.01,
+
             children: <Widget>[
-              SizedBox(width: screenWidth * 0.02), // Responsive width instead of hardcoded 30
+              SizedBox(width: screenWidth * 0.01),
               const _HeaderCell(text: "Action Type"),
-              SizedBox(width: screenWidth * 0.02), // Responsive spacing instead of hardcoded 16
 
               const _HeaderCell(text: "Action Item"),
-              SizedBox(width: screenWidth * 0.02),
 
               const _HeaderCell(text: "Param / Action"),
-              SizedBox(width: screenWidth * 0.02),
 
               const _HeaderCell(
                 text: "Value",
               ),
-              SizedBox(width: screenWidth * 0.04), // Responsive spacing instead of hardcoded 64
+              SizedBox(width: screenWidth * 0.046),
             ],
           ),
         ),

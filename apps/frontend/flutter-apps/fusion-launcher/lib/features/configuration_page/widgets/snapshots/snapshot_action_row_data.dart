@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/value_widget.dart';
+import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_value_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
@@ -208,7 +208,7 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
 
     return Expanded(
-      child: ValueWidgetForRow(
+      child: SnapshotValueWidget(
         actionId: action.id,
         value:
             action.value ??
