@@ -157,6 +157,10 @@ static void gpt_program_next_compare(struct fusion_gpt *g)
     u32 inc = PERIOD_TICKS_BASE;
     if (++g->frac == 3) { inc += 1; g->frac = 0; }
     g->next_ocr1 += inc;
+    /* If we ever program a compare that is already behind CNT, roll it forward
+     * so we don't wait for a full 32-bit wrap to see OF1 again. */
+    if ((s32)(g->next_ocr1 - g->last32) <= 0)
+        g->next_ocr1 = g->last32 + inc;
     wrl(g, g->next_ocr1, GPT_OCR1);
 }
 
