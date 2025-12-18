@@ -1,13 +1,16 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/amplifier_product.dart';
 import 'package:fusion_lib/product_data/models/dsp_product.dart';
 import 'package:fusion_lib/product_data/models/io_endpoint_product.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
 class EqlProductsVm extends Cubit<EQLProductsState> {
-  EqlProductsVm()
+  final ProjectViewModel projectViewModel;
+  EqlProductsVm(this.projectViewModel)
     : super(
         EQLProductsState(
           filters: EQLProductFilters(
@@ -33,7 +36,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.amplifier,
-          price: "\$290.00",
+          price: 290.00,
           specifications: <String, String>{
             "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
             "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
@@ -56,7 +59,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.endpoint,
           description: element.shortDescription ?? element.description,
-          price: "\$150.00",
+          price: 150.00,
           specifications: <String, String>{
             "Input Type": element.inputs?.type ?? "-",
             "no.Of inputs": element.inputs?.quantity.toString() ?? "-",
@@ -75,7 +78,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.processor,
-          price: "\$200.00",
+          price: 200.00,
           description: element.shortDescription ?? element.description,
           specifications: <String, String>{
             "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
@@ -130,6 +133,44 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       ),
     );
     loadProducts();
+  }
+
+  void addProductToLocation({required String equipLocationId, required EQLProduct product}) {
+    final HardwareComponent hardware = _createHardwareFor(product);
+    projectViewModel.addHardware(hardware: hardware);
+    projectViewModel.addHardwareToEquipLocation(
+      equipLocationId: equipLocationId,
+      hardwareId: hardware.id,
+    );
+  }
+
+  HardwareComponent _createHardwareFor(EQLProduct product) {
+    final HardwareComponent hardware = projectViewModel.fromProductQueryModel(
+      _createPQMFor(product),
+      locationEntity: LocationModel(),
+      isFromBuildingPage: true,
+    );
+    return hardware;
+  }
+
+  ProductQueryModel _createPQMFor(EQLProduct product) {
+    return ProductQueryModel(
+      name: product.name,
+      price: product.price,
+      image: product.assetPath ?? '',
+      type: switch (product.deviceType) {
+        EQLDeviceType.amplifier => ProductType.amplifier,
+        EQLDeviceType.endpoint => ProductType.endpoints,
+        EQLDeviceType.processor => ProductType.dsps,
+        EQLDeviceType.mixerAmp => ProductType.amplifier,
+      },
+      sku: switch (product.data) {
+        final AmplifierProduct a => a.skus.isNotEmpty ? a.skus.first.toString() : 'UNKNOWN',
+        final IoEndpointProduct i => i.skus.isNotEmpty ? i.skus.first.toString() : 'UNKNOWN',
+        final DspProduct d => d.skus.isNotEmpty ? d.skus.first.toString() : 'UNKNOWN',
+        _ => 'UNKNOWN',
+      },
+    );
   }
 }
 
@@ -212,7 +253,7 @@ class EQLProduct {
   final dynamic data;
   final String searchingFields;
   final EQLDeviceType deviceType;
-  final String price;
+  final double price;
   final Map<String, String> specifications;
   EQLProduct({
     required this.name,

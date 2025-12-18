@@ -9,6 +9,7 @@ import 'package:fusion_lib/models/project_entities/hardware_component_model.dart
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../../../../configuration_page/widgets/snapshots/snapshots_and_scenes_panel.dart';
 
 class EquipmentLocationSection extends StatelessWidget {
   const EquipmentLocationSection({super.key});
@@ -36,14 +37,48 @@ class EquipmentLocationSection extends StatelessWidget {
                     ),
                   ),
 
-                  InkWell(
-                    onTap: () {
-                      BlocProvider.of<ProjectViewModel>(context).addEquipLocation(
-                        equipLocation: EquipLocation(
-                          name: 'Equipment Location ${equipmentLocations.length + 1}',
-                        ),
-                      );
-                    },
+                  PopupMenuButton<dynamic>(
+                    onSelected: (dynamic value) {},
+                    shadowColor: Colors.transparent,
+                    color: Colors.transparent,
+                    itemBuilder:
+                        (BuildContext context) => <PopupMenuItem<dynamic>>[
+                          PopupMenuItem<dynamic>(
+                            enabled: false,
+                            padding: EdgeInsets.zero,
+                            child: SizedBox(
+                              width: 250,
+                              child: StatefulBuilder(
+                                builder: (BuildContext context, StateSetter setMenuState) {
+                                  final TextEditingController snapshotsNameController = TextEditingController();
+                                  return SingleChildScrollView(
+                                    child: CreateSnapshotsOrScenesWidget(
+                                      headerText: 'Equipment Location',
+                                      nameController: snapshotsNameController,
+                                      onCreate: () {
+                                        /// Pass popup context so only the menu closes.
+                                        BlocProvider.of<ProjectViewModel>(context).addEquipLocation(
+                                          equipLocation: EquipLocation(
+                                            name: snapshotsNameController.text,
+                                          ),
+                                        );
+                                        if (Navigator.of(context).canPop()) {
+                                          Navigator.of(context).pop();
+                                        }
+                                      },
+                                      onCancel: () {
+                                        /// Cancel inside popup: close only popup.
+                                        if (Navigator.of(context).canPop()) {
+                                          Navigator.of(context).pop();
+                                        }
+                                      },
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                        ],
                     child: Padding(
                       padding: const EdgeInsets.all(3.0),
                       child: Icon(
@@ -62,6 +97,7 @@ class EquipmentLocationSection extends StatelessWidget {
                 child: _ExpansionTile(
                   title: location.name,
                   isExpanded: true,
+                  location: location,
                   trailing: SizedBox(
                     height: 24,
                     width: 24,
@@ -101,7 +137,7 @@ class EquipmentLocationSection extends StatelessWidget {
                       final List<HardwareComponent> hardwares = BlocProvider.of<ProjectViewModel>(
                         context,
                       ).getHardwareForEquipLocation(equipLocationId: location.id);
-
+                      print("Hardware count: ${hardwares.length}");
                       return Column(
                         children: <Widget>[
                           for (final HardwareComponent hardware in hardwares)
@@ -118,6 +154,7 @@ class EquipmentLocationSection extends StatelessWidget {
                                   Expanded(
                                     child: FusionAppText(
                                       text: hardware.name,
+                                      maxLine: 1,
                                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                         fontSize: 11,
                                       ),
@@ -145,11 +182,13 @@ class _ExpansionTile extends StatefulWidget {
     required this.child,
     this.isExpanded = false,
     required this.trailing,
+    required this.location,
   });
   final String title;
   final Widget child;
   final bool isExpanded;
   final Widget trailing;
+  final EquipLocation location;
   @override
   State<_ExpansionTile> createState() => __ExpansionTileState();
 }
@@ -205,7 +244,7 @@ class __ExpansionTileState extends State<_ExpansionTile> {
               child: RightAlignedPopupMenu(
                 menuContent: Theme(
                   data: ThemeData.dark(),
-                  child:  EquipmentLocationDialog(equipmentLocationId: widget.title),
+                  child: EquipmentLocationDialog(equipmentLocationId: widget.location.id),
                 ),
                 child: FusionAppText(
                   text: widget.title,
@@ -219,7 +258,15 @@ class __ExpansionTileState extends State<_ExpansionTile> {
             widget.trailing,
           ],
         ),
-        AnimatedSize(duration: const Duration(milliseconds: 200), child: isExpanded ? widget.child : const SizedBox.shrink()),
+        AnimatedSize(
+          duration: const Duration(milliseconds: 200),
+          child:
+              isExpanded
+                  ? widget.child
+                  : const SizedBox(
+                    width: double.infinity,
+                  ),
+        ),
       ],
     );
   }

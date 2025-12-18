@@ -4,11 +4,14 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/viewmodel/eql_products_vm.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:nested/nested.dart';
 
+import '../../../../viewmodel/equipment_location_viewmodel.dart';
 import '../../widgets/drop_down.dart';
 import '../../widgets/grid_view.dart';
 
@@ -17,8 +20,23 @@ class EquipmentLocationDialog extends StatelessWidget {
   final String equipmentLocationId;
   @override
   Widget build(BuildContext context) {
-    return BlocProvider<EqlProductsVm>(
-      create: (BuildContext context) => EqlProductsVm(),
+    return MultiBlocProvider(
+      providers: <SingleChildWidget>[
+        BlocProvider<EqlProductsVm>(
+          create:
+              (BuildContext context) => EqlProductsVm(
+                BlocProvider.of<ProjectViewModel>(context),
+              ),
+        ),
+        BlocProvider<EquipmentLocationViewmodel>(
+          create:
+              (BuildContext context) => EquipmentLocationViewmodel(
+                BlocProvider.of<ProjectViewModel>(context),
+                equipmentLocationId,
+              ),
+        ),
+      ],
+
       child: Container(
         width: 640,
         // constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
@@ -42,88 +60,105 @@ class EquipmentLocationDialog extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: <Widget>[
-                      NeumorphicDarkTextField(
-                        prefix: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6),
-                          child: Icon(
-                            LucideIcons.search200,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                        borderRadius: 8,
-                        contentPadding: const EdgeInsets.all(10),
-                        hintText: "Search devices...",
-                        hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
-                        onChanged: (String value) {
-                          vm.updateFilters(state.filters.copyWith(searchQuery: value));
-                        },
+                      const Expanded(
+                        child: _EQLRackPreview(),
                       ),
-                      const SizedBox(height: 10),
-                      Row(
-                        children: <Widget>[
-                          Expanded(
-                            child: FusionAppText(
-                              text: "Recently Viewed",
-                              style: context.textTheme.bodySmall?.copyWith(
-                                fontWeight: FontWeight.normal,
-                                color: context.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () {},
-                              child: FusionSvgIcon(
-                                icon: "assets/svg/sort.svg",
-                                color: context.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: () {},
-                              child: FusionSvgIcon(
-                                icon: "assets/svg/filter.svg",
-                                color: context.colorScheme.onSurface,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 10),
-                      const Divider(
-                        thickness: 0.5,
-                        height: 0,
-                      ),
-
                       Expanded(
-                        child: switch (state.data) {
-                          EQLProductsLoading() => const Center(
-                            child: Padding(
-                              padding: EdgeInsets.all(16.0),
-                              child: CupertinoActivityIndicator(),
+                        child: Column(
+                          children: <Widget>[
+                            NeumorphicDarkTextField(
+                              prefix: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 6),
+                                child: Icon(
+                                  LucideIcons.search200,
+                                  color: Colors.grey[500],
+                                ),
+                              ),
+                              borderRadius: 8,
+                              contentPadding: const EdgeInsets.all(10),
+                              hintText: "Search devices...",
+                              hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
+                              onChanged: (String value) {
+                                vm.updateFilters(state.filters.copyWith(searchQuery: value));
+                              },
                             ),
-                          ),
-                          EQLProductsError(:final String message) => Center(
-                            child: FusionAppText(
-                              text: 'Error: $message',
-                              style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.error),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: "Recently Viewed",
+                                    style: context.textTheme.bodySmall?.copyWith(
+                                      fontWeight: FontWeight.normal,
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: GestureDetector(
+                                    onTap: () {},
+                                    child: FusionSvgIcon(
+                                      icon: "assets/svg/sort.svg",
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: GestureDetector(
+                                    onTap: () {},
+                                    child: FusionSvgIcon(
+                                      icon: "assets/svg/filter.svg",
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          EQLProductsLoaded(:final List<EQLProduct> products) => ListView.builder(
-                            itemCount: products.length,
-                            itemBuilder: (BuildContext context, int index) {
-                              final EQLProduct product = products[index];
+                            const SizedBox(height: 10),
+                            const Divider(
+                              thickness: 0.5,
+                              height: 0,
+                            ),
 
-                              return _ProductTile(product: product);
-                            },
-                          ),
-                          _ => const SizedBox.shrink(),
-                        },
+                            Expanded(
+                              child: switch (state.data) {
+                                EQLProductsLoading() => const Center(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: CupertinoActivityIndicator(),
+                                  ),
+                                ),
+                                EQLProductsError(:final String message) => Center(
+                                  child: FusionAppText(
+                                    text: 'Error: $message',
+                                    style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.error),
+                                  ),
+                                ),
+                                EQLProductsLoaded(:final List<EQLProduct> products) => ListView.builder(
+                                  itemCount: products.length,
+                                  itemBuilder: (BuildContext context, int index) {
+                                    final EQLProduct product = products[index];
+
+                                    return _ProductTile(
+                                      product: product,
+                                      addProduct: () {
+                                        vm.addProductToLocation(
+                                          equipLocationId: equipmentLocationId,
+                                          product: product,
+                                        );
+                                      },
+                                    );
+                                  },
+                                ),
+                                _ => const SizedBox.shrink(),
+                              },
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -325,9 +360,11 @@ class EquipmentLocationDialog extends StatelessWidget {
 class _ProductTile extends StatelessWidget {
   const _ProductTile({
     required this.product,
+    required this.addProduct,
   });
 
   final EQLProduct product;
+  final VoidCallback addProduct;
 
   @override
   Widget build(BuildContext context) {
@@ -398,20 +435,7 @@ class _ProductTile extends StatelessWidget {
                                 Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
                                 Builder(
                                   builder: (BuildContext context) {
-                                    // TODO: hardcoded
                                     final Map<String, String> details = product.specifications;
-                                    // <String, String>{
-                                    //   "Mounting": "Surface",
-                                    //   "Frequency Response": "speaker",
-                                    //   "Environment": "speaker",
-                                    //   "HF Size": "speaker",
-                                    //   "Power Handling": "speaker",
-                                    //   "LF Size": "speaker",
-                                    //   "Sensitivity": "speaker",
-                                    //   "Max. SPL": "speaker",
-                                    //   "Peak Power": "speaker",
-                                    //   "Long Term Power": "speaker",
-                                    // };
 
                                     final List<Widget> children = <Widget>[
                                       ...details.keys.map((String key) {
@@ -459,7 +483,7 @@ class _ProductTile extends StatelessWidget {
                     ),
 
                     FusionAppText(
-                      text: "\$290.00", // TODO: hardcoded
+                      text: "\$${product.price.toStringAsFixed(2)}", // TODO: hardcoded
                       style: context.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.normal,
                         color: context.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -478,12 +502,27 @@ class _ProductTile extends StatelessWidget {
                   size: 12,
                   color: context.colorScheme.onSurface,
                 ),
-                onTap: () async {},
+                onTap: () async {
+                  addProduct();
+                },
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+class _EQLRackPreview extends StatelessWidget {
+  const _EQLRackPreview({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<EquipmentLocationViewmodel,EquipmentLocationState>(
+      builder: (BuildContext context, Object? asyncSnapshot) {
+        return const Placeholder();
+      },
     );
   }
 }
