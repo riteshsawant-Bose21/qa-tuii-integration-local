@@ -11,6 +11,7 @@
 #include <cstring>
 #include <deque>
 #include <fstream>
+#include <thread>
 #include <sstream>
 #include <mutex>
 #include <string>
@@ -192,6 +193,16 @@ public:
             if (written < 0) {
                 if (errno == EINTR) {
                     continue;
+                }
+                if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                    // Non-blocking write would block; back off briefly and retry.
+                    std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                    continue;
+                }
+                if (errno == EIO) {
+                    SPDLOG_ERROR("BDIF: write failed (EIO), closing port: {}", strerror(errno));
+                    close();
+                    return false;
                 }
                 SPDLOG_ERROR("BDIF: write failed: {}", strerror(errno));
                 return false;
