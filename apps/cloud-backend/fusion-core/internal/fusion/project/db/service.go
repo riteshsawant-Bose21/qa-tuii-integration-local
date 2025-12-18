@@ -93,10 +93,14 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 		EnvironmentType:       null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != ""),
 		ProjectPhase:          null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != ""),
 		Application:           null.NewString(project.Application, project.Application != ""),
-		BudgetAmount:          boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0)),
-		Currency:              null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
 		CreatedAt:             now,
 		UpdatedAt:             now,
+	}
+
+	// Only set budget fields if Budget is provided (non-zero values)
+	if project.Budget.Currency != "" && project.Budget.Amount > 0 {
+		projectRecord.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
+		projectRecord.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
 	}
 
 	// Insert project
@@ -279,7 +283,7 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 		projectRow.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
 	}
 
-	if project.Budget.Amount >= 0 {
+	if project.Budget.Amount > 0 {
 		projectRow.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
 	}
 
@@ -412,7 +416,6 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, e
 	user, err := model.AppUsers(
 		model.AppUserWhere.Email.EQ(email),
 	).One(ctx, s.db)
-
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

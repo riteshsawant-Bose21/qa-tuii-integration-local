@@ -586,6 +586,7 @@ definitions:
         example: active
         type: string
     type: object
+host: fusionapi.cloud-dev-external-bpro.in:8080
 info:
   contact:
     email: support@swagger.io

@@ -118,6 +118,12 @@ func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID str
 // CreateProject adds a new project to the database.
 func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectCreateResponse, error) {
 
+	projectRow, err := s.dbService.GetProjectByID(ctx, project.ID)
+
+	if err == nil && projectRow != nil {
+		return nil, errors.New(types.ErrMsgProjectAlreadyExists)
+	}
+
 	db := s.dbService.GetDB(ctx)
 
 	tx, err := db.BeginTx(ctx, nil)

@@ -19,6 +19,7 @@
         },
         "version": "1.0"
     },
+    "host": "fusionapi.cloud-dev-external-bpro.in:8080",
     "basePath": "/api/v1",
     "paths": {
         "/auth/status": {

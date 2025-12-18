@@ -33,16 +33,16 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Security BearerAuth
 // @Param body body types.ProjectCreateRequest true "Project details"
 // @Success 201 {object} types.ProjectCreateResponse "Successfully created project"
-// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload or user not found"
+// @Failure 400 {object} types.BadRequestError "Bad request - Invalid payload or user not found or project Id already exists"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	var p types.ProjectCreateRequest
 	if err := ctx.ShouldBindJSON(&p); err != nil {
@@ -59,6 +59,10 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	response, err := h.project.CreateProject(ctx, &p, *user)
 
 	if err != nil {
+		if err.Error() == types.ErrMsgProjectAlreadyExists {	
+			ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
+			return
+		}
 		// Internal server errors
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
 		return
@@ -85,13 +89,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
 	params := types.GetAllProjectsParams{}
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
 
-	user, ok := user_auth.(*types.UserAuthorizationResponse)
+	user, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok || user == nil {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
@@ -143,14 +147,14 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
 
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -219,13 +223,13 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
 
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -273,12 +277,12 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate projectID UUID
 	if !validation.IsValidUUID(projectID) {
@@ -319,12 +323,12 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate projectID UUID
 	if !validation.IsValidUUID(projectID) {
@@ -370,12 +374,12 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -439,12 +443,12 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {
@@ -511,12 +515,12 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 	projectID := ctx.Param("projectId")
 
-	user_auth, exists := ctx.Get("user_auth")
+	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
 		return
 	}
-	user := user_auth.(*types.UserAuthorizationResponse)
+	user := userAuth.(*types.UserAuthorizationResponse)
 
 	// Validate UUIDs
 	if !validation.IsValidUUID(projectID) {

@@ -286,6 +286,9 @@ func TestCreateProject(t *testing.T) {
 			// Mock the GetDB call to return our mock database
 			mockDB.On("GetDB", mock.Anything).Return(dbWithTx)
 
+			// Mock GetProjectByID call - should return nil (not found) for new projects
+			mockDB.On("GetProjectByID", mock.Anything, tt.project.ID).Return(nil, errors.New("not found"))
+
 			// Mock Insert call with accountID parameter
 			mockDB.On("Insert", mock.Anything, tt.project, "test-account-id", mock.Anything).Return(tt.mockID, tt.mockErr)
 			// Always expect InsertProjectUser to be called if Insert succeeds
