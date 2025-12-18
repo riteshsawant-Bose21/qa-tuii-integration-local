@@ -39,6 +39,18 @@ class ProjectManager {
     return response;
   }
 
+  Future<List<ProjectData>> getAllProjectsToUpload() async {
+    return projects.where((project) => (project.isSyncNeeded && !project.isCloudInstance)).toList();
+  }
+
+  Future<File> getProjectDirectoryZip(String projectId) async {
+    return await localProjectManager.zipProjectDirectory(projectId);
+  }
+
+  Future<Directory> getFusionProjectDirectory() async {
+    return await localProjectManager.fusionProjectDirectory;
+  }
+
   // Create and save new project
   Future<ResponseCallback<ProjectData?>> createAndSaveNewProject(NewProjectDetails newProject) async {
     try {
@@ -69,9 +81,9 @@ class ProjectManager {
   }
 
   //Delete specific project by ID
-  Future<ResponseCallback<bool>> deleteProject(String projectId) async {
+  Future<ResponseCallback<bool>> deleteProjectLocally(String projectId) async {
     try {
-      await localProjectManager.deleteProject(projectId: projectId);
+      await localProjectManager.deleteProjectFolder(projectId: projectId);
       projects.removeWhere((p) => p.id == projectId);
       if (projectService != null && projectService!.id == projectId) {
         projectService = null;
@@ -90,13 +102,33 @@ class ProjectManager {
       projectService = ProjectService.fromJson(project.projectRawData);
 
       //initial state of project;
-      projectService!.recordChange();
+      // projectService!.recordChange();
 
       return ResponseCallback.success(project);
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: "Error opening project: $e");
       return ResponseCallback.failure("Error opening project: $e");
     }
+  }
+
+  Future<void> updateProjectLastSyncedAt(String projectId, DateTime lastSyncedAt) async {
+    final ProjectData project = getProjectById(projectId);
+    ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
+    projectToUpdate = projectToUpdate.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+    if (projectService != null && projectService!.id == projectId) {
+      projectService = projectService!.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+    }
+    print("Updated lastSyncedAt to ${projectToUpdate.lastUploadedAt}");
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
+    await localProjectManager.saveProject(updatedProject);
+  }
+
+  Future<void> softDeleteProject(String projectId) async {
+    final ProjectData project = getProjectById(projectId);
+    ProjectService projectService = ProjectService.fromJson(project.projectRawData);
+    projectService = projectService.copyWith(isDeleted: true);
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectService.toJson());
+    await localProjectManager.saveProject(updatedProject);
   }
 
   //Save current project
@@ -113,6 +145,10 @@ class ProjectManager {
 
       try {
         final ProjectData currentProject = getProjectById(projectService!.id);
+        // Update the updatedAt timestamp,
+        projectService = projectService!.copyWith(
+          updatedAt: DateTime.now().toUtc(),
+        );
         final ProjectData updatedProject = currentProject.copyWith(projectRawData: projectService!.toJson());
 
         // Save to local storage
@@ -124,6 +160,15 @@ class ProjectManager {
         return ResponseCallback.failure("Error saving project: $e");
       }
     });
+  }
+
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projectsToSave) async {
+    try {
+      return await localProjectManager.saveProjects(projectsToSave, fromServer: true);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Error saving projects: $e");
+      return ResponseCallback.failure("Error saving projects: $e");
+    }
   }
 
   /// save image to current project directory
@@ -179,5 +224,9 @@ class ProjectManager {
       return FusionUtils().zipProjectDirectory(projectDirectory);
     }
     return null;
+  }
+
+  Future<void> deleteFusionProjectDirectory() async {
+    await localProjectManager.deleteFusionProjectDirectory();
   }
 }

@@ -10,6 +10,7 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
@@ -92,6 +93,9 @@ class MyApp extends StatelessWidget {
         ),
         BlocProvider<ProjectViewModel>(
           create: (BuildContext context) => serviceLocator<ProjectViewModel>(),
+        ),
+        BlocProvider<ProjectSyncViewModel>(
+          create: (BuildContext context) => serviceLocator<ProjectSyncViewModel>(),
         ),
         BlocProvider<ProductQueryCubit>(
           create: (BuildContext context) => serviceLocator<ProductQueryCubit>(),

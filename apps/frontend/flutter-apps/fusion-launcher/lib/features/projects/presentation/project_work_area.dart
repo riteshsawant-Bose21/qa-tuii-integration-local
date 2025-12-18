@@ -5,7 +5,9 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -13,6 +15,7 @@ import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/spl_calculation/mace_calculation_manager.dart';
 import '../../../../core/spl_calculation/mace_engine_provider.dart';
@@ -725,6 +728,34 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           tooltip: 'Save project',
                           onPressed: () => _showProjectJsonDialog(context),
                           onLongPress: () => serviceLocator<ProjectViewModel>().deleteCurrentProjectFromLocal(),
+                        ),
+                      ),
+
+                      /// Save Icon Section
+                      Container(
+                        width: 56,
+                        height: 48,
+                        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            LucideIcons.cloudUpload,
+                            size: 24,
+                            color: Theme.of(context).colorScheme.greyDark,
+                          ),
+                          tooltip: 'Upload project',
+                          onPressed: () async {
+                            FusionUiUtils.showLoader(context);
+
+                            await serviceLocator<ProjectSyncViewModel>().uploadProject(
+                              projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
+                            );
+                            if (context.mounted) {
+                              FusionUiUtils.hideLoader(context);
+                            }
+                          },
                         ),
                       ),
 

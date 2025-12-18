@@ -181,10 +181,46 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  ProjectData? getCurrentProjectData() {
+    try {
+      if (_currentProject != null) {
+        return allProjects.firstWhere((ProjectData project) => project.id == _currentProject!.id);
+      } else {
+        return null;
+      }
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> updateProjectLastSyncedAt({required String projectId, required DateTime lastSyncedAt}) async {
+    try {
+      await projectManager.updateProjectLastSyncedAt(projectId, lastSyncedAt);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Failed to update project last synced at: $e");
+    }
+  }
+
+  Future<File> getProjectZipFile({required String projectId}) async {
+    return projectManager.getProjectDirectoryZip(projectId);
+  }
+
+  Future<List<ProjectData>> getAllProjectsToUpload() async {
+    return await projectManager.getAllProjectsToUpload();
+  }
+
+  Future<Directory> getFusionProjectsDirectory() async {
+    return projectManager.getFusionProjectDirectory();
+  }
+
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projects) async {
+    return await projectManager.saveProjects(projects);
+  }
+
   /// Delete Project from local storage
   Future<void> deleteProjectFromLocal(String projectId) async {
     try {
-      final ResponseCallback<void> deleteResponse = await projectManager.deleteProject(projectId);
+      final ResponseCallback<void> deleteResponse = await projectManager.deleteProjectLocally(projectId);
       if (deleteResponse.success) {
         // Reload projects after deletion
         await loadAllLocalProjects();
@@ -202,6 +238,16 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  Future<void> softDeleteProject(String projectId) async {
+    try {
+      await projectManager.softDeleteProject(projectId);
+      await loadAllLocalProjects();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Failed to soft delete project: $e");
+      emit(ProjectError(message: "Failed to soft delete project: $e"));
+    }
+  }
+
   /// Delete Current Project from local storage
   Future<void> deleteCurrentProjectFromLocal() async {
     if (_currentProject == null) {
@@ -209,6 +255,12 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       return;
     }
     await deleteProjectFromLocal(_currentProject!.id);
+    _currentProject = null;
+  }
+
+  Future<void> deleteFusionProjectDirectory() async {
+    await projectManager.deleteFusionProjectsDirectory();
+    allProjects.clear();
     _currentProject = null;
   }
 
