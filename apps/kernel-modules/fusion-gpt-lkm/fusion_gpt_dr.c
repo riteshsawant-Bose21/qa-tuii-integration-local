@@ -188,6 +188,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
     if (sr & SR_OF1) {
         gpt_program_next_compare(g);
         clr |= SR_OF1;
+        pr_info_ratelimited("fusion-gpt: compare (10MHz) at cnt=0x%08x\n",
+                            g->last32);
         if (READ_ONCE(g->ops))
             irq_work_queue(&g->tick_iw);
     }
