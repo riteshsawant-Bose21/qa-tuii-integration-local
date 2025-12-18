@@ -570,7 +570,7 @@ int fusion_cn_mgr_start(struct fusion_cn_manager *mgr)
         u64 first_tick;
 
         // Get current PHC time
-        current_phc_ns = fusion_cn_rtp_get_phc_ns();
+        current_phc_ns = fusion_cn_get_phc_ns();
         if (current_phc_ns == 0) {
             printk(KERN_ERR "fusion_cn: mgr_start: Failed to get PHC time\n");
             return -MGR_START_ERRNO_PTP;
