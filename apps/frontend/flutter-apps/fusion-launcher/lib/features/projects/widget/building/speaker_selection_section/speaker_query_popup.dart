@@ -492,125 +492,38 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                                                       // info
                                                       FusionArrowPopup(
                                                         content: SizedBox(
-                                                          width: 500,
-                                                          height: 200,
+                                                          width: 400,
+                                                          height: 280,
                                                           child: SingleChildScrollView(
                                                             padding: const EdgeInsets.all(16),
                                                             child: Column(
                                                               crossAxisAlignment: CrossAxisAlignment.start,
                                                               children: <Widget>[
-                                                                FusionAppText(
-                                                                  text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
-                                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                                    color: context.colorScheme.onSurface,
-                                                                  ),
-                                                                ),
-
-                                                                // GRID VIEW
-                                                                Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
-                                                                Builder(
-                                                                  builder: (BuildContext context) {
-                                                                    final String frequencyResponse = () {
-                                                                      final FrequencyRange? f = speaker.frequencyRange;
-                                                                      if (f == null) return 'N/A';
-                                                                      if (f.low == 0 && f.high == 0) return 'N/A';
-                                                                      return '${f.low}\u2013${f.high} ${f.unit}';
-                                                                    }();
-
-                                                                    final String environment = () {
-                                                                      if ((speaker.environment ?? '').isNotEmpty) {
-                                                                        return speaker.environment!;
-                                                                      }
-                                                                      return speaker.isWeatherRated ? 'Weather rated' : 'N/A';
-                                                                    }();
-
-                                                                    final String sensitivity = () {
-                                                                      final Sensitivity? s = speaker.sensitivity;
-                                                                      if (s == null || s.at.isEmpty) return 'N/A';
-                                                                      return s.at.map((MeasurementValue e) => '${e.value} ${s.unit} @ ${e.key}').join(', ');
-                                                                    }();
-
-                                                                    final String maxSpl = () {
-                                                                      final MaxSpl? m = speaker.maxSpl;
-                                                                      if (m == null || m.at.isEmpty) return 'N/A';
-                                                                      return m.at.map((MeasurementValue e) => '${e.value} ${m.unit} @ ${e.key}').join(', ');
-                                                                    }();
-
-                                                                    final String peakPower = () {
-                                                                      final PowerHandling? p = speaker.powerHandling;
-                                                                      if (p == null) return 'N/A';
-                                                                      return '${p.peak} ${p.unit}';
-                                                                    }();
-
-                                                                    final String longTermPower = () {
-                                                                      final PowerHandling? p = speaker.powerHandling;
-                                                                      if (p == null) return 'N/A';
-                                                                      return '${p.longTermRms} ${p.unit}';
-                                                                    }();
-
-                                                                    final String powerHandlingSummary = () {
-                                                                      final PowerHandling? p = speaker.powerHandling;
-                                                                      if (p == null) return 'N/A';
-                                                                      return 'RMS ${p.longTermRms} ${p.unit}, Peak ${p.peak} ${p.unit}';
-                                                                    }();
-
-                                                                    final Map<String, String> details = <String, String>{
-                                                                      'Mounting': speaker.mountType ?? 'N/A',
-                                                                      'Frequency Response': frequencyResponse,
-                                                                      'Environment': environment,
-                                                                      'HF Size': 'N/A', // TODO: hardcoded
-                                                                      'Power Handling': powerHandlingSummary,
-                                                                      'LF Size': 'N/A', // TODO: hardcoded
-                                                                      'Sensitivity': sensitivity,
-                                                                      'Max. SPL': maxSpl,
-                                                                      'Peak Power': peakPower,
-                                                                      'Long Term Power': longTermPower,
-                                                                    };
-
-                                                                    final List<Widget> children = <Widget>[
-                                                                      ...details.entries.map((MapEntry<String, String> entry) {
-                                                                        final String key = entry.key;
-                                                                        final String value = entry.value;
-
-                                                                        return GestureDetector(
-                                                                          onTap: () {
-                                                                            // selectedSpeaker = selectedSpeaker == speaker ? null : speaker;
-                                                                            // setState(() {});
-                                                                          },
-                                                                          behavior: HitTestBehavior.translucent,
-                                                                          child: Column(
-                                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                                            children: <Widget>[
-                                                                              FusionAppText(
-                                                                                text: key,
-                                                                                style: context.textTheme.bodySmall?.copyWith(
-                                                                                  fontWeight: FontWeight.normal,
-                                                                                ),
-                                                                              ),
-                                                                              FusionAppText(
-                                                                                text: value,
-                                                                                style: context.textTheme.bodySmall?.copyWith(
-                                                                                  fontWeight: FontWeight.normal,
-                                                                                  color: context.colorScheme.onSurface.withAlpha(128),
-                                                                                ),
-                                                                              ),
-                                                                            ],
+                                                                Row(
+                                                                  children: <Widget>[
+                                                                    if (assetImagePath != null) ...<Widget>[
+                                                                      Center(
+                                                                        child: ClipRRect(
+                                                                          borderRadius: BorderRadius.circular(4),
+                                                                          child: Image.asset(
+                                                                            assetImagePath,
+                                                                            width: 36,
+                                                                            height: 36,
+                                                                            fit: BoxFit.cover,
                                                                           ),
-                                                                        );
-                                                                      }),
-                                                                    ];
-
-                                                                    return BuildingPageGridView(
-                                                                      width: 140,
-                                                                      children: children,
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                FusionAppText(
-                                                                  text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
-                                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                                    color: context.colorScheme.onSurface,
-                                                                  ),
+                                                                        ),
+                                                                      ),
+                                                                      const SizedBox(width: 8),
+                                                                    ],
+                                                                    Expanded(
+                                                                      child: FusionAppText(
+                                                                        text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
+                                                                        style: context.textTheme.bodySmall?.copyWith(
+                                                                          color: context.colorScheme.onSurface,
+                                                                        ),
+                                                                      ),
+                                                                    ),
+                                                                  ],
                                                                 ),
 
                                                                 // GRID VIEW

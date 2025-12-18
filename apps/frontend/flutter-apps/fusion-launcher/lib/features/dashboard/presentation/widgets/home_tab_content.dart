@@ -4,12 +4,9 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/router/routes.dart';
 import '../../../../core/service_locator.dart';
-import '../../../../core/utils/fusion_utils.dart';
 
 class HomeTabContent extends StatefulWidget {
   const HomeTabContent({super.key});
@@ -181,24 +178,7 @@ class _RecentProjects extends StatelessWidget {
             ),
           ),
 
-          BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-            listener: (BuildContext context, ProjectViewModelState state) {
-              if (state is ProjectLoaded && context.mounted) {
-                if (state.currentProject != null) {
-                  FusionThemeController.setThemeMode(ThemeMode.light);
-
-                  FusionUiUtils.hideLoader(context);
-                  Navigator.pushNamed(context, Routes.projectPage).then((_) async {
-                    FusionThemeController.setThemeMode(ThemeMode.dark);
-                    await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
-                  });
-                }
-              }
-              if (state is OpenProjectError && context.mounted) {
-                FusionUiUtils.hideLoader(context);
-                FusionToast.show(context, message: state.message);
-              }
-            },
+          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
               if (!serviceLocator<ProjectViewModel>().hasProjects) {
                 return Center(

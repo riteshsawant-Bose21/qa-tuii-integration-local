@@ -367,7 +367,6 @@ class _PopupPositioner extends StatefulWidget {
 
 class _PopupPositionerState extends State<_PopupPositioner> {
   static const double _margin = 10;
-  static const double _maxPopupWidth = 280.0;
 
   _ArrowDirection _arrowDirection = _ArrowDirection.top;
   double _arrowX = 0;
@@ -448,9 +447,7 @@ class _PopupPositionerState extends State<_PopupPositioner> {
                   ),
                   alignment: _arrowDirection == _ArrowDirection.top ? Alignment.topCenter : Alignment.bottomCenter,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      maxWidth: _maxPopupWidth,
-                    ),
+                    constraints: BoxConstraints(),
                     child: _PopupContent(
                       key: _popupKey,
                       arrowDirection: _arrowDirection,

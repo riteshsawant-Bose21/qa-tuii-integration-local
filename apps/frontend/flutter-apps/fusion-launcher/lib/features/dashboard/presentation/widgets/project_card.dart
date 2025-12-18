@@ -120,37 +120,35 @@ class ProjectCard extends StatelessWidget {
               Positioned(
                 top: 6,
                 right: 6,
-                child: PopupMenuButton<String>(
-                  onSelected: (String value) {
-                    if (value == 'delete') onDelete();
-                  },
-                  tooltip: "", // Remove default tooltip
-                  padding: EdgeInsets.zero,
-                  menuPadding: const EdgeInsets.only(),
-                  borderRadius: BorderRadius.circular(8),
-                  position: PopupMenuPosition.under,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(9),
-                    side: BorderSide(
-                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                child: FusionArrowPopup(
+                  blurAmount: 0,
+                  barrierColor: Colors.transparent,
+                  content: Padding(
+                    padding: const EdgeInsets.all(12.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        GestureDetector(
+                          onTap: () {
+                            onDelete();
+                            Navigator.of(context).pop();
+                          },
+                          child: Row(
+                            children: <Widget>[
+                              Icon(LucideIcons.trash, size: 14, color: context.colorScheme.onSurface),
+                              const SizedBox(width: 8),
+                              FusionAppText(
+                                text: 'Delete',
+                                style: context.textTheme.labelMedium?.copyWith(
+                                  color: context.colorScheme.onSurface,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  color: context.colorScheme.surface,
-                  itemBuilder: (BuildContext context) {
-                    return <PopupMenuEntry<String>>[
-                      const PopupMenuItem<String>(
-                        value: 'delete',
-                        height: 36,
-                        child: Row(
-                          children: <Widget>[
-                            Icon(LucideIcons.trash),
-                            SizedBox(width: 8),
-                            FusionAppText(text: 'Delete'),
-                          ],
-                        ),
-                      ),
-                    ];
-                  },
                   child: const Padding(
                     padding: EdgeInsets.all(8.0),
                     child: Icon(Icons.more_vert),

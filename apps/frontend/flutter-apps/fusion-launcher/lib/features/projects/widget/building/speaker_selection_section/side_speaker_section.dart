@@ -56,34 +56,46 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                       ),
                     ),
 
-                    PopupMenuButton<String>(
-                      color: Colors.transparent,
-                      shadowColor: Colors.transparent,
-                      tooltip: 'Add sources',
-                      padding: EdgeInsets.zero,
-                      menuPadding: EdgeInsets.zero,
-                      clipBehavior: Clip.none,
-                      offset: const Offset(45, 0),
-                      constraints: const BoxConstraints(minWidth: 1000),
-                      child: Padding(
-                        padding: const EdgeInsets.all(3.0),
-                        child: Icon(
-                          LucideIcons.plus200,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
-                        ),
-                      ),
-                      itemBuilder: (BuildContext context) {
-                        return <PopupMenuEntry<String>>[
-                          PopupMenuItem<String>(
-                            enabled: false,
-                            padding: EdgeInsets.zero,
-                            child: Theme(
-                              data: ThemeData.dark(),
-                              child: const SpeakerQueryPopup(),
+                    BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                      builder: (BuildContext context, ProjectViewModelState state) {
+                        final String? areaId = projectViewModel.currentSelectedListeningAreaId;
+                        if (areaId == null) return const SizedBox.shrink();
+
+                        final List<HardwareComponent> allHardware = projectViewModel.getHardwareForListeningArea(listeningAreaId: areaId);
+                        final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos == null).toList();
+
+                        if (speakers.isNotEmpty) return const SizedBox.shrink();
+
+                        return PopupMenuButton<String>(
+                          color: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          tooltip: 'Add speakers',
+                          padding: EdgeInsets.zero,
+                          menuPadding: EdgeInsets.zero,
+                          clipBehavior: Clip.none,
+                          offset: const Offset(45, 0),
+                          constraints: const BoxConstraints(minWidth: 1000),
+                          child: Padding(
+                            padding: const EdgeInsets.all(3.0),
+                            child: Icon(
+                              LucideIcons.plus200,
+                              size: 14,
+                              color: Theme.of(context).colorScheme.fusionTextViewColor,
                             ),
                           ),
-                        ];
+                          itemBuilder: (BuildContext context) {
+                            return <PopupMenuEntry<String>>[
+                              PopupMenuItem<String>(
+                                enabled: false,
+                                padding: EdgeInsets.zero,
+                                child: Theme(
+                                  data: ThemeData.dark(),
+                                  child: const SpeakerQueryPopup(),
+                                ),
+                              ),
+                            ];
+                          },
+                        );
                       },
                     ),
                   ],
@@ -92,12 +104,12 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
               BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                 builder: (BuildContext context, ProjectViewModelState state) {
-                  final String? listeningAreaId = serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId;
+                  final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
                   if (listeningAreaId == null) return const SizedBox.shrink();
 
-                  final ListeningArea listeningArea = serviceLocator<ProjectViewModel>().getListeningArea(areaId: listeningAreaId);
+                  final ListeningArea listeningArea = projectViewModel.getListeningArea(areaId: listeningAreaId);
 
-                  final List<HardwareComponent> allHardware = serviceLocator<ProjectViewModel>().getHardwareForListeningArea(
+                  final List<HardwareComponent> allHardware = projectViewModel.getHardwareForListeningArea(
                     listeningAreaId: listeningAreaId,
                   );
                   final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos == null).toList();
@@ -168,6 +180,40 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                         ),
                                       ),
                                     ),
+                                    const SizedBox(width: 12),
+                                    if (speakers.isNotEmpty) ...<Widget>[
+                                      // edit icon
+                                      PopupMenuButton<String>(
+                                        color: Colors.transparent,
+                                        shadowColor: Colors.transparent,
+                                        tooltip: 'Edit speakers',
+                                        padding: EdgeInsets.zero,
+                                        menuPadding: EdgeInsets.zero,
+                                        clipBehavior: Clip.none,
+                                        offset: const Offset(45, 0),
+                                        constraints: const BoxConstraints(minWidth: 1000),
+                                        child: Padding(
+                                          padding: const EdgeInsets.all(3.0),
+                                          child: Icon(
+                                            LucideIcons.pencil200,
+                                            size: 12,
+                                            color: context.colorScheme.onSurface,
+                                          ),
+                                        ),
+                                        itemBuilder: (BuildContext context) {
+                                          return <PopupMenuEntry<String>>[
+                                            PopupMenuItem<String>(
+                                              enabled: false,
+                                              padding: EdgeInsets.zero,
+                                              child: Theme(
+                                                data: ThemeData.dark(),
+                                                child: const SpeakerQueryPopup(),
+                                              ),
+                                            ),
+                                          ];
+                                        },
+                                      ),
+                                    ],
                                   ],
                                 ),
                               ),
