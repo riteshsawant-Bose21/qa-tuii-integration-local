@@ -183,11 +183,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   ProjectData? getCurrentProjectData() {
     try {
-      if (_currentProject != null) {
-        return allProjects.firstWhere((ProjectData project) => project.id == _currentProject!.id);
-      } else {
-        return null;
-      }
+      return projectManager.getCurrentProjectData();
     } catch (e) {
       return null;
     }

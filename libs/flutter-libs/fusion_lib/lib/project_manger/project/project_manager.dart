@@ -21,6 +21,21 @@ class ProjectManager {
     return projects.firstWhere((project) => project.id == projectId);
   }
 
+  ProjectData? getCurrentProjectData() {
+    if (projectService == null) return null;
+    try {
+      ProjectData projectData = getProjectById(projectService!.id);
+      projectData = projectData.copyWith(
+        projectRawData: projectService!.toJson(),
+        lastUploadedAt: projectService!.lastUploadedAt,
+      );
+      return projectData;
+    } catch (e) {
+      return null;
+    }
+    return null;
+  }
+
   //Load projects from cloud
   Future<ResponseCallback<List<ProjectData>?>> loadProjectsFromCloud() async {
     final ResponseCallback<List<ProjectData>?> response = await projectCloudSyncManager.loadProjects();
@@ -112,11 +127,13 @@ class ProjectManager {
   }
 
   Future<void> updateProjectLastSyncedAt(String projectId, DateTime lastSyncedAt) async {
+    await loadProjectsFromLocal();
     final ProjectData project = getProjectById(projectId);
     ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
     projectToUpdate = projectToUpdate.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
     if (projectService != null && projectService!.id == projectId) {
       projectService = projectService!.copyWith(lastUploadedAt: lastSyncedAt.toUtc());
+      projectToUpdate = projectService!;
     }
     print("Updated lastSyncedAt to ${projectToUpdate.lastUploadedAt}");
     final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
@@ -124,10 +141,15 @@ class ProjectManager {
   }
 
   Future<void> softDeleteProject(String projectId) async {
+    await loadProjectsFromLocal();
     final ProjectData project = getProjectById(projectId);
-    ProjectService projectService = ProjectService.fromJson(project.projectRawData);
-    projectService = projectService.copyWith(isDeleted: true);
-    final ProjectData updatedProject = project.copyWith(projectRawData: projectService.toJson());
+    ProjectService projectToUpdate = ProjectService.fromJson(project.projectRawData);
+    projectToUpdate = projectToUpdate.copyWith(isDeleted: true);
+    if (projectService != null && projectService!.id == projectId) {
+      projectService = projectService!.copyWith(isDeleted: true);
+      projectToUpdate = projectService!;
+    }
+    final ProjectData updatedProject = project.copyWith(projectRawData: projectToUpdate.toJson());
     await localProjectManager.saveProject(updatedProject);
   }
 
