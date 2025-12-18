@@ -71,9 +71,15 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
         rollController.text = widget.selectedHardware is Speaker ? (widget.selectedHardware as Speaker).roll.toString() : '0.0';
 
         // Divide by 100 for display
-        xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
-        yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
-        zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
+
+        if (widget.selectedHardware.pos != null) {
+          xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
+          yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
+        }
+
+        if (widget.selectedHardware.zAxis != null) {
+          zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
+        }
 
         return Container(
           padding: const EdgeInsets.all(20),
@@ -212,7 +218,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(
                                       pos: Offset(
                                         xValue * 100,
-                                        widget.selectedHardware.pos.dy,
+                                        widget.selectedHardware.pos?.dy ?? 0.0,
                                       ),
                                     );
                                     viewModel.updateHardware(hardware: updated);
@@ -221,7 +227,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     }
                                   } else {
                                     // Reset to previous value if invalid
-                                    xController.text = (widget.selectedHardware.pos.dx / 100).toStringAsFixed(2);
+                                    if (widget.selectedHardware.pos != null) {
+                                      xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
+                                    }
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -265,7 +273,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     // Multiply by 100 when submitting
                                     final HardwareComponent updated = widget.selectedHardware.copyWith(
                                       pos: Offset(
-                                        widget.selectedHardware.pos.dx,
+                                        widget.selectedHardware.pos?.dx ?? 0.0,
                                         yValue * 100,
                                       ),
                                     );
@@ -275,7 +283,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     }
                                   } else {
                                     // Reset to previous value if invalid
-                                    yController.text = (widget.selectedHardware.pos.dy / 100).toStringAsFixed(2);
+                                    if (widget.selectedHardware.pos != null) {
+                                      yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
+                                    }
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
@@ -324,7 +334,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                     }
                                   } else {
                                     // Reset to previous value if invalid
-                                    zController.text = (widget.selectedHardware.zAxis / 100).toStringAsFixed(2);
+                                    if (widget.selectedHardware.zAxis != null) {
+                                      zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
+                                    }
                                     // Show validation error
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(

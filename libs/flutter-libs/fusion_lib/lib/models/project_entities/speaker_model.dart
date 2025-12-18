@@ -38,6 +38,7 @@ class Speaker extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    required super.addedFromBuildingPage,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -67,6 +68,7 @@ class Speaker extends HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -90,6 +92,7 @@ class Speaker extends HardwareComponent {
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
+      addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
 
@@ -180,7 +183,7 @@ class Speaker extends HardwareComponent {
     return <String, dynamic>{
       'id': id,
       'name': name,
-      'pos': <String, double>{'dx': pos.dx, 'dy': pos.dy},
+      'pos': pos != null ? <String, double>{'dx': pos!.dx, 'dy': pos!.dy} : null,
       'wiringPos': wiringPos != null ? <String, double>{'dx': wiringPos!.dx, 'dy': wiringPos!.dy} : null,
       'rotation': rotation,
       'gain': gain,
@@ -200,6 +203,7 @@ class Speaker extends HardwareComponent {
       'communicationPorts': communicationPorts.map((PortData port) => port.toJson()).toList(),
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
+      'addedFromBuildingPage': addedFromBuildingPage,
     };
   }
 
@@ -207,7 +211,7 @@ class Speaker extends HardwareComponent {
     return Speaker(
       id: json['id'] as String?,
       name: json['name'] as String,
-      pos: Offset(json['pos']['dx'] as double, json['pos']['dy'] as double),
+      pos: json['pos'] != null ? Offset((json['pos']['dx'] as num).toDouble(), (json['pos']['dy'] as num).toDouble()) : null,
       wiringPos: json['wiringPos'] != null ? Offset((json['wiringPos']['dx'] as num).toDouble(), (json['wiringPos']['dy'] as num).toDouble()) : null,
       rotation: (json['rotation'] as num).toDouble(),
       gain: (json['gain'] as num).toDouble(),
@@ -227,6 +231,7 @@ class Speaker extends HardwareComponent {
           (json['communicationPorts'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
+      addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
     );
   }
 }

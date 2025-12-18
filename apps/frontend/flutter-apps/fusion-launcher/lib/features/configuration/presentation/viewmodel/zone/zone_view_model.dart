@@ -170,26 +170,6 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  //add Speaker to zone with a new circuit
-  void addSpeakerToZone({required String hardwareId, required String zoneId, bool autoSave = true}) {
-    try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      final CircuitModel circuitModel = CircuitModel(name: "New Circuit");
-      projectManager.addCircuit(circuitModel);
-      projectManager.addHardwareToCircuit(hardwareId, circuitModel.id);
-      projectManager.addCircuitToZone(circuitModel.id, zoneId);
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to add speaker to zone: $e");
-      throwError("Failed to add speaker to zone: $e");
-    }
-  }
-
   // Add Source Set to Zone
   void addSourceSetToZone({required String sourceSetId, required String zoneId, bool autoSave = true}) {
     try {

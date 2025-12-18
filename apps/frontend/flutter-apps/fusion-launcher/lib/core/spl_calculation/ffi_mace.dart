@@ -3,36 +3,69 @@ import 'dart:ffi';
 import 'dart:io';
 
 import 'package:ffi/ffi.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
+import 'base_mace_engine.dart';
 import 'ffi_constants.dart';
 
+/// Mace Engine Factory
+Future<MaceEngine> createMaceEngine({required String basePath, required String bsfBasePath}) => MaceEngine.create(basePath: basePath, bsfBasePath: bsfBasePath);
+
 /// Load the dylib from the app bundle’s Frameworks folder
-final DynamicLibrary _mace = () {
+late DynamicLibrary _mace;
+// Cache base path for locating bundled assets without relying on rootBundle in isolates
+String? _bundleBasePath;
+void _maceInitializer(String basePath) {
   if (Platform.isMacOS) {
     // return DynamicLibrary.process();
     // On macOS we bundled a fat dylib into MyApp.app/Contents/Frameworks/
-    final String exe = Platform.resolvedExecutable;
-    final String bundleContents = File(exe).parent.parent.path;
+    // final String exe = Platform.resolvedExecutable;
+    // final String bundleContents = File(exe).parent.parent.path;
+
+    final String bundleContents = basePath;
+    _bundleBasePath = bundleContents;
     final String frameworksDir = p.join(bundleContents, 'Frameworks');
-    return DynamicLibrary.open(p.join(frameworksDir, 'libMaceAPI.dylib'));
+    _mace = DynamicLibrary.open(p.join(frameworksDir, 'libMaceAPI.dylib'));
   } else if (Platform.isIOS) {
-    return DynamicLibrary.process();
+    _mace = DynamicLibrary.process();
   } else if (Platform.isWindows) {
-    final String exe = Platform.resolvedExecutable;
-    final String exeDir = File(exe).parent.path;
+    // final String exe = Platform.resolvedExecutable;
+    // final String exeDir = File(exe).parent.path;
+    final String exeDir = basePath;
     final String dllPath = p.join(exeDir, 'MaceAPI.dll');
 
-    print('DLL path: $dllPath');
-    print('DLL exists: ${File(dllPath).existsSync()}');
+    debugPrint('DLL path: $dllPath');
+    debugPrint('DLL exists: ${File(dllPath).existsSync()}');
 
-    return DynamicLibrary.open(dllPath);
+    _bundleBasePath = exeDir;
+    _mace = DynamicLibrary.open(dllPath);
   } else {
     throw UnsupportedError('This platform is not supported');
   }
-}();
+
+  maceCreateEngine = _mace.lookup<NativeFunction<CreateEngine>>('mace_create_engine').asFunction();
+  maceDestroyEngine = _mace.lookup<NativeFunction<DestroyEngine>>('mace_destroy_engine').asFunction();
+  maceAddPolygon = _mace.lookup<NativeFunction<AddPolygon>>('mace_add_polygon').asFunction();
+  maceAddSpeakerCluster = _mace.lookup<NativeFunction<AddSpeakerCluster>>('mace_add_speaker_cluster').asFunction();
+  maceAddFieldPoints = _mace.lookup<NativeFunction<AddFieldPoints>>('mace_add_field_points').asFunction();
+  maceCreateMeasurement = _mace.lookup<NativeFunction<CreateMeasurement>>('mace_create_measurement').asFunction();
+  maceCreateGroup = _mace.lookup<NativeFunction<CreateGroup>>('mace_create_group').asFunction();
+  maceAddToGroup = _mace.lookup<NativeFunction<AddToGroup>>('mace_add_to_group').asFunction();
+  maceAddGroupsToMeasurement =
+      _mace
+          .lookup<NativeFunction<AddGroupsToMeasurement>>(
+            'mace_add_groups_to_measurement',
+          )
+          .asFunction();
+  maceRunCalc = _mace.lookup<NativeFunction<RunCalculation>>('mace_run_calculation').asFunction();
+  maceGetSpl = _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
+  _maceGetAllSplJson = _mace.lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json').asFunction<GetAllSplJsonDart>();
+  maceDebugSpeakers = _mace.lookup<NativeFunction<DebugSpeakers>>('mace_debug_speakers').asFunction();
+  maceGetSplAt = _mace.lookup<NativeFunction<GetSplAt>>('mace_get_spl_at').asFunction();
+  maceClear = _mace.lookup<NativeFunction<Clear>>('mace_clear').asFunction();
+}
 
 /// FFI type definitions
 typedef CreateEngine = Uint64 Function(Pointer<Utf8>);
@@ -121,30 +154,26 @@ typedef Clear = Void Function(Uint64);
 typedef DartClear = void Function(int);
 
 /// Lookup the C functions
-final DartCreateEngine maceCreateEngine = _mace.lookup<NativeFunction<CreateEngine>>('mace_create_engine').asFunction();
-final DartDestroyEngine maceDestroyEngine = _mace.lookup<NativeFunction<DestroyEngine>>('mace_destroy_engine').asFunction();
-final DartAddPolygon maceAddPolygon = _mace.lookup<NativeFunction<AddPolygon>>('mace_add_polygon').asFunction();
-final DartAddSpeakerCluster maceAddSpeakerCluster = _mace.lookup<NativeFunction<AddSpeakerCluster>>('mace_add_speaker_cluster').asFunction();
-final DartAddFieldPoints maceAddFieldPoints = _mace.lookup<NativeFunction<AddFieldPoints>>('mace_add_field_points').asFunction();
-final DartCreateMeasurement maceCreateMeasurement = _mace.lookup<NativeFunction<CreateMeasurement>>('mace_create_measurement').asFunction();
-final DartCreateGroup maceCreateGroup = _mace.lookup<NativeFunction<CreateGroup>>('mace_create_group').asFunction();
-final DartAddToGroup maceAddToGroup = _mace.lookup<NativeFunction<AddToGroup>>('mace_add_to_group').asFunction();
-final DartAddGroupsToMeasurement maceAddGroupsToMeasurement =
-    _mace
-        .lookup<NativeFunction<AddGroupsToMeasurement>>(
-          'mace_add_groups_to_measurement',
-        )
-        .asFunction();
-final DartRunCalc maceRunCalc = _mace.lookup<NativeFunction<RunCalculation>>('mace_run_calculation').asFunction();
-final DartGetSpl maceGetSpl = _mace.lookup<NativeFunction<GetSpl>>('mace_get_spl').asFunction();
-final GetAllSplJsonDart _maceGetAllSplJson = _mace.lookup<NativeFunction<GetAllSplJsonNative>>('mace_get_all_spl_json').asFunction<GetAllSplJsonDart>();
-final DartDebugSpeakers maceDebugSpeakers = _mace.lookup<NativeFunction<DebugSpeakers>>('mace_debug_speakers').asFunction();
-final DartGetSplAt maceGetSplAt = _mace.lookup<NativeFunction<GetSplAt>>('mace_get_spl_at').asFunction();
+late DartCreateEngine maceCreateEngine;
+late DartDestroyEngine maceDestroyEngine;
+late DartAddPolygon maceAddPolygon;
+late DartAddSpeakerCluster maceAddSpeakerCluster;
+late DartAddFieldPoints maceAddFieldPoints;
+late DartCreateMeasurement maceCreateMeasurement;
+late DartCreateGroup maceCreateGroup;
+late DartAddToGroup maceAddToGroup;
+late DartAddGroupsToMeasurement maceAddGroupsToMeasurement;
+late DartRunCalc maceRunCalc;
+late DartGetSpl maceGetSpl;
+late GetAllSplJsonDart _maceGetAllSplJson;
+late DartDebugSpeakers maceDebugSpeakers;
+late DartGetSplAt maceGetSplAt;
+late DartClear maceClear;
 
 /// Copy .bsf assets into the macOS sandbox and return that folder path
-Future<String> prepareLoudspeakersFolder() async {
-  final Directory supportDir = await getApplicationSupportDirectory();
-  final Directory lsDir = Directory(p.join(supportDir.path, 'Loudspeakers'));
+Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
+  // final Directory supportDir = await getApplicationSupportDirectory();
+  final Directory lsDir = Directory(p.join(supportDirPath, 'Loudspeakers'));
   if (!await lsDir.exists()) {
     await lsDir.create(recursive: true);
   }
@@ -192,41 +221,107 @@ Future<String> prepareLoudspeakersFolder() async {
     'assets/Loudspeakers/MSA12X.bsf',
   ];
 
+  // Determine on-disk Flutter assets location to avoid rootBundle in isolates
+  String? assetsRoot;
+  try {
+    // macOS: <bundle>/Frameworks/App.framework/Resources/flutter_assets
+    if (Platform.isMacOS && _bundleBasePath != null) {
+      assetsRoot = p.join(_bundleBasePath!, 'Frameworks', 'App.framework', 'Resources', 'flutter_assets');
+    }
+    // Windows desktop: assets copied near exe at data/flutter_assets (typical structure)
+    else if (Platform.isWindows && _bundleBasePath != null) {
+      // Try common locations used by Flutter desktop
+      final String candidate1 = p.join(_bundleBasePath!, 'data', 'flutter_assets');
+      final String candidate2 = p.join(_bundleBasePath!, 'flutter_assets');
+      if (Directory(candidate1).existsSync()) {
+        assetsRoot = candidate1;
+      } else if (Directory(candidate2).existsSync()) {
+        assetsRoot = candidate2;
+      }
+    }
+  } catch (_) {
+    // ignore; we'll fallback to rootBundle
+  }
+
   for (final String assetPath in bsfs) {
-    final ByteData data = await rootBundle.load(assetPath);
     final String filename = p.basename(assetPath); // e.g. "MSA12X.bsf"
     final File outFile = File(p.join(lsDir.path, filename));
-    if (!await outFile.exists()) {
+    if (await outFile.exists()) {
+      // Already copied
+      continue;
+    }
+
+    // Prefer copying from disk when assetsRoot is known
+    if (assetsRoot != null) {
+      final String srcPath = p.join(assetsRoot, assetPath);
+      final File srcFile = File(srcPath);
+      if (await srcFile.exists()) {
+        await srcFile.copy(outFile.path);
+        continue;
+      }
+    }
+
+    // Fallback: use rootBundle if available in this isolate
+    try {
+      final ByteData data = await rootBundle.load(assetPath);
       await outFile.writeAsBytes(data.buffer.asUint8List(), flush: true);
+    } catch (e) {
+      // If both disk copy and rootBundle fail, surface a helpful error once
+      throw Exception('Failed to prepare loudspeaker asset "$filename". Checked disk (assetsRoot=$assetsRoot) and rootBundle. Error: $e');
     }
   }
 
   return lsDir.path;
 }
 
-final DartClear maceClear = _mace.lookup<NativeFunction<Clear>>('mace_clear').asFunction();
-
 /// High-level Dart wrapper
-class MaceEngine {
+class MaceEngine extends BaseMaceEngine {
   final int _handle;
   MaceEngine._(this._handle);
 
   /// Create the engine, copying speaker files into place first.
-  static Future<MaceEngine> create() async {
-    final String speakerDir = await prepareLoudspeakersFolder();
+  static Future<MaceEngine> create({required String basePath, required String bsfBasePath}) async {
+    /// Initialize the MACE library
+    _maceInitializer(basePath);
+    final String speakerDir = await prepareLoudspeakersFolder(bsfBasePath);
     final Pointer<Utf8> ptr = speakerDir.toNativeUtf8();
     final int h = maceCreateEngine(ptr);
     calloc.free(ptr);
     return MaceEngine._(h);
   }
 
+  static Future<String> getLibPath() async {
+    if (Platform.isMacOS) {
+      // return DynamicLibrary.process();
+      // On macOS we bundled a fat dylib into MyApp.app/Contents/Frameworks/
+      final String exe = Platform.resolvedExecutable;
+      final String bundleContents = File(exe).parent.parent.path;
+      return bundleContents;
+    } else if (Platform.isIOS) {
+      return "";
+    } else if (Platform.isWindows) {
+      final String exe = Platform.resolvedExecutable;
+      final String exeDir = File(exe).parent.path;
+      // final String dllPath = p.join(exeDir, 'MaceAPI.dll');
+
+      // print('DLL path: $dllPath');
+      // print('DLL exists: ${File(dllPath).existsSync()}');
+
+      return exeDir;
+    }
+    return "";
+  }
+
   /// Stops & destroys the engine.
+  @override
   void dispose() => maceDestroyEngine();
 
   /// Clears all previously added surfaces/clusters/measurements.
+  @override
   void clear() => maceClear(_handle);
 
   /// Adds a polygon; [vertices] is a list of [x,y,z] triples.
+  @override
   int addSurface(List<List<num>> vertices) {
     final List<double> flat = vertices.expand((List<num> r) => r.map((num e) => e.toDouble())).toList();
     final Pointer<Double> ptr = calloc<Double>(flat.length);
@@ -239,6 +334,7 @@ class MaceEngine {
   }
 
   /// Adds a speaker cluster by model name.
+  @override
   int addSpeaker(
     String name,
     double x,
@@ -266,6 +362,7 @@ class MaceEngine {
   }
 
   /// Adds field points; [pts] is a list of [x,y,z] triples.
+  @override
   int addFieldPoints(List<List<num>> pts) {
     final List<double> flat = pts.expand((List<num> r) => r.map((num e) => e.toDouble())).toList();
     final Pointer<Double> ptr = calloc<Double>(flat.length);
@@ -278,21 +375,27 @@ class MaceEngine {
   }
 
   /// Creates a measurement of the given type enum value.
+  @override
   int createMeasurement(int type) => maceCreateMeasurement(type);
 
   /// Creates a new group.
+  @override
   int createGroup() => maceCreateGroup();
 
   /// Adds cluster and fieldPoints to the group.
+  @override
   void addToGroup(int groupId, int sourceId, int fieldPointsId) => maceAddToGroup(groupId, sourceId, fieldPointsId);
 
   /// Associates group with measurement.
+  @override
   void addGroupsToMeasurement(int measId, int groupId) => maceAddGroupsToMeasurement(measId, groupId);
 
   /// Runs the acoustic calculation synchronously.
+  @override
   void runCalculation() => maceRunCalc(_handle);
 
   /// Retrieves SPL levels at [freqHz] for [numPoints].
+  @override
   List<double> getSpl(int fph, int freqHz, int numPoints) {
     final Pointer<Double> out = calloc<Double>(numPoints);
     final int count = maceGetSpl(_handle, fph, out, freqHz);
@@ -301,7 +404,7 @@ class MaceEngine {
 
     //getAllSplJson(fph); and print the result for debugging
     final Map<String, dynamic> splJson = getAllSplJson(fph);
-    print('ALL SPL JSON: $splJson');
+    debugPrint('ALL SPL JSON: $splJson');
 
     return res;
   }
@@ -313,6 +416,7 @@ class MaceEngine {
 
   /// Run calculation and extract SPL values for a given bandwidth + frequency.
   /// Returns one value per field point.
+  @override
   List<double> getSplForBandwidth(
     int fph,
     Bandwidth bw, {
@@ -353,6 +457,7 @@ class MaceEngine {
     }
   }
 
+  @override
   Map<String, dynamic> getAllSplJson(int fph) {
     final Pointer<Utf8> splJson = _maceGetAllSplJson(_handle, fph);
     final String jsonStr = splJson.toDartString();
@@ -360,6 +465,7 @@ class MaceEngine {
     return jsonDecode(jsonStr) as Map<String, dynamic>;
   }
 
+  @override
   List<double> getSplAt(
     int fph,
     int bandwidth,
@@ -390,5 +496,6 @@ class MaceEngine {
   }
 
   /// Prints loaded speaker models (debug).
+  @override
   void debugSpeakers() => maceDebugSpeakers();
 }

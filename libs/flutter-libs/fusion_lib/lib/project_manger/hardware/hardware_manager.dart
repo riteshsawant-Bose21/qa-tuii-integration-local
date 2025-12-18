@@ -2,14 +2,14 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 extension HardwareManager on ProjectManager {
   //Add Hardware
-  void addHardware(HardwareComponent hardware) {
+  void addHardware(HardwareComponent hardware, {bool addToCircuit = true}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
     if (projectService!.hardware.exists(hardware.id)) {
       throw Exception('Hardware with id ${hardware.id} already exists');
     }
-    projectService!.addHardware(hardware);
+    projectService!.addHardware(hw: hardware, addToCircuit: addToCircuit);
   }
 
   /// Remove Hardware
@@ -55,6 +55,20 @@ extension HardwareManager on ProjectManager {
     return projectService!.getHardwareForListeningArea(listeningAreaId);
   }
 
+  List<HardwareComponent> getAllHardwareInFloorWithPosition(String floorId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInFloorWithPosition(floorId: floorId);
+  }
+
+  List<HardwareComponent> getAllHardwareInFloorWithoutPosition(String floorId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInFloorWithoutPosition(floorId: floorId);
+  }
+
   List<HardwareComponent> getHardwareForFloor(String floorId) {
     if (projectService == null) {
       throw Exception('No project is currently open');
@@ -86,7 +100,7 @@ extension HardwareManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    addHardware(hw);
+    addHardware(hw, addToCircuit: false);
     projectService!.addHardwareToCircuit(hw.id, circuitId);
   }
 
