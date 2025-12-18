@@ -36,7 +36,7 @@
 #define CR_FRR          BIT(9)
 #define CR_IM1_SHIFT    16
 #define CR_IM1_RISING   (0x1 << CR_IM1_SHIFT)
-#define CR_IM2_SHIFT    19
+#define CR_IM2_SHIFT    18
 #define CR_IM2_RISING   (0x1 << CR_IM2_SHIFT)
 
 /* SR (status, W1C) and IR (enable) bits */
@@ -196,9 +196,9 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
     if (sr & SR_OF1) {
         gpt_program_next_compare(g);
         clr |= SR_OF1;
-        if (++of1_log_ctr % 1000 == 0)
-            pr_info("fusion-gpt: compare (10MHz) at cnt=0x%08x\n",
-                    g->last32);
+        if (++of1_log_ctr <= 10 || of1_log_ctr % 1000 == 0)
+            pr_info("fusion-gpt: compare (10MHz) at cnt=0x%08x (%u)\n",
+                    g->last32, of1_log_ctr);
         if (READ_ONCE(g->ops))
             irq_work_queue(&g->tick_iw);
     }
