@@ -82,12 +82,6 @@ const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
     .stop_interrupts = alsa_ops_stop_interrupts
 };
 
-/* RTP Callbacks */
-static u64 fusion_cn_rtp_get_phc_ns(void)
-{
-    return fusion_cn_gpt_get_phc_ns();
-}
-
 static void *fusion_cn_rtp_ops_get_buffer(void *alsa_stream)
 {
     struct fusion_cn_substream *stream = alsa_stream;
@@ -111,6 +105,17 @@ static u64 fusion_cn_gpt_get_phc_ns(void)
 {
     u64 ticks = fusion_gpt_read_ticks64();
     return ticks ? ticks * GPT_TICK_NS : 0;
+}
+
+/* Mode-aware PHC getter: GPT if selected, otherwise CLOCK_REALTIME */
+u64 fusion_cn_get_phc_ns(void)
+{
+    struct fusion_cn_manager *mgr = READ_ONCE(g_fusion_cn_mgr);
+
+    if (mgr && mgr->ptp.ptp_timing_mode == TIMING_GPT)
+        return fusion_cn_gpt_get_phc_ns();
+
+    return ktime_get_real_ns();
 }
 
 /* helpers: compute how many interrupts are due, and advance state */
@@ -349,7 +354,7 @@ static int fusion_cn_state_init(struct fusion_cn_manager *mgr)
 }
 
 static struct fusion_cn_rtp_ops rtp_ops = {
-    .get_phc_ns = fusion_cn_rtp_get_phc_ns,
+    .get_phc_ns = fusion_cn_get_phc_ns,
     .get_buffer = fusion_cn_rtp_ops_get_buffer,
     .get_buffer_size_in_frames = fusion_cn_rtp_ops_get_buffer_size_in_frames,
     .get_buffer_offset = fusion_cn_rtp_ops_get_buffer_offset
@@ -402,7 +407,6 @@ static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
         int ret;
         u64 now_ns;
 
-        rtp_ops.get_phc_ns = fusion_cn_gpt_get_phc_ns;
         mgr->ptp.tick_count = 0;
 
         ret = fusion_gpt_register_client(&fusion_cn_gpt_ops, mgr, THIS_MODULE);

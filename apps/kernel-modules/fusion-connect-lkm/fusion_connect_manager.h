@@ -92,5 +92,6 @@ struct message_handler_entry {
 
 int fusion_cn_mgr_init(struct fusion_cn_manager *mgr);
 void fusion_cn_mgr_destroy(struct fusion_cn_manager *mgr);
+u64 fusion_cn_get_phc_ns(void);
 
 extern const struct fusion_cn_alsa_ops fusion_cn_alsa_ops;
