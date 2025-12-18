@@ -66,7 +66,7 @@ void fusion_cn_metrics_aggregate_tx(struct fusion_cn_stream_metrics *m)
     m->snap.tx_sched_err_abs_p50_ns  = m->win.tx_sched_err_abs_p50_ns;
 
     /* Always give TX streams a fresh timestamp so userspace sees progress */
-    m->snap.ts_snapshot_ns = ktime_get_real_ns();
+    m->snap.ts_snapshot_ns = fusion_cn_gpt_get_phc_ns();
 }
 
 /* Helpers for 16-bit sequence arithmetic */
@@ -251,7 +251,7 @@ void fusion_cn_metrics_aggregate_rx(struct fusion_cn_stream_metrics *m,
         w->jb_depth_count ? (u32)(w->jb_depth_sum_samples / w->jb_depth_count) : 0;
 
     /* === 4) Final snapshot timestamp === */
-    m->snap.ts_snapshot_ns = ktime_get_real_ns();
+    m->snap.ts_snapshot_ns = fusion_cn_gpt_get_phc_ns();
 }
 
 static inline u32 fc_ns_to_samples(u64 ns, u32 rate)

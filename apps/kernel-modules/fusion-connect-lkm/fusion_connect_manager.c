@@ -18,6 +18,9 @@
 #include "fusion_connect_metrics.h"
 #include "fusion_gpt_client.h"
 
+/* Some builds may carry an older fusion_gpt_client.h without read_ticks; declare locally */
+extern u64 fusion_gpt_read_ticks64(void);
+
 
 #define TIMER_BASE_INTERVAL_NS 333333
 #define GPT_TICK_NS            100
@@ -82,7 +85,7 @@ const struct fusion_cn_alsa_ops fusion_cn_alsa_ops = {
 /* RTP Callbacks */
 static u64 fusion_cn_rtp_get_phc_ns(void)
 {
-    return ktime_get_real_ns();
+    return fusion_cn_gpt_get_phc_ns();
 }
 
 static void *fusion_cn_rtp_ops_get_buffer(void *alsa_stream)
