@@ -20,6 +20,7 @@
 
 
 #define TIMER_BASE_INTERVAL_NS 333333
+#define GPT_TICK_NS            100
 
 #ifndef abs64
 #define abs64(x) ((x) >= 0 ? (x) : -(x))
@@ -100,6 +101,13 @@ static u32 fusion_cn_rtp_ops_get_buffer_offset(void *alsa_stream)
 {
     struct fusion_cn_substream *stream = alsa_stream;
     return stream->buffer_pos;
+}
+
+/* In GPT timing mode, synthesize ns from the 10 MHz counter (100 ns/tick) */
+static u64 fusion_cn_gpt_get_phc_ns(void)
+{
+    u64 ticks = fusion_gpt_read_ticks64();
+    return ticks ? ticks * GPT_TICK_NS : 0;
 }
 
 /* helpers: compute how many interrupts are due, and advance state */
@@ -367,6 +375,16 @@ static inline void fusion_cn_queue_process(void)
 /* --- GPT client callback (softirq via irq_work) --- */
 static void fusion_cn_gpt_tick(void *ctx, u64 tick64)
 {
+    struct fusion_cn_manager *mgr = ctx;
+    u64 now_ns = tick64 * GPT_TICK_NS;
+
+    mgr->ptp.hrtimer_last_tick_ns = now_ns;
+    mgr->ptp.hrtimer_next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
+    if (++mgr->ptp.tick_count == 3) {
+        mgr->ptp.tick_count = 0;
+        mgr->ptp.hrtimer_next_tick_ns += 1;
+    }
+
     /* Keep it tiny: just queue your existing work */
     fusion_cn_queue_process();
 }
@@ -379,15 +397,27 @@ static int fusion_cn_ptp_init(struct fusion_cn_manager *mgr)
 {
     if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
         int ret;
-        ret = fusion_gpt_register_client(&fusion_cn_gpt_ops, g_fusion_cn_mgr, THIS_MODULE);
+        u64 now_ns;
+
+        rtp_ops.get_phc_ns = fusion_cn_gpt_get_phc_ns;
+        mgr->ptp.tick_count = 0;
+
+        ret = fusion_gpt_register_client(&fusion_cn_gpt_ops, mgr, THIS_MODULE);
         if (ret) {
             pr_err("fusion_cn: GPT register failed: %d\n", ret);
             return ret;
         }
+
+        /* Seed timebase from current GPT tick */
+        now_ns = fusion_cn_gpt_get_phc_ns();
+        mgr->ptp.hrtimer_last_tick_ns = now_ns;
+        mgr->ptp.hrtimer_next_tick_ns = now_ns + TIMER_BASE_INTERVAL_NS;
+        pr_info("fusion_cn: GPT timing active (10MHz, 1/3ms compares)\n");
     } else {
         mgr->ptp.ptp_timing_mode = TIMING_HRTIMER;
         hrtimer_init(&mgr->ptp.audio_timer, CLOCK_REALTIME, HRTIMER_MODE_ABS);
         mgr->ptp.audio_timer.function = audio_frame_tick_hrtimer;
+        mgr->ptp.tick_count = 0;
     }
     printk(KERN_DEBUG "fusion_cn: Initialized with %s timing\n",
            mgr->ptp.ptp_timing_mode == TIMING_HRTIMER ? "hrtimer" : "GPT");
@@ -567,7 +597,7 @@ bool fusion_cn_mgr_stop(struct fusion_cn_manager *mgr)
     if (mgr->ptp.ptp_timing_mode == TIMING_HRTIMER) {
         hrtimer_cancel(&mgr->ptp.audio_timer);
     } else if (mgr->ptp.ptp_timing_mode == TIMING_GPT) {
-        // TODO
+        fusion_gpt_unregister_client();
     }
     
     /* Flush and destroy TX worker on stop */

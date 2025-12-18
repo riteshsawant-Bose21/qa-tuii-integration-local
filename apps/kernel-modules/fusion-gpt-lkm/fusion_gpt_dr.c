@@ -75,7 +75,6 @@ struct fusion_gpt
 
 static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
-static unsigned int of1_log_ctr;
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
@@ -98,6 +97,21 @@ static void gpt_tick_iw(struct irq_work *iw)
     if (ops && ops->tick)
         ops->tick(g->ops_ctx, gpt_read_ticks64(g));
 }
+
+u64 fusion_gpt_read_ticks64(void)
+{
+    struct fusion_gpt *g;
+    u64 ret = 0;
+
+    mutex_lock(&gpt_singleton_lock);
+    g = gpt_singleton;
+    if (g)
+        ret = gpt_read_ticks64(g);
+    mutex_unlock(&gpt_singleton_lock);
+
+    return ret;
+}
+EXPORT_SYMBOL(fusion_gpt_read_ticks64);
 
 /* exported client API */
 int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
@@ -181,6 +195,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
     }
     write_sequnlock(&g->ticks_sl);
 
+    /* If compare was programmed behind CNT, pull it forward so OF1 keeps firing */
+    if (!(sr & SR_OF1) && (s32)(g->next_ocr1 - g->last32) <= 0)
+        gpt_program_next_compare(g);
+
     if (sr & SR_IF1) {
         (void)rdl(g, GPT_ICR1);
         clr |= SR_IF1;
@@ -193,9 +211,6 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
     if (sr & SR_OF1) {
         gpt_program_next_compare(g);
         clr |= SR_OF1;
-        if (++of1_log_ctr <= 10 || of1_log_ctr % 1000 == 0)
-            pr_info("fusion-gpt: compare (10MHz) at cnt=0x%08x (%u)\n",
-                    g->last32, of1_log_ctr);
         if (READ_ONCE(g->ops))
             irq_work_queue(&g->tick_iw);
     }

@@ -11,3 +11,4 @@ struct fusion_gpt_client_ops {
 int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
                                void *ctx, struct module *owner);
 void fusion_gpt_unregister_client(void);
+u64 fusion_gpt_read_ticks64(void);
