@@ -32,7 +32,7 @@
 #define CR_DBGEN        BIT(2)
 #define CR_WAITEN       BIT(3)
 #define CR_CLKSRC_SHIFT 6
-#define CR_CLKSRC_EXT   (0x7 << CR_CLKSRC_SHIFT)
+#define CR_CLKSRC_EXT   (0x6 << CR_CLKSRC_SHIFT)
 #define CR_FRR          BIT(9)
 
 /* SR (status, W1C) and IR (enable) bits */
