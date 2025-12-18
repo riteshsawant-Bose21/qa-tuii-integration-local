@@ -33,6 +33,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
   SpeakerWiring? _selectedWiring;
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  SpeakerSortOption _sortOption = SpeakerSortOption.nameAsc;
 
   @override
   void initState() {
@@ -54,6 +55,19 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
 
   List<SpeakerProduct>? get speakers {
     return _speakers;
+  }
+
+  List<SpeakerProduct> _sortProducts(List<SpeakerProduct> items) {
+    final List<SpeakerProduct> sorted = List<SpeakerProduct>.from(items);
+    switch (_sortOption) {
+      case SpeakerSortOption.nameAsc:
+        sorted.sort((SpeakerProduct a, SpeakerProduct b) => (a.modelFamily.toLowerCase()).compareTo(b.modelFamily.toLowerCase()));
+        break;
+      case SpeakerSortOption.nameDesc:
+        sorted.sort((SpeakerProduct a, SpeakerProduct b) => (b.modelFamily.toLowerCase()).compareTo(a.modelFamily.toLowerCase()));
+        break;
+    }
+    return sorted;
   }
 
   // Expand each speaker into color variants so black/white appear as separate entries
@@ -267,7 +281,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                   children: <Widget>[
                     Expanded(
                       child: FusionAppText(
-                        text: "Recently Viewed",
+                        text: _sortOption.displayName,
                         style: context.textTheme.bodySmall?.copyWith(
                           fontWeight: FontWeight.normal,
                           color: context.colorScheme.onSurface,
@@ -275,23 +289,67 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                       ),
                     ),
                     const SizedBox(width: 8),
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () {},
+                    FusionArrowPopup(
+                      blurAmount: 0,
+                      content: StatefulBuilder(
+                        builder: (BuildContext context, StateSetter menuSetState) {
+                          return SizedBox(
+                            width: 220,
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  FusionAppText(
+                                    text: 'Sort by',
+                                    style: context.textTheme.bodySmall?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
+                                    final bool selected = _sortOption == entry;
+
+                                    return GestureDetector(
+                                      behavior: HitTestBehavior.translucent,
+                                      onTap: () {
+                                        _sortOption = entry;
+                                        if (mounted) setState(() => _sortOption = entry);
+                                        menuSetState(() {});
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                        child: Row(
+                                          children: <Widget>[
+                                            Icon(
+                                              selected ? Icons.circle : Icons.radio_button_unchecked,
+                                              size: 14,
+                                              color: selected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: FusionAppText(
+                                                text: entry.displayName,
+                                                style: context.textTheme.bodySmall?.copyWith(
+                                                  color: context.colorScheme.onSurface,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
                         child: FusionSvgIcon(
                           icon: "assets/svg/sort.svg",
-                          color: context.colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () {},
-                        child: FusionSvgIcon(
-                          icon: "assets/svg/filter.svg",
                           color: context.colorScheme.onSurface,
                         ),
                       ),
@@ -349,7 +407,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
                           child: Builder(
                             builder: (BuildContext context) {
-                              final List<MapEntry<SpeakerProduct, String?>> variants = _buildColorVariants(filtered);
+                              final List<MapEntry<SpeakerProduct, String?>> variants = _buildColorVariants(_sortProducts(filtered));
                               return ListView.separated(
                                 itemCount: variants.length,
                                 padding: const EdgeInsets.symmetric(vertical: 10),
@@ -434,118 +492,229 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                                                       // info
                                                       FusionArrowPopup(
                                                         content: SizedBox(
-                                                          width: 300,
-                                                          child: Column(
-                                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                                            children: <Widget>[
-                                                              FusionAppText(
-                                                                text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
-                                                                style: context.textTheme.bodySmall?.copyWith(
-                                                                  color: context.colorScheme.onSurface,
+                                                          width: 500,
+                                                          height: 200,
+                                                          child: SingleChildScrollView(
+                                                            padding: const EdgeInsets.all(16),
+                                                            child: Column(
+                                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                                              children: <Widget>[
+                                                                FusionAppText(
+                                                                  text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
+                                                                  style: context.textTheme.bodySmall?.copyWith(
+                                                                    color: context.colorScheme.onSurface,
+                                                                  ),
                                                                 ),
-                                                              ),
 
-                                                              // GRID VIEW
-                                                              Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
-                                                              Builder(
-                                                                builder: (BuildContext context) {
-                                                                  final String frequencyResponse = () {
-                                                                    final FrequencyRange? f = speaker.frequencyRange;
-                                                                    if (f == null) return 'N/A';
-                                                                    if (f.low == 0 && f.high == 0) return 'N/A';
-                                                                    return '${f.low}\u2013${f.high} ${f.unit}';
-                                                                  }();
+                                                                // GRID VIEW
+                                                                Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
+                                                                Builder(
+                                                                  builder: (BuildContext context) {
+                                                                    final String frequencyResponse = () {
+                                                                      final FrequencyRange? f = speaker.frequencyRange;
+                                                                      if (f == null) return 'N/A';
+                                                                      if (f.low == 0 && f.high == 0) return 'N/A';
+                                                                      return '${f.low}\u2013${f.high} ${f.unit}';
+                                                                    }();
 
-                                                                  final String environment = () {
-                                                                    if ((speaker.environment ?? '').isNotEmpty) {
-                                                                      return speaker.environment!;
-                                                                    }
-                                                                    return speaker.isWeatherRated ? 'Weather rated' : 'N/A';
-                                                                  }();
+                                                                    final String environment = () {
+                                                                      if ((speaker.environment ?? '').isNotEmpty) {
+                                                                        return speaker.environment!;
+                                                                      }
+                                                                      return speaker.isWeatherRated ? 'Weather rated' : 'N/A';
+                                                                    }();
 
-                                                                  final String sensitivity = () {
-                                                                    final Sensitivity? s = speaker.sensitivity;
-                                                                    if (s == null || s.at.isEmpty) return 'N/A';
-                                                                    return s.at.map((MeasurementValue e) => '${e.value} ${s.unit} @ ${e.key}').join(', ');
-                                                                  }();
+                                                                    final String sensitivity = () {
+                                                                      final Sensitivity? s = speaker.sensitivity;
+                                                                      if (s == null || s.at.isEmpty) return 'N/A';
+                                                                      return s.at.map((MeasurementValue e) => '${e.value} ${s.unit} @ ${e.key}').join(', ');
+                                                                    }();
 
-                                                                  final String maxSpl = () {
-                                                                    final MaxSpl? m = speaker.maxSpl;
-                                                                    if (m == null || m.at.isEmpty) return 'N/A';
-                                                                    return m.at.map((MeasurementValue e) => '${e.value} ${m.unit} @ ${e.key}').join(', ');
-                                                                  }();
+                                                                    final String maxSpl = () {
+                                                                      final MaxSpl? m = speaker.maxSpl;
+                                                                      if (m == null || m.at.isEmpty) return 'N/A';
+                                                                      return m.at.map((MeasurementValue e) => '${e.value} ${m.unit} @ ${e.key}').join(', ');
+                                                                    }();
 
-                                                                  final String peakPower = () {
-                                                                    final PowerHandling? p = speaker.powerHandling;
-                                                                    if (p == null) return 'N/A';
-                                                                    return '${p.peak} ${p.unit}';
-                                                                  }();
+                                                                    final String peakPower = () {
+                                                                      final PowerHandling? p = speaker.powerHandling;
+                                                                      if (p == null) return 'N/A';
+                                                                      return '${p.peak} ${p.unit}';
+                                                                    }();
 
-                                                                  final String longTermPower = () {
-                                                                    final PowerHandling? p = speaker.powerHandling;
-                                                                    if (p == null) return 'N/A';
-                                                                    return '${p.longTermRms} ${p.unit}';
-                                                                  }();
+                                                                    final String longTermPower = () {
+                                                                      final PowerHandling? p = speaker.powerHandling;
+                                                                      if (p == null) return 'N/A';
+                                                                      return '${p.longTermRms} ${p.unit}';
+                                                                    }();
 
-                                                                  final String powerHandlingSummary = () {
-                                                                    final PowerHandling? p = speaker.powerHandling;
-                                                                    if (p == null) return 'N/A';
-                                                                    return 'RMS ${p.longTermRms} ${p.unit}, Peak ${p.peak} ${p.unit}';
-                                                                  }();
+                                                                    final String powerHandlingSummary = () {
+                                                                      final PowerHandling? p = speaker.powerHandling;
+                                                                      if (p == null) return 'N/A';
+                                                                      return 'RMS ${p.longTermRms} ${p.unit}, Peak ${p.peak} ${p.unit}';
+                                                                    }();
 
-                                                                  final Map<String, String> details = <String, String>{
-                                                                    'Mounting': speaker.mountType ?? 'N/A',
-                                                                    'Frequency Response': frequencyResponse,
-                                                                    'Environment': environment,
-                                                                    'HF Size': 'N/A', // TODO: hardcoded
-                                                                    'Power Handling': powerHandlingSummary,
-                                                                    'LF Size': 'N/A', // TODO: hardcoded
-                                                                    'Sensitivity': sensitivity,
-                                                                    'Max. SPL': maxSpl,
-                                                                    'Peak Power': peakPower,
-                                                                    'Long Term Power': longTermPower,
-                                                                  };
+                                                                    final Map<String, String> details = <String, String>{
+                                                                      'Mounting': speaker.mountType ?? 'N/A',
+                                                                      'Frequency Response': frequencyResponse,
+                                                                      'Environment': environment,
+                                                                      'HF Size': 'N/A', // TODO: hardcoded
+                                                                      'Power Handling': powerHandlingSummary,
+                                                                      'LF Size': 'N/A', // TODO: hardcoded
+                                                                      'Sensitivity': sensitivity,
+                                                                      'Max. SPL': maxSpl,
+                                                                      'Peak Power': peakPower,
+                                                                      'Long Term Power': longTermPower,
+                                                                    };
 
-                                                                  final List<Widget> children = <Widget>[
-                                                                    ...details.entries.map((MapEntry<String, String> entry) {
-                                                                      final String key = entry.key;
-                                                                      final String value = entry.value;
+                                                                    final List<Widget> children = <Widget>[
+                                                                      ...details.entries.map((MapEntry<String, String> entry) {
+                                                                        final String key = entry.key;
+                                                                        final String value = entry.value;
 
-                                                                      return GestureDetector(
-                                                                        onTap: () {
-                                                                          // selectedSpeaker = selectedSpeaker == speaker ? null : speaker;
-                                                                          // setState(() {});
-                                                                        },
-                                                                        behavior: HitTestBehavior.translucent,
-                                                                        child: Column(
-                                                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                                                          children: <Widget>[
-                                                                            FusionAppText(
-                                                                              text: key,
-                                                                              style: context.textTheme.bodySmall?.copyWith(
-                                                                                fontWeight: FontWeight.normal,
+                                                                        return GestureDetector(
+                                                                          onTap: () {
+                                                                            // selectedSpeaker = selectedSpeaker == speaker ? null : speaker;
+                                                                            // setState(() {});
+                                                                          },
+                                                                          behavior: HitTestBehavior.translucent,
+                                                                          child: Column(
+                                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                                            children: <Widget>[
+                                                                              FusionAppText(
+                                                                                text: key,
+                                                                                style: context.textTheme.bodySmall?.copyWith(
+                                                                                  fontWeight: FontWeight.normal,
+                                                                                ),
                                                                               ),
-                                                                            ),
-                                                                            FusionAppText(
-                                                                              text: value,
-                                                                              style: context.textTheme.bodySmall?.copyWith(
-                                                                                fontWeight: FontWeight.normal,
-                                                                                color: context.colorScheme.onSurface.withAlpha(128),
+                                                                              FusionAppText(
+                                                                                text: value,
+                                                                                style: context.textTheme.bodySmall?.copyWith(
+                                                                                  fontWeight: FontWeight.normal,
+                                                                                  color: context.colorScheme.onSurface.withAlpha(128),
+                                                                                ),
                                                                               ),
-                                                                            ),
-                                                                          ],
-                                                                        ),
-                                                                      );
-                                                                    }),
-                                                                  ];
+                                                                            ],
+                                                                          ),
+                                                                        );
+                                                                      }),
+                                                                    ];
 
-                                                                  return BuildingPageGridView(
-                                                                    width: 140,
-                                                                    children: children,
-                                                                  );
-                                                                },
-                                                              ),
-                                                            ],
+                                                                    return BuildingPageGridView(
+                                                                      width: 140,
+                                                                      children: children,
+                                                                    );
+                                                                  },
+                                                                ),
+                                                                FusionAppText(
+                                                                  text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
+                                                                  style: context.textTheme.bodySmall?.copyWith(
+                                                                    color: context.colorScheme.onSurface,
+                                                                  ),
+                                                                ),
+
+                                                                // GRID VIEW
+                                                                Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
+                                                                Builder(
+                                                                  builder: (BuildContext context) {
+                                                                    final String frequencyResponse = () {
+                                                                      final FrequencyRange? f = speaker.frequencyRange;
+                                                                      if (f == null) return 'N/A';
+                                                                      if (f.low == 0 && f.high == 0) return 'N/A';
+                                                                      return '${f.low}\u2013${f.high} ${f.unit}';
+                                                                    }();
+
+                                                                    final String environment = () {
+                                                                      if ((speaker.environment ?? '').isNotEmpty) {
+                                                                        return speaker.environment!;
+                                                                      }
+                                                                      return speaker.isWeatherRated ? 'Weather rated' : 'N/A';
+                                                                    }();
+
+                                                                    final String sensitivity = () {
+                                                                      final Sensitivity? s = speaker.sensitivity;
+                                                                      if (s == null || s.at.isEmpty) return 'N/A';
+                                                                      return s.at.map((MeasurementValue e) => '${e.value} ${s.unit} @ ${e.key}').join(', ');
+                                                                    }();
+
+                                                                    final String maxSpl = () {
+                                                                      final MaxSpl? m = speaker.maxSpl;
+                                                                      if (m == null || m.at.isEmpty) return 'N/A';
+                                                                      return m.at.map((MeasurementValue e) => '${e.value} ${m.unit} @ ${e.key}').join(', ');
+                                                                    }();
+
+                                                                    final String peakPower = () {
+                                                                      final PowerHandling? p = speaker.powerHandling;
+                                                                      if (p == null) return 'N/A';
+                                                                      return '${p.peak} ${p.unit}';
+                                                                    }();
+
+                                                                    final String longTermPower = () {
+                                                                      final PowerHandling? p = speaker.powerHandling;
+                                                                      if (p == null) return 'N/A';
+                                                                      return '${p.longTermRms} ${p.unit}';
+                                                                    }();
+
+                                                                    final String powerHandlingSummary = () {
+                                                                      final PowerHandling? p = speaker.powerHandling;
+                                                                      if (p == null) return 'N/A';
+                                                                      return 'RMS ${p.longTermRms} ${p.unit}, Peak ${p.peak} ${p.unit}';
+                                                                    }();
+
+                                                                    final Map<String, String> details = <String, String>{
+                                                                      'Mounting': speaker.mountType ?? 'N/A',
+                                                                      'Frequency Response': frequencyResponse,
+                                                                      'Environment': environment,
+                                                                      'HF Size': 'N/A', // TODO: hardcoded
+                                                                      'Power Handling': powerHandlingSummary,
+                                                                      'LF Size': 'N/A', // TODO: hardcoded
+                                                                      'Sensitivity': sensitivity,
+                                                                      'Max. SPL': maxSpl,
+                                                                      'Peak Power': peakPower,
+                                                                      'Long Term Power': longTermPower,
+                                                                    };
+
+                                                                    final List<Widget> children = <Widget>[
+                                                                      ...details.entries.map((MapEntry<String, String> entry) {
+                                                                        final String key = entry.key;
+                                                                        final String value = entry.value;
+
+                                                                        return GestureDetector(
+                                                                          onTap: () {
+                                                                            // selectedSpeaker = selectedSpeaker == speaker ? null : speaker;
+                                                                            // setState(() {});
+                                                                          },
+                                                                          behavior: HitTestBehavior.translucent,
+                                                                          child: Column(
+                                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                                            children: <Widget>[
+                                                                              FusionAppText(
+                                                                                text: key,
+                                                                                style: context.textTheme.bodySmall?.copyWith(
+                                                                                  fontWeight: FontWeight.normal,
+                                                                                ),
+                                                                              ),
+                                                                              FusionAppText(
+                                                                                text: value,
+                                                                                style: context.textTheme.bodySmall?.copyWith(
+                                                                                  fontWeight: FontWeight.normal,
+                                                                                  color: context.colorScheme.onSurface.withAlpha(128),
+                                                                                ),
+                                                                              ),
+                                                                            ],
+                                                                          ),
+                                                                        );
+                                                                      }),
+                                                                    ];
+
+                                                                    return BuildingPageGridView(
+                                                                      width: 140,
+                                                                      children: children,
+                                                                    );
+                                                                  },
+                                                                ),
+                                                              ],
+                                                            ),
                                                           ),
                                                         ),
                                                         child: Icon(

@@ -40,3 +40,11 @@ enum SpeakerWiring {
   const SpeakerWiring(this.displayName);
   final String displayName;
 }
+
+enum SpeakerSortOption {
+  nameAsc("Name (A-Z)"),
+  nameDesc("Name (Z-A)");
+
+  const SpeakerSortOption(this.displayName);
+  final String displayName;
+}
