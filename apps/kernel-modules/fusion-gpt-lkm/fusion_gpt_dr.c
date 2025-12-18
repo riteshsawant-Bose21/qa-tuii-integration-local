@@ -76,8 +76,6 @@ struct fusion_gpt
 static struct fusion_gpt *gpt_singleton;
 static DEFINE_MUTEX(gpt_singleton_lock);
 static unsigned int of1_log_ctr;
-static unsigned int if1_log_ctr;
-static unsigned int if2_log_ctr;
 
 static inline u32 rdl(struct fusion_gpt *g, u32 off) { return readl_relaxed(g->base + off); }
 static inline void wrl(struct fusion_gpt *g, u32 v, u32 off) { writel_relaxed(v, g->base + off); }
@@ -182,15 +180,10 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
     if (sr & SR_IF1) {
         (void)rdl(g, GPT_ICR1);
         clr |= SR_IF1;
-        pr_info("fusion-gpt: capture1 (1PPS) at cnt=0x%08x (%u)\n",
-                g->last32, ++if1_log_ctr);
     }
     if (sr & SR_IF2) {
         (void)rdl(g, GPT_ICR2);
         clr |= SR_IF2;
-        if (++if2_log_ctr % 48000 == 0)
-            pr_info("fusion-gpt: capture2 (48k frame sync) at cnt=0x%08x (%u)\n",
-                    g->last32, if2_log_ctr);
     }
 
     if (sr & SR_OF1) {
