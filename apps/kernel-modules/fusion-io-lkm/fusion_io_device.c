@@ -1247,10 +1247,10 @@ static int get_device_id(struct device *dev, char *device_id, size_t len)
     const char *device_id_prop;
     int ret;
 
-    ret = device_property_read_string(dev, "device_id", &device_id_prop);
+    ret = device_property_read_string(dev, "device-id", &device_id_prop);
     if (!ret && device_id_prop && device_id_prop[0]) {
         strscpy(device_id, device_id_prop, len);
-        dev_dbg(dev, "Using device_id '%s' from devicetree\n", device_id);
+        dev_dbg(dev, "Using device-id '%s' from devicetree\n", device_id);
         return 0;
     }
 
