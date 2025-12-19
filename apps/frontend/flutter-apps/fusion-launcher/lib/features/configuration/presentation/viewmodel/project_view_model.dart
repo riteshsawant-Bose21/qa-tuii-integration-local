@@ -24,6 +24,7 @@ export 'equip_location/equip_location_view_model.dart';
 export 'scenes_view_model/scenes_view_model.dart';
 export 'schedule/schedule_view_model.dart';
 export 'events/events_view_model.dart';
+export 'media_files/media_file_view_models.dart';
 
 part 'project_view_model_state.dart';
 
