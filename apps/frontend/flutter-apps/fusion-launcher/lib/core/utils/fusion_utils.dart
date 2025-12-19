@@ -278,9 +278,9 @@ Status Code: ${statusCode ?? 'None'}
           width: double.infinity,
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey[100],
+            color: Colors.black,
             borderRadius: BorderRadius.circular(4),
-            border: Border.all(color: Colors.grey[300]!),
+            border: Border.all(color: Colors.black),
           ),
           child: SelectableText(
             content,

@@ -1,5 +1,6 @@
 //Cloud
 export 'cloud/project_cloud_sync_manager.dart';
+export 'cloud/services/project_sync_service.dart';
 
 //Floor
 export 'floor/floor_service.dart';

@@ -1,7 +1,9 @@
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:bloc/bloc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
@@ -136,6 +138,8 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       _emitLoading();
 
       await _authService.logout();
+      await serviceLocator<SharedPreferencesHandler>().clearAll();
+      await serviceLocator<ProjectViewModel>().deleteFusionProjectDirectory();
 
       _emitUnauthenticated();
     } catch (e) {

@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive_io.dart';
 import 'package:flutter/services.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:path/path.dart' as path;
+import 'package:path_provider/path_provider.dart';
 
 const String kFusionProjectDirName = '/FusionProject';
 const String kAdminFusionProjectDirName = '/AdminFusionProject';
@@ -60,8 +63,10 @@ class LocalProjectManager {
 
         final String jsonStr = await jsonFile.readAsString();
         final Map<String, dynamic> projectData = jsonDecode(jsonStr);
-
-        allProjects.add(ProjectData.fromJson(projectData));
+        ProjectData project = ProjectData.fromJson(projectData);
+        if (!project.isDeleted) {
+          allProjects.add(project);
+        }
       }
 
       return ResponseCallback.success(allProjects);
@@ -77,12 +82,69 @@ class LocalProjectManager {
     return projectDir;
   }
 
+  Future<File> zipProjectDirectory(String projectId) async {
+    final Directory projectDir = await getProjectDirectoryById(projectId);
+
+    if (!await projectDir.exists()) {
+      throw Exception("Project directory not found: ${projectDir.path}");
+    }
+
+    final String zipPath = '${projectDir.path}.zip';
+    final File zipFile = File(zipPath);
+
+    // Delete existing zip file
+    if (await zipFile.exists()) {
+      await zipFile.delete();
+    }
+
+    try {
+      // Create archive in memory
+      final archive = Archive();
+
+      // Get all entities recursively
+      final entities = projectDir.listSync(recursive: true);
+
+      for (final entity in entities) {
+        final relativePath = entity.path.substring(projectDir.path.length + 1);
+
+        if (entity is File) {
+          // Add file with its content
+          final bytes = await entity.readAsBytes();
+          final archiveFile = ArchiveFile(relativePath, bytes.length, bytes);
+          archive.addFile(archiveFile);
+        } else if (entity is Directory) {
+          // Add directory entry (with trailing slash)
+          final archiveFile = ArchiveFile('$relativePath/', 0, []);
+          archive.addFile(archiveFile);
+        }
+      }
+
+      // Encode to zip
+      final zipData = ZipEncoder().encode(archive);
+
+      if (zipData == null) {
+        throw Exception("Failed to encode zip file");
+      }
+
+      // Write to file
+      await zipFile.writeAsBytes(zipData);
+
+      return zipFile;
+    } catch (e) {
+      // Cleanup partial zip on error
+      if (await zipFile.exists()) {
+        await zipFile.delete();
+      }
+      rethrow;
+    }
+  }
+
   /// Creates a new project folder
   /// with the given name.
   /// inside the Fusion project directory.
   Future<ResponseCallback<ProjectData?>> createNewProject({required NewProjectDetails projectDetails}) async {
-    final String projectId = FusionUtils.shortStringUUID();
-    final DateTime now = DateTime.now();
+    final String projectId = FusionUtils.generateUUID();
+    final DateTime now = DateTime.now().toUtc();
     final List<Color> newColor = FusionUtils.randomColors();
 
     try {
@@ -99,42 +161,72 @@ class LocalProjectManager {
       /// Create the new folder
       await projectDir.create(recursive: true);
 
-      final Map<String, dynamic> sampleMetadata = ProjectMetadataModel(fileId: '', thumbnailUrl: '', projectName: projectDetails.name).toJson();
-
       Map<String, dynamic> newProjectData = {
         'id': projectId,
         'name': projectDetails.name,
         'projectName': projectDetails.name,
-        'metaData': sampleMetadata.toString(),
-        'colors': newColor.map((Color color) => color.value).toList(),
+        'colors': newColor.map((Color color) => '0x${color.toARGB32().toRadixString(16).padLeft(8, '0')}').toList(),
         'createdAt': now.toIso8601String(),
         'updatedAt': now.toIso8601String(),
-        "floors": [
-          {
-            "id": "FLOOR${FusionUtils.shortStringUUID()}",
-            'name': "Floor 1",
-            'floorPlan': FloorPlanModel.defaultFloorPlan,
-          },
-        ],
-        "listeningAreas": [],
-        "zones": [],
-        "sourceSet": [],
-        "circuits": [],
-        "wiringConnection": [],
-        "hardwareComponents": [],
-        "fusionDevices": [],
-        "suggestedFusionDevices": [],
-        "amplifiers": [],
         "virtualIP": null,
         "currentFloorIndex": 0,
         "droResponse": null,
         "minSPL": 36.0,
         "maxSPL": 132.0,
         "isInControlMode": false,
+        "isInHardwareMode": false,
+        "application": null,
+        "budget": null,
+        "description": null,
+        "environment_type": null,
+        "is_archived": false,
+        "is_starred": false,
+        "locked_by_user": null,
+        "project_file_url": null,
+        "project_phase": null,
+        "thumbnail_url": null,
+        "venue": null,
+        "lastUploadedAt": null,
+        "isCloudInstance": false,
+        "is_deleted": false,
+        "floors": [
+          {
+            "id": "FLOOR${FusionUtils.shortStringUUID()}",
+            'name': "Floor 1",
+            'floorPlan': FloorPlanModel.defaultFloorPlan.toJson(),
+          },
+        ],
+        "listeningAreas": [],
+        "zones": [],
+        "subZones": [],
+        "sourceSet": [],
+        "circuits": [],
+        "wiringConnection": [],
+        "hardware": [],
+        "fusionDevices": [],
+        "suggestedFusionDevices": [],
+        "amplifiers": [],
+        "processingBlocks": [],
+        "relationships": {},
+        "zoneFunctions": [],
+        "prioritySourceData": [],
+        "snapshots": [],
+        "sceneActions": [],
+        "sceneSets": [],
+        "gpioConfig": [],
+        "schedulerConfig": [],
+        "events": [],
       };
 
       /// Create the project entity
-      final ProjectData newProject = ProjectData(id: projectId, name: projectDetails.name, metaData: sampleMetadata.toString(), projectRawData: newProjectData);
+      final ProjectData newProject = ProjectData(
+        id: projectId,
+        name: projectDetails.name,
+        projectRawData: newProjectData,
+        createdAt: now,
+        updatedAt: now,
+        isCloudInstance: false,
+      );
 
       /// Write the project data to a JSON file
       final File jsonFile = File('${projectDir.path}/$kProjectDataFileName');
@@ -148,7 +240,7 @@ class LocalProjectManager {
   }
 
   ///save all projects to fusion project directory
-  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projects) async {
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projects, {bool fromServer = false}) async {
     try {
       final Directory fusionDir = await fusionProjectDirectory;
 
@@ -157,10 +249,25 @@ class LocalProjectManager {
 
         if (!await projectDir.exists()) {
           await projectDir.create(recursive: true);
+        } else {
+          if (fromServer) {
+            FusionLogger.log(tag: LogTag.project, message: 'Project directory already exists: ${projectDir.path}');
+            //check for existing project data file and updated at date to avoid overwriting newer data or if both are same then also skip
+            final File existingJsonFile = File('${projectDir.path}/$kProjectDataFileName');
+            if (await existingJsonFile.exists()) {
+              final String existingJsonStr = await existingJsonFile.readAsString();
+              final Map<String, dynamic> existingProjectData = jsonDecode(existingJsonStr);
+              final DateTime existingUpdatedAt = DateTime.parse(existingProjectData['updatedAt'] as String);
+              if (existingUpdatedAt.isAfter(project.updatedAt) || existingUpdatedAt.isAtSameMomentAs(project.updatedAt)) {
+                FusionLogger.log(tag: LogTag.project, message: 'Skipping save for project ${project.id} as existing data is same/newer.');
+                continue;
+              }
+            }
+          }
         }
 
         final File jsonFile = File('${projectDir.path}/$kProjectDataFileName');
-        await jsonFile.writeAsString(jsonEncode(project.projectRawData));
+        await jsonFile.writeAsString(jsonEncode(project.isCloudInstance ? project.toJson() : project.projectRawData));
       }
 
       return ResponseCallback.success(true);
@@ -171,7 +278,7 @@ class LocalProjectManager {
   }
 
   ///save single project to fusion project directory
-  Future<ResponseCallback<bool>> saveProject(ProjectData project) async {
+  Future<ResponseCallback<bool>> saveProject(ProjectData project, {bool fromServer = false}) async {
     try {
       final Directory fusionDir = await fusionProjectDirectory;
 
@@ -179,10 +286,25 @@ class LocalProjectManager {
 
       if (!await projectDir.exists()) {
         await projectDir.create(recursive: true);
+      } else {
+        if (fromServer) {
+          FusionLogger.log(tag: LogTag.project, message: 'Project directory already exists: ${projectDir.path}');
+          //check for existing project data file and updated at date to avoid overwriting newer data or if both are same then also skip
+          final File existingJsonFile = File('${projectDir.path}/$kProjectDataFileName');
+          if (await existingJsonFile.exists()) {
+            final String existingJsonStr = await existingJsonFile.readAsString();
+            final Map<String, dynamic> existingProjectData = jsonDecode(existingJsonStr);
+            final DateTime existingUpdatedAt = DateTime.parse(existingProjectData['updatedAt'] as String);
+            if (existingUpdatedAt.isAfter(project.updatedAt) || existingUpdatedAt.isAtSameMomentAs(project.updatedAt)) {
+              FusionLogger.log(tag: LogTag.project, message: 'Skipping save for project ${project.id} as existing data is same/newer.');
+              return ResponseCallback.success(true);
+            }
+          }
+        }
       }
 
       final File jsonFile = File('${projectDir.path}/$kProjectDataFileName');
-      await jsonFile.writeAsString(jsonEncode(project.projectRawData));
+      await jsonFile.writeAsString(jsonEncode(project.isCloudInstance ? project.toJson() : project.projectRawData));
 
       return ResponseCallback.success(true);
     } catch (e) {
@@ -201,7 +323,7 @@ class LocalProjectManager {
   }
 
   /// Deletes a project folder
-  Future<ResponseCallback<bool>> deleteProject({required String projectId}) async {
+  Future<ResponseCallback<bool>> deleteProjectFolder({required String projectId}) async {
     return await deleteLocalFolder(projectId);
   }
 

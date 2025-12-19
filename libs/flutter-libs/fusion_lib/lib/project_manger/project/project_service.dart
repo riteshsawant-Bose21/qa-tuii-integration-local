@@ -16,11 +16,24 @@ class ProjectService {
   final Map<String, dynamic>? droResponse;
   final DateTime createdAt;
   final DateTime updatedAt;
-  final String metaData;
   final double minSPL;
   final double maxSPL;
   bool isInControlMode;
   bool isInHardwareMode = false;
+  final String? application;
+  final Map<String, dynamic>? budget;
+  final String? description;
+  final String? environmentType;
+  final bool isArchived;
+  final bool isStarred;
+  final String? lockedByUser;
+  final String? projectFileUrl;
+  final String? projectPhase;
+  final String? thumbnailUrl;
+  final String? venue;
+  final DateTime? lastUploadedAt;
+  final bool isDeleted;
+  final bool isCloudInstance;
 
   final FloorRepository floors;
   final ListeningAreaRepository listeningAreas;
@@ -64,11 +77,24 @@ class ProjectService {
     this.droResponse,
     required this.createdAt,
     required this.updatedAt,
-    required this.metaData,
     required this.minSPL,
     required this.maxSPL,
     this.isInControlMode = false,
     this.isInHardwareMode = false,
+    this.application,
+    this.budget,
+    this.description,
+    this.environmentType,
+    this.isArchived = false,
+    this.isStarred = false,
+    this.isDeleted = false,
+    this.lockedByUser,
+    this.projectFileUrl,
+    this.projectPhase,
+    this.thumbnailUrl,
+    this.venue,
+    this.lastUploadedAt,
+    this.isCloudInstance = false,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -128,6 +154,20 @@ class ProjectService {
     double? minSPL,
     double? maxSPL,
     bool? isInControlMode,
+    String? application,
+    Map<String, dynamic>? budget,
+    String? description,
+    String? environmentType,
+    bool? isArchived,
+    bool? isStarred,
+    String? lockedByUser,
+    String? projectFileUrl,
+    String? projectPhase,
+    String? thumbnailUrl,
+    String? venue,
+    bool? isDeleted,
+    DateTime? lastUploadedAt,
+    bool? isCloudInstance,
     FloorRepository? floors,
     ListeningAreaRepository? listeningAreas,
     ZoneRepository? zones,
@@ -162,10 +202,22 @@ class ProjectService {
       droResponse: droResponse ?? this.droResponse,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
-      metaData: metaData ?? this.metaData,
       minSPL: minSPL ?? this.minSPL,
       maxSPL: maxSPL ?? this.maxSPL,
       isInControlMode: isInControlMode ?? this.isInControlMode,
+      application: application ?? this.application,
+      budget: budget ?? this.budget,
+      description: description ?? this.description,
+      environmentType: environmentType ?? this.environmentType,
+      isArchived: isArchived ?? this.isArchived,
+      isStarred: isStarred ?? this.isStarred,
+      lockedByUser: lockedByUser ?? this.lockedByUser,
+      projectFileUrl: projectFileUrl ?? this.projectFileUrl,
+      projectPhase: projectPhase ?? this.projectPhase,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      venue: venue ?? this.venue,
+      isDeleted: isDeleted ?? this.isDeleted,
+      lastUploadedAt: lastUploadedAt ?? this.lastUploadedAt,
       floors: floors ?? this.floors,
       listeningAreas: listeningAreas ?? this.listeningAreas,
       zones: zones ?? this.zones,
@@ -180,6 +232,7 @@ class ProjectService {
       processingBlocks: processingBlocks ?? this.processingBlocks,
       relationships: relationships ?? this.relationships,
       isInHardwareMode: isInHardwareMode ?? this.isInHardwareMode,
+      isCloudInstance: isCloudInstance ?? this.isCloudInstance,
       zoneFunctions: zoneFunctions ?? this.zoneFunctions,
       prioritySourceData: prioritySourceData ?? this.prioritySourceData,
       equipLocations: equipLocations ?? this.equipLocations,
@@ -206,17 +259,30 @@ class ProjectService {
       "id": id,
       "name": name,
       "projectName": name,
-      "colors": colors.map((c) => c.value).toList(),
+      "colors": colors.map((c) => '0x${c.toARGB32().toRadixString(16).padLeft(8, '0')}').toList(),
       "virtualIP": virtualIP,
       "currentFloorIndex": currentFloorIndex,
       "droResponse": droResponse,
       "createdAt": createdAt.toIso8601String(),
       "updatedAt": updatedAt.toIso8601String(),
-      "metaData": metaData,
       "minSPL": minSPL,
       "maxSPL": maxSPL,
       "isInControlMode": isInControlMode,
       "isInHardwareMode": isInHardwareMode,
+      "application": application,
+      "budget": budget,
+      "description": description,
+      "environment_type": environmentType,
+      "is_archived": isArchived,
+      "is_starred": isStarred,
+      "locked_by_user": lockedByUser,
+      "project_file_url": projectFileUrl,
+      "project_phase": projectPhase,
+      "thumbnail_url": thumbnailUrl,
+      "venue": venue,
+      "is_deleted": isDeleted,
+      "lastUploadedAt": lastUploadedAt?.toIso8601String(),
+      "isCloudInstance": isCloudInstance,
       "floors": floors.toJson((f) => f.toJson()),
       "listeningAreas": listeningAreas.toJson((a) => a.toJson()),
       "zones": zones.toJson((z) => z.toJson()),
@@ -263,11 +329,24 @@ class ProjectService {
       droResponse: json["droResponse"],
       createdAt: DateTime.parse(json["createdAt"]),
       updatedAt: DateTime.parse(json["updatedAt"]),
-      metaData: json["metaData"] ?? "",
       minSPL: (json["minSPL"] as num).toDouble(),
       maxSPL: (json["maxSPL"] as num).toDouble(),
       isInControlMode: json["isInControlMode"] ?? false,
       isInHardwareMode: json["isInHardwareMode"] ?? false,
+      application: json["application"],
+      budget: json["budget"],
+      description: json["description"] ?? "",
+      environmentType: json["environment_type"],
+      isArchived: json["is_archived"] ?? false,
+      isStarred: json["is_starred"] ?? false,
+      lockedByUser: json["locked_by_user"],
+      projectFileUrl: json["project_file_url"],
+      projectPhase: json["project_phase"],
+      thumbnailUrl: json["thumbnail_url"],
+      venue: json["venue"],
+      isDeleted: json["is_deleted"] ?? false,
+      lastUploadedAt: json["lastUploadedAt"] != null ? DateTime.parse(json["lastUploadedAt"]) : null,
+      isCloudInstance: json["isCloudInstance"] ?? false,
     );
 
     service.floors.fromJsonList(json["floors"], (m) => FloorModel.fromJson(m), "id");
