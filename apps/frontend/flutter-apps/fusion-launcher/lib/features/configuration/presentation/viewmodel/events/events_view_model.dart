@@ -261,4 +261,19 @@ extension EventsViewModel on ProjectViewModel {
       rethrow;
     }
   }
+
+  void updateEventSelectedState({required String eventId, required EventStates selectedState, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      throwError("Failed to update event selected state: $ex");
+    }
+  }
 }

@@ -283,4 +283,13 @@ extension EventsService on ProjectService {
     }
     return events.get(eventId)!;
   }
+
+  void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
+    if (!events.exists(eventId)) {
+      throw Exception("Event with id $eventId does not exist.");
+    }
+    final FusionEvent event = events.get(eventId)!;
+    final FusionEvent updated = event.copyWith(selectedState: selectedState);
+    events.add(eventId, updated);
+  }
 }

@@ -153,4 +153,11 @@ extension EventsManager on ProjectManager {
     }
     return projectService!.getEventById(eventId: eventId);
   }
+
+  void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
+  }
 }

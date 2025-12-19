@@ -492,4 +492,12 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     selectedSnapshotId = snapshotId;
     emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
   }
+
+  /// Selected event ID for actions panel
+  String? selectedEventId;
+
+  void setSelectedEventId(String? eventId) {
+    selectedEventId = eventId;
+    emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
+  }
 }

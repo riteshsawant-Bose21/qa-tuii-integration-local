@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
+import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
@@ -543,26 +544,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
               ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
               // add all othere
-              ConfigurationMenuMode.events => const Center(
-                child: FusionAppText(
-                  text: "Presets Configuration Page",
-                ),
-              ),
+              ConfigurationMenuMode.events => const ConfigurationEvents(),
               ConfigurationMenuMode.gpio => const GpioPage(),
               ConfigurationMenuMode.scheduling => const SchedulingPage(),
             };
-            // return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
-            //     ? const ConfigurationPage()
-            //     : Center(
-            //       child: FusionAppText(
-            //         text:
-            //             _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
-            //                 ? "Sources Configuration Page"
-            //                 : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
-            //                 ? "Presets Configuration Page"
-            //                 : "Scheduling Configuration Page",
-            //       ),
-            //     );
           },
         ),
 
