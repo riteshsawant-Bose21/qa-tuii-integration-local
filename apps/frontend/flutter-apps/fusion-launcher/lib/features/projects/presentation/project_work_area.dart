@@ -8,6 +8,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
+import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
+import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
@@ -547,6 +549,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ConfigurationMenuMode.events => const ConfigurationEvents(),
               ConfigurationMenuMode.gpio => const GpioPage(),
               ConfigurationMenuMode.scheduling => const SchedulingPage(),
+              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+                create: (_) => MediaFilesViewModel(),
+                child: const ConfigurationMediaFilesPage(),
+              ),
             };
           },
         ),

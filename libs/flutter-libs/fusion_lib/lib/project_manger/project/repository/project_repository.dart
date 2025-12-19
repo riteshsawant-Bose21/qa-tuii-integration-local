@@ -140,6 +140,8 @@ class SchedulerRepository extends Repository<ScheduleConfig> {}
 
 class EventsRepository extends Repository<FusionEvent> {}
 
+class MediaFileRepository extends Repository<MediaFileModel> {}
+
 class ZoneFunctionRepository extends Repository<ZoneFunctions> {
   // Get ZoneFunction by function id
   ZoneFunctions? getByFunctionId({required String functionId}) {

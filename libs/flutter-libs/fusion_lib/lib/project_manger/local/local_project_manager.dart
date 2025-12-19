@@ -8,6 +8,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 
 const String kFusionProjectDirName = '/FusionProject';
+const String kFusionMediaDirectory = '/MediaFiles';
 const String kAdminFusionProjectDirName = '/AdminFusionProject';
 const String kProjectDataFileName = 'project_data.json';
 
@@ -80,6 +81,17 @@ class LocalProjectManager {
     final Directory fusionDir = await fusionProjectDirectory;
     final Directory projectDir = Directory('${fusionDir.path}/$projectId');
     return projectDir;
+  }
+
+  Future<Directory> getProjectMediaDirectory({required String projectId}) async {
+    final String mediaDirPath = kFusionMediaDirectory;
+    Directory appDocDir = await getProjectDirectoryById(projectId);
+    final Directory mediaDir = Directory('${appDocDir.path}$mediaDirPath');
+
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+    return mediaDir;
   }
 
   Future<File> zipProjectDirectory(String projectId) async {
@@ -380,6 +392,64 @@ class LocalProjectManager {
       return "${splits[splits.length - 2]}/${splits.last}/images/$imageName";
     } catch (e) {
       throw ('Error saving image to project: $e');
+    }
+  }
+
+  Future<String> saveMediaFileToProject({required File mediaFile, required String projectId, String? fileName}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      if (!await mediaDir.exists()) {
+        await mediaDir.create(recursive: true);
+      }
+      fileName ??= path.basename(mediaFile.path);
+      final File destFile = File('${mediaDir.path}/$fileName');
+      await destFile.writeAsBytes(await mediaFile.readAsBytes());
+      return destFile.path;
+    } catch (e) {
+      throw ('Error saving media file to project: $e');
+    }
+  }
+
+  Future<List<File>> getAllMediaFilesFromProject({required String projectId}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      if (!await mediaDir.exists()) {
+        return [];
+      }
+      final List<FileSystemEntity> entities = await mediaDir.list().toList();
+      final List<File> mediaFiles = entities.whereType<File>().toList();
+      return mediaFiles;
+    } catch (e) {
+      throw ('Error getting media files from project: $e');
+    }
+  }
+
+  Future<void> deleteMediaFileFromProject({required String projectId, required String fileName}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      final File mediaFile = File('${mediaDir.path}/$fileName');
+      if (await mediaFile.exists()) {
+        await mediaFile.delete();
+      } else {
+        FusionLogger.log(tag: LogTag.project, message: 'Media file does not exist: ${mediaFile.path}');
+      }
+    } catch (e) {
+      throw ('Error deleting media file from project: $e');
+    }
+  }
+
+  Future<void> renameMediaFileInProject({required String projectId, required String oldFileName, required String newFileName}) async {
+    try {
+      final Directory mediaDir = await getProjectMediaDirectory(projectId: projectId);
+      final File oldMediaFile = File('${mediaDir.path}/$oldFileName');
+      final File newMediaFile = File('${mediaDir.path}/$newFileName');
+      if (await oldMediaFile.exists()) {
+        await oldMediaFile.rename(newMediaFile.path);
+      } else {
+        throw ('Media file does not exist: ${oldMediaFile.path}');
+      }
+    } catch (e) {
+      throw ('Error renaming media file in project: $e');
     }
   }
 

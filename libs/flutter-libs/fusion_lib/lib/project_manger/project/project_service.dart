@@ -56,6 +56,7 @@ class ProjectService {
   final GPIORepository gpioConfigs;
   final SchedulerRepository schedulerConfig;
   final EventsRepository events;
+  final MediaFileRepository mediaFiles;
 
   final RelationshipManager relationships;
 
@@ -117,6 +118,7 @@ class ProjectService {
     GPIORepository? gpioRepository,
     SchedulerRepository? schedulerConfig,
     EventsRepository? events,
+    MediaFileRepository? mediaFiles,
   }) : floors = floors ?? FloorRepository(),
        listeningAreas = listeningAreas ?? ListeningAreaRepository(),
        zones = zones ?? ZoneRepository(),
@@ -138,7 +140,8 @@ class ProjectService {
        sceneSets = sceneSetRepository ?? SceneSetRepository(),
        gpioConfigs = gpioRepository ?? GPIORepository(),
        schedulerConfig = schedulerConfig ?? SchedulerRepository(),
-       events = events ?? EventsRepository();
+       events = events ?? EventsRepository(),
+       mediaFiles = mediaFiles ?? MediaFileRepository();
 
   ProjectService copyWith({
     String? id,
@@ -191,6 +194,7 @@ class ProjectService {
     GPIORepository? gpioRepository,
     SchedulerRepository? schedulerConfig,
     EventsRepository? events,
+    MediaFileRepository? mediaFiles,
   }) {
     ProjectService projectService = ProjectService(
       id: id ?? this.id,
@@ -242,6 +246,7 @@ class ProjectService {
       gpioRepository: gpioRepository ?? gpioConfigs,
       schedulerConfig: schedulerConfig ?? this.schedulerConfig,
       events: events ?? this.events,
+      mediaFiles: mediaFiles ?? this.mediaFiles,
     );
 
     // Preserve undo/redo stacks
@@ -315,6 +320,7 @@ class ProjectService {
       "gpioConfig": gpioConfigs.toJson((g) => g.toJson()),
       "schedulerConfig": schedulerConfig.toJson((s) => s.toJson()),
       "events": events.toJson((e) => e.toJson()),
+      "mediaFiles": mediaFiles.toJson((m) => m.toJson()),
     };
   }
 
@@ -393,6 +399,7 @@ class ProjectService {
     service.gpioConfigs.fromJsonList(json["gpioConfig"], (m) => GpioConfig.fromJson(m), "id");
     service.schedulerConfig.fromJsonList(json["schedulerConfig"], (m) => ScheduleConfig.fromJson(m), "id");
     service.events.fromJsonList(json["events"], (m) => FusionEvent.fromJson(m), "id");
+    service.mediaFiles.fromJsonList(json["mediaFiles"], (m) => MediaFileModel.fromJson(m), "id");
 
     service.relationships.fromJson(json["relationships"]);
 
