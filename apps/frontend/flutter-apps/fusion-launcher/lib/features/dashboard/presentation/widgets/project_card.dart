@@ -121,7 +121,7 @@ class ProjectCard extends StatelessWidget {
                               if (projectData.isSyncNeeded && !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
                                 const SizedBox(height: 4),
                                 FusionAppText(
-                                  text: "Sync Needed",
+                                  text: "Modified",
                                   style: context.textTheme.labelSmall?.copyWith(
                                     color: context.colorScheme.error,
                                   ),
@@ -192,6 +192,38 @@ class ProjectCard extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  if (!projectData.isCloudInstance && projectData.isSyncNeeded)
+                    Positioned(
+                      top: 40,
+                      right: 6,
+                      child: IconButton(
+                        onPressed: () async {
+                          await serviceLocator<ProjectSyncViewModel>().uploadProject(projectData: projectData);
+                        },
+                        tooltip: "Upload to Cloud",
+                        icon: Icon(
+                          LucideIcons.cloudUpload,
+                          color: context.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+
+                  if (projectData.isCloudInstance)
+                    Positioned(
+                      top: 40,
+                      right: 6,
+                      child: IconButton(
+                        onPressed: () async {
+                          await serviceLocator<ProjectSyncViewModel>().downloadProject(projectData);
+                        },
+                        tooltip: "Download from Cloud",
+                        icon: Icon(
+                          LucideIcons.cloudDownload,
+                          color: context.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
                 ],
               ],
             ),
