@@ -37,7 +37,7 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
-enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling }
+enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling, mediaFiles }
 
 enum SelectedItemType {
   source,

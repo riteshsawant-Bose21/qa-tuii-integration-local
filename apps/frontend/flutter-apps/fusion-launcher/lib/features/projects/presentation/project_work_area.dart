@@ -6,6 +6,8 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
+import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
+import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
@@ -514,6 +516,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ConfigurationMenuMode.events => const ConfigurationEvents(),
               ConfigurationMenuMode.gpio => const GpioPage(),
               ConfigurationMenuMode.scheduling => const SchedulingPage(),
+              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+                create: (_) => MediaFilesViewModel(),
+                child: const ConfigurationMediaFilesPage(),
+              ),
             };
           },
         ),
