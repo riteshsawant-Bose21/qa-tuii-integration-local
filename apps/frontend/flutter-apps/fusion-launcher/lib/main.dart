@@ -10,6 +10,7 @@ import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
@@ -82,6 +83,9 @@ class MyApp extends StatelessWidget {
         BlocProvider<SessionViewModel>(
           create: (BuildContext context) => serviceLocator<SessionViewModel>(),
         ),
+
+        BlocProvider<SpeakerSelectionViewModel>(create: (BuildContext context) => serviceLocator<SpeakerSelectionViewModel>()),
+
         BlocProvider<AuthViewModel>(
           create: (BuildContext context) => serviceLocator<AuthViewModel>()..initialize(),
           lazy: false,

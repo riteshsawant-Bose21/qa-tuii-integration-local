@@ -84,6 +84,17 @@ enum ListeningHeightOption {
         return 1.0;
     }
   }
+
+  static ListeningHeightOption getOptionByValue(double height) {
+    switch (height) {
+      case 3.0:
+        return ListeningHeightOption.sitting;
+      case 6.0:
+        return ListeningHeightOption.standing;
+      default:
+        return ListeningHeightOption.custom;
+    }
+  }
 }
 
 enum SpeakerSplRangeOptions {

@@ -10,7 +10,6 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_checkbox_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../../core/service_locator.dart';
 import 'view_model/view_model.dart';
 
 class SpeakerListeningAreaProperties extends StatefulWidget {
@@ -35,7 +34,9 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+
+    final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
 
     return Container(
       decoration: BoxDecoration(
@@ -44,7 +45,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
       ),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
-          final ListeningArea? selectedListeningArea = viewModel.getCurrentSelectedListeningArea();
+          final ListeningArea? selectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,17 +100,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                     ceilingHeightController.text = selectedListeningArea.ceilingHeight;
                     listeningAreaController.text = selectedListeningArea.name;
 
-                    String displayValue;
-                    bool isCustomListeningHeight = false;
-                    if (selectedListeningArea.listeningHeight == 3.0) {
-                      displayValue = "Sitting";
-                    } else if (selectedListeningArea.listeningHeight == 6.0) {
-                      displayValue = "Standing";
-                    } else {
-                      displayValue = "Custom";
-                      isCustomListeningHeight = true;
-                      customListeningHeightController.text = selectedListeningArea.listeningHeight.toString();
-                    }
+                    final ListeningHeightOption listeningHeightOption = ListeningHeightOption.getOptionByValue(selectedListeningArea.listeningHeight);
 
                     return Padding(
                       padding: const EdgeInsets.all(16.0).copyWith(top: 0),
@@ -136,7 +127,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   onFieldSubmitted: (String value) {
                                     if (value.trim().isNotEmpty) {
                                       final ListeningArea updatedLA = selectedListeningArea.copyWith(name: value.trim());
-                                      viewModel.updateListeningArea(area: updatedLA);
+                                      projectViewModel.updateListeningArea(area: updatedLA);
                                     } else {
                                       listeningAreaController.text = selectedListeningArea.name;
                                     }
@@ -146,30 +137,30 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             ],
                           ),
 
-                          _BuildRowPropertyWidget(
+                          BuildRowPropertyWidget(
                             label: "Type",
                             value: selectedListeningArea.venuType,
                             options: VenueOptions.values.map((VenueOptions option) => option.displayName).toList(),
                             onOptionSelected: (int selectedIndex) {
                               final String selectedType = VenueOptions.values[selectedIndex].displayName;
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-                              viewModel.updateListeningArea(area: updatedLA);
+                              projectViewModel.updateListeningArea(area: updatedLA);
                             },
                           ),
                           const SizedBox(height: 5),
-                          _BuildRowPropertyWidget(
+                          BuildRowPropertyWidget(
                             label: "Listening Ht",
-                            value: displayValue,
+                            value: listeningHeightOption.displayName,
                             options: ListeningHeightOption.values.map((ListeningHeightOption option) => option.displayName).toList(),
                             onOptionSelected: (int selectedIndex) {
                               final ListeningHeightOption selectedOption = ListeningHeightOption.values[selectedIndex];
                               final double heightValue = ListeningHeightOption.getValue(selectedOption) ?? 3.0;
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
-                              viewModel.updateListeningArea(area: updatedLA);
+                              projectViewModel.updateListeningArea(area: updatedLA);
                             },
                           ),
 
-                          if (isCustomListeningHeight) ...<Widget>[
+                          if (listeningHeightOption == ListeningHeightOption.custom) ...<Widget>[
                             const SizedBox(height: 5),
                             BuildingPageTextField(
                               label: "Custom Height",
@@ -193,7 +184,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   final double? customHeight = double.tryParse(newValue);
                                   if (customHeight != null && customHeight > 0) {
                                     final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
-                                    viewModel.updateListeningArea(area: updatedLA);
+                                    projectViewModel.updateListeningArea(area: updatedLA);
                                   }
                                 } else {
                                   customListeningHeightController.text = selectedListeningArea.listeningHeight.toString();
@@ -229,11 +220,11 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             inputFormatters: <TextInputFormatter>[FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
                             onFieldSubmitted: (String newValue) {
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-                              viewModel.updateListeningArea(area: updatedLA);
+                              projectViewModel.updateListeningArea(area: updatedLA);
                             },
                           ),
                           const SizedBox(height: 5),
-                          _BuildRowPropertyWidget(
+                          BuildRowPropertyWidget(
                             label: "SPL Range",
                             value: SpeakerSplRangeOptions.getSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL).displayName,
                             options: SpeakerSplRangeOptions.values.map((SpeakerSplRangeOptions option) => option.displayName).toList(),
@@ -242,8 +233,34 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                               final double minSPL = splRangeValues["min"]!;
                               final double maxSPL = splRangeValues["max"]!;
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(minSPL: minSPL, maxSPL: maxSPL);
-                              viewModel.updateListeningArea(area: updatedLA);
+                              projectViewModel.updateListeningArea(area: updatedLA);
                             },
+                          ),
+                          const SizedBox(height: 10),
+
+                          MouseRegion(
+                            cursor: SystemMouseCursors.forbidden,
+                            child: IgnorePointer(
+                              child: FusionRadio<SignalType>(
+                                selected: speakerSelectionViewModel.state.selectedSignalType,
+                                options: SignalType.values,
+                                labelBuilder: (SignalType signalType) {
+                                  return FusionAppText(
+                                    text: signalType.name,
+                                    style: context.textTheme.bodySmall?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  );
+                                },
+                                onChanged: (SignalType value) {
+                                  // if (value != null) {
+                                  //   setState(() {
+                                  //     _selectedSignalType = value;
+                                  //   });
+                                  // }
+                                },
+                              ),
+                            ),
                           ),
                         ],
                       ),
@@ -261,35 +278,53 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                   children: <Widget>[
                     BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                        return Row(
-                          spacing: 10,
-                          mainAxisSize: MainAxisSize.min,
-                          children: <Widget>[
-                            ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
-                              final bool isSelected = vmState.mode == mode;
-                              return GestureDetector(
-                                behavior: HitTestBehavior.translucent,
-                                onTap: () => context.read<SpeakerSelectionViewModel>().setMode(mode),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? context.colorScheme.primary.withValues(alpha: 0.15) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(
-                                      color: isSelected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.2),
-                                    ),
-                                  ),
-                                  child: FusionAppText(
-                                    text: mode.displayName,
-                                    style: context.textTheme.bodySmall?.copyWith(
-                                      color: isSelected ? context.colorScheme.primary : context.colorScheme.onSurface,
-                                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                    ),
-                                  ),
+                        return Center(
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.forbidden,
+                            child: IgnorePointer(
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.surface,
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                              );
-                            }),
-                          ],
+                                child: Row(
+                                  spacing: 10,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    ...SpeakerSelectionMode.values.map((SpeakerSelectionMode mode) {
+                                      final bool isSelected = vmState.mode == mode;
+
+                                      return GestureDetector(
+                                        onTap: () {
+                                          // setState(() {
+                                          //   SpeakerselectionMode = mode;
+                                          // });
+                                        },
+                                        child: Container(
+                                          width: 89,
+                                          padding: const EdgeInsets.all(8),
+                                          decoration: BoxDecoration(
+                                            color: isSelected ? context.colorScheme.surfaceBright : null,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Center(
+                                            child: FusionAppText(
+                                              text: mode.displayName,
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.onSurface,
+                                                fontWeight: FontWeight.normal,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    }),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         );
                       },
                     ),
@@ -316,7 +351,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                               ),
                             );
                           },
-                          onChanged: (List<SpeakerMountingType> updated) => context.read<SpeakerSelectionViewModel>().setMountingTypes(updated),
+                          onChanged: (List<SpeakerMountingType> updated) => speakerSelectionViewModel.setMountingTypes(updated),
                         );
                       },
                     ),
@@ -343,7 +378,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                               ),
                             );
                           },
-                          onChanged: (List<SpeakerLowFrequency> updated) => context.read<SpeakerSelectionViewModel>().setLowFrequencies(updated),
+                          onChanged: (List<SpeakerLowFrequency> updated) => speakerSelectionViewModel.setLowFrequencies(updated),
                         );
                       },
                     ),
@@ -370,7 +405,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                               ),
                             );
                           },
-                          onChanged: (List<SpeakerColor> updated) => context.read<SpeakerSelectionViewModel>().setColors(updated),
+                          onChanged: (List<SpeakerColor> updated) => speakerSelectionViewModel.setColors(updated),
                         );
                       },
                     ),
@@ -399,7 +434,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             );
                           },
                           onChanged: (SpeakerWiring value) {
-                            context.read<SpeakerSelectionViewModel>().setWiring(value);
+                            speakerSelectionViewModel.setWiring(value);
                           },
                         );
                       },
@@ -415,13 +450,14 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
   }
 }
 
-class _BuildRowPropertyWidget extends StatelessWidget {
+class BuildRowPropertyWidget extends StatelessWidget {
   final String label;
   final String value;
   final List<String> options;
   final ValueChanged<int> onOptionSelected;
 
-  const _BuildRowPropertyWidget({
+  const BuildRowPropertyWidget({
+    super.key,
     required this.label,
     required this.value,
     required this.options,

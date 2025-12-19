@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -19,6 +21,7 @@ class SpeakerSelectionViewModelState extends Equatable {
     this.searchQuery = '',
     this.isLoading = false,
     this.speakers,
+    this.selectedSignalType = SignalType.mono,
   });
 
   final SpeakerSelectionMode mode;
@@ -30,6 +33,7 @@ class SpeakerSelectionViewModelState extends Equatable {
   final String searchQuery;
   final bool isLoading;
   final List<SpeakerProduct>? speakers;
+  final SignalType selectedSignalType;
 
   SpeakerSelectionViewModelState copyWith({
     SpeakerSelectionMode? mode,
@@ -116,7 +120,9 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     try {
       await productsApi.initialize();
       emit(state.copyWith(isLoading: false, speakers: productsApi.speakers));
+      log("Loaded ${productsApi.speakers.length} products");
     } catch (_) {
+      log("Error loading products");
       emit(state.copyWith(isLoading: false, speakers: <SpeakerProduct>[]));
     }
   }
@@ -229,18 +235,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       });
     }
 
-    if (state.selectedColors.isNotEmpty) {
-      filtered = filtered.where((SpeakerProduct p) {
-        bool match = false;
-        for (final SpeakerColor c in state.selectedColors) {
-          if (p.assets.getAssetsFor(c.jsonAssetKey).isNotEmpty) {
-            match = true;
-            break;
-          }
-        }
-        return match;
-      });
-    }
+    // Color selection is applied at variant-building stage to avoid double filtering
 
     if (currentSelectedListeningArea != null) {
       final String vt = currentSelectedListeningArea!.venuType.trim().toLowerCase();
@@ -250,12 +245,14 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           final bool isIndoorEnv = env.contains('indoor');
           return !p.isWeatherRated || isIndoorEnv;
         });
-      } else if (vt == 'indoor + outdoor') {
+      } else if (vt == 'outdoor') {
         filtered = filtered.where((SpeakerProduct p) {
           final String env = (p.environment ?? '').toLowerCase();
           final bool isOutdoorEnv = env.contains('outdoor');
           return p.isWeatherRated || isOutdoorEnv;
         });
+      } else if (vt == 'indoor + outdoor' || vt == 'indoor+outdoor') {
+        // Mixed venue: include both indoor and outdoor options (no environment filter)
       }
     }
 
@@ -291,7 +288,15 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       if (state.selectedColors.isNotEmpty) {
         targetColors = state.selectedColors.where((SpeakerColor c) => available.contains(c));
       } else {
-        targetColors = available.isNotEmpty ? available : <SpeakerColor?>[null];
+        SpeakerColor? defaultColor;
+        if (available.contains(SpeakerColor.black)) {
+          defaultColor = SpeakerColor.black;
+        } else if (available.contains(SpeakerColor.white)) {
+          defaultColor = SpeakerColor.white;
+        } else {
+          defaultColor = available.isNotEmpty ? available.first : null;
+        }
+        targetColors = defaultColor == null ? const <SpeakerColor?>[] : <SpeakerColor?>[defaultColor];
       }
 
       for (final SpeakerColor? variantColor in targetColors) {
@@ -299,15 +304,18 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         if (variantColor != null) {
           final List<String> urls = speakerProduct.assets.getAssetsFor(variantColor.jsonAssetKey);
           assetImagePath = urls.isNotEmpty ? productsApi.getImagePath(urls.first) : null;
-        } else if (speakerProduct.assets.firstAssetUrl != null) {
-          assetImagePath = productsApi.getImagePath(speakerProduct.assets.firstAssetUrl!);
+        }
+
+        // Skip variant if no image for the chosen color variant
+        if (assetImagePath == null) {
+          continue;
         }
 
         final Speaker speaker = projectViewModel.fromSpeakerProductModel(
-          assetImagePath ?? '',
+          assetImagePath,
           speakerProduct,
           LocationModel(floorId: currentFloor.id, listeningAreaId: la!.id),
-          true,
+          true,           
         );
 
         variants.add(
@@ -321,6 +329,36 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       }
     }
     return variants;
+  }
+
+  // Orchestrates adding or replacing a speaker in the current listening area.
+  // Enforces one speaker type (SKU) per listening area; color does not matter.
+  Future<void> addOrReplaceSpeakerVariant({
+    required SpeakerColorVarientModel variant,
+    required Future<bool?> Function(String listeningAreaName, String existingSpeakerName, String currentSpeakerName) confirmReplace,
+  }) async {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
+
+    if (listeningArea == null) return;
+
+    final List<Speaker> listeningAreaSpeakers = getSpeakersForListeningArea();
+    final String newSku = variant.product.skus.first.toString();
+
+    if (listeningAreaSpeakers.isNotEmpty) {
+      final String existingSku = listeningAreaSpeakers.first.speakerSKU;
+      if (existingSku != newSku) {
+        final String existingName = listeningAreaSpeakers.first.name;
+        final bool? confirm = await confirmReplace(listeningArea.name, existingName, variant.product.modelFamily);
+        if (confirm != true) return;
+
+        for (final Speaker s in listeningAreaSpeakers) {
+          projectViewModel.removeHardware(hardwareId: s.id, autoSave: false);
+        }
+      }
+    }
+
+    projectViewModel.addHardware(hardware: variant.speaker);
   }
 }
 
