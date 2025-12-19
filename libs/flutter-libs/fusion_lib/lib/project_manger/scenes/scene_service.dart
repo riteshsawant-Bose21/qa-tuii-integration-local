@@ -73,7 +73,7 @@ extension SceneService on ProjectService {
     if (scene == null) {
       throw Exception("SceneAction with id $actionId does not exist.");
     }
-    bool disableValue = false;
+    bool enalbled = true;
 
     bool hasStates = false;
     print("Event ID in updateSceneActionParam: $eventId");
@@ -84,7 +84,7 @@ extension SceneService on ProjectService {
         hasStates = true;
       } else if (event != null && event.condition != null && (event.condition is ValueChangeCondition)) {
         //only for value change condition, we do not give option to edit value, because values are set based on analog voltage value levels
-        disableValue = true;
+        enalbled = false;
       }
     }
 
@@ -93,7 +93,7 @@ extension SceneService on ProjectService {
       valueType: param.type.valueType,
       label: param.type.valueLabel,
       hasStates: hasStates,
-      enabled: disableValue,
+      enabled: enalbled,
       states: hasStates ? SceneStateValue() : null,
     );
     final updatedScene = scene.copyWith(param: param, value: value);
@@ -321,7 +321,7 @@ extension SceneService on ProjectService {
   //get Dropdown value for a SceneParam
   List<SceneValueDropdown> getSceneActionValueDropdownItems(String actionId) {
     final scene = sceneActions.get(actionId);
-    if (scene == null || scene.item == null || scene.param == null) {
+    if (scene == null || (scene.actionType != SceneActionType.snapshot && scene.item == null) || scene.param == null) {
       throw Exception("SceneAction or SceneParam or SceneItem with id $actionId does not exist.");
     }
 
