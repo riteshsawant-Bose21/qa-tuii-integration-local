@@ -23,6 +23,7 @@ export 'mix_scenes/mix_scenes_view_model.dart';
 export 'equip_location/equip_location_view_model.dart';
 export 'scenes_view_model/scenes_view_model.dart';
 export 'schedule/schedule_view_model.dart';
+export 'events/events_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -441,6 +442,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
 
   void setSelectedSnapshotId(String? snapshotId) {
     selectedSnapshotId = snapshotId;
+    emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
+  }
+
+  /// Selected event ID for actions panel
+  String? selectedEventId;
+
+  void setSelectedEventId(String? eventId) {
+    selectedEventId = eventId;
     emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
   }
 }

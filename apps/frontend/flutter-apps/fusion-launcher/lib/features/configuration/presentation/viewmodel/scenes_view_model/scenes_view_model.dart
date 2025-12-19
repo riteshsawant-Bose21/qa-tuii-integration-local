@@ -137,12 +137,12 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  void updateSceneActionParam({required String actionId, required SceneParam param, bool autoSave = true}) {
+  void updateSceneActionParam({required String actionId, required SceneParam param, String? eventId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.updateSceneActionParam(actionId: actionId, param: param);
+      projectManager.updateSceneActionParam(actionId: actionId, param: param, eventId: eventId);
       if (autoSave) {
         saveProject();
       }
@@ -165,9 +165,9 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneActionType> getSceneActionTypes() {
+  List<SceneActionType> getSceneActionTypes({String? eventId}) {
     try {
-      return projectManager.getSceneActionTypes();
+      return projectManager.getSceneActionTypes(eventId: eventId);
     } catch (e) {
       throwError("Get Scene Action Types Error  ${e.toString()}");
       return <SceneActionType>[];
@@ -183,9 +183,9 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneParam> getParamsByActionTypeAndItem(SceneActionType actionType, SceneItem item) {
+  List<SceneParam> getParamsByActionTypeAndItem({required SceneActionType actionType, required SceneItem item, String? eventId}) {
     try {
-      return projectManager.getParamsByActionTypeAndItem(actionType, item);
+      return projectManager.getParamsByActionTypeAndItem(actionType: actionType, item: item, eventId: eventId);
     } catch (e) {
       throwError("Get Params By Action Type And Item Error  ${e.toString()}");
       return <SceneParam>[];
