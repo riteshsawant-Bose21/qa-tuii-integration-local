@@ -245,10 +245,6 @@ class _FusionSidebarState extends State<FusionSidebar> {
             NeumorphicDarkButton(
               onTap: () async {
                 await serviceLocator<AuthViewModel>().logout();
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  //   Navigator.pushReplacementNamed(context, '/welcome');
-                }
               },
               height: 32,
               borderRadius: 8,

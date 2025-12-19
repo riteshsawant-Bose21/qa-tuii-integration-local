@@ -22,6 +22,7 @@ import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import 'package:universal_platform/universal_platform.dart';
+
 Future<void> main() async {
   await runZonedGuarded(() async {
     WidgetsFlutterBinding.ensureInitialized();
@@ -34,16 +35,18 @@ Future<void> main() async {
     await AppConfig.initialize();
 
     await setupServiceLocator();
-if(UniversalPlatform.isWindows){
-  await initDesktopAuth0Flutter(
-   const DesktopAuth0FlutterInitOptions( bundleName: 'com.bosepro.fusion',
-     auth0Scheme: 'com.bosepro.fusion',
-     categories: 'Office;Productivity',
-     comment: 'Fusion Launcher',
-     name: 'Fusion Launcher',
-     iconAssetPath: 'assets/images/splash/splash_app_icon.png',)
-  );
-}
+    if (UniversalPlatform.isWindows) {
+      await initDesktopAuth0Flutter(
+        const DesktopAuth0FlutterInitOptions(
+          bundleName: 'com.bosepro.fusion',
+          auth0Scheme: 'com.bosepro.fusion',
+          categories: 'Office;Productivity',
+          comment: 'Fusion Launcher',
+          name: 'Fusion Launcher',
+          iconAssetPath: 'assets/images/splash/splash_app_icon.png',
+        ),
+      );
+    }
     runApp(const MyApp());
 
     //TODO: Only for web automation build
@@ -90,12 +93,12 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: <SingleChildWidget>[
-        BlocProvider<SessionViewModel>(
-          create: (BuildContext context) => serviceLocator<SessionViewModel>(),
+        BlocProvider<SessionViewModel>.value(
+          value: serviceLocator<SessionViewModel>(),
         ),
-        BlocProvider<AuthViewModel>(
-          create: (BuildContext context) => serviceLocator<AuthViewModel>()..initialize(),
-          lazy: false,
+        BlocProvider<AuthViewModel>.value(
+          value: serviceLocator<AuthViewModel>()..initialize(),
+          // lazy: false,
         ),
 
         BlocProvider<PanelBloc>(
@@ -116,44 +119,42 @@ class MyApp extends StatelessWidget {
       ],
       child: FusionThemeBuilder(
         builder: (BuildContext context, ThemeMode mode) {
-          return MaterialApp(
-            title: 'Fusion Launcher',
-            debugShowCheckedModeBanner: false,
-            theme: FusionAppTheme.lightTheme,
-            darkTheme: FusionAppTheme.darkTheme,
-            themeMode: ThemeMode.dark,
+          return BlocConsumer<SessionViewModel, SessionViewModelState>(
+            // Listener: Handle one-off events like errors (optional)
+            listener: (BuildContext context, SessionViewModelState state) {
+              if (state is SessionExpired) {
+                // USAGE: Use the Global Key to navigate
+                // pushNamedAndRemoveUntil ensures the user can't go 'back' to the protected page
+                globalNavigatorKey.currentState?.pushNamedAndRemoveUntil(
+                  Routes.launcherSignInPage,
+                  (Route<dynamic> route) => false, // Remove all previous routes
+                );
+              }
+            },
+            builder: (BuildContext context, SessionViewModelState state) {
+              return MaterialApp(
+                title: 'Fusion Launcher',
+                debugShowCheckedModeBanner: false,
+                theme: FusionAppTheme.lightTheme,
+                darkTheme: FusionAppTheme.darkTheme,
+                themeMode: ThemeMode.dark,
 
-            home: BlocConsumer<SessionViewModel, SessionViewModelState>(
-              // Listener: Handle one-off events like errors (optional)
-              listener: (BuildContext context, SessionViewModelState state) {
-                if (state is SessionExpired) {
-                  // USAGE: Use the Global Key to navigate
-                  // pushNamedAndRemoveUntil ensures the user can't go 'back' to the protected page
-                  globalNavigatorKey.currentState?.pushNamedAndRemoveUntil(
-                    Routes.launcherSignInPage,
-                    (Route<dynamic> route) => false, // Remove all previous routes
-                  );
-                }
-              },
-              // Builder: Determines WHICH page to show
-              builder: (BuildContext context, SessionViewModelState state) {
-                if (state is SessionValid) {
-                  return const HomePage();
-                } else {
-                  return const Scaffold(
-                    body: Center(
-                      child: CircularProgressIndicator(),
-                    ),
-                  );
-                }
-              },
-            ),
+                home:
+                    (state is SessionValid)
+                        ? const HomePage()
+                        : const Scaffold(
+                          body: Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
 
-            navigatorKey: globalNavigatorKey,
-            navigatorObservers: <NavigatorObserver>[
-              AppNavigatorObserver(),
-            ],
-            onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+                navigatorKey: globalNavigatorKey,
+                navigatorObservers: <NavigatorObserver>[
+                  AppNavigatorObserver(),
+                ],
+                onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+              );
+            },
           );
         },
       ),
