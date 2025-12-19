@@ -18,7 +18,7 @@ class _ConfigurationEventsState extends State<ConfigurationEvents> {
   @override
   void dispose() {
     /// Clear selected snapshot when screen is disposed
-    _projectViewModel.setSelectedSnapshotId(null);
+    _projectViewModel.setSelectedEventId(null);
     super.dispose();
   }
 

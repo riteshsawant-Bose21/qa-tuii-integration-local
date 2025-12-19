@@ -290,9 +290,9 @@ class FusionEvent {
       id: json['id'],
       name: json['name'] ?? '',
       isEnabled: json['isEnabled'] ?? false,
-      triggerType: EventTriggerType.values.firstWhere((e) => e.name == json['triggerType']),
-      item: EventTriggerItem.fromJson(json['item']),
-      action: EventActionType.values.firstWhere((e) => e.name == json['action']),
+      triggerType: json['triggerType'] != null ? EventTriggerType.values.firstWhere((e) => e.name == json['triggerType']) : null,
+      item: json['item'] != null ? EventTriggerItem.fromJson(json['item']) : null,
+      action: json['action'] != null ? EventActionType.values.firstWhere((e) => e.name == json['action']) : null,
       condition: json['condition'] != null
           ? switch (EventConditionType.values.firstWhere((e) => e.name == json['condition']['type'])) {
               EventConditionType.stateChange => StateChangeCondition.fromJson(json['condition']),
