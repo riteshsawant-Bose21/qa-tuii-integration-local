@@ -306,7 +306,7 @@ class FusionAppTheme {
       primary: Color(0xFF2F7554),
       onPrimary: Colors.white,
       surface: Color(0xFF1D1D1D),
-      
+
       onSurface: Colors.white,
       surfaceDim: Color(0xFFC0C0C0),
       seedColor: const Color(0xFF80C7FF), // Using your dark primary color
@@ -552,6 +552,8 @@ extension ColorExtends on ColorScheme {
   ///
   ///
   Color get portOverlayTitle => Color(0xFF929292);
+
+  Color get green => Color(0xFF78B899);
 }
 
 /// Extension on [BuildContext] to easily access commonly used theme properties.
