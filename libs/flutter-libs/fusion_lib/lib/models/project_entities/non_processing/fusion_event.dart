@@ -257,9 +257,19 @@ class FusionEvent {
       return true;
     }
     // For other actions, condition and states are required
-    if (condition == null || states == null || states!.isEmpty) {
+    if (condition == null) {
       return false;
     }
+
+    if (condition is StateChangeCondition || condition is ThresholdCondition) {
+      if (states == null || states!.isEmpty) {
+        return false;
+      }
+    }
+    // else if (condition is ValueChangeCondition) {
+    //   return true;
+    // }
+
     return true;
   }
 

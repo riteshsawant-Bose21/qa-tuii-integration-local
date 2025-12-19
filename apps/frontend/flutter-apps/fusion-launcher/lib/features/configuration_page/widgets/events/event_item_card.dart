@@ -4,29 +4,29 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 
-class SnapshotItemCard extends StatefulWidget {
-  final SnapshotsModel snapShotData;
-  final bool isDragging;
+class EventItemCard extends StatefulWidget {
+  final FusionEvent eventData;
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final Function(String eventId)? onSwitchChanged;
   final int index;
 
-  const SnapshotItemCard({
-    this.isDragging = false,
+  const EventItemCard({
     this.isSelected = false,
     super.key,
-    required this.snapShotData,
+    required this.eventData,
     this.onDelete,
     this.onTap,
     required this.index,
+    this.onSwitchChanged,
   });
 
   @override
-  State<SnapshotItemCard> createState() => _SnapshotItemCardState();
+  State<EventItemCard> createState() => _EventItemCardState();
 }
 
-class _SnapshotItemCardState extends State<SnapshotItemCard> {
+class _EventItemCardState extends State<EventItemCard> {
   bool _isHovered = false;
 
   @override
@@ -48,16 +48,10 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
         /// Card container
         child: Container(
           decoration: BoxDecoration(
-            color:
-                widget.isSelected
-                    ? Colors.grey[200]
-                    : widget.isDragging
-                    ? Theme.of(context).colorScheme.primary.withOpacity(0.15)
-                    : (_isHovered ? Colors.grey[200] : null),
+            color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color:
-                  widget.isSelected ? Theme.of(context).colorScheme.greyDark : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
+              color: widget.isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
               width: 1.0,
             ),
           ),
@@ -86,46 +80,55 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
               const SizedBox(width: 12),
               Expanded(
                 child: FusionAppText(
-                  text: widget.snapShotData.name,
+                  text: widget.eventData.name,
                   maxLine: 1,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
                 ),
               ),
 
               const SizedBox(width: 8),
-              if (!widget.isDragging)
-                Tooltip(
-                  message: 'Delete Snapshot',
-                  child: GestureDetector(
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder:
-                            (_) => FusionDialog(
-                              title: 'Delete Snapshot?',
-                              description: "This will remove '${widget.snapShotData.name}' from the Snapshot list.",
-                              primaryButtonLabel: 'Delete',
-                              secondaryButtonLabel: 'Cancel',
-                              onSecondaryPressed: () {
+              FusionSwitch(
+                value: widget.eventData.isEnabled,
+                onChanged: (bool value) {
+                  if (widget.onSwitchChanged != null) {
+                    widget.onSwitchChanged!(widget.eventData.id);
+                  }
+                },
+              ),
+              const SizedBox(width: 12),
+
+              Tooltip(
+                message: 'Delete Snapshot',
+                child: GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder:
+                          (_) => FusionDialog(
+                            title: 'Delete Snapshot?',
+                            description: "This will remove '${widget.eventData.name}' from the Snapshot list.",
+                            primaryButtonLabel: 'Delete',
+                            secondaryButtonLabel: 'Cancel',
+                            onSecondaryPressed: () {
+                              Navigator.of(context).pop();
+                            },
+                            onPrimaryPressed: () {
+                              if (widget.onDelete != null) {
+                                widget.onDelete!();
                                 Navigator.of(context).pop();
-                              },
-                              onPrimaryPressed: () {
-                                if (widget.onDelete != null) {
-                                  widget.onDelete!();
-                                  Navigator.of(context).pop();
-                                }
-                              },
-                            ),
-                      );
-                    },
-                    child: const FusionImage.asset(
-                      Assets.deleteIcon,
-                      width: 17,
-                      height: 17,
-                      fit: BoxFit.contain,
-                    ),
+                              }
+                            },
+                          ),
+                    );
+                  },
+                  child: const FusionImage.asset(
+                    Assets.deleteIcon,
+                    width: 17,
+                    height: 17,
+                    fit: BoxFit.contain,
                   ),
                 ),
+              ),
             ],
           ),
         ),

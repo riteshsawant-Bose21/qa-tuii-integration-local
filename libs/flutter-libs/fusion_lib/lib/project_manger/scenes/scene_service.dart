@@ -76,6 +76,7 @@ extension SceneService on ProjectService {
     bool disableValue = false;
 
     bool hasStates = false;
+    print("Event ID in updateSceneActionParam: $eventId");
     //for events with threshold or state change condition, we need  save value for two states
     if (eventId != null) {
       final event = events.get(eventId);

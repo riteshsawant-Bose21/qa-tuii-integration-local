@@ -6,12 +6,12 @@ import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import 'action_drop_down.dart';
 
-class ValueWidgetForRow extends StatefulWidget {
+class SnapshotValueWidget extends StatefulWidget {
   final String actionId;
   final SceneValue value;
   final ValueChanged<SceneValue> onChanged;
 
-  const ValueWidgetForRow({
+  const SnapshotValueWidget({
     super.key,
     required this.value,
     required this.onChanged,
@@ -19,10 +19,10 @@ class ValueWidgetForRow extends StatefulWidget {
   });
 
   @override
-  State<ValueWidgetForRow> createState() => _ValueWidgetForRowState();
+  State<SnapshotValueWidget> createState() => _SnapshotValueWidgetState();
 }
 
-class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
+class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
   @override
@@ -111,12 +111,15 @@ class _ValueWidgetForRowState extends State<ValueWidgetForRow> {
           return const Text('No parameter selected');
         }
 
+        print('Fetching dropdown items for actionId: ${widget.actionId}');
+
         final List<SceneValueDropdown> items = _projectViewModel.getSceneValueDropdownItems(widget.actionId);
 
         /// Find selected value by matching the stored string value with item labels
         SceneValueDropdown? selectedValue;
         if (value.value != null && value.value!.isNotEmpty && items.isNotEmpty) {
           try {
+            print('Finding selected value for: ${value.value}');
             selectedValue = items.firstWhere(
               (SceneValueDropdown item) => item.label == value.value || item.value == value.value,
             );
