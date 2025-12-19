@@ -168,7 +168,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return s.replaceFirst(RegExp(r"\.0+"), '').replaceFirst(RegExp(r"(\.\d*[1-9])0+"), r"$1");
   }
 
-  // Filtering/sorting logic
   List<SpeakerProduct> applyFilters() {
     Iterable<SpeakerProduct> filtered = <SpeakerProduct>[...(state.speakers ?? <SpeakerProduct>[])];
 
@@ -188,7 +187,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       });
     }
 
-    // Wiring (single select encoded as Set with 0/1)
     final bool filterWiring = state.selectedWirings.isNotEmpty;
     if (filterWiring) {
       final bool wantHiZ = state.selectedWirings.contains(SpeakerWiring.hiZ);
@@ -235,15 +233,15 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       filtered = filtered.where((SpeakerProduct p) {
         bool match = false;
         for (final SpeakerColor c in state.selectedColors) {
-          if (c == SpeakerColor.black && p.assets.getAssetsFor('black').isNotEmpty) match = true;
-          if (c == SpeakerColor.white && p.assets.getAssetsFor('white').isNotEmpty) match = true;
-          if (match) break;
+          if (p.assets.getAssetsFor(c.jsonAssetKey).isNotEmpty) {
+            match = true;
+            break;
+          }
         }
         return match;
       });
     }
 
-    // Venue type (indoor / indoor + outdoor)
     if (currentSelectedListeningArea != null) {
       final String vt = currentSelectedListeningArea!.venuType.trim().toLowerCase();
       if (vt == 'indoor') {
@@ -277,34 +275,65 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return copy;
   }
 
-  List<MapEntry<SpeakerProduct, String?>> buildColorVariants(List<SpeakerProduct> sorted) {
-    final List<MapEntry<SpeakerProduct, String?>> variants = <MapEntry<SpeakerProduct, String?>>[];
-    for (final SpeakerProduct speakerProduct in sorted) {
-      final bool hasBlack = speakerProduct.assets.getAssetsFor('black').isNotEmpty;
-      final bool hasWhite = speakerProduct.assets.getAssetsFor('white').isNotEmpty;
+  List<SpeakerColorVarientModel> buildColorVariantModels(List<SpeakerProduct> sorted, Products productsApi) {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final ListeningArea? la = currentSelectedListeningArea;
+    final FloorModel currentFloor = projectViewModel.currentFloor;
 
+    final List<SpeakerColorVarientModel> variants = <SpeakerColorVarientModel>[];
+    for (final SpeakerProduct speakerProduct in sorted) {
+      final Set<SpeakerColor> available = <SpeakerColor>{
+        for (final SpeakerColor c in SpeakerColor.values)
+          if (speakerProduct.assets.getAssetsFor(c.jsonAssetKey).isNotEmpty) c,
+      };
+
+      Iterable<SpeakerColor?> targetColors;
       if (state.selectedColors.isNotEmpty) {
-        if (state.selectedColors.contains(SpeakerColor.black) && hasBlack) {
-          variants.add(MapEntry<SpeakerProduct, String?>(speakerProduct, 'black'));
-        }
-        if (state.selectedColors.contains(SpeakerColor.white) && hasWhite) {
-          variants.add(MapEntry<SpeakerProduct, String?>(speakerProduct, 'white'));
-        }
+        targetColors = state.selectedColors.where((SpeakerColor c) => available.contains(c));
       } else {
-        if (hasBlack && hasWhite) {
-          variants.addAll(<MapEntry<SpeakerProduct, String?>>[
-            MapEntry<SpeakerProduct, String?>(speakerProduct, 'black'),
-            MapEntry<SpeakerProduct, String?>(speakerProduct, 'white'),
-          ]);
-        } else if (hasBlack) {
-          variants.add(MapEntry<SpeakerProduct, String?>(speakerProduct, 'black'));
-        } else if (hasWhite) {
-          variants.add(MapEntry<SpeakerProduct, String?>(speakerProduct, 'white'));
-        } else {
-          variants.add(MapEntry<SpeakerProduct, String?>(speakerProduct, null));
+        targetColors = available.isNotEmpty ? available : <SpeakerColor?>[null];
+      }
+
+      for (final SpeakerColor? variantColor in targetColors) {
+        String? assetImagePath;
+        if (variantColor != null) {
+          final List<String> urls = speakerProduct.assets.getAssetsFor(variantColor.jsonAssetKey);
+          assetImagePath = urls.isNotEmpty ? productsApi.getImagePath(urls.first) : null;
+        } else if (speakerProduct.assets.firstAssetUrl != null) {
+          assetImagePath = productsApi.getImagePath(speakerProduct.assets.firstAssetUrl!);
         }
+
+        final Speaker speaker = projectViewModel.fromSpeakerProductModel(
+          assetImagePath ?? '',
+          speakerProduct,
+          LocationModel(floorId: currentFloor.id, listeningAreaId: la!.id),
+          true,
+        );
+
+        variants.add(
+          SpeakerColorVarientModel(
+            product: speakerProduct,
+            speaker: speaker,
+            variantColor: variantColor,
+            assetImagePath: assetImagePath,
+          ),
+        );
       }
     }
     return variants;
   }
+}
+
+class SpeakerColorVarientModel {
+  const SpeakerColorVarientModel({
+    required this.product,
+    required this.speaker,
+    required this.variantColor,
+    required this.assetImagePath,
+  });
+
+  final SpeakerProduct product;
+  final Speaker speaker;
+  final SpeakerColor? variantColor;
+  final String? assetImagePath;
 }

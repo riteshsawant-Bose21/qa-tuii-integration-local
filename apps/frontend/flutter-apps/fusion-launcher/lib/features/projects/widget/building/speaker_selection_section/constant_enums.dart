@@ -31,6 +31,15 @@ enum SpeakerColor {
 
   const SpeakerColor(this.displayName);
   final String displayName;
+
+  String get jsonAssetKey {
+    switch (this) {
+      case SpeakerColor.black:
+        return 'black';
+      case SpeakerColor.white:
+        return 'white';
+    }
+  }
 }
 
 enum SpeakerWiring {

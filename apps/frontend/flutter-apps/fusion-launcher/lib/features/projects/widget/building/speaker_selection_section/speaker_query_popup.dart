@@ -40,8 +40,6 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-
     final List<Speaker> listeningAreaSpeakers = _vm.getSpeakersForListeningArea();
 
     return BlocProvider<SpeakerSelectionViewModel>.value(
@@ -214,28 +212,17 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                             behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
                             child: Builder(
                               builder: (BuildContext context) {
-                                final List<MapEntry<SpeakerProduct, String?>> variants = vm.buildColorVariants(vm.sortProducts(filtered));
+                                final List<SpeakerColorVarientModel> variants = vm.buildColorVariantModels(vm.sortProducts(filtered), productsApi);
                                 return ListView.separated(
                                   itemCount: variants.length,
                                   padding: const EdgeInsets.symmetric(vertical: 10),
                                   physics: const ClampingScrollPhysics(),
                                   separatorBuilder: (BuildContext context, int index) => const Divider(thickness: 0.5),
                                   itemBuilder: (BuildContext context, int index) {
-                                    final MapEntry<SpeakerProduct, String?> variant = variants[index];
-                                    final SpeakerProduct speaker = variant.key;
-                                    final String? variantColor = variant.value; // 'black' | 'white' | null
-
-                                    late String? assetImagePath;
-
-                                    if (variantColor == 'black') {
-                                      final List<String> urls = speaker.assets.getAssetsFor('black');
-                                      assetImagePath = urls.isNotEmpty ? productsApi.getImagePath(urls.first) : null;
-                                    } else if (variantColor == 'white') {
-                                      final List<String> urls = speaker.assets.getAssetsFor('white');
-                                      assetImagePath = urls.isNotEmpty ? productsApi.getImagePath(urls.first) : null;
-                                    } else if (speaker.assets.firstAssetUrl != null) {
-                                      assetImagePath = productsApi.getImagePath(speaker.assets.firstAssetUrl!);
-                                    }
+                                    final SpeakerColorVarientModel variant = variants[index];
+                                    final SpeakerProduct speaker = variant.product;
+                                    final SpeakerColor? variantColor = variant.variantColor;
+                                    final String? assetImagePath = variant.assetImagePath;
 
                                     final bool isSelected = listeningAreaSpeakers.any((Speaker element) => element.speakerSKU == speaker.skus.first.toString());
 
@@ -289,7 +276,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                                                         if (variantColor != null) ...<Widget>[
                                                           const SizedBox(width: 6),
                                                           FusionAppText(
-                                                            text: '($variantColor)',
+                                                            text: '(${variantColor.displayName})',
                                                             style: context.textTheme.labelSmall?.copyWith(
                                                               color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                                             ),
@@ -452,8 +439,6 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                                                   final ListeningArea? currentSelectedListeningArea = _vm.currentSelectedListeningArea;
 
                                                   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-                                                  final String listeningAreaId = currentSelectedListeningArea!.id;
-                                                  final FloorModel currentFloor = projectViewModel.currentFloor;
 
                                                   final String newSku = speaker.skus.first.toString();
 
@@ -465,7 +450,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                                                       final String existingName = listeningAreaSpeakers.first.name;
                                                       final bool? confirm = await ReplaceSpeakersWarningDialog.show(
                                                         context,
-                                                        listeningAreaName: currentSelectedListeningArea.name,
+                                                        listeningAreaName: currentSelectedListeningArea?.name ?? '',
                                                         existingSpeakerName: existingName,
                                                         currentSpeakerName: speaker.modelFamily,
                                                       );
@@ -480,14 +465,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
                                                   }
 
                                                   // Add selected (either same type or replacing after confirm)
-                                                  projectViewModel.addHardware(
-                                                    hardware: projectViewModel.fromSpeakerProductModel(
-                                                      assetImagePath!,
-                                                      speaker,
-                                                      LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId),
-                                                      true,
-                                                    ),
-                                                  );
+                                                  projectViewModel.addHardware(hardware: variant.speaker);
                                                 },
                                               ),
                                             ],
