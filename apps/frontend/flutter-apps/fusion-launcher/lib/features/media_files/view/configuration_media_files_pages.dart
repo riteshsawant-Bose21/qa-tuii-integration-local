@@ -4,42 +4,8 @@ import 'package:fusion_launcher/features/media_files/state/media_files_state.dar
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:intl/intl.dart';
 
-// ==================== Models ====================
-class MediaFileModel {
-  final String id;
-  final String name;
-  final String path;
-  final int size;
-  final Duration length;
-  final DateTime date;
-
-  MediaFileModel({
-    required this.id,
-    required this.name,
-    required this.path,
-    required this.size,
-    required this.length,
-    required this.date,
-  });
-
-  String get formattedSize {
-    if (size < 1024) return '$size B';
-    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(0)} KB';
-    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
-  }
-
-  String get formattedLength {
-    final int minutes = length.inMinutes;
-    final int seconds = length.inSeconds % 60;
-    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
-  }
-
-  String get formattedDate {
-    return DateFormat('M/d/yyyy; HH:mm').format(date);
-  }
-}
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ConfigurationMediaFilesPage extends StatelessWidget {
   const ConfigurationMediaFilesPage({super.key});
@@ -109,49 +75,58 @@ class _TopBar extends StatelessWidget {
 class _MediaTable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
-      builder: (BuildContext context, ConfigurationMediaFilesState state) {
-        return Column(
-          children: <Widget>[
-            const _TableHeader(),
-            const Divider(height: 1),
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
+          builder: (BuildContext context, ConfigurationMediaFilesState state) {
+            return Column(
+              children: <Widget>[
+                const _TableHeader(),
+                const Divider(height: 1),
 
-            Expanded(
-              child: ListView.builder(
-                itemCount: state.files.length,
-                itemBuilder: (BuildContext context, int index) {
-                  final MediaFileModel file = state.files[index];
-                  final bool isSelected = index == state.selectedIndex;
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: context.read<MediaFilesViewModel>().getAllFiles().length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final MediaFileModel file = context.read<MediaFilesViewModel>().getAllFiles()[index];
+                      final bool isSelected = state.selectedMediaFileId == file.id;
 
-                  return InkWell(
-                    onTap: () => context.read<MediaFilesViewModel>().selectFile(index),
-                    child: Container(
-                      margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.grey[200] : null,
-                        borderRadius: BorderRadius.circular(3),
-                        border: Border.all(
-                          color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
-                          width: 1.0,
+                      return InkWell(
+                        onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
+                        child: Container(
+                          margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
+                          decoration: BoxDecoration(
+                            color: isSelected ? Colors.grey[200] : null,
+                            borderRadius: BorderRadius.circular(3),
+                            border: Border.all(
+                              color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                              width: 1.0,
+                            ),
+                          ),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          child: Row(
+                            children: <Widget>[
+                              Expanded(flex: 4, child: Text(file.name)),
+                              Expanded(flex: 2, child: Text(file.size.toString())),
+                              Expanded(flex: 2, child: Text(file.length.toString())),
+                              Expanded(flex: 3, child: Text(file.date.toString())),
+
+                              GestureDetector(
+                                onTap: () {
+                                  context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
+                                },
+                                child: const Icon(Icons.delete_outline, size: 18),
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      child: Row(
-                        children: <Widget>[
-                          Expanded(flex: 4, child: Text(file.name)),
-                          Expanded(flex: 2, child: Text(file.formattedSize)),
-                          Expanded(flex: 2, child: Text(file.formattedLength)),
-                          Expanded(flex: 3, child: Text(file.formattedDate)),
-
-                          GestureDetector(onTap: () {}, child: const Icon(Icons.delete_outline, size: 18)),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              ),
-            ),
-          ],
+                      );
+                    },
+                  ),
+                ),
+              ],
+            );
+          },
         );
       },
     );
@@ -221,7 +196,7 @@ class _PreviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
       builder: (BuildContext context, ConfigurationMediaFilesState state) {
-        final MediaFileModel? selectedFile = state.selectedFile;
+        final MediaFileModel? selectedFile = context.read<MediaFilesViewModel>().getSelectedFile();
         if (selectedFile == null) {
           return const Center(child: Text('Select a file'));
         }
@@ -318,7 +293,7 @@ class _PreviewPanel extends StatelessWidget {
                         activeColor: Theme.of(context).colorScheme.greyDark,
                         inactiveColor: Theme.of(context).colorScheme.grey,
                         min: 0,
-                        max: file.length.inSeconds > 0 ? file.length.inSeconds.toDouble() : 1,
+                        max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
                         divisions: 100,
 
                         onChanged: (double v) {

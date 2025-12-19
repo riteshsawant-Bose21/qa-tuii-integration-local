@@ -1,4 +1,5 @@
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:intl/intl.dart';
 
 class MediaFileModel {
   final String id;
@@ -54,5 +55,24 @@ class MediaFileModel {
       length: json['length'] != null ? Duration(milliseconds: json['length'] as int) : null,
       date: DateTime.parse(json['date'] as String),
     );
+  }
+
+  String get formattedSize {
+    if (size < 1024) return '$size B';
+    if (size < 1024 * 1024) return '${(size / 1024).toStringAsFixed(0)} KB';
+    return '${(size / (1024 * 1024)).toStringAsFixed(1)} MB';
+  }
+
+  String get formattedLength {
+    if (length == null) {
+      return '';
+    }
+    final int minutes = length!.inMinutes;
+    final int seconds = length!.inSeconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}';
+  }
+
+  String get formattedDate {
+    return DateFormat('M/d/yyyy; HH:mm').format(date);
   }
 }

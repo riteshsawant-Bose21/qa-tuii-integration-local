@@ -1,10 +1,12 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/media_files/state/media_files_state.dart';
 import 'dart:io';
 
-import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
+import 'package:fusion_lib/models/project_entities/media_files/media_file_model.dart';
 
 class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -32,9 +34,21 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   void _onAudioCompleted() {
     emit(state.copyWith(isPlaying: false, currentPosition: Duration.zero));
     // Auto play next
-    if (state.selectedIndex != null && state.selectedIndex! < state.files.length - 1) {
+    if (state.selectedMediaFileId != null) {
       playNext();
     }
+  }
+
+  List<MediaFileModel> getAllFiles() {
+    return serviceLocator<ProjectViewModel>().getAllMediaFiles();
+  }
+
+  MediaFileModel? getSelectedFile() {
+    if (state.selectedMediaFileId == null) return null;
+
+    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>().getMediaFileById(state.selectedMediaFileId!);
+
+    return selectedFile;
   }
 
   Future<void> pickFiles() async {
@@ -43,72 +57,62 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
 
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
-        allowMultiple: true,
+        allowMultiple: false,
       );
 
       if (result != null) {
-        final List<MediaFileModel> newFiles = <MediaFileModel>[];
+        if (result.files.first.path != null) {
+          final File fileInfo = File(result.files.first.path!);
 
-        for (PlatformFile file in result.files) {
-          if (file.path != null) {
-            final File fileInfo = File(file.path!);
-            final FileStat stat = await fileInfo.stat();
-
-            final Duration duration = const Duration(minutes: 3, seconds: 30);
-
-            final MediaFileModel mediaFile = MediaFileModel(
-              id: DateTime.now().millisecondsSinceEpoch.toString() + file.name,
-              name: file.name,
-              path: file.path!,
-              size: file.size,
-              length: duration,
-              date: DateTime.now(),
-            );
-
-            newFiles.add(mediaFile);
-          }
+          await serviceLocator<ProjectViewModel>().addMediaFile(file: fileInfo);
         }
-
-        final List<MediaFileModel> updatedFiles = <MediaFileModel>[...state.files, ...newFiles];
-
-        emit(
-          state.copyWith(
-            files: updatedFiles,
-            selectedIndex: state.selectedIndex ?? (updatedFiles.isNotEmpty ? 0 : null),
-            isLoading: false,
-          ),
-        );
-
-        if (state.selectedIndex == null && updatedFiles.isNotEmpty) {
-          await selectFile(0);
-        }
-      } else {
-        emit(state.copyWith(isLoading: false));
       }
     } catch (e) {
       emit(state.copyWith(isLoading: false));
     }
   }
 
-  Future<void> selectFile(int index) async {
-    if (index < 0 || index >= state.files.length) return;
-
-    final MediaFileModel file = state.files[index];
-
-    await _audioPlayer.stop();
-    await _audioPlayer.setSourceDeviceFile(file.path);
+  Future<void> selectFile(MediaFileModel file) async {
+    try {
+      await _audioPlayer.stop();
+    } catch (e) {
+      // Handle error if needed
+    }
+    try {
+      await _audioPlayer.setSourceDeviceFile(file.path);
+    } catch (e) {
+      // Handle error if needed
+    }
 
     emit(
       state.copyWith(
-        selectedIndex: index,
+        selectedMediaFileId: file.id,
         currentPosition: Duration.zero,
         isPlaying: false,
       ),
     );
   }
 
+  Future<void> deleteMediaFile(String mediaId) async {
+    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>().getMediaFileById(mediaId);
+    if (mediaFile == null) return;
+
+    if (state.selectedMediaFileId == mediaId) {
+      await _audioPlayer.stop();
+      emit(
+        state.copyWith(
+          selectedMediaFileId: null,
+          currentPosition: Duration.zero,
+          isPlaying: false,
+        ),
+      );
+    }
+
+    await serviceLocator<ProjectViewModel>().removeMediaFileById(mediaId);
+  }
+
   Future<void> playPause() async {
-    if (state.selectedFile == null) return;
+    if (state.selectedMediaFileId == null) return;
 
     if (state.isPlaying) {
       await _audioPlayer.pause();
@@ -118,21 +122,29 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   }
 
   Future<void> playNext() async {
-    if (state.selectedIndex == null) return;
+    if (state.selectedMediaFileId == null) return;
 
-    final int nextIndex = state.selectedIndex! + 1;
-    if (nextIndex < state.files.length) {
-      await selectFile(nextIndex);
+    final List<MediaFileModel> stateFiles = getAllFiles();
+    final int currentIndex = stateFiles.indexWhere((MediaFileModel file) => file.id == state.selectedMediaFileId);
+    if (currentIndex == -1) return;
+
+    final int nextIndex = currentIndex + 1;
+    if (nextIndex < stateFiles.length) {
+      await selectFile(stateFiles[nextIndex]);
       await _audioPlayer.resume();
     }
   }
 
   Future<void> playPrevious() async {
-    if (state.selectedIndex == null) return;
+    if (state.selectedMediaFileId == null) return;
 
-    final int prevIndex = state.selectedIndex! - 1;
-    if (prevIndex >= 0) {
-      await selectFile(prevIndex);
+    final List<MediaFileModel> stateFiles = getAllFiles();
+    final int currentIndex = stateFiles.indexWhere((MediaFileModel file) => file.id == state.selectedMediaFileId);
+    if (currentIndex == -1) return;
+
+    final int previousIndex = currentIndex - 1;
+    if (previousIndex >= 0) {
+      await selectFile(stateFiles[previousIndex]);
       await _audioPlayer.resume();
     }
   }

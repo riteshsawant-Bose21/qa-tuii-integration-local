@@ -8,7 +8,7 @@ extension MediaFileService on ProjectService {
   }
 
   MediaFileModel? getMediaFileById(String mediaId) {
-    return mediaFiles.get(id);
+    return mediaFiles.get(mediaId);
   }
 
   Future<void> addMediaFile({required MediaFileModel mediaFile}) async {
