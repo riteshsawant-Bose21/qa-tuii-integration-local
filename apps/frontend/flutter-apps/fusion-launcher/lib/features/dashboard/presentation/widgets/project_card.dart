@@ -477,7 +477,6 @@ class ProjectDetailsDialog extends StatelessWidget {
                                                     );
 
                                                 if (context.mounted) {
-                                                  FusionUiUtils.hideLoader(context);
                                                   if (!downloadResponse.success) {
                                                     FusionToast.error(
                                                       context,
@@ -486,7 +485,10 @@ class ProjectDetailsDialog extends StatelessWidget {
                                                     return;
                                                   }
                                                   await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
-                                                  serviceLocator<ProjectViewModel>().openProject(project.id);
+                                                  if (context.mounted) {
+                                                    Navigator.of(context).pop();
+                                                    serviceLocator<ProjectViewModel>().openProject(project.id);
+                                                  }
                                                 }
                                               },
                                               height: 32,
