@@ -1,5 +1,6 @@
 //Cloud
 export 'cloud/project_cloud_sync_manager.dart';
+export 'cloud/services/project_sync_service.dart';
 
 //Floor
 export 'floor/floor_service.dart';
@@ -59,6 +60,10 @@ export 'functions/functions_service.dart';
 export 'mix_scenes/mix_scenes_manager.dart';
 export 'mix_scenes/mix_scenes_service.dart';
 
+//equip location
+export 'equip_location/equip_location_manager.dart';
+export 'equip_location/equip_location_service.dart';
+
 //scenes
 export 'scenes/scene_manager.dart';
 export 'scenes/scene_service.dart';
@@ -74,3 +79,7 @@ export 'gpio/gpio_service.dart';
 //Events
 export 'events/events_manager.dart';
 export 'events/events_service.dart';
+
+//media files
+export 'media_files/media_file_manager.dart';
+export 'media_files/media_file_service.dart';

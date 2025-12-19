@@ -32,6 +32,7 @@ class ExpandableSubZoneWidget extends StatefulWidget {
 
 class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   late ValueNotifier<bool> _isSubZoneExpanded;
+
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   bool _isHovered = false;
 
@@ -163,6 +164,11 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   /// Only accept if the incoming circuit has the same name but different ID
                   ///
                   if (incoming == null) return false;
+
+                  if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
+                    return false;
+                  }
+
                   // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                   final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                   final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
@@ -199,7 +205,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           child: CircuitDeviceWidget(
                             index: index,
                             deviceId: deviceId,
-
+                            circuitModel: circuitData,
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
@@ -234,7 +240,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           width: 220,
                           child: CircuitDeviceWidget(
                             index: index,
-
+                            circuitModel: circuitData,
                             deviceId: deviceId,
                             location: location,
                             speakers: speakers,
@@ -256,6 +262,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       deviceId: deviceId,
                       location: location,
                       speakers: speakers,
+                      circuitModel: circuitData,
                       circuitDeviceName: circuitData.name,
                       assetImagePath: speakers.first.assetImagePath,
                       circuitDeviceCount: speakers.length,

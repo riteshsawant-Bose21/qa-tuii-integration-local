@@ -46,7 +46,7 @@ class FusionNetworkClient {
     } else if (api.type == FusionApiType.fusionServer) {
       return "http://TODO:8080${api.path}";
     } else if (api.type == FusionApiType.backendServer) {
-      return "http://$apiBaseUrl${api.path}";
+      return "$apiBaseUrl${api.path}";
     } else {
       throw Exception("Invalid API type: ${api.type}");
     }
@@ -171,7 +171,7 @@ class FusionNetworkClient {
       }
     } catch (ex) {
       debugPrint("Exception in FusionNetworkClient.post() - $ex");
-      return ResponseCallback<T>(success: false, message: "Exception in FusionNetworkClient.post() - $ex");
+      return ResponseCallback.failure("Exception in FusionNetworkClient.post() - $ex");
     }
   }
 
@@ -184,9 +184,20 @@ class FusionNetworkClient {
     T Function(Map<String, dynamic>)? fromJson,
   }) async {
     try {
+      final Map<String, dynamic> headers = httpClient.dioInstance.options.headers;
+      final String? token = await getAccessTokenForApi(api);
+      if (token != null && token.isNotEmpty) {
+        headers['Authorization'] = 'Bearer $token';
+      }
+
+      /// Detect content type based on data type
+      final Options options = Options(
+        headers: <String, dynamic>{...headers, if (data is FormData) 'Content-Type': 'multipart/form-data' else 'Content-Type': 'application/json'},
+      );
+
       final Response<dynamic> response = await httpClient.dioInstance.patch(
         additionalPath != null ? "${geApiUrl(api, baseUrlToOverride: baseUrlToOverride)}/$additionalPath" : geApiUrl(api, baseUrlToOverride: baseUrlToOverride),
-
+        options: options,
         data: data,
         queryParameters: urlParameters,
       );
@@ -227,8 +238,10 @@ class FusionNetworkClient {
       final Response<dynamic> response = await httpClient.dioInstance.delete(url, options: options, queryParameters: urlParameters);
 
       if (response.data != null) {
-        T data = fromJson != null ? fromJson(response.data) : response.data;
+        T? data = fromJson != null ? fromJson(response.data) : response.data;
         return ResponseCallback<T>.success(data);
+      } else if (response.statusCode == 204 || response.statusCode == 200 || response.statusCode == 202) {
+        return ResponseCallback<T>(success: true, message: "Resource deleted successfully");
       } else {
         return ResponseCallback<T>(success: false, message: httpClient.handleStatusCodeError(response.statusCode));
       }
@@ -300,6 +313,7 @@ enum FusionApiEndpoint {
 
   //Backend server endpoints
   getProfile("/user/me/authorization", FusionApiType.backendServer),
+  projects("/projects", FusionApiType.backendServer),
 
   //fusion server setup apis
   fusionDevice('/devices', FusionApiType.fusionServer),
@@ -329,7 +343,7 @@ extension ApiEndpointTypeCheckExtension on String {
   }
 
   bool isBackendServerEndpoint() {
-    return contains(FusionApiEndpoint.getProfile.path);
+    return contains(FusionApiEndpoint.getProfile.path) || contains(FusionApiEndpoint.projects.path);
   }
 
   bool isTokenRequired() {
