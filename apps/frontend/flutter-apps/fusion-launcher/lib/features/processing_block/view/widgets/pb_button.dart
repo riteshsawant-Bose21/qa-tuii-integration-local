@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_container.dart';
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -17,7 +17,7 @@ class PBButton extends StatelessWidget {
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
         final double mw = constraints.maxHeight;
-        final bool value = WiringSerializationUtil.boolDeserializer.deserialize(handler?.getValue(item)) ?? false;
+        final bool value = DeserializationUtil.boolDeserializer.deserialize(handler?.getValue(item)) ?? false;
         return InkWell(
           onTap: () {
             handler?.onValueChanged(item, !value);

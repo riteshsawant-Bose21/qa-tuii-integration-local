@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -38,7 +39,7 @@ class EquipmentLocationDialog extends StatelessWidget {
       ],
 
       child: Container(
-        width: 640,
+        width: 720,
         // constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),
         height: MediaQuery.of(context).size.height * 0.8,
         padding: const EdgeInsets.all(12),
@@ -46,276 +47,283 @@ class EquipmentLocationDialog extends StatelessWidget {
           color: context.colorScheme.surface,
           borderRadius: BorderRadius.circular(20),
         ),
-        child: BlocBuilder<EqlProductsVm, EQLProductsState>(
-          builder: (BuildContext context, EQLProductsState state) {
-            final EqlProductsVm vm = BlocProvider.of<EqlProductsVm>(context);
-            return Row(
-              spacing: 12,
-              children: <Widget>[
-                ///********************************************************************** */
-                ///
-                /// ------- LEFT PANEL -------
-                ///
-                ///********************************************************************** */
-                Expanded(
-                  child: Column(
-                    children: <Widget>[
-                      const Expanded(
-                        child: _EQLRackPreview(),
-                      ),
-                      Expanded(
-                        child: Column(
-                          children: <Widget>[
-                            NeumorphicDarkTextField(
-                              prefix: Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 6),
-                                child: Icon(
-                                  LucideIcons.search200,
-                                  color: Colors.grey[500],
-                                ),
-                              ),
-                              borderRadius: 8,
-                              contentPadding: const EdgeInsets.all(10),
-                              hintText: "Search devices...",
-                              hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
-                              onChanged: (String value) {
-                                vm.updateFilters(state.filters.copyWith(searchQuery: value));
-                              },
-                            ),
-                            const SizedBox(height: 10),
-                            Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: "Recently Viewed",
-                                    style: context.textTheme.bodySmall?.copyWith(
-                                      fontWeight: FontWeight.normal,
-                                      color: context.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: GestureDetector(
-                                    onTap: () {},
-                                    child: FusionSvgIcon(
-                                      icon: "assets/svg/sort.svg",
-                                      color: context.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 8),
-                                MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: GestureDetector(
-                                    onTap: () {},
-                                    child: FusionSvgIcon(
-                                      icon: "assets/svg/filter.svg",
-                                      color: context.colorScheme.onSurface,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 10),
-                            const Divider(
-                              thickness: 0.5,
-                              height: 0,
-                            ),
-
-                            Expanded(
-                              child: switch (state.data) {
-                                EQLProductsLoading() => const Center(
-                                  child: Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: CupertinoActivityIndicator(),
-                                  ),
-                                ),
-                                EQLProductsError(:final String message) => Center(
-                                  child: FusionAppText(
-                                    text: 'Error: $message',
-                                    style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.error),
-                                  ),
-                                ),
-                                EQLProductsLoaded(:final List<EQLProduct> products) => ListView.builder(
-                                  itemCount: products.length,
-                                  itemBuilder: (BuildContext context, int index) {
-                                    final EQLProduct product = products[index];
-
-                                    return _ProductTile(
-                                      product: product,
-                                      addProduct: () {
-                                        vm.addProductToLocation(
-                                          equipLocationId: equipmentLocationId,
-                                          product: product,
-                                        );
-                                      },
-                                    );
-                                  },
-                                ),
-                                _ => const SizedBox.shrink(),
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-
-                ///********************************************************************** */
-                ///
-                /// ------- RIGHT PANEL -------
-                ///
-                ///********************************************************************** */
-                ///
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF292826),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
+        child: BlocListener<ProjectViewModel, ProjectViewModelState>(
+          listener: (BuildContext context, ProjectViewModelState state) {
+            if (state is ProjectUpdated) {
+              BlocProvider.of<EquipmentLocationViewmodel>(context).refresh();
+            }
+          },
+          child: BlocBuilder<EqlProductsVm, EQLProductsState>(
+            builder: (BuildContext context, EQLProductsState state) {
+              final EqlProductsVm vm = BlocProvider.of<EqlProductsVm>(context);
+              return Row(
+                spacing: 12,
+                children: <Widget>[
+                  ///********************************************************************** */
+                  ///
+                  /// ------- LEFT PANEL -------
+                  ///
+                  ///********************************************************************** */
+                  Expanded(
                     child: Column(
                       children: <Widget>[
-                        Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: FusionAppText(
-                                  text: "Select Devices",
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: context.colorScheme.onSurface,
-                                  ),
-                                ),
-                              ),
-                              MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: () => Navigator.of(context).pop(),
-                                  child: const Padding(
-                                    padding: EdgeInsets.all(2.0),
-                                    child: Icon(LucideIcons.x200, size: 16),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        const Expanded(
+                          child: _EQLRackPreview(),
                         ),
-                        const Divider(thickness: 0.5, height: 0),
-                        const SizedBox(height: 16),
-                        Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              spacing: 10,
-                              mainAxisSize: MainAxisSize.min,
-                              children: <Widget>[
-                                ...<String>["Select", "Suggest"].map((String mode) {
-                                  final bool isSelected = "Select" == mode;
-
-                                  return Container(
-                                    width: 89,
-                                    padding: const EdgeInsets.all(8),
-                                    decoration: BoxDecoration(
-                                      color: isSelected ? context.colorScheme.surfaceBright : null,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Center(
-                                      child: FusionAppText(
-                                        text: mode,
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          color: context.colorScheme.onSurface,
-                                          fontWeight: FontWeight.normal,
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                }),
-                              ],
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-
-                        ///
-                        ///
-                        ///
-                        ///
                         Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                            child: Column(
-                              spacing: 12,
-                              children: <Widget>[
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    FusionAppText(
-                                      text: 'Device',
+                          child: Column(
+                            children: <Widget>[
+                              NeumorphicDarkTextField(
+                                prefix: Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6),
+                                  child: Icon(
+                                    LucideIcons.search200,
+                                    color: Colors.grey[500],
+                                  ),
+                                ),
+                                borderRadius: 8,
+                                contentPadding: const EdgeInsets.all(10),
+                                hintText: "Search devices...",
+                                hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
+                                onChanged: (String value) {
+                                  vm.updateFilters(state.filters.copyWith(searchQuery: value));
+                                },
+                              ),
+                              const SizedBox(height: 10),
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: FusionAppText(
+                                      text: "Recently Viewed",
                                       style: context.textTheme.bodySmall?.copyWith(
                                         fontWeight: FontWeight.normal,
                                         color: context.colorScheme.onSurface,
                                       ),
                                     ),
-
-                                    const SizedBox(height: 8),
-
-                                    FusionRadio<EQLDeviceType>(
-                                      selected: state.filters.deviceType,
-                                      options: EQLDeviceType.values,
-                                      labelBuilder: (EQLDeviceType mountingType) {
-                                        return FusionAppText(
-                                          text: mountingType.displayName,
-                                          style: context.textTheme.bodySmall?.copyWith(
-                                            color: context.colorScheme.onSurface,
-                                          ),
-                                        );
-                                      },
-                                      onChanged: (EQLDeviceType value) {
-                                        vm.updateFilters(
-                                          state.filters.copyWith(
-                                            deviceType: value,
-                                          ),
-                                        );
-                                      },
+                                  ),
+                                  const SizedBox(width: 8),
+                                  MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: () {},
+                                      child: FusionSvgIcon(
+                                        icon: "assets/svg/sort.svg",
+                                        color: context.colorScheme.onSurface,
+                                      ),
                                     ),
-                                  ],
-                                ),
-                                _buildLAPropertyRow(
-                                  context: context,
-                                  label: "Spare Capacity",
-                                  value: state.filters.spareCapacity.displayName,
-                                  options: SpareCapacity.values.map((SpareCapacity capacity) => capacity.displayName).toList(),
-                                  onOptionSelected: (int selectedIndex) {
-                                    vm.updateFilters(state.filters.copyWith(spareCapacity: SpareCapacity.values[selectedIndex]));
-                                  },
-                                ),
-                                _buildLAPropertyRow(
-                                  context: context,
-                                  label: "Monitoring",
-                                  value: state.filters.monitoringType.displayName,
-                                  options: MonitoringType.values.map((MonitoringType type) => type.displayName).toList(),
-                                  onOptionSelected: (int selectedIndex) {
-                                    vm.updateFilters(state.filters.copyWith(monitoringType: MonitoringType.values[selectedIndex]));
-                                  },
-                                ),
-                              ],
-                            ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  MouseRegion(
+                                    cursor: SystemMouseCursors.click,
+                                    child: GestureDetector(
+                                      onTap: () {},
+                                      child: FusionSvgIcon(
+                                        icon: "assets/svg/filter.svg",
+                                        color: context.colorScheme.onSurface,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 10),
+                              const Divider(
+                                thickness: 0.5,
+                                height: 0,
+                              ),
+
+                              Expanded(
+                                child: switch (state.data) {
+                                  EQLProductsLoading() => const Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.all(16.0),
+                                      child: CupertinoActivityIndicator(),
+                                    ),
+                                  ),
+                                  EQLProductsError(:final String message) => Center(
+                                    child: FusionAppText(
+                                      text: 'Error: $message',
+                                      style: context.textTheme.bodyMedium?.copyWith(color: context.colorScheme.error),
+                                    ),
+                                  ),
+                                  EQLProductsLoaded(:final List<EQLProduct> products) => ListView.builder(
+                                    itemCount: products.length,
+                                    itemBuilder: (BuildContext context, int index) {
+                                      final EQLProduct product = products[index];
+
+                                      return _ProductTile(
+                                        product: product,
+                                        addProduct: () {
+                                          vm.addProductToLocation(
+                                            equipLocationId: equipmentLocationId,
+                                            product: product,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                  _ => const SizedBox.shrink(),
+                                },
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
-            );
-          },
+
+                  ///********************************************************************** */
+                  ///
+                  /// ------- RIGHT PANEL -------
+                  ///
+                  ///********************************************************************** */
+                  ///
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF292826),
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Column(
+                        children: <Widget>[
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: FusionAppText(
+                                    text: "Select Devices",
+                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                                MouseRegion(
+                                  cursor: SystemMouseCursors.click,
+                                  child: GestureDetector(
+                                    onTap: () => Navigator.of(context).pop(),
+                                    child: const Padding(
+                                      padding: EdgeInsets.all(2.0),
+                                      child: Icon(LucideIcons.x200, size: 16),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const Divider(thickness: 0.5, height: 0),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: context.colorScheme.surface,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                spacing: 10,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  ...<String>["Select", "Suggest"].map((String mode) {
+                                    final bool isSelected = "Select" == mode;
+
+                                    return Container(
+                                      width: 89,
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: isSelected ? context.colorScheme.surfaceBright : null,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Center(
+                                        child: FusionAppText(
+                                          text: mode,
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            color: context.colorScheme.onSurface,
+                                            fontWeight: FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          ///
+                          ///
+                          ///
+                          ///
+                          Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                              child: Column(
+                                spacing: 12,
+                                children: <Widget>[
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      FusionAppText(
+                                        text: 'Device',
+                                        style: context.textTheme.bodySmall?.copyWith(
+                                          fontWeight: FontWeight.normal,
+                                          color: context.colorScheme.onSurface,
+                                        ),
+                                      ),
+
+                                      const SizedBox(height: 8),
+
+                                      FusionRadio<EQLDeviceType>(
+                                        selected: state.filters.deviceType,
+                                        options: EQLDeviceType.values,
+                                        labelBuilder: (EQLDeviceType mountingType) {
+                                          return FusionAppText(
+                                            text: mountingType.displayName,
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          );
+                                        },
+                                        onChanged: (EQLDeviceType value) {
+                                          vm.updateFilters(
+                                            state.filters.copyWith(
+                                              deviceType: value,
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                  _buildLAPropertyRow(
+                                    context: context,
+                                    label: "Spare Capacity",
+                                    value: state.filters.spareCapacity.displayName,
+                                    options: SpareCapacity.values.map((SpareCapacity capacity) => capacity.displayName).toList(),
+                                    onOptionSelected: (int selectedIndex) {
+                                      vm.updateFilters(state.filters.copyWith(spareCapacity: SpareCapacity.values[selectedIndex]));
+                                    },
+                                  ),
+                                  _buildLAPropertyRow(
+                                    context: context,
+                                    label: "Monitoring",
+                                    value: state.filters.monitoringType.displayName,
+                                    options: MonitoringType.values.map((MonitoringType type) => type.displayName).toList(),
+                                    onOptionSelected: (int selectedIndex) {
+                                      vm.updateFilters(state.filters.copyWith(monitoringType: MonitoringType.values[selectedIndex]));
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -519,9 +527,161 @@ class _EQLRackPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<EquipmentLocationViewmodel,EquipmentLocationState>(
-      builder: (BuildContext context, Object? asyncSnapshot) {
-        return const Placeholder();
+    return BlocBuilder<EquipmentLocationViewmodel, EquipmentLocationState>(
+      builder: (BuildContext context, EquipmentLocationState? state) {
+        if (state is! EquipmentLocationLoaded) {
+          return const SizedBox.shrink();
+        }
+        final int length = max(10, state.hardwares.length);
+        final double height = 32.0;
+        return Center(
+          child: ScrollConfiguration(
+            behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+            child: SingleChildScrollView(
+              child: SizedBox(
+                width: 250,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: "Rack $length Units",
+                      style: context.textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      color: Colors.grey.shade300,
+
+                      padding: const EdgeInsets.all(12),
+                      child: SizedBox(
+                        height: (height * (length)),
+                        child: ReorderableListView.builder(
+                          physics: const NeverScrollableScrollPhysics(),
+                          onReorder: (int oldIndex, int newIndex) {
+                            final int adjustedNewIndex = newIndex > oldIndex ? newIndex - 1 : newIndex;
+                            BlocProvider.of<EquipmentLocationViewmodel>(context).reorderHardware(oldIndex, adjustedNewIndex);
+                          },
+                          itemCount: length,
+                          buildDefaultDragHandles: false,
+                          itemBuilder: (BuildContext context, int index) {
+                            return Center(
+                              key: ValueKey<int>(index),
+                              child: LayoutBuilder(
+                                builder: (BuildContext context, BoxConstraints constraints) {
+                                  return Container(
+                                    height: height,
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[400],
+                                      // border: const Border(
+                                      //   bottom: BorderSide(color: Colors.black, width: 2),
+                                      // ),
+                                    ),
+                                    child: Stack(
+                                      children: <Widget>[
+                                        if (index < length - 1)
+                                          Align(
+                                            alignment: Alignment.bottomCenter,
+                                            child: Container(
+                                              width: constraints.maxWidth,
+                                              height: 2,
+                                              color: context.colorScheme.surface,
+                                            ),
+                                          ),
+                                        Center(
+                                          child: Container(
+                                            width: constraints.maxWidth * 0.8,
+                                            height: double.maxFinite,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xfff1a1a18),
+                                              border: Border.symmetric(vertical: BorderSide(color: Colors.grey.shade200, width: 5)),
+                                            ),
+                                          ),
+                                        ),
+                                        Align(
+                                          alignment: Alignment.topCenter,
+                                          child: Builder(
+                                            builder: (BuildContext context) {
+                                              final HardwareComponent? hardware = state.hardwares[index];
+                                              if (hardware != null) {
+                                                return ReorderableDragStartListener(
+                                                  index: index,
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.only(top: 2),
+                                                    child: Row(
+                                                      crossAxisAlignment: CrossAxisAlignment.center,
+
+                                                      children: <Widget>[
+                                                        SizedBox(width: constraints.maxWidth * 0.05),
+                                                        Container(
+                                                          width: (constraints.maxWidth * 0.05) + 5,
+                                                          height: 25,
+                                                          color: Colors.black54,
+                                                          child: const Icon(Icons.more_vert, color: Colors.white54, size: 12),
+                                                        ),
+
+                                                        Container(
+                                                          width: constraints.maxWidth * 0.8 - 10,
+                                                          color: Colors.black,
+                                                          height: 25,
+                                                          child: Padding(
+                                                            padding: const EdgeInsets.all(4.0),
+                                                            child: FusionAppText(
+                                                              text: hardware.name,
+                                                              maxLine: 1,
+                                                              style: context.textTheme.bodySmall?.copyWith(
+                                                                color: context.colorScheme.onSurface,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        Container(
+                                                          width: (constraints.maxWidth * 0.05) + 5,
+                                                          height: 25,
+                                                          color: Colors.black54,
+                                                          child: const Icon(Icons.more_vert, color: Colors.white54, size: 12),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                              return const SizedBox();
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: <Widget>[
+                        Container(
+                          height: 20,
+                          width: 30,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(),
+                        Container(
+                          height: 20,
+                          width: 30,
+                          color: Colors.grey.shade400,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
       },
     );
   }

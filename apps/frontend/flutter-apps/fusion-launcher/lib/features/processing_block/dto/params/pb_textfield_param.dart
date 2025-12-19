@@ -16,7 +16,7 @@ class PBTextfieldParam extends PBItemParam {
     return <String, dynamic>{
       'label': label,
       'unit': unit,
-       //'min': min, 'max': max
+      //'min': min, 'max': max
     };
   }
 
@@ -24,8 +24,8 @@ class PBTextfieldParam extends PBItemParam {
     return PBTextfieldParam(
       label: map['label'] as String,
       unit: map['unit'] as String?,
-      min: WiringSerializationUtil.numDeserializer.deserialize(map['min']) ?? 0,
-      max: WiringSerializationUtil.numDeserializer.deserialize(map['max']) ?? 0,
+      min: DeserializationUtil.numDeserializer.deserialize(map['min']) ?? 0,
+      max: DeserializationUtil.numDeserializer.deserialize(map['max']) ?? 0,
     );
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/processing_block/view/common/neumorphic_container.dart';
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 import '../../dto/pb_item.dart';
 import '../../dto/pb_item_param.dart';
@@ -24,7 +24,7 @@ class PBTextfield extends StatelessWidget {
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        final num? value = WiringSerializationUtil.numDeserializer.deserialize(handler?.getValue(item) ?? item.value);
+        final num? value = DeserializationUtil.numDeserializer.deserialize(handler?.getValue(item) ?? item.value);
         final double widthPerCell = constraints.maxWidth / item.width;
         return NeumorphicContainer(
           inner: true,

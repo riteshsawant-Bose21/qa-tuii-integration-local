@@ -1,6 +1,6 @@
 import 'dart:ui';
 
-class WiringSerializationUtil {
+class DeserializationUtil {
   static final Deserializer<int> intDeserializer = Deserializer<int>(
     fromInt: (int value) => value,
     fromString: (String value) => int.tryParse(value),
@@ -47,18 +47,16 @@ class WiringSerializationUtil {
     fromMap: (Map<dynamic, dynamic> value) => value.toString(),
   );
 
-  static final Deserializer<Map<dynamic, dynamic>> mapDeserializer =
-      Deserializer<Map<dynamic, dynamic>>(
-        fromMap: (Map<dynamic, dynamic> map) => map,
-      );
+  static final Deserializer<Map<dynamic, dynamic>> mapDeserializer = Deserializer<Map<dynamic, dynamic>>(
+    fromMap: (Map<dynamic, dynamic> map) => map,
+  );
 
-  static final Deserializer<List<dynamic>> listDeserializer =
-      Deserializer<List<dynamic>>(
-        fromString: (String value) {
-          // comma separated
-          return value.split(',').map((String e) => e.trim()).toList();
-        },
-      );
+  static final Deserializer<List<dynamic>> listDeserializer = Deserializer<List<dynamic>>(
+    fromString: (String value) {
+      // comma separated
+      return value.split(',').map((String e) => e.trim()).toList();
+    },
+  );
 
   static final Deserializer<Offset> offsetDeserializer = Deserializer<Offset>(
     fromMap: (Map<dynamic, dynamic> map) {

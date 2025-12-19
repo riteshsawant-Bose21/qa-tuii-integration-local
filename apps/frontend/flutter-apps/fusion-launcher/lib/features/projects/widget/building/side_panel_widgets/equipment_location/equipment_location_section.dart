@@ -137,7 +137,6 @@ class EquipmentLocationSection extends StatelessWidget {
                       final List<HardwareComponent> hardwares = BlocProvider.of<ProjectViewModel>(
                         context,
                       ).getHardwareForEquipLocation(equipLocationId: location.id);
-                      print("Hardware count: ${hardwares.length}");
                       return Column(
                         children: <Widget>[
                           for (final HardwareComponent hardware in hardwares)
@@ -159,6 +158,15 @@ class EquipmentLocationSection extends StatelessWidget {
                                         fontSize: 11,
                                       ),
                                     ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  InkWell(
+                                    onTap: () {
+                                      BlocProvider.of<ProjectViewModel>(context).removeHardware(
+                                        hardwareId: hardware.id,
+                                      );
+                                    },
+                                    child: Icon(Icons.delete_outline_rounded, size: 12, color: Colors.red[600]),
                                   ),
                                 ],
                               ),

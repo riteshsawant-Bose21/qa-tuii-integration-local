@@ -34,6 +34,7 @@ class Speaker extends HardwareComponent {
     required super.price,
     super.lockListeningArea,
     String? hardwareName,
+    super.equipmentLocationPosition,
     super.portData,
     super.communicationPorts,
     super.inputPortsData,
@@ -65,6 +66,7 @@ class Speaker extends HardwareComponent {
     double? roll,
     double? yaw,
     bool? lockListeningArea,
+    int? equipmentLocationPosition,
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
@@ -88,6 +90,7 @@ class Speaker extends HardwareComponent {
       pitch: pitch ?? this.pitch,
       roll: roll ?? this.roll,
       yaw: yaw ?? this.yaw,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       lockListeningArea: lockListeningArea ?? this.lockListeningArea,
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
@@ -204,6 +207,7 @@ class Speaker extends HardwareComponent {
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 
@@ -232,6 +236,7 @@ class Speaker extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 }
