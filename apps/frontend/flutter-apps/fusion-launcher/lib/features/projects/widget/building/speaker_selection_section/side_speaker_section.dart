@@ -109,9 +109,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                   final ListeningArea listeningArea = projectViewModel.getListeningArea(areaId: listeningAreaId);
 
-                  final List<HardwareComponent> allHardware = projectViewModel.getHardwareForListeningArea(
-                    listeningAreaId: listeningAreaId,
-                  );
+                  final List<HardwareComponent> allHardware = projectViewModel.getHardwareForListeningArea(listeningAreaId: listeningAreaId);
                   final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos == null).toList();
 
                   if (speakers.isEmpty) return const SizedBox.shrink();
