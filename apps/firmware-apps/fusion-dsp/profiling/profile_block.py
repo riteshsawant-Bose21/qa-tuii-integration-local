@@ -1,3 +1,10 @@
+"""
+Fusion DSP Algorithm Performance Profiler
+
+This script profiles DSP algorithms by measuring execution time across parameter ranges
+and generating linear regression models for performance prediction.
+"""
+
 import pandas as pd
 import jinja2 as jinja2
 import itertools
@@ -59,7 +66,7 @@ def check_remote_diskspace(board_ip):
 
 def get_checkpoint_dir(config_name):
     """Get the checkpoint directory for a given config"""
-    return f'profiling_results/{config_name}_checkpoints'
+    return f'../profiling_results/{config_name}_checkpoints'
 
 def get_checkpoint_params_file(config_name):
     """Get the checkpoint params file path"""
@@ -75,6 +82,8 @@ def save_processed_checkpoint(config_name, param_dict, df):
         checkpoint_file = f"{checkpoint_dir}/timings_mm_{param_dict['num_inputs']}_{param_dict['num_outputs']}_processed.csv"
     elif config_name == 'peq':
         checkpoint_file = f"{checkpoint_dir}/timings_peq_{param_dict['bands']}_{param_dict['channels']}_processed.csv"
+    elif config_name == 'fir':
+        checkpoint_file = f"{checkpoint_dir}/timings_fir_{param_dict['channels']}_{param_dict['num_taps_wfir']}_{param_dict['num_taps_fir']}_processed.csv"
     else:
         param_str = '_'.join([f"{k}{v}" for k, v in param_dict.items()])
         checkpoint_file = f"{checkpoint_dir}/timings_{config_name}_{param_str}_processed.csv"
@@ -95,6 +104,8 @@ def load_checkpoints(config_name):
             processed_combos = set(zip(params_df['num_inputs'], params_df['num_outputs']))
         elif config_name == 'peq' and 'bands' in params_df.columns:
             processed_combos = set(zip(params_df['bands'], params_df['channels']))
+        elif config_name == 'fir' and 'channels' in params_df.columns:
+            processed_combos = set(zip(params_df['channels'], params_df['num_taps_wfir'], params_df['num_taps_fir']))
         else:
             param_cols = [col for col in params_df.columns if col not in ['Unnamed: 0']]
             if param_cols:
@@ -167,7 +178,7 @@ def check_missing_data(config_name, current_config):
         print("="*60)
         
         params = current_config.get('parameters', {})
-        if config_name in ['matrix_mixer', 'peq']:
+        if config_name in ['matrix_mixer', 'peq', 'fir']:
             existing, missing = check_missing.check_missing_combinations(
                 config_name, 
                 expected_params=params
@@ -191,7 +202,7 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
         board_ip (str): IP address of the remote board
         board_clock (float): Clock speed in MHz of the remote board
     """
-    loader = jinja2.FileSystemLoader("./config/profiling")
+    loader = jinja2.FileSystemLoader("../config/profiling")
     env = jinja2.Environment(loader=loader, autoescape=jinja2.select_autoescape())
     current_config = configurations[config_name]
     template = env.get_template(current_config['path'])
@@ -205,7 +216,7 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
     param_counter = 0
     completed_params = []
     
-    needs_special_processing = config_name in ['matrix_mixer', 'peq']
+    needs_special_processing = config_name in ['matrix_mixer', 'peq', 'fir']
     
     processed_combos = set()
     if needs_special_processing:
@@ -217,6 +228,8 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
                 combo_key = (param_dict['num_inputs'], param_dict['num_outputs'])
             elif config_name == 'peq':
                 combo_key = (param_dict['bands'], param_dict['channels'])
+            elif config_name == 'fir':
+                combo_key = (param_dict['channels'], param_dict['num_taps_wfir'], param_dict['num_taps_fir'])
             else:
                 combo_key = tuple(param_dict.values())
             
@@ -235,11 +248,11 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
                 **param_dict
             ) 
             
-            with open('tmp.json', 'w') as f:
+            with open('../tmp.json', 'w') as f:
                 f.write(config_content)
             
             print(f'REMOTE: Running with parameters: {param_dict}')
-            os.system(f'scp tmp.json root@{board_ip}:/home/root/tmp.json')
+            os.system(f'scp ../tmp.json root@{board_ip}:/home/root/tmp.json')
             
             if config_name == 'feedback_suppression':
                 fusion_cmd = '/usr/local/bin/fusion_dsp -v -d /etc/fusion/dsp/algorithm-definitions.json -c /home/root/tmp.json 2>&1'
@@ -271,29 +284,30 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
                         print(f"Captured analysis MIPS: avg={mips_avg}")
                         print(f"Converted to analysis thread time: {analysis_thread_time} seconds")
             
-            os.system(f'scp root@{board_ip}:/home/root/timings.csv ./timings.csv')
-            local_csv_name = 'timings.csv'
+            os.system(f'scp root@{board_ip}:/home/root/timings.csv ../timings.csv')
+            local_csv_name = '../timings.csv'
             
             print(f'Cleanup after remote execution')
             os.system(f'ssh root@{board_ip} "rm -f /home/root/tmp.json /home/root/timings.csv"')
         else:
             config_content = template.render(
-                output_file='timings.csv',
-                wav_input=current_config.get('wav_input','in.wav'),
+                output_file='../timings.csv',
+                wav_input='../' + current_config.get('wav_input','in.wav'),
                 algorithm=current_config.get('algorithm'),
                 **param_dict
             )
             
-            with open('tmp.json', 'w') as f:
+            with open('../tmp.json', 'w') as f:
                 f.write(config_content)
             
             print(f'LOCAL: Running with parameters: {param_dict}')
+            env = os.environ.copy()
             if platform.system() == 'Darwin':
-                env = {'DYLD_LIBRARY_PATH' : 'libs/onnxruntime-osx-universal2-1.17.0/lib/:'}
+                env['DYLD_LIBRARY_PATH'] = '../libs/onnxruntime-osx-universal2-1.17.0/lib/:'
             else:
-                env = {'LD_LIBRARY_PATH' : 'libs/onnxruntime-linux-x64-1.17.0/lib/:'}
-            subprocess.run(['./build/fusion_dsp','-c', 'tmp.json'], env=env)
-            local_csv_name = 'timings.csv'
+                env['LD_LIBRARY_PATH'] = '../libs/onnxruntime-linux-x64-1.17.0/lib/:'
+            subprocess.run(['../build/fusion_dsp','-c', '../tmp.json', '-d', '../config/algorithm-definitions.json'], env=env)
+            local_csv_name = '../timings.csv'
         
         try:
             df = pd.read_csv(local_csv_name)
@@ -342,7 +356,7 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
         if not complete:
             print(f"WARNING: Some {config_name} combinations are missing!")
     
-    if config_name in ['matrix_mixer', 'peq']:
+    if config_name in ['matrix_mixer', 'peq', 'fir']:
         print(f"\n{'='*60}")
         print(f"{config_name.upper()} DATA COLLECTION COMPLETE")
         print(f"{'='*60}")
@@ -392,7 +406,7 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
             )
     
     if current_config.get('csv_dump'):
-        config_dir = f'profiling_results/{config_name}'
+        config_dir = f'../profiling_results/{config_name}'
         os.makedirs(config_dir, exist_ok=True)
         result_df.to_csv(f"{config_dir}/{current_config['csv_dump']}")
     
@@ -481,7 +495,7 @@ def profile(config_name, remote=True, board_ip='192.168.1.6', board_clock=1500.0
 
 def create_regression_plots(filtered_df, model, feature_names, block, config_name, current_config, suffix='local'):
     """Create regression plots for the analysis"""
-    config_dir = f'profiling_results/{config_name}'
+    config_dir = f'../profiling_results/{config_name}'
     os.makedirs(config_dir, exist_ok=True)
     
     if len(feature_names) == 1:
@@ -672,6 +686,70 @@ configurations = {
         },
         'csv_dump' : 'wav_write_timings.csv',
         'format_string' : 'T = {0}'
+    },
+    'fir' : {
+        'path' : 'profile_fir.json.jinja',
+        'block' : 'arbitrary_eq',
+        'wav_input' : 'in.wav',
+        'parameters' : {
+            'channels' : [1, 2, 4],
+            'num_taps_wfir' : [64, 128, 256, 512],
+            'num_taps_fir' : [64, 128, 256, 512]
+        },
+        'features' : {
+            'channels' : lambda x: x['channels'],
+            'num_taps_wfir' : lambda x: x['num_taps_wfir'],
+            'num_taps_fir' : lambda x: x['num_taps_fir'],
+            'total_taps' : lambda x: x['num_taps_wfir'] + x['num_taps_fir'],
+            'channels_taps_wfir' : lambda x: x['channels'] * x['num_taps_wfir'],
+            'channels_taps_fir' : lambda x: x['channels'] * x['num_taps_fir'],
+            'channels_total_taps' : lambda x: x['channels'] * (x['num_taps_wfir'] + x['num_taps_fir'])
+        },
+        'fixed_values': {
+            'num_taps_wfir': { 'fix_for': 'num_taps_fir', 'values': [64, 96, 128, 160, 192, 256, 288, 320, 384, 512] },
+            'num_taps_fir': { 'fix_for': 'num_taps_wfir', 'values': [64, 96, 128, 160, 192, 256, 288, 320, 384, 512] },
+            'channels': { 'fix_for': 'num_taps_wfir', 'values': list(range(1, 5, 1)) }
+        },
+        'csv_dump' : 'fir_timings.csv',
+        'format_string' : 'T = {0} + {1}*channels + {2}*num_taps_wfir + {3}*num_taps_fir + {4}*total_taps + {5}*channels_taps_wfir + {6}*channels_taps_fir + {7}*channels_total_taps'
+    },
+    'fir_hybrid' : {
+        'path' : 'profile_fir_hybrid.json.jinja',
+        'block' : 'fir_hybrid',
+        'wav_input' : 'in_long.wav',
+        'parameters' : {
+            'channels' : [1, 2, 4],
+            'num_taps' : [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 98304],
+            'direct_taps' : [64]
+        },
+        'features' : {
+            'channels' : lambda x: x['channels'],
+            'num_taps' : lambda x: x['num_taps'],
+            'direct_taps' : lambda x: x['direct_taps'],
+            'fft_taps' : lambda x: x['num_taps'] - x['direct_taps'],
+            'channels_num_taps' : lambda x: x['channels'] * x['num_taps']
+        },
+        'csv_dump' : 'fir_hybrid_timings.csv',
+        'format_string' : 'T = {0} + {1}*channels + {2}*num_taps + {3}*direct_taps + {4}*fft_taps + {5}*channels_num_taps'
+    },
+    'fir_direct' : {
+        'path' : 'profile_fir_direct.json.jinja',
+        'block' : 'fir_direct',
+        'wav_input' : 'in_long.wav',
+        'parameters' : {
+            'channels' : [1, 2, 4],
+            'num_taps' : [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536, 98304],
+            'direct_taps' : [64]
+        },
+        'features' : {
+            'channels' : lambda x: x['channels'],
+            'num_taps' : lambda x: x['num_taps'],
+            'direct_taps' : lambda x: x['direct_taps'],
+            'fft_taps' : lambda x: x['num_taps'] - x['direct_taps'],
+            'channels_num_taps' : lambda x: x['channels'] * x['num_taps']
+        },
+        'csv_dump' : 'fir_direct_timings.csv',
+        'format_string' : 'T = {0} + {1}*channels + {2}*num_taps + {3}*direct_taps + {4}*fft_taps + {5}*channels_num_taps'
     }
 }
 
@@ -697,7 +775,7 @@ if __name__ == '__main__':
     parser.add_argument('config', nargs='?', help='Configuration to profile (if not specified, runs all)')
     parser.add_argument('--remote', action='store_true', help='Run on remote Variscite board (default behavior)')
     parser.add_argument('--local', action='store_true', help='Run locally on the host machine')
-    parser.add_argument('--ip', type=str, default='192.168.1.5', help='IP address of remote Variscite board')
+    parser.add_argument('--ip', type=str, default='192.168.1.6', help='IP address of remote Variscite board')
     parser.add_argument('--clock', type=float, default=1500.0, help='Processor clock speed in MHz for remote board')
     
     args = parser.parse_args()
@@ -719,7 +797,7 @@ if __name__ == '__main__':
     mode_str = "REMOTE BOARD" if remote else "LOCAL"
     print(f"Running in {mode_str} mode")
     
-    os.makedirs('profiling_results', exist_ok=True)
+    os.makedirs('../profiling_results', exist_ok=True)
     
     if args.config is None:
         results = {}
@@ -731,7 +809,7 @@ if __name__ == '__main__':
             print(f'{"="*60}')
             model = results[config] = profile(config, remote=remote, board_ip=board_ip, board_clock=board_clock)
             if model:
-                config_dir = f'profiling_results/{config}'
+                config_dir = f'../profiling_results/{config}'
                 os.makedirs(config_dir, exist_ok=True)
 
                 try:
@@ -761,7 +839,7 @@ if __name__ == '__main__':
                 except Exception as e:
                     print(f"Failed to write results txt for {config}: {e}")
         
-        with open(f'profiling_results/all_results{suffix}.pkl', 'wb') as f:
+        with open(f'../profiling_results/all_results{suffix}.pkl', 'wb') as f:
             pickle.dump(results, f)
         
     else:
@@ -775,8 +853,8 @@ if __name__ == '__main__':
         model = profile(config, remote=remote, board_ip=board_ip, board_clock=board_clock)
         
         if model:
-            if config not in ['matrix_mixer', 'peq']:
-                config_dir = f'profiling_results/{config}'
+            if config not in ['matrix_mixer', 'peq', 'fir']:
+                config_dir = f'../profiling_results/{config}'
                 os.makedirs(config_dir, exist_ok=True)
                 
                 with open(f'{config_dir}/results_{config}{suffix}.pkl', 'wb') as f:
