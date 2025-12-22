@@ -50,7 +50,7 @@ extension MediaFileManager on ProjectManager {
     await projectService!.removeMediaFileById(mediaId);
   }
 
-  MediaFileModel? getMediaFileById(String mediaId) {
+  MediaFileModel? getMediaFileModelById(String mediaId) {
     // Ensure projectService is not null
     if (projectService == null) {
       throw Exception("ProjectService is not initialized.");
@@ -66,5 +66,46 @@ extension MediaFileManager on ProjectManager {
     }
 
     return await localProjectManager.getAllMediaFilesFromProject(projectId: projectService!.id);
+  }
+
+  Future<Directory> getProjectsMediaDirectory() async {
+    // Ensure projectService is not null
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+    return await localProjectManager.getProjectMediaDirectory(projectId: projectService!.id);
+  }
+
+  Future<File> getMediaFileFromProject({required String mediaId}) async {
+    // Ensure projectService is not null
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+
+    final MediaFileModel? mediaFile = projectService!.getMediaFileById(mediaId);
+    if (mediaFile == null) {
+      throw Exception("Media file with id $mediaId does not exist.");
+    }
+
+    Directory mediaDir = await getProjectsMediaDirectory();
+    return File('${mediaDir.path}${Platform.pathSeparator}${mediaFile.path}');
+  }
+
+  Future<void> renameMediaFile({required String mediaId, required String newFileName}) async {
+    // Ensure projectService is not null
+    if (projectService == null) {
+      throw Exception("ProjectService is not initialized.");
+    }
+
+    final MediaFileModel? mediaFile = projectService!.getMediaFileById(mediaId);
+    if (mediaFile == null) {
+      throw Exception("Media file with id $mediaId does not exist.");
+    }
+
+    await localProjectManager.renameMediaFileInProject(oldFileName: mediaFile.name, newFileName: newFileName, projectId: projectService!.id);
+
+    MediaFileModel updatedMediaFile = mediaFile.copyWith(name: newFileName, path: newFileName);
+
+    projectService!.updateMediaFile(mediaFile: updatedMediaFile);
   }
 }

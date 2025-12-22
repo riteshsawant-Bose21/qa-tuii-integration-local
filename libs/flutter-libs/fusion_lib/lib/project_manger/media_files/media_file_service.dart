@@ -21,4 +21,11 @@ extension MediaFileService on ProjectService {
     }
     mediaFiles.remove(mediaId);
   }
+
+  void updateMediaFile({required MediaFileModel mediaFile}) {
+    if (!mediaFiles.exists(mediaFile.id)) {
+      throw Exception("Media file with id ${mediaFile.id} does not exist.");
+    }
+    mediaFiles.add(mediaFile.id, mediaFile);
+  }
 }

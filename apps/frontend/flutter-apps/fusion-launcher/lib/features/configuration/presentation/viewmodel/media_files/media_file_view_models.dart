@@ -30,12 +30,41 @@ extension MediaFileViewModels on ProjectViewModel {
     }
   }
 
-  MediaFileModel? getMediaFileById(String mediaId) {
+  MediaFileModel? getMediaFileModelById(String mediaId) {
     try {
-      return projectManager.getMediaFileById(mediaId);
+      return projectManager.getMediaFileModelById(mediaId);
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Error getting media file by id: $ex");
       return null;
+    }
+  }
+
+  Future<File> getMediaFileFromProject({required String mediaId}) async {
+    try {
+      return await projectManager.getMediaFileFromProject(mediaId: mediaId);
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Error getting media file by id: $ex");
+      rethrow;
+    }
+  }
+
+  Future<Directory> getProjectsMediaDirectory() async {
+    try {
+      return await projectManager.getProjectsMediaDirectory();
+    } catch (ex) {
+      FusionLogger.log(tag: LogTag.project, message: "Error getting project's media directory: $ex");
+      rethrow;
+    }
+  }
+
+  Future<void> renameMediaFile({required String mediaId, required String newName, bool autoSave = true}) async {
+    if (autoSave) {
+      recordSnapshot();
+    }
+    await projectManager.renameMediaFile(mediaId: mediaId, newFileName: newName);
+
+    if (autoSave) {
+      await saveProject();
     }
   }
 

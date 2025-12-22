@@ -404,7 +404,8 @@ class LocalProjectManager {
       fileName ??= path.basename(mediaFile.path);
       final File destFile = File('${mediaDir.path}/$fileName');
       await destFile.writeAsBytes(await mediaFile.readAsBytes());
-      return destFile.path;
+
+      return fileName;
     } catch (e) {
       throw ('Error saving media file to project: $e');
     }

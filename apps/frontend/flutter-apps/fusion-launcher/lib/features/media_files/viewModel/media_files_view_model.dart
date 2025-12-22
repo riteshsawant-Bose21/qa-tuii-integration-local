@@ -46,7 +46,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   MediaFileModel? getSelectedFile() {
     if (state.selectedMediaFileId == null) return null;
 
-    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>().getMediaFileById(state.selectedMediaFileId!);
+    final MediaFileModel? selectedFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(state.selectedMediaFileId!);
 
     return selectedFile;
   }
@@ -72,13 +72,14 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
     }
   }
 
-  Future<void> selectFile(MediaFileModel file) async {
+  Future<void> selectFile(MediaFileModel mediaFileModel) async {
     try {
       await _audioPlayer.stop();
     } catch (e) {
       // Handle error if needed
     }
     try {
+      final File file = await serviceLocator<ProjectViewModel>().getMediaFileFromProject(mediaId: mediaFileModel.id);
       await _audioPlayer.setSourceDeviceFile(file.path);
     } catch (e) {
       // Handle error if needed
@@ -86,7 +87,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
 
     emit(
       state.copyWith(
-        selectedMediaFileId: file.id,
+        selectedMediaFileId: mediaFileModel.id,
         currentPosition: Duration.zero,
         isPlaying: false,
       ),
@@ -94,7 +95,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
   }
 
   Future<void> deleteMediaFile(String mediaId) async {
-    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>().getMediaFileById(mediaId);
+    final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(mediaId);
     if (mediaFile == null) return;
 
     if (state.selectedMediaFileId == mediaId) {
