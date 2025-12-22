@@ -127,6 +127,9 @@ class ListeningArea {
   void setSplData(List<Offset> points, List<double> values) {
     splData = SplData(surfaceId: id, fieldPoints: points, splValues: values);
   }
+  void clearSplData() {
+    splData = null;
+  }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,

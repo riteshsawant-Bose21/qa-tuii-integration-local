@@ -39,8 +39,9 @@ class FloorCanvasPainter extends CustomPainter {
 
   // Mode state
   final bool isAcousticsMode;
-
+  final AnimationController animationController;
   FloorCanvasPainter({
+    required this.animationController,
     required this.gridSize,
     required this.zoomScale,
     required this.panOffset,
@@ -187,7 +188,6 @@ class FloorCanvasPainter extends CustomPainter {
 
     for (final ListeningArea listeningArea in listeningAreas) {
       final SplData? spl = listeningArea.splData;
-      if (spl == null) continue;
 
       // Clip to listening area polygon once
       tmpPath.reset();
@@ -196,6 +196,12 @@ class FloorCanvasPainter extends CustomPainter {
 
       // Skip if bounds are invalid
       if (bounds.width <= 0 || bounds.height <= 0) continue;
+
+      if (spl == null) {
+        // Paint loading shimmer when splData is null
+        _drawLoadingShimmer(canvas, tmpPath, bounds);
+        continue;
+      }
 
       final ui.Image pic = _HeatmapCache.instance.getOrBuild(
         _AreaSplSummary(
@@ -722,6 +728,23 @@ class FloorCanvasPainter extends CustomPainter {
     }
 
     return Color.lerp(colors[i0], colors[i1], f)!;
+  }
+
+  void _drawLoadingShimmer(Canvas canvas, ui.Path clipPath, Rect bounds) {
+    // Create shimmer effect with animated gradient
+    canvas.save();
+    canvas.clipPath(clipPath);
+
+    final Paint shimmerPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(bounds.left - bounds.width + (bounds.width * 2) * animationController.value, bounds.top),
+        Offset(bounds.left + (bounds.width * 2) * animationController.value, bounds.top),
+        [Colors.grey.shade300, Colors.grey, Colors.grey.shade300],
+        [0.0, 0.5, 1.0],
+      );
+    canvas.drawRect(bounds, shimmerPaint);
+
+    canvas.restore();
   }
 
   @override
