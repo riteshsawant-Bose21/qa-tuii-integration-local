@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
+import '../../../../core/utils/fusion_utils.dart';
+import '../../../projects/view_model/project_sync_view_model.dart';
 
 class HomeTabContent extends StatefulWidget {
   const HomeTabContent({super.key});
@@ -17,6 +21,19 @@ class HomeTabContent extends StatefulWidget {
 
 class _HomeTabContentState extends State<HomeTabContent> {
   final SharedPreferencesHandler prefs = serviceLocator<SharedPreferencesHandler>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Set theme to dark mode on home tab load
+    Future<void>.delayed(const Duration(milliseconds: 500), () {
+      _initProjects();
+    });
+  }
+
+  void _initProjects() async {
+    await serviceLocator<ProjectSyncViewModel>().getAllProjects();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -178,47 +195,88 @@ class _RecentProjects extends StatelessWidget {
             ),
           ),
 
-          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              if (!serviceLocator<ProjectViewModel>().hasProjects) {
-                return Center(
-                  child: SizedBox(
-                    height: 166,
-                    child: Center(
-                      child: FusionAppText(
-                        text: "No recent projects found.\nCreate a new project to get started!",
-                        textAlign: TextAlign.center,
-                        style: context.textTheme.labelLarge?.copyWith(
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+          BlocBuilder<ProjectSyncViewModel, ProjectSyncViewModelState>(
+            builder: (BuildContext context, ProjectSyncViewModelState syncState) {
+              return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                listener: (BuildContext context, ProjectViewModelState state) {
+                  if (state is ProjectLoaded && context.mounted) {
+                    if (state.currentProject != null) {
+                      FusionThemeController.setThemeMode(ThemeMode.light);
+
+                      FusionUiUtils.hideLoader(context);
+                      Navigator.pushNamed(context, Routes.projectPage).then((_) async {
+                        FusionThemeController.setThemeMode(ThemeMode.dark);
+                        await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+                      });
+                    }
+                  }
+                  if (state is OpenProjectError && context.mounted) {
+                    FusionUiUtils.hideLoader(context);
+                    FusionToast.show(context, message: state.message);
+                  }
+                },
+                builder: (BuildContext context, ProjectViewModelState state) {
+                  //Add a circle progress indicator when loading projects
+                  if (syncState is LoadingAllProjects) {
+                    return Column(
+                      children: <Widget>[
+                        Center(
+                          child: SizedBox(
+                            height: 30,
+                            width: 30,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: context.colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    );
+                  }
+
+                  if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+                    return Center(
+                      child: SizedBox(
+                        width: 262,
+                        height: 166,
+                        child: Center(
+                          child: FusionAppText(
+                            text: "No Projects Available",
+                            style: context.textTheme.labelLarge?.copyWith(
+                              fontSize: 16,
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                            ),
+                          ),
                         ),
                       ),
+                    );
+                  }
+
+                  final List<ProjectData> projects = serviceLocator<ProjectViewModel>().allProjects;
+
+                  return SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      spacing: 16,
+                      children: List<Widget>.generate(
+                        projects.length,
+                        (int index) {
+                          final ProjectData project = projects[index];
+
+                          return GestureDetector(
+                            onTap: () => ProjectDetailsDialog.show(context, project: project),
+                            child: ProjectCard(
+                              projectData: project,
+                              onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
+                            ),
+                          );
+                        },
+                      ),
                     ),
-                  ),
-                );
-              }
-
-              final List<ProjectData> projects = serviceLocator<ProjectViewModel>().allProjects;
-
-              return SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                scrollDirection: Axis.horizontal,
-                child: Row(
-                  spacing: 16,
-                  children: List<Widget>.generate(
-                    projects.length,
-                    (int index) {
-                      final ProjectData project = projects[index];
-
-                      return GestureDetector(
-                        onTap: () => ProjectDetailsDialog.show(context, project: project),
-                        child: ProjectCard(
-                          title: project.projectName,
-                          onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
-                        ),
-                      );
-                    },
-                  ),
-                ),
+                  );
+                },
               );
             },
           ),
@@ -330,7 +388,14 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
                       // serviceLocator<ProjectViewModel>().openProject(project.id);
                     },
                     child: ProjectCard(
-                      title: title,
+                      projectData: ProjectData(
+                        id: "id",
+                        name: "name",
+                        projectRawData: <String, dynamic>{},
+                        createdAt: DateTime.now().toUtc(),
+                        updatedAt: DateTime.now().toUtc(),
+                        isCloudInstance: true,
+                      ),
                       subtitle: subtitle,
                       assetPath: assetPath,
                       showMore: false,
@@ -349,6 +414,7 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
 
 class _HomeRightContent extends StatelessWidget {
   const _HomeRightContent();
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(

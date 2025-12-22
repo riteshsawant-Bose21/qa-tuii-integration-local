@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
@@ -17,6 +20,7 @@ enum _SavedProjectsSortOption {
   name("Name");
 
   final String title;
+
   const _SavedProjectsSortOption(this.title);
 }
 
@@ -207,185 +211,255 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-      builder: (BuildContext context, ProjectViewModelState state) {
-        final List<ProjectData> projects = getProjects;
+    return BlocConsumer<ProjectSyncViewModel, ProjectSyncViewModelState>(
+      listener: (BuildContext context, ProjectSyncViewModelState syncState) {
+        if (syncState is ProjectsLoadFailure) {
+          FusionToast.show(context, message: syncState.error);
+        }
+      },
+      builder: (BuildContext context, ProjectSyncViewModelState syncState) {
+        return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+          listener: (BuildContext context, ProjectViewModelState state) {
+            if (state is ProjectLoaded && context.mounted) {
+              if (state.currentProject != null) {
+                FusionThemeController.setThemeMode(ThemeMode.light);
 
-        return LayoutBuilder(
-          builder: (BuildContext context, BoxConstraints constraints) {
-            return Container(
-              width: double.infinity,
-              decoration: BoxDecoration(
-                color: context.colorScheme.surface,
-                borderRadius: BorderRadius.circular(12),
-                border: _getBorder(context),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Padding(
-                    padding: const EdgeInsets.all(16).copyWith(bottom: 0),
-                    child: Row(
-                      spacing: 10,
-                      children: <Widget>[
-                        /// Recent Projects
-                        Expanded(
-                          child: FusionAppText(
-                            text: 'Projects',
-                            style: context.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        ValueListenableBuilder<bool>(
-                          valueListenable: showSearchBarNotifier,
-                          builder: (BuildContext context, bool showSearchBar, Widget? child) {
-                            return AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              height: 32,
-                              padding: const EdgeInsets.symmetric(horizontal: 8),
-                              decoration: BoxDecoration(
-                                color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
-                                borderRadius: BorderRadius.circular(60),
-                              ),
+                FusionUiUtils.hideLoader(context);
+                Navigator.pushNamed(context, Routes.projectPage).then((_) async {
+                  FusionThemeController.setThemeMode(ThemeMode.dark);
+                  await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+                });
+              }
+            }
+            if (state is OpenProjectError && context.mounted) {
+              FusionUiUtils.hideLoader(context);
+              FusionToast.show(context, message: state.message);
+            }
+          },
+          builder: (BuildContext context, ProjectViewModelState state) {
+            final List<ProjectData> projects = getProjects;
+
+            return LayoutBuilder(
+              builder: (BuildContext context, BoxConstraints constraints) {
+                return Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: context.colorScheme.surface,
+                    borderRadius: BorderRadius.circular(12),
+                    border: _getBorder(context),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Padding(
+                        padding: const EdgeInsets.all(16).copyWith(bottom: 0),
+                        child: Row(
+                          spacing: 10,
+                          children: <Widget>[
+                            /// Recent Projects
+                            Expanded(
                               child: Row(
+                                mainAxisSize: MainAxisSize.min,
                                 children: <Widget>[
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: showSearchBar ? 250 : 0,
-                                    child: TextFormField(
-                                      focusNode: _searchFocusNode,
-                                      controller: _searchController,
-                                      style: context.textTheme.labelLarge,
-                                      cursorColor: context.colorScheme.onSurface,
-                                      cursorWidth: 1,
-                                      cursorHeight: 15,
-                                      decoration: InputDecoration(
-                                        filled: true,
-                                        isDense: true,
-                                        fillColor: Colors.transparent,
-                                        border: InputBorder.none,
-                                        enabledBorder: InputBorder.none,
-                                        focusedBorder: InputBorder.none,
-                                        hintText: "Search projects",
-                                        hoverColor: Colors.transparent,
-                                        contentPadding: EdgeInsets.zero,
-                                        hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
-                                      ),
+                                  FusionAppText(
+                                    text: 'Projects',
+                                    style: context.textTheme.titleMedium?.copyWith(
+                                      fontWeight: FontWeight.w600,
                                     ),
                                   ),
-                                  InkWell(
-                                    onTap: () {
-                                      showSearchBarNotifier.value = !showSearchBarNotifier.value;
-
-                                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                                        showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
-                                        _searchController.clear();
-                                      });
+                                  const Spacer(),
+                                  //cloud sync icon button
+                                  IconButton(
+                                    onPressed: () {
+                                      serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
                                     },
-                                    child: AnimatedSwitcher(
-                                      duration: const Duration(milliseconds: 200),
-                                      transitionBuilder: (Widget child, Animation<double> animation) {
-                                        return FadeTransition(
-                                          opacity: animation,
-                                          child: child,
-                                        );
-                                      },
-                                      child: Icon(
-                                        key: ValueKey<bool>(showSearchBar),
-                                        showSearchBar ? LucideIcons.x : LucideIcons.search,
-                                        size: 18,
-                                      ),
+                                    tooltip: "Upload All Projects to Cloud",
+                                    icon: Icon(
+                                      LucideIcons.cloudUpload,
+                                      size: 18,
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                    ),
+                                  ),
+                                  //cloud download icon button
+                                  IconButton(
+                                    onPressed: () {
+                                      serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
+                                    },
+                                    tooltip: "Download All Projects from Cloud",
+                                    icon: Icon(
+                                      LucideIcons.cloudDownload,
+                                      size: 18,
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                     ),
                                   ),
                                 ],
                               ),
-                            );
-                          },
-                        ),
-
-                        // ==============================
-                        //   Sort by Widget
-                        // ==============================
-                        _SortByWidget(
-                          selectedSortOption: selectedSortOption,
-                          onSelect: (_SavedProjectsSortOption value) {
-                            setState(() {
-                              selectedSortOption = value == selectedSortOption ? null : value;
-                            });
-                          },
-                        ),
-
-                        // ==============================
-                        //   Filter by Widget
-                        // ==============================
-                        const _FilterByWidget(), // TODO: Implement filter functionality
-                      ],
-                    ),
-                  ),
-
-                  Expanded(
-                    child: Builder(
-                      builder: (BuildContext context) {
-                        if (_isSearching && projects.isEmpty) {
-                          return Center(
-                            child: FusionAppText(
-                              text: "No Projects Found for \"${_searchController.text}\"",
-                              style: context.textTheme.labelLarge?.copyWith(
-                                fontSize: 16,
-                                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                              ),
                             ),
-                          );
-                        } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
-                          return Center(
-                            child: FusionAppText(
-                              text: "No Projects Saved Yet. Create a new project to get started!",
-                              textAlign: TextAlign.center,
-                              style: context.textTheme.labelLarge?.copyWith(
-                                fontSize: 16,
-                                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                              ),
-                            ),
-                          );
-                        } else {
-                          int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
-                          if (constraints.maxWidth > 1200) crossAxisCount = 5;
 
-                          return GridView.builder(
-                            itemCount: projects.length,
-                            padding: const EdgeInsets.all(16),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: crossAxisCount,
-                              childAspectRatio: 16 / 12,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                            itemBuilder: (BuildContext context, int index) {
-                              final ProjectData project = projects[index];
-
-                              return GestureDetector(
-                                onTap: () => ProjectDetailsDialog.show(context, project: project),
-                                child: Container(
+                            ValueListenableBuilder<bool>(
+                              valueListenable: showSearchBarNotifier,
+                              builder: (BuildContext context, bool showSearchBar, Widget? child) {
+                                return AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  height: 32,
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
                                   decoration: BoxDecoration(
-                                    color: context.colorScheme.surface,
-                                    borderRadius: BorderRadius.circular(12),
-                                    border: _getBorder(context),
+                                    color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(60),
                                   ),
-                                  child: ProjectCard(
-                                    title: project.projectName,
-                                    onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
+                                  child: Row(
+                                    children: <Widget>[
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        width: showSearchBar ? 250 : 0,
+                                        child: TextFormField(
+                                          focusNode: _searchFocusNode,
+                                          controller: _searchController,
+                                          style: context.textTheme.labelLarge,
+                                          cursorColor: context.colorScheme.onSurface,
+                                          cursorWidth: 1,
+                                          cursorHeight: 15,
+                                          decoration: InputDecoration(
+                                            filled: true,
+                                            isDense: true,
+                                            fillColor: Colors.transparent,
+                                            border: InputBorder.none,
+                                            enabledBorder: InputBorder.none,
+                                            focusedBorder: InputBorder.none,
+                                            hintText: "Search projects",
+                                            hoverColor: Colors.transparent,
+                                            contentPadding: EdgeInsets.zero,
+                                            hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
+                                          ),
+                                        ),
+                                      ),
+                                      InkWell(
+                                        onTap: () {
+                                          showSearchBarNotifier.value = !showSearchBarNotifier.value;
+
+                                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
+                                            _searchController.clear();
+                                          });
+                                        },
+                                        child: AnimatedSwitcher(
+                                          duration: const Duration(milliseconds: 200),
+                                          transitionBuilder: (Widget child, Animation<double> animation) {
+                                            return FadeTransition(
+                                              opacity: animation,
+                                              child: child,
+                                            );
+                                          },
+                                          child: Icon(
+                                            key: ValueKey<bool>(showSearchBar),
+                                            showSearchBar ? LucideIcons.x : LucideIcons.search,
+                                            size: 18,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+
+                            // ==============================
+                            //   Sort by Widget
+                            // ==============================
+                            _SortByWidget(
+                              selectedSortOption: selectedSortOption,
+                              onSelect: (_SavedProjectsSortOption value) {
+                                setState(() {
+                                  selectedSortOption = value == selectedSortOption ? null : value;
+                                });
+                              },
+                            ),
+
+                            // ==============================
+                            //   Filter by Widget
+                            // ==============================
+                            const _FilterByWidget(), // TODO: Implement filter functionality
+                          ],
+                        ),
+                      ),
+
+                      Expanded(
+                        child: Builder(
+                          builder: (BuildContext context) {
+                            //Add a circle progress indicator when loading projects
+                            if (syncState is LoadingAllProjects) {
+                              return Center(
+                                child: SizedBox(
+                                  height: 50,
+                                  width: 50,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: context.colorScheme.onSurface,
                                   ),
                                 ),
                               );
-                            },
-                          );
-                        }
-                      },
-                    ),
+                            }
+
+                            if (_isSearching && projects.isEmpty) {
+                              return Center(
+                                child: FusionAppText(
+                                  text: "No Projects Found for \"${_searchController.text}\"",
+                                  style: context.textTheme.labelLarge?.copyWith(
+                                    fontSize: 16,
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                              );
+                            } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+                              return Center(
+                                child: FusionAppText(
+                                  text: "No Projects Saved Yet",
+                                  style: context.textTheme.labelLarge?.copyWith(
+                                    fontSize: 16,
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                  ),
+                                ),
+                              );
+                            } else {
+                              int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
+                              if (constraints.maxWidth > 1200) crossAxisCount = 5;
+
+                              return GridView.builder(
+                                itemCount: projects.length,
+                                padding: const EdgeInsets.all(16),
+                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  crossAxisCount: crossAxisCount,
+                                  childAspectRatio: 16 / 12,
+                                  crossAxisSpacing: 16,
+                                  mainAxisSpacing: 16,
+                                ),
+                                itemBuilder: (BuildContext context, int index) {
+                                  final ProjectData project = projects[index];
+
+                                  return GestureDetector(
+                                    onTap: () => ProjectDetailsDialog.show(context, project: project),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.surface,
+                                        borderRadius: BorderRadius.circular(12),
+                                        border: _getBorder(context),
+                                      ),
+                                      child: ProjectCard(
+                                        projectData: project,
+                                        onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            }
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                );
+              },
             );
           },
         );
@@ -397,6 +471,7 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 class _SortByWidget extends StatelessWidget {
   final _SavedProjectsSortOption? selectedSortOption;
   final ValueChanged<_SavedProjectsSortOption>? onSelect;
+
   const _SortByWidget({required this.selectedSortOption, required this.onSelect});
 
   @override

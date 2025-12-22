@@ -19,7 +19,7 @@ class SnapshotItemCard extends StatefulWidget {
     required this.snapShotData,
     this.onDelete,
     this.onTap,
-    required this.index, // Add this
+    required this.index,
   });
 
   @override

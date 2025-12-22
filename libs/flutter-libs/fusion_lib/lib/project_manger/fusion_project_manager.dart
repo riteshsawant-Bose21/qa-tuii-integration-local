@@ -1,5 +1,6 @@
 //Cloud
 export 'cloud/project_cloud_sync_manager.dart';
+export 'cloud/services/project_sync_service.dart';
 
 //Floor
 export 'floor/floor_service.dart';
@@ -78,3 +79,7 @@ export 'gpio/gpio_service.dart';
 //Events
 export 'events/events_manager.dart';
 export 'events/events_service.dart';
+
+//media files
+export 'media_files/media_file_manager.dart';
+export 'media_files/media_file_service.dart';

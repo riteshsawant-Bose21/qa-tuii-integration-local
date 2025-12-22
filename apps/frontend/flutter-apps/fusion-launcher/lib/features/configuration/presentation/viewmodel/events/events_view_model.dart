@@ -54,32 +54,38 @@ extension EventsViewModel on ProjectViewModel {
     }
   }
 
-  void addEventForGPI({required String gpiId, bool autoSave = true}) {
+  FusionEvent? addEventForGPI({required String gpiId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addEventForGPI(gpiId: gpiId);
+      final FusionEvent addedEvent = projectManager.addEventForGPI(gpiId: gpiId);
       if (autoSave) {
         saveProject();
       }
+      selectedEventId = addedEvent.id;
+      return addedEvent;
     } catch (ex) {
       throwError("Failed to add GPI event: $ex");
     }
+    return null;
   }
 
-  void addEventForSchedule({required String scheduleId, bool autoSave = true}) {
+  FusionEvent? addEventForSchedule({required String scheduleId, bool autoSave = true}) {
     try {
       if (autoSave) {
         recordSnapshot();
       }
-      projectManager.addEventForSchedule(scheduleId: scheduleId);
+      final FusionEvent fusionEvent = projectManager.addEventForSchedule(scheduleId: scheduleId);
       if (autoSave) {
         saveProject();
       }
+      selectedEventId = fusionEvent.id;
+      return fusionEvent;
     } catch (ex) {
       throwError("Failed to add scheduled event: $ex");
     }
+    return null;
   }
 
   List<EventTriggerType> getEventTriggers() {
@@ -259,6 +265,21 @@ extension EventsViewModel on ProjectViewModel {
     } catch (ex) {
       throwError("Failed to retrieve event by id: $ex");
       rethrow;
+    }
+  }
+
+  void updateEventSelectedState({required String eventId, required EventStates selectedState, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      throwError("Failed to update event selected state: $ex");
     }
   }
 }

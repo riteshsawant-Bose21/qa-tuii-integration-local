@@ -64,7 +64,7 @@ Have these in the root project directory for local testing, or copy them to the 
 ### Choose platform
 
 ```bash
-python3 profile_block.py --local
+python3 profiling/profile_block.py --local
 ```
 
 This will:
@@ -72,9 +72,9 @@ This will:
 
 
 ```bash
-python3 profile_block.py --remote
+python3 profiling/profile_block.py --remote
 # or leave blank (remote is default)
-python3 profile_block.py
+python3 profiling/profile_block.py
 ```
 
 This will:
@@ -89,7 +89,7 @@ Matrix Mixer and PEQ profile with checkpoints. Timing files will output in `prof
 
 ### Profile All Algorithms
 ```bash
-python3 profile_block.py
+python3 profiling/profile_block.py
 ```
 
 This will:
@@ -100,13 +100,20 @@ This will:
 
 ### Profile Specific Algorithm
 ```bash
-python3 profile_block.py matrix_mixer --ip 192.168.1.6 --clock 1500.0
+python3 profiling/profile_block.py matrix_mixer --ip 192.168.1.6 --clock 1500.0
 ```
 
 This will:
 - Profile only the specified algorithm using provided ip and clock speed (remote only)
 - `ip=192.168.1.5` and `clock=1500.0` are the default values. 
 - Generate `results_matrix_mixer.pkl`, `results_matrix_mixer.txt` and `matrix_mixer_regression_plots.png` in `/profiling_results`
+
+### FIR Hybrid Check Profiling Results
+```bash
+python3 profiling/firh_check_profiling.py
+```
+
+This companion script displays FIR Hybrid profiling results with pass/fail status and maximum safe filter lengths based on MIPS budget analysis. It's designed to be a brief overview for debugging.
 
 ## Supported Algorithms
 

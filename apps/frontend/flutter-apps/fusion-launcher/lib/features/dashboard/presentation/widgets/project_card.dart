@@ -1,8 +1,10 @@
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -11,7 +13,7 @@ import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 
 class ProjectCard extends StatelessWidget {
-  final String title;
+  final ProjectData projectData;
   final String? subtitle;
   final VoidCallback onDelete;
   final String? assetPath;
@@ -20,7 +22,7 @@ class ProjectCard extends StatelessWidget {
 
   const ProjectCard({
     super.key,
-    required this.title,
+    required this.projectData,
     this.subtitle,
     required this.onDelete,
     this.assetPath,
@@ -32,139 +34,209 @@ class ProjectCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: width ?? 268,
-      height: height ?? 178,
-      child: Container(
-        decoration: BoxDecoration(
-          color: context.colorScheme.onSurface.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(borderRadius ?? 6),
-        ),
-        child: Stack(
-          children: <Widget>[
-            Positioned.fill(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Expanded(
-                    flex: 2,
-                    child: LayoutBuilder(
-                      builder: (BuildContext context, BoxConstraints constraints) {
-                        return Align(
-                          alignment: Alignment.topLeft,
-                          child: SizedBox(
-                            width: constraints.maxWidth,
-                            height: constraints.maxHeight,
-                            child: FittedBox(
-                              fit: BoxFit.contain,
+    return BlocConsumer<ProjectSyncViewModel, ProjectSyncViewModelState>(
+      listener: (BuildContext context, ProjectSyncViewModelState state) {
+        if (state is ProjectDownloadSuccess) {
+          serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+        }
+      },
+      builder: (BuildContext context, ProjectSyncViewModelState state) {
+        return SizedBox(
+          width: width ?? 268,
+          height: height ?? 178,
+          child: Container(
+            decoration: BoxDecoration(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(borderRadius ?? 6),
+            ),
+            child: Stack(
+              children: <Widget>[
+                Positioned.fill(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Expanded(
+                        flex: 2,
+                        child: LayoutBuilder(
+                          builder: (BuildContext context, BoxConstraints constraints) {
+                            return Align(
                               alignment: Alignment.topLeft,
-                              child: Image.asset(
-                                assetPath ?? "assets/images/floor_plans/floor_plan_placeholder.png",
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: <Widget>[
-                          Flexible(
-                            child: FusionAppText(
-                              text: title,
-                              maxLine: 1,
-                              style: context.textTheme.titleSmall?.copyWith(
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-
-                          if (subtitle != null) ...<Widget>[
-                            Flexible(
-                              child: Tooltip(
-                                message: subtitle!,
-                                textStyle: context.textTheme.labelSmall?.copyWith(
-                                  color: context.colorScheme.onSurface.withValues(alpha: 0.3),
-                                ),
-                                constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.2),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: context.colorScheme.surface,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3),
-                                ),
-                                child: FusionAppText(
-                                  text: subtitle!,
-                                  maxLine: 1,
-                                  style: context.textTheme.labelSmall?.copyWith(
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                              child: SizedBox(
+                                width: constraints.maxWidth,
+                                height: constraints.maxHeight,
+                                child: FittedBox(
+                                  fit: BoxFit.contain,
+                                  alignment: Alignment.topLeft,
+                                  child: Image.asset(
+                                    assetPath ?? "assets/images/floor_plans/floor_plan_placeholder.png",
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            if (showMore) ...<Widget>[
-              Positioned(
-                top: 6,
-                right: 6,
-                child: FusionArrowPopup(
-                  blurAmount: 0,
-                  barrierColor: Colors.transparent,
-                  content: Padding(
-                    padding: const EdgeInsets.all(12.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        GestureDetector(
-                          onTap: () {
-                            onDelete();
-                            Navigator.of(context).pop();
+                            );
                           },
-                          child: Row(
+                        ),
+                      ),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
-                              Icon(LucideIcons.trash, size: 14, color: context.colorScheme.onSurface),
-                              const SizedBox(width: 8),
-                              FusionAppText(
-                                text: 'Delete',
-                                style: context.textTheme.labelMedium?.copyWith(
-                                  color: context.colorScheme.onSurface,
+                              Flexible(
+                                child: FusionAppText(
+                                  text: projectData.name,
+                                  maxLine: 1,
+                                  style: context.textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
                               ),
+
+                              if (subtitle != null) ...<Widget>[
+                                Flexible(
+                                  child: Tooltip(
+                                    message: subtitle!,
+                                    textStyle: context.textTheme.labelSmall?.copyWith(
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                                    ),
+                                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.2),
+                                    padding: const EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: context.colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3), width: 0.3),
+                                    ),
+                                    child: FusionAppText(
+                                      text: subtitle!,
+                                      maxLine: 1,
+                                      style: context.textTheme.labelSmall?.copyWith(
+                                        color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+
+                              if (projectData.isSyncNeeded && !(state is ProjectUploadInProgress && state.projectId == projectData.id)) ...<Widget>[
+                                const SizedBox(height: 4),
+                                FusionAppText(
+                                  text: "Modified",
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.colorScheme.error,
+                                  ),
+                                ),
+                              ],
+
+                              if (state is ProjectUploadInProgress && state.projectId == projectData.id)
+                                FusionAppText(
+                                  text: "Uploading... ${(state.progress * 100).toStringAsFixed(0)}%",
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              if (state is ProjectDownloadInProgress && state.projectId == projectData.id) ...<Widget>[
+                                FusionAppText(
+                                  text: "${state.downloadPhase}... ${(state.progress * 100).toStringAsFixed(0)}%",
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ],
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  ),
-                  child: const Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Icon(Icons.more_vert),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ],
-        ),
-      ),
+
+                if (showMore) ...<Widget>[
+                  Positioned(
+                    top: 6,
+                    right: 6,
+                    child: PopupMenuButton<String>(
+                      onSelected: (String value) {
+                        if (value == 'delete') onDelete();
+                      },
+                      tooltip: "",
+                      // Remove default tooltip
+                      padding: EdgeInsets.zero,
+                      menuPadding: const EdgeInsets.only(),
+                      borderRadius: BorderRadius.circular(8),
+                      position: PopupMenuPosition.under,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(9),
+                        side: BorderSide(
+                          color: context.colorScheme.onSurface.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      color: context.colorScheme.surface,
+                      itemBuilder: (BuildContext context) {
+                        return <PopupMenuEntry<String>>[
+                          const PopupMenuItem<String>(
+                            value: 'delete',
+                            child: Row(
+                              children: <Widget>[
+                                Icon(LucideIcons.trash),
+                                SizedBox(width: 8),
+                                FusionAppText(text: 'Delete'),
+                              ],
+                            ),
+                          ),
+                        ];
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.all(8.0),
+                        child: Icon(Icons.more_vert),
+                      ),
+                    ),
+                  ),
+
+                  if (!projectData.isCloudInstance && projectData.isSyncNeeded)
+                    Positioned(
+                      top: 40,
+                      right: 6,
+                      child: IconButton(
+                        onPressed: () async {
+                          await serviceLocator<ProjectSyncViewModel>().uploadProject(projectData: projectData);
+                        },
+                        tooltip: "Upload to Cloud",
+                        icon: Icon(
+                          LucideIcons.cloudUpload,
+                          color: context.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+
+                  if (projectData.isCloudInstance)
+                    Positioned(
+                      top: 40,
+                      right: 6,
+                      child: IconButton(
+                        onPressed: () async {
+                          await serviceLocator<ProjectSyncViewModel>().downloadProject(projectData);
+                        },
+                        tooltip: "Download from Cloud",
+                        icon: Icon(
+                          LucideIcons.cloudDownload,
+                          color: context.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
 class ProjectDetailsDialog extends StatelessWidget {
   final ProjectData project;
+
   const ProjectDetailsDialog({super.key, required this.project});
 
   static void show(BuildContext context, {required ProjectData project}) {
@@ -204,7 +276,7 @@ class ProjectDetailsDialog extends StatelessWidget {
                 child: ProjectCard(
                   width: cardWidth,
                   height: cardHeight,
-                  title: project.projectName,
+                  projectData: project,
                   showMore: false,
                   borderRadius: borderRadius,
                   onDelete: () {},
@@ -353,30 +425,122 @@ class ProjectDetailsDialog extends StatelessWidget {
                                 ),
                               ),
                               Flexible(
-                                child: NeumorphicDarkButton(
-                                  onTap: () {
-                                    Navigator.of(context).pop();
-                                    FusionUiUtils.showLoader(context);
-                                    serviceLocator<ProjectViewModel>().openProject(project.id);
+                                child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                                  builder: (BuildContext context, ProjectViewModelState viewState) {
+                                    final ProjectData project = serviceLocator<ProjectViewModel>().allProjects.firstWhere(
+                                      (ProjectData p) => p.id == this.project.id,
+                                    );
+                                    return BlocBuilder<ProjectSyncViewModel, ProjectSyncViewModelState>(
+                                      builder: (BuildContext context, ProjectSyncViewModelState state) {
+                                        if (project.isCloudInstance) {
+                                          if (state is ProjectDownloadInProgress && state.projectId == project.id) {
+                                            return NeumorphicDarkButton(
+                                              onTap: null,
+                                              height: 32,
+                                              width: 168,
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                spacing: 4,
+                                                children: <Widget>[
+                                                  Flexible(
+                                                    child: FusionAppText(
+                                                      text: "Downloading... ${(state.progress * 100).toStringAsFixed(0)}%",
+                                                      style: context.textTheme.labelLarge?.copyWith(
+                                                        fontSize: 12,
+                                                        color: context.colorScheme.onSurface,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const Icon(
+                                                    LucideIcons.cloudDownload,
+                                                    size: 16,
+                                                  ),
+                                                ],
+                                              ),
+                                            );
+                                          } else {
+                                            if (project.projectFileUrl == null) {
+                                              return FusionAppText(
+                                                text: "Project file not available for download.",
+                                                style: context.textTheme.labelLarge?.copyWith(
+                                                  fontSize: 12,
+                                                  color: context.colorScheme.error,
+                                                ),
+                                              );
+                                            }
+                                            return NeumorphicDarkButton(
+                                              onTap: () async {
+                                                // FusionUiUtils.showLoader(context);
+                                                final ResponseCallback<CloudSyncStatus> downloadResponse = await serviceLocator<ProjectSyncViewModel>()
+                                                    .downloadProject(
+                                                      project,
+                                                    );
+
+                                                if (context.mounted) {
+                                                  if (!downloadResponse.success) {
+                                                    FusionToast.error(
+                                                      context,
+                                                      message: downloadResponse.message,
+                                                    );
+                                                    return;
+                                                  }
+                                                  await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
+                                                  if (context.mounted) {
+                                                    Navigator.of(context).pop();
+                                                    serviceLocator<ProjectViewModel>().openProject(project.id);
+                                                  }
+                                                }
+                                              },
+                                              height: 32,
+                                              width: 168,
+                                              child: Row(
+                                                mainAxisAlignment: MainAxisAlignment.center,
+                                                spacing: 4,
+                                                children: <Widget>[
+                                                  Flexible(
+                                                    child: FusionAppText(
+                                                      text: "Download Project",
+                                                      style: context.textTheme.labelLarge?.copyWith(
+                                                        fontSize: 12,
+                                                        color: context.colorScheme.onSurface,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                  const Icon(LucideIcons.arrowRight),
+                                                ],
+                                              ),
+                                            );
+                                          }
+                                        } else {
+                                          return NeumorphicDarkButton(
+                                            onTap: () async {
+                                              Navigator.of(context).pop();
+                                              FusionUiUtils.showLoader(context);
+                                              serviceLocator<ProjectViewModel>().openProject(project.id);
+                                            },
+                                            height: 32,
+                                            width: 168,
+                                            child: Row(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              spacing: 4,
+                                              children: <Widget>[
+                                                Flexible(
+                                                  child: FusionAppText(
+                                                    text: "Open Project",
+                                                    style: context.textTheme.labelLarge?.copyWith(
+                                                      fontSize: 12,
+                                                      color: context.colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                ),
+                                                const Icon(LucideIcons.arrowRight),
+                                              ],
+                                            ),
+                                          );
+                                        }
+                                      },
+                                    );
                                   },
-                                  height: 32,
-                                  width: 168,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    spacing: 4,
-                                    children: <Widget>[
-                                      Flexible(
-                                        child: FusionAppText(
-                                          text: "Open Project",
-                                          style: context.textTheme.labelLarge?.copyWith(
-                                            fontSize: 12,
-                                            color: context.colorScheme.onSurface,
-                                          ),
-                                        ),
-                                      ),
-                                      const Icon(LucideIcons.arrowRight),
-                                    ],
-                                  ),
                                 ),
                               ),
                             ],
