@@ -26,6 +26,7 @@ class Amplifier extends HardwareComponent {
     super.portData,
     super.inputPortsData,
     super.outputPortsData,
+    super.equipmentLocationPosition,
     this.sku = '',
     required super.addedFromBuildingPage,
   }) : super(
@@ -56,6 +57,7 @@ class Amplifier extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     String? sku,
+    int? equipmentLocationPosition,
     bool? addedFromBuildingPage,
   }) {
     return Amplifier(
@@ -76,6 +78,7 @@ class Amplifier extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       sku: sku ?? this.sku,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
     );
   }
@@ -101,6 +104,7 @@ class Amplifier extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       sku: json['sku'] as String? ?? '',
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 
@@ -125,6 +129,7 @@ class Amplifier extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'sku': sku,
       'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 
