@@ -141,7 +141,12 @@ bool OcaServiceDiscovery::StartDiscovery()
         return false;
     }
 #else
-    send_oca_service_discovery();
+    err_t error = send_oca_service_discovery();
+    if (error != ERR_OK)
+    {
+        OCA_LOG_ERROR_PARAMS("Failed to send OCA service discovery message: %d", error);
+        return false;
+    }
 #endif
 
     m_isDiscovering = true;
@@ -252,7 +257,7 @@ size_t OcaServiceDiscovery::WaitForDevices(uint32_t timeoutMs)
 #if !defined(STM32H7S7xx) && !defined(STM32N657xx)
     deviceCount = m_discoveredDevices.size();
 #endif
-    OCA_LOG_INFO_PARAMS("Discovery completed. Found %zu OCA device(s)", deviceCount);
+    OCA_LOG_INFO_PARAMS("Discovery completed. Found %lu OCA device(s)", (unsigned long)deviceCount);
 
     return deviceCount;
 }

@@ -42,7 +42,7 @@ void DisplayDiscoveredDevices(
     for (size_t i = 0; i < devices.size(); ++i)
     {
         const auto &device = devices[i];
-        OCA_LOG_INFO_PARAMS("%zu. %s", i + 1, device.name.c_str());
+        OCA_LOG_INFO_PARAMS("%d. %s", i + 1, device.name.c_str());
         OCA_LOG_INFO_PARAMS("   Host: %s:%d", device.hostname.c_str(), device.port);
         OCA_LOG_INFO_PARAMS("   Protocol: OCA v%u", device.protocolVersion);
 
@@ -140,12 +140,12 @@ void DisconnectFromDevice(::OcaSessionID& sessionId, ::OcaONo networkONo)
             OCA_LOG_INFO("=== Parsed Controller Configuration ===");
             OCA_LOG_INFO_PARAMS("Controller ID: %s", newController->id.c_str());
             OCA_LOG_INFO_PARAMS("Controller Name: %s", newController->name.c_str());
-            OCA_LOG_INFO_PARAMS("Number of Zones: %zu", newController->zones.size());
+            OCA_LOG_INFO_PARAMS("Number of Zones: %lu", (unsigned long)newController->zones.size());
 
             for (size_t i = 0; i < newController->zones.size(); ++i)
             {
                 const auto &zone = newController->zones[i];
-                OCA_LOG_INFO_PARAMS("  Zone %zu: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
+                OCA_LOG_INFO_PARAMS("  Zone %d: %s (%s)", i + 1, zone->name.c_str(), zone->id.c_str());
                 OCA_LOG_INFO_PARAMS("    ONOs - Zone: %u, Gain: %u, Mute: %u, Switch: %u",
                         zone->ono.zone, zone->ono.gain, zone->ono.mute, zone->ono.sourceSelector);
                 OCA_LOG_INFO_PARAMS("    Gain ID: %s", zone->gain.gainID.c_str());
@@ -153,7 +153,7 @@ void DisconnectFromDevice(::OcaSessionID& sessionId, ::OcaONo networkONo)
                 OCA_LOG_INFO_PARAMS("    Default Gain: %s", zone->gain.default_gain_value.c_str());
                 OCA_LOG_INFO_PARAMS("    Default Mute: %s", zone->gain.default_mute_value.c_str());
 
-                OCA_LOG_INFO_PARAMS("    Sources: %zu", zone->sources.size());
+                OCA_LOG_INFO_PARAMS("    Sources: %lu", (unsigned long)zone->sources.size());
 
                 for (size_t j = 0; j < zone->sources.size(); ++j)
                 {
@@ -369,6 +369,7 @@ ZoneGroup* CreateZoneGroup(Zone& newZone, FusionProxy &fusion_proxy,
 ::OcaBoolean ControlPalSetupConnection(::OcaSessionID& sessionId)
 {
     ::OcaBoolean retVal(false);
+    OCA_LOG_INFO("Starting ControlPal service discovery...");
 
     // Start service discovery
     OcaServiceDiscovery discovery;
