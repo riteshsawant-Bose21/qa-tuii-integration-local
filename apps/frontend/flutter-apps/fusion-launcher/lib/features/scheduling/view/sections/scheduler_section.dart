@@ -116,11 +116,38 @@ class _SchedulerSection extends StatelessWidget {
                 ),
               ),
               FusionButton(label: "Test", onTap: () {}),
-              Center(
-                child: SvgPicture.asset(
-                  "assets/icons/scheduler/run.svg",
-                  width: 25,
-                  height: 25,
+              InkWell(
+                onTap: () {
+                  /// Check if an event already exists for this schedule
+                  final FusionEvent? eventsForScheduler = serviceLocator<ProjectViewModel>().getEventsForSchedule(
+                    scheduleId: schedule.id,
+                  );
+                  if (eventsForScheduler != null) {
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      /// Set the selected event ID to the existing event for this schedule
+                      serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForScheduler.id);
+                    });
+                  } else {
+                    /// Add the event to the project
+                    serviceLocator<ProjectViewModel>().addEventForSchedule(
+                      scheduleId: schedule.id,
+                    );
+                  }
+
+                  /// Navigate to Configuration tab (index 3)
+                  projectTabBroadcastController.add(3);
+
+                  /// Switch to Events sub-tab within Configuration
+                  serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
+                    ConfigurationMenuMode.events,
+                  );
+                },
+                child: Center(
+                  child: SvgPicture.asset(
+                    "assets/icons/scheduler/run.svg",
+                    width: 25,
+                    height: 25,
+                  ),
                 ),
               ),
               IconButton(
