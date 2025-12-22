@@ -225,7 +225,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       floorId: currentFloor.id,
     );
     if (floorListeningAreas.isEmpty) return;
-
+    // for (ListeningArea e in floorListeningAreas) {
+    //   e.clearSplData();
+    // }
     final List<Speaker> speakers = List<Speaker>.from(
       serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(floorId: currentFloor.id).whereType<Speaker>(),
     );
