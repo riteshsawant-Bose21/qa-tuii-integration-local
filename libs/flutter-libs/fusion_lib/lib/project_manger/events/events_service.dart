@@ -286,6 +286,24 @@ extension EventsService on ProjectService {
     return events.get(eventId)!;
   }
 
+  FusionEvent? getEventsForGPI({required String gpiId}) {
+    final allEvents = events.getAll();
+    try {
+      return allEvents.firstWhere((event) => event.triggerType == EventTriggerType.gpi && event.item?.itemId == gpiId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  FusionEvent? getEventsForSchedule({required String scheduleId}) {
+    final allEvents = events.getAll();
+    try {
+      return allEvents.firstWhere((event) => event.triggerType == EventTriggerType.schedule && event.item?.itemId == scheduleId);
+    } catch (e) {
+      return null;
+    }
+  }
+
   void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
     if (!events.exists(eventId)) {
       throw Exception("Event with id $eventId does not exist.");

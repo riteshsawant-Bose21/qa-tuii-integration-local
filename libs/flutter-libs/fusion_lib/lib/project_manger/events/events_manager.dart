@@ -154,6 +154,20 @@ extension EventsManager on ProjectManager {
     return projectService!.getEventById(eventId: eventId);
   }
 
+  FusionEvent? getEventsForGPI({required String gpiId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getEventsForGPI(gpiId: gpiId);
+  }
+
+  FusionEvent? getEventsForSchedule({required String scheduleId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getEventsForSchedule(scheduleId: scheduleId);
+  }
+
   void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
