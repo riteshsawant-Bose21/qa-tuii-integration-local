@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/gpio/gpio_view_model.dart';
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -276,13 +277,45 @@ class GpioPage extends StatelessWidget {
                                   )
                                 else
                                   FusionButton(label: "Test", onTap: () {}),
-                                Center(
-                                  child: SvgPicture.asset(
-                                    "assets/icons/scheduler/run.svg",
-                                    width: 25,
-                                    height: 25,
-                                  ),
-                                ),
+
+                                if (gpio.direction == GpioDirection.input)
+                                  InkWell(
+                                    onTap: () {
+                                      /// getEventsForGPI if existis this directly navigate to Configuration tab
+                                      final FusionEvent? eventsForGPI = serviceLocator<ProjectViewModel>().getEventsForGPI(
+                                        gpiId: gpio.id,
+                                      );
+                                      if (eventsForGPI != null) {
+                                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                                          /// Set the selected event ID to the existing event for this GPI
+                                          serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForGPI.id);
+                                        });
+                                      } else {
+                                        /// Add the event to the project
+                                        serviceLocator<ProjectViewModel>().addEventForGPI(
+                                          gpiId: gpio.id,
+                                        );
+                                      }
+
+                                      /// Navigate to Configuration tab (index 3)
+                                      projectTabBroadcastController.add(3);
+
+                                      /// Switch to Events sub-tab within Configuration
+                                      serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
+                                        ConfigurationMenuMode.events,
+                                      );
+                                    },
+                                    child: Center(
+                                      child: SvgPicture.asset(
+                                        "assets/icons/scheduler/run.svg",
+                                        width: 25,
+                                        height: 25,
+                                      ),
+                                    ),
+                                  )
+                                else
+                                  const SizedBox(),
+
                                 IconButton(
                                   onPressed: () {
                                     context.read<GpioViewmodel>().removeGpio(gpio);

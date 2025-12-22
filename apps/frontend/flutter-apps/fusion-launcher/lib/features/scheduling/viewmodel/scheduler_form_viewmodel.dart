@@ -89,9 +89,30 @@ class SchedulerFormViewModel extends ChangeNotifier {
     }
   }
 
-  Future<bool> submit() async {
+  Future<bool> submit(ScheduleConfig? initial) async {
     if (!key.currentState!.validate()) {
       return false;
+    }
+
+    if (initial != null) {
+      viewModel.updateSchedule(
+        initial.copyWith(
+          name: name.text,
+          colorHex: color!,
+          startDate: startDate!,
+          time: DateTime(
+            startDate!.year,
+            startDate!.month,
+            startDate!.day,
+            startTime.hour,
+            startTime.minute,
+          ),
+          endDate: endDate!,
+          recurrence: recurrenceType,
+          weeklyDays: recurrenceDays.map((RecurrenceDay e) => e.value).toList(),
+        ),
+      );
+      return true;
     }
     viewModel.addSchedule(
       ScheduleConfig(

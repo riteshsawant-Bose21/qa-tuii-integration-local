@@ -268,6 +268,24 @@ extension EventsViewModel on ProjectViewModel {
     }
   }
 
+  FusionEvent? getEventsForGPI({required String gpiId}) {
+    try {
+      return projectManager.getEventsForGPI(gpiId: gpiId);
+    } catch (ex) {
+      throwError("Failed to retrieve events for GPI: $ex");
+      return null;
+    }
+  }
+
+  FusionEvent? getEventsForSchedule({required String scheduleId}) {
+    try {
+      return projectManager.getEventsForSchedule(scheduleId: scheduleId);
+    } catch (ex) {
+      throwError("Failed to retrieve events for schedule: $ex");
+      return null;
+    }
+  }
+
   void updateEventSelectedState({required String eventId, required EventStates selectedState, bool autoSave = true}) {
     try {
       if (autoSave) {
