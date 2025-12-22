@@ -44,8 +44,23 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
   @override
   void initState() {
     super.initState();
-    _textController = TextEditingController(text: widget.snapshotName);
+    final String capitalizedName =
+        widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName;
+    _textController = TextEditingController(text: capitalizedName);
     _focusNode = FocusNode();
+  }
+
+  /// Update the text controller if the snapshot name changes
+  @override
+  void didUpdateWidget(EventHeaderWidget oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.snapshotName != widget.snapshotName) {
+      // make widget.snapshotName first letter caps
+      final String capitalizedName =
+          widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName;
+
+      _textController.text = capitalizedName;
+    }
   }
 
   @override
@@ -71,11 +86,11 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
       FusionToast.success(context, message: 'Event renamed to "${_textController.text.trim()}"');
     } else {
       /// name cannot same and cant be empty, revert to old name and show toast
-      _textController.text = widget.snapshotName;
+      final String capitalizedName =
+          widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName;
+      _textController.text = capitalizedName;
       if (_textController.text.trim().isEmpty) {
         FusionToast.error(context, message: 'Event name cannot be empty.');
-      } else {
-        FusionToast.error(context, message: 'Event name cannot be same as before.');
       }
     }
   }
@@ -117,7 +132,7 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
                     : GestureDetector(
                       onTap: _startEditing,
                       child: FusionAppText(
-                        text: widget.snapshotName,
+                        text: widget.snapshotName.isNotEmpty ? widget.snapshotName[0].toUpperCase() + widget.snapshotName.substring(1) : widget.snapshotName,
                         style: context.textTheme.bodyMedium?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
                         maxLine: 1,
                       ),
