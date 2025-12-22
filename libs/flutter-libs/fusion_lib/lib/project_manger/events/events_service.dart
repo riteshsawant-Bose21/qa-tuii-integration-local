@@ -23,7 +23,7 @@ extension EventsService on ProjectService {
     events.remove(eventId);
   }
 
-  void addEventForGPI({required String gpiId}) {
+  FusionEvent addEventForGPI({required String gpiId}) {
     final newEvent = FusionEvent(
       name: "GPI Event",
       triggerType: EventTriggerType.gpi,
@@ -32,9 +32,10 @@ extension EventsService on ProjectService {
       ),
     );
     events.add(newEvent.id, newEvent);
+    return newEvent;
   }
 
-  void addEventForSchedule({required String scheduleId}) {
+  FusionEvent addEventForSchedule({required String scheduleId}) {
     final newEvent = FusionEvent(
       name: "Scheduled Event",
       triggerType: EventTriggerType.schedule,
@@ -44,6 +45,7 @@ extension EventsService on ProjectService {
       action: EventActionType.timedEvent,
     );
     events.add(newEvent.id, newEvent);
+    return newEvent;
   }
 
   //Get first dropdown
