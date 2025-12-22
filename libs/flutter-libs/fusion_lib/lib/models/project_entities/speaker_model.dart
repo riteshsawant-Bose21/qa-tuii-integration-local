@@ -99,6 +99,34 @@ class Speaker extends HardwareComponent {
     );
   }
 
+  Speaker migrateSpeakerTo({required Speaker speaker}) {
+    return Speaker(
+      id: id,
+      name: speaker.name,
+      pos: pos,
+      wiringPos: wiringPos,
+      rotation: rotation,
+      gain: gain,
+      zAxis: zAxis,
+      assetImagePath: speaker.assetImagePath,
+      type: speaker.type,
+      locationEntity: locationEntity,
+      ipAddress: ipAddress,
+      speakerSKU: speaker.speakerSKU,
+      price: speaker.price,
+      hardwareName: speaker.hardwareName,
+      pitch: pitch,
+      roll: roll,
+      yaw: yaw,
+      equipmentLocationPosition: equipmentLocationPosition,
+      lockListeningArea: lockListeningArea,
+      communicationPorts: speaker.communicationPorts,
+      inputPortsData: speaker.inputPortsData,
+      outputPortsData: speaker.outputPortsData,
+      addedFromBuildingPage: speaker.addedFromBuildingPage,
+    );
+  }
+
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;

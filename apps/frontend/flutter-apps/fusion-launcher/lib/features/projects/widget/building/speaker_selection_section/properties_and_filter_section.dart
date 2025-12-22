@@ -143,10 +143,10 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
 
                           BuildRowPropertyWidget(
                             label: "Type",
-                            value: selectedListeningArea.venuType,
-                            options: VenueOptions.values.map((VenueOptions option) => option.displayName).toList(),
+                            value: selectedListeningArea.venuType?.name ?? '',
+                            options: VenueType.values.map((VenueType option) => option.name).toList(),
                             onOptionSelected: (int selectedIndex) {
-                              final String selectedType = VenueOptions.values[selectedIndex].displayName;
+                              final VenueType selectedType = VenueType.values[selectedIndex];
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
                               projectViewModel.updateListeningArea(area: updatedLA);
                             },
@@ -230,13 +230,17 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                           const SizedBox(height: 5),
                           BuildRowPropertyWidget(
                             label: "SPL Range",
-                            value: SpeakerSplRangeOptions.getSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL).displayName,
-                            options: SpeakerSplRangeOptions.values.map((SpeakerSplRangeOptions option) => option.displayName).toList(),
+                            value: selectedListeningArea.splRange?.name ?? "",
+                            options: SplRange.values.map((SplRange option) => option.name).toList(),
                             onOptionSelected: (int selectedIndex) {
-                              final Map<String, double> splRangeValues = SpeakerSplRangeOptions.values[selectedIndex].splRangeValues;
+                              final Map<String, double> splRangeValues = SplRange.values[selectedIndex].splRangeValues;
                               final double minSPL = splRangeValues["min"]!;
                               final double maxSPL = splRangeValues["max"]!;
-                              final ListeningArea updatedLA = selectedListeningArea.copyWith(minSPL: minSPL, maxSPL: maxSPL);
+                              final ListeningArea updatedLA = selectedListeningArea.copyWith(
+                                minSPL: minSPL,
+                                maxSPL: maxSPL,
+                                splRange: SplRange.values[selectedIndex],
+                              );
                               projectViewModel.updateListeningArea(area: updatedLA);
                             },
                           ),
@@ -344,18 +348,18 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                     const SizedBox(height: 8),
                     BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                        return FusionCheckboxGroup<SpeakerMountingType>(
-                          options: SpeakerMountingType.values,
+                        return FusionCheckboxGroup<MountingType>(
+                          options: MountingType.values.toList(),
                           selected: vmState.selectedMountingTypes.toList(),
-                          labelBuilder: (BuildContext context, SpeakerMountingType option) {
+                          labelBuilder: (BuildContext context, MountingType option) {
                             return FusionAppText(
-                              text: option.displayName,
+                              text: option.name,
                               style: context.textTheme.bodySmall?.copyWith(
                                 color: context.colorScheme.onSurface,
                               ),
                             );
                           },
-                          onChanged: (List<SpeakerMountingType> updated) => speakerSelectionViewModel.setMountingTypes(updated),
+                          onChanged: (List<MountingType> updated) => speakerSelectionViewModel.setMountingTypes(updated),
                         );
                       },
                     ),
@@ -371,18 +375,18 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                     const SizedBox(height: 8),
                     BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                        return FusionCheckboxGroup<SpeakerLowFrequency>(
-                          options: SpeakerLowFrequency.values,
+                        return FusionCheckboxGroup<LowFrequency>(
+                          options: LowFrequency.values,
                           selected: vmState.selectedLowFrequencies.toList(),
-                          labelBuilder: (BuildContext context, SpeakerLowFrequency option) {
+                          labelBuilder: (BuildContext context, LowFrequency option) {
                             return FusionAppText(
-                              text: option.displayName,
+                              text: option.name,
                               style: context.textTheme.bodySmall?.copyWith(
                                 color: context.colorScheme.onSurface,
                               ),
                             );
                           },
-                          onChanged: (List<SpeakerLowFrequency> updated) => speakerSelectionViewModel.setLowFrequencies(updated),
+                          onChanged: (List<LowFrequency> updated) => speakerSelectionViewModel.setLowFrequencies(updated),
                         );
                       },
                     ),
@@ -425,19 +429,19 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                     const SizedBox(height: 8),
                     BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                        final SpeakerWiring? selected = vmState.selectedWirings.isEmpty ? null : vmState.selectedWirings.first;
-                        return FusionRadio<SpeakerWiring>(
+                        final WiringType? selected = vmState.selectedWirings.isEmpty ? null : vmState.selectedWirings.first;
+                        return FusionRadio<WiringType>(
                           selected: selected,
-                          options: SpeakerWiring.values,
-                          labelBuilder: (SpeakerWiring wiring) {
+                          options: WiringType.values,
+                          labelBuilder: (WiringType wiring) {
                             return FusionAppText(
-                              text: wiring.displayName,
+                              text: wiring.name,
                               style: context.textTheme.bodySmall?.copyWith(
                                 color: context.colorScheme.onSurface,
                               ),
                             );
                           },
-                          onChanged: (SpeakerWiring value) {
+                          onChanged: (WiringType value) {
                             speakerSelectionViewModel.setWiring(value);
                           },
                         );

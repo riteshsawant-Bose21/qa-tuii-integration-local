@@ -179,6 +179,34 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<HardwareComponent> getAllPlacedHardwareInListeningArea({
+    required String listeningAreaId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInListeningAreaWithPosition(listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get placed hardware for listening area: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<HardwareComponent> getAllNonPlacedHardwareInListeningArea({
+    required String listeningAreaId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
   ResponseCallback<bool> moveHardware({
     required String hardwareId,
     String? listeningAreaId,
