@@ -53,6 +53,24 @@ extension GpioViewModel on ProjectViewModel {
     }
   }
 
+  List<GpioConfig> getGpiConfigs() {
+    try {
+      return projectManager.getGpiConfigs();
+    } catch (e) {
+      throwError("Get GPI Configs Error  ${e.toString()}");
+      return <GpioConfig>[];
+    }
+  }
+
+  List<GpioConfig> getGpoConfigs() {
+    try {
+      return projectManager.getGpoConfigs();
+    } catch (e) {
+      throwError("Get GPO Configs Error  ${e.toString()}");
+      return <GpioConfig>[];
+    }
+  }
+
   List<GpiAction> getGPIActions() {
     try {
       return projectManager.getGPIActions();

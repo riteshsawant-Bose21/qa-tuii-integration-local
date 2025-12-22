@@ -159,6 +159,21 @@ FILTERS = [
         'color': 'purple',
         'linestyle': '-'
     },
+    # Dynamic EQ Band-Pass Filters
+    {
+        'name': 'LF_BPF_30Hz_Q1.0',
+        'b': [[0.001959643, 0.0, -0.001959643]],
+        'a': [[1.0, -1.996065324, 0.996080715]],
+        'color': 'orange',
+        'linestyle': '-'
+    },
+    {
+        'name': 'HF_BPF_3400Hz_Q1.1',
+        'b': [[0.163660628, 0.0, -0.163660628]],
+        'a': [[1.0, -1.509735221, 0.672678745]],
+        'color': 'orange',
+        'linestyle': '--'
+    },
     # {
     #     'name': 'Filter Name',
     #     'b': [[b0,b1,b2], [b0,b1,b2], ...],

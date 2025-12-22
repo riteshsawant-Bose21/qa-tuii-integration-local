@@ -55,7 +55,7 @@ extension SceneService on ProjectService {
     if (sceneAction == null) {
       throw Exception("Scene Action with id $actionId does not exist ");
     }
-    final updatedScene = sceneAction.copyWith(actionType: actionType, item: null, param: null, value: null);
+    final updatedScene = sceneAction.updateActionType(actionType);
     sceneActions.add(actionId, updatedScene);
   }
 
@@ -64,19 +64,37 @@ extension SceneService on ProjectService {
     if (action == null) {
       throw Exception("SceneAction with id $action does not exist.");
     }
-    final updatedScene = action.copyWith(item: item, param: null, value: null);
+    final updatedScene = action.updateItem(item);
     sceneActions.add(actionId, updatedScene);
   }
 
-  void updateSceneActionParam({required String actionId, required SceneParam param}) {
+  void updateSceneActionParam({required String actionId, required SceneParam param, String? eventId}) {
     final scene = sceneActions.get(actionId);
     if (scene == null) {
       throw Exception("SceneAction with id $actionId does not exist.");
     }
+    bool enalbled = true;
+
+    bool hasStates = false;
+    print("Event ID in updateSceneActionParam: $eventId");
+    //for events with threshold or state change condition, we need  save value for two states
+    if (eventId != null) {
+      final event = events.get(eventId);
+      if (event != null && event.condition != null && (event.condition is ThresholdCondition || event.condition is StateChangeCondition)) {
+        hasStates = true;
+      } else if (event != null && event.condition != null && (event.condition is ValueChangeCondition)) {
+        //only for value change condition, we do not give option to edit value, because values are set based on analog voltage value levels
+        enalbled = false;
+      }
+    }
+
     //add a empty value based on param type for rendering purposes
     SceneValue value = SceneValue(
       valueType: param.type.valueType,
       label: param.type.valueLabel,
+      hasStates: hasStates,
+      enabled: enalbled,
+      states: hasStates ? SceneStateValue() : null,
     );
     final updatedScene = scene.copyWith(param: param, value: value);
     sceneActions.add(actionId, updatedScene);
@@ -110,7 +128,19 @@ extension SceneService on ProjectService {
     snapshots.remove(sceneId);
   }
 
-  List<SceneActionType> getSceneActionTypes() {
+  List<SceneActionType> getSceneActionTypes({String? eventId}) {
+    //for events return values based on condition
+    if (eventId != null) {
+      //get event to check if its value change condition
+      final event = events.get(eventId);
+      if (event != null && event.condition != null && event.condition is ValueChangeCondition) {
+        //for value change condition, only allow zone control actions
+        return [
+          SceneActionType.zoneControl,
+        ];
+      }
+    }
+
     return SceneActionType.values;
   }
 
@@ -118,7 +148,21 @@ extension SceneService on ProjectService {
   List<SceneItemDropdown> getActionItemsByType(SceneActionType actionType) {
     switch (actionType) {
       case SceneActionType.zoneControl:
-        return zones.getAll().map((zone) => SceneItemDropdown(id: zone.id, name: zone.name)).toList();
+        List<Zone> zonesList = zones.getAll();
+
+        List<SubZone> subZonesList = subZones.getAll();
+
+        return [
+          ...zonesList.map((zone) => SceneItemDropdown(id: zone.id, name: zone.name)),
+          ...subZonesList.map(
+            (subZone) => SceneItemDropdown(
+              id: subZone.id,
+              name: "${getZoneForSubZone(subZoneId: subZone.id).name}/${subZone.name}",
+            ),
+          ),
+        ].toList();
+
+      // return zones.getAll().map((zone) => SceneItemDropdown(id: zone.id, name: zone.name)).toList();
       // case SceneActionType.sourceControl:
       //   return hardware.getAll().whereType<Source>().map((source) => SceneItemDropdown(id: source.id, name: source.name)).toList();
       case SceneActionType.deviceControl:
@@ -160,10 +204,10 @@ extension SceneService on ProjectService {
     }
   }
 
-  List<SceneParam> getParamsByActionTypeAndItem(SceneActionType actionType, SceneItem item) {
+  List<SceneParam> getParamsByActionTypeAndItem({required SceneActionType actionType, required SceneItem item, String? eventId}) {
     switch (actionType) {
       case SceneActionType.zoneControl:
-        return _getZoneControlParams(item);
+        return _getZoneControlParams(item: item, eventId: eventId);
       case SceneActionType.deviceControl:
         return [_createParam(SceneParamType.standby)];
       case SceneActionType.gpOut:
@@ -187,10 +231,10 @@ extension SceneService on ProjectService {
   }
 
   // Helper method to get common zone parameters
-  List<SceneParam> _getCommonZoneParams() {
+  List<SceneParam> _getCommonZoneParams(bool addOnlyLevelParam) {
     return [
       _createParam(SceneParamType.volume),
-      _createParam(SceneParamType.mute),
+      if (!addOnlyLevelParam) _createParam(SceneParamType.mute),
     ];
   }
 
@@ -203,7 +247,7 @@ extension SceneService on ProjectService {
   }
 
   // Helper method to get source mix parameters
-  List<SceneParam> _getSourceMixParams(String zoneId) {
+  List<SceneParam> _getSourceMixParams(String zoneId, bool addOnlyLevelParam) {
     final params = <SceneParam>[_createParam(SceneParamType.mixScene)];
     final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
 
@@ -214,11 +258,12 @@ extension SceneService on ProjectService {
           type: SceneParamType.inputLevel,
           associatedId: source.id,
         ),
-        SceneParam(
-          label: '${source.name} mute',
-          type: SceneParamType.inputMute,
-          associatedId: source.id,
-        ),
+        if (!addOnlyLevelParam)
+          SceneParam(
+            label: '${source.name} mute',
+            type: SceneParamType.inputMute,
+            associatedId: source.id,
+          ),
       ]);
     }
 
@@ -226,31 +271,46 @@ extension SceneService on ProjectService {
   }
 
   // Main zone control logic
-  List<SceneParam> _getZoneControlParams(SceneItem item) {
-    final params = _getCommonZoneParams();
-    final zoneFunction = getZoneFunction(zoneId: item.itemId);
+  List<SceneParam> _getZoneControlParams({required SceneItem item, String? eventId}) {
+    bool addOnlyLevelParam = false;
+    //for events with value change condition, only add volume level
+    if (eventId != null) {
+      final event = events.get(eventId);
+      if (event != null && event.condition != null && event.condition is ValueChangeCondition) {
+        addOnlyLevelParam = true;
+      }
+    }
+
+    final params = _getCommonZoneParams(addOnlyLevelParam);
+    final zoneFunction = getZoneFunction(zoneOrSubZoneId: item.itemId);
 
     if (zoneFunction == null) return params;
 
     switch (zoneFunction.type) {
       case ZoneFunctionsType.sourceSelect:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.sourceSelect));
 
       case ZoneFunctionsType.sourceSelectWithPriority:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.sourceSelect));
         params.addAll(_getPriorityParams());
 
       case ZoneFunctionsType.sourceMix:
-        params.addAll(_getSourceMixParams(item.itemId));
+        params.addAll(_getSourceMixParams(item.itemId, addOnlyLevelParam));
 
       case ZoneFunctionsType.sourceMixWithPriority:
-        params.addAll(_getSourceMixParams(item.itemId));
-        params.addAll(_getPriorityParams());
+        params.addAll(_getSourceMixParams(item.itemId, addOnlyLevelParam));
+        if (!addOnlyLevelParam) {
+          params.addAll(_getPriorityParams());
+        }
 
       case ZoneFunctionsType.miniMatrix:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.mixScene));
 
       case ZoneFunctionsType.miniMatrixWithPriority:
+        if (addOnlyLevelParam) break;
         params.add(_createParam(SceneParamType.mixScene));
         params.addAll(_getPriorityParams());
     }
@@ -261,7 +321,7 @@ extension SceneService on ProjectService {
   //get Dropdown value for a SceneParam
   List<SceneValueDropdown> getSceneActionValueDropdownItems(String actionId) {
     final scene = sceneActions.get(actionId);
-    if (scene == null || scene.item == null || scene.param == null) {
+    if (scene == null || (scene.actionType != SceneActionType.snapshot && scene.item == null) || scene.param == null) {
       throw Exception("SceneAction or SceneParam or SceneItem with id $actionId does not exist.");
     }
 
@@ -270,7 +330,7 @@ extension SceneService on ProjectService {
 
     switch (param.type) {
       case SceneParamType.sourceSelect:
-        final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);
+        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
         if (zoneFunction == null) return [];
         final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: scene.item!.itemId);
         return sourcesInZone
@@ -282,7 +342,7 @@ extension SceneService on ProjectService {
             )
             .toList();
       case SceneParamType.mixScene:
-        final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);
+        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
         if (zoneFunction == null) return [];
         return zoneFunction.mixScenes
             .map(
@@ -317,7 +377,7 @@ extension SceneService on ProjectService {
 
       case SceneParamType.prioritySelect1:
       case SceneParamType.prioritySelect2:
-        final zoneFunction = getZoneFunction(zoneId: scene.item!.itemId);
+        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
         if (zoneFunction == null) return [];
         final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: scene.item!.itemId);
         return sourcesInZone

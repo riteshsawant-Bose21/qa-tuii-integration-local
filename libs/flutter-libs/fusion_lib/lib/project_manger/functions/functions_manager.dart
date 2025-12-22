@@ -16,11 +16,11 @@ extension ZoneFunctionManager on ProjectManager {
     projectService!.removeFunction(functionId: functionId);
   }
 
-  ZoneFunctions? getZoneFunction({required String zoneId}) {
+  ZoneFunctions? getZoneFunction({required String zoneOrSubZoneId}) {
     if (projectService == null) {
       throw Exception("No project is currently loaded.");
     }
-    return projectService!.getZoneFunction(zoneId: zoneId);
+    return projectService!.getZoneFunction(zoneOrSubZoneId: zoneOrSubZoneId);
   }
 
   ZoneFunctions? getZoneFunctionById({required String functionId}) {

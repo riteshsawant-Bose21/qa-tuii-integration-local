@@ -9,6 +9,7 @@ import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dar
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
@@ -16,6 +17,7 @@ import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
 import '../features/dashboard/domain/usecases/create_project_usecase.dart';
 import '../features/dashboard/domain/usecases/delete_project_usecase.dart';
@@ -177,8 +179,27 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerSingleton<ProjectManager>(pm);
 
   serviceLocator.registerLazySingleton<ProjectViewModel>(() => ProjectViewModel(serviceLocator<ProjectManager>()));
+  serviceLocator.registerLazySingleton<SessionViewModel>(
+    () => SessionViewModel(),
+  );
   serviceLocator.registerLazySingleton<AuthViewModel>(
-    () => AuthViewModel(authService: serviceLocator<FusionAuthService>(), networkClient: serviceLocator<FusionNetworkClient>()),
+    () => AuthViewModel(
+      authService: serviceLocator<FusionAuthService>(),
+      networkClient: serviceLocator<FusionNetworkClient>(),
+      sessionViewModel: serviceLocator<SessionViewModel>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ProjectSyncService>(
+    () => ProjectSyncService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ProjectSyncViewModel>(
+    () => ProjectSyncViewModel(
+      serviceLocator<ProjectSyncService>(),
+    ),
   );
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());

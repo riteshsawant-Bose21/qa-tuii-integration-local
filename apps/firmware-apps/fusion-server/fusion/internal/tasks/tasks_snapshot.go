@@ -195,8 +195,7 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 		if err := tm.handleSnapshotOperation(
 			tm.node,
 			snapID,
-			api.NotifyOpSnapActivate,
-			nil); err != nil {
+			api.NotifyOpSnapActivate); err != nil {
 			return err
 		}
 
@@ -207,13 +206,12 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
-func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
+func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp) error {
 
 	msg := api.NewNotifyMessage(update,
 		node,
 		api.WithSnapshotOperation(&api.SnapshotOperation{
 			Name:      name,
-			Data:      data,
 			Timestamp: time.Now().UTC(),
 		}),
 	)

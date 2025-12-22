@@ -109,6 +109,7 @@ class _SourcesColumnState extends State<SourcesColumn> {
                 final Source source = Source(
                   name: selectedBlock.name,
                   pos: null,
+                  addedFromBuildingPage: false,
                   type: selectedBlock.type,
                   connectionType: selectedBlock.connectionType,
                   assetImagePath: selectedBlock.assetPath,

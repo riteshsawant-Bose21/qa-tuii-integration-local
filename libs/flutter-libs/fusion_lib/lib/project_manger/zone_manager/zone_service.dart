@@ -114,7 +114,7 @@ extension ZoneService on ProjectService {
   //Add Circuit to Zone
   void addCircuitToZone(String circuitId, String zoneId) {
     if (!circuits.exists(circuitId)) throw Exception('Circuit $circuitId not found');
-    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+    // if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
 
     // Update relationship graph (idempotent)
     relationships.link(RelationshipType.zoneCircuits, zoneId, circuitId);
@@ -160,6 +160,14 @@ extension ZoneService on ProjectService {
 
     // Convert back to Map
     return {for (var zone in items) zone.id: zone};
+  }
+
+  List<Zone> getZonesWithoutSubzones() {
+    final allZones = zones.getAll();
+    return allZones.where((zone) {
+      final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zone.id);
+      return subZoneIds.isEmpty;
+    }).toList();
   }
 
   //Zone Sources

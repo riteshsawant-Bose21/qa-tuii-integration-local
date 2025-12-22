@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/utils/bug_report_popup.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
@@ -9,6 +10,7 @@ import 'package:fusion_launcher/features/dashboard/presentation/widgets/saved_pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
@@ -31,6 +33,28 @@ class FusionSidebar extends StatefulWidget {
 }
 
 class _FusionSidebarState extends State<FusionSidebar> {
+  String _appVersion = 'v1.0.0';
+
+  @override
+  void initState() {
+    super.initState();
+    _initAppVersion();
+  }
+
+  Future<void> _initAppVersion() async {
+    try {
+      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = 'v${packageInfo.version}-${packageInfo.buildNumber}';
+      });
+    } catch (e) {
+      // Fallback to default version if package info fails
+      setState(() {
+        _appVersion = 'v1.0.0';
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
@@ -211,6 +235,33 @@ class _FusionSidebarState extends State<FusionSidebar> {
                       ),
 
                       const Spacer(),
+                      // Build number text
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                        child: Text(
+                          'Build- $_appVersion',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: FusionDarkColorPallette.medium50,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+
+                      const Divider(height: 0),
+
+                      // Submit Feedback button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        child: _HoverNavItem(
+                          icon: Icons.feedback_rounded,
+                          title: 'Submit Feedback',
+                          semanticsId: 'submit_feedback_section',
+                          onTap: () => handleExportLogs(context),
+                        ),
+                      ),
+
                       const Divider(height: 0),
                       Padding(
                         padding: const EdgeInsets.all(16.0),
@@ -245,10 +296,6 @@ class _FusionSidebarState extends State<FusionSidebar> {
             NeumorphicDarkButton(
               onTap: () async {
                 await serviceLocator<AuthViewModel>().logout();
-                if (ctx.mounted) {
-                  Navigator.pop(ctx);
-                  //   Navigator.pushReplacementNamed(context, '/welcome');
-                }
               },
               height: 32,
               borderRadius: 8,

@@ -224,16 +224,15 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
 	// Snapshots
-	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
+	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
 	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
 	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
 	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
 	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
-	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
-	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
