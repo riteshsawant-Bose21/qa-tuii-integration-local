@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/popups/create_zone_popup.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/constant_enums.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
@@ -62,13 +63,16 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                         ),
                       ),
                     ),
-                    MouseRegion(
-                      cursor: SystemMouseCursors.click,
-                      child: GestureDetector(
-                        onTap: () => Navigator.of(context).pop(),
-                        child: const Padding(
-                          padding: EdgeInsets.all(2.0),
-                          child: Icon(LucideIcons.x200, size: 16),
+                    CreateZonePopup(
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          // onTap: () => Navigator.of(context).pop(),
+                          // onTap: () => AddSourcePopup.show(context),
+                          child: const Padding(
+                            padding: EdgeInsets.all(2.0),
+                            child: Icon(LucideIcons.x200, size: 16),
+                          ),
                         ),
                       ),
                     ),
@@ -472,7 +476,7 @@ class BuildRowPropertyWidget extends StatelessWidget {
         Expanded(
           child: FusionAppText(
             text: label,
-            style: context.textTheme.bodySmall?.copyWith(
+            style: context.textTheme.bodyMedium?.copyWith(
               color: context.colorScheme.onSurface,
               fontWeight: FontWeight.normal,
             ),

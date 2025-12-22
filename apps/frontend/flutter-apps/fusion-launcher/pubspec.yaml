@@ -63,7 +63,7 @@ dependencies:
   flutter_svg: ^2.2.1
   lucide_icons_flutter: ^3.1.6
   flutter_secure_storage: ^9.2.4
-
+  flutter_colorpicker: ^1.1.0
 
   # Authentication
   auth0_flutter: ^1.14.0

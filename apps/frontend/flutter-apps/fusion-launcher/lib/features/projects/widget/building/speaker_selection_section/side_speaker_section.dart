@@ -23,7 +23,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-        final String? currentSelectedListeningAreaId = projectViewModel.currentSelectedListeningAreaId;
+        final ListeningArea? currentSelectedListeningAreaId = projectViewModel.getCurrentSelectedListeningArea();
 
         if (currentSelectedListeningAreaId == null) return const SizedBox.shrink();
 

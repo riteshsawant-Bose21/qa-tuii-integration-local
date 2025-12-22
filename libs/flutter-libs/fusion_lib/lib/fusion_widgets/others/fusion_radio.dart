@@ -33,7 +33,7 @@ class FusionRadio<T> extends StatelessWidget {
               onTap: () => onChanged?.call(option),
               behavior: HitTestBehavior.translucent,
               child: Row(
-                spacing: 4,
+                spacing: 10,
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Icon(
