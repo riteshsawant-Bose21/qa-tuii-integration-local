@@ -3,6 +3,7 @@
 /// Run with: dart run products_usage.dart
 ///
 /// Shows all fields from the product models
+library;
 
 // ignore_for_file: avoid_print
 
@@ -11,7 +12,7 @@ import 'products.dart';
 Future<void> main() async {
   print('=== Products Library - Full Model Fields ===\n');
 
-  final products = Products(baseUrl: 'http://localhost:8080');
+  final products = Products(baseUrl: 'http://fusionapi.cloud-dev-external-bpro.in:8080/api/v1');
   await products.initialize();
 
   print('Source: ${products.wasSyncedFromApi ? "API" : "LOCAL CACHE"}');
@@ -139,21 +140,21 @@ Future<void> main() async {
   print('\n${"=" * 60}');
   print('IMAGE ACCESS EXAMPLE');
   print('=' * 60);
-  
+
   if (products.speakers.isNotEmpty) {
     final speaker = products.speakers.first;
     print('\nSpeaker: ${speaker.modelName}');
-    
+
     // All image URLs
     print('\n   All Image URLs:');
     for (final url in speaker.assets.allAssetUrls) {
       print('     - $url');
     }
-    
+
     // By color - use getAssetsFor()
     print('\n   Black Images: ${speaker.assets.getAssetsFor("black").length}');
     print('   White Images: ${speaker.assets.getAssetsFor("white").length}');
-    
+
     // Check if cached
     if (speaker.assets.allAssetUrls.isNotEmpty) {
       final url = speaker.assets.allAssetUrls.first;

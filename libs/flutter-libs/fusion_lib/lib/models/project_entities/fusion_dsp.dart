@@ -35,6 +35,7 @@ class FusionDsp extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    super.equipmentLocationPosition,
     required super.locationEntity,
     this.sku = '',
     required super.addedFromBuildingPage,
@@ -70,6 +71,7 @@ class FusionDsp extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     String? sku,
+    int? equipmentLocationPosition,
     bool? addedFromBuildingPage,
   }) {
     return FusionDsp(
@@ -93,6 +95,7 @@ class FusionDsp extends HardwareComponent {
       outputPortsData: outputPortsData ?? this.outputPortsData,
       sku: sku ?? this.sku,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
     );
   }
 
@@ -123,6 +126,7 @@ class FusionDsp extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       sku: json['sku'] as String? ?? '',
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 
@@ -150,6 +154,7 @@ class FusionDsp extends HardwareComponent {
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'sku': sku,
       'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 }

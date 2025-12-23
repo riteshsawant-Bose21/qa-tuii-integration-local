@@ -33,6 +33,7 @@ abstract class HardwareComponent {
   final String assetImagePath;
   final LocationModel locationEntity;
   final double price;
+  final int? equipmentLocationPosition;
   final String hardwareName;
   final bool lockListeningArea;
   final List<PortData> communicationPorts;
@@ -52,6 +53,7 @@ abstract class HardwareComponent {
     required this.locationEntity,
     required this.price,
     required this.hardwareName,
+    this.equipmentLocationPosition,
     HardwarePortData? portData,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
@@ -96,6 +98,7 @@ abstract class HardwareComponent {
     if (other is! HardwareComponent) return false;
     return id == other.id &&
         name == other.name &&
+        equipmentLocationPosition == other.equipmentLocationPosition &&
         pos == other.pos &&
         wiringPos == other.wiringPos &&
         assetImagePath == other.assetImagePath &&
@@ -104,7 +107,13 @@ abstract class HardwareComponent {
 
   @override
   int get hashCode {
-    return id.hashCode ^ name.hashCode ^ pos.hashCode ^ wiringPos.hashCode ^ assetImagePath.hashCode ^ locationEntity.hashCode;
+    return id.hashCode ^
+        name.hashCode ^
+        pos.hashCode ^
+        wiringPos.hashCode ^
+        assetImagePath.hashCode ^
+        locationEntity.hashCode ^
+        equipmentLocationPosition.hashCode;
   }
 
   HardwareComponent copyWith({
@@ -116,6 +125,7 @@ abstract class HardwareComponent {
     String? assetImagePath,
     LocationModel? locationEntity,
     double? price,
+    int? equipmentLocationPosition,
     String? hardwareName,
     bool? lockListeningArea,
     List<PortData>? communicationPorts,

@@ -1,6 +1,6 @@
 import 'dart:convert';
 
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 part 'params/pb_empty_param.dart';
 part 'params/pb_graph_param.dart';

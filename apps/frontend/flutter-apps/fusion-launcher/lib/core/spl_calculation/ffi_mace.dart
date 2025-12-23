@@ -179,6 +179,7 @@ Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
   }
 
   const List<String> bsfs = <String>[
+    'assets/Loudspeakers/DM8C.bsf',
     'assets/Loudspeakers/CO-12 H120.bsf',
     'assets/Loudspeakers/DM2C-LP 100V.bsf',
     'assets/Loudspeakers/DM2C-LP 70V.bsf',
@@ -212,7 +213,6 @@ Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
     'assets/Loudspeakers/DM6SE.bsf',
     'assets/Loudspeakers/DM8C 100V.bsf',
     'assets/Loudspeakers/DM8C 70V.bsf',
-    'assets/Loudspeakers/DM8C.bsf',
     'assets/Loudspeakers/DM8S 100V.bsf',
     'assets/Loudspeakers/DM8S 70V.bsf',
     'assets/Loudspeakers/DM8S.bsf',
@@ -250,15 +250,31 @@ Future<String> prepareLoudspeakersFolder(String supportDirPath) async {
       // Already copied
       continue;
     }
-
+await outFile.create(recursive: true);
     // Prefer copying from disk when assetsRoot is known
+    print("[isolate] Base Asset path identified : $assetsRoot");
     if (assetsRoot != null) {
       final String srcPath = p.join(assetsRoot, assetPath);
       final File srcFile = File(srcPath);
+      print("[isolate] Source File: $srcPath");
       if (await srcFile.exists()) {
         await srcFile.copy(outFile.path);
         continue;
+      }else{
+        print("[isolate] Not Found file in First Method, Trying in second method");
+
+        final String filenameWithoutSpace = srcPath.replaceAll(assetPath, assetPath.replaceAll(" ", "%20"));
+        print("[isolate] Second MEthod File : $filenameWithoutSpace");
+        final File newFile = File(filenameWithoutSpace);
+        if(await newFile.exists()){
+          await newFile.copy(outFile.path);
+          continue;
+        }else{
+          print("[isolate] No File found in 2 methods");
+
+        }
       }
+
     }
 
     // Fallback: use rootBundle if available in this isolate

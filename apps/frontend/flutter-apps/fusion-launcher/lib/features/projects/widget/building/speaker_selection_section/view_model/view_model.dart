@@ -13,10 +13,10 @@ import '../constant_enums.dart';
 class SpeakerSelectionViewModelState extends Equatable {
   const SpeakerSelectionViewModelState({
     this.mode = SpeakerSelectionMode.select,
-    this.selectedMountingTypes = const <SpeakerMountingType>{},
-    this.selectedLowFrequencies = const <SpeakerLowFrequency>{},
+    this.selectedMountingTypes = const <MountingType>{},
+    this.selectedLowFrequencies = const <LowFrequency>{},
     this.selectedColors = const <SpeakerColor>{},
-    this.selectedWirings = const <SpeakerWiring>{},
+    this.selectedWirings = const <WiringType>{},
     this.sortOption = SpeakerSortOption.nameAsc,
     this.searchQuery = '',
     this.isLoading = false,
@@ -25,10 +25,10 @@ class SpeakerSelectionViewModelState extends Equatable {
   });
 
   final SpeakerSelectionMode mode;
-  final Set<SpeakerMountingType> selectedMountingTypes;
-  final Set<SpeakerLowFrequency> selectedLowFrequencies;
+  final Set<MountingType> selectedMountingTypes;
+  final Set<LowFrequency> selectedLowFrequencies;
   final Set<SpeakerColor> selectedColors;
-  final Set<SpeakerWiring> selectedWirings;
+  final Set<WiringType> selectedWirings;
   final SpeakerSortOption sortOption;
   final String searchQuery;
   final bool isLoading;
@@ -37,10 +37,10 @@ class SpeakerSelectionViewModelState extends Equatable {
 
   SpeakerSelectionViewModelState copyWith({
     SpeakerSelectionMode? mode,
-    Set<SpeakerMountingType>? selectedMountingTypes,
-    Set<SpeakerLowFrequency>? selectedLowFrequencies,
+    Set<MountingType>? selectedMountingTypes,
+    Set<LowFrequency>? selectedLowFrequencies,
     Set<SpeakerColor>? selectedColors,
-    Set<SpeakerWiring>? selectedWirings,
+    Set<WiringType>? selectedWirings,
     SpeakerSortOption? sortOption,
     String? searchQuery,
     bool? isLoading,
@@ -82,14 +82,14 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   // State updates
   void setMode(SpeakerSelectionMode mode) => emit(state.copyWith(mode: mode));
 
-  void toggleMountingType(SpeakerMountingType type) {
-    final Set<SpeakerMountingType> updated = Set<SpeakerMountingType>.from(state.selectedMountingTypes);
+  void toggleMountingType(MountingType type) {
+    final Set<MountingType> updated = Set<MountingType>.from(state.selectedMountingTypes);
     updated.contains(type) ? updated.remove(type) : updated.add(type);
     emit(state.copyWith(selectedMountingTypes: updated));
   }
 
-  void toggleLowFrequency(SpeakerLowFrequency lf) {
-    final Set<SpeakerLowFrequency> updated = Set<SpeakerLowFrequency>.from(state.selectedLowFrequencies);
+  void toggleLowFrequency(LowFrequency lf) {
+    final Set<LowFrequency> updated = Set<LowFrequency>.from(state.selectedLowFrequencies);
     updated.contains(lf) ? updated.remove(lf) : updated.add(lf);
     emit(state.copyWith(selectedLowFrequencies: updated));
   }
@@ -100,8 +100,8 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     emit(state.copyWith(selectedColors: updated));
   }
 
-  void toggleWiring(SpeakerWiring wiring) {
-    final Set<SpeakerWiring> updated = Set<SpeakerWiring>.from(state.selectedWirings);
+  void toggleWiring(WiringType wiring) {
+    final Set<WiringType> updated = Set<WiringType>.from(state.selectedWirings);
     updated.contains(wiring) ? updated.remove(wiring) : updated.add(wiring);
     emit(state.copyWith(selectedWirings: updated));
   }
@@ -109,10 +109,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   void setSortOption(SpeakerSortOption option) => emit(state.copyWith(sortOption: option));
   void setSearchQuery(String query) => emit(state.copyWith(searchQuery: query));
 
-  void setMountingTypes(Iterable<SpeakerMountingType> types) => emit(state.copyWith(selectedMountingTypes: Set<SpeakerMountingType>.from(types)));
-  void setLowFrequencies(Iterable<SpeakerLowFrequency> lfs) => emit(state.copyWith(selectedLowFrequencies: Set<SpeakerLowFrequency>.from(lfs)));
+  void setMountingTypes(Iterable<MountingType> types) => emit(state.copyWith(selectedMountingTypes: Set<MountingType>.from(types)));
+  void setLowFrequencies(Iterable<LowFrequency> lfs) => emit(state.copyWith(selectedLowFrequencies: Set<LowFrequency>.from(lfs)));
   void setColors(Iterable<SpeakerColor> colors) => emit(state.copyWith(selectedColors: Set<SpeakerColor>.from(colors)));
-  void setWiring(SpeakerWiring? wiring) => emit(state.copyWith(selectedWirings: wiring == null ? <SpeakerWiring>{} : <SpeakerWiring>{wiring}));
+  void setWiring(WiringType? wiring) => emit(state.copyWith(selectedWirings: wiring == null ? <WiringType>{} : <WiringType>{wiring}));
 
   // Data loading
   Future<void> loadProducts(Products productsApi) async {
@@ -130,8 +130,9 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   List<Speaker> getSpeakersForListeningArea() {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
-    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getHardwareForListeningArea(listeningAreaId: currentSelectedListeningArea!.id);
-    return listeningAreaSpeakers.whereType<Speaker>().where((Speaker element) => element.pos == null).toList();
+    final List<Speaker> listeningAreaSpeakers =
+        projectViewModel.getAllPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningArea!.id).whereType<Speaker>().toList();
+    return listeningAreaSpeakers;
   }
 
   // Business logic helpers for UI formatting
@@ -186,7 +187,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     }
 
     if (state.selectedMountingTypes.isNotEmpty) {
-      final List<String> keys = state.selectedMountingTypes.map((SpeakerMountingType e) => e.displayName.toLowerCase()).toList();
+      final List<String> keys = state.selectedMountingTypes.map((MountingType e) => e.name.toLowerCase()).toList();
       filtered = filtered.where((SpeakerProduct p) {
         final String mt = (p.mountType ?? '').toLowerCase();
         return keys.any((String k) => mt.contains(k));
@@ -195,7 +196,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     final bool filterWiring = state.selectedWirings.isNotEmpty;
     if (filterWiring) {
-      final bool wantHiZ = state.selectedWirings.contains(SpeakerWiring.hiZ);
+      final bool wantHiZ = state.selectedWirings.contains(WiringType.highImpedance);
       filtered = filtered.where((SpeakerProduct p) {
         final bool hasHiZ =
             p.isHighImpedanceRated ||
@@ -214,18 +215,18 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
             p.isSubwoofer || (p.description.toLowerCase().contains('subwoofer') || (p.shortDescription?.toLowerCase().contains('subwoofer') ?? false));
 
         bool matches = false;
-        for (final SpeakerLowFrequency sel in state.selectedLowFrequencies) {
+        for (final LowFrequency sel in state.selectedLowFrequencies) {
           switch (sel) {
-            case SpeakerLowFrequency.subwoofer:
+            case LowFrequency.subwoofer:
               if (isSub) matches = true;
               break;
-            case SpeakerLowFrequency.extended:
+            case LowFrequency.extended:
               if (!isSub && fr != null && fr.low > 0 && fr.low <= 40) matches = true;
               break;
-            case SpeakerLowFrequency.fullRange:
+            case LowFrequency.fullRange:
               if (!isSub && fr != null && fr.low > 40 && fr.low <= 80) matches = true;
               break;
-            case SpeakerLowFrequency.vocal:
+            case LowFrequency.vocal:
               if (!isSub && fr != null && fr.low > 80) matches = true;
               break;
           }
@@ -237,21 +238,21 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     // Color selection is applied at variant-building stage to avoid double filtering
 
-    if (currentSelectedListeningArea != null) {
-      final String vt = currentSelectedListeningArea!.venuType.trim().toLowerCase();
-      if (vt == 'indoor') {
+    if (currentSelectedListeningArea?.venuType != null) {
+      final VenueType vt = currentSelectedListeningArea!.venuType!;
+      if (vt == VenueType.indoor) {
         filtered = filtered.where((SpeakerProduct p) {
           final String env = (p.environment ?? '').toLowerCase();
           final bool isIndoorEnv = env.contains('indoor');
           return !p.isWeatherRated || isIndoorEnv;
         });
-      } else if (vt == 'outdoor') {
+      } else if (vt == VenueType.outdoor) {
         filtered = filtered.where((SpeakerProduct p) {
           final String env = (p.environment ?? '').toLowerCase();
           final bool isOutdoorEnv = env.contains('outdoor');
           return p.isWeatherRated || isOutdoorEnv;
         });
-      } else if (vt == 'indoor + outdoor' || vt == 'indoor+outdoor') {
+      } else if (vt == VenueType.mixed) {
         // Mixed venue: include both indoor and outdoor options (no environment filter)
       }
     }
@@ -315,7 +316,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           assetImagePath,
           speakerProduct,
           LocationModel(floorId: currentFloor.id, listeningAreaId: la!.id),
-          true,           
+          true,
         );
 
         variants.add(

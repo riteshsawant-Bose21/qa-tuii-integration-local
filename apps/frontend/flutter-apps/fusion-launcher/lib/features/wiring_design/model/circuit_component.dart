@@ -2,7 +2,7 @@ import 'dart:math';
 import 'dart:ui';
 
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 import 'package:fusion_lib/models/project_entities/communication_ports.dart';
 
 import '../util/canvas_util.dart';
@@ -88,10 +88,7 @@ class CircuitComponent extends CanvasElement {
           id: element.id,
           relativePosition: Offset(
             data.portRadius + WiringViewConstants.portSpacing,
-            data.portRadius +
-                data.portOffset.dy +
-                (WiringViewConstants.portSpacing * (i + 1)) +
-                i * data.portRadius * 2,
+            data.portRadius + data.portOffset.dy + (WiringViewConstants.portSpacing * (i + 1)) + i * data.portRadius * 2,
           ),
           padding: Offset(-50 - i * 10, 0),
           parent: circuitComponent,
@@ -109,10 +106,7 @@ class CircuitComponent extends CanvasElement {
 
           relativePosition: Offset(
             size.width - data.portRadius - WiringViewConstants.portSpacing,
-            data.portRadius +
-                data.portOffset.dy +
-                (WiringViewConstants.portSpacing * (i + 1)) +
-                i * data.portRadius * 2,
+            data.portRadius + data.portOffset.dy + (WiringViewConstants.portSpacing * (i + 1)) + i * data.portRadius * 2,
           ),
           padding: Offset(50 + i * 10, 0),
           parent: circuitComponent,
@@ -155,8 +149,7 @@ class CircuitComponent extends CanvasElement {
     final List<ComponentPort> footerCenter =
         data.comPorts
             .where(
-              (ComponentPort e) =>
-                  e.position == PortPosition.footerCenter || e.position == null,
+              (ComponentPort e) => e.position == PortPosition.footerCenter || e.position == null,
             )
             .toList()
           ..sort(
@@ -180,11 +173,7 @@ class CircuitComponent extends CanvasElement {
 
           relativePosition: Offset(
             data.portRadius + WiringViewConstants.portSpacing,
-            currentHeight +
-                data.portOffset.dy +
-                data.portRadius +
-                (WiringViewConstants.portSpacing * (i + 1)) +
-                i * data.portRadius * 2,
+            currentHeight + data.portOffset.dy + data.portRadius + (WiringViewConstants.portSpacing * (i + 1)) + i * data.portRadius * 2,
           ),
           padding: Offset(50 + i * 10, 0),
           parent: circuitComponent,
@@ -201,10 +190,7 @@ class CircuitComponent extends CanvasElement {
 
           relativePosition: Offset(
             size.width - data.portRadius - WiringViewConstants.portSpacing,
-            data.portRadius +
-                data.portOffset.dy +
-                (WiringViewConstants.portSpacing * (i + 1)) +
-                i * data.portRadius * 2,
+            data.portRadius + data.portOffset.dy + (WiringViewConstants.portSpacing * (i + 1)) + i * data.portRadius * 2,
           ),
           padding: Offset(50 + i * 10, 0),
           parent: circuitComponent,
@@ -215,15 +201,12 @@ class CircuitComponent extends CanvasElement {
 
     // final int totalFooterItems =
     //     footerLeft.length + footerCenter.length + footerRight.length;
-    double cuPortPosition =
-        WiringViewConstants.portSpacing + WiringViewConstants.comPortWidth / 2;
+    double cuPortPosition = WiringViewConstants.portSpacing + WiringViewConstants.comPortWidth / 2;
     final double widthPerPort =
         data.size.width /
         max(
           1,
-          max(1, footerLeft.length) +
-              max(1, footerCenter.length) +
-              max(1, footerRight.length),
+          max(1, footerLeft.length) + max(1, footerCenter.length) + max(1, footerRight.length),
         );
 
     /// For Footer Left Side
@@ -356,7 +339,7 @@ class CircuitComponent extends CanvasElement {
   @override
   void restoreFromMap(Map<dynamic, dynamic> map) {
     _position =
-        WiringSerializationUtil.offsetDeserializer.deserialize(
+        DeserializationUtil.offsetDeserializer.deserialize(
           map['position'],
         ) ??
         _position;

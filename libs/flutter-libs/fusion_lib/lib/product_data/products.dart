@@ -90,7 +90,7 @@ class Products {
 
     try {
       final request = await client.getUrl(
-        Uri.parse('$baseUrl/api/v1/products'),
+        Uri.parse('$baseUrl/products'),
       );
       request.headers.set('Accept', 'application/json');
 

@@ -554,6 +554,8 @@ extension ColorExtends on ColorScheme {
   ///
   ///
   Color get portOverlayTitle => Color(0xFF929292);
+
+  Color get green => Color(0xFF78B899);
 }
 
 /// Extension on [BuildContext] to easily access commonly used theme properties.

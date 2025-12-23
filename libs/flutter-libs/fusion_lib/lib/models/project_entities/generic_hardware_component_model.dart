@@ -25,6 +25,7 @@ class GenericHardwareComponent extends HardwareComponent {
     String? sku,
     String? hardwareName,
     super.lockListeningArea,
+    super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
   }) : sku = sku ?? name,
        super(hardwareName: hardwareName ?? name, id: id ?? "${type.name.toUpperCase()}{FusionUtils.shortStringUUID()}");
@@ -49,6 +50,7 @@ class GenericHardwareComponent extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    int? equipmentLocationPosition,
   }) {
     return GenericHardwareComponent(
       id: id ?? this.id,
@@ -67,6 +69,7 @@ class GenericHardwareComponent extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
     );
   }
 
@@ -89,6 +92,7 @@ class GenericHardwareComponent extends HardwareComponent {
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 
@@ -120,6 +124,7 @@ class GenericHardwareComponent extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 }

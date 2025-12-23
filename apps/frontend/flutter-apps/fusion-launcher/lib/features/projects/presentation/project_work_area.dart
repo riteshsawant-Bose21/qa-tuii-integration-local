@@ -10,6 +10,7 @@ import 'package:fusion_launcher/core/utils/fusion_utils.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/side_speaker_section.dart';
@@ -41,6 +42,7 @@ import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/equipment_location/equipment_location_section.dart';
 import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
@@ -223,7 +225,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       floorId: currentFloor.id,
     );
     if (floorListeningAreas.isEmpty) return;
-
+    // for (ListeningArea e in floorListeningAreas) {
+    //   e.clearSplData();
+    // }
     final List<Speaker> speakers = List<Speaker>.from(
       serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(floorId: currentFloor.id).whereType<Speaker>(),
     );
@@ -439,6 +443,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         allowUndock: false,
         isCollapsibleSection: false,
         dockItemWidget: SpeakerSelectionWidget(),
+      ),
+      // if (toolbarMode == ToolbarMode.system)
+      DockItemConfig(
+        id: "21",
+        title: "EQUIPMENT LOCATIONS",
+        side: "left",
+        allowUndock: false,
+        isCollapsibleSection: false,
+        dockItemWidget: toolbarMode == ToolbarMode.system ? const EquipmentLocationSection() : const SizedBox(),
       ),
     ];
   }
@@ -804,6 +817,45 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             }
                           },
                         ),
+                      ),
+
+                      /// Share Icon Section
+                      Container(
+                        width: 56,
+                        height: 48,
+                        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                          // border horizontal
+                          border: Border(
+                            left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          ),
+                        ),
+                        child: Tooltip(
+                          message: 'Give Feedback',
+                          child: InkWell(
+                            child: Icon(
+                              Icons.feedback_outlined,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            onTap: () async {
+                              showDialog(
+                                context: context,
+                                builder:
+                                    (BuildContext context) => const Dialog(
+                                      child: _FeedbackWebView(),
+                                    ),
+                              );
+                            },
+                          ),
+                        ),
+                        // child: Image.asset(
+                        //   "assets/images/share_icon.png",
+                        //   width: 24,
+                        //   height: 24,
+                        // ),
                       ),
 
                       /// Share Icon Section
@@ -1187,6 +1239,64 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               ),
             ),
           ),
+    );
+  }
+}
+
+class _FeedbackWebView extends StatefulWidget {
+  const _FeedbackWebView({super.key});
+
+  @override
+  State<_FeedbackWebView> createState() => __FeedbackWebViewState();
+}
+
+class __FeedbackWebViewState extends State<_FeedbackWebView> {
+  @override
+  Widget build(BuildContext context) {
+    return InAppWebView(
+      initialSettings: InAppWebViewSettings(
+        javaScriptEnabled: true,
+        javaScriptCanOpenWindowsAutomatically: true,
+      ),
+      onReceivedError: (InAppWebViewController controller, WebResourceRequest request, WebResourceError error) {
+        print("Error loading feedback form: ${error.description}");
+      },
+      initialData: InAppWebViewInitialData(
+        data: '''
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Jira Issue Collector Demo</title>
+
+        <!-- Jira Issue Collector Script -->
+        <script type="text/javascript" src="https://boseprofessional.atlassian.net/s/d41d8cd98f00b204e9800998ecf8427e-T/ribuf7/b/0/c95134bc67d3a521bb3f4331beb9b804/_/download/batch/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector/com.atlassian.jira.collector.plugin.jira-issue-collector-plugin:issuecollector.js?locale=en-US&collectorId=9740b101"></script>
+      </head>
+      <body>
+      	<iframe
+          style="display:none;"
+          id="jiraIssueCollector"
+          name="jiraIssueCollector"
+          src='https://inappwebview.dev/docs/webview/in-app-webview'
+        ></iframe>
+        <script type="text/javascript">
+          // Initialize the Jira Issue Collector
+          JIRA.IssueCollector.showIssueCollectorDialog({
+            triggerFunction: function() {
+              // This function is called when the dialog is shown
+              console.log("Jira Issue Collector dialog opened.");
+            }
+          });
+        </script>
+      </body>
+      ''',
+      ),
+      // initialUrlRequest: URLRequest(
+      //   url: WebUri(
+      //     'https://inappwebview.dev/docs/webview/in-app-webview',
+      //   ),
+      // ),
     );
   }
 }

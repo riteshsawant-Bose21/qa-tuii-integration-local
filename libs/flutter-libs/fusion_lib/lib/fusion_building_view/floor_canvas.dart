@@ -93,7 +93,7 @@ class FloorCanvas extends StatefulWidget {
   FloorCanvasState createState() => FloorCanvasState();
 }
 
-class FloorCanvasState extends State<FloorCanvas> {
+class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderStateMixin {
   double _zoomScale = 1.0;
   Offset _panOffset = Offset.zero;
   double _baseZoom = 1.0;
@@ -154,6 +154,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     originalZoneList = widget.zones.map((zone) => zone.copyWith()).toList();
   }
 
+  late final animationController = AnimationController.unbounded(vsync: this)..repeat(min: 0, max: 1, period: const Duration(milliseconds: 1000));
   @override
   void initState() {
     super.initState();
@@ -232,6 +233,12 @@ class FloorCanvasState extends State<FloorCanvas> {
   }
 
   @override
+  void dispose() {
+    animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
@@ -248,41 +255,47 @@ class FloorCanvasState extends State<FloorCanvas> {
                 onPointerMove: _handleMove,
                 onPointerUp: _handleUp,
                 onPointerHover: _handleHover,
-                child: CustomPaint(
-                  size: Size.infinite,
-                  painter: FloorCanvasPainter(
-                    gridSize: widget.gridSize,
-                    zoomScale: _zoomScale,
-                    panOffset: _panOffset,
-                    listeningAreas: widget.listeningAreas,
-                    zones: widget.zones,
-                    subZones: widget.subZones,
-                    current: _current,
-                    previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
-                    highlightedIndex: _highlightIndex,
-                    floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
-                    hardwareComponents: widget.hardwareComponents,
-                    selectedHardwareComponentId: _selectedHardwareComponentId,
-                    showSpl: showSpl,
-                    floorPlanEntity: _tempFloorPlan ?? widget.floorPlanEntity,
-                    floorPlanImage: _floorPlanImage,
-                    hardwareImages: _hardwareImages,
-                    listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
-                    currentlySelectingZone: widget.controller.currentlySelectingZone,
-                    currentlySelectingSubZone: widget.controller.currentlySelectingSubZone,
-                    selectedListeningAreaIds: [
-                      ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
-                      if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
-                    ],
-                    splMax: widget.splMax,
-                    splMin: widget.splMin,
-                    splPanelData: widget.splPanelData,
-                    //prepare a map of listening area id to zone
-                    listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
-                    listeningAreaToSubZoneMap: widget.listeningAreaToSubZoneMap,
-                    subZoneToZoneMap: widget.subZoneToZoneMap,
-                    isAcousticsMode: widget.isAcousticsMode,
-                  ),
+                child: AnimatedBuilder(
+                  animation: animationController,
+                  builder: (context, asyncSnapshot) {
+                    return CustomPaint(
+                      size: Size.infinite,
+                      painter: FloorCanvasPainter(
+                        animationController: animationController,
+                        gridSize: widget.gridSize,
+                        zoomScale: _zoomScale,
+                        panOffset: _panOffset,
+                        listeningAreas: widget.listeningAreas,
+                        zones: widget.zones,
+                        subZones: widget.subZones,
+                        current: _current,
+                        previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
+                        highlightedIndex: _highlightIndex,
+                        floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
+                        hardwareComponents: widget.hardwareComponents,
+                        selectedHardwareComponentId: _selectedHardwareComponentId,
+                        showSpl: showSpl,
+                        floorPlanEntity: _tempFloorPlan ?? widget.floorPlanEntity,
+                        floorPlanImage: _floorPlanImage,
+                        hardwareImages: _hardwareImages,
+                        listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
+                        currentlySelectingZone: widget.controller.currentlySelectingZone,
+                        currentlySelectingSubZone: widget.controller.currentlySelectingSubZone,
+                        selectedListeningAreaIds: [
+                          ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
+                          if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
+                        ],
+                        splMax: widget.splMax,
+                        splMin: widget.splMin,
+                        splPanelData: widget.splPanelData,
+                        //prepare a map of listening area id to zone
+                        listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
+                        listeningAreaToSubZoneMap: widget.listeningAreaToSubZoneMap,
+                        subZoneToZoneMap: widget.subZoneToZoneMap,
+                        isAcousticsMode: widget.isAcousticsMode,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

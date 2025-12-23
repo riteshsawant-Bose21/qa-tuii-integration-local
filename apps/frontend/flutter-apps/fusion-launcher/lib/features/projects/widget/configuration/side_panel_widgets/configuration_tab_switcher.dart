@@ -46,7 +46,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
     ),
 
     ConfigurationMenuMode.mediaFiles: TabConfig(
-      assetsName: Assets.schedulingIcon,
+      assetsName: Assets.playIcon,
       label: 'Media Files',
     ),
   };

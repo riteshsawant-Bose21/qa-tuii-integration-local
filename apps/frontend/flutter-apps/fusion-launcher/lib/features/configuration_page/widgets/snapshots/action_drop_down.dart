@@ -23,6 +23,7 @@ class FusionDropdown<T> extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DropdownButtonFormField<T>(
+      isExpanded: true,
       initialValue: value,
       hint: FusionAppText(
         text: hint,
