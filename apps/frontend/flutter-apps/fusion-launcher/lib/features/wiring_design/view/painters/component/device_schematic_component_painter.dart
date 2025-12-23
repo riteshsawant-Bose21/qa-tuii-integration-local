@@ -7,13 +7,17 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
   DeviceSchematicComponentPainter(this.component, this.painter);
   @override
   void paint(Canvas canvas, Size size) {
-    /// -------------------------------------------------------------
+    /// **************************************************************************************************************************
+    ///
+    ///
     ///   Draw Component
-    /// -------------------------------------------------------------
+    ///
+    ///
+    /// **************************************************************************************************************************
 
-    ///
+    ///--------------------------------------------------------
     /// Background
-    ///
+    ///--------------------------------------------------------
     final Rect rect = component.position & component.size;
 
     if (painter.isSelected(component)) {
@@ -28,11 +32,10 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         ..strokeWidth = 2,
     );
 
-    ///
+    ///--------------------------------------------------------
     /// Heading
-    ///
-    final Rect headingRect =
-        component.position & Size(component.size.width, 50);
+    ///--------------------------------------------------------
+    final Rect headingRect = component.position & Size(component.size.width, 50);
     canvas.drawRect(
       headingRect,
       Paint()..color = painter.colorScheme.componentHeadingBG,
@@ -43,9 +46,9 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       rect: headingRect,
     );
 
-    ///
+    ///--------------------------------------------------------
     /// Body
-    ///
+    ///--------------------------------------------------------
 
     painter.drawText(
       canvas: canvas,
@@ -60,9 +63,13 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       maxWidth: rect.width * 0.35,
     );
 
-    /// -------------------------------------------------------------
-    ///   Draw Ports
-    /// -------------------------------------------------------------
+    /// **************************************************************************************************************************
+    ///
+    ///
+    ///   Draw Input/Output Ports
+    ///
+    ///
+    /// **************************************************************************************************************************
     final Paint connectedPortPaint =
         Paint()
           ..color = painter.colorScheme.activePortBG
@@ -77,13 +84,10 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       painter.drawText(
         canvas: canvas,
         text: "INPUT",
-        position:
-            component.inputPorts.first.absolutePosition +
-            const Offset(WiringViewConstants.portRadius * 2, 0),
+        position: component.inputPorts.first.absolutePosition + const Offset(WiringViewConstants.portRadius * 2, 0),
         positionAlignment: Alignment.centerLeft,
         style: TextStyle(
           color: painter.colorScheme.componentFG,
-          // color:
           fontSize: rect.width * 0.035,
           fontWeight: FontWeight.w600,
         ),
@@ -93,9 +97,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       painter.drawText(
         canvas: canvas,
         text: "OUTPUT",
-        position:
-            component.outputPorts.first.absolutePosition -
-            const Offset(WiringViewConstants.portRadius * 2, 0),
+        position: component.outputPorts.first.absolutePosition - const Offset(WiringViewConstants.portRadius * 2, 0),
         positionAlignment: Alignment.centerRight,
         style: TextStyle(
           color: painter.colorScheme.componentFG,
@@ -130,10 +132,7 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         text: TextSpan(
           text: port.data.label ?? Random().nextInt(20).toString(),
           style: TextStyle(
-            color:
-                hasConnection
-                    ? painter.colorScheme.activePortFG
-                    : painter.colorScheme.inactivePortFG,
+            color: hasConnection ? painter.colorScheme.activePortFG : painter.colorScheme.inactivePortFG,
             fontSize: WiringViewConstants.portRadius * 0.75,
           ),
         ),
@@ -149,85 +148,87 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
         ),
       );
     }
+
+    /// --------------------------------------------------------------------------------------------------------------------------
+    ///   Draw Com Ports
+    /// --------------------------------------------------------------------------------------------------------------------------
     for (final CircuitPort port in <CircuitPort>[
       ...component.otherPorts,
     ]) {
-      final Path portPath = Path();
-
-      /// Port
-      // portPath.add(
-      // Rect.fromCircle(
-      //   center: port.absolutePosition,
-      //   radius: WiringViewConstants.portRadius,
-      // ),
-      // );
-      // canvas.drawRect(
-      //   Rect.fromLTRB(
-      //     port.absolutePosition.dx - WiringViewConstants.comPortWidth / 2,
-      //     port.absolutePosition.dy - WiringViewConstants.portRadius,
-      //     port.absolutePosition.dx + WiringViewConstants.comPortWidth / 2,
-      //     port.absolutePosition.dy + WiringViewConstants.portRadius,
-      //   ),
-      //   freePortPaint,
-      // );
-      painter.drawImage(
-        canvas: canvas,
-        path: port.data.image!,
-        rect: Rect.fromCircle(
-          center: port.absolutePosition,
-          radius: WiringViewConstants.portRadius,
-        ),
-      );
-      final bool hasConnection = painter.hasConnection(port);
-      canvas.drawPath(
-        portPath,
-        hasConnection ? connectedPortPaint : freePortPaint,
-      );
-
-      /// Port Label
-      final TextPainter tp = TextPainter(
-        text: TextSpan(
-          text: port.data.label ?? port.data.type.name,
-          style: TextStyle(
-            color: painter.colorScheme.inactivePortFG,
-            fontSize: WiringViewConstants.portRadius * 0.75,
+      if (port.data.image != null) {
+        painter.drawImage(
+          canvas: canvas,
+          path: port.data.image!,
+          rect: Rect.fromCircle(
+            center: port.absolutePosition,
+            radius: WiringViewConstants.portRadius,
           ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout(
+        );
+      }
+
+      final PortPosition? position2 = port.data.position;
+      painter.drawText(
+        canvas: canvas,
+        text: port.data.label ?? port.data.type.name,
         maxWidth: WiringViewConstants.comPortWidth,
+        positionAlignment: switch (position2) {
+          PortPosition.bottomRight => Alignment.bottomRight,
+          PortPosition.footerLeft || PortPosition.footerCenter || PortPosition.footerRight => Alignment.bottomCenter,
+          _ => Alignment.centerLeft,
+        },
+        position: switch (position2) {
+          PortPosition.bottomRight => Offset(
+            port.absolutePosition.dx - WiringViewConstants.portDimension,
+            port.absolutePosition.dy + WiringViewConstants.portRadius / 2,
+          ),
+          PortPosition.footerLeft || PortPosition.footerCenter || PortPosition.footerRight => Offset(
+            port.absolutePosition.dx,
+            port.absolutePosition.dy - WiringViewConstants.portRadius - 5,
+          ),
+          _ => Offset(
+            WiringViewConstants.portRadius * 2 + port.absolutePosition.dx,
+            port.absolutePosition.dy,
+          ),
+        },
       );
 
-      final Offset labelPosition = switch (port.data.position) {
-        PortPosition.bottomRight => Offset(
-          port.absolutePosition.dx + WiringViewConstants.portRadius + 10,
-          port.absolutePosition.dy +
-              WiringViewConstants.portRadius -
-              tp.height / 2,
-        ),
-        PortPosition.footerLeft ||
-        PortPosition.footerCenter ||
-        PortPosition.footerRight => Offset(
-          port.absolutePosition.dx - tp.width / 2,
-          port.absolutePosition.dy -
-              WiringViewConstants.portRadius -
-              tp.height -
-              5,
-        ),
-        _ => Offset(
-          WiringViewConstants.portRadius * 2 +
-              10 +
-              port.absolutePosition.dx -
-              tp.width / 2,
-          port.absolutePosition.dy - tp.height / 2,
-        ),
-      };
-
-      // Align text to center
-      tp.paint(
-        canvas,
-        labelPosition,
-      );
+      final PortType type = port.data.type;
+      if (type.isEthernet) {
+        final Color color = painter.colorScheme.switchWireColor;
+        final Offset center = port.absolutePosition + const Offset(0, 75);
+        canvas.drawLine(
+          center - const Offset(0, WiringViewConstants.portRadius),
+          port.absolutePosition + const Offset(0, WiringViewConstants.portRadius),
+          Paint()
+            ..color = color
+            ..strokeWidth = 3
+            ..strokeCap = StrokeCap.round
+            ..style = PaintingStyle.stroke,
+        );
+        painter.drawImage(
+          canvas: canvas,
+          path: 'assets/icons/wiring_ports/ethernet.png',
+          paint:
+              Paint()
+                ..colorFilter = ColorFilter.mode(
+                  color,
+                  BlendMode.srcIn,
+                ),
+          rect: Rect.fromCircle(
+            center: center,
+            radius: WiringViewConstants.portRadius,
+          ),
+        );
+        painter.drawText(
+          canvas: canvas,
+          text: "SWITCH",
+          position: center + const Offset(0, WiringViewConstants.portRadius),
+          positionAlignment: Alignment.topCenter,
+          style: TextStyle(
+            color: color,
+          ),
+        );
+      }
     }
   }
 }

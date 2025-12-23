@@ -4,16 +4,15 @@ import 'package:fusion_launcher/features/wiring_design/controller/state/canvas_s
 mixin CanvasHandlerMixin on ChangeNotifier {
   CanvasState get canvasState;
 
-  double get minScale => 0.5;
-  double get maxScale => 5.0;
+  double get minScale => 0.25;
+  double get maxScale => 2.0;
 
   Size? canvasSize;
 
   bool isWithinViewport(Offset position) {
-    final bool contains =
-        (-canvasState.offset & (canvasSize ?? const Size(100, 100))).contains(
-          position,
-        );
+    final bool contains = (-canvasState.offset & (canvasSize ?? const Size(100, 100))).contains(
+      position,
+    );
     return contains;
   }
 
@@ -41,13 +40,19 @@ mixin CanvasHandlerMixin on ChangeNotifier {
     saveState();
   }
 
+  double? _startScale;
   void onScaleStart(ScaleStartDetails details) {
     // Handle scale start if needed
+    _startScale = 1;
   }
 
   void onScaleUpdate(double scale, Offset focalPoint) {
+    final double diffScale = _startScale != null ? scale - _startScale! : scale;
+    if (_startScale != null) {
+      _startScale = scale;
+    }
     final double oldScale = canvasState.scale;
-    final double newScale = (canvasState.scale + scale).clamp(
+    final double newScale = (canvasState.scale + diffScale).clamp(
       minScale,
       maxScale,
     );
@@ -57,9 +62,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
 
     // Adjust offset to zoom towards focal point
     // The focal point should remain at the same screen position
-    final Offset delta =
-        (focalPoint - (focalPoint - canvasState.offset) * actualScaleChange) -
-        canvasState.offset;
+    final Offset delta = (focalPoint - (focalPoint - canvasState.offset) * actualScaleChange) - canvasState.offset;
     setCanvasState(canvasState.scaleCanvas(newScale, offset: delta));
 
     notifyListeners();
@@ -69,6 +72,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
     // Handle scale end if needed
     setCanvasState(canvasState.idle());
     saveState();
+    _startScale = null;
   }
 
   void saveState();

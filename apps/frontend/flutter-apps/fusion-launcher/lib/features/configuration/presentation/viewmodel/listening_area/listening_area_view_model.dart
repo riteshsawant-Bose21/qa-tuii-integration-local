@@ -76,6 +76,15 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  SubZone? getSubZoneForListeningArea({required String areaId}) {
+    try {
+      return projectManager.getSubZoneForListeningArea(areaId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get subzone for listening area: $e");
+      return null;
+    }
+  }
+
   FloorModel? getFloorForListeningArea({required String areaId}) {
     try {
       return projectManager.getFloorForListeningArea(areaId);
@@ -119,6 +128,24 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  List<ListeningArea> getPendingListeningAreaToDraw({required String floorId}) {
+    try {
+      return projectManager.getPendingListeningAreaToDraw(floorId: floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get pending listening areas to draw for floor: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  List<ListeningArea> getAllDrawnListeningAreasForFloor({required String floorId}) {
+    try {
+      return projectManager.getAllDrawnListeningAreasForFloor(floorId: floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get drawn listening areas for floor: $e");
+      return <ListeningArea>[];
+    }
+  }
+
   List<ListeningArea> getAvailableListeningAreasForSubZone({required String parentZoneId, String? subZoneId}) {
     try {
       return projectManager.getAvailableListeningAreasForSubZone(subZoneId: subZoneId, parentZoneId: parentZoneId);
@@ -143,6 +170,24 @@ extension ListeningAreaViewModel on ProjectViewModel {
       return laToZoneMap;
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area to zone map: $e");
+      return <String, String>{};
+    }
+  }
+
+  Map<String, String> getListeningAreaToSubZoneMap() {
+    try {
+      final List<ListeningArea> allListening = getAllListeningAreas();
+      final Map<String, String> laToSubZoneMap = <String, String>{};
+
+      for (final ListeningArea la in allListening) {
+        final SubZone? subZone = getSubZoneForListeningArea(areaId: la.id);
+        if (subZone != null) {
+          laToSubZoneMap[la.id] = subZone.id;
+        }
+      }
+      return laToSubZoneMap;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get listening area to subzone map: $e");
       return <String, String>{};
     }
   }

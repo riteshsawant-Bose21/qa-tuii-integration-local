@@ -22,14 +22,13 @@ import 'wiring_state_cache.dart';
 
 part 'helpers/canvas_elements_handler_mixin.dart';
 
-class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
+class CircuitController extends ChangeNotifier
+    with CanvasHandlerMixin, _CanvasElementsHandlerMixin {
   final ProjectViewModel projectManager;
   CircuitController(this.projectManager) {
     loadFromPM();
-    _loadAllHardwareImages();
-    cache.cacheForState(state);
-    stack.push(state.toMap());
   }
+
   @override
   WiringState state = IdleWiringState(
     components: <CircuitComponent>[],
@@ -38,7 +37,7 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
   );
 
   Map<String, ui.Image> imagesCache = <String, ui.Image>{};
-  void _loadAllHardwareImages() {
+  void loadAllHardwareImages() {
     final ImageLoaderService loader = fusionLibLocator<ImageLoaderService>();
     for (final CircuitComponent comp in state.components) {
       final String? path = comp.data.image;
@@ -123,8 +122,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
 
   void addExistingWire(Wire wire) {
     componentDB.addWire(wire);
-    setState(state.addWire(wire));
-    saveState();
+    setState(state.addExistingWire(wire));
+    // saveState();
     cache.cacheForState(state);
   }
 
@@ -145,23 +144,32 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
   }
 
   void _updateWirePath(CircuitComponent component) {
-    final List<Wire> connectedWires = cache.wiresOfComponent(component);
-    if (component.parent != null) {
-      connectedWires.addAll(
-        cache.wiresOfComponent(component.parent!),
-      );
-      for (final CircuitComponent child in component.parent?.children ?? <CircuitComponent>[]) {
-        if (component != child) {
-          connectedWires.addAll(cache.wiresOfComponent(child));
-        }
-      }
-    }
+    // final List<Wire> connectedWires = cache.wiresOfComponent(component);
+    // if (component.parent != null) {
+    //   connectedWires.addAll(
+    //     cache.wiresOfComponent(component.parent!),
+    //   );
+    //   for (final CircuitComponent child
+    //       in component.parent?.children ?? <CircuitComponent>[]) {
+    //     if (component != child) {
+    //       connectedWires.addAll(cache.wiresOfComponent(child));
+    //     }
+    //   }
+    // }
 
-    for (final CircuitComponent child in component.children) {
+    // for (final CircuitComponent child in component.children) {
+    //   connectedWires.addAll(cache.wiresOfComponent(child));
+    //   for (final CircuitComponent child2 in child.children) {
+    //     connectedWires.addAll(cache.wiresOfComponent(child2));
+    //   }
+    // }
+    final List<Wire> connectedWires = <Wire>[];
+    final List<CircuitComponent> allComps = allConnectedComponents(
+      component,
+      <CircuitComponent>[component],
+    );
+    for (final CircuitComponent child in allComps) {
       connectedWires.addAll(cache.wiresOfComponent(child));
-      for (final CircuitComponent child2 in child.children) {
-        connectedWires.addAll(cache.wiresOfComponent(child2));
-      }
     }
 
     for (final Wire wire in connectedWires) {
@@ -174,6 +182,24 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
     }
   }
 
+  List<CircuitComponent> allConnectedComponents(
+    CircuitComponent component,
+    List<CircuitComponent> comps,
+  ) {
+    for (final CircuitComponent child in component.children) {
+      if (!comps.contains(child)) {
+        comps.add(child);
+        comps.addAll(allConnectedComponents(child, comps));
+      }
+    }
+
+    if (component.parent != null && !comps.contains(component.parent)) {
+      comps.add(component.parent!);
+      comps.addAll(allConnectedComponents(component.parent!, comps));
+    }
+    return comps.toSet().toList();
+  }
+
   @override
   CircuitController get self => this;
 
@@ -182,19 +208,23 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
     setState(state.updateCanvasState(canvasState));
   }
 
-  void setState(WiringState state) {
+  void setState(WiringState state, {bool notifyToPM = true}) {
+    final WiringState oldState = this.state;
+
     this.state = state;
     notifyListeners();
-    switch (state) {
-      case ElementSelectionState(element: final CanvasElement element):
-        selectElementToPM(element.id);
-        break;
-      case ElementMovingState(element: final CanvasElement element):
-        selectElementToPM(element.id);
-        break;
+    if (notifyToPM) {
+      switch (state) {
+        case ElementSelectionState(element: final CanvasElement element):
+          selectElementToPM(element.id);
+          break;
+        case ElementMovingState(element: final CanvasElement element):
+          selectElementToPM(element.id);
+          break;
 
-      default:
-        selectElementToPM(null);
+        default:
+          if (oldState is! IdleWiringState) selectElementToPM(null);
+      }
     }
   }
 
@@ -243,11 +273,13 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
     if (diffMap.containsKey("modified")) {
       final Map<String, dynamic> modified = diffMap["modified"];
       for (final String id in modified.keys) {
-        final CircuitComponent? component = componentDB.getComponent(id) as CircuitComponent?;
+        final CircuitComponent? component =
+            componentDB.getComponent(id) as CircuitComponent?;
         if (component != null) {
           switch (component.data) {
             case DeviceSchematicComponentData():
-              final HardwareComponent hardware = (component.data as DeviceSchematicComponentData).data;
+              final HardwareComponent hardware =
+                  (component.data as DeviceSchematicComponentData).data;
               projectManager.updateHardware(
                 hardware: hardware.copyWith(
                   wiringPos: component.position,
@@ -255,7 +287,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
               );
               break;
             case SourceComponentData():
-              final Source source = (component.data as SourceComponentData).source;
+              final Source source =
+                  (component.data as SourceComponentData).source;
               projectManager.updateHardware(
                 hardware: source.copyWith(
                   wiringPos: component.position,
@@ -263,7 +296,8 @@ class CircuitController extends ChangeNotifier with CanvasHandlerMixin, _CanvasE
               );
               break;
             case SpeakerComponentData():
-              final Speaker speaker = (component.data as SpeakerComponentData).speaker;
+              final Speaker speaker =
+                  (component.data as SpeakerComponentData).speaker;
               projectManager.updateHardware(
                 hardware: speaker.copyWith(
                   wiringPos: component.position,

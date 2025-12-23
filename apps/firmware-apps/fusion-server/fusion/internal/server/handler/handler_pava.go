@@ -2,7 +2,6 @@ package handler
 
 import (
 	"crypto/rand"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -17,7 +16,14 @@ import (
 	"strings"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/oklog/ulid/v2"
+)
+
+const (
+	maxFormSize    = 32 << 20  // 32MB
+	maxUploadBytes = 100 << 20 // 100MB
 )
 
 // HandleAudioList returns all audio metadata, optionally filtered by one or more tags.
@@ -37,7 +43,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	metas, err := h.persistence.ListAudioMetadata(r.Context())
+	metas, err := h.persistence.ListAudioMetadata()
 	if err != nil {
 		logger.Error("Error listing audio metadata: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
@@ -46,16 +52,15 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 
 	// If no tags provided, return everything
 	if len(normalizedTags) == 0 {
-		w.Header().Set("Content-Type", "application/json")
+		w.Header().Set(api.ContentType, api.JsonMIMEType)
 		if err := json.NewEncoder(w).Encode(metas); err != nil {
 			logger.Error("Error encoding audio metadata list: %v", err)
-			http.Error(w, "Server error", http.StatusInternalServerError)
 		}
 		return
 	}
 
 	// Filter
-	filtered := make([]*persistence.AudioMetadata, 0, len(metas))
+	filtered := make([]*api.AudioMetadata, 0, len(metas))
 	for _, m := range metas {
 		// Build a lowercase set of tags on the item
 		itemTags := make(map[string]struct{}, len(m.Tags))
@@ -77,7 +82,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(filtered); err != nil {
 		logger.Error("Error encoding filtered audio metadata list: %v", err)
 	}
@@ -90,6 +95,7 @@ func (h *Handler) HandleAudioList(w http.ResponseWriter, r *http.Request) {
 //	display_name: Name 		(optional
 //			  	  Defaults to filename without extension
 func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
+
 	logger := logging.GetLogger()
 
 	// Limit overall body size
@@ -114,7 +120,6 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	origName := header.Filename
 	ext := strings.ToLower(filepath.Ext(origName))
 	if ext == "" {
-		// Try to guess an extension from content-type later; for now require an ext.
 		http.Error(w, "File extension required", http.StatusBadRequest)
 		return
 	}
@@ -124,7 +129,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Optional user-provided display name (fallback to original filename w/o ext).
+	// Optional user-provided display name
 	displayName := strings.TrimSpace(r.FormValue("display_name"))
 	if displayName == "" {
 		displayName = strings.TrimSuffix(origName, ext)
@@ -167,8 +172,11 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	// Optionally sniff content type using the first 512 bytes.
 	// We'll tee the first N bytes into a buffer for sniffing, then continue the copy.
 	sniffBuf := make([]byte, 512)
-	n, _ := io.ReadFull(file, sniffBuf) // n may be < 512 for small files
-	// Write what we read into dst first
+
+	// n may be < 512 for small files
+	n, _ := io.ReadFull(file, sniffBuf)
+
+	// Write what we read into destination first
 	if _, err := tmp.Write(sniffBuf[:n]); err != nil {
 		tmp.Close()
 		_ = os.Remove(tmp.Name())
@@ -177,7 +185,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Now copy the rest
+	// Copy the rest
 	written, err := io.Copy(tmp, file)
 	if err != nil {
 		tmp.Close()
@@ -203,7 +211,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Determine MIME type.
+	// Determine MIME type
 	mimeType := http.DetectContentType(sniffBuf[:n])
 	if mimeType == "application/octet-stream" || mimeType == "" {
 		// Try by extension
@@ -212,10 +220,19 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Move into place atomically.
+	// Move into place atomically
 	if err := os.Rename(tmp.Name(), finalPath); err != nil {
 		_ = os.Remove(tmp.Name())
-		logger.Error("Error renaming temp file into place: %v", err)
+		logger.Error("Error renaming temp file: %v", err)
+		http.Error(w, "Server error", http.StatusInternalServerError)
+		return
+	}
+
+	// Generate the checksum
+	checksum, err := utils.FileChecksum(finalPath)
+	if err != nil {
+		_ = os.Remove(finalPath)
+		logger.Error("Error generating checksum: %v", err)
 		http.Error(w, "Server error", http.StatusInternalServerError)
 		return
 	}
@@ -229,8 +246,8 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Build metadata record.
-	meta := &persistence.AudioMetadata{
+	// Build metadata record
+	meta := &api.AudioMetadata{
 		Id:          id,
 		OrigName:    origName,
 		DisplayName: displayName,
@@ -239,6 +256,7 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 		Uploaded:    time.Now().UTC(),
 		SizeBytes:   totalSize,
 		Tags:        normalized,
+		Checksum:    checksum,
 	}
 
 	if err := h.persistence.SaveAudioMeta(meta); err != nil {
@@ -250,12 +268,29 @@ func (h *Handler) HandleAudioUpload(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Return created metadata
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(meta); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		logger.Error("json encode failed after header write: %v", err)
 	}
+
+	// Background the audio sync update
+	go func() {
+		update := &api.AudioSyncUpdate{
+			Metadata: *meta,
+			URL:      h.appConfig.SelfUrl(),
+		}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpAudioSync,
+			h.memberlist.LocalNode().Name,
+			api.WithAudioSync(update),
+		)
+
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			logger.Error("Error broadcasting audio sync: %v", err)
+		}
+	}()
 }
 
 // HandleAudioGet returns metadata for a single audio file.
@@ -272,10 +307,9 @@ func (h *Handler) HandleAudioGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(meta); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+		logging.GetLogger().Error("Error encoding audio metadata: %v", err)
 	}
 }
 
@@ -346,7 +380,7 @@ func (h *Handler) HandleAudioStream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Fallback: send whole file
+	// Fallback: Send whole file
 	w.Header().Set("Content-Length", fmt.Sprintf("%d", size))
 	w.WriteHeader(http.StatusOK)
 	_, _ = io.Copy(w, f)
@@ -394,6 +428,21 @@ func (h *Handler) HandleAudioRemove(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+
+	// Background broadcast of delete event
+	go func() {
+		update := &api.AudioRemoveUpdate{ID: id}
+
+		msg := api.NewNotifyMessage(
+			api.NotifyOpAudioRemove,
+			h.memberlist.LocalNode().Name,
+			api.WithAudioRemove(update),
+		)
+
+		if err := h.hub.BroadcastToNodes(msg); err != nil {
+			logger.Error("Error broadcasting audio delete: %v", err)
+		}
+	}()
 }
 
 // HandleAudioTagList returns all unique tags present across audio files.
@@ -407,7 +456,7 @@ func (h *Handler) HandleAudioTagList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set(api.ContentType, api.JsonMIMEType)
 	if err := json.NewEncoder(w).Encode(tags); err != nil {
 		logger.Error("Error encoding tag list: %v", err)
 	}

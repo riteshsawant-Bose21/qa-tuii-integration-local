@@ -12,29 +12,37 @@ enum PortPosition {
 }
 
 enum PortType {
-  analogInput('Analog Input'),
-  analogOutput('Analog Output'),
+  analogInput('Input'),
+  analogOutput('Output'),
   ethernet('Ethernet'),
   networkSwitchIn('Ethernet'),
   networkSwitchOut('Ethernet'),
   usb('Usb'),
+  usbIn('Usb'),
+  usbOut('Usb'),
   serial('Serial'),
   ble('Ble'),
   wifi('Wifi'),
   hdmi('Hdmi'),
+  bleIn('Ble'),
+  bleOut('Ble'),
+  wifiIn('Wifi'),
+  wifiOut('Wifi'),
+  hdmiIn('Hdmi'),
+  hdmiOut('Hdmi'),
   audioJack('Audio Jack'),
-  amplifierInput('Amplifier Input'),
-  amplifierOutput('Amplifier Output'),
-  dspAnalogInput('Dsp Analog Input'),
-  endpointInput('Endpoint Analog Input'),
-  dspAnalogOutput('Dsp Analog Output'),
-  controllerInput('Controller Input'),
-  controllerOutput('Controller Output'),
+  amplifierInput('Input'),
+  amplifierOutput('Output'),
+  dspAnalogInput('Input'),
+  endpointInput('Input'),
+  dspAnalogOutput('Output'),
+  controllerInput('Input'),
+  controllerOutput('Output'),
   sourceData('Source Data'),
   speakerData('Speaker Data'),
-  digitalInput('Digital Input'),
-  digitalOutput('Digital Output'),
-  circuitInput('Circuit Input');
+  digitalInput('Input'),
+  digitalOutput('Output'),
+  circuitInput('Input');
 
   const PortType(this.description);
 
@@ -77,9 +85,7 @@ class PortData {
       ),
       portNumber: json['portNumber'] as int,
       type: PortType.values.firstWhere((e) => e.name == json['type']),
-      compatibleTypes: (json['compatibleTypes'] as List<dynamic>)
-          .map((e) => PortType.values.firstWhere((pt) => pt.name == e))
-          .toList(),
+      compatibleTypes: (json['compatibleTypes'] as List<dynamic>).map((e) => PortType.values.firstWhere((pt) => pt.name == e)).toList(),
     );
   }
 

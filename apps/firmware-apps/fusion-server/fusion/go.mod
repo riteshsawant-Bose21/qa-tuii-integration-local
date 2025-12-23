@@ -5,6 +5,7 @@ go 1.23.1
 require (
 	github.com/gibson042/canonicaljson-go v1.0.3
 	github.com/go-ble/ble v0.0.0-20240122180141-8c5522f54333
+	github.com/goccy/go-json v0.10.5
 	github.com/go-ping/ping v1.2.0
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.3
@@ -13,6 +14,7 @@ require (
 	github.com/pion/sdp/v3 v3.0.13
 	github.com/prometheus/client_golang v1.22.0
 	github.com/robfig/cron/v3 v3.0.1
+	github.com/vishvananda/netlink v1.3.1
 	go.etcd.io/bbolt v1.4.0
 )
 
@@ -36,6 +38,7 @@ require (
 	github.com/prometheus/procfs v0.15.1 // indirect
 	github.com/raff/goble v0.0.0-20190909174656-72afc67d6a99 // indirect
 	github.com/sirupsen/logrus v1.5.0 // indirect
+	github.com/vishvananda/netns v0.0.5 // indirect
 	golang.org/x/mod v0.22.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/tools v0.29.0 // indirect
@@ -52,7 +55,7 @@ require (
 require (
 	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/google/btree v1.1.3 // indirect
-	github.com/google/uuid v1.6.0
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect

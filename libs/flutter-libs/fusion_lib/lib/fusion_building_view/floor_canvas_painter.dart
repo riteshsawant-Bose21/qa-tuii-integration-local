@@ -1,17 +1,10 @@
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/api_data/speakers/speaker_catalog.dart';
-import 'package:fusion_lib/fusion_building_view/spl_panel.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
-import 'package:fusion_lib/models/project_entities/zone_model.dart';
 
-import '../api_data/speakers/speaker_types.dart';
 import '../fusion_acoustic_calculation_engine/spl_calculation_data.dart';
-import '../models/project_entities/floor_plan_model.dart';
-import '../models/project_entities/hardware_component_model.dart';
-import '../models/project_entities/listening_area_model.dart';
-import '../models/project_entities/speaker_model.dart';
 
 class FloorCanvasPainter extends CustomPainter {
   final double gridSize, zoomScale;
@@ -34,21 +27,27 @@ class FloorCanvasPainter extends CustomPainter {
   final bool listeningAreaSelectionActive;
   final List<String> selectedListeningAreaIds;
   final List<Zone> zones;
+  final List<SubZone> subZones;
   Zone? currentlySelectingZone;
+  SubZone? currentlySelectingSubZone;
   final SplPanelData splPanelData;
 
   //key value pair for listening area and its zone
   final Map<String, String> listeningAreaToZoneMap;
+  final Map<String, String> subZoneToZoneMap;
+  final Map<String, String> listeningAreaToSubZoneMap;
 
   // Mode state
   final bool isAcousticsMode;
-
+  final AnimationController animationController;
   FloorCanvasPainter({
+    required this.animationController,
     required this.gridSize,
     required this.zoomScale,
     required this.panOffset,
     required this.listeningAreas,
     required this.zones,
+    required this.subZones,
     required this.current,
     required this.showSpl,
     required this.floorPlanImageSelected,
@@ -59,6 +58,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.listeningAreaSelectionActive,
     required this.selectedListeningAreaIds,
     required this.currentlySelectingZone,
+    required this.currentlySelectingSubZone,
     required this.splMax,
     required this.splMin,
     required this.isAcousticsMode,
@@ -67,6 +67,8 @@ class FloorCanvasPainter extends CustomPainter {
     this.selectedHardwareComponentId,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
+    required this.listeningAreaToSubZoneMap,
+    required this.subZoneToZoneMap,
   });
 
   @override
@@ -77,7 +79,7 @@ class FloorCanvasPainter extends CustomPainter {
 
     if (showSpl) {
       _drawGrid(canvas, size);
-      _drawHeatMap(canvas);
+      _drawHeatMapCached(canvas, size);
       _drawFloorPlanImage(canvas);
     } else {
       _drawFloorPlanImage(canvas);
@@ -94,6 +96,7 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   /// Todo: optimize grid labels
+  // ignore: unused_element
   void _drawGridLabels(Canvas canvas, Size size) {
     // Text style in screen‐pixels
     final TextStyle textStyle = const TextStyle(color: Colors.black45, fontSize: 12);
@@ -137,8 +140,47 @@ class FloorCanvasPainter extends CustomPainter {
     }
   }
 
-  void _drawHeatMap(Canvas canvas) {
+  // Legacy immediate heatmap rendering removed after caching implementation.
+
+  // Cached heatmap rendering using a recorded Picture
+  void _drawHeatMapCached(Canvas canvas, Size paintSize) {
     if (!showSpl) return;
+
+    final _HeatmapSignature currentSig = _computeHeatmapSignature();
+    _HeatmapCache.instance.checkWithSignature(currentSig);
+    // if (pic != null) {
+    //   canvas.drawPicture(pic);
+    // }
+    _buildHeatmapPicture(paintSize, canvas);
+  }
+
+  _HeatmapSignature _computeHeatmapSignature() {
+    // Collect minimal info impacting heatmap content
+    final List<_AreaSplSummary> summaries = <_AreaSplSummary>[];
+    // summaries.length = listeningAreas.length;
+    for (int i = 0; i < listeningAreas.length; i++) {
+      final ListeningArea a = listeningAreas[i];
+      final SplData? s = a.splData;
+      summaries.add(
+        _AreaSplSummary(
+          id: a.id,
+          splRef: s,
+          fieldPointsLen: s?.fieldPoints.length ?? -1,
+          splValuesLen: s?.splValues.length ?? -1,
+          vertices: a.vertices,
+        ),
+      );
+    }
+    return _HeatmapSignature(
+      splMin: splMin,
+      splMax: splMax,
+      invert: splPanelData.splInvertColor,
+      gridSize: gridSize,
+      areas: summaries,
+    );
+  }
+
+  void _buildHeatmapPicture(Size paintSize, Canvas canvas) {
     final List<HeatMapData> heatMapData = _buildSortedHeatMapEntries();
     final double pointSize = gridSize / 2;
 
@@ -146,26 +188,59 @@ class FloorCanvasPainter extends CustomPainter {
 
     for (final ListeningArea listeningArea in listeningAreas) {
       final SplData? spl = listeningArea.splData;
-      if (spl == null) continue;
 
-      // 1) compute clipPath once
+      // Clip to listening area polygon once
       tmpPath.reset();
       tmpPath.addPolygon(listeningArea.vertices, true);
-      canvas.save();
-      canvas.clipPath(tmpPath);
+      final bounds = tmpPath.getBounds();
 
-      // 2) draw *all* points for that listeningArea
-      for (final HeatMapData data in heatMapData.where((HeatMapData e) => e.listeningArea == listeningArea)) {
-        final double v = data.value.clamp(splMin, splMax);
-        final Color color = _colorFromLegend(v);
+      // Skip if bounds are invalid
+      if (bounds.width <= 0 || bounds.height <= 0) continue;
 
-        final ui.Paint paint = Paint()
-          ..color = color
-          ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
-
-        canvas.drawRect(Rect.fromCenter(center: data.point, width: pointSize, height: pointSize), paint);
+      if (spl == null) {
+        // Paint loading shimmer when splData is null
+        _drawLoadingShimmer(canvas, tmpPath, bounds);
+        continue;
       }
-      canvas.restore();
+
+      final ui.Image pic = _HeatmapCache.instance.getOrBuild(
+        _AreaSplSummary(
+          id: listeningArea.id,
+          splRef: spl,
+          fieldPointsLen: spl.fieldPoints.length,
+          splValuesLen: spl.splValues.length,
+          vertices: listeningArea.vertices,
+        ),
+        () {
+          final ui.PictureRecorder areaRecorder = ui.PictureRecorder();
+          final Canvas areaCanvas = Canvas(areaRecorder);
+
+          // Translate canvas so the picture's origin aligns with bounds.topLeft
+          areaCanvas.translate(-bounds.left, -bounds.top);
+          areaCanvas.save();
+          areaCanvas.clipPath(tmpPath);
+
+          // Draw all points for that listening area
+          for (final HeatMapData data in heatMapData.where((HeatMapData e) => e.listeningArea == listeningArea)) {
+            final double v = data.value.clamp(splMin, splMax);
+            final Color color = _colorFromLegend(v);
+
+            final ui.Paint paint = Paint()
+              ..color = color
+              ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 30);
+
+            areaCanvas.drawRect(Rect.fromCenter(center: data.point, width: pointSize, height: pointSize), paint);
+          }
+          areaCanvas.restore();
+          final pic = areaRecorder.endRecording();
+          return pic.toImageSync(bounds.width.toInt(), bounds.height.toInt());
+        },
+      );
+
+      // Draw the cached image using explicit src/dst rects to ensure correct placement
+      final Rect src = Rect.fromLTWH(0, 0, pic.width.toDouble(), pic.height.toDouble());
+      final Rect dst = bounds;
+      canvas.drawImageRect(pic, src, dst, Paint());
     }
   }
 
@@ -199,7 +274,9 @@ class FloorCanvasPainter extends CustomPainter {
   void _drawFloorPlanImageHandles(Canvas canvas) {
     if (floorPlanImage == null) return;
 
+    // ignore: unused_local_variable
     final List<ui.Offset> corners = _computeFloorPlanImageCorners();
+    // ignore: unused_local_variable
     final ui.Paint stroke = Paint()
       ..color = Colors.blueGrey
       ..style = PaintingStyle.stroke
@@ -218,7 +295,7 @@ class FloorCanvasPainter extends CustomPainter {
   }
 
   void _drawGrid(Canvas canvas, Size size) {
-    const double dotRadius = 1.75;
+    const double dotRadius = 10;
 
     final Paint paint = Paint()
       ..color = Colors.grey.shade300.withValues(alpha: 0.5)
@@ -237,13 +314,13 @@ class FloorCanvasPainter extends CustomPainter {
 
     for (double x = startX; x < right; x += spacing) {
       for (double y = startY; y < bottom; y += spacing) {
-        canvas.drawCircle(Offset(x, y), dotRadius / zoomScale, paint);
+        final double r = (dotRadius / zoomScale).clamp(6.0, 8.0); // clamp to avoid oversized dots
+        canvas.drawCircle(Offset(x, y), r, paint);
       }
     }
   }
 
   /// Draw all listening areas on the canvas
-
   void _drawListeningAreas(Canvas canvas) {
     for (int i = 0; i < listeningAreas.length; i++) {
       final List<ui.Offset> poly = listeningAreas[i].vertices;
@@ -251,14 +328,34 @@ class FloorCanvasPainter extends CustomPainter {
 
       bool selected = false;
 
+      // Determine if listening area belongs to a subzone or zone
+      SubZone? parentSubZone;
       Zone? parentZone;
-      try {
+
+      final String? subZoneId = listeningAreaToSubZoneMap[listeningAreas[i].id];
+      if (subZoneId != null) {
+        // Listening area belongs to a subzone
+        try {
+          parentSubZone = subZones.firstWhere((SubZone sz) => sz.id == subZoneId);
+          // Get the parent zone for color
+          final String? zoneId = subZoneToZoneMap[subZoneId];
+          if (zoneId != null) {
+            parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          }
+        } catch (e) {
+          parentSubZone = null;
+          parentZone = null;
+        }
+      } else {
+        // Listening area belongs directly to a zone
         final String? zoneId = listeningAreaToZoneMap[listeningAreas[i].id];
         if (zoneId != null) {
-          parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          try {
+            parentZone = zones.firstWhere((Zone z) => z.id == zoneId);
+          } catch (e) {
+            parentZone = null;
+          }
         }
-      } catch (e) {
-        parentZone = null;
       }
 
       Color zoneColor = parentZone != null ? ColorUtils.hexToColor(parentZone.zoneColor) : defaultListeningAreaColor;
@@ -310,7 +407,17 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final anchor = _leftMostVertex(poly, zoomScale);
-      final label = listeningAreas[i].name ?? listeningAreas[i].name ?? 'Area ${i + 1}';
+      String label = listeningAreas[i].name;
+
+      // Add zone/subzone information to the label
+      if (parentSubZone != null) {
+        // Listening area belongs to a subzone
+        label = '$label (${parentSubZone.name})';
+      } else if (parentZone != null) {
+        // Listening area belongs directly to a zone
+        label = '$label (${parentZone.name})';
+      }
+
       _drawBadgeAtLeftMostVertexAuto(
         canvas: canvas,
         path: path,
@@ -352,7 +459,7 @@ class FloorCanvasPainter extends CustomPainter {
         return Offset(start!, y - stepY);
       }
     }
-    if (inside && start != null) return Offset(start!, bounds.bottom - stepY);
+    if (inside && start != null) return Offset(start, bounds.bottom - stepY);
     return null;
   }
 
@@ -454,7 +561,7 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final Rect dst = Rect.fromCenter(
-        center: comp.pos,
+        center: comp.pos!,
         width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
         height: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
       );
@@ -476,7 +583,7 @@ class FloorCanvasPainter extends CustomPainter {
           // --- SURFACE-MOUNTED (Rectangle) ---
           if (speakerModel.mountingType == 'surface') {
             final Rect rect = Rect.fromCenter(
-              center: comp.pos,
+              center: comp.pos!,
               width: radius * 1.5,
               height: radius * 2,
             );
@@ -486,17 +593,17 @@ class FloorCanvasPainter extends CustomPainter {
           // --- PENDANT (Triangle) ---
           else if (speakerModel.mountingType == 'pendant') {
             final Path path = Path()
-              ..moveTo(comp.pos.dx, comp.pos.dy - radius)
-              ..lineTo(comp.pos.dx - radius * 0.866, comp.pos.dy + radius * 0.75)
-              ..lineTo(comp.pos.dx + radius * 0.866, comp.pos.dy + radius * 0.75)
+              ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)
+              ..lineTo(comp.pos!.dx - radius * 0.866, comp.pos!.dy + radius * 0.75)
+              ..lineTo(comp.pos!.dx + radius * 0.866, comp.pos!.dy + radius * 0.75)
               ..close();
             canvas.drawPath(path, fillPaint);
             canvas.drawPath(path, outlinePaint);
           }
           // --- DEFAULT (Circle) ---
           else {
-            canvas.drawCircle(comp.pos, radius, fillPaint);
-            canvas.drawCircle(comp.pos, radius, outlinePaint);
+            canvas.drawCircle(comp.pos!, radius, fillPaint);
+            canvas.drawCircle(comp.pos!, radius, outlinePaint);
           }
         }
       } else {
@@ -521,7 +628,7 @@ class FloorCanvasPainter extends CustomPainter {
       // draw selection border - in acoustics mode, only show selection for speakers
       if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
         canvas.drawRect(
-          Rect.fromCenter(center: comp.pos, width: gridSize, height: gridSize),
+          Rect.fromCenter(center: comp.pos!, width: gridSize, height: gridSize),
           Paint()
             ..color = Colors.pinkAccent
             ..style = PaintingStyle.stroke
@@ -623,12 +730,32 @@ class FloorCanvasPainter extends CustomPainter {
     return Color.lerp(colors[i0], colors[i1], f)!;
   }
 
+  void _drawLoadingShimmer(Canvas canvas, ui.Path clipPath, Rect bounds) {
+    // Create shimmer effect with animated gradient
+    canvas.save();
+    canvas.clipPath(clipPath);
+
+    final Paint shimmerPaint = Paint()
+      ..shader = ui.Gradient.linear(
+        Offset(bounds.left - bounds.width + (bounds.width * 2) * animationController.value, bounds.top),
+        Offset(bounds.left + (bounds.width * 2) * animationController.value, bounds.top),
+        [Colors.grey.shade300, Colors.grey, Colors.grey.shade300],
+        [0.0, 0.5, 1.0],
+      );
+    canvas.drawRect(bounds, shimmerPaint);
+
+    canvas.restore();
+  }
+
   @override
   bool shouldRepaint(covariant FloorCanvasPainter old) {
-    return old.gridSize != gridSize ||
+    final bool repaintNeeded =
+        old.gridSize != gridSize ||
         old.zoomScale != zoomScale ||
         old.panOffset != panOffset ||
         old.listeningAreas != listeningAreas ||
+        old.zones != zones ||
+        old.subZones != subZones ||
         old.current != current ||
         old.previewPoint != previewPoint ||
         old.highlightedIndex != highlightedIndex ||
@@ -638,8 +765,131 @@ class FloorCanvasPainter extends CustomPainter {
         old.hardwareComponents != hardwareComponents ||
         old.hardwareImages != hardwareImages ||
         old.selectedHardwareComponentId != selectedHardwareComponentId ||
-        old.isAcousticsMode != isAcousticsMode;
+        old.listeningAreaToZoneMap != listeningAreaToZoneMap ||
+        old.listeningAreaToSubZoneMap != listeningAreaToSubZoneMap ||
+        old.subZoneToZoneMap != subZoneToZoneMap ||
+        old.isAcousticsMode != isAcousticsMode ||
+        old.splMin != splMin ||
+        old.splMax != splMax ||
+        old.splPanelData != splPanelData;
+
+    // Note: Cached heatmap invalidation is handled via static cache keyed by signature.
+    return repaintNeeded;
   }
+
+  // Heatmap inputs change detection now handled by _HeatmapSignature equality in the static cache.
+  // Keeping this method removed to satisfy lints and avoid duplicate logic.
+}
+
+// Lightweight signature types used to detect input changes without relying on shouldRepaint lifecycle
+class _HeatmapSignature {
+  final double splMin;
+  final double splMax;
+  final bool invert;
+  final double gridSize;
+  final List<_AreaSplSummary> areas;
+
+  const _HeatmapSignature({
+    required this.splMin,
+    required this.splMax,
+    required this.invert,
+    required this.gridSize,
+    required this.areas,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _HeatmapSignature) return false;
+    if (splMin != other.splMin || splMax != other.splMax || invert != other.invert || gridSize != other.gridSize) {
+      return false;
+    }
+    if (areas.length != other.areas.length) return false;
+    for (int i = 0; i < areas.length; i++) {
+      if (areas[i] != other.areas[i]) return false;
+    }
+    return true;
+  }
+
+  @override
+  int get hashCode {
+    int h = splMin.hashCode ^ splMax.hashCode ^ invert.hashCode ^ gridSize.hashCode;
+    for (final _AreaSplSummary a in areas) {
+      h = h * 31 ^ a.hashCode;
+    }
+    return h;
+  }
+}
+
+class _AreaSplSummary {
+  final String id;
+  final Object? splRef; // identity only
+  final int fieldPointsLen;
+  final int splValuesLen;
+  final List<Offset> vertices; // listening area points
+
+  const _AreaSplSummary({
+    required this.id,
+    required this.splRef,
+    required this.fieldPointsLen,
+    required this.splValuesLen,
+    required this.vertices,
+  });
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    if (other is! _AreaSplSummary) return false;
+    return id == other.id &&
+        identical(splRef, other.splRef) &&
+        fieldPointsLen == other.fieldPointsLen &&
+        splValuesLen == other.splValuesLen &&
+        _listEquals(vertices, other.vertices);
+  }
+
+  @override
+  int get hashCode => id.hashCode ^ identityHashCode(splRef) ^ fieldPointsLen.hashCode ^ splValuesLen.hashCode ^ Object.hashAll(vertices);
+
+  // Helper method to compare lists of Offsets
+  bool _listEquals(List<Offset> a, List<Offset> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+}
+
+// Global/static heatmap cache keyed by signature, survives painter instance recreation
+class _HeatmapCache {
+  _HeatmapCache._();
+  final bool log = false;
+  static final _HeatmapCache instance = _HeatmapCache._();
+  _HeatmapSignature? _currentSignature;
+
+  void checkWithSignature(_HeatmapSignature sig) {
+    if (_currentSignature != sig) {
+      if (log) print('[HeatmapCache] Signature changed, clearing cache');
+      clear();
+      _currentSignature = sig;
+    }
+  }
+
+  final Map<_AreaSplSummary, ui.Image> _cache = <_AreaSplSummary, ui.Image>{};
+
+  ui.Image getOrBuild(_AreaSplSummary key, ui.Image Function() builder) {
+    final ui.Image? existing = _cache[key];
+    if (existing != null) {
+      if (log) print('[HeatmapCache] Using cached Image for signature');
+      return existing;
+    }
+    if (log) print('[HeatmapCache] Building new Image for signature');
+    final ui.Image img = builder();
+    _cache[key] = img;
+    return img;
+  }
+
+  void clear() => _cache.clear();
 }
 
 class HeatMapData {

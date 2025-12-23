@@ -84,7 +84,7 @@ class FloatingWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: <Widget>[
                   Expanded(
-                    child: FusionAppText(text: item.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+                    child: FusionAppText(text: config?.title ?? item.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
                   ),
                   IconButton(icon: const Icon(Icons.close, size: 16), onPressed: onClose, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                 ],
@@ -98,7 +98,7 @@ class FloatingWidget extends StatelessWidget {
               right: 0,
               bottom: resizing ? 0 : 0,
               child: SingleChildScrollView(
-                child: config?.dockItemWidget() ?? Container(alignment: Alignment.center, child: Text("${item.title} content")),
+                child: config?.dockItemWidget ?? Container(alignment: Alignment.center, child: Text("${item.title} content")),
               ),
             ),
 

@@ -25,8 +25,6 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   String? get virtualIP => projectManager.getVirtualIP();
 
-  String get metaData => projectManager.getMetaData();
-
   double get minSPL => projectManager.getMinSPL();
 
   double get maxSPL => projectManager.getMaxSPL();
@@ -34,8 +32,6 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
   bool get isInControlMode => projectManager.inControlMode();
 
   List<Color> get projectColors => projectManager.getProjectColors();
-
-  bool get isAdminLogin => projectManager.isAdminLogin();
 
   int get currentFloorIndex => projectManager.getCurrentFloorIndex();
 
@@ -274,6 +270,11 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void clearSelectedZone() {
     currentSelectedZoneId = null;
+    updateProject();
+  }
+
+  void clearSelectedSubZone() {
+    currentSelectedSubZoneId = null;
     updateProject();
   }
 }

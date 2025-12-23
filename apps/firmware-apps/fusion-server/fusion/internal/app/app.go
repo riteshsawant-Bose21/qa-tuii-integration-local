@@ -1,10 +1,13 @@
 package app
 
 import (
+	"bufio"
 	"context"
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/cluster"
+	clustertransport "fusion/internal/cluster/transport"
+	"fusion/internal/controllers"
 	"fusion/internal/logging"
 	"fusion/internal/network"
 	"fusion/internal/persistence"
@@ -14,6 +17,7 @@ import (
 	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"fusion/internal/version"
+	"net"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -42,7 +46,6 @@ type App struct {
 	StateManager      *persistence.StateManager
 	Persistence       *persistence.Persistence
 	TaskManager       *tasks.TaskManager
-	Updater           *handler.Updater
 	ConnectionHandler *handler.Handler
 	Cluster           *cluster.Cluster
 	Delegate          *cluster.ClusterDelegate
@@ -50,6 +53,7 @@ type App struct {
 	BLEServer         *network.BLEServer
 	SAPServer         *network.SAPServer
 	UDPServer         *network.UDPServer
+	ControllerManager *controllers.ControllerManager
 	memberlist        *memberlist.Memberlist
 	monitor           *network.Monitor
 	config            *api.AppConfig
@@ -66,13 +70,14 @@ func NewApp(config *api.AppConfig) *App {
 
 	stateManager := initStateManager(config)
 	persistence := initPersistence(fusionDatabasePath, stateManager)
-	taskManager := initTaskManager(config, persistence)
-	updater := handler.NewUpdater()
-	hub := pubsub.NewHub()
-
-	delegate := cluster.NewClusterDelegate(config.NodeName, persistence, stateManager, taskManager, updater, hub)
+	hub := pubsub.NewHub(stateManager, persistence)
+	taskManager := initTaskManager(config, persistence, hub)
+	controllerManager := controllers.NewControllerManager(hub, api.ControllerPort)
+	delegate := cluster.NewClusterDelegate(config, persistence, stateManager, taskManager, hub)
 	memberlist := cluster.CreateMemberlist(config, delegate)
-	connectionHandler := handler.NewHandler(memberlist, persistence, stateManager, updater, hub)
+	transport := clustertransport.NewMemberlistTransport(memberlist)
+	hub.SetClusterTransport(transport)
+	connectionHandler := handler.NewHandler(config, memberlist, persistence, stateManager, hub, controllerManager)
 	clusterInstance := cluster.NewCluster(config, delegate, memberlist)
 	bleServer := initBLEServer()
 	sapServer := initSAPServer(config, api.SAPPort, connectionHandler, hub)
@@ -94,7 +99,6 @@ func NewApp(config *api.AppConfig) *App {
 		StateManager:      stateManager,
 		Persistence:       persistence,
 		TaskManager:       taskManager,
-		Updater:           updater,
 		ConnectionHandler: connectionHandler,
 		Cluster:           clusterInstance,
 		Delegate:          delegate,
@@ -102,6 +106,7 @@ func NewApp(config *api.AppConfig) *App {
 		BLEServer:         bleServer,
 		SAPServer:         sapServer,
 		UDPServer:         udpServer,
+		ControllerManager: controllerManager,
 		memberlist:        memberlist,
 		config:            config,
 		publicRouter:      publicRouter,
@@ -116,6 +121,9 @@ func (app *App) Close() {
 	app.TaskManager.Stop()
 	if app.BLEServer != nil {
 		app.BLEServer.Stop()
+	}
+	if app.ControllerManager != nil {
+		app.ControllerManager.Stop()
 	}
 	app.Cluster.Stop()
 	app.UDPServer.Stop()
@@ -167,6 +175,11 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.ClusterNTPSkewEndpoint, app.Cluster.GetNTPSkew)
 	app.registerPublicGET(routes.ClusterStatusEndpoint, app.Cluster.Metrics.GetClusterStatus)
 
+	// Controllers
+	app.registerPublicGET(routes.ControllersEndpoint, app.Server.GetControllers)
+	app.registerPublicGET(routes.ControllersIDEndpoint, app.Server.GetControllerByID)
+	app.registerPublicGET(routes.ControllersIDWinkEndpoint, app.Server.TriggerWinkById)
+
 	// Device
 	app.registerPublicGET(routes.DevicesEndpoint, app.Cluster.GetDevicesInfo)
 	app.registerPublicGET(routes.DevicesVIPEndpoint, app.Cluster.GetVIP)
@@ -193,8 +206,10 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicDELETE(routes.PAVAMessagesIDEndpoint, app.Server.DeleteMessage)
 	app.registerPublicGET(routes.PAVAMessagesEndpoint, app.Server.ListMessages)
 	app.registerPublicGET(routes.PAVAMessageStreamEndpoint, app.Server.StreamMessage)
-	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.Server.ListScheduledMessages)
-	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.Server.ScheduleMessage)
+	app.registerPublicGET(routes.PAVAScheduleEndpoint, app.TaskManager.ListScheduledMessages)
+	app.registerPublicPOST(routes.PAVAScheduleEndpoint, app.TaskManager.CreateScheduleMessageTask)
+	app.registerPublicPATCH(routes.PAVAScheduleIDEndpoint, app.TaskManager.UpdateScheduleMessageTask)
+	app.registerPublicPUT(routes.PAVAMessageTriggerEndpoint, app.TaskManager.TriggerMessage)
 	// app.registerPublicGET(routes.PAVAZonesEndpoint, app.Server.ListZones)
 	// app.registerPublicGET(routes.PAVAZoneStatusEndpoint, app.Server.GetZoneStatus)
 	// app.registerPublicGET(routes.PAVADiagnosticsEndpoint, app.Server.GetSystemDiagnostics)
@@ -209,21 +224,21 @@ func (app *App) setupPublicRoutes() {
 	app.registerPublicGET(routes.SessionsIdEndpoint, app.Server.GetSession)
 
 	// Snapshots
-	// NOTE: These must be added before the {name} parameter endpoints to avoid conflicts
-	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
+	app.registerPublicPOST(routes.SnapshotsUpdateEndpoint, app.Server.SaveSnapshot)
 	app.registerPublicPOST(routes.SnapshotsNameEndpoint, app.Server.CreateSnapshot)
+	app.registerPublicGET(routes.SnapshotsEndpoint, app.Server.ListSnapshots)
+	app.registerPublicGET(routes.SnapshotsActiveEndpoint, app.Server.GetActiveSnapshotName)
 	app.registerPublicGET(routes.SnapshotsNameEndpoint, app.Server.GetSnapshot)
 	app.registerPublicDELETE(routes.SnapshotsNameEndpoint, app.Server.DeleteSnapshot)
-	app.registerPublicPOST(routes.SnapshotsActivateEndpoint, app.Server.ActivateSnapshot)
 
 	// Tasks
-	// NOTE: These must be added before the {id} parameter endpoints to avoid conflicts
 	app.registerPublicGET(routes.TasksHistoryEndpoint, app.TaskManager.GetHistory)
 	app.registerPublicDELETE(routes.TasksHistoryEndpoint, app.TaskManager.ClearHistory)
 	app.registerPublicGET(routes.TasksEndpoint, app.TaskManager.GetTasks)
 	app.registerPublicPOST(routes.TasksEndpoint, app.TaskManager.CreateApplySnapshotTask)
-	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTask)
-	app.registerPublicPOST(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
+	app.registerPublicGET(routes.TasksIdEndpoint, app.TaskManager.GetTaskHandler)
+	app.registerPublicPATCH(routes.TasksIdEndpoint, app.TaskManager.UpdateApplySnapshotTask)
 	app.registerPublicDELETE(routes.TasksIdEndpoint, app.TaskManager.DeleteTask)
 	app.registerPublicPOST(routes.TasksIdEnableEndpoint, app.TaskManager.EnableTask)
 	app.registerPublicPOST(routes.TasksIdDisableEndpoint, app.TaskManager.DisableTask)
@@ -236,8 +251,6 @@ func (app *App) setupPublicRoutes() {
 
 	// Versioning
 	app.registerPublicGET(routes.VersionEndpoint, app.Server.GetVersion)
-	app.registerPublicPOST(routes.VersionEndpoint, app.Server.RollbackVersion)
-	app.registerPublicPUT(routes.VersionEndpoint, app.Server.UpdateVersion)
 
 	// WebSocket
 	app.registerPublicGET(routes.WebsocketEndpoint, withWebSocketMetrics(app.config, app.Server.HandleWebSocket, app.Cluster.Metrics))
@@ -364,6 +377,11 @@ func (app *App) Start(ctx context.Context) {
 
 	app.StateManager.Start(app.memberlist)
 
+	// Start the Controller Manager for TCP wall controllers
+	if err := app.ControllerManager.Start(); err != nil {
+		app.Logger.Error("Failed to start ControllerManager: %v", err)
+	}
+
 	wg.Wait()
 }
 
@@ -425,11 +443,9 @@ func initStateManager(config *api.AppConfig) *persistence.StateManager {
 }
 
 // initTaskManager initializes the timer manager.
-func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence) *tasks.TaskManager {
-	taskManager := tasks.NewTaskManager(config, persistence)
-	if err := taskManager.Start(); err != nil {
-		logging.GetLogger().Fatal("Failed to start TaskManager: %v", err)
-	}
+func initTaskManager(config *api.AppConfig, persistence *persistence.Persistence, hub *pubsub.Hub) *tasks.TaskManager {
+	taskManager := tasks.NewTaskManager(config, persistence, hub)
+	taskManager.Start()
 	return taskManager
 }
 
@@ -475,7 +491,6 @@ func initUDPServer(port string, handler *handler.Handler, hub *pubsub.Hub) *netw
 	}
 
 	hub.Register(udpServer)
-	udpServer.Start()
 	return udpServer
 }
 
@@ -552,4 +567,12 @@ type statusRecorder struct {
 func (rec *statusRecorder) WriteHeader(code int) {
 	rec.status = code
 	rec.ResponseWriter.WriteHeader(code)
+}
+
+// Hijack implements http.Hijacker interface for WebSocket support
+func (rec *statusRecorder) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+	if hijacker, ok := rec.ResponseWriter.(http.Hijacker); ok {
+		return hijacker.Hijack()
+	}
+	return nil, nil, fmt.Errorf("underlying ResponseWriter does not implement http.Hijacker")
 }

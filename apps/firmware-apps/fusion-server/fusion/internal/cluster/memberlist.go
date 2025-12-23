@@ -2,7 +2,6 @@ package cluster
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"fusion/internal/api"
@@ -17,26 +16,46 @@ import (
 	"syscall"
 	"time"
 
+	json "github.com/goccy/go-json"
+
 	"github.com/hashicorp/memberlist"
 )
 
 const (
-	gossipInterval   = 100 * time.Millisecond
-	probeInterval    = 5 * time.Second
-	probeTimeout     = 2 * time.Second
-	pushPullInterval = 30 * time.Second
-	retryInterval    = 2 * time.Second
-	retryTimes       = 5
-	serialPath       = "/sys/firmware/devicetree/base/serial-number"
-	serialUnknown    = "Unknown"
-	suspicionMult    = 3
-	tcpTimeout       = 10 * time.Second
+	gossipInterval      = 20 * time.Millisecond
+	gossipToTheDeadTime = 30 * time.Second
+	probeInterval       = 100 * time.Millisecond
+	probeTimeout        = 100 * time.Millisecond
+	pushPullInterval    = 1 * time.Second
+	retryInterval       = 2 * time.Second
+	retryTimes          = 5
+	serialPath          = "/sys/firmware/devicetree/base/serial-number"
+	serialUnknown       = "Unknown"
+	suspicionMult       = 3
+	tcpTimeout          = 10 * time.Second
 )
+
+type MemberlistTransport struct {
+	ml *memberlist.Memberlist
+}
+
+func (t *MemberlistTransport) LocalNode() *memberlist.Node {
+	return t.ml.LocalNode()
+}
+
+func (t *MemberlistTransport) Members() []*memberlist.Node {
+	return t.ml.Members()
+}
+
+func (t *MemberlistTransport) SendReliable(n *memberlist.Node, msg []byte) error {
+	return t.ml.SendReliable(n, msg)
+}
 
 // CreateMemberlist creates and configures a new memberlist instance
 func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memberlist.Memberlist {
 	config := memberlist.DefaultLANConfig()
 	config.GossipInterval = gossipInterval
+	config.GossipToTheDeadTime = gossipToTheDeadTime
 	config.Name = appConfig.NodeName
 	config.BindAddr = appConfig.BindAddr
 	config.BindPort = appConfig.BindPort
@@ -53,7 +72,7 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 	config.TCPTimeout = tcpTimeout
 	config.DisableTcpPings = false
 	config.ProbeInterval = probeInterval
-	config.ProbeTimeout = probeTimeout * time.Second
+	config.ProbeTimeout = probeTimeout
 	config.SuspicionMult = suspicionMult
 	config.PushPullInterval = pushPullInterval
 
@@ -69,17 +88,19 @@ func CreateMemberlist(appConfig *api.AppConfig, delegate *ClusterDelegate) *memb
 func (c *Cluster) JoinMemberlist() error {
 
 	// Determine other members to join
-	joinAddrs, err := c.getJoinAddresses(c.bindAddr)
+	joinAddrs, err := c.getJoinAddresses(c.appConfig.BindAddr)
 	if err != nil {
 		return fmt.Errorf("getJoinAddresses: %w", err)
 	}
 
+	logger := logging.GetLogger()
+
 	if len(joinAddrs) == 0 {
 		// This is the first node in the cluster
+		logger.Debug("[MEMBERLIST] First member of cluster: %s", c.appConfig.BindAddr)
 		return nil
 	}
 
-	logger := logging.GetLogger()
 	var lastErr error
 
 	for attempt := range retryTimes {
@@ -87,11 +108,11 @@ func (c *Cluster) JoinMemberlist() error {
 		_, err := c.Memberlist.Join(joinAddrs)
 		if err == nil {
 			members := c.Memberlist.Members()
-			logger.Info("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
+			logger.Debug("[MEMBERLIST] Successfully joined cluster of size %d", len(members))
 
 			c.updateDeviceInfo()
 
-			if c.config.Verbose {
+			if c.appConfig.Verbose {
 				for _, member := range members {
 					logger.Debug("[MEMBERLIST] %s (%s)\n", member.Name, member.Addr)
 				}
@@ -116,7 +137,7 @@ func (c *Cluster) isMember() (bool, error) {
 		return false, err
 	}
 
-	return slices.Contains(liveAddrs, c.bindAddr), nil
+	return slices.Contains(liveAddrs, c.appConfig.BindAddr), nil
 }
 
 // GetLiveNodeAddresses returns a list of live node addresses from the VIP
@@ -133,12 +154,13 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 	}
 	defer resp.Body.Close()
 
+	logger := logging.GetLogger()
+
 	if resp.StatusCode != http.StatusOK {
 		// Assume the admin API isn't ready yet.
+		logger.Warn("GetLiveNodeAddresses: Admin API unavailable")
 		return []string{}, nil
 	}
-
-	logger := logging.GetLogger()
 
 	var members []*memberlist.Node
 	if err := json.NewDecoder(resp.Body).Decode(&members); err != nil {
@@ -146,7 +168,7 @@ func (c *Cluster) GetLiveNodeAddresses() ([]string, error) {
 		return []string{}, nil
 	}
 
-	if c.config.Verbose {
+	if c.appConfig.Verbose {
 		for _, m := range members {
 			logger.Debug("[MEMBERLIST] Found node: %s (%s), state=%v", m.Name, m.Addr.String(), m.State)
 		}
@@ -191,13 +213,13 @@ func (c *Cluster) updateDeviceInfo() {
 		info = *savedInfo
 	}
 
-	info.Address = c.bindAddr
+	info.Address = c.appConfig.BindAddr
 	if info.Id == "" {
-		info.Id = c.nodeName + "_instance"
+		info.Id = c.appConfig.NodeName + "_instance"
 	}
 
 	if info.Name == "" {
-		info.Name = c.nodeName
+		info.Name = c.appConfig.NodeName
 	}
 
 	if info.SerialNumber == "" {

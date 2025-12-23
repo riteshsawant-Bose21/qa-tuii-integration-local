@@ -1,7 +1,7 @@
 import 'dart:math';
 import 'dart:ui';
 
-import 'package:uuid/uuid.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../fusion_utils/fusion_utilities.dart';
 
@@ -16,6 +16,7 @@ class ListeningArea {
   final double minSPL;
   final double maxSPL;
   final double customListeningAreaHeight;
+  final bool isDrawn;
 
   ListeningArea({
     String? id,
@@ -28,7 +29,9 @@ class ListeningArea {
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}";
+    bool? isDrawn,
+  }) : id = id ?? "AREA${FusionUtils.shortStringUUID()}",
+       isDrawn = isDrawn ?? vertices.isNotEmpty;
 
   List<Offset> getFieldPointsSet({int cols = 60, int rows = 60}) {
     if (vertices.isEmpty) return <Offset>[];
@@ -42,15 +45,14 @@ class ListeningArea {
     final double dx = (maxX - minX) / cols;
     final double dy = (maxY - minY) / rows;
 
-    // 2) build Path for polygon‐hit testing
-    final Path path = Path()..addPolygon(vertices, true);
+    // 2) use custom point-in-polygon for hit testing (Path cannot be used in isolates)
 
     // 3) sample grid and keep only points inside
     final List<Offset> pts = <Offset>[];
     for (int i = 0; i <= cols; i++) {
       for (int j = 0; j <= rows; j++) {
         final Offset p = Offset(minX + dx * i, minY + dy * j);
-        if (path.contains(p)) {
+        if (_polygonContains(vertices, p)) {
           pts.add(p);
         }
       }
@@ -76,8 +78,7 @@ class ListeningArea {
     final int cols = ((maxX - minX) / spacing).ceil();
     final int rows = ((maxY - minY) / spacing).ceil();
 
-    // 3) prepare polygon for hit‐testing
-    final Path path = Path()..addPolygon(vertices, true);
+    // 3) use custom point-in-polygon for hit testing (Path cannot be used in isolates)
 
     // 4) sample grid
     final List<Offset> pts = <Offset>[];
@@ -86,7 +87,7 @@ class ListeningArea {
       for (int j = 0; j <= rows; j++) {
         final double y = minY + j * spacing;
         final Offset p = Offset(x, y);
-        if (path.contains(p)) {
+        if (_polygonContains(vertices, p)) {
           pts.add(p);
         }
       }
@@ -126,6 +127,9 @@ class ListeningArea {
   void setSplData(List<Offset> points, List<double> values) {
     splData = SplData(surfaceId: id, fieldPoints: points, splValues: values);
   }
+  void clearSplData() {
+    splData = null;
+  }
 
   Map<String, dynamic> toJson() => <String, dynamic>{
     'id': id,
@@ -138,6 +142,7 @@ class ListeningArea {
     'minSPL': minSPL,
     'maxSPL': maxSPL,
     'customListeningAreaHeight': customListeningAreaHeight,
+    'isDrawn': isDrawn,
   };
 
   /// Parses back from JSON, turning the dynamic list into List<Offset>
@@ -164,6 +169,7 @@ class ListeningArea {
       customListeningAreaHeight: (json['customListeningAreaHeight'] as num?)?.toDouble() ?? 0.0,
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
+      isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
     );
   }
 
@@ -186,8 +192,7 @@ class ListeningArea {
     final int cols = ((maxX - minX) / spacing).ceil() + 1;
     final int rows = ((maxY - minY) / rowHeight).ceil() + 1;
 
-    // 3) build polygon path & extract edges
-    final Path poly = Path()..addPolygon(vertices, true);
+    // 3) extract polygon edges (avoid Path in isolates)
     final List<_Edge> edges = <_Edge>[];
     for (int i = 0; i < vertices.length; i++) {
       final Offset a = vertices[i];
@@ -206,14 +211,49 @@ class ListeningArea {
         final double x = minX + col * spacing + xOffset;
         final Offset p = Offset(x, y);
 
-        // keep if inside or within tolerance of any edge
-        if (poly.contains(p) || _minDistToEdges(p, edges) <= tolerance) {
+        // keep if inside polygon or within tolerance of any edge
+        if (_polygonContains(vertices, p) || _minDistToEdges(p, edges) <= tolerance) {
           points.add(p);
         }
       }
     }
 
     return points;
+  }
+
+  /// Point-in-polygon using ray casting. Works in isolates without dart:ui Path.
+  /// Returns true if [point] lies inside or on the boundary of the polygon [poly].
+  bool _polygonContains(List<Offset> poly, Offset point) {
+    final int n = poly.length;
+    if (n < 3) return false;
+
+    bool inside = false;
+    for (int i = 0, j = n - 1; i < n; j = i++) {
+      final Offset pi = poly[i];
+      final Offset pj = poly[j];
+
+      // Check if point is exactly on the segment pj->pi
+      if (_pointOnSegment(point, pj, pi)) return true;
+
+      final bool intersect =
+          ((pi.dy > point.dy) != (pj.dy > point.dy)) &&
+          (point.dx < (pj.dx - pi.dx) * (point.dy - pi.dy) / ((pj.dy - pi.dy) == 0 ? 1e-12 : (pj.dy - pi.dy)) + pi.dx);
+      if (intersect) inside = !inside;
+    }
+    return inside;
+  }
+
+  // Checks if point p lies on segment v->w within a small epsilon tolerance.
+  bool _pointOnSegment(Offset p, Offset v, Offset w, {double epsilon = 1e-6}) {
+    final double cross = (p.dy - v.dy) * (w.dx - v.dx) - (p.dx - v.dx) * (w.dy - v.dy);
+    if (cross.abs() > epsilon) return false; // not colinear
+
+    final double dot = (p.dx - v.dx) * (w.dx - v.dx) + (p.dy - v.dy) * (w.dy - v.dy);
+    if (dot < -epsilon) return false; // before v
+
+    final double lenSq = (w.dx - v.dx) * (w.dx - v.dx) + (w.dy - v.dy) * (w.dy - v.dy);
+    if (dot - lenSq > epsilon) return false; // beyond w
+    return true;
   }
 
   // helper: compute minimum distance from p to any edge
@@ -255,6 +295,19 @@ class SplData {
 
   SplData({required this.surfaceId, required this.fieldPoints, required this.splValues})
     : assert(fieldPoints.length == splValues.length, 'fieldPoints(${fieldPoints.length}) and splValues(${splValues.length}) must match');
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is SplData && other.surfaceId == surfaceId && listEquals(other.fieldPoints, fieldPoints) && listEquals(other.splValues, splValues);
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    surfaceId,
+    Object.hashAll(fieldPoints),
+    Object.hashAll(splValues),
+  );
 }
 
 class _Edge {

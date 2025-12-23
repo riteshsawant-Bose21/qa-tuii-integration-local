@@ -1,11 +1,16 @@
 package network
 
 import (
-	"encoding/json"
 	"fmt"
+	"maps"
+	"math/rand"
 	"net"
+	"runtime"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	json "github.com/goccy/go-json"
 
 	"fusion/internal/api"
 	"fusion/internal/logging"
@@ -13,15 +18,31 @@ import (
 	"fusion/internal/server/handler"
 )
 
+const (
+	maxConcurrent    = 32
+	queueElementSize = 2048
+)
+
+type packet struct {
+	data []byte
+	addr *net.UDPAddr
+}
+
 type UDPServer struct {
 	*Listener
-	clients    map[string]*net.UDPAddr
-	clientsMux sync.RWMutex
-	handler    *handler.Handler
+	handler *handler.Handler
 
-	// Messages waiting for acknowledgement
-	pending    map[string]chan struct{} // messageID -> notify channel
-	pendingMux sync.Mutex
+	clients sync.Map // string:*net.UDPAddr
+
+	// Workers
+	queue      chan packet
+	wg         sync.WaitGroup
+	numWorkers int
+
+	// ACK handling
+	pending              sync.Map
+	lastBroadcastEpoch   atomic.Uint64
+	lastBroadcastVersion atomic.Uint64
 }
 
 func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
@@ -31,74 +52,70 @@ func NewUDPServer(addr string, handler *handler.Handler) (*UDPServer, error) {
 	}
 	logging.GetLogger().Info("UDP listening on %s", addr)
 
+	queueWorkers := runtime.NumCPU() * 2
+	queueSize := queueWorkers * queueElementSize
+
 	srv := &UDPServer{
-		clients: make(map[string]*net.UDPAddr),
-		handler: handler,
+		handler:    handler,
+		queue:      make(chan packet, queueSize),
+		numWorkers: queueWorkers,
+		clients:    sync.Map{},
+		pending:    sync.Map{},
 	}
 
 	srv.Listener = NewListener(
 		conn,
 		defaultBufferSize,
 		time.Second,
-		srv.packetHandler,
+		srv.enqueuePacket,
 	)
+
+	for i := 0; i < srv.numWorkers; i++ {
+		srv.wg.Add(1)
+		go srv.workerLoop()
+	}
 
 	srv.Start()
 	return srv, nil
 }
 
-func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+// enqueuePacket is called from the I/O goroutine. Keep it very fast.
+func (s *UDPServer) enqueuePacket(data []byte, addr *net.UDPAddr) {
 
-	if !msg.IsPublic() {
-		return nil
-	}
+	// Copy to prevent concurrent buffer reuse corruption
+	buf := make([]byte, len(data))
+	copy(buf, data)
 
-	data, err := json.Marshal(msg.ConfigUpdate.Data)
-	if err != nil {
-		return fmt.Errorf("marshal update: %w", err)
-	}
-
-	logger := logging.GetLogger()
-
-	var dead []string
-	s.clientsMux.RLock()
-	for k, addr := range s.clients {
-		_, err := s.conn.WriteToUDP(data, addr)
-		if err != nil {
-			logger.Error("broadcast to %s failed: %v", k, err)
-			dead = append(dead, k)
+	select {
+	case s.queue <- packet{buf, addr}:
+	default:
+		if rand.Intn(1000) == 0 {
+			logging.GetLogger().Warn("UDP queue full. Dropping packet from %s", addr)
 		}
 	}
-	s.clientsMux.RUnlock()
-
-	for _, k := range dead {
-		s.clientsMux.Lock()
-		delete(s.clients, k)
-		s.clientsMux.Unlock()
-	}
-	return nil
 }
 
-func (s *UDPServer) packetHandler(data []byte, addr *net.UDPAddr) {
+// workerLoop runs concurrently to process packets
+func (s *UDPServer) workerLoop() {
+	defer s.wg.Done()
+	for pkt := range s.queue {
+		s.handlePacket(pkt.data, pkt.addr)
+	}
+}
 
-	// Add caller to client map
-	s.clientsMux.Lock()
-	s.clients[addr.String()] = addr
-	s.clientsMux.Unlock()
+func (s *UDPServer) handlePacket(data []byte, addr *net.UDPAddr) {
+	s.clients.Store(addr.String(), addr)
 
-	// Handle acknowledgements
 	var msg api.NotifyMessage
 	if err := json.Unmarshal(data, &msg); err == nil && msg.Operation == api.NotifyOpAck {
-		s.pendingMux.Lock()
-		if ch, ok := s.pending[msg.ID]; ok {
+		if chVal, ok := s.pending.Load(msg.ID); ok {
+			ch := chVal.(chan struct{})
 			close(ch)
-			delete(s.pending, msg.ID)
+			s.pending.Delete(msg.ID)
 		}
-		s.pendingMux.Unlock()
 		return
 	}
 
-	// Handle normal messages
 	resp, err := s.handler.HandleUDPMessage(data)
 	if err != nil {
 		s.sendResponse(addr, server.UDPResponse{
@@ -117,9 +134,104 @@ func (s *UDPServer) sendResponse(addr *net.UDPAddr, v any) {
 		return
 	}
 	if _, err := s.conn.WriteToUDP(b, addr); err != nil {
-		logging.GetLogger().Error("write error: %v", err)
-		s.clientsMux.Lock()
-		delete(s.clients, addr.String())
-		s.clientsMux.Unlock()
+		logging.GetLogger().Error("write error to %s: %v", addr, err)
+		s.clients.Delete(addr.String())
 	}
+}
+
+func (s *UDPServer) BroadcastMessage(msg *api.NotifyMessage) error {
+
+	if !msg.IsPublic() {
+		return nil
+	}
+
+	logger := logging.GetLogger()
+
+	if msg.Operation == api.NotifyOpSnapActivate {
+
+		// Load the snapshot data
+		sm := s.handler.StateManager
+		snapshotState := sm.GetFullState()
+		snapshotFlat := snapshotState.Flatten()
+
+		payload, err := s.buildJSONPayload(snapshotFlat, sm.GetVersion())
+		if err != nil {
+			return err
+		}
+
+		s.broadcast(payload)
+
+		return nil
+	}
+
+	// Normal config updates: apply Lamport version gating
+	if msg.Operation == api.NotifyOpConfigUpdate &&
+		msg.ConfigUpdate != nil {
+
+		v := msg.ConfigUpdate.Version
+
+		last := api.Version{
+			Epoch:   s.lastBroadcastEpoch.Load(),
+			Counter: s.lastBroadcastVersion.Load(),
+		}
+
+		if v.Less(last) {
+			logger.Debug(
+				"udp broadcast: skipping stale/duplicate config_update version=%v (last=%v)",
+				v, last,
+			)
+			return nil
+		}
+
+		s.lastBroadcastEpoch.Store(v.Epoch)
+		s.lastBroadcastVersion.Store(v.Counter)
+	}
+
+	payload, err := s.buildJSONPayload(msg.ConfigUpdate.Data, msg.ConfigUpdate.Version)
+	if err != nil {
+		return err
+	}
+
+	s.broadcast(payload)
+
+	return nil
+}
+
+func (s *UDPServer) Close() error {
+	close(s.queue)
+	s.wg.Wait()
+	return s.conn.Close()
+}
+
+// buildPayload creates a JSON byte stream including authoritative Lamport version
+func (s *UDPServer) buildJSONPayload(data map[string]any, version api.Version) ([]byte, error) {
+
+	payload := make(map[string]any, len(data)+2)
+	maps.Copy(payload, data)
+	payload[api.FusionVersion] = version.Counter
+	payload[api.FusionEpoch] = version.Epoch
+
+	json, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("marshal error: %w", err)
+	}
+
+	return json, nil
+}
+
+func (s *UDPServer) broadcast(payload []byte) {
+
+	s.clients.Range(func(k, v any) bool {
+		addr, ok := v.(*net.UDPAddr)
+		if !ok || addr == nil {
+			return true
+		}
+
+		if _, err := s.conn.WriteToUDP(payload, addr); err != nil {
+			logging.GetLogger().Warn("udp broadcast to %s failed: %v", k, err)
+			s.clients.Delete(k)
+		}
+
+		return true
+	})
 }

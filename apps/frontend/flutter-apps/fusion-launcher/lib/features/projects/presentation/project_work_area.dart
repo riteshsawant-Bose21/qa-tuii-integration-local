@@ -5,32 +5,46 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/features/configuration/presentation/pages/audio_system_design_page.dart';
+import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
+import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
+import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
+import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/spl_calculation/mace_calculation_manager.dart';
-import '../../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/service_locator.dart';
 import '../../../core/spl_calculation/ffi_constants.dart';
+import '../../../core/spl_calculation/mace_engine_provider.dart';
 import '../../../core/utils/broadcast_controllers.dart';
+import '../../../core/utils/bug_report_popup.dart';
 import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../configuration_page/pages/configuration_processing_page.dart';
+import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../gpio/view/gpio_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
-import '../../schematics/presentation/widgets/circuit_test_widget.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
 import '../widget/building/side_panel_widgets/building_plan.dart';
+import '../widget/building/side_panel_widgets/listening_areas_panel.dart';
 import '../widget/building/side_panel_widgets/properties_panel.dart';
 import '../widget/building/side_panel_widgets/schematic_properties.dart';
 import '../widget/building/side_panel_widgets/zone_and_listening_area.dart';
+import '../widget/configuration/side_panel_widgets/configuration_tab_switcher.dart';
 import '../widget/control_design_tab_switcher.dart';
 
 class ProjectWorkArea extends StatefulWidget {
@@ -52,13 +66,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final SplRangeController _splRangeController = SplRangeController();
   final FloorCanvasController _floorCanvasController = FloorCanvasController();
   MaceEngine? _engine;
-
+  bool useIsolateEngine = true;
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
+  String _appVersion = '1.0.0';
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematics'),
-    Tab(text: 'Zone config'),
     Tab(text: 'Budget'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
@@ -74,6 +88,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       vsync: this,
       animationDuration: Duration.zero,
     );
+    FusionLogger.log(
+      message: "Opened Project ",
+      tag: LogTag.project,
+    );
 
     // Listen for tab changes to trigger rebuild for IndexedStack
     _tabController.addListener(() {
@@ -82,34 +100,62 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
     /// Todo: Need to handle this in a better way
     serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(-1);
+    serviceLocator<ProjectViewModel>().currentToolbarMode = ToolbarMode.acoustics;
 
     subscription = projectTabBroadcastController.stream.listen((int index) {
       if (index >= 0 && index < _tabController.length) {
         _tabController.animateTo(index);
       }
     });
-    _projectNameController = TextEditingController(text: serviceLocator<ProjectViewModel>().projectName);
+    _projectNameController = TextEditingController(
+      text: serviceLocator<ProjectViewModel>().projectName,
+    );
     _initMace();
     _initSplRangeDefaults();
+    _initAppVersion();
 
     // Initialize tab widgets to preserve state
     _tabWidgets = _createTabWidgets();
   }
 
   Future<void> _initMace() async {
-    if (Platform.isMacOS || Platform.isIOS) {
+    await IsolatedMaceCalculationManager.instance.start();
+
+    if (Platform.isMacOS || Platform.isIOS || Platform.isWindows) {
       WidgetsFlutterBinding.ensureInitialized();
-      _engine = await MaceEngine.create();
+      _engine = await MaceEngine.create(
+        basePath: await MaceEngine.getLibPath(),
+        bsfBasePath: (await getApplicationSupportDirectory()).path,
+      );
+
+      FusionLogger.log(
+        message: "Mace engine initialized ",
+        tag: LogTag.project,
+      );
     }
   }
 
   SplPanelData? _lastPanelData;
 
-  _initSplRangeDefaults() {
+  void _initSplRangeDefaults() {
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
     _lastPanelData = currentPanelData;
     serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb, autoSave: false);
     serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb, autoSave: false);
+  }
+
+  Future<void> _initAppVersion() async {
+    try {
+      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
+      setState(() {
+        _appVersion = 'v${packageInfo.version}-${packageInfo.buildNumber}';
+      });
+    } catch (e) {
+      // Fallback to default version if package info fails
+      setState(() {
+        _appVersion = 'v1.0.0';
+      });
+    }
   }
 
   void _updateSPLFromPanelData() {
@@ -128,6 +174,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       serviceLocator<ProjectViewModel>().setMinSPL(minSPL: currentPanelData.splLowerDb);
       serviceLocator<ProjectViewModel>().setMaxSPL(maxSPL: currentPanelData.splUpperDb);
       updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+
       setState(() {}); // <-- Trigger rebuild
     }
   }
@@ -157,8 +204,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   }
 
   Future<void> calculateSPL() async {
-    if (_engine == null) return;
-    if (!_floorCanvasController.isShowingSpl.value) return;
+    // if (_engine == null) {
+    //   debugPrint('calculateSPL: _engine is null');
+    //   return;
+    // }
+    if (!_floorCanvasController.isShowingSpl.value) {
+      debugPrint('calculateSPL: isShowingSpl is false');
+      return;
+    }
 
     final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
     if (currentFloorIndex == -1) return;
@@ -169,21 +222,42 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       floorId: currentFloor.id,
     );
     if (floorListeningAreas.isEmpty) return;
-
+    // for (ListeningArea e in floorListeningAreas) {
+    //   e.clearSplData();
+    // }
     final List<Speaker> speakers = List<Speaker>.from(
-      serviceLocator<ProjectViewModel>().getHardwareForFloor(floorId: currentFloor.id).whereType<Speaker>(),
+      serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(floorId: currentFloor.id).whereType<Speaker>(),
     );
-    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+    final List<ListeningArea> surfaces = serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
       floorId: currentFloor.id,
     );
-
-    await SPLCalculationManager.calculateSpl(_engine!, speakers, surfaces, _lastPanelData!.getResolutionSpacing());
+    if (!useIsolateEngine) {
+      await SPLCalculationManager.calculateSpl(
+        _engine!,
+        speakers,
+        surfaces,
+        _lastPanelData!.getResolutionSpacing(),
+      );
+    } else {
+      await IsolatedMaceCalculationManager.instance.calculateSpl(
+        speakers: speakers,
+        surfaces: surfaces,
+        resolutionSpacing: _lastPanelData!.getResolutionSpacing(),
+      );
+    }
 
     final SplPanelData currentPanelData = _splRangeController.getPanelData();
-    final Bandwidth maceBandwidth = _mapToMaceBandwidth(currentPanelData.bandwidth);
+    final Bandwidth maceBandwidth = _mapToMaceBandwidth(
+      currentPanelData.bandwidth,
+    );
     final Weighting weighting = _mapToMaceWeighting(currentPanelData.weighting);
     final double frequency = currentPanelData.frequency.frequencyValue.toDouble();
-    await updateSpl(maceBandwidth, frequency, weighting, currentPanelData.relative);
+    await updateSpl(
+      maceBandwidth,
+      frequency,
+      weighting,
+      currentPanelData.relative,
+    );
   }
 
   Future<void> updateSpl(
@@ -192,7 +266,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     Weighting weighting,
     bool relative,
   ) async {
-    if (_engine == null) return;
+    // if (_engine == null) return;
     if (!_floorCanvasController.isShowingSpl.value) return;
 
     final int currentFloorIndex = serviceLocator<ProjectViewModel>().currentFloorIndex;
@@ -205,28 +279,44 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     if (floorListeningAreas.isEmpty) return;
 
     final List<SPLCalculation> toApply = <SPLCalculation>[];
-    final Iterable<SPLCalculation> currentCalcs = SPLCalculationManager.currentCalculations();
+
+    final Iterable<SPLCalculation> currentCalcs =
+        useIsolateEngine ? await IsolatedMaceCalculationManager.instance.currentCalculations() : SPLCalculationManager.currentCalculations();
 
     for (final SPLCalculation sc in currentCalcs) {
       if (!floorListeningAreas.any((ListeningArea area) => area.id == sc.surface.id)) continue;
+      final List<SPLCalculation> updated =
+          useIsolateEngine
+              ? await IsolatedMaceCalculationManager.instance.getSplAt(
+                fph: sc.fphHandle,
+                bandwidth: bw,
+                freqHz: (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+                weighting: weighting,
+                relative: relative,
+                resolutionSpacing: _lastPanelData?.getResolutionSpacing() ?? 20.0,
+              )
+              : SPLCalculationManager.getSplAt(
+                _engine!,
+                sc.fphHandle,
+                bw,
+                (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
+                weighting,
+                relative,
+                _lastPanelData?.getResolutionSpacing() ?? 20.0,
+              );
 
-      final List<SPLCalculation> updated = SPLCalculationManager.getSplAt(
-        _engine!,
-        sc.fphHandle,
-        bw,
-        (bw == Bandwidth.oneThirdOctave || bw == Bandwidth.oneOctave) ? frequency : 2000,
-        weighting,
-        relative,
-        _lastPanelData?.getResolutionSpacing() ?? 20.0,
-      );
-
+      print("[isolate] updateSpl: updated length ${updated.map((SPLCalculation e) => e.spl.length)}");
       toApply.addAll(updated);
     }
 
     for (final SPLCalculation calc in toApply) {
-      final List<ui.Offset> pts = calc.surface.getFieldPoints(_lastPanelData?.getResolutionSpacing() ?? 20.0);
-      calc.surface.setSplData(pts, calc.spl);
+      final List<ui.Offset> pts = calc.surface.getFieldPoints(
+        _lastPanelData?.getResolutionSpacing() ?? 20.0,
+      );
+      floorListeningAreas.firstWhere((ListeningArea area) => area.id == calc.surface.id).setSplData(pts, calc.spl);
+      // calc.surface.setSplData(pts, calc.spl);
     }
+    setState(() {});
   }
 
   /// Clear input fields
@@ -246,7 +336,11 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     zoneAreaController.dispose();
     _splRangeController.dispose();
     _engine?.dispose();
+    IsolatedMaceCalculationManager.instance.stop();
     _floorCanvasController.dispose();
+
+    /// Reset configuration menu mode to processing on dispose
+    _projectViewModel.setConfigurationMenuMode(ConfigurationMenuMode.processing);
 
     super.dispose();
   }
@@ -257,6 +351,90 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final ExpansibleController productsController = ExpansibleController();
   final ExpansibleController splController = ExpansibleController();
   final ExpansibleController zoneAreaController = ExpansibleController();
+
+  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
+    return <DockItemConfig>[
+      const DockItemConfig(
+        id: "1",
+        title: "FLOORS",
+        side: "left",
+        allowUndock: true,
+        isCollapsibleSection: false,
+        dockItemWidget: BuildingPlan(),
+      ),
+      DockItemConfig(
+        id: "5",
+        title: "PROPERTIES",
+        side: "right",
+        initiallyExpanded: false,
+        dockItemWidget: PropertiesPanel(
+          onSpeakerUpdated: () {
+            calculateSPL();
+          },
+          onSpeakerDeleted: () {
+            calculateSPL();
+          },
+        ),
+      ),
+      DockItemConfig(
+        id: "6",
+        title: "COST CALCULATOR",
+        side: "right",
+        allowUndock: true,
+        dockItemWidget: CostCalculatorScreen(
+          speakers: serviceLocator<ProjectViewModel>().speakers,
+          sources: serviceLocator<ProjectViewModel>().sources,
+          controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+          racks:
+              serviceLocator<ProjectViewModel>().genericHardwareComponents
+                  .where(
+                    (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                  )
+                  .toList(),
+          amplifiers: <Amplifier>[],
+          fusionDevices: <FusionDsp>[],
+          others:
+              serviceLocator<ProjectViewModel>().genericHardwareComponents
+                  .where(
+                    (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                  )
+                  .toList(),
+        ),
+      ),
+      DockItemConfig(
+        id: "7",
+        title: toolbarMode == ToolbarMode.acoustics ? "LISTENING AREAS" : "ZONES",
+        side: "left",
+        controller: zoneAreaController,
+        allowUndock: false,
+        initiallyExpanded: true,
+        dockItemWidget: toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+      ),
+      DockItemConfig(
+        id: "8",
+        title: "PRODUCT QUERY",
+        side: "right",
+        dockItemWidget: const ProductQueryView(),
+        controller: productsController,
+      ),
+      DockItemConfig(
+        id: "9",
+        title: "SPL MAPPING",
+        side: "right",
+        controller: splController,
+        dockItemWidget: SplPanel(
+          controller: _splRangeController,
+          initialData: _lastPanelData!,
+          onChanged: (SplPanelData value) {
+            FusionLogger.log(tag: LogTag.panel, message: value.toString());
+            _splRangeController.onMappingDataChanged(value);
+            _updateSPLFromPanelData();
+            setState(() {});
+          },
+        ),
+      ),
+    ];
+  }
 
   List<Widget> _createTabWidgets() {
     return <Widget>[
@@ -291,120 +469,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 );
               },
             ),
-            dockItemList: <DockItemConfig>[
-              DockItemConfig(
-                id: "1",
-                title: "BUILDING PLAN",
-                side: "left",
-                alowUndock: true,
-                isCollapsibleSection: false,
-                dockItemWidget: () => const BuildingPlan(),
-              ),
-
-              // DockItemConfig(
-              //   id: "2",
-              //   title: "COVERAGE",
-              //   side: "left",
-              //   alowUndock: false,
-              //   initiallyExpanded: true,
-              //   isCollapsibleSection: true,
-              //   dockItemWidget:
-              //       () => CoveragePanel(
-              //         onModeSelection: (bool value) {
-              //           if (value) {
-              //             zoneAreaController.expand();
-              //           }
-              //         },
-              //       ),
-              // ),
-
-              // DockItemConfig(
-              //   id: "4",
-              //   title: "DEVICES",
-              //   side: "left",
-              //   alowUndock: false,
-              //   initiallyExpanded: true,
-              //   isCollapsibleSection: true,
-              //   dockItemWidget:
-              //       () => DevicesPanel(
-              //         onProductSelected: () {
-              //           productsController.expand();
-              //         },
-              //       ),
-              // ),
-              DockItemConfig(
-                id: "5",
-                title: "PROPERTIES",
-                side: "right",
-                alowUndock: false,
-                dockItemWidget:
-                    () => PropertiesPanel(
-                      onSpeakerUpdated: () {
-                        print("Speaker properties updated, update SPL...");
-                        calculateSPL();
-                      },
-                    ),
-              ),
-              DockItemConfig(
-                id: "6",
-                title: "COST CALCULATOR",
-                side: "right",
-                alowUndock: true,
-                dockItemWidget:
-                    () => CostCalculatorScreen(
-                      speakers: serviceLocator<ProjectViewModel>().speakers,
-                      sources: serviceLocator<ProjectViewModel>().sources,
-                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                      racks:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                              )
-                              .toList(),
-                      amplifiers: <Amplifier>[],
-                      fusionDevices: <FusionDsp>[],
-                      others:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                              )
-                              .toList(),
-                    ),
-              ),
-              DockItemConfig(
-                id: "7",
-                title: "ZONES",
-                side: "left",
-                controller: zoneAreaController,
-                initiallyExpanded: true,
-                // isVisible: serviceLocator<ProjectViewModel>().isInZoneSelectionMode ,
-                dockItemWidget: () => const ZoneAndListeningAreaPanel(),
-              ),
-              DockItemConfig(
-                id: "8",
-                title: "PRODUCT QUERY",
-                side: "right",
-                dockItemWidget: () => const ProductQueryView(),
-                controller: productsController,
-              ),
-              DockItemConfig(
-                id: "9",
-                title: "SPL MAPPING",
-                side: "right",
-                controller: splController,
-                dockItemWidget:
-                    () => SplPanel(
-                      controller: _splRangeController,
-                      initialData: _lastPanelData!,
-                      onChanged: (SplPanelData value) {
-                        FusionLogger.log(tag: LogTag.panel, message: value.toString());
-                        _splRangeController.onMappingDataChanged(value);
-                        _updateSPLFromPanelData();
-                        setState(() {});
-                      },
-                    ),
-              ),
-            ],
+            dockItemList: _createBuildingDockItems(
+              serviceLocator<ProjectViewModel>().currentToolbarMode,
+            ),
           );
         },
       ),
@@ -418,39 +485,38 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             showRight: true,
             mainArea: const SchematicsPage(),
             dockItemList: <DockItemConfig>[
-              DockItemConfig(
+              const DockItemConfig(
                 id: "5",
                 title: "PROPERTIES",
                 side: "right",
                 initiallyExpanded: true,
-                alowUndock: false,
-                dockItemWidget: () => const SchematicProperties(),
+                allowUndock: false,
+                dockItemWidget: SchematicProperties(),
               ),
               DockItemConfig(
                 id: "6",
                 title: "COST CALCULATOR",
                 side: "right",
-                alowUndock: true,
-                dockItemWidget:
-                    () => CostCalculatorScreen(
-                      speakers: serviceLocator<ProjectViewModel>().speakers,
-                      sources: serviceLocator<ProjectViewModel>().sources,
-                      controllers: serviceLocator<ProjectViewModel>().fusionControllers,
-                      racks:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
-                              )
-                              .toList(),
-                      amplifiers: <Amplifier>[],
-                      fusionDevices: <FusionDsp>[],
-                      others:
-                          serviceLocator<ProjectViewModel>().genericHardwareComponents
-                              .where(
-                                (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
-                              )
-                              .toList(),
-                    ),
+                allowUndock: true,
+                dockItemWidget: CostCalculatorScreen(
+                  speakers: serviceLocator<ProjectViewModel>().speakers,
+                  sources: serviceLocator<ProjectViewModel>().sources,
+                  controllers: serviceLocator<ProjectViewModel>().fusionControllers,
+                  racks:
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                          .where(
+                            (GenericHardwareComponent component) => component.type == GenericHardwareComponentType.rack,
+                          )
+                          .toList(),
+                  amplifiers: <Amplifier>[],
+                  fusionDevices: <FusionDsp>[],
+                  others:
+                      serviceLocator<ProjectViewModel>().genericHardwareComponents
+                          .where(
+                            (HardwareComponent component) => component is GenericHardwareComponent && component.type == GenericHardwareComponentType.other,
+                          )
+                          .toList(),
+                ),
               ),
               // DockItemConfig(
               //   id: "8",
@@ -458,25 +524,26 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               //   side: "right",
               //   dockItemWidget: () => const ProductQueryView(),
               // ),
-              DockItemConfig(
+              const DockItemConfig(
                 id: "10",
                 title: "PRODUCT LIST",
                 side: "left",
                 initiallyExpanded: true,
-                dockItemWidget: () => const WiringDeviceListView(),
+                dockItemWidget: WiringDeviceListView(),
               ),
             ],
           );
         },
       ),
-
-      const FusionDockableArea(
-        tabKey: "zone_config_tab",
-        showLeft: false,
-        showRight: false,
-        mainArea: ZoneCircuitConfigPage(),
-        dockItemList: <DockItemConfig>[],
-      ),
+      //
+      // if (kDebugMode)
+      //   const FusionDockableArea(
+      //     tabKey: "zone_config_tab",
+      //     showLeft: false,
+      //     showRight: false,
+      //     mainArea: ProcessingBlockCustomizer(), //ProcessingBlockPage(),
+      //     dockItemList: <DockItemConfig>[],
+      //   ),
 
       /// budget tab with docking area
       const FusionDockableArea(
@@ -488,12 +555,46 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       ),
 
       /// Config tab without docking area
-      const FusionDockableArea(
+      FusionDockableArea(
         tabKey: "configuration_tab",
-        showLeft: false,
+        showLeft: true,
         showRight: false,
-        mainArea: AudioSystemDesignPage(),
-        dockItemList: <DockItemConfig>[],
+        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            return switch (_projectViewModel.currentConfigurationMenuMode) {
+              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+              // add all othere
+              ConfigurationMenuMode.events => const ConfigurationEvents(),
+              ConfigurationMenuMode.gpio => const GpioPage(),
+              ConfigurationMenuMode.scheduling => const SchedulingPage(),
+              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+                create: (_) => MediaFilesViewModel(),
+                child: const ConfigurationMediaFilesPage(),
+              ),
+            };
+          },
+        ),
+
+        dockItemList: <DockItemConfig>[
+          DockItemConfig(
+            id: "1",
+            title: "FLOORS",
+            side: "left",
+            allowUndock: true,
+            isCollapsibleSection: false,
+            dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              builder: (BuildContext context, ProjectViewModelState state) {
+                return ConfigurationTabSwitcher(
+                  selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                  onModeChanged: (ConfigurationMenuMode mode) {
+                    _projectViewModel.setConfigurationMenuMode(mode);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
 
       /// Cloud tab without docking area
@@ -519,35 +620,35 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         listener: (BuildContext context, ProjectViewModelState state) {},
         builder: (BuildContext context, ProjectViewModelState state) {
           return Scaffold(
-            appBar: FusionAppBar(
-              backgroundColor: Colors.black87,
-              leading: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-                child: SizedBox(
-                  width: 50,
-                  height: 50,
-                  child: IconButton(
-                    icon: Icon(
-                      Icons.arrow_back_ios,
-                      color: Theme.of(context).colorScheme.white,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      serviceLocator<ProjectViewModel>().closeProject();
-                      Navigator.of(context).pop();
-                    },
-                    tooltip: 'Back to projects',
-                  ),
-                ),
-              ), // List icon
-              actions: <Widget>[
-                const FusionProfileImage(
-                  assetPath: "assets/images/fusion_default_icon.png",
-                  size: 24,
-                ),
-              ],
-              title: const SizedBox(),
-            ),
+            // appBar: FusionAppBar(
+            //   backgroundColor: Colors.black87,
+            //   leading: Padding(
+            //     padding: const EdgeInsets.symmetric(horizontal: 12),
+            //     child: SizedBox(
+            //       width: 50,
+            //       height: 50,
+            //       child: IconButton(
+            //         icon: Icon(
+            //           Icons.arrow_back_ios,
+            //           color: Theme.of(context).colorScheme.white,
+            //           size: 20,
+            //         ),
+            //         onPressed: () {
+            //           serviceLocator<ProjectViewModel>().closeProject();
+            //           Navigator.of(context).pop();
+            //         },
+            //         tooltip: 'Back to projects',
+            //       ),
+            //     ),
+            //   ), // List icon
+            //   actions: <Widget>[
+            //     const FusionProfileImage(
+            //       assetPath: "assets/images/fusion_default_icon.png",
+            //       size: 24,
+            //     ),
+            //   ],
+            //   title: const SizedBox(),
+            // ),
             body: Column(
               children: <Widget>[
                 /// Tab Bar Section
@@ -670,6 +771,34 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                       ),
 
+                      /// Save Icon Section
+                      Container(
+                        width: 56,
+                        height: 48,
+                        // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                        ),
+                        child: IconButton(
+                          icon: Icon(
+                            LucideIcons.cloudUpload,
+                            size: 24,
+                            color: Theme.of(context).colorScheme.greyDark,
+                          ),
+                          tooltip: 'Upload project',
+                          onPressed: () async {
+                            FusionUiUtils.showLoader(context);
+
+                            await serviceLocator<ProjectSyncViewModel>().uploadProject(
+                              projectData: serviceLocator<ProjectViewModel>().getCurrentProjectData()!,
+                            );
+                            if (context.mounted) {
+                              FusionUiUtils.hideLoader(context);
+                            }
+                          },
+                        ),
+                      ),
+
                       /// Share Icon Section
                       Container(
                         width: 56,
@@ -677,19 +806,50 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.white,
-                          // border horizontal
                           border: Border(
-                            left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                            // left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                             right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
                           ),
                         ),
-                        child: Image.asset(
-                          "assets/images/share_icon.png",
-                          width: 24,
-                          height: 24,
+                        child: Tooltip(
+                          message: 'Feedback and bug reports',
+                          child: InkWell(
+                            child: Icon(
+                              Icons.feedback_outlined,
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
+                            ),
+                            onTap: () async {
+                              handleExportLogs(context);
+                            },
+                          ),
                         ),
+                        // child: Image.asset(
+                        //   "assets/images/share_icon.png",
+                        //   width: 24,
+                        //   height: 24,
+                        // ),
                       ),
                       const ControlDesignTabSwitcher(),
+                      // App Build Version
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                          border: Border(
+                            left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                            // right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                          ),
+                        ),
+                        child: FusionAppText(
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Theme.of(context).colorScheme.greyDark,
+                            fontWeight: FontWeight.w400,
+                          ),
+                          text: "Build- $_appVersion",
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -707,58 +867,95 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     );
   }
 
-  /// Project Name Section
+  /// Project Name Section with Back Button
   Widget _projectNameSection() {
-    return InkWell(
-      onTap: _showEditProjectNameDropdown,
-      child: Container(
-        key: _projectNameKey,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-        width: 237,
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.white,
-          // border right
-          border: Border(
-            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+    return Row(
+      children: <Widget>[
+        // Back Button
+        Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.white,
+            // border: Border(
+            //   right: BorderSide(
+            //     color: Theme.of(context).colorScheme.dividerColor,
+            //     width: 1,
+            //   ),
+            // ),
           ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Expanded(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-                    builder: (BuildContext context, ProjectViewModelState state) {
-                      return FusionAppText(
-                        text: serviceLocator<ProjectViewModel>().projectName,
-                        textOverflow: TextOverflow.ellipsis,
-                        maxLine: 1,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 2),
-                  FusionAppText(
-                    text: "File_Version",
-                    style: Theme.of(
-                      context,
-                    ).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(width: 2),
-            const Icon(
-              Icons.arrow_drop_down_rounded,
+          child: IconButton(
+            icon: Icon(
+              Icons.arrow_back_ios,
+              color: Theme.of(context).colorScheme.greyDark,
               size: 20,
             ),
-          ],
+            onPressed: () {
+              serviceLocator<ProjectViewModel>().closeProject();
+              Navigator.of(context).pop();
+            },
+            tooltip: 'Back to projects',
+          ),
         ),
-      ),
+        // Project Name Section
+        InkWell(
+          onTap: _showEditProjectNameDropdown,
+          child: Container(
+            key: _projectNameKey,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            width: 197, // Reduced width to account for back button
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.white,
+              border: Border(
+                right: BorderSide(
+                  color: Theme.of(context).colorScheme.dividerColor,
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+                        builder: (
+                          BuildContext context,
+                          ProjectViewModelState state,
+                        ) {
+                          return FusionAppText(
+                            text: serviceLocator<ProjectViewModel>().projectName,
+                            semanticId: "Project Name",
+                            textOverflow: TextOverflow.ellipsis,
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w900,
+                            ),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 2),
+                      FusionAppText(
+                        text: "1.0.0",
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 2),
+                const Icon(
+                  Icons.arrow_drop_down_rounded,
+                  size: 20,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -770,7 +967,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       const Offset(-100, -20) & overlay.size,
     );
@@ -784,7 +984,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       ),
       color: Theme.of(context).colorScheme.white,
       elevation: 1,
-      constraints: const BoxConstraints(minWidth: 237, maxWidth: 237),
+      constraints: const BoxConstraints(minWidth: 189, maxWidth: 189),
       // Match container width
       items: <PopupMenuEntry<String>>[
         PopupMenuItem<String>(
@@ -798,7 +998,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
               });
 
               return Container(
-                width: 237,
+                width: 189,
                 padding: const EdgeInsets.all(12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -830,11 +1030,15 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+                          borderSide: BorderSide(
+                            color: Theme.of(context).colorScheme.dividerColor,
+                          ),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(4),
@@ -842,7 +1046,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
                           ),
                         ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
                         isDense: true,
                       ),
                       onChanged: (String value) {
@@ -882,7 +1089,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           height: 28,
                           width: 64,
                           label: "Cancel",
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                          textStyle: Theme.of(
+                            context,
+                          ).textTheme.labelLarge?.copyWith(fontSize: 10),
                           onTap: () {
                             _clearFields();
                             Navigator.of(context).pop();
@@ -940,7 +1149,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(4),
+                  ),
                   elevation: 0,
                 ),
                 child: const Text(

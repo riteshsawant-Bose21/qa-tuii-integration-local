@@ -43,6 +43,11 @@ final class ZoneSelectionMode extends ProjectViewModelState {
   ZoneSelectionMode(this.zone);
 }
 
+final class SubZoneSelectionMode extends ProjectViewModelState {
+  final SubZone subZone;
+  SubZoneSelectionMode(this.subZone);
+}
+
 final class ListeningAreaSelectionMode extends ProjectViewModelState {
   ListeningAreaSelectionMode();
 }
@@ -67,6 +72,11 @@ final class DeviceSelectionsCleared extends ProjectViewModelState {}
 final class ToolbarModeChanged extends ProjectViewModelState {
   final ToolbarMode mode;
   ToolbarModeChanged(this.mode);
+}
+
+final class ConfigurationMenuModeChanged extends ProjectViewModelState {
+  final ConfigurationMenuMode mode;
+  ConfigurationMenuModeChanged(this.mode);
 }
 
 final class ProductToAddChanged extends ProjectViewModelState {

@@ -1,29 +1,24 @@
 import 'dart:convert';
 
 import 'package:dio/dio.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/core/image_loader_service.dart';
 import 'package:fusion_launcher/core/models/algorithm/algorithm_metadata.dart';
 import 'package:fusion_launcher/core/network_clients/rest_client/interceptor.dart';
 import 'package:fusion_launcher/core/services/user_profile_manager.dart';
-import 'package:fusion_launcher/features/dashboard/data/datasources/home_page_datasource.dart';
+import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
-import 'package:fusion_launcher/features/user_account_setup/data/datasources/auth_datasource.dart';
-import 'package:fusion_launcher/features/user_account_setup/data/datasources/auth_datasource_impl.dart';
-import 'package:fusion_launcher/features/user_account_setup/data/repositories/auth_repository_impl.dart';
-import 'package:fusion_launcher/features/user_account_setup/domain/repositories/auth_repository.dart';
-import 'package:fusion_launcher/features/user_account_setup/presentation/bloc/auth_bloc.dart';
+import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
-import 'package:fusion_lib/fusion_auth/fusion_auth.dart';
-import 'package:fusion_lib/fusion_auth/fusion_auth_impl.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
+import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../features/authentication/viewmodel/session_view_model.dart';
 import '../features/configuration/presentation/viewmodel/project_view_model.dart';
-import '../features/dashboard/data/datasources/home_page_datasource_impl.dart';
-import '../features/dashboard/data/repositories/home_page_repository_impl.dart';
-import '../features/dashboard/domain/repositories/home_page_repository.dart';
 import '../features/dashboard/domain/usecases/create_project_usecase.dart';
 import '../features/dashboard/domain/usecases/delete_project_usecase.dart';
 import '../features/dashboard/domain/usecases/fetch_file_usecase.dart';
@@ -44,6 +39,7 @@ import '../features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import '../features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
 import 'constants/algorithms_data.dart';
 import 'models/user_profile_model.dart';
+import 'router/navigation_observer.dart';
 
 final GetIt serviceLocator = GetIt.instance;
 
@@ -56,6 +52,45 @@ Future<void> setupServiceLocator() async {
   serviceLocator.registerSingleton<SharedPreferences>(prefs);
 
   serviceLocator.registerSingleton<SharedPreferencesHandler>(SharedPreferencesHandler.getInstance(serviceLocator<SharedPreferences>()));
+
+  serviceLocator.registerLazySingleton<FlutterSecureStorage>(
+    () => const FlutterSecureStorage(
+      aOptions: AndroidOptions(encryptedSharedPreferences: true),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<FusionSecureStorage>(
+    () => FusionSecureStorageImpl(serviceLocator<FlutterSecureStorage>()),
+  );
+
+  serviceLocator.registerSingleton<DioClient>(
+    DioClient(dioInstance: Dio(), interceptors: <Interceptor>[AppInterceptors()]),
+  );
+
+  //register Telemetry manager
+  serviceLocator.registerLazySingleton<TelemetryData>(() => TelemetryData());
+
+  serviceLocator.registerLazySingleton<FusionAuthService>(
+    () => FusionAuthService(
+      domain: AppConfig.auth0Domain,
+      clientId: AppConfig.auth0ClientId,
+      secureStorage: serviceLocator<FusionSecureStorage>(),
+      authScheme: AppConfig.auth0Schema,
+      webRedirectUrl: AppConfig.auth0RedirectUri,
+      nativeRedirectUrl: AppConfig.auth0NativeRedirectUri,
+    ),
+  );
+
+  serviceLocator.registerSingleton<FusionNetworkClient>(
+    FusionNetworkClient(
+      httpClient: serviceLocator<DioClient>(),
+      sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>(),
+      telemetryData: serviceLocator<TelemetryData>(),
+      fusionAuthService: serviceLocator<FusionAuthService>(),
+      secureStorageService: serviceLocator<FusionSecureStorage>(),
+      apiBaseUrl: AppConfig.awsApiBaseUrl,
+    ),
+  );
 
   final UserProfile initialUserProfile = UserProfile(
     personalInfo: PersonalInfo(
@@ -119,26 +154,8 @@ Future<void> setupServiceLocator() async {
     FusionBleCommandsImpl(),
   );
 
-  serviceLocator.registerSingleton<DioClient>(
-    DioClient(dioInstance: Dio(), interceptors: <Interceptor>[AppInterceptors()]),
-  );
-
   //Register App Settings
   serviceLocator.registerSingleton<FusionPreferences>(FusionPreferences(sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>()));
-
-  //register Telemetry manager
-  serviceLocator.registerLazySingleton<TelemetryData>(() => TelemetryData());
-
-  serviceLocator.registerSingleton<FusionNetworkClient>(
-    FusionNetworkClient(
-      httpClient: serviceLocator<DioClient>(),
-      sharedPreferencesHandler: serviceLocator<SharedPreferencesHandler>(),
-      telemetryData: serviceLocator<TelemetryData>(),
-      fusionPreferences: serviceLocator<FusionPreferences>(),
-    ),
-  );
-
-  serviceLocator.registerLazySingleton<FusionAuth>(() => FusionAuthImpl(fusionNetworkClient: serviceLocator<FusionNetworkClient>()));
 
   ///Register Project Manager
   serviceLocator.registerLazySingleton<ProjectCloudSyncManager>(
@@ -161,19 +178,32 @@ Future<void> setupServiceLocator() async {
 
   serviceLocator.registerSingleton<ProjectManager>(pm);
 
-  /// Registering the HomePageRepository and its use cases
-  serviceLocator.registerLazySingleton<AuthDataSource>(() => AuthDataSourceImpl(fusionAuth: serviceLocator<FusionAuth>()));
-  serviceLocator.registerLazySingleton<AuthRepository>(() => AuthRepositoryImpl(serviceLocator<AuthDataSource>()));
-  serviceLocator.registerLazySingleton<AuthBloc>(() => AuthBloc(repository: serviceLocator<AuthRepository>()));
-
-  /// Registering the CreateProjectUseCase
-  serviceLocator.registerLazySingleton<HomePageDatasource>(() => HomePageDatasourceImpl(serviceLocator<FusionNetworkClient>()));
-  serviceLocator.registerLazySingleton<HomePageRepository>(() => HomePageRepositoryImpl(serviceLocator<HomePageDatasource>()));
-  // serviceLocator.registerLazySingleton(() => CreateProjectUseCase(serviceLocator()));
-
   serviceLocator.registerLazySingleton<ProjectViewModel>(() => ProjectViewModel(serviceLocator<ProjectManager>()));
+  serviceLocator.registerLazySingleton<SessionViewModel>(
+    () => SessionViewModel(),
+  );
+  serviceLocator.registerLazySingleton<AuthViewModel>(
+    () => AuthViewModel(
+      authService: serviceLocator<FusionAuthService>(),
+      networkClient: serviceLocator<FusionNetworkClient>(),
+      sessionViewModel: serviceLocator<SessionViewModel>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ProjectSyncService>(
+    () => ProjectSyncService(
+      networkClient: serviceLocator<FusionNetworkClient>(),
+    ),
+  );
+
+  serviceLocator.registerLazySingleton<ProjectSyncViewModel>(
+    () => ProjectSyncViewModel(
+      serviceLocator<ProjectSyncService>(),
+    ),
+  );
 
   serviceLocator.registerLazySingleton<ProductQueryCubit>(() => ProductQueryCubit());
+  serviceLocator.registerLazySingleton<GuideShowCaseController>(() => GuideShowCaseController(globalNavigatorKey.currentContext!));
 
   // TODO: ALWAYS KEEP THIS AT THE END OF THE FILE
   await setupFusionLib(serviceLocator);

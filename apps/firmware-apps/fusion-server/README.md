@@ -51,7 +51,7 @@ Fusion Server is a distributed configuration management system with high availab
      - Configurable timeouts and connection limits
 
    **Keepalived Configuration**
-   - Virtual IP (VIP): 192.168.64.100. The address to use is configurable in [multipass.env](multipass.env).
+   - Virtual IP (VIP): 192.168.2.100. The address to use is configurable in [multipass.env](multipass.env).
    - VRRP configuration for high availability
    - Automatic failover between nodes
 
@@ -169,7 +169,7 @@ Local builds are good for developing the various server components without deali
 ### Set a single value
 This will set a single value.
 ```bash
-curl -X POST http://192.168.64.100:8080/value \
+curl -X POST http://192.168.2.100:8080/value \
   -H "Content-Type: application/json" \
   -d '{"key": "value"}'
 ```
@@ -178,7 +178,7 @@ curl -X POST http://192.168.64.100:8080/value \
 This will set multiple nested values. This call will not merge
 any existing values, so use caution.
 ```bash
-curl -X POST http://192.168.64.100:8080/value \
+curl -X POST http://192.168.2.100:8080/value \
   -H "Content-Type: application/json" \
   -d '{
     "volume" : {
@@ -193,7 +193,7 @@ curl -X POST http://192.168.64.100:8080/value \
 This will update multiple nested values. Existing values will be merged.
 If a value is set to null, it will be removed.
 ```bash
-curl -X PATCH http://192.168.64.100:8080/value  \
+curl -X PATCH http://192.168.2.100:8080/value  \
   -H "Content-Type: application/json" \
   -d '{
     "settings": {
@@ -224,49 +224,41 @@ Result:
 
 ### Get a specific value
 ```bash
-curl "http://192.168.64.100:8080/value?key=current"
+curl "http://192.168.2.100:8080/value?key=current"
 ```
 
 Response if value exists:
 ```json
 {
-  "exists": true,
-  "value": {
-    "current": 0.5,
-    "max": 1,
-    "min": "0.0"
-  }
+  "current": 0.5,
+  "max": 1,
+  "min": "0.0"
 }
 ```
 
 Response if value does not exist:
-```json
-{
-  "error": "key not found",
-  "exists": false
-}
-```
+HTTP 404
 
 ### Get all configuration values
 ```bash
-curl http://192.168.64.100:8080/value
+curl http://192.168.2.100:8080/value
 ```
 
 ### Download and save current configuration with specific filename
 ```bash
-curl http://192.168.64.100:8080/value > backup_config.json
+curl http://192.168.2.100:8080/value > backup_config.json
 ```
 
 ## Websockets
 
 ### Simple connection that prints received messages
 ```bash
-websocat ws://192.168.64.100:8080/ws
+websocat ws://192.168.2.100:8080/ws
 ```
 
 ### Connect with interactive mode to send and receive messages
 ```bash
-websocat -v ws://192.168.64.100:8080/ws
+websocat -v ws://192.168.2.100:8080/ws
 ```
 
 ## Unix Domain Sockets (UDP)
@@ -276,7 +268,7 @@ The socket can only be accessed within the internal network.
 ### Get all values
 From with server instance:
 ```bash
-echo '{"action":"get"}' | nc -u -w 1 localhost 7947
+echo '{"action":"get"}' | nc -u -w 1 {vip} 7947
 ```
 
 Outside of instance:
@@ -286,20 +278,23 @@ multipass exec fusion1 -- bash -c "echo '{\"action\":\"get\"}' | nc -u -w 1 -v l
 
 ### Set a value
 ```bash
-echo '{"action":"set","test":"hello"}' | nc -u -w 1 localhost 7947
+echo '{"action":"set","payload":{"test":"hello"}}' | nc -u -w 1 {vip} 7947
 ```
-Outside of instance:
+
+Inside of instance:
 ```bash
-multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"test\":\"hello\"}' | nc -u -w 1 localhost 7947"
+multipass exec fusion1 -- bash -c "echo '{\"action\":\"set\",\"payload\":{\"test\":\"hello\"}}' | nc -u -w 1 localhost 7947"
 ```
 
 ### Set a nested value
 ```bash
 echo '{
-  "action": "set",
-  "audio": {
-    "settings": {
-      "volume": 0.6
+  "action":"set",
+  "payload":{
+    "settings":{
+      "audio":{
+        "volume":0.6
+      }
     }
   }
 }' | nc -u -w1 127.0.0.1 7947
@@ -309,14 +304,26 @@ echo '{
 ```bash
 multipass exec fusion1 -- bash -c 'cat <<EOF | nc -u -w1 127.0.0.1 7947
 {
-  "action": "set",
-  "audio": {
-    "settings": {
-      "volume": 0.6
+  "action":"set",
+  "payload":{
+    "settings":{
+      "audio":{
+        "volume":0.6
+      }
     }
   }
 }
 EOF'
+```
+
+### Monitor all UDP traffic within an instance
+```bash
+# Create a connection to fusion-server
+echo hi | nc -u 127.0.0.1 7947
+
+# Observer messages to the connection
+sudo tcpdump -l -A -nn -vv -i any udp port 7947 2>/dev/null \
+  | sed -n 's/.*\({.*}\).*/\1/p'
 ```
 
 ## Updates
@@ -343,7 +350,7 @@ The checksum of the new binary can be calculated as part of the curl command.
 curl -X POST \
   -F "binary=@build/fusion-server_linux_arm64" \
   -F "checksum=$(shasum -a 256 build/fusion-server_linux_arm64  | cut -d ' ' -f 1)" \
-  http://192.168.64.100:8080/version
+  http://192.168.2.100:8080/version
 ```
 
 ## Basic Commands
@@ -498,10 +505,33 @@ multipass exec fusion1 -- systemctl status fusion-server
    Multipass has not yet released a version that resolves this issue on M4 Macs. In the meantime, you can install the package from this [workaround](https://github.com/canonical/multipass/issues/3842#issuecomment-2552189605).
 
 8. **list failed: cannot connect to the multipass socket**
+An upgrade to MacOs Tahoe can delete the bridge network that was being used
+by multipass.  You can verify if it still present by running
+```bash
+ifconfig bridge100
+```
+
+If it is missing, run the following commands. 
+
 ```bash
 sudo launchctl load -w /Library/LaunchDaemons/com.canonical.multipassd.plist
 sudo launchctl kickstart -k system/com.canonical.multipassd
 ```
+
+8. **Upgrading to MacOs Tahoe**
+```bash
+multipass stop --all
+multipass delete --all
+multipass purge
+
+sudo launchctl unload /Library/LaunchDaemons/com.canonical.multipassd.plist
+sudo rm -rf /Library/Application\ Support/com.canonical.multipassd/network
+sudo launchctl load /Library/LaunchDaemons/com.canonical.multipassd.plist
+
+sudo ifconfig bridge100 create
+sudo ifconfig bridge100 inet 192.168.64.1 255.255.255.0 up
+```
+
 
 ## Testing
 
@@ -562,7 +592,7 @@ brew install loki
 
 #### Get Complete System Metrics
 ```bash
-curl http://192.168.64.100:8080/metrics
+curl http://192.168.2.100:8080/metrics
 ```
 Response includes:
 - Timestamp
@@ -575,7 +605,7 @@ Response includes:
 
 #### Check Cluster Status
 ```bash
-curl http://192.168.64.100:8080/cluster/status
+curl http://192.168.2.100:8080/cluster/status
 ```
 Response includes:
 - Member count
@@ -619,17 +649,17 @@ Response includes:
 
 1. **Check all metrics**
 ```bash
-curl -s http://192.168.64.100:8080/metrics
+curl -s http://192.168.2.100:8080/metrics
 ```
 
 2. **Track cluster membership**
 ```bash
-watch -n 1 'curl -s http://192.168.64.100:8080/cluster/status | jq .members'
+watch -n 1 'curl -s http://192.168.2.100:8080/cluster/status | jq .members'
 ```
 
 3. **System resource usage**
 ```bash
-curl -s http://192.168.64.100:8080/metrics | jq 'select(.cpu_usage, .memory_usage, .goroutines)'
+curl -s http://192.168.2.100:8080/metrics | jq 'select(.cpu_usage, .memory_usage, .goroutines)'
 ```
 
 ### Diagram
@@ -643,7 +673,7 @@ graph TB
     end
 
     subgraph Load Balancer
-        VIP[Virtual IP<br>192.168.64.100]
+        VIP[Virtual IP<br>192.168.2.100]
         HAP[HAProxy<br>Port 80]
         KA[Keepalived<br>VRRP]
     end

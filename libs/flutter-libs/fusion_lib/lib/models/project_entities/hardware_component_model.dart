@@ -27,9 +27,9 @@ class HardwarePortData {
 abstract class HardwareComponent {
   final String id;
   final String name;
-  Offset pos;
+  Offset? pos;
   Offset? wiringPos;
-  double zAxis;
+  double? zAxis;
   final String assetImagePath;
   final LocationModel locationEntity;
   final double price;
@@ -38,15 +38,16 @@ abstract class HardwareComponent {
   final List<PortData> communicationPorts;
   final List<PortData> inputPortsData;
   final List<PortData> outputPortsData;
+  final bool addedFromBuildingPage;
 
   static final Uuid _uuid = const Uuid();
 
   HardwareComponent({
     String? id,
     required this.name,
-    Offset? pos,
+    this.pos,
     this.wiringPos,
-    this.zAxis = 0.0,
+    this.zAxis,
     required this.assetImagePath,
     required this.locationEntity,
     required this.price,
@@ -56,8 +57,8 @@ abstract class HardwareComponent {
     List<PortData>? outputPortsData,
     this.lockListeningArea = false,
     this.communicationPorts = const [],
+    required this.addedFromBuildingPage,
   }) : id = id ?? "HW${FusionUtils.shortStringUUID()}",
-       pos = pos ?? const Offset(0, 0),
        inputPortsData =
            inputPortsData ??
            List<PortData>.generate(
@@ -69,8 +70,7 @@ abstract class HardwareComponent {
                  name: '${index + 1}',
                  type: portData?.inputPortType ?? PortType.analogInput,
                  portNumber: index + 1,
-                 description:
-                     "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 1}",
+                 description: "${(portData?.inputPortType ?? PortType.analogInput).description} ${index + 1}",
                  position: portData?.portPosition ?? PortPosition.topLeft,
                  compatibleTypes: portData?.compatibleInputTypes ?? [],
                );
@@ -83,8 +83,7 @@ abstract class HardwareComponent {
              (index) => PortData(
                id: _uuid.v4(),
                name: '${index + 1}',
-               description:
-                   "${(portData?.inputPortType ?? PortType.analogOutput).description} ${index + 1}",
+               description: "${(portData?.outputPortType ?? PortType.analogOutput).description} ${index + 1}",
                type: portData?.outputPortType ?? PortType.analogOutput,
                portNumber: index + 1,
                position: portData?.portPosition ?? PortPosition.topRight,
@@ -105,12 +104,7 @@ abstract class HardwareComponent {
 
   @override
   int get hashCode {
-    return id.hashCode ^
-        name.hashCode ^
-        pos.hashCode ^
-        wiringPos.hashCode ^
-        assetImagePath.hashCode ^
-        locationEntity.hashCode;
+    return id.hashCode ^ name.hashCode ^ pos.hashCode ^ wiringPos.hashCode ^ assetImagePath.hashCode ^ locationEntity.hashCode;
   }
 
   HardwareComponent copyWith({
@@ -127,6 +121,7 @@ abstract class HardwareComponent {
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
+    bool? addedFromBuildingPage,
   });
 }
 
@@ -134,8 +129,7 @@ extension TotalPrice on List<HardwareComponent> {
   double get totalPrice {
     return fold(
       0.0,
-      (double previousValue, HardwareComponent element) =>
-          previousValue + element.price,
+      (double previousValue, HardwareComponent element) => previousValue + element.price,
     );
   }
 }

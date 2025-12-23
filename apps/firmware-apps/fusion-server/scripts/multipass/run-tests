@@ -1,8 +1,9 @@
 #!/bin/bash
 
 function show_help() {
-    echo "Usage: ./run_tests.sh [--all|--controllers|--fusion] [--vip IP:PORT]"
+    echo "Usage: ./run_tests.sh [--all|--cluster|--fusion] [--vip IP:PORT] [--test-name NAME] [--list] [--list-all]"
     echo "Options:"
+    echo "  --vip         VIP address and port (default: 192.168.2.100:8080)"
     echo "  --all         Run all tests (default)"
     echo "  --audio       Run only audio tests"
     echo "  --bluetooth   Run only bluetooth tests"
@@ -12,85 +13,61 @@ function show_help() {
     echo "  --logger      Run only logger tests"     
     echo "  --persistence Run only persistence tests"     
     echo "  --sap         Run only SAP tests"     
-    echo "  --short       Run short versions of all tests"     
+    echo "  --scheduler   Run only scheduler tests"     
     echo "  --snapshot    Run only snapshot tests"     
     echo "  --state       Run only state manager tests"     
     echo "  --tasks       Run only tasks tests"     
-    echo "  --updater     Run only updater tests"     
-    echo "  --websocket   Run only websocket tests"     
-    echo "  --vip         VIP address and port (default: 192.168.64.100:8080)"
+    echo "  --udp         Run only UDP tests"     
+    echo "  --websocket   Run only websocket tests"
+    echo "  --test-name   Run only a specific Go test name or subtest"
+    echo "  --list        List tests for the selected category"
+    echo "  --list-all    List all tests in fusion/test"
     exit 1
 }
 
-test_type="short"
-vip="192.168.64.100:8080"
+test_type="all"
+vip="192.168.2.100:8080"
+test_name=""
+list_tests=false
+list_all_tests=false
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --all)
-            test_type="all"
-            shift
-            ;;
-        --audio)
-            test_type="audio"
-            shift
-            ;;
-        --bluetooth)
-            test_type="bluetooth"
-            shift
-            ;;
-        --cluster)
-            test_type="cluster"
-            shift
-            ;;
-        --controllers)
-            test_type="controllers"
-            shift
-            ;;
-        --fusion)
-            test_type="fusion"
-            shift
-            ;;
-        --logger)
-            test_type="logger"
-            shift
-            ;;
-        --persistence)
-            test_type="persistence"
-            shift
-            ;;
-        --sap)
-            test_type="sap"
-            shift
-            ;;
-
-        --short)
-            test_type="short"
-            shift
-            ;;
-        --snapshot)
-            test_type="snapshot"
-            shift
-            ;;
-        --state)
-            test_type="state"
-            shift
-            ;;
-        --tasks)
-            test_type="tasks"
-            shift
-            ;;
-        --updater)
-            test_type="updater"
-            shift
-            ;;
-        --websocket)
-            test_type="websocket"
-            shift
-            ;;
+        --all)          test_type="all"; shift ;;
+        --audio)        test_type="audio"; shift ;;
+        --bluetooth)    test_type="bluetooth"; shift ;;
+        --cluster)      test_type="cluster"; shift ;;
+        --controllers)  test_type="controllers"; shift ;;
+        --fusion)       test_type="fusion"; shift ;;
+        --logger)       test_type="logger"; shift ;;
+        --persistence)  test_type="persistence"; shift ;;
+        --sap)          test_type="sap"; shift ;;
+        --scheduler)    test_type="scheduler"; shift ;;
+        --snapshot)     test_type="snapshot"; shift ;;
+        --state)        test_type="state"; shift ;;
+        --tasks)        test_type="tasks"; shift ;;
+        --udp)          test_type="udp"; shift ;;
+        --websocket)    test_type="websocket"; shift ;;
         --vip)
             vip="$2"
             shift 2
+            ;;
+        --test-name)
+            if [[ $# -ge 2 && "$2" != --* ]]; then
+                test_name="$2"
+                shift 2
+            else
+                echo "Error: --test-name requires a value"
+                exit 1
+            fi
+            ;;
+        --list)
+            list_tests=true
+            shift
+            ;;
+        --list-all)
+            list_all_tests=true
+            shift
             ;;
         *)
             show_help
@@ -98,57 +75,124 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-sh scripts/multipass/clear-config.sh
+export FUSION_TEST_VIP="$vip"
+export FUSION_AUTO_DISCOVER=true
+
+# Helper to list tests from a file
+function list_tests_from_file() {
+    local file="$1"
+    echo "Tests in $file:"
+    go test -list . "$file" | grep '^Test' | sort
+    echo ""
+}
+
+# List all tests across the directory
+function list_all() {
+    echo "Listing all tests under fusion/test:"
+    for f in *_test.go; do
+        list_tests_from_file "./$f"
+    done
+    exit 0
+}
+
+# Determine the file for a given category
+function test_file_for_type() {
+    case "$test_type" in
+        audio)        echo "audio_test.go" ;;
+        bluetooth)    echo "bluetooth_test.go" ;;
+        cluster)      echo "cluster_test.go" ;;
+        controllers)  echo "controllers_test.go" ;;
+        fusion)       echo "fusion_test.go" ;;
+        logger)       echo "logger_test.go" ;;
+        persistence)  echo "persistence_test.go" ;;
+        sap)          echo "sap_test.go" ;;
+        scheduler)    echo "scheduler_test.go" ;;
+        snapshot)     echo "snapshot_test.go" ;;
+        state)        echo "state_test.go" ;;
+        tasks)        echo "tasks_test.go" ;;
+        udp)          echo "udp_test.go" ;;
+        websocket)    echo "websocket_test.go" ;;
+        all)          echo "" ;;
+    esac
+}
+
+# Handle list-all
+if [[ "$list_all_tests" = true ]]; then
+    cd fusion/test || exit 1
+    list_all
+fi
+
+# Handle list for a specific category
+if [[ "$list_tests" = true ]]; then
+    cd fusion/test || exit 1
+    
+    if [[ "$test_type" == "all" ]]; then
+        echo "Use --list-all for all test files."
+        exit 0
+    fi
+
+    file=$(test_file_for_type)
+    if [[ -z "$file" ]]; then
+        echo "No file found for test type '$test_type'"
+        exit 1
+    fi
+
+    list_tests_from_file "./$file"
+    exit 0
+fi
+
+# Helper to run a go test with or without -run
+function run_test_file() {
+    local file="$1"
+    if [[ -n "$test_name" ]]; then
+        go test -v --race "$file" -run "$test_name" -- -auto --vip "$vip"
+    else
+        go test -v --race "$file" -- -auto --vip "$vip"
+    fi
+}
+
+# # Helper for tests without extra args
+# function run_simple_test() {
+#     local file="$1"
+#     if [[ -n "$test_name" ]]; then
+#         go test -v --race "$file" -run "$test_name"
+#     else
+#         go test -v --race "$file"
+#     fi
+# }
 
 cd fusion/test || exit 1
 
 case "$test_type" in
     "all")
-        go test -v --race ./... -args --auto --vip "$vip"
+        test_files=$(ls *_test.go)
+
+        for tf in $test_files; do
+            echo "=============================================="
+            echo "Running: $tf"
+            echo "=============================================="
+
+            run_test_file "./$tf"
+
+            echo " "
+            sleep 2
+        done
         ;;
-    "audio")
-        go test -v --race ./audio_test.go
-        ;;
-    "bluetooth")
-        go test -v --race ./bluetooth_test.go
-        ;;
-    "cluster")
-        go test -v --race ./cluster_test.go
-        ;;
-    "controllers")
-        go test -v --race ./cxa_test.go ./cxd_test.go
-        ;;
-    "fusion")
-        go test -v --race ./fusion_test.go -args --auto --vip "$vip"
-        ;;
-    "logger")
-        go test -v --race ./logger_test.go
-        ;;
-    "persistence")
-        go test -v --race ./persistence_test.go
-        ;;
-    "sap")
-        go test -v --race ./sap_test.go
-        ;;        
-    "short")
-        go test -v --race  -short -tags='!exclude' ./... -args --auto --vip "$vip"
-        ;;
-    "snapshot")
-        go test -v --race ./snapshot_test.go
-        ;;
-    "state")
-        go test -v --race ./state_test.go
-        ;;
-    "tasks")
-        go test -v --race ./tasks_test.go
-        ;;
-    "updater")
-        go test -v --race ./updater_test.go
-        ;;
-    "websocket")
-        go test -v --race ./websocket_test.go
-        ;;
+
+    audio)        run_test_file ./audio_test.go ;;
+    bluetooth)    run_test_file ./bluetooth_test.go ;;
+    cluster)      run_test_file ./cluster_test.go ;;
+    controllers)  run_test_file ./controllers_test.go ;;
+    fusion)       run_test_file ./fusion_test.go ;;
+    logger)       run_test_file ./logger_test.go ;;
+    persistence)  run_test_file ./persistence_test.go ;;
+    sap)          run_test_file ./sap_test.go ;;
+    scheduler)    run_test_file ./scheduler_test.go ;;
+    snapshot)     run_test_file ./snapshot_test.go ;;
+    state)        run_test_file ./state_test.go ;;
+    tasks)        run_test_file ./tasks_test.go ;;
+    udp)          run_test_file ./udp_test.go ;;
+    websocket)    run_test_file ./websocket_test.go ;;
 esac
 
 cd ../../ || exit 1
-sh scripts/multipass/clear-config.sh

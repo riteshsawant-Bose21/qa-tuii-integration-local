@@ -129,4 +129,4 @@ resume with the latest settings that you applied.
 
 DSP algorithm profiling
 ------------------------------
-See [PROFILE_BLOCK.md](PROFILE_BLOCK.md).
+See [profiling/PROFILE_BLOCK.md](profiling/PROFILE_BLOCK.md).

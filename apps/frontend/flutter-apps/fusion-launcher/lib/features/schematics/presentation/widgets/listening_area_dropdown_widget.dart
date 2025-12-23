@@ -57,12 +57,8 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
       // todo: Replace with actual area creation logic (e.g., user-defined vertices)
       final ListeningArea newListeningArea = ListeningArea(
         name: _areaNameController.text.trim(),
-        vertices: <Offset>[
-          const Offset(0, 0),
-          const Offset(100, 0),
-          const Offset(100, 100),
-          const Offset(0, 100),
-        ],
+        vertices: <Offset>[],
+        isDrawn: false,
       );
 
       try {
@@ -81,6 +77,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
         );
 
         /// Automatically select the newly created area
+        print('New Listening Area ID: ${newListeningArea.id} and Floor ID: $floorId');
         widget.onSelectionChanged(<String>[newListeningArea.id], floorId);
         Navigator.of(context).pop();
       } catch (e) {

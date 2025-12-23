@@ -65,6 +65,23 @@ extension HardwareViewModel on ProjectViewModel {
           projectManager.addHardware(hardware.getClone());
         }
       }
+      if (hardware is Source) {
+        final SourceType spurceType = (hardware).type;
+        final List<String> chain = switch (spurceType) {
+          SourceType.mic => <String>['peq', 'gate', 'compressor', 'agc'],
+          SourceType.media => <String>['peq', 'compressor', 'agc'],
+          SourceType.generic => <String>['peq', 'compressor'],
+        };
+        for (final String algo in chain) {
+          addProcessingBlockToSource(
+            processingBlock: ProcessingBlockModel.sourceBlocks.firstWhere(
+              (ProcessingBlockModel element) => element.algorithmId == algo,
+            ),
+            sourceId: hardware.id,
+            autoSave: false,
+          );
+        }
+      }
       if (autoSave) {
         saveProject();
       }
@@ -133,6 +150,34 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<HardwareComponent> getHardwareInFloorWithPosition({
+    required String floorId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInFloorWithPosition(floorId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get hardware with position for floor: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<HardwareComponent> getHardwareInFloorWithoutPosition({
+    required String floorId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInFloorWithoutPosition(floorId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get hardware without position for floor: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
   ResponseCallback<bool> moveHardware({
     required String hardwareId,
     String? listeningAreaId,
@@ -144,10 +189,10 @@ extension HardwareViewModel on ProjectViewModel {
         recordSnapshot();
       }
       final ResponseCallback<bool> responseCallback = projectManager.moveHardware(
-            hardwareId,
-            listeningAreaId: listeningAreaId,
-            floorId: floorId,
-          );
+        hardwareId,
+        listeningAreaId: listeningAreaId,
+        floorId: floorId,
+      );
       if (autoSave) {
         saveProject();
       }
@@ -278,6 +323,7 @@ extension HardwareViewModel on ProjectViewModel {
     required Offset position,
     String? listeningAreaId,
     bool autoSave = true,
+    required bool isFromBuildingPage,
   }) {
     if (selectedProductToAdd == null) return;
     try {
@@ -291,8 +337,37 @@ extension HardwareViewModel on ProjectViewModel {
           floorId: currentFloor.id,
           listeningAreaId: listeningAreaId,
         ),
+        isFromBuildingPage: isFromBuildingPage,
       );
-      addHardware(hardware: newHardware, autoSave: autoSave);
+      addHardware(hardware: newHardware, autoSave: false);
+
+      // if (newHardware is Speaker) {
+      //   final CircuitModel circuitModel = CircuitModel(name: newHardware.name, speakerSKU: (newHardware).speakerSKU);
+      //   addCircuit(circuit: circuitModel, autoSave: false);
+      //   addHardwareToCircuit(hwId: newHardware.id, circuitId: circuitModel.id);
+      //
+      //   if (listeningAreaId != null) {
+      //     final SubZone? subZone = getSubZoneForListeningArea(areaId: listeningAreaId);
+      //     if (subZone != null) {
+      //       addCircuitToSubZone(subZoneId: subZone.id, circuitId: circuitModel.id);
+      //     }
+      //
+      //     final Zone? zone = getZonesForListeningArea(areaId: listeningAreaId);
+      //     if (zone != null) {
+      //       addCircuitToZone(zoneId: zone.id, circuitId: circuitModel.id);
+      //     }
+      //   }
+      // }
+
+      // final SubZone? subZone = getZonesForListeningArea(hardwareId: newHardware.id);
+      // if(subZone == null){
+      //   final Zone? zone = getZoneForHardware(hardwareId: newHardware.id);
+      //   if(zone != null){
+      //     addCircuitToZone(zoneId: zone.id, circuitId: circuitModel.id);
+      //   }
+      // }else{
+      //   addCircuitToSubZone(subZoneId: subZone.id, circuitId: circuitModel.id);
+      // }
 
       // Clear selected product after adding
       clearSelectedProduct();
@@ -307,8 +382,9 @@ extension HardwareViewModel on ProjectViewModel {
 
   HardwareComponent fromProductQueryModel(
     ProductQueryModel product, {
-    required Offset pos,
+    Offset? pos,
     required LocationModel locationEntity,
+    required bool isFromBuildingPage,
   }) {
     switch (product.type) {
       case ProductType.speaker:
@@ -317,13 +393,13 @@ extension HardwareViewModel on ProjectViewModel {
           name: product.name,
           pos: pos,
           zAxis: 300.0,
-          // 200 cm default height
           speakerSKU: product.sku,
-          gain: 20.0,
+          gain: 0.0,
+          addedFromBuildingPage: isFromBuildingPage,
           assetImagePath: product.image,
           type: OutputType.analogOutput,
           price: product.price,
-          pitch: product.mountingType == "pendant" ? 90.0 : 0.0,
+          pitch: product.mountingType == "pendant" || product.mountingType == "ceiling" ? 90.0 : 0.0,
           inputPortsData: <PortData>[
             PortData(
               name: "In",
@@ -337,12 +413,12 @@ extension HardwareViewModel on ProjectViewModel {
           outputPortsData: <PortData>[],
         );
       case ProductType.sources:
+        final SourceConnectionType connectionType = SourceData.getSourceConnectionType(product.sku);
         final SourceType type = SourceData.getSourceType(product.sku);
-        final PortType portType = switch (type) {
-          SourceType.analogInput ||
-          SourceType.aes67input => PortType.analogOutput,
-          SourceType.bluetooth => PortType.ble,
-          SourceType.usb => PortType.usb,
+        final PortType portType = switch (connectionType) {
+          SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+          SourceConnectionType.bluetooth => PortType.bleOut,
+          SourceConnectionType.usb => PortType.usbOut,
         };
         return Source(
           locationEntity: locationEntity,
@@ -351,7 +427,9 @@ extension HardwareViewModel on ProjectViewModel {
           assetImagePath: product.image,
           sku: product.sku,
           price: product.price,
+          addedFromBuildingPage: isFromBuildingPage,
           hardwareName: product.name,
+          connectionType: connectionType,
           type: type,
           inputPortsData: <PortData>[],
           outputPortsData: <PortData>[
@@ -359,15 +437,15 @@ extension HardwareViewModel on ProjectViewModel {
               name: "1",
               position: PortPosition.bottomRight,
               portNumber: 1,
-              compatibleTypes: switch (type) {
-                SourceType.analogInput || SourceType.aes67input => <PortType>[
+              compatibleTypes: switch (connectionType) {
+                SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
                   PortType.dspAnalogInput,
                   PortType.endpointInput,
                 ],
-                SourceType.bluetooth => <PortType>[
-                  PortType.ble,
+                SourceConnectionType.bluetooth => <PortType>[
+                  PortType.bleIn,
                 ],
-                SourceType.usb => <PortType>[PortType.usb],
+                SourceConnectionType.usb => <PortType>[PortType.usbIn],
               },
               type: portType,
               description: portType.description,
@@ -382,6 +460,7 @@ extension HardwareViewModel on ProjectViewModel {
           assetImagePath: product.image,
           sku: product.sku,
           price: product.price,
+          addedFromBuildingPage: isFromBuildingPage,
           hardwareName: product.name,
           portData: HardwarePortData(
             inputPorts: 5,
@@ -417,6 +496,7 @@ extension HardwareViewModel on ProjectViewModel {
           pos: pos,
           assetImagePath: product.image,
           sku: product.sku,
+          addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
           hardwareName: product.name,
           inputPortsData: <PortData>[
@@ -473,6 +553,7 @@ extension HardwareViewModel on ProjectViewModel {
           pos: pos,
           assetImagePath: product.image,
           sku: product.sku,
+          addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
           hardwareName: product.name,
           portData: HardwarePortData(
@@ -493,25 +574,25 @@ extension HardwareViewModel on ProjectViewModel {
               name: 'Wifi',
               position: PortPosition.footerRight,
               portNumber: 1,
-              type: PortType.wifi,
-              description: PortType.wifi.description,
-              compatibleTypes: <PortType>[PortType.wifi],
+              type: PortType.wifiIn,
+              description: PortType.wifiIn.description,
+              compatibleTypes: <PortType>[PortType.wifiOut],
             ),
             PortData(
               name: 'USB',
               position: PortPosition.footerRight,
               portNumber: 2,
-              type: PortType.usb,
-              description: PortType.usb.description,
-              compatibleTypes: <PortType>[PortType.usb],
+              type: PortType.usbIn,
+              description: PortType.usbIn.description,
+              compatibleTypes: <PortType>[PortType.usbOut],
             ),
             PortData(
               name: 'ble',
               position: PortPosition.footerRight,
               portNumber: 3,
-              type: PortType.ble,
-              description: PortType.ble.description,
-              compatibleTypes: <PortType>[PortType.ble],
+              type: PortType.bleIn,
+              description: PortType.bleIn.description,
+              compatibleTypes: <PortType>[PortType.bleOut],
             ),
           ],
           location: '',
@@ -525,6 +606,7 @@ extension HardwareViewModel on ProjectViewModel {
           pos: pos,
           assetImagePath: product.image,
           sku: product.sku,
+          addedFromBuildingPage: isFromBuildingPage,
           price: product.price,
           hardwareName: product.name,
           ipAddress: '',
@@ -554,6 +636,7 @@ extension HardwareViewModel on ProjectViewModel {
           locationEntity: locationEntity,
           name: product.name,
           pos: pos,
+          addedFromBuildingPage: isFromBuildingPage,
           assetImagePath: product.image,
           price: product.price,
           hardwareName: product.name,

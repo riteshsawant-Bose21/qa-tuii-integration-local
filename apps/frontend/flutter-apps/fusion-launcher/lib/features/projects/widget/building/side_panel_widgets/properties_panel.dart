@@ -9,8 +9,14 @@ import 'hardware_properties.dart';
 import 'listening_area_properties.dart';
 
 class PropertiesPanel extends StatefulWidget {
-  const PropertiesPanel({super.key, this.onSpeakerUpdated});
   final VoidCallback? onSpeakerUpdated;
+  final VoidCallback? onSpeakerDeleted;
+
+  const PropertiesPanel({
+    super.key,
+    this.onSpeakerUpdated,
+    this.onSpeakerDeleted,
+  });
 
   @override
   State<PropertiesPanel> createState() => _PropertiesPanelState();
@@ -61,6 +67,7 @@ class _PropertiesPanelState extends State<PropertiesPanel> with SingleTickerProv
           return HardwareComponentProperties(
             selectedHardware: selectedHardware,
             onSpeakerParametersChanged: widget.onSpeakerUpdated,
+            onSpeakerDeleted: widget.onSpeakerDeleted,
           );
         } else if (selectedListeningArea != null) {
           return ListeningAreaProperties(selectedListeningArea: selectedListeningArea);

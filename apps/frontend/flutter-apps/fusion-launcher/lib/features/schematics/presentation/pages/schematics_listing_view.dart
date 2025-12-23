@@ -21,8 +21,7 @@ class SchematicsListingview extends StatefulWidget {
 
 class _SchematicsListingviewState extends State<SchematicsListingview> {
   static const double _speakersWidthRatio = 0.25; // 25% of available width
-  static const double _normalColumnWidthRatio =
-      0.1875; // 18.75% each (4 columns = 75%)
+  static const double _normalColumnWidthRatio = 0.1875; // 18.75% each (4 columns = 75%)
 
   /// Get ProjectViewModel instance
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
@@ -59,24 +58,36 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   String? getLocationName(String? listeningAreaId) {
     if (listeningAreaId == null) return null;
 
-    final ListeningArea area = serviceLocator<ProjectViewModel>()
-        .getListeningArea(areaId: listeningAreaId);
+    final ListeningArea area = serviceLocator<ProjectViewModel>().getListeningArea(areaId: listeningAreaId);
 
     return area.name;
   }
 
   /// Get zone data from hardwareId
-  Zone? getZoneData(String hardwareId) {
-    return serviceLocator<ProjectViewModel>().getZoneForHardware(
-      hardwareId: hardwareId,
-    );
+  String? getZoneName(String hardwareId) {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+    String? zoneName = projectViewModel.getZoneForHardware(hardwareId: hardwareId)?.name;
+    if (zoneName == null || zoneName.trim().isEmpty) {
+      zoneName = projectViewModel.getSubZoneForHardware(hardwareId: hardwareId)?.name;
+    }
+    return zoneName;
+  }
+
+  Color? getZoneColor(String hardwareId) {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    Color? zoneColor = projectViewModel.getZoneForHardware(hardwareId: hardwareId)?.color;
+    if (zoneColor == null) {
+      final SubZone? subZone = projectViewModel.getSubZoneForHardware(hardwareId: hardwareId);
+      if (subZone != null) zoneColor = projectViewModel.getZoneForSubZone(subZoneId: subZone.id)?.color;
+    }
+    return zoneColor;
   }
 
   /// sources & endpoints result count
   int _sourcesEndpointsResultCount() {
     if (_sourcesEndpointsSearchQuery.isEmpty) {
-      return _projectViewModel.sources.length +
-          _projectViewModel.fusionEndpoints.length;
+      return _projectViewModel.sources.length + _projectViewModel.fusionEndpoints.length;
     }
     final int sources =
         (_sourcesEndpointsSearchScope == DeviceSearchScope.endpoints)
@@ -104,8 +115,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   /// processors & amplifiers result count
   int _processorsAmplifiersResultCount() {
     if (_processorsAmplifiersSearchQuery.isEmpty) {
-      return _projectViewModel.fusionDsps.length +
-          _projectViewModel.amplifiers.length;
+      return _projectViewModel.fusionDsps.length + _projectViewModel.amplifiers.length;
     }
     final int processors =
         (_processorsAmplifiersSearchScope == DeviceSearchScope.amplifiers)
@@ -132,12 +142,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// controllers result count
   int _controllersResultCount() {
-    if (_controllersSearchQuery.isEmpty)
-      return _projectViewModel.fusionControllers.length;
+    if (_controllersSearchQuery.isEmpty) return _projectViewModel.fusionControllers.length;
     return _projectViewModel.fusionControllers
         .where(
-          (FusionController c) =>
-              c.name.toLowerCase().contains(_controllersSearchQuery),
+          (FusionController c) => c.name.toLowerCase().contains(_controllersSearchQuery),
         )
         .length;
   }
@@ -145,16 +153,14 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   /// accessories result count
   int _accessoriesResultCount() {
     if (_accessoriesSearchQuery.isEmpty) {
-      return _projectViewModel.hardwareRacks.length +
-          _projectViewModel.networkSwitches.length;
+      return _projectViewModel.hardwareRacks.length + _projectViewModel.networkSwitches.length;
     }
     final int racks =
         (_accessoriesSearchScope == DeviceSearchScope.switches)
             ? 0
             : _projectViewModel.hardwareRacks
                 .where(
-                  (HardwareRack r) =>
-                      r.name.toLowerCase().contains(_accessoriesSearchQuery),
+                  (HardwareRack r) => r.name.toLowerCase().contains(_accessoriesSearchQuery),
                 )
                 .length;
     final int switches =
@@ -162,8 +168,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             ? 0
             : _projectViewModel.networkSwitches
                 .where(
-                  (NetworkSwitch s) =>
-                      s.name.toLowerCase().contains(_accessoriesSearchQuery),
+                  (NetworkSwitch s) => s.name.toLowerCase().contains(_accessoriesSearchQuery),
                 )
                 .length;
     return racks + switches;
@@ -172,9 +177,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
   /// speakers result count
   int _speakersResultCount() {
     if (_speakersSearchQuery.isEmpty) return _projectViewModel.zones.length;
-    return _projectViewModel.zones
-        .where((Zone z) => z.name.toLowerCase().contains(_speakersSearchQuery))
-        .length;
+    return _projectViewModel.zones.where((Zone z) => z.name.toLowerCase().contains(_speakersSearchQuery)).length;
   }
 
   @override
@@ -185,8 +188,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
         /// Calculate column widths proportionally to prevent overflow
         final double speakersColumnWidth = availableWidth * _speakersWidthRatio;
-        final double normalColumnWidth =
-            availableWidth * _normalColumnWidthRatio;
+        final double normalColumnWidth = availableWidth * _normalColumnWidthRatio;
 
         return Container(
           color: Colors.white,
@@ -221,33 +223,26 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     final List<FusionEndpoints> endpointMatches =
                         _projectViewModel.fusionEndpoints
                             .where(
-                              (FusionEndpoints e) => e.name
-                                  .toLowerCase()
-                                  .contains(_sourcesEndpointsSearchQuery),
+                              (FusionEndpoints e) => e.name.toLowerCase().contains(_sourcesEndpointsSearchQuery),
                             )
                             .toList();
                     if (sourceMatches.isNotEmpty && endpointMatches.isEmpty) {
                       _sourcesEndpointsSearchScope = DeviceSearchScope.sources;
-                    } else if (endpointMatches.isNotEmpty &&
-                        sourceMatches.isEmpty) {
-                      _sourcesEndpointsSearchScope =
-                          DeviceSearchScope.endpoints;
+                    } else if (endpointMatches.isNotEmpty && sourceMatches.isEmpty) {
+                      _sourcesEndpointsSearchScope = DeviceSearchScope.endpoints;
                     } else {
                       _sourcesEndpointsSearchScope = null;
                     }
                   });
                 },
                 expandableSections: <ExpandableSection>[
-                  if (_sourcesEndpointsSearchQuery.isEmpty ||
-                      _sourcesEndpointsSearchScope !=
-                          DeviceSearchScope.endpoints)
+                  if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.endpoints)
                     ExpandableSection(
                       title: "Sources",
                       content: _buildSourcesContent(),
                       initiallyExpanded: true,
                     ),
-                  if (_sourcesEndpointsSearchQuery.isEmpty ||
-                      _sourcesEndpointsSearchScope != DeviceSearchScope.sources)
+                  if (_sourcesEndpointsSearchQuery.isEmpty || _sourcesEndpointsSearchScope != DeviceSearchScope.sources)
                     ExpandableSection(
                       title: "Endpoints",
                       content: _buildEndpointsContent(),
@@ -255,25 +250,23 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                selectedDeviceId:
-                    _projectViewModel.selectedDevice?.type ==
-                            SelectedItemType.source
-                        ? _projectViewModel.selectedDevice?.id
-                        : null,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.source ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   /// Sources [onTapAddDevice]
                   if (item is SourceData) {
                     final SourceType type = SourceData.getSourceType(item.id);
-                    final PortType portType = switch (type) {
-                      SourceType.analogInput ||
-                      SourceType.aes67input => PortType.analogOutput,
-                      SourceType.bluetooth => PortType.ble,
-                      SourceType.usb => PortType.usb,
+                    final SourceConnectionType connectType = SourceData.getSourceConnectionType(item.id);
+                    final PortType portType = switch (connectType) {
+                      SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
+                      SourceConnectionType.bluetooth => PortType.bleOut,
+                      SourceConnectionType.usb => PortType.usbOut,
                     };
                     final Source source = Source(
                       name: item.name,
                       pos: null,
                       type: item.type,
+                      addedFromBuildingPage: false,
+                      connectionType: connectType,
                       assetImagePath: item.assetPath,
                       locationEntity: LocationModel(
                         listeningAreaId: areaId,
@@ -287,16 +280,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         inputPortType: PortType.analogInput,
                         outputPortType: portType,
                         compatibleInputTypes: <PortType>[],
-                        compatibleOutputTypes: switch (type) {
-                          SourceType.analogInput ||
-                          SourceType.aes67input => <PortType>[
+                        compatibleOutputTypes: switch (connectType) {
+                          SourceConnectionType.analogInput || SourceConnectionType.aes67input => <PortType>[
                             PortType.dspAnalogInput,
                             PortType.endpointInput,
                           ],
-                          SourceType.bluetooth => <PortType>[
-                            PortType.ble,
+                          SourceConnectionType.bluetooth => <PortType>[
+                            PortType.bleIn,
                           ],
-                          SourceType.usb => <PortType>[PortType.usb],
+                          SourceConnectionType.usb => <PortType>[PortType.usbIn],
                         },
                         portPosition: PortPosition.topLeft,
                       ),
@@ -311,16 +303,14 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   }
                   /// Endpoints [onTapAddDevice]
                   else if (item is ProductQueryModel) {
-                    final HardwareComponent hardware =
-                        serviceLocator<ProjectViewModel>()
-                            .fromProductQueryModel(
-                              item,
-                              locationEntity: LocationModel(
-                                listeningAreaId: areaId,
-                                floorId: floorId,
-                              ),
-                              pos: Offset.zero,
-                            );
+                    final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                      item,
+                      locationEntity: LocationModel(
+                        listeningAreaId: areaId,
+                        floorId: floorId,
+                      ),
+                      isFromBuildingPage: false,
+                    );
 
                     serviceLocator<ProjectViewModel>().addHardware(
                       hardware: hardware,
@@ -370,31 +360,23 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                               ),
                             )
                             .toList();
-                    if (processorMatches.isNotEmpty &&
-                        amplifierMatches.isEmpty) {
-                      _processorsAmplifiersSearchScope =
-                          DeviceSearchScope.fusionDevices;
-                    } else if (amplifierMatches.isNotEmpty &&
-                        processorMatches.isEmpty) {
-                      _processorsAmplifiersSearchScope =
-                          DeviceSearchScope.amplifiers;
+                    if (processorMatches.isNotEmpty && amplifierMatches.isEmpty) {
+                      _processorsAmplifiersSearchScope = DeviceSearchScope.fusionDevices;
+                    } else if (amplifierMatches.isNotEmpty && processorMatches.isEmpty) {
+                      _processorsAmplifiersSearchScope = DeviceSearchScope.amplifiers;
                     } else {
                       _processorsAmplifiersSearchScope = null;
                     }
                   });
                 },
                 expandableSections: <ExpandableSection>[
-                  if (_processorsAmplifiersSearchQuery.isEmpty ||
-                      _processorsAmplifiersSearchScope !=
-                          DeviceSearchScope.amplifiers)
+                  if (_processorsAmplifiersSearchQuery.isEmpty || _processorsAmplifiersSearchScope != DeviceSearchScope.amplifiers)
                     ExpandableSection(
                       title: "Fusion Devices",
                       content: _buildProcessorsContent(),
                       initiallyExpanded: true,
                     ),
-                  if (_processorsAmplifiersSearchQuery.isEmpty ||
-                      _processorsAmplifiersSearchScope !=
-                          DeviceSearchScope.fusionDevices)
+                  if (_processorsAmplifiersSearchQuery.isEmpty || _processorsAmplifiersSearchScope != DeviceSearchScope.fusionDevices)
                     ExpandableSection(
                       title: "Amplifiers",
                       content: _buildAmplifiersContent(),
@@ -402,25 +384,19 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                selectedDeviceId:
-                    _projectViewModel.selectedDevice?.type ==
-                            SelectedItemType.processor
-                        ? _projectViewModel.selectedDevice?.id
-                        : null,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   print("Adding hardware of type: ${item.type}");
 
                   if (item is ProductQueryModel) {
-                    final HardwareComponent hardware =
-                        serviceLocator<ProjectViewModel>()
-                            .fromProductQueryModel(
-                              item,
-                              locationEntity: LocationModel(
-                                listeningAreaId: areaId,
-                                floorId: floorId,
-                              ),
-                              pos: Offset.zero,
-                            );
+                    final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                      item,
+                      locationEntity: LocationModel(
+                        listeningAreaId: areaId,
+                        floorId: floorId,
+                      ),
+                      isFromBuildingPage: false,
+                    );
                     if (item.type == ProductType.dsps) {
                       serviceLocator<ProjectViewModel>().addHardware(
                         hardware: hardware,
@@ -451,11 +427,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 backgroundColor: Colors.white,
                 sectionContent: _buildSpeakersContent(),
                 listeningAreas: _projectViewModel.listeningAreas,
-                selectedDeviceId:
-                    _projectViewModel.selectedDevice?.type ==
-                            SelectedItemType.zone
-                        ? _projectViewModel.selectedDevice?.id
-                        : null,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.zone ? _projectViewModel.selectedDevice?.id : null,
                 onSearchChanged: (String q) {
                   _projectViewModel.clearSelections();
                   setState(() {
@@ -490,23 +462,17 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                selectedDeviceId:
-                    _projectViewModel.selectedDevice?.type ==
-                            SelectedItemType.controller
-                        ? _projectViewModel.selectedDevice?.id
-                        : null,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.controller ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is ProductQueryModel) {
-                    final HardwareComponent hardware =
-                        serviceLocator<ProjectViewModel>()
-                            .fromProductQueryModel(
-                              item,
-                              locationEntity: LocationModel(
-                                listeningAreaId: areaId,
-                                floorId: floorId,
-                              ),
-                              pos: Offset.zero,
-                            );
+                    final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                      item,
+                      locationEntity: LocationModel(
+                        listeningAreaId: areaId,
+                        floorId: floorId,
+                      ),
+                      isFromBuildingPage: false,
+                    );
 
                     serviceLocator<ProjectViewModel>().addHardware(
                       hardware: hardware,
@@ -548,15 +514,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     final List<NetworkSwitch> switchMatches =
                         _projectViewModel.networkSwitches
                             .where(
-                              (NetworkSwitch s) => s.name
-                                  .toLowerCase()
-                                  .contains(_accessoriesSearchQuery),
+                              (NetworkSwitch s) => s.name.toLowerCase().contains(_accessoriesSearchQuery),
                             )
                             .toList();
                     if (rackMatches.isNotEmpty && switchMatches.isEmpty) {
                       _accessoriesSearchScope = DeviceSearchScope.racks;
-                    } else if (switchMatches.isNotEmpty &&
-                        rackMatches.isEmpty) {
+                    } else if (switchMatches.isNotEmpty && rackMatches.isEmpty) {
                       _accessoriesSearchScope = DeviceSearchScope.switches;
                     } else {
                       _accessoriesSearchScope = null;
@@ -564,15 +527,13 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   });
                 },
                 expandableSections: <ExpandableSection>[
-                  if (_accessoriesSearchQuery.isEmpty ||
-                      _accessoriesSearchScope != DeviceSearchScope.switches)
+                  if (_accessoriesSearchQuery.isEmpty || _accessoriesSearchScope != DeviceSearchScope.switches)
                     ExpandableSection(
                       title: "Racks",
                       content: _buildRacksContent(),
                       initiallyExpanded: true,
                     ),
-                  if (_accessoriesSearchQuery.isEmpty ||
-                      _accessoriesSearchScope != DeviceSearchScope.racks)
+                  if (_accessoriesSearchQuery.isEmpty || _accessoriesSearchScope != DeviceSearchScope.racks)
                     ExpandableSection(
                       title: "Switches",
                       content: _buildSwitchesContent(),
@@ -580,11 +541,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     ),
                 ],
                 listeningAreas: _projectViewModel.listeningAreas,
-                selectedDeviceId:
-                    _projectViewModel.selectedDevice?.type ==
-                            SelectedItemType.racks
-                        ? _projectViewModel.selectedDevice?.id
-                        : null,
+                selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.racks ? _projectViewModel.selectedDevice?.id : null,
                 onTapAddDevice: (dynamic item, String areaId, String floorId) {
                   if (item is RackData) {
                     final HardwareRack hardwareRack = HardwareRack(
@@ -593,10 +550,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         floorId: floorId,
                       ),
                       name: item.name,
-                      pos: Offset.zero,
                       assetImagePath: item.assetPath,
                       price: item.price,
                       hardwareName: item.name,
+                      addedFromBuildingPage: false,
                     );
                     serviceLocator<ProjectViewModel>().addHardware(
                       hardware: hardwareRack,
@@ -611,8 +568,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         listeningAreaId: areaId,
                         floorId: floorId,
                       ),
+                      addedFromBuildingPage: false,
                       name: item.name,
-                      pos: Offset.zero,
                       assetImagePath: item.assetPath,
                       price: item.price,
                       hardwareName: item.name,
@@ -642,17 +599,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final List<FusionController> filteredControllers =
             _projectViewModel.fusionControllers
                 .where(
-                  (FusionController c) =>
-                      _controllersSearchQuery.isEmpty ||
-                      c.name.toLowerCase().contains(_controllersSearchQuery),
+                  (FusionController c) => _controllersSearchQuery.isEmpty || c.name.toLowerCase().contains(_controllersSearchQuery),
                 )
                 .toList();
         return CommonReorderableListView<FusionController>(
           items: filteredControllers,
-          emptyMessage:
-              _controllersSearchQuery.isEmpty
-                  ? "No controllers added yet"
-                  : "No controllers match search",
+          emptyMessage: _controllersSearchQuery.isEmpty ? "No controllers added yet" : "No controllers match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredControllers[oldIndex].id;
@@ -672,18 +624,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             FusionController controller,
             int index,
           ) {
-            final bool isSelected =
-                selectedDevice?.id == controller.id &&
-                selectedDevice?.type == SelectedItemType.controller;
+            final bool isSelected = selectedDevice?.id == controller.id && selectedDevice?.type == SelectedItemType.controller;
             return HardwareItemCard(
               name: controller.name,
               highlightQuery: _controllersSearchQuery,
               assetImagePath: controller.assetImagePath,
               itemId: controller.id,
-              zone: getZoneData(controller.id),
-              location:
-                  getLocationName(controller.locationEntity.listeningAreaId) ??
-                  "Add location",
+              zoneName: getZoneName(controller.id),
+              zoneColor: getZoneColor(controller.id),
+              location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -710,8 +659,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// Optimized Sources content using CommonReorderableListView
   Widget _buildSourcesContent() {
-    if (_sourcesEndpointsSearchQuery.isNotEmpty &&
-        _sourcesEndpointsSearchScope == DeviceSearchScope.endpoints) {
+    if (_sourcesEndpointsSearchQuery.isNotEmpty && _sourcesEndpointsSearchScope == DeviceSearchScope.endpoints) {
       return const SizedBox.shrink();
     }
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -730,10 +678,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
         return CommonReorderableListView<Source>(
           items: filteredSources,
-          emptyMessage:
-              _sourcesEndpointsSearchQuery.isEmpty
-                  ? "No sources added yet"
-                  : "No sources match search",
+          emptyMessage: _sourcesEndpointsSearchQuery.isEmpty ? "No sources added yet" : "No sources match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredSources[oldIndex].id;
@@ -749,18 +694,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (Source source) => source.id,
           itemBuilder: (BuildContext context, Source source, int index) {
-            final bool isSelected =
-                selectedDevice?.id == source.id &&
-                selectedDevice?.type == SelectedItemType.source;
+            final bool isSelected = selectedDevice?.id == source.id && selectedDevice?.type == SelectedItemType.source;
             return HardwareItemCard(
               name: source.name,
               highlightQuery: _sourcesEndpointsSearchQuery,
               assetImagePath: source.assetImagePath,
               itemId: source.id,
-              zone: getZoneData(source.id),
-              location:
-                  getLocationName(source.locationEntity.listeningAreaId) ??
-                  "Add location",
+              zoneName: getZoneName(source.id),
+              zoneColor: getZoneColor(source.id),
+              location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -787,8 +729,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// Endpoints content using CommonReorderableListView
   Widget _buildEndpointsContent() {
-    if (_sourcesEndpointsSearchQuery.isNotEmpty &&
-        _sourcesEndpointsSearchScope == DeviceSearchScope.sources) {
+    if (_sourcesEndpointsSearchQuery.isNotEmpty && _sourcesEndpointsSearchScope == DeviceSearchScope.sources) {
       return const SizedBox.shrink();
     }
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -807,10 +748,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
         return CommonReorderableListView<FusionEndpoints>(
           items: filteredEndpoints,
-          emptyMessage:
-              _sourcesEndpointsSearchQuery.isEmpty
-                  ? "No endpoints added yet"
-                  : "No endpoints match search",
+          emptyMessage: _sourcesEndpointsSearchQuery.isEmpty ? "No endpoints added yet" : "No endpoints match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredEndpoints[oldIndex].id;
@@ -830,18 +768,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             FusionEndpoints endpoint,
             int index,
           ) {
-            final bool isSelected =
-                selectedDevice?.id == endpoint.id &&
-                selectedDevice?.type == SelectedItemType.endpoint;
+            final bool isSelected = selectedDevice?.id == endpoint.id && selectedDevice?.type == SelectedItemType.endpoint;
             return HardwareItemCard(
               name: endpoint.name,
               highlightQuery: _sourcesEndpointsSearchQuery, // new
               assetImagePath: endpoint.assetImagePath,
               itemId: endpoint.id,
-              zone: getZoneData(endpoint.id),
-              location:
-                  getLocationName(endpoint.locationEntity.listeningAreaId) ??
-                  "Add location",
+              zoneName: getZoneName(endpoint.id),
+              zoneColor: getZoneColor(endpoint.id),
+              location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -868,8 +803,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   ///  Processors content using CommonReorderableListView
   Widget _buildProcessorsContent() {
-    if (_processorsAmplifiersSearchQuery.isNotEmpty &&
-        _processorsAmplifiersSearchScope == DeviceSearchScope.amplifiers) {
+    if (_processorsAmplifiersSearchQuery.isNotEmpty && _processorsAmplifiersSearchScope == DeviceSearchScope.amplifiers) {
       return const SizedBox.shrink();
     }
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -887,10 +821,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 .toList();
         return CommonReorderableListView<FusionDsp>(
           items: filteredProcessors,
-          emptyMessage:
-              _processorsAmplifiersSearchQuery.isEmpty
-                  ? "No processors added yet"
-                  : "No processors match search",
+          emptyMessage: _processorsAmplifiersSearchQuery.isEmpty ? "No processors added yet" : "No processors match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredProcessors[oldIndex].id;
@@ -906,19 +837,16 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (FusionDsp processor) => processor.id,
           itemBuilder: (BuildContext context, FusionDsp processor, int index) {
-            final bool isSelected =
-                selectedDevice?.id == processor.id &&
-                selectedDevice?.type == SelectedItemType.processor;
+            final bool isSelected = selectedDevice?.id == processor.id && selectedDevice?.type == SelectedItemType.processor;
 
             return HardwareItemCard(
               name: processor.name,
               highlightQuery: _processorsAmplifiersSearchQuery,
               assetImagePath: processor.assetImagePath,
               itemId: processor.id,
-              zone: getZoneData(processor.id),
-              location:
-                  getLocationName(processor.locationEntity.listeningAreaId) ??
-                  "Add location",
+              zoneName: getZoneName(processor.id),
+              zoneColor: getZoneColor(processor.id),
+              location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -943,8 +871,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// Amplifiers content using CommonReorderableListView
   Widget _buildAmplifiersContent() {
-    if (_processorsAmplifiersSearchQuery.isNotEmpty &&
-        _processorsAmplifiersSearchScope == DeviceSearchScope.fusionDevices) {
+    if (_processorsAmplifiersSearchQuery.isNotEmpty && _processorsAmplifiersSearchScope == DeviceSearchScope.fusionDevices) {
       return const SizedBox.shrink();
     }
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -962,10 +889,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 .toList();
         return CommonReorderableListView<Amplifier>(
           items: filteredAmplifiers,
-          emptyMessage:
-              _processorsAmplifiersSearchQuery.isEmpty
-                  ? "No amplifiers added yet"
-                  : "No amplifiers match search",
+          emptyMessage: _processorsAmplifiersSearchQuery.isEmpty ? "No amplifiers added yet" : "No amplifiers match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredAmplifiers[oldIndex].id;
@@ -981,19 +905,16 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
           },
           keyExtractor: (Amplifier amplifier) => amplifier.id,
           itemBuilder: (BuildContext context, Amplifier amplifier, int index) {
-            final bool isSelected =
-                selectedDevice?.id == amplifier.id &&
-                selectedDevice?.type == SelectedItemType.amplifier;
+            final bool isSelected = selectedDevice?.id == amplifier.id && selectedDevice?.type == SelectedItemType.amplifier;
 
             return HardwareItemCard(
               name: amplifier.name,
               highlightQuery: _processorsAmplifiersSearchQuery, // new
               assetImagePath: amplifier.assetImagePath,
               itemId: amplifier.id,
-              zone: getZoneData(amplifier.id),
-              location:
-                  getLocationName(amplifier.locationEntity.listeningAreaId) ??
-                  "Add location",
+              zoneName: getZoneName(amplifier.id),
+              zoneColor: getZoneColor(amplifier.id),
+              location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add location",
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -1018,8 +939,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// Racks content using CommonReorderableListView
   Widget _buildRacksContent() {
-    if (_accessoriesSearchQuery.isNotEmpty &&
-        _accessoriesSearchScope == DeviceSearchScope.switches) {
+    if (_accessoriesSearchQuery.isNotEmpty && _accessoriesSearchScope == DeviceSearchScope.switches) {
       return const SizedBox.shrink();
     }
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -1028,17 +948,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final List<HardwareRack> filteredRacks =
             _projectViewModel.hardwareRacks
                 .where(
-                  (HardwareRack r) =>
-                      _accessoriesSearchQuery.isEmpty ||
-                      r.name.toLowerCase().contains(_accessoriesSearchQuery),
+                  (HardwareRack r) => _accessoriesSearchQuery.isEmpty || r.name.toLowerCase().contains(_accessoriesSearchQuery),
                 )
                 .toList();
         return CommonReorderableListView<HardwareRack>(
           items: filteredRacks,
-          emptyMessage:
-              _accessoriesSearchQuery.isEmpty
-                  ? "No racks added yet"
-                  : "No racks match search",
+          emptyMessage: _accessoriesSearchQuery.isEmpty ? "No racks added yet" : "No racks match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredRacks[oldIndex].id;
@@ -1058,16 +973,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             HardwareRack hardwareRack,
             int index,
           ) {
-            final bool isSelected =
-                selectedDevice?.id == hardwareRack.id &&
-                selectedDevice?.type == SelectedItemType.racks;
+            final bool isSelected = selectedDevice?.id == hardwareRack.id && selectedDevice?.type == SelectedItemType.racks;
 
             return HardwareItemCard(
               name: hardwareRack.name,
               highlightQuery: _accessoriesSearchQuery, // new
               assetImagePath: hardwareRack.assetImagePath,
               itemId: hardwareRack.id,
-              zone: getZoneData(hardwareRack.id),
+              zoneName: getZoneName(hardwareRack.id),
+              zoneColor: getZoneColor(hardwareRack.id),
               location:
                   getLocationName(
                     hardwareRack.locationEntity.listeningAreaId,
@@ -1099,8 +1013,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
 
   /// Accessories content using CommonReorderableListView
   Widget _buildSwitchesContent() {
-    if (_accessoriesSearchQuery.isNotEmpty &&
-        _accessoriesSearchScope == DeviceSearchScope.racks) {
+    if (_accessoriesSearchQuery.isNotEmpty && _accessoriesSearchScope == DeviceSearchScope.racks) {
       return const SizedBox.shrink();
     }
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -1109,17 +1022,12 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final List<NetworkSwitch> filteredSwitches =
             _projectViewModel.networkSwitches
                 .where(
-                  (NetworkSwitch s) =>
-                      _accessoriesSearchQuery.isEmpty ||
-                      s.name.toLowerCase().contains(_accessoriesSearchQuery),
+                  (NetworkSwitch s) => _accessoriesSearchQuery.isEmpty || s.name.toLowerCase().contains(_accessoriesSearchQuery),
                 )
                 .toList();
         return CommonReorderableListView<NetworkSwitch>(
           items: filteredSwitches,
-          emptyMessage:
-              _accessoriesSearchQuery.isEmpty
-                  ? "No switches added yet"
-                  : "No switches match search",
+          emptyMessage: _accessoriesSearchQuery.isEmpty ? "No switches added yet" : "No switches match search",
           onReorder: (int oldIndex, int newIndex) {
             if (oldIndex < newIndex) newIndex -= 1;
             final String hwToMove = filteredSwitches[oldIndex].id;
@@ -1139,15 +1047,14 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             NetworkSwitch networkSwitch,
             int index,
           ) {
-            final bool isSelected =
-                selectedDevice?.id == networkSwitch.id &&
-                selectedDevice?.type == SelectedItemType.switchs;
+            final bool isSelected = selectedDevice?.id == networkSwitch.id && selectedDevice?.type == SelectedItemType.switchs;
             return HardwareItemCard(
               name: networkSwitch.name,
               highlightQuery: _accessoriesSearchQuery, // new
               assetImagePath: networkSwitch.assetImagePath,
               itemId: networkSwitch.id,
-              zone: getZoneData(networkSwitch.id),
+              zoneName: getZoneName(networkSwitch.id),
+              zoneColor: getZoneColor(networkSwitch.id),
               location:
                   getLocationName(
                     networkSwitch.locationEntity.listeningAreaId,
@@ -1183,9 +1090,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
         final List<Zone> filteredZones =
             _projectViewModel.zones
                 .where(
-                  (Zone z) =>
-                      _speakersSearchQuery.isEmpty ||
-                      z.name.toLowerCase().contains(_speakersSearchQuery),
+                  (Zone z) => _speakersSearchQuery.isEmpty || z.name.toLowerCase().contains(_speakersSearchQuery),
                 )
                 .toList();
 
@@ -1194,10 +1099,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
             padding: const EdgeInsets.all(16),
             child: Center(
               child: FusionAppText(
-                text:
-                    _speakersSearchQuery.isEmpty
-                        ? "No zones added yet"
-                        : "No zones match search",
+                text: _speakersSearchQuery.isEmpty ? "No zones added yet" : "No zones match search",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 12,
                   color: Colors.grey[600],

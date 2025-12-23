@@ -1,16 +1,16 @@
 package cluster
 
 import (
-	"encoding/json"
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/persistence"
 	"fusion/internal/pubsub"
-	"fusion/internal/server/handler"
 	"fusion/internal/tasks"
 	"math"
 	"sync"
 	"time"
+
+	json "github.com/goccy/go-json"
 )
 
 const (
@@ -47,7 +47,7 @@ func (s *SkewStore) Add(node string, skew time.Duration, detected time.Time) {
 	s.mu.Unlock()
 }
 
-// Prune remomves stale records from the store.
+// Prune removes stale records from the store.
 func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 	for range ticker.C {
 		now := time.Now()
@@ -62,28 +62,26 @@ func (s *SkewStore) Prune(ticker *time.Ticker, maxAge time.Duration) {
 }
 
 type ClusterDelegate struct {
-	nodeID        string
+	appConfig     *api.AppConfig
 	persistence   *persistence.Persistence
 	stateManager  *persistence.StateManager
 	taskManager   *tasks.TaskManager
-	updater       *handler.Updater
 	syncLatencies *SyncLatencyStore
 	skewStore     *SkewStore
 	hub           *pubsub.Hub
 }
 
 func NewClusterDelegate(
-	nodeID string, persistence *persistence.Persistence,
+	config *api.AppConfig,
+	persistence *persistence.Persistence,
 	stateManager *persistence.StateManager,
 	taskManager *tasks.TaskManager,
-	updater *handler.Updater,
 	hub *pubsub.Hub) *ClusterDelegate {
 	delegate := &ClusterDelegate{
-		nodeID:        nodeID,
+		appConfig:     config,
 		persistence:   persistence,
 		stateManager:  stateManager,
 		taskManager:   taskManager,
-		updater:       updater,
 		hub:           hub,
 		syncLatencies: NewSyncLatencyStore(maxLatencyCount, latencyPruneTime),
 		skewStore:     NewSkewStore(),
@@ -102,7 +100,7 @@ func (d *ClusterDelegate) NodeMeta(limit int) []byte {
 		NodeID  string      `json:"node_id"`
 		Version api.Version `json:"version"`
 	}{
-		NodeID:  d.nodeID,
+		NodeID:  d.appConfig.NodeName,
 		Version: version,
 	}
 
@@ -153,7 +151,7 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 
 		d.syncLatencies.Add(SyncLatency{
 			Sender:    message.Node,
-			Receiver:  d.nodeID,
+			Receiver:  d.appConfig.NodeName,
 			Operation: string(message.Operation),
 			Latency:   latencyMs,
 			Timestamp: time.Now(),
@@ -162,27 +160,75 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 
 	switch message.Operation {
 
+	case api.NotifyOpAudioRemove:
+		if message.AudioRemove == nil {
+			logger.Error("AudioRemove message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.handleAudioRemove(message.AudioRemove); err != nil {
+			logger.Error("Error handling audio remove from %s: %v", message.Node, err)
+		}
+
+	case api.NotifyOpAudioSync:
+		if message.AudioSync == nil {
+			logger.Error("AudioSync message with nil payload from %s", message.Node)
+			return
+		}
+		if err := d.handleAudioSync(message.AudioSync); err != nil {
+			logger.Error("Error handling audio sync from %s: %v", message.Node, err)
+		}
+
 	case api.NotifyOpConfigUpdate:
-		if err := d.stateManager.ApplyUpdate(*message.ConfigUpdate); err != nil {
+		dirty, err := d.stateManager.ApplyUpdate(*message.ConfigUpdate)
+		if err != nil {
 			logger.Error("Error applying update: %v", err)
 			return
 		}
+
+		if !dirty {
+			logger.Debug("[Delegate] Skipping stale ConfigUpdate version=%v from %s",
+				message.ConfigUpdate.Version, message.Node)
+			return
+		}
+
+		// Overwrite with effective local Lamport version
+		updated := *message.ConfigUpdate
+		updated.Version = d.stateManager.GetVersion()
+		logger.Debug("[Delegate] NotifyOpConfigUpdate setting Version: %d", updated.Version.Counter)
+		message.ConfigUpdate = &updated
+
 		d.persistence.MarkDirty()
-		d.hub.Broadcast(&message)
+		d.hub.BroadcastToObservers(&message)
 
 	case api.NotifyOpSnapActivate:
-		if err := d.persistence.ActivateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if message.SnapshotOperation == nil {
+			logger.Error("SnapActivate message with nil payload from %s", message.Node)
+			return
+		}
+
+		logger.Info("[Delegate] SnapActivate on %s for %s (from=%s)",
+			d.appConfig.NodeName,
+			message.SnapshotOperation.Name,
+			message.Node,
+		)
+
+		if err := d.persistence.ActivateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error activating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapCreate:
-		if err := d.persistence.CreateSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := d.persistence.CreateSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error creating snapshot: %v", err)
 		}
 
 	case api.NotifyOpSnapDelete:
-		if err := d.persistence.DeleteSnapshot(message.SnapshotUpdate.Name); err != nil {
+		if err := d.persistence.DeleteSnapshot(message.SnapshotOperation.Name); err != nil {
 			logger.Error("Error deleting snapshot: %v", err)
+		}
+
+	case api.NotifyOpSnapSave:
+		if err := d.persistence.SaveSnapshot(message.SnapshotOperation.Name); err != nil {
+			logger.Error("Error saving snapshot: %v", err)
 		}
 
 	case api.NotifyOpTaskCreate:
@@ -198,11 +244,6 @@ func (d *ClusterDelegate) NotifyMsg(msg []byte) {
 	case api.NotifyOpTaskUpdate:
 		if err := d.taskManager.UpdateTaskFromCluster(message.Task); err != nil {
 			logger.Error("Error updating task: %v", err)
-		}
-
-	case api.NotifyOpVersionUpdate:
-		if err := d.updater.PerformRemoteUpdate(*message.VersionUpdate); err != nil {
-			logger.Error("PerformRemoteUpdate error: %v", err)
 		}
 
 	default:
@@ -226,7 +267,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 		State   map[string]*api.StateEntry `json:"state"`
 	}{
 		Version: d.stateManager.GetVersion(),
-		NodeID:  d.nodeID,
+		NodeID:  d.appConfig.NodeName,
 		State:   state.State,
 	}
 
@@ -242,6 +283,7 @@ func (d *ClusterDelegate) LocalState(join bool) []byte {
 	return data
 }
 
+// MergeRemoteState merges remote state data
 func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 	if len(buf) == 0 {
 		return
@@ -258,9 +300,36 @@ func (d *ClusterDelegate) MergeRemoteState(buf []byte, join bool) {
 
 	logger.Debug("Merging remote state from node %s with %d entries (version: %v)",
 		snapshot.NodeID, len(snapshot.State), snapshot.Version)
+
+	localVersion := d.stateManager.GetVersion()
+	remoteVersion := snapshot.Version
+
+	// Reject older epoch outright
+	if remoteVersion.Epoch < localVersion.Epoch {
+		logger.Debug("Ignoring remote state from older epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		return
+	}
+
+	// Adopt newer epoch as authoritative
+	if remoteVersion.Epoch > localVersion.Epoch {
+		logger.Debug("Adopting newer epoch %d (local=%d)", remoteVersion.Epoch, localVersion.Epoch)
+		d.stateManager.ReplaceFullState(snapshot.State, remoteVersion)
+		d.persistence.MarkDirty()
+		return
+	}
+
+	// Same epoch, do normal merge
 	d.stateManager.MergeRemoteState(snapshot.State)
 
 	d.persistence.MarkDirty()
+}
+
+func (d *ClusterDelegate) handleAudioRemove(update *api.AudioRemoveUpdate) error {
+	return d.persistence.RemoveAudioFile(update.ID)
+}
+
+func (d *ClusterDelegate) handleAudioSync(update *api.AudioSyncUpdate) error {
+	return d.persistence.SyncAudioFile(update)
 }
 
 func (d *ClusterDelegate) startSkewPruner() {

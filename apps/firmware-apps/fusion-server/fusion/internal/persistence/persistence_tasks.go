@@ -1,9 +1,10 @@
 package persistence
 
 import (
-	"encoding/json"
 	"fmt"
 	"fusion/internal/api"
+
+	json "github.com/goccy/go-json"
 
 	"go.etcd.io/bbolt"
 )
@@ -37,7 +38,6 @@ func (p *Persistence) LoadTasks() (map[string]*api.Task, error) {
 
 // SaveTasks saves tasks data into the database
 func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
-
 	err := p.db.Update(func(tx *bbolt.Tx) error {
 
 		bucket := tx.Bucket([]byte(bucketTasks))
@@ -45,13 +45,25 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 			return fmt.Errorf("tasks bucket not found")
 		}
 
+		// Clear existing bucket contents
+		err := bucket.ForEach(func(k, _ []byte) error {
+			return bucket.Delete(k)
+		})
+		if err != nil {
+			return fmt.Errorf("failed to clear task bucket: %w", err)
+		}
+
+		// Write all current tasks
 		for key, task := range tasks {
-			json, err := json.Marshal(task)
+			data, err := json.Marshal(task)
 			if err != nil {
 				return err
 			}
-			return bucket.Put([]byte(key), json)
+			if err := bucket.Put([]byte(key), data); err != nil {
+				return err
+			}
 		}
+
 		return nil
 	})
 
@@ -59,11 +71,7 @@ func (p *Persistence) SaveTasks(tasks map[string]*api.Task) error {
 		return fmt.Errorf("failed to save tasks: %w", err)
 	}
 
-	if err := p.updateHash(); err != nil {
-		return err
-	}
-
-	return nil
+	return p.updateHash()
 }
 
 // DeleteTask removes the task

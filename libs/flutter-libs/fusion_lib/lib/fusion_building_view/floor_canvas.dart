@@ -17,6 +17,7 @@ class FloorCanvas extends StatefulWidget {
   // external state
   final List<HardwareComponent> hardwareComponents;
   final List<Zone> zones;
+  final List<SubZone> subZones;
   final List<ListeningArea> listeningAreas;
   final FloorPlanModel floorPlanEntity;
   final FloorModel floor;
@@ -47,6 +48,8 @@ class FloorCanvas extends StatefulWidget {
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
   final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
   final Map<String, String> listeningAreaToZoneMap;
+  final Map<String, String> subZoneToZoneMap;
+  final Map<String, String> listeningAreaToSubZoneMap;
 
   // Mode state
   final bool isAcousticsMode;
@@ -72,12 +75,15 @@ class FloorCanvas extends StatefulWidget {
     required this.onSelectedFloorPlanIdChanged,
     required this.onTapListeningArea,
     required this.zones,
+    required this.subZones,
     required this.splMin,
     required this.splMax,
     required this.moveHardware,
     required this.addNewHardwareComponent,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
+    required this.listeningAreaToSubZoneMap,
+    required this.subZoneToZoneMap,
     required this.isAcousticsMode,
     this.selectedHardwareId,
     this.selectedListeningAreaId,
@@ -87,7 +93,7 @@ class FloorCanvas extends StatefulWidget {
   FloorCanvasState createState() => FloorCanvasState();
 }
 
-class FloorCanvasState extends State<FloorCanvas> {
+class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderStateMixin {
   double _zoomScale = 1.0;
   Offset _panOffset = Offset.zero;
   double _baseZoom = 1.0;
@@ -148,6 +154,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     originalZoneList = widget.zones.map((zone) => zone.copyWith()).toList();
   }
 
+  late final animationController = AnimationController.unbounded(vsync: this)..repeat(min: 0, max: 1, period: const Duration(milliseconds: 1000));
   @override
   void initState() {
     super.initState();
@@ -169,6 +176,7 @@ class FloorCanvasState extends State<FloorCanvas> {
     _loadPlanImage();
 
     widget.controller.bind(
+      onTapListeningArea: widget.onTapListeningArea,
       toggleDraw: () {
         setState(() {
           _isDrawing = !_isDrawing;
@@ -225,6 +233,12 @@ class FloorCanvasState extends State<FloorCanvas> {
   }
 
   @override
+  void dispose() {
+    animationController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (BuildContext ctx, BoxConstraints constraints) {
@@ -241,37 +255,47 @@ class FloorCanvasState extends State<FloorCanvas> {
                 onPointerMove: _handleMove,
                 onPointerUp: _handleUp,
                 onPointerHover: _handleHover,
-                child: CustomPaint(
-                  size: Size.infinite,
-                  painter: FloorCanvasPainter(
-                    gridSize: widget.gridSize,
-                    zoomScale: _zoomScale,
-                    panOffset: _panOffset,
-                    listeningAreas: widget.listeningAreas,
-                    zones: widget.zones,
-                    current: _current,
-                    previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
-                    highlightedIndex: _highlightIndex,
-                    floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
-                    hardwareComponents: widget.hardwareComponents,
-                    selectedHardwareComponentId: _selectedHardwareComponentId,
-                    showSpl: showSpl,
-                    floorPlanEntity: _tempFloorPlan ?? widget.floorPlanEntity,
-                    floorPlanImage: _floorPlanImage,
-                    hardwareImages: _hardwareImages,
-                    listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
-                    currentlySelectingZone: widget.controller.currentlySelectingZone,
-                    selectedListeningAreaIds: [
-                      ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
-                      if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
-                    ],
-                    splMax: widget.splMax,
-                    splMin: widget.splMin,
-                    splPanelData: widget.splPanelData,
-                    //prepare a map of listening area id to zone
-                    listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
-                    isAcousticsMode: widget.isAcousticsMode,
-                  ),
+                child: AnimatedBuilder(
+                  animation: animationController,
+                  builder: (context, asyncSnapshot) {
+                    return CustomPaint(
+                      size: Size.infinite,
+                      painter: FloorCanvasPainter(
+                        animationController: animationController,
+                        gridSize: widget.gridSize,
+                        zoomScale: _zoomScale,
+                        panOffset: _panOffset,
+                        listeningAreas: widget.listeningAreas,
+                        zones: widget.zones,
+                        subZones: widget.subZones,
+                        current: _current,
+                        previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
+                        highlightedIndex: _highlightIndex,
+                        floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
+                        hardwareComponents: widget.hardwareComponents,
+                        selectedHardwareComponentId: _selectedHardwareComponentId,
+                        showSpl: showSpl,
+                        floorPlanEntity: _tempFloorPlan ?? widget.floorPlanEntity,
+                        floorPlanImage: _floorPlanImage,
+                        hardwareImages: _hardwareImages,
+                        listeningAreaSelectionActive: widget.controller.isListeningAreaSelectionActive.value,
+                        currentlySelectingZone: widget.controller.currentlySelectingZone,
+                        currentlySelectingSubZone: widget.controller.currentlySelectingSubZone,
+                        selectedListeningAreaIds: [
+                          ...widget.controller.selectedListeningAreas.map((ListeningArea s) => s.id),
+                          if (widget.selectedListeningAreaId != null) widget.selectedListeningAreaId!,
+                        ],
+                        splMax: widget.splMax,
+                        splMin: widget.splMin,
+                        splPanelData: widget.splPanelData,
+                        //prepare a map of listening area id to zone
+                        listeningAreaToZoneMap: widget.listeningAreaToZoneMap,
+                        listeningAreaToSubZoneMap: widget.listeningAreaToSubZoneMap,
+                        subZoneToZoneMap: widget.subZoneToZoneMap,
+                        isAcousticsMode: widget.isAcousticsMode,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),
@@ -313,10 +337,14 @@ class FloorCanvasState extends State<FloorCanvas> {
   }
 
   Future<void> _loadPlanImage() async {
+    print("Load Plan Image method called @#@#@@#@#@#@#");
     final String imagePath = widget.floorPlanEntity.imagePath;
     if (imagePath.isNotEmpty) {
+      print("Loading image *&*&*&*&*&*&*& $imagePath");
       final ui.Image img = await fusionLibLocator<ImageLoaderService>().loadImage(imagePath);
+      print("Image Loaded **********");
       if (!mounted) return;
+      print("Updating the state ####################");
       setState(() {
         _floorPlanImage = img;
         _fitToViewport();
@@ -447,10 +475,12 @@ class FloorCanvasState extends State<FloorCanvas> {
 
         // simplest circular hit‐test:
         final double hitRadius = widget.gridSize * 0.3;
-        if ((worldPos - sp.pos).distance < hitRadius) {
+        if ((worldPos - sp.pos!).distance < hitRadius) {
           _stopListeningAreaSelection();
           widget.onSelectedHardwareComponentIdChanged(sp.id);
-          print("setting speaker hit (${worldPos.dx}, ${worldPos.dy}) to index $i speaker at pos is ${widget.hardwareComponents[i].id}, selected is ${sp.id}");
+          print(
+            "setting speaker hit (${worldPos.dx}, ${worldPos.dy}) to index $i speaker at pos is ${widget.hardwareComponents[i].id}, selected is ${sp.id}",
+          );
           setState(() {
             _selectedHardwareComponentId = sp.id;
             _isHardwareComponentDragging = true;
@@ -467,7 +497,10 @@ class FloorCanvasState extends State<FloorCanvas> {
       if (e.buttons == kPrimaryMouseButton) {
         if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
           if (_current.length >= 3) {
-            final ListeningArea newArea = ListeningArea(name: "Area ${widget.listeningAreas.length + 1}", vertices: List<Offset>.of(_current));
+            final ListeningArea newArea = ListeningArea(
+              name: "Area ${widget.listeningAreas.length + 1}",
+              vertices: List<Offset>.of(_current),
+            );
             final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
             widget.onAddListeningArea(newArea, hardwareForArea);
           }
@@ -668,7 +701,9 @@ class FloorCanvasState extends State<FloorCanvas> {
 
     // hardware component drag
     if (_isHardwareComponentDragging && _selectedHardwareComponentId != null) {
-      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
+      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere(
+        (HardwareComponent sp) => sp.id == _selectedHardwareComponentId,
+      );
 
       // In acoustics mode, only allow movement of speakers
       if (widget.isAcousticsMode && hardwareComponent is! Speaker) {
@@ -762,7 +797,9 @@ class FloorCanvasState extends State<FloorCanvas> {
     if (e.kind != PointerDeviceKind.mouse) return;
 
     if (_isHardwareComponentRotating) {
-      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
+      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere(
+        (HardwareComponent sp) => sp.id == _selectedHardwareComponentId,
+      );
 
       setState(() {
         _isHardwareComponentRotating = false;
@@ -771,7 +808,9 @@ class FloorCanvasState extends State<FloorCanvas> {
     }
     if (_isHardwareComponentDragging) {
       print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
-      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere((HardwareComponent sp) => sp.id == _selectedHardwareComponentId);
+      final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere(
+        (HardwareComponent sp) => sp.id == _selectedHardwareComponentId,
+      );
       setState(() {
         _isHardwareComponentDragging = false;
         _updateHardwareComponentListeningAreaId(hardwareComponent);
@@ -821,7 +860,10 @@ class FloorCanvasState extends State<FloorCanvas> {
   }
 
   void _fitToViewport() {
-    final List<Offset> all = <Offset>[for (ListeningArea s in widget.listeningAreas) ...s.vertices, ..._computedCorners];
+    final List<Offset> all = <Offset>[
+      for (ListeningArea s in widget.listeningAreas) ...s.vertices,
+      ..._computedCorners,
+    ];
     if (all.isEmpty) return;
     final Iterable<double> xs = all.map((ui.Offset p) => p.dx), ys = all.map((ui.Offset p) => p.dy);
     final double minX = xs.reduce(min), maxX = xs.reduce(max);
@@ -853,12 +895,14 @@ class FloorCanvasState extends State<FloorCanvas> {
 
   void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
     // Find the listening area at the component’s position (if any)
-    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos);
+    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos!);
 
     // Determine the new listeningAreaId (use empty string when none)
     final String newListeningAreaId = hit?.id ?? '';
 
-    final HardwareComponent originalHardware = originalHardwareList.firstWhere((comp) => comp.id == hardwareComponent.id);
+    final HardwareComponent originalHardware = originalHardwareList.firstWhere(
+      (comp) => comp.id == hardwareComponent.id,
+    );
 
     print(
       "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
@@ -867,7 +911,11 @@ class FloorCanvasState extends State<FloorCanvas> {
       print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
 
       //new logic
-      widget.moveHardware(hardwareComponent, newListeningAreaId.isNotEmpty ? newListeningAreaId : null, widget.floor.id);
+      widget.moveHardware(
+        hardwareComponent,
+        newListeningAreaId.isNotEmpty ? newListeningAreaId : null,
+        widget.floor.id,
+      );
     }
   }
 
@@ -882,7 +930,7 @@ class FloorCanvasState extends State<FloorCanvas> {
   List<HardwareComponent> _getHardwareComponentsInListeningAreas(ListeningArea area) {
     final result = <HardwareComponent>[];
     for (final hw in widget.hardwareComponents) {
-      if (_isPointInsidePolygon(hw.pos, area.vertices)) {
+      if (_isPointInsidePolygon(hw.pos!, area.vertices)) {
         result.add(hw);
       }
     }
@@ -907,7 +955,9 @@ class FloorCanvasState extends State<FloorCanvas> {
   void _updateHighlightIndexFromSelectedListeningArea() {
     if (widget.selectedListeningAreaId != null) {
       // Find the index of the selected listening area
-      final int index = widget.listeningAreas.indexWhere((ListeningArea area) => area.id == widget.selectedListeningAreaId);
+      final int index = widget.listeningAreas.indexWhere(
+        (ListeningArea area) => area.id == widget.selectedListeningAreaId,
+      );
       if (index != -1) {
         _highlightIndex = index;
       }

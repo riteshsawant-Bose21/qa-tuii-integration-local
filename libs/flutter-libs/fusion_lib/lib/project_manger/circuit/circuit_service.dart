@@ -59,6 +59,13 @@ extension CircuitService on ProjectService {
       throw Exception('Circuit $circuitId does not exist');
     }
 
+    //check if hardware is in different circuit
+    final currentCircuitId = relationships.getParent(RelationshipType.circuitHardware, hwId);
+    if (currentCircuitId != null && currentCircuitId != circuitId) {
+      //remove hardware from current circuit
+      removeHardwareFromCircuit(hwId, currentCircuitId);
+    }
+
     relationships.link(RelationshipType.circuitHardware, circuitId, hwId);
   }
 
@@ -114,5 +121,35 @@ extension CircuitService on ProjectService {
     circuitsInZone.insert(newIndex, item);
 
     relationships.reOrder(RelationshipType.zoneCircuits, parentId, circuitsInZone);
+  }
+
+  SubZone? getSubZoneForCircuit(String circuitId) {
+    if (!circuits.exists(circuitId)) {
+      throw Exception('Circuit with id $circuitId does not exist');
+    }
+    final zoneId = relationships.getParent(RelationshipType.zoneCircuits, circuitId);
+    if (zoneId == null) {
+      return null;
+    }
+
+    if (subZones.exists(zoneId)) {
+      return subZones.get(zoneId);
+    }
+    return null;
+  }
+
+  Zone? getZoneForCircuit(String circuitId) {
+    if (!circuits.exists(circuitId)) {
+      throw Exception('Circuit with id $circuitId does not exist');
+    }
+    final zoneId = relationships.getParent(RelationshipType.zoneCircuits, circuitId);
+    if (zoneId == null) {
+      return null;
+    }
+
+    if (zones.exists(zoneId)) {
+      return zones.get(zoneId);
+    }
+    return null;
   }
 }

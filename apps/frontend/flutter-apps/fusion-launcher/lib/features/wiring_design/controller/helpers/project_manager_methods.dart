@@ -16,18 +16,15 @@ extension ProjectManagerMethods on CircuitController {
   void selectElementFromPM(String? id) {
     if (state is ElementSelectionState &&
         (state as ElementSelectionState).element.id == id) {
-      print("Already selected existing item");
       return;
     }
     if (state is ElementMovingState &&
         (state as ElementMovingState).element.id == id) {
-      print("Already selected existing item");
       return;
     }
     final CanvasElement? element = componentDB.getComponent(id ?? "");
-    print("[Selecting] Component : ${element?.id}");
     if (element != null) {
-      final IdleWiringState updateCanvasState = state.updateCanvasState(
+      final WiringState updateCanvasState = state.updateCanvasState(
         isWithinViewport(element.position)
             ? state.canvasState
             : state.canvasState.recenter(
@@ -35,11 +32,9 @@ extension ProjectManagerMethods on CircuitController {
               ((canvasSize ?? const Size(100, 100)) * 0.25),
             ),
       );
-      setState(
-        updateCanvasState.select(element),
-      );
+      setState(updateCanvasState.select(element), notifyToPM: false);
     } else {
-      setState(state.idle());
+      setState(state.idle(), notifyToPM: false);
     }
   }
 
@@ -52,6 +47,8 @@ extension ProjectManagerMethods on CircuitController {
         getType(element),
       );
     } else {
+      if (projectManager.selectedDevice?.id == null) return;
+
       projectManager.setSelectedDevice(null, null);
     }
   }
