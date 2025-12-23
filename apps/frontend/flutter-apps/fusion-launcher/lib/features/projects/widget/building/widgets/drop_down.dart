@@ -2,25 +2,27 @@ import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-class BuildingPageDronDown extends StatefulWidget {
-  final String? value;
+class BuildingPageDronDown<T> extends StatefulWidget {
+  final T? value;
   final String? hintText;
-  final List<String> options;
-  final ValueChanged<String> onSelect;
+  final List<T> items;
+  final ValueChanged<T> onSelect;
+  final Widget Function(T option) labelBuilder;
 
   const BuildingPageDronDown({
     super.key,
     this.value,
     this.hintText,
-    this.options = const <String>[],
+    required this.items,
     required this.onSelect,
+    required this.labelBuilder,
   });
 
   @override
-  State<BuildingPageDronDown> createState() => _BuildingPageDronDownState();
+  State<BuildingPageDronDown<T>> createState() => _BuildingPageDronDownState<T>();
 }
 
-class _BuildingPageDronDownState extends State<BuildingPageDronDown> {
+class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
   bool isFocused = false;
   late FocusNode _focusNode;
 
@@ -80,11 +82,11 @@ class _BuildingPageDronDownState extends State<BuildingPageDronDown> {
                 padding: const EdgeInsets.all(8).copyWith(right: 0),
                 child: Builder(
                   builder: (BuildContext context) {
-                    if (widget.options.isEmpty) {
+                    if (widget.items.isEmpty) {
                       return Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: FusionAppText(
-                          text: "No options available",
+                          text: "Empty items",
                           style: Theme.of(context).textTheme.labelSmall?.copyWith(
                             color: context.colorScheme.onSurface.withValues(alpha: 0.5),
                           ),
@@ -96,8 +98,8 @@ class _BuildingPageDronDownState extends State<BuildingPageDronDown> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: <Widget>[
-                        ...widget.options.map(
-                          (String value) => GestureDetector(
+                        ...widget.items.map(
+                          (T value) => GestureDetector(
                             onTap: () {
                               widget.onSelect(value);
                               Navigator.of(context).pop();
@@ -105,10 +107,7 @@ class _BuildingPageDronDownState extends State<BuildingPageDronDown> {
                             behavior: HitTestBehavior.translucent,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                              child: FusionAppText(
-                                text: value,
-                                style: Theme.of(context).textTheme.labelMedium,
-                              ),
+                              child: widget.labelBuilder(value),
                             ),
                           ),
                         ),
@@ -126,14 +125,22 @@ class _BuildingPageDronDownState extends State<BuildingPageDronDown> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: FusionAppText(
-                      text: widget.value ?? widget.hintText ?? 'Select',
-                      maxLine: 1,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
-                        fontWeight: FontWeight.normal,
-                        fontSize: 12,
-                      ),
+                    child: Builder(
+                      builder: (BuildContext context) {
+                        if (widget.value != null) {
+                          return widget.labelBuilder(widget.value as T);
+                        } else {
+                          return FusionAppText(
+                            text: widget.hintText ?? 'Select',
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
+                              fontWeight: FontWeight.normal,
+                              fontSize: 12,
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
                 ),
