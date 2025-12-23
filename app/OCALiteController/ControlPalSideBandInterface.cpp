@@ -233,6 +233,7 @@ void SidebandInterface::messageHandler() {
 bool SidebandInterface::sideBandDiscovery(OcaServiceDiscovery &discovery) {
 
     bool retVal(false);
+    info("🔍 Starting Side band service discovery...");
 
     // Start service discovery
     if (discovery.StartDiscovery())

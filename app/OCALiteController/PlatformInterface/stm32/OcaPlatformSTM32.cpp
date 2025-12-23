@@ -1,6 +1,12 @@
 #include <new> // Required for placement new and delete
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "FreeRTOS.h"
 #include "task.h" // For pvPortMalloc and vPortFree
+#ifdef __cplusplus
+}
+#endif
 #include "OcaPlatformSTM32.h"
 #include <sys/time.h>
 
