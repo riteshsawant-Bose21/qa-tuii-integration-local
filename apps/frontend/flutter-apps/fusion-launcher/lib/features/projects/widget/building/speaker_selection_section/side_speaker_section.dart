@@ -6,7 +6,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
-import 'speaker_query_popup.dart';
+import 'parts/select_speaker_popup.dart';
 
 class SpeakerSelectionWidget extends StatefulWidget {
   const SpeakerSelectionWidget({super.key});
@@ -234,7 +234,8 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       cursor: SystemMouseCursors.click,
                                       child: GestureDetector(
                                         onTap: () {
-                                          // TODO: hardcoded decrease count
+                                          final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                          projectViewModel.decreaseQty();
                                         },
                                         child: Icon(
                                           LucideIcons.minus200,
@@ -253,7 +254,8 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       cursor: SystemMouseCursors.click,
                                       child: GestureDetector(
                                         onTap: () {
-                                          // TODO: hardcoded increase count
+                                          final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                          projectViewModel.increaseQty();
                                         },
                                         child: Icon(
                                           LucideIcons.plus200,

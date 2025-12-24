@@ -414,6 +414,7 @@ extension HardwareViewModel on ProjectViewModel {
     SpeakerProduct product,
     LocationModel locationEntity,
     bool isFromBuildingPage,
+    Color? color,
   ) {
     return Speaker(
       locationEntity: locationEntity,
@@ -427,6 +428,7 @@ extension HardwareViewModel on ProjectViewModel {
       type: OutputType.analogOutput,
       price: 300,
       // price: product.price, // TODO: add price
+      color: color,
       pitch: product.mountType == "pendant" || product.mountType == "ceiling" ? 90.0 : 0.0,
       inputPortsData: <PortData>[
         PortData(

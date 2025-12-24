@@ -91,13 +91,19 @@ class _FilterOptions extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: BuildingPageDronDown(
+          child: BuildingPageDronDown<String>(
             value: value,
             hintText: "Select type",
-            options: options,
+            items: options,
             onSelect: (String newValue) {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex);
+            },
+            labelBuilder: (String option) {
+              return FusionAppText(
+                text: option,
+                style: Theme.of(context).textTheme.labelMedium,
+              );
             },
           ),
         ),

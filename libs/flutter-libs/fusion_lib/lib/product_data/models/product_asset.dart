@@ -2,6 +2,7 @@
 ///
 /// Assets are organized by color variants or category keys,
 /// each containing a list of asset URLs/filenames.
+library;
 
 class ProductAsset {
   /// Map of asset category to list of asset URLs
@@ -28,6 +29,12 @@ class ProductAsset {
 
           if (value is List) {
             allAssets[key] = value.map((e) => e.toString()).toList();
+          } else if (value == null) {
+            // Preserve the color/category key even if there are no assets
+            allAssets[key] = <String>[];
+          } else if (value is String) {
+            // Be defensive: sometimes APIs may send a single string
+            allAssets[key] = <String>[value];
           }
         }
       }
@@ -55,8 +62,8 @@ class ProductAsset {
   }
 
   Map<String, dynamic> toJson() => {
-        'assets': assets,
-      };
+    'assets': assets,
+  };
 
   @override
   String toString() => 'ProductAsset(assets: $assets)';

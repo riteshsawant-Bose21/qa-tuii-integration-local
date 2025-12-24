@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/popups/create_zone_popup.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/constant_enums.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/constant_enums.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -11,7 +11,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_checkbox_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'view_model/view_model.dart';
+import '../view_model/view_model.dart';
 
 class SpeakerListeningAreaProperties extends StatefulWidget {
   const SpeakerListeningAreaProperties({super.key});

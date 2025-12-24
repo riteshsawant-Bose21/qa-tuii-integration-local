@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 enum SpeakerSelectionMode {
   select("Select"),
   suggest("Suggest");
@@ -7,20 +9,19 @@ enum SpeakerSelectionMode {
 }
 
 enum SpeakerColor {
-  black("Black"),
-  white("White");
+  black("Black", Colors.black),
+  white("White", Colors.white);
 
-  const SpeakerColor(this.displayName);
+  const SpeakerColor(this.displayName, this.color);
   final String displayName;
+  final Color color;
 
-  String get jsonAssetKey {
-    switch (this) {
-      case SpeakerColor.black:
-        return 'black';
-      case SpeakerColor.white:
-        return 'white';
-    }
+  static SpeakerColor getValueBasedOnKey(String key) {
+    if (SpeakerColor.white.name == key) return SpeakerColor.white;
+    if (SpeakerColor.black.name == key) return SpeakerColor.black;
+    return SpeakerColor.black;
   }
+
 }
 
 enum SpeakerSortOption {

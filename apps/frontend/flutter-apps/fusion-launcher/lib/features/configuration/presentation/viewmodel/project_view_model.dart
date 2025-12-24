@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 export 'circuit/circuit_viewmodel.dart';
@@ -500,5 +501,17 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void setSelectedEventId(String? eventId) {
     selectedEventId = eventId;
     emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
+  }
+
+  void increaseQty() {
+    final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
+    final Speaker clonedSpeaker = speakers.last.getClone();
+    addHardware(hardware: clonedSpeaker);
+  }
+
+  void decreaseQty() {
+    final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
+    final Speaker clonedSpeaker = speakers.last;
+    removeHardware(hardwareId: clonedSpeaker.id);
   }
 }

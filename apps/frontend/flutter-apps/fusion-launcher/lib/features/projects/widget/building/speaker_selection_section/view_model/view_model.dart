@@ -1,14 +1,17 @@
 import 'dart:developer';
 
 import 'package:equatable/equatable.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
-import '../constant_enums.dart';
+import '../parts/constant_enums.dart';
+import '../parts/replace_speaker_warning_dialog.dart';
 
 class SpeakerSelectionViewModelState extends Equatable {
   const SpeakerSelectionViewModelState({
@@ -74,10 +77,11 @@ class SpeakerSelectionViewModelState extends Equatable {
 }
 
 class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
-  SpeakerSelectionViewModel() : super(const SpeakerSelectionViewModelState());
+  SpeakerSelectionViewModel() : super(const SpeakerSelectionViewModelState()) {
+    loadProducts();
+  }
 
-  String? get currentSelectedListeningAreaId => serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId;
-  ListeningArea? get currentSelectedListeningArea => serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
+  final Products productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl);
 
   // State updates
   void setMode(SpeakerSelectionMode mode) => emit(state.copyWith(mode: mode));
@@ -115,24 +119,40 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   void setWiring(WiringType? wiring) => emit(state.copyWith(selectedWirings: wiring == null ? <WiringType>{} : <WiringType>{wiring}));
 
   // Data loading
-  Future<void> loadProducts(Products productsApi) async {
+  Future<void> loadProducts() async {
     emit(state.copyWith(isLoading: true));
     try {
       await productsApi.initialize();
-      emit(state.copyWith(isLoading: false, speakers: productsApi.speakers));
-      log("Loaded ${productsApi.speakers.length} products");
+      emit(
+        state.copyWith(
+          isLoading: false,
+          speakers: productsApi.speakers,
+        ),
+      );
     } catch (_) {
       log("Error loading products");
       emit(state.copyWith(isLoading: false, speakers: <SpeakerProduct>[]));
     }
   }
 
-  List<Speaker> getSpeakersForListeningArea() {
+  List<Speaker> getAllPlacedNonPlacedSpeakers() {
+    final List<Speaker> placedSpeakers = getPlacedSpeakers();
+    final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakers();
+    return Set<Speaker>.from(<Speaker>{...placedSpeakers, ...nonPlacedSpeakers}).toList();
+  }
+
+  List<Speaker> getPlacedSpeakers() {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
-    final List<Speaker> listeningAreaSpeakers =
-        projectViewModel.getAllPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningArea!.id).whereType<Speaker>().toList();
-    return listeningAreaSpeakers;
+    final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
+    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getAllPlacedHardwareInListeningArea(listeningAreaId: listeningAreaId!);
+    return listeningAreaSpeakers.whereType<Speaker>().toList();
+  }
+
+  List<Speaker> getNonPlacedSpeakers() {
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
+    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getAllNonPlacedHardwareInListeningArea(listeningAreaId: listeningAreaId!);
+    return listeningAreaSpeakers.whereType<Speaker>().toList();
   }
 
   // Business logic helpers for UI formatting
@@ -236,7 +256,24 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       });
     }
 
-    // Color selection is applied at variant-building stage to avoid double filtering
+    // Color filter: include product if it declares any requested color key
+    if (state.selectedColors.isNotEmpty) {
+      final Set<String> wantedColors = state.selectedColors.map((SpeakerColor c) => c.name.toLowerCase()).toSet();
+
+      filtered = filtered.where((SpeakerProduct p) {
+        final Map<String, List<String>> assetMap = p.assets.assets;
+        if (assetMap.isEmpty) return false;
+        // Only include if the product has a matching color key AND it has at least one asset for that color
+        final bool declaresSelectedColor = assetMap.entries.any((MapEntry<String, List<String>> entry) {
+          final String key = entry.key.toLowerCase();
+          final List<String> urls = entry.value;
+          return wantedColors.contains(key) && urls.isNotEmpty;
+        });
+        return declaresSelectedColor;
+      });
+    }
+
+    final ListeningArea? currentSelectedListeningArea = serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
 
     if (currentSelectedListeningArea?.venuType != null) {
       final VenueType vt = currentSelectedListeningArea!.venuType!;
@@ -273,106 +310,31 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return copy;
   }
 
-  List<SpeakerColorVarientModel> buildColorVariantModels(List<SpeakerProduct> sorted, Products productsApi) {
-    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final ListeningArea? la = currentSelectedListeningArea;
-    final FloorModel currentFloor = projectViewModel.currentFloor;
-
-    final List<SpeakerColorVarientModel> variants = <SpeakerColorVarientModel>[];
-    for (final SpeakerProduct speakerProduct in sorted) {
-      final Set<SpeakerColor> available = <SpeakerColor>{
-        for (final SpeakerColor c in SpeakerColor.values)
-          if (speakerProduct.assets.getAssetsFor(c.jsonAssetKey).isNotEmpty) c,
-      };
-
-      Iterable<SpeakerColor?> targetColors;
-      if (state.selectedColors.isNotEmpty) {
-        targetColors = state.selectedColors.where((SpeakerColor c) => available.contains(c));
-      } else {
-        SpeakerColor? defaultColor;
-        if (available.contains(SpeakerColor.black)) {
-          defaultColor = SpeakerColor.black;
-        } else if (available.contains(SpeakerColor.white)) {
-          defaultColor = SpeakerColor.white;
-        } else {
-          defaultColor = available.isNotEmpty ? available.first : null;
-        }
-        targetColors = defaultColor == null ? const <SpeakerColor?>[] : <SpeakerColor?>[defaultColor];
-      }
-
-      for (final SpeakerColor? variantColor in targetColors) {
-        String? assetImagePath;
-        if (variantColor != null) {
-          final List<String> urls = speakerProduct.assets.getAssetsFor(variantColor.jsonAssetKey);
-          assetImagePath = urls.isNotEmpty ? productsApi.getImagePath(urls.first) : null;
-        }
-
-        // Skip variant if no image for the chosen color variant
-        if (assetImagePath == null) {
-          continue;
-        }
-
-        final Speaker speaker = projectViewModel.fromSpeakerProductModel(
-          assetImagePath,
-          speakerProduct,
-          LocationModel(floorId: currentFloor.id, listeningAreaId: la!.id),
-          true,
-        );
-
-        variants.add(
-          SpeakerColorVarientModel(
-            product: speakerProduct,
-            speaker: speaker,
-            variantColor: variantColor,
-            assetImagePath: assetImagePath,
-          ),
-        );
-      }
-    }
-    return variants;
-  }
-
-  // Orchestrates adding or replacing a speaker in the current listening area.
-  // Enforces one speaker type (SKU) per listening area; color does not matter.
-  Future<void> addOrReplaceSpeakerVariant({
-    required SpeakerColorVarientModel variant,
-    required Future<bool?> Function(String listeningAreaName, String existingSpeakerName, String currentSpeakerName) confirmReplace,
-  }) async {
+  Future<void> addOrReplaceSpeaker({required BuildContext context, required Speaker speaker, required String productName}) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
 
     if (listeningArea == null) return;
 
-    final List<Speaker> listeningAreaSpeakers = getSpeakersForListeningArea();
-    final String newSku = variant.product.skus.first.toString();
+    List<Speaker> speakerList = getPlacedSpeakers();
+    if (speakerList.isEmpty) speakerList = getNonPlacedSpeakers();
+    final String newSku = speaker.speakerSKU;
 
-    if (listeningAreaSpeakers.isNotEmpty) {
-      final String existingSku = listeningAreaSpeakers.first.speakerSKU;
+    if (speakerList.isNotEmpty) {
+      final String existingSku = speakerList.first.speakerSKU;
+
       if (existingSku != newSku) {
-        final String existingName = listeningAreaSpeakers.first.name;
-        final bool? confirm = await confirmReplace(listeningArea.name, existingName, variant.product.modelFamily);
+        final String existingName = speakerList.first.name;
+        final bool? confirm = await ReplaceSpeakersWarningDialog.show(
+          context,
+          listeningAreaName: listeningArea.name,
+          existingSpeakerName: existingName,
+          currentSpeakerName: productName,
+        );
         if (confirm != true) return;
-
-        for (final Speaker s in listeningAreaSpeakers) {
-          projectViewModel.removeHardware(hardwareId: s.id, autoSave: false);
-        }
       }
     }
 
-    projectViewModel.addHardware(hardware: variant.speaker);
+    projectViewModel.addHardware(hardware: speaker);
   }
-}
-
-class SpeakerColorVarientModel {
-  const SpeakerColorVarientModel({
-    required this.product,
-    required this.speaker,
-    required this.variantColor,
-    required this.assetImagePath,
-  });
-
-  final SpeakerProduct product;
-  final Speaker speaker;
-  final SpeakerColor? variantColor;
-  final String? assetImagePath;
 }

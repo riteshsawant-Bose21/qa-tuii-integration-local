@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
-import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/properties_and_filter_section.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/properties_and_filter_section.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
