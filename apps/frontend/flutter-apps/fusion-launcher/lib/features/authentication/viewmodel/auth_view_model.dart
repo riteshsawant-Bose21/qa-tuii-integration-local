@@ -1,6 +1,5 @@
 import 'package:auth0_flutter/auth0_flutter.dart';
 import 'package:bloc/bloc.dart';
-import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/session_view_model.dart';
@@ -91,10 +90,8 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   Future<void> login() async {
     try {
       _emitLoading();
-      final Response<dynamic> response = await Dio().get("https://dogapi.dog/api/v2/breeds");
-      // final Credentials credentials = await _authService.login();
-      throw Exception("Test Login Success: ${response.data}");
-      // await _handleLoginSuccess(credentials);
+      final Credentials credentials = await _authService.login();
+      await _handleLoginSuccess(credentials);
     } on Exception catch (e) {
       // Web redirect initiated - this is expected
       if (kIsWeb && e.toString().contains('Web redirect initiated')) {
