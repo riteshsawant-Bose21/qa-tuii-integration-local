@@ -144,7 +144,7 @@ class ZoneFunctions {
                 ? MonoMatrixMixer.fromJson(json['matrixMixer'])
                 : StereoMatrixMixer.fromJson(json['matrixMixer'])
           : null,
-      mixScenes: (json['mixScenes'] as List).map((e) {
+      mixScenes: ((json['mixScenes']??[]) as List).map((e) {
         if (e['type'] == MixSceneType.source.name) {
           return SourceMixScene.fromJson(e);
         } else {

@@ -32,3 +32,8 @@ export 'project_entities/hardware_rack.dart';
 export 'project_entities/zone_functions.dart';
 export 'project_entities/mix_scenes.dart';
 export 'project_entities/priority_source_data.dart';
+export 'project_entities/non_processing/gpio_config.dart';
+export 'project_entities/non_processing/snapshot_model.dart';
+export 'project_entities/non_processing/scene_set_model.dart';
+export 'project_entities/non_processing/scheduler_config.dart';
+export 'fusion_auth/user_model.dart';

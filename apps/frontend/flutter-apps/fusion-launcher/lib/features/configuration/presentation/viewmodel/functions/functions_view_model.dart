@@ -51,7 +51,7 @@ extension FucntionsViewModel on ProjectViewModel {
   ZoneFunctions? getZoneFunctionForZone({required String zoneId}) {
     try {
       return projectManager.getZoneFunction(
-        zoneId: zoneId,
+        zoneOrSubZoneId: zoneId,
       );
     } catch (ex) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get function for zone : $ex");
