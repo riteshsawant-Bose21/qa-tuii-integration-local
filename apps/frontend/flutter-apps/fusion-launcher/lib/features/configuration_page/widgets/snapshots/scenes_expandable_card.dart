@@ -58,7 +58,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
   @override
   void initState() {
     super.initState();
-    _isScenesExpanded = ValueNotifier<bool>(false);
+    _isScenesExpanded = ValueNotifier<bool>(true);
   }
 
   @override
