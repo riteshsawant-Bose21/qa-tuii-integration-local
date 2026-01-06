@@ -19,6 +19,8 @@ class FusionArrowPopup extends StatefulWidget {
   final VoidCallback? onDismiss;
   final bool shouldBlur;
   final double blurAmount;
+  final double? maxHeight; // New: Optional max height
+  final double? maxWidth; // New: Optional max width
 
   const FusionArrowPopup({
     super.key,
@@ -36,6 +38,8 @@ class FusionArrowPopup extends StatefulWidget {
     this.onDismiss,
     this.shouldBlur = true,
     this.blurAmount = 1.0,
+    this.maxHeight,
+    this.maxWidth,
   });
 
   @override
@@ -73,6 +77,8 @@ class _FusionArrowPopupState extends State<FusionArrowPopup> {
         shouldBlur: widget.shouldBlur,
         blurAmount: widget.blurAmount,
         childWidget: widget.child,
+        maxHeight: widget.maxHeight,
+        maxWidth: widget.maxWidth,
       ),
     );
   }
@@ -94,6 +100,7 @@ class _PopupContent extends StatelessWidget {
   final Color backgroundColor;
   final Color borderColor;
   final bool showArrow;
+  final double maxHeight;
 
   const _PopupContent({
     super.key,
@@ -103,6 +110,7 @@ class _PopupContent extends StatelessWidget {
     required this.backgroundColor,
     required this.borderColor,
     required this.showArrow,
+    required this.maxHeight,
   });
 
   EdgeInsets get _padding {
@@ -127,7 +135,12 @@ class _PopupContent extends StatelessWidget {
         padding: _padding,
         child: ClipRRect(
           borderRadius: BorderRadius.circular(_radius),
-          child: content,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxHeight: maxHeight,
+            ),
+            child: content,
+          ),
         ),
       ),
     );
@@ -251,6 +264,8 @@ class _PopupRoute extends PopupRoute<void> {
   final VoidCallback? onDismiss;
   final bool shouldBlur;
   final double blurAmount;
+  final double? maxHeight;
+  final double? maxWidth;
 
   _PopupRoute({
     required this.targetRect,
@@ -262,6 +277,8 @@ class _PopupRoute extends PopupRoute<void> {
     this.onDismiss,
     required this.shouldBlur,
     required this.blurAmount,
+    this.maxHeight,
+    this.maxWidth,
   });
 
   @override
@@ -339,6 +356,8 @@ class _PopupRoute extends PopupRoute<void> {
       showArrow: showArrow,
       animation: animation,
       content: content,
+      maxHeight: maxHeight,
+      maxWidth: maxWidth,
     );
   }
 
@@ -352,6 +371,8 @@ class _PopupPositioner extends StatefulWidget {
   final Color? backgroundColor;
   final bool showArrow;
   final Animation<double> animation;
+  final double? maxHeight;
+  final double? maxWidth;
 
   const _PopupPositioner({
     required this.targetRect,
@@ -359,6 +380,8 @@ class _PopupPositioner extends StatefulWidget {
     required this.backgroundColor,
     required this.showArrow,
     required this.animation,
+    this.maxHeight,
+    this.maxWidth,
   });
 
   @override
@@ -367,12 +390,14 @@ class _PopupPositioner extends StatefulWidget {
 
 class _PopupPositionerState extends State<_PopupPositioner> {
   static const double _margin = 10;
+  static const double _arrowHeight = 8.0;
 
   _ArrowDirection _arrowDirection = _ArrowDirection.top;
   double _arrowX = 0;
   double _popupLeft = 0;
   double? _top;
   double? _bottom;
+  double _maxContentHeight = double.infinity;
   final GlobalKey _popupKey = GlobalKey();
   bool _positioned = false;
 
@@ -412,8 +437,30 @@ class _PopupPositionerState extends State<_PopupPositioner> {
     // Calculate arrow X position relative to the popup's left edge
     final arrowX = targetCenterX - left;
 
-    // Determine if popup should appear above or below the target
-    final bool showBelow = widget.targetRect.bottom + 200 < screen.height;
+    // Calculate available space above and below the target
+    final spaceAbove = widget.targetRect.top - _margin;
+    final spaceBelow = screen.height - widget.targetRect.bottom - _margin;
+
+    // Determine if popup should appear above or below based on available space
+    final bool showBelow = spaceBelow >= spaceAbove;
+
+    // Calculate maximum height for content area
+    double maxContentHeight;
+    if (showBelow) {
+      // Space below minus arrow height and padding
+      maxContentHeight = spaceBelow - _arrowHeight - (_margin * 2);
+    } else {
+      // Space above minus arrow height and padding
+      maxContentHeight = spaceAbove - _arrowHeight - (_margin * 2);
+    }
+
+    // Apply user-defined maxHeight if provided
+    if (widget.maxHeight != null) {
+      maxContentHeight = maxContentHeight.clamp(0, widget.maxHeight!);
+    }
+
+    // Ensure minimum height
+    maxContentHeight = maxContentHeight.clamp(100.0, double.infinity);
 
     setState(() {
       _popupLeft = left;
@@ -421,12 +468,15 @@ class _PopupPositionerState extends State<_PopupPositioner> {
       _arrowDirection = showBelow ? _ArrowDirection.top : _ArrowDirection.bottom;
       _top = showBelow ? widget.targetRect.bottom : null;
       _bottom = showBelow ? null : screen.height - widget.targetRect.top;
+      _maxContentHeight = maxContentHeight;
       _positioned = true;
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final maxWidth = widget.maxWidth ?? (Screen.width - (_margin * 2));
+
     return Stack(
       children: [
         // The popup content
@@ -447,7 +497,9 @@ class _PopupPositionerState extends State<_PopupPositioner> {
                   ),
                   alignment: _arrowDirection == _ArrowDirection.top ? Alignment.topCenter : Alignment.bottomCenter,
                   child: ConstrainedBox(
-                    constraints: BoxConstraints(),
+                    constraints: BoxConstraints(
+                      maxWidth: maxWidth,
+                    ),
                     child: _PopupContent(
                       key: _popupKey,
                       arrowDirection: _arrowDirection,
@@ -456,6 +508,7 @@ class _PopupPositionerState extends State<_PopupPositioner> {
                       borderColor: Theme.of(context).dividerColor.withOpacity(0.3),
                       showArrow: widget.showArrow,
                       content: widget.content,
+                      maxHeight: _maxContentHeight,
                     ),
                   ),
                 ),

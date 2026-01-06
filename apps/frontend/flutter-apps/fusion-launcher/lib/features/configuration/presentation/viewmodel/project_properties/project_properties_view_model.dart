@@ -215,6 +215,7 @@ extension ProjectPropertiesViewModel on ProjectViewModel {
 
   void setCurrentSelectedListeningArea(String? area) {
     currentSelectedListeningAreaId = area;
+    if (area == null) shouldPlaceNonPlacedSpeakers = false;
     updateProject();
   }
 

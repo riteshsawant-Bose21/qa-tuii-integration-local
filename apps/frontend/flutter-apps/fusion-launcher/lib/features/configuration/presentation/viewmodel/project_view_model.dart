@@ -109,6 +109,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
+  
+  bool _shouldPlaceNonPlacedSpeakers = false;
+  bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
+  set shouldPlaceNonPlacedSpeakers(bool shouldPlace) {
+    if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
+    _shouldPlaceNonPlacedSpeakers = shouldPlace;
+    updateProject();
+  }
 
   /// Global hover and selection state management
   SelectedItem? _selectedDevice;
@@ -424,6 +432,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       // Reset selections when switching modes
       changeDeviceTypeIndex(-1);
       setSelectedProductToAdd(null);
+      shouldPlaceNonPlacedSpeakers = false;
       emit(ToolbarModeChanged(mode));
     }
   }

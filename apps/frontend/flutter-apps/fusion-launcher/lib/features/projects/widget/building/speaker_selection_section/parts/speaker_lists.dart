@@ -10,8 +10,8 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import 'constant_enums.dart';
 import '../view_model/view_model.dart';
+import 'constant_enums.dart';
 
 class ProductQuerySpeakerList extends StatelessWidget {
   const ProductQuerySpeakerList({super.key, required this.searchController});
@@ -536,7 +536,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         widget.product,
                         location,
                         true,
-                        selectedVarient?.color.color,
+                        // selectedVarient?.color.color,
                       );
 
                       context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(

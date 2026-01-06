@@ -13,7 +13,6 @@ class Speaker extends HardwareComponent {
   final double pitch;
   final double roll;
   final double yaw;
-  final Color? color;
 
   Speaker({
     String? id,
@@ -41,7 +40,6 @@ class Speaker extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
     required super.addedFromBuildingPage,
-    this.color,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -99,7 +97,6 @@ class Speaker extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
-      color: color ?? this.color,
     );
   }
 

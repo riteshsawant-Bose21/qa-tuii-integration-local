@@ -114,6 +114,8 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                   if (speakers.isEmpty) return const SizedBox.shrink();
 
+                  final bool shouldPlaceNonPlacedSpeakers = projectViewModel.shouldPlaceNonPlacedSpeakers;
+
                   return Padding(
                     padding: const EdgeInsets.all(12.0),
                     child: Column(
@@ -148,71 +150,76 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
                               const SizedBox(height: 10),
-                              Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: context.colorScheme.surfaceDim,
-                                    width: 1,
+                              GestureDetector(
+                                onTap: () {
+                                  projectViewModel.shouldPlaceNonPlacedSpeakers = !projectViewModel.shouldPlaceNonPlacedSpeakers;
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: shouldPlaceNonPlacedSpeakers ? context.colorScheme.surfaceDim : Colors.transparent,
+                                      width: 1,
+                                    ),
                                   ),
-                                ),
-                                child: Row(
-                                  children: <Widget>[
-                                    Container(
-                                      width: 24,
-                                      height: 24,
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Image.asset(speakers.first.assetImagePath),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: FusionAppText(
-                                        text: speakers.first.name,
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.w500,
+                                  child: Row(
+                                    children: <Widget>[
+                                      Container(
+                                        width: 24,
+                                        height: 24,
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius: BorderRadius.circular(6),
                                         ),
+                                        child: Image.asset(speakers.first.assetImagePath),
                                       ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    if (speakers.isNotEmpty) ...<Widget>[
-                                      // edit icon
-                                      PopupMenuButton<String>(
-                                        color: Colors.transparent,
-                                        shadowColor: Colors.transparent,
-                                        tooltip: 'Edit speakers',
-                                        padding: EdgeInsets.zero,
-                                        menuPadding: EdgeInsets.zero,
-                                        clipBehavior: Clip.none,
-                                        offset: const Offset(45, 0),
-                                        constraints: const BoxConstraints(minWidth: 1000),
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(3.0),
-                                          child: Icon(
-                                            LucideIcons.pencil200,
-                                            size: 12,
-                                            color: context.colorScheme.onSurface,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: speakers.first.name,
+                                          style: context.textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.w500,
                                           ),
                                         ),
-                                        itemBuilder: (BuildContext context) {
-                                          return <PopupMenuEntry<String>>[
-                                            PopupMenuItem<String>(
-                                              enabled: false,
-                                              padding: EdgeInsets.zero,
-                                              child: Theme(
-                                                data: ThemeData.dark(),
-                                                child: const SpeakerQueryPopup(),
-                                              ),
-                                            ),
-                                          ];
-                                        },
                                       ),
+                                      const SizedBox(width: 12),
+                                      if (speakers.isNotEmpty) ...<Widget>[
+                                        // edit icon
+                                        PopupMenuButton<String>(
+                                          color: Colors.transparent,
+                                          shadowColor: Colors.transparent,
+                                          tooltip: 'Edit speakers',
+                                          padding: EdgeInsets.zero,
+                                          menuPadding: EdgeInsets.zero,
+                                          clipBehavior: Clip.none,
+                                          offset: const Offset(45, 0),
+                                          constraints: const BoxConstraints(minWidth: 1000),
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(3.0),
+                                            child: Icon(
+                                              LucideIcons.pencil200,
+                                              size: 12,
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                          itemBuilder: (BuildContext context) {
+                                            return <PopupMenuEntry<String>>[
+                                              PopupMenuItem<String>(
+                                                enabled: false,
+                                                padding: EdgeInsets.zero,
+                                                child: Theme(
+                                                  data: ThemeData.dark(),
+                                                  child: const SpeakerQueryPopup(),
+                                                ),
+                                              ),
+                                            ];
+                                          },
+                                        ),
+                                      ],
                                     ],
-                                  ],
+                                  ),
                                 ),
                               ),
 
@@ -284,7 +291,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                                     const SizedBox(width: 8),
                                     FusionAppText(
-                                      text: "${speakers.length}", // TODO: hardcoded
+                                      text: "${speakers.length}",
                                       style: context.textTheme.bodySmall?.copyWith(
                                         color: context.colorScheme.surfaceDim,
                                       ),
