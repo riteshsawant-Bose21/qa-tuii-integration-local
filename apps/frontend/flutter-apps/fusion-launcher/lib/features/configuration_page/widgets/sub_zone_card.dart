@@ -12,11 +12,14 @@ class SubZoneCard extends StatefulWidget {
   final String subZoneId;
   final String subZoneName;
   final SubZone subZoneData;
+  final Function(bool)? onExpansionChanged;
+
   const SubZoneCard({
     super.key,
     required this.subZoneId,
     required this.subZoneName,
     required this.subZoneData,
+    this.onExpansionChanged,
   });
 
   @override
@@ -78,7 +81,12 @@ class _SubZoneCardState extends State<SubZoneCard> {
   Widget _buildSubZoneHeader({required BuildContext context, required bool expanded, required bool isHovered, required bool isSelected}) {
     return GestureDetector(
       onTap: () {
-        _isSubZoneExpanded.value = !_isSubZoneExpanded.value;
+        final bool newExpandedState = !_isSubZoneExpanded.value;
+        _isSubZoneExpanded.value = newExpandedState;
+
+        /// Trigger the expansion callback
+        widget.onExpansionChanged?.call(newExpandedState);
+
         // /// Select subzone on tap
         // _projectViewModel.setSelectedDevice(widget.subZoneId, SelectedItemType.subzone);
       },

@@ -17,12 +17,15 @@ class ZoneCard extends StatefulWidget {
   final String zoneName;
   final Color bgColor;
   final Zone zoneData;
+  final Function(bool)? onExpansionChanged;
+
   const ZoneCard({
     super.key,
     required this.zoneId,
     required this.zoneName,
     required this.bgColor,
     required this.zoneData,
+    this.onExpansionChanged,
   });
 
   @override
@@ -98,7 +101,11 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildZoneHeader({required BuildContext context, required bool expanded, required bool isHovered, required bool isSelected}) {
     return GestureDetector(
       onTap: () {
-        _isZoneExpanded.value = !_isZoneExpanded.value;
+        final bool newExpandedState = !_isZoneExpanded.value;
+        _isZoneExpanded.value = newExpandedState;
+
+        /// Trigger the expansion callback
+        widget.onExpansionChanged?.call(newExpandedState);
 
         /// Select zone on tap
         _projectViewModel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
@@ -1195,6 +1202,13 @@ class _ZoneCardState extends State<ZoneCard> {
                               subZoneId: subZone.id,
                               subZoneName: subZone.name,
                               subZoneData: subZone,
+                              onExpansionChanged: (bool isExpanded) {
+                                if (isExpanded) {
+                                  // Trigger the zone's expansion callback to scroll the zone into view
+                                  // when a subzone expands
+                                  widget.onExpansionChanged?.call(true);
+                                }
+                              },
                             ),
                           ),
                         );
