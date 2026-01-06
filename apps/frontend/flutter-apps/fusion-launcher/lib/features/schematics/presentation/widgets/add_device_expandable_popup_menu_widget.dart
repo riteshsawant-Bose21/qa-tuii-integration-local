@@ -106,7 +106,6 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
   @override
   Widget build(BuildContext context) {
-    print(" _zoneNameController = $_zoneNameController , _selectedColorHex = $_selectedColorHex, _selectedListeningAreaIds = $_selectedListeningAreaIds");
     return PopupMenuButton<dynamic>(
       onCanceled: () {
         /// Clear selections when menu is closed without adding

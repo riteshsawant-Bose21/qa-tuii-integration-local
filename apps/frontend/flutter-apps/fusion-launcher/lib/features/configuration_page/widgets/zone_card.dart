@@ -485,7 +485,8 @@ class _ZoneCardState extends State<ZoneCard> {
                     }
                   }
 
-                  /// Divider
+                  // todo : source sets priority selection disabled for now according to robs feedback
+                  /*/// Divider
                   entries.add(const PopupMenuDivider(height: 4));
 
                   /// Header: Source Sets
@@ -520,7 +521,8 @@ class _ZoneCardState extends State<ZoneCard> {
                         ),
                       ),
                     );
-                  } else {
+                  } else
+                  {
                     for (final SourceSet sourceSet in allSourceSets) {
                       final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
                       for (final Source src in sources) {
@@ -582,7 +584,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         );
                       }
                     }
-                  }
+                  }*/
 
                   return entries;
                 },
