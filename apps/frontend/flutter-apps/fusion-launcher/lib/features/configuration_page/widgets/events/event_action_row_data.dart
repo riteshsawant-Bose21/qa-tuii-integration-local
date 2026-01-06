@@ -144,7 +144,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
       child: FusionDropdown<SceneActionType>(
         value: action.actionType,
         hint: "Select Action Type",
-        items: _projectViewModel.getSceneActionTypes(),
+        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false),
         display: (SceneActionType e) => e.displayName,
         onChanged: _updateActionType,
       ),

@@ -196,6 +196,12 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
             ),
           ),
         );
+      case SceneParamValueType.pulse:
+        // Not implemented yet
+        return FusionAppText(
+          text: 'Pulse not implemented',
+          style: Theme.of(context).textTheme.bodySmall,
+        );
     }
   }
 }
