@@ -53,7 +53,7 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
 
   Future<void> pickFiles() async {
     try {
-      emit(state.copyWith(isLoading: true));
+      emit(state.copyWith(isLoading: true, clearError: true));
 
       final FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.audio,
@@ -64,12 +64,38 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
         if (result.files.first.path != null) {
           final File fileInfo = File(result.files.first.path!);
 
+          /// Check file size (20MB = 20 * 1024 * 1024 bytes)
+          const int maxFileSize = 20 * 1024 * 1024;
+          final int fileSize = await fileInfo.length();
+
+          if (fileSize > maxFileSize) {
+            emit(
+              state.copyWith(
+                isLoading: false,
+                errorMessage: 'File size exceeds 20MB limit. Please select a smaller file.',
+              ),
+            );
+            return;
+          }
+
           await serviceLocator<ProjectViewModel>().addMediaFile(file: fileInfo);
+          emit(state.copyWith(isLoading: false));
         }
+      } else {
+        emit(state.copyWith(isLoading: false));
       }
     } catch (e) {
-      emit(state.copyWith(isLoading: false));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          errorMessage: 'An error occurred while uploading the file. Please try again.',
+        ),
+      );
     }
+  }
+
+  void clearError() {
+    emit(state.copyWith(clearError: true));
   }
 
   Future<void> selectFile(MediaFileModel mediaFileModel) async {
