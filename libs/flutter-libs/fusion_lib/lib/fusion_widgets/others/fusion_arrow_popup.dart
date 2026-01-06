@@ -13,7 +13,6 @@ class FusionArrowPopup extends StatefulWidget {
   final Color? barrierColor;
   final bool showArrow;
   final double? contentRadius;
-  final BoxDecoration? contentDecoration;
   final bool showOnCreate;
   final bool enabled;
   final VoidCallback? onDismiss;
@@ -32,7 +31,6 @@ class FusionArrowPopup extends StatefulWidget {
     this.showArrow = true,
     this.barrierColor,
     this.contentRadius,
-    this.contentDecoration,
     this.showOnCreate = false,
     this.enabled = true,
     this.onDismiss,

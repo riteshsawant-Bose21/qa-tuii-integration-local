@@ -1,27 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
-import 'package:fusion_lib/models/project_entities/zone_functions.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-enum SourceOption {
-  singleSource("Single Source"),
-  multipleSources("Multiple Sources");
+import '../../side_panel_widgets/schematic_properties.dart' show hexToColor;
 
-  const SourceOption(this.displayName);
-  final String displayName;
-}
-
-enum SourceOptionType {
-  mono("Mono"),
-  stereo("Stereo"),
-  monoSum("Mono-Sum");
-
-  const SourceOptionType(this.displayName);
-  final String displayName;
-}
+part 'widgets/add_listening_areas_to_zone.dart';
+part 'widgets/create_new_location.dart';
+part 'widgets/create_subzone_widget.dart';
 
 class CreateZonePopup extends StatelessWidget {
   final Widget child;
@@ -38,16 +28,41 @@ class CreateZonePopup extends StatelessWidget {
   }
 }
 
-class NewWidget extends StatelessWidget {
-  const NewWidget({
-    super.key,
-  });
+class NewWidget extends StatefulWidget {
+  const NewWidget({super.key});
+
+  @override
+  State<NewWidget> createState() => _NewWidgetState();
+}
+
+class _NewWidgetState extends State<NewWidget> {
+  final TextEditingController zoneNameController = TextEditingController();
+  final TextEditingController listeningAreaNameController = TextEditingController();
+  bool isCreateAreaExpanded = false;
+  String selectedFloorId = '';
+  String _selectedColorHex = Zone.zoneColors.first;
+
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+
+  final List<String> _selectedListeningAreaIds = <String>[];
+
+  @override
+  void initState() {
+    super.initState();
+    zoneNameController.text = 'Untitled Zone';
+  }
+
+  @override
+  void dispose() {
+    zoneNameController.dispose();
+    listeningAreaNameController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
       width: 350,
-      height: 500,
       decoration: BoxDecoration(
         color: const Color(0xFF292826),
         borderRadius: BorderRadius.circular(16),
@@ -86,7 +101,7 @@ class NewWidget extends StatelessWidget {
           const Divider(thickness: 0.5, height: 0),
           Flexible(
             child: SingleChildScrollView(
-              padding: const EdgeInsetsGeometry.all(16),
+              padding: const EdgeInsets.all(16).copyWith(top: 0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
@@ -97,31 +112,73 @@ class NewWidget extends StatelessWidget {
                         height: 20,
                         width: 20,
                         decoration: BoxDecoration(
-                          color: context.colorScheme.primaryColor,
+                          color: hexToColor(_selectedColorHex),
                           borderRadius: BorderRadius.circular(3),
                         ),
                       ),
                       const SizedBox(width: 6),
-                      FusionAppText(
-                        text: "Zone Name",
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.onSurface,
-                          fontWeight: FontWeight.w400,
+                      Expanded(
+                        child: TextFormField(
+                          controller: zoneNameController,
+                          maxLength: 24,
+                          decoration: InputDecoration(
+                            counterText: "",
+                            hintText: 'Enter zone name',
+                            hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
+                            border: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                            enabledBorder: InputBorder.none,
+                            hoverColor: Colors.transparent,
+                            errorBorder: InputBorder.none,
+                            contentPadding: EdgeInsets.zero,
+                            fillColor: Colors.transparent,
+                          ),
+                          style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                         ),
                       ),
                     ],
                   ),
+
+                  SizedBox(
+                    width: 400,
+                    child: GridView.builder(
+                      shrinkWrap: true,
+                      padding: const EdgeInsets.only(),
+                      physics: const NeverScrollableScrollPhysics(),
+                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                        maxCrossAxisExtent: 21,
+                        crossAxisSpacing: 8,
+                        mainAxisSpacing: 8,
+                      ),
+                      itemCount: Zone.zoneColors.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final String hexCode = Zone.zoneColors[index];
+                        final Color color = hexToColor(hexCode);
+                        final bool isSelected = _selectedColorHex == hexCode;
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              _selectedColorHex = hexCode;
+                            });
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              color: color,
+                              borderRadius: BorderRadius.circular(4),
+                              border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+                            ),
+                            child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+                  const Divider(thickness: 0.5, height: 0),
                   const SizedBox(height: 20),
 
-                  // SizedBox(
-                  //   height: 200,
-                  //   child: FusionColorPicker(
-                  //     initialColor: context.colorScheme.primaryColor,
-                  //     onChanged: (Color value) {
-                  //       //
-                  //     },
-                  //   ),
-                  // ),
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -155,6 +212,7 @@ class NewWidget extends StatelessWidget {
                   ),
 
                   const SizedBox(height: 10),
+
                   Row(
                     children: <Widget>[
                       Expanded(
@@ -168,57 +226,27 @@ class NewWidget extends StatelessWidget {
                       ),
                       Expanded(
                         flex: 2,
-                        child: MultiSectionMultiSelectDropDown<String>(
-                          hintText: 'Select speakers',
-                          values: <String>{},
-                          sections: <DropdownSection<String>>[
-                            const DropdownSection<String>(
-                              title: 'Analog',
-                              items: <String>['Mic 1', 'Mic 2'],
-                            ),
-                            const DropdownSection<String>(
-                              title: 'Digital',
-                              items: <String>['HDMI', 'USB'],
-                            ),
-                          ],
-                          onChanged: (Set<String> values) {
-                            // setState(() => selectedValues = values);
-                          },
-                          labelBuilder: (String item, bool isSelected) {
-                            return Text(
-                              item,
-                              style: TextStyle(
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                              ),
-                            );
+                        child: AddListeningAreasToZone(
+                          selectedListeningAreaIds: _selectedListeningAreaIds,
+                          onListeningAreaSelected: (List<String> newSelectedIds) {
+                            setState(() {
+                              _selectedListeningAreaIds
+                                ..clear()
+                                ..addAll(newSelectedIds);
+                            });
                           },
                         ),
                       ),
                     ],
                   ),
+
+                  const SizedBox(height: 20),
+                  const Divider(thickness: 0.5, height: 0),
+                  const SizedBox(height: 10),
+
+                  const CreateSubzoneWidget(),
                   const SizedBox(height: 20),
 
-                  Row(
-                    children: <Widget>[
-                      Icon(
-                        LucideIcons.plus200,
-                        size: 16,
-                        color: context.colorScheme.onSurface,
-                      ),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: FusionAppText(
-                          text: "Add Listening Areas",
-                          style: context.textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.onSurface,
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: <Widget>[

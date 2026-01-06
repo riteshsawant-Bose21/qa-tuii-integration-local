@@ -342,7 +342,7 @@ class _MultiSectionDropDownState<T> extends State<MultiSectionDropDown<T>> {
 }
 
 class MultiSectionMultiSelectDropDown<T> extends StatefulWidget {
-  final Set<T> values;
+  final Set<T> selectedValues; // SOURCE OF TRUTH (from parent)
   final String? hintText;
   final List<DropdownSection<T>> sections;
   final ValueChanged<Set<T>> onChanged;
@@ -350,7 +350,7 @@ class MultiSectionMultiSelectDropDown<T> extends StatefulWidget {
 
   const MultiSectionMultiSelectDropDown({
     super.key,
-    required this.values,
+    required this.selectedValues,
     this.hintText,
     required this.sections,
     required this.onChanged,
@@ -364,18 +364,13 @@ class MultiSectionMultiSelectDropDown<T> extends StatefulWidget {
 class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSelectDropDown<T>> {
   late Map<int, bool> _expandedSections;
 
-  /// committed → reflected in trigger
-  late Set<T> _committedSelected;
-
-  /// temp → used only inside popup
+  /// TEMP state (popup only)
   late Set<T> _tempSelected;
 
   @override
   void initState() {
     super.initState();
-
-    _committedSelected = Set<T>.from(widget.values);
-    _tempSelected = Set<T>.from(widget.values);
+    _syncTempWithParent();
 
     _expandedSections = <int, bool>{
       for (int i = 0; i < widget.sections.length; i++) i: widget.sections[i].initiallyExpanded,
@@ -383,11 +378,23 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   }
 
   @override
+  void didUpdateWidget(covariant MultiSectionMultiSelectDropDown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedValues != widget.selectedValues) {
+      _syncTempWithParent();
+    }
+  }
+
+  void _syncTempWithParent() {
+    _tempSelected = Set<T>.from(widget.selectedValues);
+  }
+
+  @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
       onDismiss: () {
-        // Reset temp state if popup closed without Done
-        _tempSelected = Set<T>.from(_committedSelected);
+        // Discard temp changes if popup closes
+        _syncTempWithParent();
       },
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter stateSetter) {
@@ -399,7 +406,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   }
 
   // ---------------------------------------------------------------------------
-  // TRIGGER (USES COMMITTED STATE ONLY)
+  // TRIGGER (USES PARENT VALUES ONLY)
   // ---------------------------------------------------------------------------
 
   Widget _buildTrigger(BuildContext context) {
@@ -416,10 +423,10 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
           children: <Widget>[
             Expanded(
               child: FusionAppText(
-                text: _committedSelected.isEmpty ? (widget.hintText ?? 'Select') : '${_committedSelected.length} selected',
+                text: widget.selectedValues.isEmpty ? (widget.hintText ?? 'Select') : '${widget.selectedValues.length} selected',
                 style: context.textTheme.labelLarge?.copyWith(
                   fontSize: 12,
-                  color: _committedSelected.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
+                  color: widget.selectedValues.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
                 ),
               ),
             ),
@@ -482,7 +489,6 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
                         isExpanded,
                         stateSetter,
                       ),
-
                       if (isExpanded)
                         ...section.items.map(
                           (T item) => _buildItem(
@@ -505,7 +511,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   }
 
   // ---------------------------------------------------------------------------
-  // SECTION HEADER (MATCHES YOUR STYLE)
+  // SECTION HEADER
   // ---------------------------------------------------------------------------
 
   Widget _buildSectionHeader(
@@ -548,7 +554,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   }
 
   // ---------------------------------------------------------------------------
-  // ITEM (TEMP SELECTION ONLY)
+  // ITEM (TEMP ONLY)
   // ---------------------------------------------------------------------------
 
   Widget _buildItem(
@@ -584,7 +590,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
   }
 
   // ---------------------------------------------------------------------------
-  // ACTIONS (APPLY / CLEAR)
+  // ACTIONS (ONLY EMIT EVENTS)
   // ---------------------------------------------------------------------------
 
   Widget _buildActions(BuildContext context) {
@@ -595,11 +601,7 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
         children: <Widget>[
           TextButton(
             onPressed: () {
-              setState(() {
-                _tempSelected.clear();
-                _committedSelected.clear();
-              });
-              widget.onChanged(_committedSelected);
+              widget.onChanged(<T>{});
               Navigator.of(context).pop();
             },
             child: const Text('Clear'),
@@ -607,13 +609,208 @@ class _MultiSectionMultiSelectDropDownState<T> extends State<MultiSectionMultiSe
           const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () {
-              setState(() {
-                _committedSelected = Set<T>.from(_tempSelected);
-              });
-              widget.onChanged(_committedSelected);
+              widget.onChanged(Set<T>.from(_tempSelected));
               Navigator.of(context).pop();
             },
             child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class MultiSelectDropDown<T> extends StatefulWidget {
+  final Set<T> selectedValues;
+  final String? hintText;
+  final List<T> items;
+  final ValueChanged<Set<T>> onChanged;
+  final Widget Function(T option, bool isSelected) labelBuilder;
+
+  const MultiSelectDropDown({
+    super.key,
+    required this.selectedValues,
+    this.hintText,
+    required this.items,
+    required this.onChanged,
+    required this.labelBuilder,
+  });
+
+  @override
+  State<MultiSelectDropDown<T>> createState() => _MultiSelectDropDownState<T>();
+}
+
+class _MultiSelectDropDownState<T> extends State<MultiSelectDropDown<T>> {
+  late Set<T> _tempSelected;
+
+  @override
+  void initState() {
+    super.initState();
+    _syncTempWithParent();
+  }
+
+  @override
+  void didUpdateWidget(covariant MultiSelectDropDown<T> oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedValues != widget.selectedValues) {
+      _syncTempWithParent();
+    }
+  }
+
+  void _syncTempWithParent() {
+    _tempSelected = Set<T>.from(widget.selectedValues);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FusionArrowPopup(
+      onDismiss: _syncTempWithParent,
+      showArrow: false,
+      blurAmount: 0,
+      content: StatefulBuilder(
+        builder: (BuildContext context, StateSetter stateSetter) {
+          return _buildMenuContent(context, stateSetter);
+        },
+      ),
+      child: _buildTrigger(context),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // TRIGGER (PARENT STATE ONLY)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildTrigger(BuildContext context) {
+    return Container(
+      height: 32,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: context.colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          children: <Widget>[
+            Expanded(
+              child: FusionAppText(
+                text: widget.selectedValues.isEmpty ? (widget.hintText ?? 'Select') : '${widget.selectedValues.length} selected',
+                style: context.textTheme.labelLarge?.copyWith(
+                  fontSize: 12,
+                  color: widget.selectedValues.isEmpty ? context.colorScheme.onSurface.withValues(alpha: 0.5) : context.colorScheme.onSurface,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // MENU CONTENT
+  // ---------------------------------------------------------------------------
+
+  Widget _buildMenuContent(BuildContext context, StateSetter stateSetter) {
+    if (widget.items.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.all(4),
+        child: FusionAppText(
+          text: 'Empty items',
+          style: context.textTheme.labelSmall?.copyWith(
+            color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+          ),
+        ),
+      );
+    }
+
+    return IntrinsicWidth(
+      child: SingleChildScrollView(
+        physics: const ClampingScrollPhysics(),
+        padding: const EdgeInsets.all(4),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            ...widget.items.map(
+              (T item) => _buildItem(context, item, stateSetter),
+            ),
+
+            _buildActions(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ITEM (TEMP SELECTION ONLY)
+  // ---------------------------------------------------------------------------
+
+  Widget _buildItem(BuildContext context, T item, StateSetter stateSetter) {
+    final bool isSelected = _tempSelected.contains(item);
+
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        setState(() {
+          isSelected ? _tempSelected.remove(item) : _tempSelected.add(item);
+        });
+        stateSetter(() {});
+      },
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          children: <Widget>[
+            Icon(
+              isSelected ? Icons.check_box : Icons.check_box_outline_blank,
+              size: 16,
+              color: isSelected ? context.colorScheme.onSurface : context.colorScheme.onSurface.withOpacity(0.4),
+            ),
+            const SizedBox(width: 8),
+            Expanded(child: widget.labelBuilder(item, isSelected)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // ACTIONS
+  // ---------------------------------------------------------------------------
+
+  Widget _buildActions(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: <Widget>[
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () {
+              widget.onChanged(<T>{});
+              Navigator.of(context).pop();
+            },
+            child: FusionAppText(
+              text: 'Clear',
+              style: context.textTheme.labelSmall?.copyWith(
+                color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () {
+              widget.onChanged(Set<T>.from(_tempSelected));
+              Navigator.of(context).pop();
+            },
+            child: FusionAppText(
+              text: 'Done',
+              style: context.textTheme.labelSmall?.copyWith(
+                color: context.colorScheme.onSurface,
+              ),
+            ),
           ),
         ],
       ),
