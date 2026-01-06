@@ -49,9 +49,9 @@ runs:
         flutter pub get
         cp /Users/devops/Documents/flutter-env/.env ./.env
         moon run flutter-apps:build-mac-ios-android
-        codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/Frameworks/*
-        codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
-        codesign --force  --verbose=4 --display  --options runtime --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app
+        codesign --force  --verbose=4 --display  --options runtime --entitlements macos/Runner/Release.entitlements --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/Frameworks/*
+        codesign --force  --verbose=4 --display  --options runtime --entitlements macos/Runner/Release.entitlements --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app/Contents/MacOS/Fusion\ Launcher*
+        codesign --force  --verbose=4 --display  --options runtime --entitlements macos/Runner/Release.entitlements --sign "Developer ID Application: Transom Post Opco LLC (7FDK3RUF89)" --identifier "com.bosepro.fusion" -vvv ./build/macos/Build/Products/Release/Fusion\ Launcher.app
         codesign -vvv -d --verbose ./build/macos/Build/Products/Release/Fusion\ Launcher.app
         hdiutil create -srcfolder "./build/macos/Build/Products/Release/Fusion Launcher.app" -volname "Fusion Launcher app" -fs HFS+ -fsargs "-c c=64,a=16,e=16" -format UDRW ./build/macos/Build/Products/Release/Fusion_Launcher.dmg
         hdiutil convert ./build/macos/Build/Products/Release/Fusion_Launcher.dmg -format UDZO -imagekey zlib-level=9 -ov -o ./build/macos/Build/Products/Release/Fusion_Launcher_installer.dmg
