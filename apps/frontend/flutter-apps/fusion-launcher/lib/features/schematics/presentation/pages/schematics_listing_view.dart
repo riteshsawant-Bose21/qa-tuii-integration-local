@@ -1136,7 +1136,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 zoneName: zoneData.name,
                 zoneId: zoneData.id,
                 bgColor: zoneData.color,
-                initiallyExpanded: false,
+                initiallyExpanded: true,
                 zoneCircuits: _projectViewModel.getCircuitsInZone(zoneData.id),
                 subZones: _projectViewModel.getSubZonesForZone(
                   parentZoneId: zoneData.id,

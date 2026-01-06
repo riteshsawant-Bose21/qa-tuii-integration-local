@@ -35,7 +35,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
   @override
   void initState() {
     super.initState();
-    _isSubZoneExpanded = ValueNotifier<bool>(false);
+    _isSubZoneExpanded = ValueNotifier<bool>(true);
   }
 
   @override

@@ -39,7 +39,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   @override
   void initState() {
     super.initState();
-    _isSubZoneExpanded = ValueNotifier<bool>(false);
+    _isSubZoneExpanded = ValueNotifier<bool>(true);
   }
 
   @override
