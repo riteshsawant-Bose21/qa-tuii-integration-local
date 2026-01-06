@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -183,7 +183,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               }),
               trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.black;
+                  return Theme.of(context).colorScheme.greyDark;
                 }
                 return Theme.of(context).colorScheme.grey;
               }),
@@ -197,10 +197,82 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
           ),
         );
       case SceneParamValueType.pulse:
-        // Not implemented yet
-        return FusionAppText(
-          text: 'Pulse not implemented',
-          style: Theme.of(context).textTheme.bodySmall,
+
+        /// Parse the pulse value format: "enabled:duration" or fallback to defaults
+        final String pulseValue = value.value ?? "false:0";
+        final List<String> parts = pulseValue.split(':');
+        final bool isEnabled = parts.isNotEmpty && parts[0] == 'true';
+        final String duration = parts.length > 1 ? parts[1] : "0";
+
+        return Row(
+          children: <Widget>[
+            /// Enable/Disable Switch
+            SizedBox(
+              height: 12,
+              child: Transform.scale(
+                scale: 0.8,
+                child: Switch(
+                  value: isEnabled,
+                  padding: EdgeInsets.zero,
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return Theme.of(context).colorScheme.white;
+                    }
+                    return Theme.of(context).colorScheme.greyDark;
+                  }),
+                  trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
+                    if (states.contains(MaterialState.selected)) {
+                      return Theme.of(context).colorScheme.greyDark;
+                    }
+                    return Theme.of(context).colorScheme.grey;
+                  }),
+                  trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
+                  onChanged: (bool val) {
+                    final String newValue = "${val ? 'true' : 'false'}:$duration";
+                    print("new vwaluw = = > $newValue");
+
+                    final SceneValue updated = value.copyWith(value: newValue);
+                    widget.onChanged(updated);
+                    setState(() {});
+                  },
+                ),
+              ),
+            ),
+
+            const SizedBox(width: 8),
+
+            /// Duration Input Field
+            Expanded(
+              child: SizedBox(
+                height: 28,
+                child: Transform.scale(
+                  alignment: Alignment.center,
+                  scale: 0.9,
+                  child: TextFormField(
+                    initialValue: duration,
+                    // enabled: isEnabled,
+                    keyboardType: TextInputType.number,
+                    decoration: InputDecoration(
+                      border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.dividerColor)),
+                      isDense: true,
+                      labelText: "Duration (ms)",
+                      labelStyle: const TextStyle(fontSize: 10),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    ),
+                    onChanged: (String v) {
+                      /// Ensure only valid numbers are accepted
+                      final String sanitizedValue = v.replaceAll(RegExp(r'[^0-9]'), '');
+                      final String newValue = "${isEnabled ? 'true' : 'false'}:$sanitizedValue";
+                      print("new vwaluw = = > $newValue");
+                      final SceneValue updated = value.copyWith(value: newValue);
+                      widget.onChanged(updated);
+                    },
+                  ),
+                ),
+              ),
+            ),
+          ],
         );
     }
   }
