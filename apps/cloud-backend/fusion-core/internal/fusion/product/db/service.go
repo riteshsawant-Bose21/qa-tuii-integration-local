@@ -194,8 +194,8 @@ func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string) (st
 	}
 
 	// Return the version if available
-	if job.Version != "" {
-		return job.Version, nil
+	if job.Version.Valid && job.Version.String != "" {
+		return job.Version.String, nil
 	}
 
 	return "", fmt.Errorf("no version information found in sync job")
@@ -212,12 +212,12 @@ func (s *Service) transformToSingleProductResponse(product *models.Product, vers
 	if product.Images.Valid {
 		var jsonData interface{}
 		if err := json.Unmarshal(product.Images.JSON, &jsonData); err != nil {
-			imagesData = []map[string]interface{}{{"black": []string{"default.jpg"}}}
+			imagesData = []map[string]interface{}{{"black": []string{""}}}
 		} else {
 			imagesData = jsonData
 		}
 	} else {
-		imagesData = []map[string]interface{}{{"black": []string{"default.jpg"}}}
+		imagesData = []map[string]interface{}{{"black": []string{""}}}
 	}
 
 	// Parse specifications JSON
@@ -354,16 +354,17 @@ func (s *Service) appendToProductResponse(response *types.ProductResponse, produ
 
 // buildProductItemResponse creates a ProductItemResponse from a SQLBoiler model
 func (s *Service) buildProductItemResponse(product *models.Product) *types.ProductItemResponse {
-	imagesData := s.parseJSONField(product.Images, []map[string]interface{}{{"black": []string{"default.jpg"}}})
+	imagesData := s.parseJSONField(product.Images, []map[string]interface{}{{"black": []string{""}}})
 	specs := s.parseJSONField(product.Specifications, make(map[string]interface{}))
 
 	return &types.ProductItemResponse{
-		ProductID:      product.ProductID,
-		Assets:         imagesData,
-		ModelName:      product.ModelName,
-		ModelFamily:    s.getStringValue(product.ModelFamily),
-		Description:    s.getStringValue(product.Description),
-		Specifications: specs,
+		ProductID:          product.ProductID,
+		Assets:             imagesData,
+		ModelName:          product.ModelName,
+		ModelFamily:        s.getStringValue(product.ModelFamily),
+		Description:        s.getStringValue(product.Description),
+		Specifications:     specs,
+		IsFusionCompatible: s.getBoolValue(product.Isfusioncompatible),
 	}
 }
 
@@ -387,6 +388,14 @@ func (s *Service) getStringValue(field null.String) string {
 		return field.String
 	}
 	return ""
+}
+
+// getBoolValue safely extracts bool from null.Bool
+func (s *Service) getBoolValue(field null.Bool) bool {
+	if field.Valid {
+		return field.Bool
+	}
+	return false
 }
 
 // ============================================================================
@@ -857,12 +866,25 @@ func (s *Service) Create(ctx context.Context, syncOperation, syncType, version, 
 		syncOperation = "manual_sync"
 	}
 
+	// Handle required S3 fields for local files by providing defaults
+	if s3Bucket == "" {
+		s3Bucket = "local-file" // Default value for local files
+	}
+	if s3Key == "" {
+		// Use the source path as s3_key for local files, or a default
+		if sourcePath != "" {
+			s3Key = sourcePath
+		} else {
+			s3Key = "local-source"
+		}
+	}
+
 	job := &models.ProductSyncJob{
 		JobID:         jobID,
 		SyncOperation: syncOperation,
-		SyncType:      syncType,
+		SyncType:      null.NewString(syncType, syncType != ""),
 		Status:        "pending",
-		Version:       version,
+		Version:       null.NewString(version, version != ""),
 		S3Bucket:      s3Bucket,
 		S3Key:         s3Key,
 		CreatedAt:     null.TimeFrom(time.Now()),
@@ -910,12 +932,14 @@ func (s *Service) UpdateWithResults(ctx context.Context, jobID, status string, t
 	job.SuccessfulItems = null.IntFrom(successful)
 	job.FailedItems = null.IntFrom(failed)
 
-	// Store validation warnings in the validation_errors JSONB field
+	// Store validation warnings in the validation_errors JSONB field with structured data
 	if len(validationWarnings) > 0 {
 		validationData := map[string]interface{}{
+			"type":           "warnings",
 			"warnings":       validationWarnings,
 			"total_warnings": len(validationWarnings),
 			"timestamp":      time.Now().UTC(),
+			"source":         "sync_process",
 		}
 		if validationJSON, err := json.Marshal(validationData); err == nil {
 			job.ValidationErrors = null.JSONFrom(validationJSON)
@@ -985,13 +1009,23 @@ func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, error
 		return nil
 	}
 
-	// Store errors in job record
+	// Store errors in job record with structured data to distinguish from warnings
 	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
 	if err != nil {
 		return fmt.Errorf("failed to find job %s: %w", jobID, err)
 	}
 
-	errorsJSON, err := json.Marshal(errorCollector.GetAllErrors())
+	// Create structured error data
+	errorData := map[string]interface{}{
+		"type":         "errors",
+		"errors":       errorCollector.GetAllErrors(),
+		"summary":      summary,
+		"total_errors": summary.TotalErrors,
+		"timestamp":    time.Now().UTC(),
+		"source":       "validation_process",
+	}
+
+	errorsJSON, err := json.Marshal(errorData)
 	if err != nil {
 		return fmt.Errorf("failed to marshal errors: %w", err)
 	}
@@ -1000,6 +1034,49 @@ func (s *Service) StoreValidationErrors(ctx context.Context, jobID string, error
 	_, err = job.Update(ctx, s.db, boil.Infer())
 
 	return err
+}
+
+// StoreValidationData stores both validation warnings and errors in a combined format
+func (s *Service) StoreValidationData(ctx context.Context, jobID string, validationWarnings []string, errorCollector *errorspkg.ErrorCollector) error {
+	job, err := models.ProductSyncJobs(qm.Where("job_id = ?", jobID)).One(ctx, s.db)
+	if err != nil {
+		return fmt.Errorf("failed to find job %s: %w", jobID, err)
+	}
+
+	// Create combined validation data structure
+	validationData := map[string]interface{}{
+		"timestamp": time.Now().UTC(),
+		"source":    "sync_process",
+	}
+
+	// Add warnings if any
+	if len(validationWarnings) > 0 {
+		validationData["warnings"] = validationWarnings
+		validationData["total_warnings"] = len(validationWarnings)
+	}
+
+	// Add errors if any
+	if errorCollector != nil {
+		summary := errorCollector.GetSummary()
+		if summary.TotalErrors > 0 {
+			validationData["errors"] = errorCollector.GetAllErrors()
+			validationData["error_summary"] = summary
+			validationData["total_errors"] = summary.TotalErrors
+		}
+	}
+
+	// Only store if there's actual data
+	if len(validationWarnings) > 0 || (errorCollector != nil && errorCollector.GetSummary().TotalErrors > 0) {
+		validationJSON, err := json.Marshal(validationData)
+		if err != nil {
+			return fmt.Errorf("failed to marshal validation data: %w", err)
+		}
+		job.ValidationErrors = null.JSONFrom(validationJSON)
+		_, err = job.Update(ctx, s.db, boil.Infer())
+		return err
+	}
+
+	return nil
 }
 
 // ============================================================================
@@ -1014,13 +1091,21 @@ func (s *Service) insertProduct(ctx context.Context, exec boil.ContextExecutor, 
 
 	// Convert types.DBProduct to models.Product
 	modelProduct := &models.Product{
-		ProductID:        product.ProductID,
-		ProductType:      product.ProductType,
-		ModelName:        product.ModelName,
-		ModelFamily:      null.NewString(product.ModelFamily, product.ModelFamily != ""),
-		Description:      null.NewString(product.Description, product.Description != ""),
-		ShortDescription: null.NewString(product.ShortDescription, product.ShortDescription != ""),
+		ProductID:          product.ProductID,
+		ProductType:        product.ProductType,
+		ModelName:          product.ModelName,
+		ModelFamily:        null.NewString(product.ModelFamily, product.ModelFamily != ""),
+		Description:        null.NewString(product.Description, product.Description != ""),
+		ShortDescription:   null.NewString(product.ShortDescription, product.ShortDescription != ""),
+		Isfusioncompatible: null.NewBool(product.IsFusionCompatible, true),
 	}
+
+	// Debug: Log fusion compatibility value
+	s.logger.Info("DEBUG: Inserting product with fusion compatibility",
+		zap.Int("product_id", product.ProductID),
+		zap.Bool("is_fusion_compatible", product.IsFusionCompatible),
+		zap.Bool("fusion_compatible_valid", modelProduct.Isfusioncompatible.Valid),
+		zap.Bool("fusion_compatible_value", modelProduct.Isfusioncompatible.Bool))
 
 	// Handle JSON fields - convert string to null.JSON
 	if product.Images != "" {

@@ -17,12 +17,13 @@ var (
 
 // Generic product item response used for all product types
 type ProductItemResponse struct {
-	ProductID      int         `json:"productid"`
-	Assets         interface{} `json:"assets"`
-	ModelName      string      `json:"model_name"`
-	ModelFamily    string      `json:"model_family,omitempty"`
-	Description    string      `json:"description,omitempty"`
-	Specifications interface{} `json:"specifications"`
+	ProductID          int         `json:"productid"`
+	Assets             interface{} `json:"assets"`
+	ModelName          string      `json:"model_name"`
+	ModelFamily        string      `json:"model_family,omitempty"`
+	Description        string      `json:"description,omitempty"`
+	Specifications     interface{} `json:"specifications"`
+	IsFusionCompatible bool        `json:"is_fusion_compatible"`
 }
 
 // New API response structure matching the required schema
@@ -143,16 +144,17 @@ type LambdaResponse struct {
 
 // DBProduct represents a product in database format
 type DBProduct struct {
-	ProductID        int     `json:"product_id"`
-	ProductType      string  `json:"product_type"`
-	ModelName        string  `json:"model_name"`
-	ModelFamily      string  `json:"model_family"`
-	ShortDescription string  `json:"short_description"`
-	Description      string  `json:"description"`
-	Images           string  `json:"images"`         // JSON string
-	Specifications   string  `json:"specifications"` // JSON string
-	CreatedAt        *string `json:"created_at"`     // Epoch timestamp as string
-	UpdatedAt        *string `json:"updated_at"`     // Epoch timestamp as string
+	ProductID          int     `json:"product_id"`
+	ProductType        string  `json:"product_type"`
+	ModelName          string  `json:"model_name"`
+	ModelFamily        string  `json:"model_family"`
+	ShortDescription   string  `json:"short_description"`
+	Description        string  `json:"description"`
+	Images             string  `json:"images"`         // JSON string
+	Specifications     string  `json:"specifications"` // JSON string
+	IsFusionCompatible bool    `json:"is_fusion_compatible"`
+	CreatedAt          *string `json:"created_at"` // Epoch timestamp as string
+	UpdatedAt          *string `json:"updated_at"` // Epoch timestamp as string
 }
 
 // DBPrice represents a price in database format
@@ -194,14 +196,15 @@ type SyncRequest struct {
 
 // Product represents a product from JSON data (internal struct for sync processing)
 type Product struct {
-	ProductID        int                    `json:"id"`
-	ModelName        string                 `json:"model_name"`
-	ModelFamily      string                 `json:"model_family,omitempty"`
-	Description      string                 `json:"description,omitempty"`
-	ShortDescription string                 `json:"short_description,omitempty"`
-	UpdatedAt        string                 `json:"updated_at,omitempty"`
-	Images           []map[string][]string  `json:"images,omitempty"`
-	RawData          map[string]interface{} `json:"-"`
+	ProductID          int                    `json:"id"`
+	ModelName          string                 `json:"model_name"`
+	ModelFamily        string                 `json:"model_family,omitempty"`
+	Description        string                 `json:"description,omitempty"`
+	ShortDescription   string                 `json:"short_description,omitempty"`
+	IsFusionCompatible bool                   `json:"is_fusion_compatible,omitempty"`
+	UpdatedAt          string                 `json:"updated_at,omitempty"`
+	Images             []map[string][]string  `json:"images,omitempty"`
+	RawData            map[string]interface{} `json:"-"`
 }
 
 // ProductData represents the structure of the JSON data from the source

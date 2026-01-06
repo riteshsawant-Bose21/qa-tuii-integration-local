@@ -117,7 +117,7 @@ func main() {
 	}
 
 	//Initialize Product Service (now includes sync functionality)
-	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg)
+	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, logger.JobSyncLog())
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}

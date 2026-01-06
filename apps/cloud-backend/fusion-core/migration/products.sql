@@ -22,6 +22,7 @@ CREATE TABLE product (
     images JSONB, -- Complete images structure
     -- Product-specific specifications stored as JSONB
     specifications JSONB, -- All technical specs go here
+    isFusionCompatible BOOLEAN DEFAULT FALSE, -- Fusion compatibility flag
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

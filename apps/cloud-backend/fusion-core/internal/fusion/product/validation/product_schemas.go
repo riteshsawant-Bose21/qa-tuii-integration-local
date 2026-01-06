@@ -7,14 +7,15 @@ import (
 
 // BaseProduct defines common fields for all products
 type BaseProduct struct {
-	ProductID   int    `json:"id" validate:"optional,type:number,positive" description:"Unique product identifier"`
-	ModelName   string `json:"model_name" validate:"optional,type:string,not_empty,max_length:255" description:"Product model name"`
-	ModelFamily string `json:"model_family" validate:"optional,type:string,not_empty,max_length:255" description:"Product family/series"`
-	Description string `json:"description" validate:"optional,type:string,not_empty" description:"Product description"`
-	ShortDesc   string `json:"short_description" validate:"optional,type:string" description:"Short product description"`
-	Images      []any  `json:"images" validate:"optional,type:array" description:"Product images"`
-	SKUs        []any  `json:"skus" validate:"optional,type:array" description:"Associated SKU numbers"`
-	UpdatedAt   string `json:"updated_at" validate:"optional,type:string" description:"Last update timestamp"`
+	ProductID          int    `json:"id" validate:"optional,type:int,positive" description:"Unique product identifier"`
+	ModelName          string `json:"model_name" validate:"optional,type:string,not_empty,max_length:255" description:"Product model name"`
+	ModelFamily        string `json:"model_family" validate:"optional,type:string,not_empty,max_length:255" description:"Product family/series"`
+	Description        string `json:"description" validate:"optional,type:string,not_empty" description:"Product description"`
+	ShortDesc          string `json:"short_description" validate:"optional,type:string" description:"Short product description"`
+	Images             []any  `json:"images" validate:"optional,type:array" description:"Product images"`
+	SKUs               []any  `json:"skus" validate:"optional,type:array" description:"Associated SKU numbers"`
+	IsFusionCompatible bool   `json:"is_fusion_compatible" validate:"optional,type:boolean" description:"Fusion compatibility indicator"`
+	UpdatedAt          string `json:"updated_at" validate:"optional,type:string" description:"Last update timestamp"`
 }
 
 // Speaker defines speaker-specific fields

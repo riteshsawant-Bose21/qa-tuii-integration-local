@@ -25,6 +25,7 @@ type Service struct {
 	validator     *validation.FieldValidator
 	validationCfg *config.Validation
 	processingCfg *config.Processing
+	logger        *zap.Logger
 }
 
 // DatabaseService defines the interface for database operations related to products and sync.
@@ -62,7 +63,7 @@ type DatabaseService interface {
 }
 
 // NewService creates a new product service.
-func NewService(dbService DatabaseService, version string, validationCfg *config.Validation, processingCfg *config.Processing) *Service {
+func NewService(dbService DatabaseService, version string, validationCfg *config.Validation, processingCfg *config.Processing, logger *zap.Logger) *Service {
 	if dbService == nil {
 		panic("dbService cannot be nil")
 	}
@@ -72,6 +73,9 @@ func NewService(dbService DatabaseService, version string, validationCfg *config
 	if processingCfg == nil {
 		panic("processingCfg cannot be nil")
 	}
+	if logger == nil {
+		panic("logger cannot be nil")
+	}
 
 	return &Service{
 		dbService:     dbService,
@@ -79,6 +83,7 @@ func NewService(dbService DatabaseService, version string, validationCfg *config
 		validator:     validation.NewFieldValidator(),
 		validationCfg: validationCfg,
 		processingCfg: processingCfg,
+		logger:        logger,
 	}
 }
 
@@ -425,11 +430,19 @@ func (s *Service) SyncProducts(ctx context.Context, jsonData []byte, jobID strin
 		if needsSync {
 			productsToSync = append(productsToSync, product)
 		} else {
+			s.logger.Info("SKIP: Product already exists and up-to-date",
+				zap.Int("product_id", product.ProductID),
+				zap.String("model_name", product.ModelName),
+				zap.String("reason", "Product exists in database and no update needed"))
 			result.Skipped++
 		}
 	}
 
 	if len(productsToSync) == 0 {
+		s.logger.Info("No products require syncing",
+			zap.Int("total_products_found", len(allProducts)),
+			zap.Int("skipped_existing", result.Skipped),
+			zap.String("reason", "All products already exist and are up-to-date"))
 		result.Duration = time.Since(startTime)
 		return result, nil
 	}
@@ -469,6 +482,24 @@ func (s *Service) SyncProducts(ctx context.Context, jsonData []byte, jobID strin
 	}
 
 	result.Duration = time.Since(startTime)
+
+	// Log comprehensive sync summary
+	s.logger.Info("Product sync completed",
+		zap.Int("total_products_processed", len(allProducts)),
+		zap.Int("products_to_sync", len(productsToSync)),
+		zap.Int("successful", result.Successful),
+		zap.Int("failed", result.Failed),
+		zap.Int("skipped", result.Skipped),
+		zap.Duration("duration", result.Duration),
+		zap.Int("validation_warnings", len(result.ValidationWarnings)),
+		zap.Int("errors", len(result.Errors)))
+
+	if result.Skipped > 0 {
+		s.logger.Info("Products were skipped",
+			zap.Int("skipped_count", result.Skipped),
+			zap.String("skip_reasons", "Existing products that don't need updates, invalid categories, or transformation failures"))
+	}
+
 	return result, nil
 }
 
@@ -572,6 +603,11 @@ func (s *Service) convertJSONToDBProduct(item interface{}, category string) *typ
 		product.ShortDescription = shortDesc
 	}
 
+	// Extract fusion compatibility flag
+	if fusionCompatible, ok := itemMap["is_fusion_compatible"].(bool); ok {
+		product.IsFusionCompatible = fusionCompatible
+	}
+
 	// Convert complex fields to JSON strings
 	if images, ok := itemMap["images"]; ok {
 		if imagesJSON, err := json.Marshal(images); err == nil {
@@ -624,7 +660,10 @@ func (s *Service) parseProductJSON(data []byte) (*types.ProductData, error) {
 	for category, items := range rawData {
 		// Skip categories that are not in our allowed list
 		if !allowedCategories[category] {
-			// Silently skip unwanted categories
+			s.logger.Info("SKIP: Category not allowed",
+				zap.String("category", category),
+				zap.String("reason", "Category not in allowed list"),
+				zap.Strings("allowed_categories", []string{"speakers", "amplifiers", "digital_signal_processors", "controllers", "i_o_endpoints", "additional_accessories"}))
 			continue
 		}
 
@@ -686,6 +725,9 @@ func (s *Service) parseProductArray(items []interface{}) ([]types.Product, error
 		}
 		if updatedAt, ok := itemMap["updated_at"].(string); ok {
 			product.UpdatedAt = updatedAt
+		}
+		if fusionCompatible, ok := itemMap["is_fusion_compatible"].(bool); ok {
+			product.IsFusionCompatible = fusionCompatible
 		}
 
 		// Extract images array
@@ -837,66 +879,38 @@ func (s *Service) extractSKUFromRawData(rawData map[string]interface{}) int {
 // shouldUpdateProduct determines if a product needs to be updated
 func (s *Service) shouldUpdateProduct(product types.Product, existingTimestamps map[int]*int64) bool {
 	// If no existing timestamp data, product is new and should be synced
-	_, exists := existingTimestamps[product.ProductID]
+	existingTimestamp, exists := existingTimestamps[product.ProductID]
 	if !exists {
 		return true // Product doesn't exist in DB, needs to be inserted
 	}
 
-	// Product exists in DB - for now skip to avoid unnecessary updates
-	// In a real implementation, you would compare updated timestamps
+	// Product exists in DB - compare timestamps if available
+	if product.UpdatedAt != "" && existingTimestamp != nil {
+		// Parse the product timestamp from the JSON (epoch timestamp as string)
+		productTimestamp, err := strconv.ParseInt(product.UpdatedAt, 10, 64)
+		if err == nil {
+			// Compare timestamps - update if JSON timestamp is newer
+			if productTimestamp > *existingTimestamp {
+				return true // Product has been updated, needs sync
+			}
+		}
+	}
+
+	// Product exists and is up-to-date (or timestamps couldn't be compared)
 	return false
 }
 
-// validateSyncFields validates product fields using the comprehensive field validator
+// validateSyncFields does basic validation for sync operations
 func (s *Service) validateSyncFields(product types.Product) []string {
 	var warnings []string
 
-	// Convert product to map for validation (using RawData if available)
-	var productData map[string]interface{}
-	if product.RawData != nil {
-		productData = product.RawData
-	} else {
-		// Fallback: create map from product fields
-		productData = map[string]interface{}{
-			"id":                product.ProductID,
-			"model_name":        product.ModelName,
-			"model_family":      product.ModelFamily,
-			"description":       product.Description,
-			"short_description": product.ShortDescription,
-			"updated_at":        product.UpdatedAt,
-			"images":            product.Images,
-		}
+	// Only validate essential fields needed for sync
+	if product.ProductID == 0 {
+		warnings = append(warnings, fmt.Sprintf("Product missing required ID"))
 	}
 
-	// Determine product type for validation (need to infer from category or type)
-	productType := "generic" // default fallback
-	if typeValue, exists := productData["type"]; exists {
-		if typeStr, ok := typeValue.(string); ok {
-			productType = validation.GetProductTypeFromCategory(typeStr)
-		}
-	}
-
-	// Use field validator for comprehensive validation
-	validationResult := s.validator.ValidateProductFields(productData, productType, product.ProductID)
-
-	// Convert validation results to warning strings
-	// Include required errors as warnings (since sync shouldn't fail completely)
-	for _, reqError := range validationResult.RequiredErrors {
-		warnings = append(warnings, fmt.Sprintf("Product %d: %s - %s (REQUIRED)",
-			product.ProductID, reqError.FieldName, reqError.Suggestion))
-	}
-
-	// Include optional warnings
-	for _, optWarning := range validationResult.OptionalWarnings {
-		warnings = append(warnings, fmt.Sprintf("Product %d: %s - %s (optional)",
-			product.ProductID, optWarning.FieldName, optWarning.Suggestion))
-	}
-
-	// Add compliance score as informational warning if low
-	if validationResult.ComplianceScore < 80.0 {
-		warnings = append(warnings, fmt.Sprintf("Product %d: Low compliance score %.1f%% (%d/%d fields)",
-			product.ProductID, validationResult.ComplianceScore,
-			validationResult.TotalIssues, len(s.validator.ProductTypeDefinitions[productType])))
+	if product.ModelName == "" {
+		warnings = append(warnings, fmt.Sprintf("Product %d: missing model_name", product.ProductID))
 	}
 
 	return warnings
@@ -944,12 +958,24 @@ func (s *Service) processBatch(ctx context.Context, products []types.Product, pr
 		if validationEnabled {
 			// Validate only the fields we're actually processing in the sync
 			syncValidationWarnings := s.validateSyncFields(product)
+			if len(syncValidationWarnings) > 0 {
+				s.logger.Warn("Product validation warnings",
+					zap.Int("product_id", product.ProductID),
+					zap.String("model_name", product.ModelName),
+					zap.Strings("warnings", syncValidationWarnings))
+			}
 			result.ValidationWarnings = append(result.ValidationWarnings, syncValidationWarnings...)
 		}
 
 		// Transform to DBProduct
 		dbProduct, err := s.convertProductToDBProduct(product, productType)
 		if err != nil {
+			s.logger.Warn("SKIP: Product transformation failed",
+				zap.Int("product_id", product.ProductID),
+				zap.String("model_name", product.ModelName),
+				zap.String("product_type", productType),
+				zap.String("reason", "Failed to convert to DB format"),
+				zap.Error(err))
 			result.Errors = append(result.Errors, fmt.Sprintf("Product %d transformation failed: %v", product.ProductID, err))
 			result.Failed++
 			continue
@@ -1059,12 +1085,13 @@ func (s *Service) convertProductToDBProduct(product types.Product, productType s
 	}
 
 	dbProduct := &types.DBProduct{
-		ProductID:        product.ProductID,
-		ProductType:      productType,
-		ModelName:        product.ModelName,        // Can be empty - validation will catch it
-		ModelFamily:      product.ModelFamily,      // Can be empty - validation will catch it
-		Description:      product.Description,      // Can be empty - validation will catch it
-		ShortDescription: product.ShortDescription, // Can be empty - validation will catch it
+		ProductID:          product.ProductID,
+		ProductType:        productType,
+		ModelName:          product.ModelName,        // Can be empty - validation will catch it
+		ModelFamily:        product.ModelFamily,      // Can be empty - validation will catch it
+		Description:        product.Description,      // Can be empty - validation will catch it
+		ShortDescription:   product.ShortDescription, // Can be empty - validation will catch it
+		IsFusionCompatible: product.IsFusionCompatible,
 	}
 
 	// Convert images to JSON
@@ -1079,17 +1106,18 @@ func (s *Service) convertProductToDBProduct(product types.Product, productType s
 		// Create specifications object by copying raw data and excluding metadata fields
 		specifications := make(map[string]interface{})
 		excludeFields := map[string]bool{
-			"id":                true,
-			"skus":              true,
-			"images":            true,
-			"model_name":        true,
-			"model_family":      true,
-			"type":              true,
-			"name":              true,
-			"description":       true,
-			"short_description": true,
-			"created_at":        true,
-			"updated_at":        true,
+			"id":                   true,
+			"skus":                 true,
+			"images":               true,
+			"model_name":           true,
+			"model_family":         true,
+			"type":                 true,
+			"name":                 true,
+			"description":          true,
+			"short_description":    true,
+			"is_fusion_compatible": true,
+			"created_at":           true,
+			"updated_at":           true,
 		}
 
 		// Copy all fields except the excluded ones to specifications
