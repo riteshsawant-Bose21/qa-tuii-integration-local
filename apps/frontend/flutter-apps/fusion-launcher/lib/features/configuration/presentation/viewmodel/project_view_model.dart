@@ -336,6 +336,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   void throwError(String message) {
+    FusionLogger.log(tag: LogTag.project, message: message);
     emit(ProjectError(message: message));
   }
 

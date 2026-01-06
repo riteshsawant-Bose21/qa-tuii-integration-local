@@ -386,7 +386,6 @@ extension SceneService on ProjectService {
               .toList();
         } else if (actionType == SceneActionType.snapshot) {
           return getAllSnapshots()
-              .where((val) => val.id != scene.item!.itemId)
               .map(
                 (SnapshotsModel snapshot) => SceneValueDropdown(
                   value: snapshot.id,
