@@ -17,6 +17,7 @@ class ControllerProduct {
   final String? shortDescription;
   final String? zoneControlCount;
   final List<int> skus;
+  final bool isFusionCompatible;
 
   const ControllerProduct({
     required this.productId,
@@ -31,6 +32,7 @@ class ControllerProduct {
     this.shortDescription,
     this.zoneControlCount,
     this.skus = const [],
+    this.isFusionCompatible = false,
   });
 
   factory ControllerProduct.fromJson(Map<String, dynamic> json) {
@@ -58,6 +60,7 @@ class ControllerProduct {
               ?.map((e) => (e as num).toInt())
               .toList() ??
           [],
+      isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
@@ -76,6 +79,7 @@ class ControllerProduct {
           if (zoneControlCount != null) 'zone_control_count': zoneControlCount,
           'skus': skus,
         },
+        'is_fusion_compatible': isFusionCompatible,
       };
 
   @override
