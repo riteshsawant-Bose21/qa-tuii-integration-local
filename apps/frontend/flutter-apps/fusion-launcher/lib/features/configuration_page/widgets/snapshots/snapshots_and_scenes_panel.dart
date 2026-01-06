@@ -250,6 +250,10 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                         onSelect: (String sceneId) {
                           _projectViewModel.setSelectedSnapshotId(sceneId);
                         },
+                        onDuplicate: (String sceneId) {
+                          _projectViewModel.duplicateSnapshot(sceneId: sceneId);
+                          FusionToast.success(context, message: "Snapshot duplicated successfully");
+                        },
                         onReorder: _handleSnapshotReorder,
                         onDragStarted: (String sceneId) {
                           setState(() {
@@ -277,7 +281,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
 
           /// Scenes Section
           SectionHeader(
-            title: 'Scenes',
+            title: 'Scene Sets',
             trailing: PopupMenuButton<dynamic>(
               onCanceled: () {
                 _clearSourceSetDialog(isScene: true);
@@ -374,12 +378,20 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                         _projectViewModel.setSelectedSnapshotId(null);
                         FusionToast.success(context, message: "Scenes deleted successfully");
                       },
+                      onSceneSetDuplicate: (String sceneSetId) {
+                        _projectViewModel.duplicateSceneSet(sceneSetId: sceneSetId);
+                        FusionToast.success(context, message: "Scene Set duplicated successfully");
+                      },
                       onScenesSnapshotDelete: (String sceneId) {
                         _projectViewModel.removeSnapshots(sceneId: sceneId);
 
                         /// clear selected snapshot to avoid confusion after delete
                         _projectViewModel.setSelectedSnapshotId(null);
                         FusionToast.success(context, message: "Snapshot deleted successfully");
+                      },
+                      onScenesSnapshotDuplicate: (String sceneId) {
+                        _projectViewModel.duplicateSnapshot(sceneId: sceneId);
+                        FusionToast.success(context, message: "Snapshot duplicated successfully");
                       },
                       onReorderScenes: _handleSceneSetReorder,
                       onDragStarted: (String sceneId) {
