@@ -128,7 +128,7 @@ extension SceneService on ProjectService {
     snapshots.remove(sceneId);
   }
 
-  List<SceneActionType> getSceneActionTypes({String? eventId}) {
+  List<SceneActionType> getSceneActionTypes({String? eventId, required bool isFromSnapshot}) {
     //for events return values based on condition
     if (eventId != null) {
       //get event to check if its value change condition
@@ -140,8 +140,20 @@ extension SceneService on ProjectService {
         ];
       }
     }
+    if (isFromSnapshot) {
+      //if action is being added from snapshot, do not allow snapshot action type
+      return SceneActionType.values.where((type) => type != SceneActionType.snapshot).toList();
+    }
 
     return SceneActionType.values;
+  }
+
+  SceneSetModel? getSceneSetForSnapshot(String snapshotId) {
+    final parentSetId = relationships.getParent(RelationshipType.sceneSetScenes, snapshotId);
+    if (parentSetId != null) {
+      return sceneSets.get(parentSetId);
+    }
+    return null;
   }
 
   //Get Action Items based on Action Type
@@ -231,7 +243,15 @@ extension SceneService on ProjectService {
   }
 
   // Helper method to get common zone parameters
-  List<SceneParam> _getCommonZoneParams(bool addOnlyLevelParam) {
+  List<SceneParam> _getCommonZoneParams(bool addOnlyLevelParam, String zoneOrSubZoneId) {
+    //check if it is subzone or zone
+    final bool isZone = zones.exists(zoneOrSubZoneId);
+    //check if zone has subzones
+    final bool hasSubZones = isZone && relationships.getChildren(RelationshipType.zoneSubZones, zoneOrSubZoneId).isNotEmpty;
+    if (hasSubZones) {
+      //if zone has subzones, do not allow volume/mute control at zone level
+      return [];
+    }
     return [
       _createParam(SceneParamType.volume),
       if (!addOnlyLevelParam) _createParam(SceneParamType.mute),
@@ -248,7 +268,9 @@ extension SceneService on ProjectService {
 
   // Helper method to get source mix parameters
   List<SceneParam> _getSourceMixParams(String zoneId, bool addOnlyLevelParam) {
-    final params = <SceneParam>[_createParam(SceneParamType.mixScene)];
+    final params = <SceneParam>[
+      if (!addOnlyLevelParam) _createParam(SceneParamType.mixScene),
+    ];
     final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: zoneId);
 
     for (var source in sourcesInZone) {
@@ -281,7 +303,7 @@ extension SceneService on ProjectService {
       }
     }
 
-    final params = _getCommonZoneParams(addOnlyLevelParam);
+    final params = _getCommonZoneParams(addOnlyLevelParam, item.itemId);
     final zoneFunction = getZoneFunction(zoneOrSubZoneId: item.itemId);
 
     if (zoneFunction == null) return params;
@@ -364,6 +386,7 @@ extension SceneService on ProjectService {
               .toList();
         } else if (actionType == SceneActionType.snapshot) {
           return getAllSnapshots()
+              .where((val) => val.id != scene.item!.itemId)
               .map(
                 (SnapshotsModel snapshot) => SceneValueDropdown(
                   value: snapshot.id,
@@ -375,19 +398,6 @@ extension SceneService on ProjectService {
           return [];
         }
 
-      case SceneParamType.prioritySelect1:
-      case SceneParamType.prioritySelect2:
-        final zoneFunction = getZoneFunction(zoneOrSubZoneId: scene.item!.itemId);
-        if (zoneFunction == null) return [];
-        final sourcesInZone = getSourcesAndSourceSetSourcesInZone(zoneId: scene.item!.itemId);
-        return sourcesInZone
-            .map(
-              (source) => SceneValueDropdown(
-                label: source.name,
-                value: source.id,
-              ),
-            )
-            .toList();
       default:
         return [];
     }

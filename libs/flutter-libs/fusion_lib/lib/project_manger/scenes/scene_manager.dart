@@ -85,12 +85,20 @@ extension SceneManager on ProjectManager {
     projectService!.removeSnapshots(sceneId);
   }
 
-  List<SceneActionType> getSceneActionTypes({String? eventId}) {
+  List<SceneActionType> getSceneActionTypes({String? eventId, required bool isFromSnapshot}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
 
-    return projectService!.getSceneActionTypes(eventId: eventId);
+    return projectService!.getSceneActionTypes(eventId: eventId, isFromSnapshot: isFromSnapshot);
+  }
+
+  SceneSetModel? getSceneSetForSnapshot(String snapshotId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+
+    return projectService!.getSceneSetForSnapshot(snapshotId);
   }
 
   List<SceneItemDropdown> getActionItemsByType(SceneActionType actionType) {

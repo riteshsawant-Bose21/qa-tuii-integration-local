@@ -165,12 +165,21 @@ extension ScenesViewModel on ProjectViewModel {
     }
   }
 
-  List<SceneActionType> getSceneActionTypes({String? eventId}) {
+  List<SceneActionType> getSceneActionTypes({String? eventId, required bool isFromSnapshot}) {
     try {
-      return projectManager.getSceneActionTypes(eventId: eventId);
+      return projectManager.getSceneActionTypes(eventId: eventId, isFromSnapshot: isFromSnapshot);
     } catch (e) {
       throwError("Get Scene Action Types Error  ${e.toString()}");
       return <SceneActionType>[];
+    }
+  }
+
+  SceneSetModel? getSceneSetForSnapshot({required String snapshotId}) {
+    try {
+      return projectManager.getSceneSetForSnapshot(snapshotId);
+    } catch (e) {
+      throwError("Get Scene Set For Scene Error  ${e.toString()}");
+      return null;
     }
   }
 
