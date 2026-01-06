@@ -106,6 +106,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
   @override
   Widget build(BuildContext context) {
+    print(" _zoneNameController = $_zoneNameController , _selectedColorHex = $_selectedColorHex, _selectedListeningAreaIds = $_selectedListeningAreaIds");
     return PopupMenuButton<dynamic>(
       onCanceled: () {
         /// Clear selections when menu is closed without adding
@@ -113,8 +114,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
           _selectedPopupDevice = null;
           _selectedListeningAreaIds.clear();
           _expandedSection = null;
-          _zoneNameController.clear(); // <-- Clear zone name
-          _selectedColorHex = ""; // <-- Clear selected color
+          _zoneNameController.clear();
+          _selectedColorHex = null;
         });
       },
       tooltip: getSectionToolTip(),
@@ -484,7 +485,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                   InkWell(
                     onTap: () {
                       _zoneNameController.clear();
-                      _selectedColorHex = "";
+                      _selectedColorHex = null;
+                      _selectedListeningAreaIds.clear();
                       Navigator.of(context).pop();
                     },
                     child: Icon(
@@ -878,7 +880,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
                       onTap: () {
                         Navigator.of(context).pop();
-                        _selectedColorHex = "";
+                        _selectedColorHex = null;
+                        _selectedListeningAreaIds.clear();
                         _zoneNameController.clear();
                       },
                     ),
@@ -890,7 +893,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
 
                       label: "Save",
-                      isActive: _zoneNameController.text.isNotEmpty && _selectedColorHex != null && _selectedListeningAreaIds.isNotEmpty,
+                      isActive:
+                          _zoneNameController.text.isNotEmpty &&
+                          _selectedColorHex != null &&
+                          _selectedColorHex!.isNotEmpty &&
+                          _selectedListeningAreaIds.isNotEmpty,
                       onTap: () {
                         final Zone newZone = Zone(
                           id: 'zone_${DateTime.now().millisecondsSinceEpoch}',
@@ -901,7 +908,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                         serviceLocator<ProjectViewModel>().addZone(zone: newZone, autoSave: false);
                         serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: newZone.id, listeningAreaIds: _selectedListeningAreaIds);
                         Navigator.of(context).pop();
-                        _selectedColorHex = "";
+                        _selectedColorHex = null;
+                        _selectedListeningAreaIds.clear();
                         _zoneNameController.clear();
                       },
                     ),
