@@ -124,17 +124,27 @@ class MediaFilesViewModel extends Cubit<ConfigurationMediaFilesState> {
     final MediaFileModel? mediaFile = serviceLocator<ProjectViewModel>().getMediaFileModelById(mediaId);
     if (mediaFile == null) return;
 
-    if (state.selectedMediaFileId == mediaId) {
-      await _audioPlayer.stop();
+    // Check if we're deleting the currently selected file
+    final bool isDeletingSelectedFile = state.selectedMediaFileId == mediaId;
+
+    if (isDeletingSelectedFile) {
+      // Stop audio playback and clear selection
+      try {
+        await _audioPlayer.stop();
+      } catch (e) {
+        // Handle error silently
+      }
+
       emit(
         state.copyWith(
-          selectedMediaFileId: null,
+          clearSelection: true,
           currentPosition: Duration.zero,
           isPlaying: false,
         ),
       );
     }
 
+    // Delete the file from the project
     await serviceLocator<ProjectViewModel>().removeMediaFileById(mediaId);
   }
 
