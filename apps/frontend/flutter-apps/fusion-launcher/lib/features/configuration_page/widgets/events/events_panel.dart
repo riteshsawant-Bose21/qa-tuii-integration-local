@@ -23,8 +23,6 @@ class EventsPanel extends StatefulWidget {
 class _EventsPanelState extends State<EventsPanel> {
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
-  final TextEditingController _eventsNameController = TextEditingController();
-
   void _addNewEvents() {
     final FusionEvent newScene = FusionEvent(
       name: "New Event ${_projectViewModel.getAllEvents().length + 1}",
@@ -36,16 +34,6 @@ class _EventsPanelState extends State<EventsPanel> {
 
     /// make this snapshot selected
     _projectViewModel.setSelectedEventId(newScene.id);
-  }
-
-  /// Clear source set dialog inputs
-  void _clearSourceSetDialog({bool pop = false, BuildContext? popContext}) {
-    _eventsNameController.clear();
-
-    if (pop && popContext != null && Navigator.of(popContext).canPop()) {
-      Navigator.of(popContext).pop();
-    }
-    setState(() {});
   }
 
   @override
@@ -68,7 +56,7 @@ class _EventsPanelState extends State<EventsPanel> {
           ),
 
           /// Event list
-          SingleChildScrollView(
+          Expanded(
             child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
               builder: (BuildContext context, ProjectViewModelState state) {
                 final List<FusionEvent> eventList = _projectViewModel.getAllEvents();
@@ -76,7 +64,6 @@ class _EventsPanelState extends State<EventsPanel> {
                   return Container(
                     width: double.infinity,
                     alignment: Alignment.center,
-                    padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.4),
                     child: FusionAppText(
                       text: 'No events available',
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(

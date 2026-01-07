@@ -40,8 +40,7 @@ class EventList extends StatelessWidget {
       },
       buildDefaultDragHandles: false,
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+      shrinkWrap: false,
       itemCount: eventList.length,
       onReorder: (int oldIndex, int newIndex) {
         if (onReorder != null) {
