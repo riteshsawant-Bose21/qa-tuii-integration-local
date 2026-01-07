@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/scheduling/model/calendar_event.dart';
+import 'package:fusion_launcher/features/scheduling/view/sections/scheduler_form.dart';
+import 'package:fusion_launcher/features/scheduling/viewmodel/scheduler_viewmodel.dart';
 import 'package:fusion_lib/fusion_utils/color_utils.dart';
+import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
 import 'package:fusion_lib/fusion_widgets/fusion_widgets.dart';
 import 'package:intl/intl.dart';
 
@@ -45,16 +50,29 @@ class _CalenderViewState extends State<CalenderView> {
     super.dispose();
   }
 
+  HoveredEventInfo? _hoveredEventInfo;
+  void onHover(CalendarEvent event, Offset position, Size size) {
+    setState(() {
+      _hoveredEventInfo = HoveredEventInfo(event: event, position: position, size: size);
+    });
+  }
+
+  void onHoverExit() {
+    setState(() {
+      _hoveredEventInfo = null;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     final ThemeData theme = Theme.of(context);
     final int daysInMonth = DateUtils.getDaysInMonth(widget.viewingMonth.year, widget.viewingMonth.month);
     const double hourLabelWidth = 100;
     const double dayLabelHeight = 50;
-    const double hourWidth = 100;
-    const double dayHeight = 200;
-    final double totalWidth = hourLabelWidth + (24 * hourWidth);
-    final double totalHeight = dayLabelHeight + (daysInMonth * dayHeight);
+    const double dayWidth = 100;
+    const double hourHeight = 200;
+    final double totalWidth = hourLabelWidth + (daysInMonth * dayWidth);
+    final double totalHeight = dayLabelHeight + (24 * hourHeight);
 
     return Stack(
       children: <Widget>[
@@ -77,15 +95,15 @@ class _CalenderViewState extends State<CalenderView> {
                         daysInMonth: daysInMonth,
                         hourLabelWidth: hourLabelWidth,
                         dayLabelHeight: dayLabelHeight,
-                        hourWidth: hourWidth,
-                        dayHeight: dayHeight,
+                        dayWidth: dayWidth,
+                        hourHeight: hourHeight,
                         theme: theme,
                       ),
                     ),
                     // Events
                     ...widget.events.map((CalendarEvent event) {
-                      final double top = dayLabelHeight + (event.startTime.day - 1) * dayHeight;
-                      final double left = hourLabelWidth + (event.startTime.hour * hourWidth) + (event.startTime.minute / 60 * hourWidth);
+                      final double top = dayLabelHeight + (event.startTime.hour * hourHeight) + (event.startTime.minute / 60 * hourHeight);
+                      final double left = hourLabelWidth + (event.startTime.day - 1) * dayWidth;
 
                       final List<CalendarEvent> todaysEvents =
                           widget.eventsByDate[DateTime(event.startTime.year, event.startTime.month, event.startTime.day)] ?? <CalendarEvent>[];
@@ -103,46 +121,131 @@ class _CalenderViewState extends State<CalenderView> {
                       overlappingEvents.sort((CalendarEvent a, CalendarEvent b) => a.startTime.compareTo(b.startTime));
                       final int currentEventPosition = overlappingEvents.indexOf(event);
 
-                      final double perEventHeight = (dayHeight * 0.9) / (overlappingEvents.isEmpty ? 1 : overlappingEvents.length);
+                      final double perEventWidth = (dayWidth * 0.95) / (overlappingEvents.isEmpty ? 1 : overlappingEvents.length);
+                      final double left2 = left + (currentEventPosition * perEventWidth);
+                      final double clamp = perEventWidth.clamp(dayWidth * 0.1, dayWidth);
                       return Positioned(
-                        top: top + (currentEventPosition * perEventHeight),
-                        left: left,
-                        // width: hourWidth,
-                        height: perEventHeight.clamp(dayHeight * 0.1, dayHeight * 0.75),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: ColorUtils.hexToColor(event.schedule.colorHex).withAlpha(50),
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border(
-                              left: BorderSide(
-                                color: ColorUtils.hexToColor(event.schedule.colorHex),
-                                width: 5,
-                              ),
-                            ),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                            child: Flex(
-                              direction: overlappingEvents.length < 2 ? Axis.vertical : Axis.horizontal,
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              spacing: 10,
-                              children: <Widget>[
-                                FusionAppText(
-                                  text: event.title,
-                                  style: theme.textTheme.labelLarge,
-                                ),
-                                FusionAppText(
-                                  text: "At ${DateFormat('hh:mm a').format(event.startTime)}",
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: Colors.black38,
+                        top: top,
+                        left: left2,
+                        width: clamp,
+                        // height: hourHeight,
+                        child: MouseRegion(
+                          cursor: MouseCursor.uncontrolled,
+                          onEnter: (PointerEnterEvent _) {},
+                          onExit: (PointerExitEvent _) {
+                            // onHoverExit();
+                          },
+                          child: InkWell(
+                            onTap: () {
+                              onHover(event, Offset(left2, top), Size(clamp, hourHeight));
+                              // SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: event.schedule);
+                            },
+                            child: Container(
+                              decoration: BoxDecoration(
+                                // color: ColorUtils.hexToColor(event.schedule.colorHex).withAlpha(50),
+                                // borderRadius: BorderRadius.circular(10),
+                                border: Border(
+                                  top: BorderSide(
+                                    color: ColorUtils.hexToColor(event.schedule.colorHex),
+                                    width: 5,
                                   ),
                                 ),
-                              ],
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  spacing: 5,
+                                  children: <Widget>[
+                                    FusionAppText(
+                                      text: event.title,
+                                      style: theme.textTheme.labelLarge,
+                                      maxLine: 2,
+                                      textAlign: TextAlign.start,
+                                    ),
+                                    FusionAppText(
+                                      text: "At ${DateFormat('hh:mm a').format(event.startTime)}",
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: Colors.black38,
+                                      ),
+                                      textAlign: TextAlign.start,
+                                      maxLine: 1,
+                                    ),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       );
                     }),
+                    if (_hoveredEventInfo != null) ...<Widget>[
+                      Positioned(
+                        top: 0,
+                        left: 0,
+                        child: GestureDetector(
+                          onTap: () {
+                            onHoverExit();
+                          },
+                          child: Container(
+                            width: totalWidth,
+                            height: totalHeight,
+                            color: Colors.transparent,
+                          ),
+                        ),
+                      ),
+                      Positioned(
+                        top: _hoveredEventInfo!.position.dy,
+                        left: _hoveredEventInfo!.position.dx + _hoveredEventInfo!.size.width + 10,
+                        child: Container(
+                          padding: const EdgeInsets.all(8.0),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border(
+                              left: BorderSide(
+                                color: ColorUtils.hexToColor(_hoveredEventInfo!.event.schedule.colorHex),
+                                width: 5,
+                              ),
+                            ),
+                            boxShadow: <BoxShadow>[
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+
+                            children: <Widget>[
+                              FusionAppText(
+                                text: _hoveredEventInfo?.event.title ?? "----",
+                                style: theme.textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+                              ),
+                              const SizedBox(height: 4),
+                              FusionAppText(
+                                text: "Scheduled at ${DateFormat('dd MMM yyyy, hh:mm a').format(_hoveredEventInfo?.event.startTime ?? DateTime.now())}",
+                                style: theme.textTheme.bodySmall,
+                              ),
+
+                              FusionTextButton(
+                                label: "",
+                                prefixIcon: Icons.edit,
+                                showPrefixIcon: true,
+                                width: 50,
+                                height: 25,
+                                onTap: () {
+                                  SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: _hoveredEventInfo?.event.schedule);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -150,7 +253,7 @@ class _CalenderViewState extends State<CalenderView> {
           ),
         ),
 
-        // Pinned time labels (top row), scroll horizontally only
+        // Pinned date labels (top row), scroll horizontally only
         Positioned(
           top: 0,
           left: 0,
@@ -160,12 +263,12 @@ class _CalenderViewState extends State<CalenderView> {
             height: dayLabelHeight,
             child: Stack(
               children: <Widget>[
-                for (int i = 0; i < 24; i++)
+                for (int i = 1; i <= daysInMonth; i++)
                   Positioned(
                     top: 10,
-                    left: hourLabelWidth + (i * hourWidth) - (_horizontalController.hasClients ? _horizontalController.offset : 0),
+                    left: hourLabelWidth + ((i - 1) * dayWidth) - (_horizontalController.hasClients ? _horizontalController.offset : 0),
                     child: Container(
-                      width: hourWidth,
+                      width: dayWidth,
                       height: dayLabelHeight,
                       decoration: BoxDecoration(
                         // color: Colors.red,
@@ -175,7 +278,7 @@ class _CalenderViewState extends State<CalenderView> {
                         ),
                       ),
                       child: Text(
-                        ' ${i.toString().padLeft(2, '0')}:00',
+                        ' ${DateFormat('MMM d').format(DateTime(widget.viewingMonth.year, widget.viewingMonth.month, i))}',
                         style: theme.textTheme.bodySmall,
                       ),
                     ),
@@ -185,7 +288,7 @@ class _CalenderViewState extends State<CalenderView> {
           ),
         ),
 
-        // Pinned day labels (left column), scroll vertically only
+        // Pinned time labels (left column), scroll vertically only
         Positioned(
           top: 0,
           bottom: 0,
@@ -195,12 +298,12 @@ class _CalenderViewState extends State<CalenderView> {
             width: hourLabelWidth,
             child: Stack(
               children: <Widget>[
-                for (int i = 1; i <= daysInMonth; i++)
+                for (int i = 0; i < 24; i++)
                   Positioned(
-                    top: dayLabelHeight + ((i - 1) * dayHeight) - (_verticalController.hasClients ? _verticalController.offset : 0),
+                    top: dayLabelHeight + (i * hourHeight) - (_verticalController.hasClients ? _verticalController.offset : 0),
                     left: 10,
-                    height: dayHeight,
-                    width: hourWidth,
+                    height: hourHeight,
+                    width: hourLabelWidth - 20,
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border.symmetric(
@@ -209,9 +312,7 @@ class _CalenderViewState extends State<CalenderView> {
                       ),
                       child: Center(
                         child: Text(
-                          DateFormat('MMM d').format(
-                            DateTime(widget.viewingMonth.year, widget.viewingMonth.month, i),
-                          ),
+                          '${i.toString().padLeft(2, '0')}:00',
                           style: theme.textTheme.bodySmall,
                         ),
                       ),
@@ -223,9 +324,8 @@ class _CalenderViewState extends State<CalenderView> {
         ),
         Positioned(
           top: 0,
-
           left: 0,
-          width: hourWidth,
+          width: hourLabelWidth,
           height: dayLabelHeight,
           child: Container(
             decoration: BoxDecoration(
@@ -247,15 +347,15 @@ class _GridPainter extends CustomPainter {
     required this.daysInMonth,
     required this.hourLabelWidth,
     required this.dayLabelHeight,
-    required this.hourWidth,
-    required this.dayHeight,
+    required this.dayWidth,
+    required this.hourHeight,
     required this.theme,
   });
   final int daysInMonth;
   final double hourLabelWidth;
   final double dayLabelHeight;
-  final double hourWidth;
-  final double dayHeight;
+  final double dayWidth;
+  final double hourHeight;
   final ThemeData theme;
 
   @override
@@ -263,14 +363,14 @@ class _GridPainter extends CustomPainter {
     final Paint paint = Paint()..color = Colors.grey.shade300;
 
     // Draw vertical lines
-    for (int i = 0; i <= 24; i++) {
-      final double x = hourLabelWidth + (i * hourWidth);
+    for (int i = 0; i <= daysInMonth; i++) {
+      final double x = hourLabelWidth + (i * dayWidth);
       canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
 
     // Draw horizontal lines
-    for (int i = 0; i <= daysInMonth; i++) {
-      final double y = dayLabelHeight + (i * dayHeight);
+    for (int i = 0; i <= 24; i++) {
+      final double y = dayLabelHeight + (i * hourHeight);
       canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
@@ -279,4 +379,15 @@ class _GridPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
     return false;
   }
+}
+
+class HoveredEventInfo {
+  final CalendarEvent event;
+  final Offset position;
+  final Size size;
+  HoveredEventInfo({
+    required this.event,
+    required this.position,
+    required this.size,
+  });
 }

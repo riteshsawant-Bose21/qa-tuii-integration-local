@@ -26,7 +26,7 @@ class ScheduleConfig {
   final String colorHex;
   final DateTime startDate;
   final DateTime time;
-  final DateTime endDate;
+  final DateTime? endDate;
   final RecurrenceType recurrence;
   final List<int> weeklyDays; // 1=Mon ... 7=Sun
   final bool status;
@@ -50,7 +50,7 @@ class ScheduleConfig {
       colorHex: json['colorHex'],
       startDate: DateTime.parse(json['startDate']),
       time: DateTime.parse(json['time']),
-      endDate: DateTime.parse(json['endDate']),
+      endDate: json['endDate'] != null ? DateTime.parse(json['endDate']) : null,
       recurrence: RecurrenceType.values.firstWhere(
         (e) => e.name == json['recurrence'],
       ),
@@ -66,7 +66,7 @@ class ScheduleConfig {
       'colorHex': colorHex,
       'startDate': startDate.toIso8601String(),
       'time': time.toIso8601String(),
-      'endDate': endDate.toIso8601String(),
+      'endDate': endDate?.toIso8601String(),
       'recurrence': recurrence.name,
       'weeklyDays': weeklyDays,
       'status': status,

@@ -33,4 +33,14 @@ class GpioViewmodel extends Cubit<GpioState> {
   void updateGpio(GpioConfig gpio) {
     projectViewModel.updateGPIOConfig(config: gpio);
   }
+
+  void reOrderGpio(int oldIndex, int newIndex) {
+    try {
+      final List<GpioConfig> gpios = state.gpios;
+      final String gpioIdToMove = gpios[oldIndex].id;
+      final String gpioAtNewIndexId = gpios[newIndex].id;
+      projectViewModel.reOrderGpioConfigs(gpioIdToMove: gpioIdToMove, gpioAtNewIndexId: gpioAtNewIndexId);
+      refresh();
+    } catch (e) {}
+  }
 }

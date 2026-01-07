@@ -12,7 +12,6 @@ import '../state/timeline_state.dart';
 import '../viewmodel/scheduler_viewmodel.dart';
 import '../viewmodel/timeline_viewmodel.dart';
 import 'sections/scheduler_form.dart';
-import 'widgets/status_chip.dart';
 
 part 'sections/scheduler_section.dart';
 part 'sections/timeline_section.dart';
@@ -62,14 +61,15 @@ class _SchedulingPageState extends State<SchedulingPage> {
                     style: context.textTheme.titleLarge,
                   ),
                 ),
-                const StatusChip(),
+                // const StatusChip(),
                 const Spacer(),
                 // OutlinedButton(onPressed: () {}, child: const Text("Share")),
-                FusionOutlinedButton(label: "Share", onTap: () {}),
+                // FusionOutlinedButton(label: "Share", onTap: () {}),
                 BlocBuilder<SchedulerViewmodel, SchedulerState>(
                   builder: (BuildContext context, SchedulerState state) {
                     return FusionButton(
-                      label: "Create",
+                      label: "+",
+                      width: 36,
                       onTap: () {
                         SchedulerForm.show(
                           context,

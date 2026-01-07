@@ -34,6 +34,9 @@ class _SchedulerSection extends StatelessWidget {
             final ScheduleConfig schedule = state.schedules[value];
             SchedulerForm.show(context, context.read<SchedulerViewmodel>(), initial: schedule);
           },
+          onReorder: (int oldIndex, int newIndex) {
+            context.read<SchedulerViewmodel>().reOrderSchedules(oldIndex, newIndex);
+          },
           itemBuilder: (BuildContext context, int index) {
             final ScheduleConfig schedule = state.schedules[index];
             return <Widget>[
@@ -60,9 +63,9 @@ class _SchedulerSection extends StatelessWidget {
                     TextSpan(
                       children: <InlineSpan>[
                         TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.startDate)),
-                        if (schedule.recurrence != RecurrenceType.none) ...<InlineSpan>[
+                        if (schedule.recurrence != RecurrenceType.none && schedule.endDate != null) ...<InlineSpan>[
                           const TextSpan(text: " - "),
-                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate)),
+                          TextSpan(text: DateFormat("MMM dd, yyyy").format(schedule.endDate!)),
                         ],
                       ],
                     ),
@@ -111,7 +114,7 @@ class _SchedulerSection extends StatelessWidget {
                 width: 10,
                 height: 10,
                 decoration: BoxDecoration(
-                  color: schedule.status ? Colors.green : Colors.red,
+                  color: schedule.status ? Colors.grey : Colors.blue,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -148,13 +151,16 @@ class FusionTable extends StatelessWidget {
     required this.itemBuilder,
     this.spacing = 10,
     this.onRowTap,
+    this.onReorder,
+    this.keyExtractor,
   });
   final List<FusionTableHeader> headers;
   final int itemCount;
   final List<Widget> Function(BuildContext context, int index) itemBuilder;
   final double spacing;
   final ValueChanged<int>? onRowTap;
-
+  final void Function(int oldIndex, int newIndex)? onReorder;
+  final String Function(int index)? keyExtractor;
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -188,12 +194,19 @@ class FusionTable extends StatelessWidget {
               decoration: BoxDecoration(
                 border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1),
               ),
-              child: ListView.builder(
+              child: ReorderableListView.builder(
                 shrinkWrap: true,
                 itemCount: itemCount,
+                onReorder: (int oldIndex, int newIndex) {
+                  if (oldIndex < newIndex) newIndex -= 1;
+                  onReorder?.call(oldIndex, newIndex);
+                },
+                buildDefaultDragHandles: false,
                 itemBuilder: (BuildContext context, int index) {
                   final List<Widget> rowItems = itemBuilder(context, index);
+                  final String key = keyExtractor != null ? keyExtractor!(index) : 'fusion_table_row_$index';
                   return Container(
+                    key: ValueKey<String>(key),
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
                       border: Border(
@@ -204,13 +217,24 @@ class FusionTable extends StatelessWidget {
                       onTap: onRowTap != null ? () => onRowTap!(index) : null,
                       child: Row(
                         spacing: spacing,
-                        children: List<Widget>.generate(
-                          headers.length,
-                          (int i) => Expanded(
-                            flex: headers[i].flex,
-                            child: Align(alignment: headers[i].aligment, child: rowItems[i]),
+                        children: <Widget>[
+                          ReorderableDragStartListener(
+                            key: ValueKey<String>(key),
+                            index: index,
+                            child: Icon(
+                              Icons.drag_handle,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
                           ),
-                        ),
+                          ...List<Widget>.generate(
+                            headers.length,
+                            (int i) => Expanded(
+                              flex: headers[i].flex,
+                              child: Align(alignment: headers[i].aligment, child: rowItems[i]),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   );
