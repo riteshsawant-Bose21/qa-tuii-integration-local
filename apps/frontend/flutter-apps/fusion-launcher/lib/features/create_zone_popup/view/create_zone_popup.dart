@@ -9,8 +9,8 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../projects/widget/building/side_panel_widgets/schematic_properties.dart' show hexToColor;
-import 'view_model/state.dart';
+import '../../projects/widget/building/side_panel_widgets/schematic_properties.dart' show hexToColor;
+import '../view_model/state.dart';
 
 part 'widgets/add_listening_areas_to_zone.dart';
 part 'widgets/create_new_location.dart';
