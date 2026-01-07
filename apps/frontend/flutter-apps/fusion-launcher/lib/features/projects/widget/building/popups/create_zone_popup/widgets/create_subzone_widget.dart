@@ -9,25 +9,17 @@ class CreateSubzoneWidget extends StatefulWidget {
 
 class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
   final List<TextEditingController> _subZoneNameControllers = <TextEditingController>[];
+  late final CreateZoneViewModel createZoneViewModel = context.read<CreateZoneViewModel>();
 
-  void addUntitledSubzone() {
-    setState(
-      () => _subZoneNameControllers.add(
-        TextEditingController(
-          text: "Untitled Subzone ${_subZoneNameControllers.length + 1}",
-        ),
-      ),
-    );
+  void _addSubzone() {
+    createZoneViewModel.addSubzone();
+    _subZoneNameControllers.add(TextEditingController(text: "Untitled subzone"));
   }
 
-  void removeSubzone(int index) {
-    setState(() {
-      final TextEditingController controller = _subZoneNameControllers.removeAt(index);
-      controller.dispose(); // ✅ IMPORTANT
-    });
+  void _removeSubzone(int index) {
+    createZoneViewModel.removeSubzone(index);
+    _subZoneNameControllers.removeAt(index).dispose();
   }
-
-  int get subzoneCount => _subZoneNameControllers.length;
 
   @override
   void dispose() {
@@ -39,95 +31,96 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        if (subzoneCount > 0) ...<Widget>[
-          ...List<Widget>.generate(subzoneCount, (int index) {
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: <Widget>[
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        TextFormField(
-                          controller: _subZoneNameControllers[index],
-                          decoration: InputDecoration(
-                            hintText: 'Enter zone name',
-                            hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                            errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                            hoverColor: Colors.transparent,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                            fillColor: context.colorScheme.surface,
-                            isDense: true,
-                          ),
-                          style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
-                        ),
-                        const SizedBox(height: 4),
+    return BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
+      buildWhen: (CreateZoneViewModelState previous, CreateZoneViewModelState current) {
+        return previous.subzones != current.subzones;
+      },
+      builder: (BuildContext context, CreateZoneViewModelState state) {
+        final int subzoneCount = state.subzones.length;
 
-                        // select listening areas for subzone
-                        AddListeningAreasToZone(
-                          selectedListeningAreaIds: <String>[],
-                          onListeningAreaSelected: (List<String> newSelectedIds) {
-                            // setState(() {
-                            //   _selectedListeningAreaIds
-                            //     ..clear()
-                            //     ..addAll(newSelectedIds);
-                            // });
-                          },
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            if (subzoneCount > 0) ...<Widget>[
+              ...List<Widget>.generate(subzoneCount, (int subZoneIndex) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            TextFormField(
+                              controller: _subZoneNameControllers[subZoneIndex],
+                              onChanged: (String value) => context.read<CreateZoneViewModel>().onSubzoneNameChanged(subZoneIndex, value),
+                              decoration: InputDecoration(
+                                hintText: 'Enter subzone name',
+                                hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
+                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                hoverColor: Colors.transparent,
+                                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                fillColor: context.colorScheme.surface,
+                                isDense: true,
+                              ),
+                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
+                            ),
+                            const SizedBox(height: 4),
+
+                            // select listening areas for subzone
+                            _buildListeningAreaSelectionSection(context, subZoneIndex: subZoneIndex),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 8),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => _removeSubzone(subZoneIndex),
+                          child: Icon(
+                            Icons.close,
+                            color: Theme.of(context).colorScheme.greyDark,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  MouseRegion(
-                    cursor: SystemMouseCursors.click,
-                    child: GestureDetector(
-                      onTap: () => removeSubzone(index),
-                      child: Icon(
-                        Icons.close,
-                        color: Theme.of(context).colorScheme.greyDark,
-                        size: 16,
+                );
+              }),
+              const SizedBox(height: 12),
+            ],
+            MouseRegion(
+              cursor: SystemMouseCursors.click,
+              child: GestureDetector(
+                onTap: _addSubzone,
+                child: Row(
+                  children: <Widget>[
+                    Icon(
+                      Icons.add,
+                      color: Theme.of(context).colorScheme.greyDark,
+                    ),
+                    const SizedBox(width: 2),
+                    Expanded(
+                      child: FusionAppText(
+                        text: "Create Subzone",
+                        style: context.textTheme.bodySmall?.copyWith(
+                          color: context.colorScheme.onSurface,
+                          fontWeight: FontWeight.w400,
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
-            );
-          }),
-          const SizedBox(height: 8),
-        ],
-        MouseRegion(
-          cursor: SystemMouseCursors.click,
-          child: GestureDetector(
-            onTap: addUntitledSubzone,
-            child: Row(
-              children: <Widget>[
-                Icon(
-                  Icons.add,
-                  color: Theme.of(context).colorScheme.greyDark,
-                ),
-                const SizedBox(width: 2),
-                Expanded(
-                  child: FusionAppText(
-                    text: "Create Subzone",
-                    style: context.textTheme.bodySmall?.copyWith(
-                      color: context.colorScheme.onSurface,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                ),
-              ],
             ),
-          ),
-        ),
-      ],
+          ],
+        );
+      },
     );
   }
 }
