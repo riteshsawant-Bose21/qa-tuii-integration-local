@@ -132,8 +132,8 @@ func TestObject(t *testing.T) {
 
 func TestBucket(t *testing.T) {
 	s3Client := &S3{
-		client:        &mockS3Client{},
-		presignClient: &mockPresignClient{},
+		Client:        &mockS3Client{},
+		PresignClient: &mockPresignClient{},
 	}
 	bucket := s3Client.Bucket("bucket")
 	assert.NotNil(t, bucket)

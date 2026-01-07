@@ -16,6 +16,7 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
@@ -34,6 +35,45 @@ import (
 	"github.com/testcontainers/testcontainers-go"
 	"github.com/testcontainers/testcontainers-go/modules/postgres"
 	"github.com/testcontainers/testcontainers-go/wait"
+	"go.uber.org/zap"
+)
+
+// Constants for frequently used literals
+const (
+	// HTTP Headers
+	headerUserID      = "X-User-ID"
+	headerAccountID   = "X-Account-ID"
+	headerContentType = "Content-Type"
+	headerAuth        = "Authorization"
+
+	// Content Types
+	contentTypeJSON = "application/json"
+
+	// API Endpoints
+	apiV1Projects            = "/api/v1/projects"
+	apiV1ProjectsArchived    = "/api/v1/projects?is_archived=true"
+	apiV1ProjectsBase        = "/api/v1/projects/"
+	apiV1ProjectsInvalidUUID = "/api/v1/projects/invalid-uuid"
+	apiV1ProjectsQuery       = "/api/v1/projects?"
+	usersPath                = "/users/"
+	starPath                 = "/star/"
+	archivePath              = "/archive"
+	lockPath                 = "/lock?"
+
+	// Test Values
+	testApplication     = "Test Application"
+	testVenue           = "Test Venue"
+	validApplication    = "Valid Application"
+	validProject        = "Valid Project"
+	updatedName         = "Updated Name"
+	testProjectTemplate = "Test Project - %s"
+	bearerTestToken     = "Bearer test-token"
+
+	// Error Messages
+	invalidProjectIDMsg = "should fail with invalid project ID"
+
+	// SQL Queries
+	countProjectsSQL = "SELECT COUNT(*) FROM project"
 )
 
 // ProjectIntegrationTestSuite defines the test suite structure
@@ -105,6 +145,7 @@ func (suite *ProjectIntegrationTestSuite) SetupSuite() {
 		"testuser",
 		"testpass",
 		"fusion_cloud_test",
+		"disable",
 	)
 	require.NoError(suite.T(), err)
 	suite.db = pgs
@@ -209,21 +250,39 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 	// Set Gin to test mode
 	gin.SetMode(gin.TestMode)
 
+	// Create loggers for tests first (needed by multiple services)
+	zapLogger, err := zap.NewDevelopment()
+	require.NoError(suite.T(), err, "Failed to create zap logger")
+
+	wrappedLogger, err := log.NewProduction()
+	require.NoError(suite.T(), err, "Failed to create wrapped logger")
+
 	// Initialize services
 	idSVC := id.NewService()
 	require.NotNil(suite.T(), idSVC, "Failed to initialize ID service")
 
 	// Initialize Product services (using mock S3 for tests)
-	productDBSvc := productdb.NewService(suite.db)
+	productDBSvc := productdb.NewService(suite.db, zapLogger)
 	require.NotNil(suite.T(), productDBSvc, "Failed to initialize product database service")
 
-	productSVC := product.NewService(productDBSvc, idSVC)
+	// Create test configurations for product service
+	validationCfg := &config.Validation{
+		SupportedVersions: []string{"v1"},
+		RequireVersion:    false,
+		DefaultVersion:    "v1",
+	}
+	processingCfg := &config.Processing{
+		MaxWorkers:    4,
+		BatchSize:     100,
+		RetryAttempts: 3,
+		RetryDelay:    "5s",
+	}
+
+	productSVC := product.NewService(productDBSvc, "v1", validationCfg, processingCfg, zapLogger)
 	require.NotNil(suite.T(), productSVC, "Failed to initialize product service")
 
-	// Initialize Project services (create logger for tests)
-	logger, err := log.NewProduction()
-	require.NoError(suite.T(), err, "Failed to create logger")
-	projectDBSvc := projectdb.NewService(suite.db, logger)
+	// Initialize Project services
+	projectDBSvc := projectdb.NewService(suite.db, wrappedLogger)
 	require.NotNil(suite.T(), projectDBSvc, "Failed to initialize project database service")
 
 	// For integration testing, we disable S3 operations by passing nil presigner
@@ -268,40 +327,50 @@ func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.S
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
-	// Add middleware for testing (recovery, but no real auth)
+	// Add middleware for testing
 	router.Use(gin.Recovery())
+	router.Use(suite.createMockAuthMiddleware())
+	router.Use(suite.createMockAccessControlMiddleware(userSVC))
 
-	// Mock authentication middleware - sets authentication context like Auth0 middleware would
-	router.Use(func(c *gin.Context) {
-		// Get user ID from header (if provided) or use default user
-		userID := c.GetHeader("X-User-ID")
+	// Setup routes
+	suite.setupRoutes(router, projectSVC)
+
+	return router
+}
+
+// createMockAuthMiddleware creates mock authentication middleware for testing
+func (suite *ProjectIntegrationTestSuite) createMockAuthMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		userID := c.GetHeader(headerUserID)
 		if userID == "" {
 			userID = suite.testUsers[0].ID
 		}
 
-		// Find the user in our test users list
-		var userEmail string
-		for _, testUser := range suite.testUsers {
-			if testUser.ID == userID {
-				userEmail = testUser.Email
-				break
-			}
-		}
+		userEmail := suite.findUserEmailByID(userID)
 		if userEmail == "" {
-			userEmail = suite.testUsers[0].Email // fallback
+			userEmail = suite.testUsers[0].Email
 		}
 
-		// Set authentication context values that Auth0 middleware would set
 		c.Set("userID", userID)
 		c.Set("email", userEmail)
 		c.Set("user_email", userEmail)
-
 		c.Next()
-	})
+	}
+}
 
-	// Mock access control middleware - sets user_auth context like access control middleware would
-	router.Use(func(c *gin.Context) {
-		// Get user email from context (set by mock auth middleware above)
+// findUserEmailByID finds a user's email by their ID
+func (suite *ProjectIntegrationTestSuite) findUserEmailByID(userID string) string {
+	for _, testUser := range suite.testUsers {
+		if testUser.ID == userID {
+			return testUser.Email
+		}
+	}
+	return ""
+}
+
+// createMockAccessControlMiddleware creates mock access control middleware for testing
+func (suite *ProjectIntegrationTestSuite) createMockAccessControlMiddleware(userSVC *user.Service) gin.HandlerFunc {
+	return func(c *gin.Context) {
 		userEmail, exists := c.Get("user_email")
 		if !exists {
 			c.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
@@ -316,67 +385,73 @@ func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.S
 			return
 		}
 
-		// Get user authorization from the actual user service (to match real behavior)
 		userAuth, err := userSVC.GetUserAuthorization(c, email)
 		if err != nil {
-			// If user doesn't exist in database, create a mock response for tests
-			userID, _ := c.Get("userID")
-			mockUserAuth := &types.UserAuthorizationResponse{
-				User: types.UserInfo{
-					ID:    userID.(string),
-					Email: email,
-				},
-				Account: types.AccountInfo{
-					ID:   "50000001-0000-4000-8000-000000000001",
-					Name: "Bose Corporation",
-					Type: "Bose Pro",
-				},
-				Role: types.RoleInfo{
-					ID:       2,
-					RoleName: "User",
-				},
-				Permissions: map[string]string{
-					"project.read":   "read",
-					"project.create": "edit",
-					"project.update": "edit",
-					"project.delete": "edit",
-					"projects":       "edit",
-					"*":              "edit", // Give full access for tests
-				},
-			}
-			c.Set("user_auth", mockUserAuth)
+			userAuth = suite.createMockUserAuth(c)
 		} else {
-			// Use real user authorization from database, but preserve User ID from auth context
-			contextUserID, _ := c.Get("userID")
-			if contextUserID != nil {
-				userAuth.User.ID = contextUserID.(string)
-			}
-			c.Set("user_auth", userAuth)
+			suite.preserveContextUserID(c, userAuth)
 		}
 
+		c.Set("user_auth", userAuth)
 		c.Next()
-	})
+	}
+}
 
-	// Setup routes manually with handlers
+// createMockUserAuth creates a mock user authorization for testing
+func (suite *ProjectIntegrationTestSuite) createMockUserAuth(c *gin.Context) *types.UserAuthorizationResponse {
+	userID, _ := c.Get("userID")
+	userEmail, _ := c.Get("user_email")
+
+	return &types.UserAuthorizationResponse{
+		User: types.UserInfo{
+			ID:    userID.(string),
+			Email: userEmail.(string),
+		},
+		Account: types.AccountInfo{
+			ID:   "50000001-0000-4000-8000-000000000001",
+			Name: "Bose Corporation",
+			Type: "Bose Pro",
+		},
+		Role: types.RoleInfo{
+			ID:       2,
+			RoleName: "User",
+		},
+		Permissions: map[string]string{
+			"project.read":   "read",
+			"project.create": "edit",
+			"project.update": "edit",
+			"project.delete": "edit",
+			"projects":       "edit",
+			"*":              "edit",
+		},
+	}
+}
+
+// preserveContextUserID preserves the user ID from the context in the user auth
+func (suite *ProjectIntegrationTestSuite) preserveContextUserID(c *gin.Context, userAuth *types.UserAuthorizationResponse) {
+	contextUserID, _ := c.Get("userID")
+	if contextUserID != nil {
+		userAuth.User.ID = contextUserID.(string)
+	}
+}
+
+// setupRoutes sets up the API routes for the test router
+func (suite *ProjectIntegrationTestSuite) setupRoutes(router *gin.Engine, projectSVC *project.Service) {
 	projectHandler := handler.NewProjectHandler(projectSVC)
 
 	api := router.Group("/api/v1")
+	projects := api.Group("/projects")
 	{
-		projects := api.Group("/projects")
-		{
-			projects.POST("", projectHandler.CreateProject)
-			projects.GET("", projectHandler.GetAllProjects)
-			projects.PATCH("/:projectId", projectHandler.UpdateProject)
-			projects.DELETE("/:projectId", projectHandler.DeleteProject)
-			projects.PUT("/:projectId/users/:userEmail", projectHandler.AssignUserToProject)
-			projects.DELETE("/:projectId/users/:userEmail", projectHandler.RemoveUserFromProject)
-			projects.POST("/:projectId/star/:userId", projectHandler.UpdateProjectStar)
-			projects.POST("/:projectId/archive", projectHandler.UpdateProjectArchive)
-			projects.POST("/:projectId/lock", projectHandler.UpdateProjectLock)
-		}
+		projects.POST("", projectHandler.CreateProject)
+		projects.GET("", projectHandler.GetAllProjects)
+		projects.PATCH("/:projectId", projectHandler.UpdateProject)
+		projects.DELETE("/:projectId", projectHandler.DeleteProject)
+		projects.PUT("/:projectId/users/:userEmail", projectHandler.AssignUserToProject)
+		projects.DELETE("/:projectId/users/:userEmail", projectHandler.RemoveUserFromProject)
+		projects.POST("/:projectId/star/:userId", projectHandler.UpdateProjectStar)
+		projects.POST("/:projectId/archive", projectHandler.UpdateProjectArchive)
+		projects.POST("/:projectId/lock", projectHandler.UpdateProjectLock)
 	}
-
-	return router
 }
 
 // Helper method to make HTTP requests to the API

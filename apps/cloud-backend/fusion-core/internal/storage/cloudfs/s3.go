@@ -30,8 +30,8 @@ type presignClient interface {
 }
 
 type S3 struct {
-	Client        *s3.Client
-	PresignClient *s3.PresignClient
+	Client        s3Client
+	PresignClient presignClient
 	config        *s3Config
 }
 
@@ -220,7 +220,7 @@ func (s *S3Source) ReadAll() ([]byte, error) {
 		}
 	}
 
-	s3Client, err := NewS3Client(ctx)
+	s3Client, err := NewS3Client(ctx, region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create S3 client: %w", err)
 	}

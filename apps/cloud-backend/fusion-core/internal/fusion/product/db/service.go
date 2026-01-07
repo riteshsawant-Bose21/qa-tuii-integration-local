@@ -194,8 +194,8 @@ func (s *Service) GetLatestSyncVersion(ctx context.Context, syncType string) (st
 	}
 
 	// Return the version if available
-	if job.Version.Valid && job.Version.String != "" {
-		return job.Version.String, nil
+	if job.Version != "" {
+		return job.Version, nil
 	}
 
 	return "", fmt.Errorf("no version information found in sync job")
@@ -884,7 +884,7 @@ func (s *Service) Create(ctx context.Context, syncOperation, syncType, version, 
 		SyncOperation: syncOperation,
 		SyncType:      null.NewString(syncType, syncType != ""),
 		Status:        "pending",
-		Version:       null.NewString(version, version != ""),
+		Version:       version,
 		S3Bucket:      s3Bucket,
 		S3Key:         s3Key,
 		CreatedAt:     null.TimeFrom(time.Now()),

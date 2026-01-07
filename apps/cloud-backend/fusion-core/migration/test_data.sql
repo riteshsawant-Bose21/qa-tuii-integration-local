@@ -97,7 +97,8 @@ INSERT INTO app_user (id, email, full_name, account_type_role_id, account_id, cr
   ('60000001-0000-4000-8000-000000000006','test@domain.com','David Admin',9,'50000001-0000-4000-8000-000000000004','2024-03-05 12:30:00','2024-03-05 12:30:00'),
   ('60000001-0000-4000-8000-000000000007','prof.operator@university.edu','Professor Operator',10,'50000001-0000-4000-8000-000000000005','2024-03-12 17:00:00','2024-03-12 17:00:00'),
   ('60000001-0000-4000-8000-000000000008','emily.service@eventproductions.com','Emily Service',6,'50000001-0000-4000-8000-000000000006','2024-03-18 14:15:00','2024-03-18 14:15:00'),
-  ('60000001-0000-4000-8000-000000000009','guest@metroconference.com','Metro Guest',11,'50000001-0000-4000-8000-000000000004','2024-03-06 09:45:00','2024-03-06 09:45:00');
+  ('60000001-0000-4000-8000-000000000009','guest@metroconference.com','Metro Guest',11,'50000001-0000-4000-8000-000000000004','2024-03-06 09:45:00','2024-03-06 09:45:00'),
+  ('60000001-0000-4000-8000-000000000010','fusion.reseller.sa@gmail.com','Fusion Reseller Admin',9,'50000001-0000-4000-8000-000000000004','2024-03-05 12:30:00','2024-03-05 12:30:00');
 
 -- Insert project data (primary_owner_account_id now UUID)
 INSERT INTO project (id, application, budget_amount, currency, description, name, project_phase, venue, environment_type, is_archived, is_deleted, locked_by_user_id, primary_owner_account_id, created_at, updated_at) VALUES
@@ -126,8 +127,8 @@ INSERT INTO product_price (product_id, variant, currency, price, created_at, upd
   (1001,'black','USD',299.99,'2024-01-10 08:30:00','2024-01-10 08:30:00'),
   (1002,'standard','USD',1299.99,'2024-01-10 08:35:00','2024-01-10 08:35:00');
 
-INSERT INTO product_sync_job (sync_operation, status, s3_bucket, s3_key, file_size_bytes, error_message, validation_errors, total_items, successful_items, failed_items, started_at, completed_at) VALUES
- ('full_sync','completed','fusion-product-import','imports/2024/01/full_catalog.json',524288,NULL,'{"warnings":[],"errors":[]}'::jsonb,150,150,0,'2024-01-11 09:00:00','2024-01-11 09:02:30');
+INSERT INTO product_sync_job (sync_operation, status, s3_bucket, s3_key, file_size_bytes, error_message, validation_errors, total_items, successful_items, failed_items, version, started_at, completed_at) VALUES
+ ('full_sync','completed','fusion-product-import','imports/2024/01/full_catalog.json',524288,NULL,'{"warnings":[],"errors":[]}'::jsonb,150,150,0,'v1','2024-01-11 09:00:00','2024-01-11 09:02:30');
 
 SELECT setval('role_id_seq',8,true);
 SELECT setval('access_level_id_seq',3,true);

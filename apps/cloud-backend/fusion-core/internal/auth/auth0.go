@@ -37,11 +37,12 @@ type JWK struct {
 
 // Auth0Validator handles Auth0 JWT token validation
 type Auth0Validator struct {
-	config    Auth0Config
-	jwksCache map[string]*rsa.PublicKey
-	cacheMu   sync.RWMutex
-	cacheTime time.Time
-	cacheExp  time.Duration
+	config     Auth0Config
+	jwksCache  map[string]*rsa.PublicKey
+	cacheMu    sync.RWMutex
+	cacheTime  time.Time
+	cacheExp   time.Duration
+	fetchMu    sync.Mutex // Prevents concurrent JWKS fetches
 }
 
 // NewAuth0Validator creates a new Auth0 validator
@@ -125,28 +126,44 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 	}
 	a.cacheMu.RUnlock()
 
+	// Use a separate mutex to prevent concurrent JWKS fetches
+	a.fetchMu.Lock()
+	defer a.fetchMu.Unlock()
+
+	// Double-check: another goroutine might have updated the cache while we were waiting
+	a.cacheMu.RLock()
+	if key, exists := a.jwksCache[kid]; exists && time.Since(a.cacheTime) < a.cacheExp {
+		a.cacheMu.RUnlock()
+		return key, nil
+	}
+	a.cacheMu.RUnlock()
+
 	// Fetch JWKS from Auth0
 	jwks, err := a.fetchJWKS()
 	if err != nil {
 		return nil, err
 	}
 
-	// Find the key with matching kid
+	// Find the key with matching kid and cache all keys
+	var targetKey *rsa.PublicKey
+	a.cacheMu.Lock()
 	for _, key := range jwks.Keys {
-		if key.Kid == kid {
+		if key.Kid != "" { // Cache all valid keys
 			publicKey, err := a.jwkToRSAPublicKey(key)
 			if err != nil {
-				return nil, err
+				continue // Skip invalid keys, don't fail the whole operation
 			}
-
-			// Cache the key
-			a.cacheMu.Lock()
-			a.jwksCache[kid] = publicKey
-			a.cacheTime = time.Now()
-			a.cacheMu.Unlock()
-
-			return publicKey, nil
+			a.jwksCache[key.Kid] = publicKey
+			if key.Kid == kid {
+				targetKey = publicKey
+			}
 		}
+	}
+	a.cacheTime = time.Now() // Update cache time after successful fetch
+	a.cacheMu.Unlock()
+
+	if targetKey != nil {
+		return targetKey, nil
 	}
 
 	return nil, fmt.Errorf("key with kid %s not found", kid)
