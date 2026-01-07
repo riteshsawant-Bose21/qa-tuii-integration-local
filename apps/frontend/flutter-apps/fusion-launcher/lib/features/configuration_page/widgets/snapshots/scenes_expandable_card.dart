@@ -67,9 +67,9 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
     super.dispose();
   }
 
-  void _addNewSceneToSceneSet(BuildContext popupContext) {
+  void _addNewSceneToSceneSet() {
     final SnapshotsModel newScene = SnapshotsModel(
-      name: _snapshotsNameController.text.trim(),
+      name: "New Snapshot ${widget.snapShotList.length + 1}",
     );
     _projectViewModel.addNewSnapshotToSceneSet(sceneSetId: widget.sceneSetData.id, scene: newScene);
 
@@ -84,7 +84,6 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
     _projectViewModel.setSelectedSnapshotId(newScene.id);
 
     /// Clear dialog and close popup
-    _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
 
   /// Clear source set dialog inputs
@@ -207,50 +206,11 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          PopupMenuButton<dynamic>(
-                            onCanceled: () {
-                              _clearSourceSetDialog();
-                            },
-                            tooltip: "Add Snapshot",
-                            padding: EdgeInsets.zero,
-                            constraints: const BoxConstraints(
-                              maxHeight: 500,
-                              maxWidth: 250,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            color: Theme.of(context).colorScheme.white,
-                            menuPadding: EdgeInsets.zero,
 
-                            itemBuilder: (BuildContext context) {
-                              return <PopupMenuItem<dynamic>>[
-                                PopupMenuItem<dynamic>(
-                                  enabled: false,
-                                  padding: EdgeInsets.zero,
-                                  child: SizedBox(
-                                    width: 250,
-                                    child: StatefulBuilder(
-                                      builder: (BuildContext context, StateSetter setMenuState) {
-                                        return SingleChildScrollView(
-                                          child: CreateSnapshotsOrScenesWidget(
-                                            headerText: 'Snapshot',
-                                            nameController: _snapshotsNameController,
-                                            onCreate: () {
-                                              /// Pass popup context so only the menu closes.
-                                              _addNewSceneToSceneSet(context);
-                                            },
-                                            onCancel: () {
-                                              /// Cancel inside popup: close only popup.
-                                              _clearSourceSetDialog(pop: true, popContext: context);
-                                            },
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
-                              ];
+                          /// Add new scene button
+                          GestureDetector(
+                            onTap: () {
+                              _addNewSceneToSceneSet();
                             },
                             child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
                           ),
