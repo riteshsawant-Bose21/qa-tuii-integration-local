@@ -138,7 +138,13 @@ class GPIORepository extends Repository<GpioConfig> {}
 
 class SchedulerRepository extends Repository<ScheduleConfig> {}
 
-class EventsRepository extends Repository<FusionEvent> {}
+class EventsRepository extends Repository<FusionEvent> {
+  EventsRepository copyWith(Map<String, FusionEvent> items) {
+    final newRepo = EventsRepository();
+    newRepo._items.addAll(items);
+    return newRepo;
+  }
+}
 
 class MediaFileRepository extends Repository<MediaFileModel> {}
 

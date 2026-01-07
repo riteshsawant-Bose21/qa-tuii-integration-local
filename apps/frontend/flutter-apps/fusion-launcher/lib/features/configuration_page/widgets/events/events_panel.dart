@@ -143,7 +143,16 @@ class _EventsPanelState extends State<EventsPanel> {
                   onSelect: (String eventId) {
                     _projectViewModel.setSelectedEventId(eventId);
                   },
-                  onReorder: (_, _) {},
+                  onReorder: (int oldIndex, int newIndex) {
+                    if (oldIndex < newIndex) newIndex -= 1;
+                    final String eventToMove = eventList[oldIndex].id;
+                    final String eventAtNewIndex = eventList[newIndex].id;
+                    _projectViewModel.reOrderEvents(
+                      eventIdToMove: eventToMove,
+                      eventAtNewIndex: eventAtNewIndex,
+                    );
+                    _projectViewModel.setSelectedEventId(eventToMove);
+                  },
                   onSwitchChanged: (String eventId) {
                     /// Fetch event, create updated copy and update
                     final FusionEvent event = _projectViewModel.getEventById(eventId);

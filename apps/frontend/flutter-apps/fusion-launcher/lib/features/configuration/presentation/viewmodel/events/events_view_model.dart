@@ -300,4 +300,19 @@ extension EventsViewModel on ProjectViewModel {
       throwError("Failed to update event selected state: $ex");
     }
   }
+
+  void reOrderEvents({required String eventIdToMove, required String eventAtNewIndex, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.reOrderEvents(eventIdToMove: eventIdToMove, eventAtNewIndex: eventAtNewIndex);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (ex) {
+      throwError("Failed to reorder events: $ex");
+    }
+  }
 }
