@@ -7,8 +7,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	"fusion-core/internal/api/types"
+	"fusion-core/internal/fusion/model/models"
+
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/aarondl/null/v8"

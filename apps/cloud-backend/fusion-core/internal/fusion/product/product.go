@@ -10,15 +10,25 @@ import (
 
 // GetProductByID retrieves a product by its ID.
 func (p *Service) GetProductByID(ctx context.Context, id string) (*types.SingleProductResponse, error) {
-	// Implement the logic to get a product by ID.
-	return p.dbService.SelectByID(ctx, id)
+	// Get the latest version from successful product sync
+	version, err := p.dbService.GetLatestSyncVersion(ctx, "product")
+	if err != nil {
+		// Fallback to configured version if no sync version found
+		version = p.version
+	}
+	return p.dbService.SelectByID(ctx, id, version)
 }
 
 // GetAllProducts retrieves all products.
 func (p *Service) GetAllProducts(ctx context.Context) (*types.ProductResponse, error) {
-	// Check who is viewing
+	// Get the latest version from successful product sync
+	version, err := p.dbService.GetLatestSyncVersion(ctx, "product")
+	if err != nil {
+		// Fallback to configured version if no sync version found
+		version = p.version
+	}
 
-	products, err := p.dbService.SelectAll(ctx)
+	products, err := p.dbService.SelectAll(ctx, version)
 	if err != nil {
 		return nil, fmt.Errorf("error getting products from DB: %w", err)
 	}

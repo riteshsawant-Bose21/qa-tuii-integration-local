@@ -40,7 +40,7 @@ type ProjectAuth struct {
 
 // Request body for creating or updating a project.
 type ProjectCreateRequest struct {
-	ID                        string          `swaggerignore:"true"`
+	ID                        string          `json:"projectId" validate:"required,uuid4" example:"50000001-0000-4000-8000-000000000008"`
 	Application               string          `json:"application" validate:"required,min=1,max=255" example:"Audio System Design"`
 	Name                      string          `json:"name" validate:"required,min=1,max=255" example:"Conference Room Audio Setup"`
 	Description               string          `json:"description" validate:"omitempty,max=1000" example:"Professional audio system for corporate conference room"`
@@ -79,8 +79,8 @@ type Project struct {
 	IsStarred       bool            `json:"is_starred" example:"true"`
 	LockedByUser    string          `json:"locked_by_user" example:"user456"`
 	Budget          Budget          `json:"budget"`
-	ProjectFileURL  string          `json:"project_file_url" example:"https://storage.example.com/projects/123e4567/project.json"`
-	ThumbnailURL    string          `json:"thumbnail_url" example:"https://storage.example.com/projects/123e4567/thumbnail.jpg"`
+	ProjectFileURL  *string         `json:"project_file_url" example:"https://storage.example.com/projects/123e4567/project.json"`
+	ThumbnailURL    *string         `json:"thumbnail_url" example:"https://storage.example.com/projects/123e4567/thumbnail.jpg"`
 	CreatedAt       time.Time       `json:"created_at" example:"2023-10-15T14:30:00Z"`
 	UpdatedAt       time.Time       `json:"updated_at" example:"2023-10-20T16:45:00Z"`
 }
@@ -143,9 +143,10 @@ const (
 	ErrMsgForbidden           = "Forbidden"
 
 	// Project entity errors
-	ErrMsgProjectNotFound    = "project not found"
-	ErrMsgProjectArchived    = "project is archived"
-	ErrMsgProjectNotArchived = "project is not archived"
+	ErrMsgProjectNotFound      = "project not found"
+	ErrMsgProjectArchived      = "project is archived"
+	ErrMsgProjectNotArchived   = "project is not archived"
+	ErrMsgProjectAlreadyExists = "project with the given ID already exists"
 
 	// Project locking errors
 	ErrMsgProjectAlreadyLocked   = "project is already locked"
