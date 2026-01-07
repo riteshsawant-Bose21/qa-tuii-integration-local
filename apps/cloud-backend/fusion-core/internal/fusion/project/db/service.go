@@ -86,7 +86,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 	now := time.Now()
 	projectRecord := &model.Project{
 		ID:                    project.ID,
-		PrimaryOwnerAccountID: null.NewString(accountID, accountID != ""),
+		PrimaryOwnerAccountID: accountID,
 		Name:                  null.NewString(project.Name, project.Name != ""),
 		Description:           null.NewString(project.Description, project.Description != ""),
 		Venue:                 null.NewString(project.Venue, project.Venue != ""),
@@ -412,7 +412,6 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, e
 	user, err := model.AppUsers(
 		model.AppUserWhere.Email.EQ(email),
 	).One(ctx, s.db)
-
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

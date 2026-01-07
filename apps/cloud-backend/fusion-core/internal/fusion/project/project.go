@@ -44,7 +44,7 @@ type ValidationOptions struct {
 
 // validateProject performs common project validations
 func (s *Service) validateProject(ctx context.Context, projectID string, opts ValidationOptions) (*models.Project, error) {
-	
+
 	projectRow, err := s.dbService.GetProjectByID(ctx, projectID)
 	if err != nil {
 		return nil, err
@@ -106,7 +106,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 // validatePrimaryOwner checks if user org account is the primary owner of the project
 func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID string) error {
 
-	if projectRow.PrimaryOwnerAccountID.String != accountID {
+	if projectRow.PrimaryOwnerAccountID != accountID {
 		return errors.New(types.ErrMsgForbidden)
 	}
 	return nil
@@ -182,13 +182,13 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", projects[i].ID, err)
 		}
-		projects[i].ProjectFileURL = presignURL
+		projects[i].ProjectFileURL = &presignURL
 
 		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate thumbnail URL for project %s: %v", projects[i].ID, err)
 		}
-		projects[i].ThumbnailURL = thumbnailURL
+		projects[i].ThumbnailURL = &thumbnailURL
 	}
 
 	return &types.GetAllProjectsResponse{
@@ -203,8 +203,8 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectUpdateResponse, error) {
 
 	opts := ValidationOptions{
-		CheckDeleted:              true,
-		CheckArchived:             true,
+		CheckDeleted:  true,
+		CheckArchived: true,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -253,8 +253,8 @@ func (s *Service) UpdateProject(ctx context.Context, project *types.ProjectUpdat
 func (s *Service) DeleteProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 
 	opts := ValidationOptions{
-		CheckDeleted:              true,
-		CheckArchived:             true,
+		CheckDeleted:  true,
+		CheckArchived: true,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -431,8 +431,8 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 
 	opts := ValidationOptions{
-		CheckDeleted:              true,
-		CheckArchived:             false,
+		CheckDeleted:  true,
+		CheckArchived: false,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -465,8 +465,8 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string, userAuth
 // UnarchiveProject unarchives a project.
 func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse) error {
 	opts := ValidationOptions{
-		CheckDeleted:              true,
-		CheckArchived:             false,
+		CheckDeleted:  true,
+		CheckArchived: false,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -528,7 +528,7 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 	}
 
 	if projectRow.LockedByUserID.Valid {
-	    if projectRow.LockedByUserID.String == userAuth.User.ID {
+		if projectRow.LockedByUserID.String == userAuth.User.ID {
 			return nil // Project is already locked by the same user, idempotent behavior
 		} else {
 			lockedByEmail, err := s.dbService.GetUserEmailByID(ctx, projectRow.LockedByUserID.String)

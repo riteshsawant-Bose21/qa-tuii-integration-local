@@ -478,7 +478,7 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product details",
                         "schema": {
-                            "$ref": "#/definitions/types.ProductResponse"
+                            "$ref": "#/definitions/types.SingleProductResponse"
                         }
                     },
                     "400": {
@@ -1678,6 +1678,9 @@ const docTemplate = `{
                 },
                 "product_id": {
                     "type": "integer"
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },
@@ -1687,6 +1690,9 @@ const docTemplate = `{
                 "assets": {},
                 "description": {
                     "type": "string"
+                },
+                "is_fusion_compatible": {
+                    "type": "boolean"
                 },
                 "model_family": {
                     "type": "string"
@@ -1738,6 +1744,9 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/types.ProductItemResponse"
                     }
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },
@@ -2075,6 +2084,32 @@ const docTemplate = `{
                 "user_count": {
                     "type": "integer",
                     "example": 5
+                }
+            }
+        },
+        "types.SingleProductResponse": {
+            "type": "object",
+            "properties": {
+                "accessory": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "amplifier": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "controller": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "dsp": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "io_endpoint": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "speaker": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },

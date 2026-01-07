@@ -32,7 +32,6 @@ type ValidationResult struct {
 	RequiredErrors   []FieldValidationError `json:"required_errors"`   // Missing required fields
 	OptionalWarnings []FieldValidationError `json:"optional_warnings"` // Missing optional fields
 	TotalIssues      int                    `json:"total_issues"`
-	ComplianceScore  float64                `json:"compliance_score"` // 0-100%
 }
 
 // FieldValidationError represents a specific field validation error
@@ -77,7 +76,6 @@ func (fv *FieldValidator) ValidateProductFields(productData map[string]interface
 		definitions = fv.ProductTypeDefinitions["generic"]
 	}
 
-	totalFields := len(definitions)
 	validFields := 0
 
 	for _, fieldDef := range definitions {
@@ -99,10 +97,6 @@ func (fv *FieldValidator) ValidateProductFields(productData map[string]interface
 
 	result.TotalIssues = len(result.RequiredErrors) + len(result.OptionalWarnings)
 
-	if totalFields > 0 {
-		result.ComplianceScore = float64(validFields) / float64(totalFields) * 100
-	}
-
 	return result
 }
 
@@ -114,7 +108,6 @@ func (fv *FieldValidator) ValidatePriceFields(priceData map[string]interface{}) 
 		OptionalWarnings: []FieldValidationError{},
 	}
 
-	totalFields := len(fv.PriceDefinitions)
 	validFields := 0
 
 	for _, fieldDef := range fv.PriceDefinitions {
@@ -135,11 +128,6 @@ func (fv *FieldValidator) ValidatePriceFields(priceData map[string]interface{}) 
 	}
 
 	result.TotalIssues = len(result.RequiredErrors) + len(result.OptionalWarnings)
-
-	// Calculate compliance score (0-100%)
-	if totalFields > 0 {
-		result.ComplianceScore = float64(validFields) / float64(totalFields) * 100
-	}
 
 	return result
 }
@@ -349,7 +337,6 @@ func (fv *FieldValidator) FormatValidationReport(result *ValidationResult, entit
 
 	report.WriteString(fmt.Sprintf("=== Validation Report for %s ID: %d ===\n", entityType, entityID))
 	report.WriteString(fmt.Sprintf("Overall Status: %s\n", map[bool]string{true: "VALID", false: "INVALID"}[result.IsValid]))
-	report.WriteString(fmt.Sprintf("Compliance Score: %.1f%%\n", result.ComplianceScore))
 	report.WriteString(fmt.Sprintf("Total Issues: %d\n\n", result.TotalIssues))
 
 	if len(result.RequiredErrors) > 0 {

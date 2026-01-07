@@ -107,7 +107,8 @@ CREATE TYPE product_type_enum AS ENUM (
     'dsp', 
     'controller', 
     'io_endpoint', 
-    'accessory'
+    'accessory',
+    'unknown'
 );
 
 -- Main product table with ENUM
@@ -123,6 +124,7 @@ CREATE TABLE product (
     images JSONB, -- Complete images structure
     -- Product-specific specifications stored as JSONB
     specifications JSONB, -- All technical specs go here
+    isFusionCompatible BOOLEAN DEFAULT FALSE, -- Fusion compatibility flag
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -159,6 +161,7 @@ CREATE TABLE product_sync_job (
     job_id UUID UNIQUE NOT NULL DEFAULT gen_random_uuid(),
     sync_operation sync_operation_enum NOT NULL,
     status sync_status_enum NOT NULL DEFAULT 'pending',
+    sync_type VARCHAR(50), -- e.g., "price", "product"
     
     -- S3 file info
     s3_bucket VARCHAR(255) NOT NULL,
@@ -173,6 +176,9 @@ CREATE TABLE product_sync_job (
     total_items INTEGER, -- Total number of items processed
     successful_items INTEGER, -- Number of successfully processed items
     failed_items INTEGER, -- Number of failed items
+
+    --version
+    version VARCHAR(50) NOT NULL,
     
     -- Timing
     started_at TIMESTAMP,
