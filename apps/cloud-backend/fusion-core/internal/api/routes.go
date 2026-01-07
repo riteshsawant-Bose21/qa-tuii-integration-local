@@ -55,8 +55,8 @@ func (a *API) registerRoutes() {
 	user.Use(a.authMiddleware.Middleware())
 
 	{
-		user.GET("/me/authorization", userHandler.GetUserAuthorization)
-		user.GET("/me/profile", userHandler.GetUserProfile)
+		user.GET("/authorization", userHandler.GetUserAuthorization)
+		user.GET("/profile", userHandler.GetUserProfile)
 	}
 
 	// Additional user management routes
