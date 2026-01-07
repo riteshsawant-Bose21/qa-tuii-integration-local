@@ -27,67 +27,6 @@ class AmplifierMeasurementValue {
       };
 }
 
-/// Represents input/output count configuration
-class InputOutputCount {
-  final int inputs;
-  final int outputs;
-
-  const InputOutputCount({
-    required this.inputs,
-    required this.outputs,
-  });
-
-  factory InputOutputCount.fromJson(Map<String, dynamic> json) {
-    return InputOutputCount(
-      inputs: (json['inputs'] as num?)?.toInt() ??
-          (json['max_inputs'] as num?)?.toInt() ??
-          0,
-      outputs: (json['outputs'] as num?)?.toInt() ??
-          (json['max_outputs'] as num?)?.toInt() ??
-          0,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        'inputs': inputs,
-        'outputs': outputs,
-      };
-}
-
-/// Represents number of inputs and outputs for different connection types
-class NumberOfInputsAndOutputs {
-  final InputOutputCount? analog;
-  final InputOutputCount? dante;
-  final InputOutputCount? fusionConnect;
-
-  const NumberOfInputsAndOutputs({
-    this.analog,
-    this.dante,
-    this.fusionConnect,
-  });
-
-  factory NumberOfInputsAndOutputs.fromJson(Map<String, dynamic> json) {
-    return NumberOfInputsAndOutputs(
-      analog: json['analog'] != null
-          ? InputOutputCount.fromJson(json['analog'] as Map<String, dynamic>)
-          : null,
-      dante: json['dante'] != null
-          ? InputOutputCount.fromJson(json['dante'] as Map<String, dynamic>)
-          : null,
-      fusionConnect: json['fusion_connect'] != null
-          ? InputOutputCount.fromJson(
-              json['fusion_connect'] as Map<String, dynamic>)
-          : null,
-    );
-  }
-
-  Map<String, dynamic> toJson() => {
-        if (analog != null) 'analog': analog!.toJson(),
-        if (dante != null) 'dante': dante!.toJson(),
-        if (fusionConnect != null) 'fusion_connect': fusionConnect!.toJson(),
-      };
-}
-
 /// Represents power specification with multiple measurements
 class Power {
   final List<AmplifierMeasurementValue> at;
@@ -119,18 +58,20 @@ class Power {
 ///
 /// Represents an amplifier product from the product catalog API.
 /// Field names follow the README specification.
+/// The numberOfInputsAndOutputs field accepts any schema structure.
 class AmplifierProduct {
   final int productId;
   final ProductAsset assets;
   final String modelName;
   final String modelFamily;
   final String description;
-  final NumberOfInputsAndOutputs? numberOfInputsAndOutputs;
+  final Map<String, dynamic>? numberOfInputsAndOutputs;
   final int numberOfLoudspeakerInputs;
   final Power? power;
   final Map<String, dynamic>? powerOutput;
   final String? shortDescription;
   final List<int> skus;
+  final bool isFusionCompatible;
 
   const AmplifierProduct({
     required this.productId,
@@ -144,6 +85,7 @@ class AmplifierProduct {
     this.powerOutput,
     this.shortDescription,
     this.skus = const [],
+    this.isFusionCompatible = false,
   });
 
   factory AmplifierProduct.fromJson(Map<String, dynamic> json) {
@@ -155,10 +97,7 @@ class AmplifierProduct {
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] != null
-          ? NumberOfInputsAndOutputs.fromJson(
-              specs['number_of_inputs_and_outputs'] as Map<String, dynamic>)
-          : null,
+      numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] as Map<String, dynamic>?,
       numberOfLoudspeakerInputs:
           (specs['number_of_loudspeaker_inputs'] as num?)?.toInt() ?? 0,
       power: specs['power'] != null
@@ -170,6 +109,7 @@ class AmplifierProduct {
               ?.map((e) => (e as num).toInt())
               .toList() ??
           [],
+      isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
@@ -181,13 +121,14 @@ class AmplifierProduct {
         'description': description,
         'specifications': {
           if (numberOfInputsAndOutputs != null)
-            'number_of_inputs_and_outputs': numberOfInputsAndOutputs!.toJson(),
+            'number_of_inputs_and_outputs': numberOfInputsAndOutputs,
           'number_of_loudspeaker_inputs': numberOfLoudspeakerInputs,
           if (power != null) 'power': power!.toJson(),
           if (powerOutput != null) 'power_output': powerOutput,
           if (shortDescription != null) 'short_description': shortDescription,
           'skus': skus,
         },
+        'is_fusion_compatible': isFusionCompatible,
       };
 
   @override

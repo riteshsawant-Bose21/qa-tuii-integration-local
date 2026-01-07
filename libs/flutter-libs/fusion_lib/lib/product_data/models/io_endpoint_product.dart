@@ -38,6 +38,7 @@ class IoEndpointProduct {
   final IoPort? outputs;
   final String? shortDescription;
   final List<int> skus;
+  final bool isFusionCompatible;
 
   const IoEndpointProduct({
     required this.productId,
@@ -50,6 +51,7 @@ class IoEndpointProduct {
     this.outputs,
     this.shortDescription,
     this.skus = const [],
+    this.isFusionCompatible = false,
   });
 
   factory IoEndpointProduct.fromJson(Map<String, dynamic> json) {
@@ -73,6 +75,7 @@ class IoEndpointProduct {
               ?.map((e) => (e as num).toInt())
               .toList() ??
           [],
+      isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
@@ -89,6 +92,7 @@ class IoEndpointProduct {
           if (shortDescription != null) 'short_description': shortDescription,
           'skus': skus,
         },
+        'is_fusion_compatible': isFusionCompatible,
       };
 
   @override

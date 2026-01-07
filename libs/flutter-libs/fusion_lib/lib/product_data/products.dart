@@ -19,6 +19,7 @@ import 'data_sources/product_catalog.dart';
 class Products {
   final String baseUrl;
   final String cacheDir;
+  final bool fusionOnly;
 
   ProductCatalog? _catalog;
   bool _syncedFromApi = false;
@@ -27,6 +28,7 @@ class Products {
   Products({
     required this.baseUrl,
     String? cacheDir,
+    this.fusionOnly = false,
   }) : cacheDir = cacheDir ?? _getDefaultCacheDir();
 
   static String _getDefaultCacheDir() {
@@ -280,14 +282,59 @@ class Products {
 
   bool get isLoaded => _catalog != null;
   String get version => _catalog?.version ?? '';
-  int get totalCount => _catalog?.totalCount ?? 0;
+  int get totalCount => fusionOnly 
+    ? speakers.length + amplifiers.length + controllers.length + dsps.length + accessories.length + ioEndpoints.length
+    : _catalog?.totalCount ?? 0;
 
-  List<SpeakerProduct> get speakers => _catalog?.speakers ?? [];
-  List<AmplifierProduct> get amplifiers => _catalog?.amplifiers ?? [];
-  List<ControllerProduct> get controllers => _catalog?.controllers ?? [];
-  List<DspProduct> get dsps => _catalog?.dsps ?? [];
-  List<AccessoryProduct> get accessories => _catalog?.accessories ?? [];
-  List<IoEndpointProduct> get ioEndpoints => _catalog?.ioEndpoints ?? [];
+  List<SpeakerProduct> get speakers => fusionOnly 
+    ? (_catalog?.speakers ?? []).where((s) => s.isFusionCompatible).toList()
+    : _catalog?.speakers ?? [];
+  
+  List<AmplifierProduct> get amplifiers => fusionOnly 
+    ? (_catalog?.amplifiers ?? []).where((a) => a.isFusionCompatible).toList()
+    : _catalog?.amplifiers ?? [];
+  
+  List<ControllerProduct> get controllers => fusionOnly 
+    ? (_catalog?.controllers ?? []).where((c) => c.isFusionCompatible).toList()
+    : _catalog?.controllers ?? [];
+  
+  List<DspProduct> get dsps => fusionOnly 
+    ? (_catalog?.dsps ?? []).where((d) => d.isFusionCompatible).toList()
+    : _catalog?.dsps ?? [];
+  
+  List<AccessoryProduct> get accessories => fusionOnly 
+    ? (_catalog?.accessories ?? []).where((a) => a.isFusionCompatible).toList()
+    : _catalog?.accessories ?? [];
+  
+  List<IoEndpointProduct> get ioEndpoints => fusionOnly 
+    ? (_catalog?.ioEndpoints ?? []).where((e) => e.isFusionCompatible).toList()
+    : _catalog?.ioEndpoints ?? [];
+
+  // ============= Fusion Compatible Filtering =============
+
+  /// Get all speakers that are Fusion compatible
+  List<SpeakerProduct> get fusionCompatibleSpeakers => 
+      speakers.where((s) => s.isFusionCompatible).toList();
+
+  /// Get all amplifiers that are Fusion compatible
+  List<AmplifierProduct> get fusionCompatibleAmplifiers => 
+      amplifiers.where((a) => a.isFusionCompatible).toList();
+
+  /// Get all controllers that are Fusion compatible
+  List<ControllerProduct> get fusionCompatibleControllers => 
+      controllers.where((c) => c.isFusionCompatible).toList();
+
+  /// Get all DSPs that are Fusion compatible
+  List<DspProduct> get fusionCompatibleDsps => 
+      dsps.where((d) => d.isFusionCompatible).toList();
+
+  /// Get all accessories that are Fusion compatible
+  List<AccessoryProduct> get fusionCompatibleAccessories => 
+      accessories.where((a) => a.isFusionCompatible).toList();
+
+  /// Get all I/O endpoints that are Fusion compatible
+  List<IoEndpointProduct> get fusionCompatibleIoEndpoints => 
+      ioEndpoints.where((e) => e.isFusionCompatible).toList();
 
   // ============= Lookup by ID =============
 
