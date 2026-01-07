@@ -1,0 +1,3136 @@
+{
+  "version": "1.0.0",
+  "speakers": [
+    {
+      "id": 815011,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM2C-LP loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/815011.bsf",
+      "skus": [
+        "815011"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 84.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 97.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 150.0
+        }
+      ],
+      "description": "Professional audio equipment from Bose Professional.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/180f4382a3819c6f/original/i_DesignMax_DM2C-LP_Right-Facing_Grille_On_Black_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/28ba55448a3a46a/original/i_DesignMax_DM2C-LP_Front_Standing_Grille_On_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/59dc7b35022108c6/original/i_DesignMax_DM2C-LP_Straight_On_Grille_Off_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/679c9eefa3b22e5e/original/i_DesignMax_DM2C-LP_Right-Facing_Rear_1200x1020-png.png",
+            "https://assets.boseprofessional.com/m/28733a8d0dace3d8/original/i_DesignMax_DM2C-LP_Flush_Group_1200x1022-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829708,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM3C loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829708.bsf",
+      "skus": [
+        "829708"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 83.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 98.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 135.0,
+          "vertical_deg": 135.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/60a6762b8189d8c2/original/Jefferson_i_FreeSpace_DesignMax_DM3_Flush_Right-Facing_Grille_On_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5b36f9814c6c310d/original/Jefferson_i_FreeSpace_DesignMax_DM3_Flush_Group_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/47be62aa684eb2e2/original/dm3c_grill_off_straight_on_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/6d695d28d677821e/original/dm3c_left_facing_grill_off_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/1ac0e169cc5a4a40/original/dm_flush_right_facing_rear_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/2fd36ca426ecf66d/original/designmax_dm3c_face_down_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/7787c3f3db6123ff/original/dm3c_straight_on_grill_on_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 841165,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM3P loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841165.bsf",
+      "skus": [
+        "841165"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 84.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 99.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 130.0,
+          "vertical_deg": 130.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/46049a03eb3a1ad/original/DM3P__I-STUDIO_Black_Diagonal_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/1e21926f4ecf4cec/original/DM3P_I-STUDIO_TopDown_1200x1022-png.png",
+            "https://assets.boseprofessional.com/m/748d6880fd12c5c2/original/dm3p_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/339b9147df586ad4/original/dm3p_blk_grille_off_silo-png.png",
+            "https://assets.boseprofessional.com/m/26c04f1178fc8cb8/original/DM3P_I-STUDIO_black_and_white_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/4c8ce3fe108d3682/original/DM3P__I-STUDIO_White_Diagonal_1200x1022-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829712,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM3SE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829712.bsf",
+      "skus": [
+        "829712"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 86.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 101.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 140.0,
+          "vertical_deg": 140.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/77826f35127a36b9/original/Jefferson_i_FreeSpace_DesignMax_DM3_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/412c700bc56a3f6b/original/Jefferson_i_FreeSpace_DesignMax_DM3_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/76b213a02487ec0e/original/DM3SE-Right-Facing-Grill-Off-1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/b1868a6f860e017/original/DM3SE-Left-Facing-Grill-Off-1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5aa6e9d564f05c1e/original/Jefferson_i_FreeSpace_DesignMax_DM3_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829683,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM5C loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829683.bsf",
+      "skus": [
+        "829683"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 87.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 105.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 130.0,
+          "vertical_deg": 130.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/4bdf84d08aadf65f/original/Lincoln_i_FreeSpace_DesignMax_DM5_Flush_Right-Facing_Grille_On_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/transform/bc2a3fb2-efe3-4e01-9f79-76305d5924e0/Lincoln_i_FreeSpace_DesignMax_DM5_Flush_Group_1200x1022-jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 841166,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM5P loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841166.bsf",
+      "skus": [
+        "841166"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 87.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 105.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 120.0,
+          "vertical_deg": 120.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/72e14fb1f0eb948b/original/designmax_dm5p_black_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/75e6779957fd7003/original/designmax_dm5p_black_topdown_silo-png.png",
+            "https://assets.boseprofessional.com/m/78c9a8f80b02083a/original/dm5p_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/9cfa5743a821f15/original/dm5p_blk_grille_off_silo-png.png",
+            "https://assets.boseprofessional.com/m/4eb82c67c7ef6395/original/designmax_dm5p_black_and_white_silo-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/23f631a538854409/original/designmax_dm5p_white_diagonal_silo-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829705,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM5SE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829705.bsf",
+      "skus": [
+        "829705"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 89.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 107.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 135.0,
+          "vertical_deg": 135.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/158183a24910f5fb/original/Lincoln_i_FreeSpace_DesignMax_DM5_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/439bee485d0bad70/original/Lincoln_i_FreeSpace_DesignMax_DM5_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3e9a5fbf349f7faf/original/Lincoln_i_FreeSpace_DesignMax_DM5_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829679,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM6C loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829679.bsf",
+      "skus": [
+        "829679"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 88.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 109.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 120.0,
+          "vertical_deg": 120.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/293e73bfe01b8563/original/Hamilton_i_FreeSpace_DesignMax_DM6_Flush_Right-Facing_Grille_On_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/45b422ad255e8142/original/Hamilton_i_FreeSpace_DesignMax_DM6_Flush_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 841168,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM6PE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/841168.bsf",
+      "skus": [
+        "841168"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 89.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 115.0,
+          "vertical_deg": 115.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/44c006e94f15c8f7/original/designmax_dm6pe_black_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/d672d24c2a003fd/original/designmax_dm6pe_black_topdown_silo-png.png",
+            "https://assets.boseprofessional.com/m/4363617b3f7c785d/original/dm6pe_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/31604415510c66c9/original/DM6PE_I-STUDIO_black-white_1200x1022-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829682,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM6SE loudspeakers (1 pair)",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829682.bsf",
+      "skus": [
+        "829682"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 111.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 125.0,
+          "vertical_deg": 125.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/872b09f3ad8684c/original/Hamilton_i_FreeSpace_DesignMax_DM6_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/1091bfa47a3689b7/original/Hamilton_i_FreeSpace_DesignMax_DM6_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/75d72bcb79f3b126/original/Hamilton_i_FreeSpace_DesignMax_DM6_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 802080,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM8C loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/802080.bsf",
+      "skus": [
+        "802080"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 91.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 113.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 135.0,
+          "vertical_deg": 135.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3d062b6482a7f560/original/Jackson_i_DesignMax_DM8C_Flush_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 801332,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM8S loudspeaker",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/801332.bsf",
+      "skus": [
+        "801332"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 93.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 115.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 60,
+        "high": 20000
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 130.0,
+          "vertical_deg": 130.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/4f32a7c7fea04d23/original/Jackson_i_DesignMax_DM8S_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/5d6d100492664b06/original/Jackson_i_DesignMax_DM8S_Left-Facing_Grille_On_Vertical_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/m/3257aba05f20adc3/original/Jackson_i_DesignMax_DM8S_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": false,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 829380,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM8C-SUB subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/829380.bsf",
+      "skus": [
+        "829380"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 89.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 112.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 38.0,
+        "high": 115.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/514b3e7a605c6013/original/i_DesignMax_DM8C_1200x1022_SUB-png.png"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 835265,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM10P-SUB subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/835265.bsf",
+      "skus": [
+        "835265"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 85.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 110.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 40.0,
+        "high": 125.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "No description available for this product.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/3f457d4900505da7/original/dm10p-sub_black_diagonal_silo-png.png",
+            "https://assets.boseprofessional.com/m/3ea4dec0844865c0/original/dm10p-sub_black_kitchen_silo-png.png",
+            "https://assets.boseprofessional.com/m/31243f58c764818b/original/dm10p_sub_blk_covered_silo-png.png",
+            "https://assets.boseprofessional.com/m/2940c0d91c95179/original/dm10p_sub_blk_grille_off_silo-png.png",
+            "https://assets.boseprofessional.com/m/3a124d8f92f88512/original/dm10p-sub_topdown_silo-png.png",
+            "https://assets.boseprofessional.com/m/46d9c7625e3471b5/original/DM10P-SUB_I-STUDIO_black-white_1200x1022-png.png"
+          ],
+          "white": [
+            "https://assets.boseprofessional.com/m/6237555e522d6863/original/dm10p-sub_white_kitchen_silo-png.png"
+          ]
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    },
+    {
+      "id": 831856,
+      "model_family": "DesignMax",
+      "is_fusion_compatible": true,
+      "type": "DesignMax",
+      "model_name": "DesignMax DM10S-SUB subwoofer",
+      "bsf_file_url": "https://assets.boseprofessional.com/bsf/831856.bsf",
+      "skus": [
+        "831856"
+      ],
+      "power_handling": {
+        "unit": "Watts",
+        "long_term_rms": 100,
+        "peak": 200
+      },
+      "sensitivity": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "1W at 1m",
+            "value": 90.0
+          }
+        ]
+      },
+      "max_spl": {
+        "unit": "dB SPL",
+        "at": [
+          {
+            "key": "continuous at 1m",
+            "value": 115.0
+          }
+        ]
+      },
+      "frequency_range": {
+        "unit": "Hz",
+        "low": 35.0,
+        "high": 125.0
+      },
+      "nominal_impedance": {
+        "unit": "ohms",
+        "value": 8
+      },
+      "coverage": [
+        {
+          "frequency_range": {
+            "low": {
+              "unit": "Hz",
+              "value": 125
+            },
+            "high": {
+              "unit": "Hz",
+              "value": 4000
+            }
+          },
+          "type": "rectangular",
+          "horizontal_deg": 200.0,
+          "vertical_deg": 200.0
+        }
+      ],
+      "description": "Professional audio equipment from Bose Professional.",
+      "environment": "Indoor",
+      "mount_type": "Wall",
+      "impedance": {
+        "unit": "ohms",
+        "low": 4,
+        "high": 8
+      },
+      "available_taps": {
+        "70v": [
+          2.5,
+          5,
+          10,
+          20
+        ],
+        "100v": [
+          2.5,
+          5,
+          10,
+          20,
+          40
+        ]
+      },
+      "images": [
+        {
+          "black": [
+            "https://assets.boseprofessional.com/m/72ef72003c472f2b/original/Grant_i_FreeSpace_DesignMax_DMsub_Surface_Right-Facing_Grille_On_Horizontal_1200x1022-jpeg.jpeg",
+            "https://assets.boseprofessional.com/transform/cbf6f070-e475-49cd-b9c6-b69afd4da7fc/Grant_i_FreeSpace_DesignMax_DMsub_Surface_Left-Facing_Grille_On_Vertical_1200x1022-jpeg",
+            "https://assets.boseprofessional.com/m/524fff8f3b07cd64/original/Grant_i_FreeSpace_DesignMax_DMsub_Surface_Group_1200x1022-jpeg.jpeg"
+          ],
+          "white": []
+        }
+      ],
+      "is_subwoofer": true,
+      "is_weather_rated": false,
+      "is_high_impedance_rated": true,
+      "high_impedance_taps": [
+        2.5,
+        5,
+        10,
+        20,
+        40
+      ],
+      "updated_at": "1764753602",
+      "frequency_response": null,
+      "installation": null,
+      "impedance_curve": null,
+      "certifications": null,
+      "no_of_passbands": null,
+      "acoustic_technology": null,
+      "polar_data": null,
+      "short_description": null,
+      "dimensions": null,
+      "product_codes": null,
+      "net_weight": null,
+      "bose_professional_voicing": null,
+      "frequency_response_curve": null,
+      "driver_components": null
+    }
+  ],
+  "amplifiers": [
+    {
+      "id": 1458,
+      "model_family": "PowerPure",
+      "is_fusion_compatible": true,
+      "model_name": "PP-4150",
+      "skus": [
+        "A01458-T3140",
+        "A01458-T1110",
+        "A01460-T0100",
+        "A01460-T4110",
+        "A01458-T5110",
+        "A01460-T2140",
+        "A01458-T2110",
+        "A01458-T2140",
+        "A01460-T5110",
+        "A01460-T2110",
+        "A01458-T4110",
+        "A01458-T0100",
+        "A01460-T1110",
+        "A01460-T3140"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 4
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 150.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 600.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1459,
+      "model_family": "PowerPure",
+      "is_fusion_compatible": true,
+      "model_name": "PP-8300",
+      "skus": [
+        "A01459-T4110",
+        "A01459-T3140",
+        "A01459-T5110",
+        "A01459-T1110",
+        "A01459-T2110",
+        "A01459-T2140",
+        "A01459-T0100"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8
+        },
+        "gpio": {
+          "assignable_inputs": 0,
+          "assignable_outputs": 0
+        },
+        "loudspeaker": {
+          "outputs": 8
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 300.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 1200.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 8,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1460,
+      "model_family": "PowerPure",
+      "is_fusion_compatible": true,
+      "model_name": "PP-41500",
+      "skus": [
+        "A01460-T0100",
+        "A01460-T4110",
+        "A01460-T2140",
+        "A01460-T5110",
+        "A01460-T2110",
+        "A01460-T1110",
+        "A01460-T3140"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4
+        },
+        "gpio": {
+          "assignable_inputs": 0,
+          "assignable_outputs": 0
+        },
+        "loudspeaker": {
+          "outputs": 4
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 3.5,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 1800.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 1500.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 3000.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 2400.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 3000.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 4,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1466,
+      "model_family": "PowerSmart",
+      "is_fusion_compatible": true,
+      "model_name": "PSM-4150",
+      "skus": [
+        "A01466-T4110",
+        "A01512-T0100",
+        "A01466-T3140",
+        "A01512-T4110",
+        "A01466-T2110",
+        "A01512-T2110",
+        "A01512-T3140",
+        "A01466-T1110",
+        "A01466-T2140",
+        "A01512-T5110",
+        "A01466-T5110",
+        "A01512-T2140",
+        "A01512-T1110",
+        "A01466-T0100"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 4
+        }
+      },
+      "dimensions": [
+        {
+          "width": null,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 150.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 150.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 600.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 4,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1461,
+      "model_family": "PowerSmart",
+      "is_fusion_compatible": true,
+      "model_name": "PSM-4300",
+      "skus": [
+        "A01461-T5110",
+        "A01461-T1110",
+        "A01461-T4110",
+        "A01461-T2140",
+        "A01461-T0100",
+        "A01461-T2110",
+        "A01461-T3140"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 4
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 300.0,
+                "unit": ""
+              },
+              {
+                "key": "4 Ohms",
+                "value": 300.0,
+                "unit": ""
+              },
+              {
+                "key": "2 Ohms",
+                "value": 300.0,
+                "unit": ""
+              },
+              {
+                "key": "70V",
+                "value": 300.0,
+                "unit": ""
+              },
+              {
+                "key": "100V",
+                "value": 300.0,
+                "unit": ""
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1200.0,
+                "unit": ""
+              },
+              {
+                "key": "4 Ohms",
+                "value": 1200.0,
+                "unit": ""
+              },
+              {
+                "key": "2 Ohms",
+                "value": 600.0,
+                "unit": ""
+              },
+              {
+                "key": "70V",
+                "value": 1200.0,
+                "unit": ""
+              },
+              {
+                "key": "100V",
+                "value": 1200.0,
+                "unit": ""
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 4,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1463,
+      "model_family": "PowerSmart",
+      "is_fusion_compatible": true,
+      "model_name": "PSM-4600",
+      "skus": [
+        "A01463-T2140",
+        "A01463-T0100",
+        "A01463-T5110",
+        "A01463-T2110",
+        "A01463-T4110",
+        "A01463-T1110",
+        "A01463-T3140"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 4
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 3.5,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 600.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 2400.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 2400.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 2400.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 4,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1462,
+      "model_family": "PowerSmart",
+      "is_fusion_compatible": true,
+      "model_name": "PSM-8300",
+      "skus": [
+        "A01462-T2110",
+        "A01462-T4110",
+        "A01462-T1110",
+        "A01462-T2140",
+        "A01462-T5110",
+        "A01462-T3140",
+        "A01462-T0100"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 8
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 300.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 300.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 1200.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 8,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 1465,
+      "model_family": "PowerSmart",
+      "is_fusion_compatible": true,
+      "model_name": "PSM-8600",
+      "skus": [
+        "A01465-T1110",
+        "A01465-T4110",
+        "A01465-T2110",
+        "A01465-T3140",
+        "A01465-T2140",
+        "A01465-T0100",
+        "A01465-T5110"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 8
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 8
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 3.5,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 600.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 600.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 2400.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 1200.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 2400.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 2400.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 8,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    },
+    {
+      "id": 14661,
+      "model_family": "PowerSmart",
+      "is_fusion_compatible": true,
+      "model_name": "PSM-41500",
+      "skus": [
+        "A01466-T4110",
+        "A01466-T3140",
+        "A01466-T2110",
+        "A01466-T1110",
+        "A01466-T2140",
+        "A01466-T5110",
+        "A01466-T0100"
+      ],
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 4
+        },
+        "gpio": {
+          "assignable_inputs": 2,
+          "assignable_outputs": 2
+        },
+        "loudspeaker": {
+          "outputs": 4
+        }
+      },
+      "dimensions": [
+        {
+          "width": 19.0,
+          "height": 3.5,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": {
+        "symmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 1800.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 1500.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        },
+        "asymmetrical": {
+          "rated_per_channel": {
+            "at": [
+              {
+                "key": "8 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "4 Ohms",
+                "value": 3000.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "2 Ohms",
+                "value": 1500.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "70V",
+                "value": 2400.0,
+                "unit": "Watts"
+              },
+              {
+                "key": "100V",
+                "value": 3000.0,
+                "unit": "Watts"
+              }
+            ]
+          }
+        }
+      },
+      "thermal_output": {
+        "unit": "BTU/h",
+        "value": null
+      },
+      "current_draw": {
+        "unit": "Amps",
+        "value": null
+      },
+      "number_of_loudspeaker_outputs": 4,
+      "front_panel_image": null,
+      "rear_panel_image": null,
+      "updated_at": null,
+      "rack_height": null,
+      "colors": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "description": "",
+      "short_description": ""
+    }
+  ],
+  "digital_signal_processors": [
+    {
+      "id": 1469,
+      "model_family": "Fusion Mini",
+      "is_fusion_compatible": true,
+      "model_name": "FM6",
+      "skus": [
+        "A01469-T3140",
+        "A01469-T2110",
+        "A01469-T2140",
+        "A01469-T0100",
+        "A01469-T5110",
+        "A01469-T4110",
+        "A01469-T1110"
+      ],
+      "description": "",
+      "short_description": "",
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs_balanced": 4,
+          "inputs_unbalanced": 1,
+          "outputs_balanced": 4,
+          "outputs_unbalanced": 0
+        },
+        "fusion_connect": {
+          "max_inputs": 8,
+          "max_outputs": 16
+        },
+        "aes67": {
+          "max_inputs": 0,
+          "max_outputs": 0
+        },
+        "gpio": {
+          "total_gpio": 4
+        },
+        "usb_io_ports": {
+          "inputs": 2,
+          "outputs": 2
+        },
+        "bluetooth_io": {
+          "inputs": 2
+        },
+        "hdmi_io": {
+          "inputs": 0,
+          "outputs": 0
+        }
+      },
+      "dimensions": [
+        {
+          "width": 9.5,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": null,
+      "thermal_output": null,
+      "current_draw": null,
+      "updated_at": null,
+      "configuration_software": null,
+      "acoustic_echo_cancellation": null,
+      "supported_bose_professional_dante_endpoints": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "dsp_architecture": null,
+      "max_fusion_controllers": 8
+    },
+    {
+      "id": 1468,
+      "model_family": "Fusion Mini",
+      "is_fusion_compatible": true,
+      "model_name": "FM8Y",
+      "skus": [
+        "A01468-T3140",
+        "A01468-T1110",
+        "A01468-T2110",
+        "A01468-T5110",
+        "A01468-T4110",
+        "A01468-T2140",
+        "A01468-T0100"
+      ],
+      "description": "",
+      "short_description": "",
+      "product_codes": [],
+      "images": [],
+      "number_of_inputs_and_outputs": {
+        "analog": {
+          "inputs": 5,
+          "outputs": 8,
+          "inputs_balanced": 4,
+          "inputs_unbalanced": 1,
+          "outputs_balanced": 8,
+          "outputs_unbalanced": 0
+        },
+        "fusion_connect": {
+          "max_inputs": 8,
+          "max_outputs": 16
+        },
+        "aes67": {
+          "max_inputs": 8,
+          "max_outputs": 8
+        },
+        "gpio": {
+          "total_gpio": 4
+        },
+        "usb_io_ports": {
+          "inputs": 2,
+          "outputs": 2
+        },
+        "bluetooth_io": {
+          "inputs": 2
+        },
+        "hdmi_io": {
+          "inputs": 1,
+          "outputs": 0
+        }
+      },
+      "dimensions": [
+        {
+          "width": 9.5,
+          "height": 1.75,
+          "depth": null,
+          "unit": "Inches"
+        }
+      ],
+      "net_weight": [],
+      "certifications": [],
+      "power_output": null,
+      "thermal_output": null,
+      "current_draw": null,
+      "updated_at": null,
+      "configuration_software": null,
+      "acoustic_echo_cancellation": null,
+      "supported_bose_professional_dante_endpoints": null,
+      "firmware": null,
+      "safe_operating_temperature": null,
+      "dsp_architecture": null,
+      "max_fusion_controllers": 16
+    }
+  ],
+  "controllers": [
+    {
+      "id": 1151,
+      "model_family": "ControlCenter",
+      "is_fusion_compatible": true,
+      "model_name": "ControlPal LT",
+      "description": "",
+      "short_description": "",
+      "skus": [
+        "A01151-T0110",
+        "A01151-T0120"
+      ],
+      "zone_control_count": "",
+      "control_type": "",
+      "additional_sensors": [],
+      "images": [],
+      "updated_at": "1703400000"
+    },
+    {
+      "id": 1471,
+      "model_family": "ControlCenter",
+      "is_fusion_compatible": true,
+      "model_name": "ControlPal Pro",
+      "description": "",
+      "short_description": "",
+      "skus": [
+        "A01471-T0100"
+      ],
+      "zone_control_count": "",
+      "control_type": "",
+      "additional_sensors": [],
+      "images": [],
+      "updated_at": "1703400000"
+    }
+  ],
+  "additional_accessories": [
+    {
+      "id": 0,
+      "model_name": "",
+      "model_family": "",
+      "type": "",
+      "description": "",
+      "short_description": "",
+      "quantity": 0,
+      "skus": [],
+      "updated_at": "",
+      "name": null,
+      "sku": null
+    }
+  ],
+  "i_o_endpoints": [
+    {
+      "id": 1472,
+      "model_family": "Endpoint",
+      "is_fusion_compatible": true,
+      "model_name": "BluePal",
+      "description": "",
+      "short_description": "",
+      "skus": [
+        "A01472-T0110",
+        "A01472-T0120"
+      ],
+      "inputs": {
+        "quantity": 1,
+        "type": "bluetooth"
+      },
+      "outputs": {
+        "quantity": 1,
+        "type": "bluetooth"
+      },
+      "network": false,
+      "images": [],
+      "updated_at": "1703400000"
+    },
+    {
+      "id": 1467,
+      "model_family": "Endpoint",
+      "is_fusion_compatible": true,
+      "model_name": "XLRPal",
+      "description": "",
+      "short_description": "",
+      "skus": [
+        "A01467-T0110",
+        "A01467-T0120"
+      ],
+      "inputs": {
+        "quantity": 1,
+        "type": "XLR"
+      },
+      "outputs": {
+        "quantity": 1,
+        "type": "XLR"
+      },
+      "network": false,
+      "images": [],
+      "updated_at": "1703400000"
+    }
+  ]
+}

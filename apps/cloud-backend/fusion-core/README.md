@@ -328,24 +328,24 @@ Before you begin, ensure you have the following installed:
    # Check server logs - you should see:
    # {"level":"info","msg":"Starting Fusion Cloud Backend in production mode"}
    # {"level":"info","msg":"Database connection established successfully"}
-   # {"level":"info","msg":"Starting HTTP server at localhost:8020..."}
+   # {"level":"info","msg":"Starting HTTP server at localhost:8080..."}
    ```
 
 3. **Test the API endpoints**
    ```bash
    # Health check
-   curl http://localhost:8020/api/v1/products
+   curl http://localhost:8080/api/v1/products
    
    # View API documentation
-   open http://localhost:8020/docs/index.html
+   open http://localhost:8080/docs/index.html
    ```
 
 ## API Documentation
 
 ### Interactive Documentation
 Once the server is running, access the interactive Swagger documentation:
-- **Swagger UI**: http://localhost:8020/docs/index.html
-- **OpenAPI JSON**: http://localhost:8020/docs/doc.json
+- **Swagger UI**: http://localhost:8080/docs/index.html
+- **OpenAPI JSON**: http://localhost:8080/docs/doc.json
 - **OpenAPI YAML**: Available in `docs/swagger.yaml`
 
 ### API Endpoints Overview
@@ -370,13 +370,13 @@ Once the server is running, access the interactive Swagger documentation:
 
 **Get All Products**
 ```bash
-curl -X GET "http://localhost:8020/api/v1/products" \
+curl -X GET "http://localhost:8080/api/v1/products" \
   -H "accept: application/json"
 ```
 
 **Create a New Project**
 ```bash
-curl -X POST "http://localhost:8020/api/v1/projects" \
+curl -X POST "http://localhost:8080/api/v1/projects" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -400,7 +400,7 @@ curl -X POST "http://localhost:8020/api/v1/projects" \
 
 **Sync Project Data**
 ```bash
-curl -X POST "http://localhost:8020/api/v1/projects/project-001/sync" \
+curl -X POST "http://localhost:8080/api/v1/projects/project-001/sync" \
   -H "accept: application/json" \
   -H "Content-Type: application/json" \
   -d '{
@@ -511,7 +511,7 @@ git diff docs/
 | `DB_PASSWORD` | Database password | `bose123` |
 | `DB_NAME` | Database name | `fusion_cloud` |
 | `SERVER_HOST` | Server host | `localhost` |
-| `SERVER_PORT` | Server port | `8020` |
+| `SERVER_PORT` | Server port | `8080` |
 
 ## Contributing
 

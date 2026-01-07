@@ -11,16 +11,16 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
 // API is a service for the main API.
 type API struct {
-	engine  *gin.Engine
-	server  *http.Server
-	product fusion.Product
-	project fusion.Project
-	sync    fusion.Sync
+	engine                *gin.Engine
+	server                *http.Server
+	product               fusion.Product
+	project               fusion.Project
 	user                  fusion.User
 	userDBService         *userdb.Service
 	roleManagementService *userdb.RoleManagementService
@@ -37,7 +37,7 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	product fusion.Product,
+	productSvc fusion.Product,
 	project fusion.Project,
 	userSvc fusion.User,
 	userDBSvc *userdb.Service,
@@ -56,7 +56,7 @@ func New(cfg *Config,
 	// engine.Use(ginLogger(logger)) // Custom logging middleware
 	engine.Use(corsMiddleware()) // CORS if needed
 
-	if product == nil {
+	if productSvc == nil {
 		return nil, errors.New("missing product service")
 	}
 
@@ -82,7 +82,7 @@ func New(cfg *Config,
 
 	api := &API{
 		engine:  engine,
-		product: product,
+		product: productSvc,
 		project: project,
 		user:    userSvc,
 

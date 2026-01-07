@@ -109,7 +109,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 // validatePrimaryOwner checks if user org account is the primary owner of the project
 func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID string) error {
 
-	if projectRow.PrimaryOwnerAccountID.String != accountID {
+	if projectRow.PrimaryOwnerAccountID != accountID {
 		return errors.New(types.ErrMsgForbidden)
 	}
 	return nil

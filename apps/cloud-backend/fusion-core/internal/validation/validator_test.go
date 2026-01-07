@@ -3,7 +3,7 @@ package validation
 import (
 	"testing"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"fusion-core/internal/api/types"
 	"github.com/stretchr/testify/assert"
 )
 

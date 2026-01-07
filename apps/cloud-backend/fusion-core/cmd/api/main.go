@@ -36,12 +36,12 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/id"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product"
 	productdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/product/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/cloudfs"
 	sql "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
+
 	"go.uber.org/zap"
 
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
@@ -101,6 +101,7 @@ func main() {
 		cfg.Postgres.User,     // user
 		cfg.Postgres.Password, // password
 		cfg.Postgres.Database, // instance (example: database name)
+		cfg.Postgres.SSLMode,  // sslmode
 	)
 	if err != nil {
 		logger.Fatal("Failed to connect to the database", zap.Error(err))
@@ -108,21 +109,25 @@ func main() {
 
 	logger.Info("Database connection established successfully")
 
-	// Initialize ID Service
-	idSVC := id.NewService()
-	if idSVC == nil {
-		logger.Fatal("Failed to initialize ID service")
-	}
-	logger.Info("Initialized ID Service.")
 	//Initialize Product DB Service
-	productDBSvc := productdb.NewService(pgs)
+	productDBSvc := productdb.NewService(pgs, logger.JobSyncLog())
 	if productDBSvc == nil {
 		logger.Fatal("Failed to initialize product database service")
 	}
 	logger.Info("Initialized Product DB Service.")
 
-	//Initialize Product Service
-	productSVC := product.NewService(productDBSvc, idSVC)
+	validationCfg, err := configSVC.Validation()
+	if err != nil {
+		logger.Fatal("Failed to get validation config", zap.Error(err))
+	}
+
+	processingCfg, err := configSVC.Processing()
+	if err != nil {
+		logger.Fatal("Failed to get processing config", zap.Error(err))
+	}
+
+	//Initialize Product Service (now includes sync functionality)
+	productSVC := product.NewService(productDBSvc, validationCfg.DefaultVersion, validationCfg, processingCfg, logger.JobSyncLog())
 	if productSVC == nil {
 		logger.Fatal("Failed to initialize product service")
 	}

@@ -212,12 +212,16 @@ definitions:
         type: array
       product_id:
         type: integer
+      version:
+        type: string
     type: object
   types.ProductItemResponse:
     properties:
       assets: {}
       description:
         type: string
+      is_fusion_compatible:
+        type: boolean
       model_family:
         type: string
       model_name:
@@ -252,6 +256,8 @@ definitions:
         items:
           $ref: '#/definitions/types.ProductItemResponse'
         type: array
+      version:
+        type: string
     type: object
   types.Project:
     properties:
@@ -488,6 +494,23 @@ definitions:
       user_count:
         example: 5
         type: integer
+    type: object
+  types.SingleProductResponse:
+    properties:
+      accessory:
+        $ref: '#/definitions/types.ProductItemResponse'
+      amplifier:
+        $ref: '#/definitions/types.ProductItemResponse'
+      controller:
+        $ref: '#/definitions/types.ProductItemResponse'
+      dsp:
+        $ref: '#/definitions/types.ProductItemResponse'
+      io_endpoint:
+        $ref: '#/definitions/types.ProductItemResponse'
+      speaker:
+        $ref: '#/definitions/types.ProductItemResponse'
+      version:
+        type: string
     type: object
   types.UpdateUserRequest:
     properties:
@@ -897,7 +920,7 @@ paths:
         "200":
           description: Successful response with product details
           schema:
-            $ref: '#/definitions/types.ProductResponse'
+            $ref: '#/definitions/types.SingleProductResponse'
         "400":
           description: Bad request - Product ID is required
           schema:
