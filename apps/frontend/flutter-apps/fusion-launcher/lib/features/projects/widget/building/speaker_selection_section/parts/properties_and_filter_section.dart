@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/popups/create_zone_popup/create_zone_popup.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/constant_enums.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
@@ -63,16 +62,13 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                         ),
                       ),
                     ),
-                    CreateZonePopup(
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          // onTap: () => Navigator.of(context).pop(),
-                          // onTap: () => AddSourcePopup.show(context),
-                          child: const Padding(
-                            padding: EdgeInsets.all(2.0),
-                            child: Icon(LucideIcons.x200, size: 16),
-                          ),
+                    MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: GestureDetector(
+                        onTap: () => Navigator.of(context).pop(),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2.0),
+                          child: Icon(LucideIcons.x200, size: 16),
                         ),
                       ),
                     ),

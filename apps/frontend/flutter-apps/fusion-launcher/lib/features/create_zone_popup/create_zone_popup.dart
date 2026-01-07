@@ -3,13 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/projects/widget/building/popups/create_zone_popup/view_model/create_zone_viewmodel.dart';
+import 'package:fusion_launcher/features/create_zone_popup/view_model/create_zone_viewmodel.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../side_panel_widgets/schematic_properties.dart' show hexToColor;
+import '../projects/widget/building/side_panel_widgets/schematic_properties.dart' show hexToColor;
 import 'view_model/state.dart';
 
 part 'widgets/add_listening_areas_to_zone.dart';
