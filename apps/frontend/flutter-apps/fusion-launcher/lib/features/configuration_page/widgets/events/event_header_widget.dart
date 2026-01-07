@@ -95,13 +95,13 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      height: 44,
       padding: const EdgeInsets.symmetric(
         horizontal: 16,
         vertical: 6,
       ),
       decoration: BoxDecoration(
-        color: context.colorScheme.greyLight,
-        // border bottom
+        color: context.colorScheme.white,
         border: Border(
           bottom: BorderSide(width: 1, color: context.colorScheme.grey),
         ),
@@ -117,7 +117,7 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
                     ? TextField(
                       controller: _textController,
                       focusNode: _focusNode,
-                      style: context.textTheme.bodyMedium?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
+                      style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
                       decoration: const InputDecoration(
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
@@ -130,7 +130,7 @@ class _EventHeaderWidgetState extends State<EventHeaderWidget> {
                       onTap: _startEditing,
                       child: FusionAppText(
                         text: widget.eventName.isNotEmpty ? widget.eventName[0].toUpperCase() + widget.eventName.substring(1) : widget.eventName,
-                        style: context.textTheme.bodyMedium?.copyWith(fontSize: 12, fontWeight: FontWeight.w600),
+                        style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
                         maxLine: 1,
                       ),
                     ),

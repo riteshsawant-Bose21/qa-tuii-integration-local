@@ -230,60 +230,6 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
               },
               child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
             ),
-            // trailing: PopupMenuButton<dynamic>(
-            //   onCanceled: () {
-            //     _clearSourceSetDialog(isScene: true);
-            //     setState(() {});
-            //   },
-            //   tooltip: "Add Scenes",
-            //   padding: EdgeInsets.zero,
-            //   constraints: const BoxConstraints(
-            //     maxHeight: 500,
-            //     maxWidth: 250,
-            //   ),
-            //   shape: RoundedRectangleBorder(
-            //     borderRadius: BorderRadius.circular(8),
-            //   ),
-            //   color: Theme.of(context).colorScheme.white,
-            //   menuPadding: EdgeInsets.zero,
-            //
-            //   itemBuilder: (BuildContext context) {
-            //     return <PopupMenuItem<dynamic>>[
-            //       PopupMenuItem<dynamic>(
-            //         enabled: false,
-            //         padding: EdgeInsets.zero,
-            //         child: SizedBox(
-            //           width: 250,
-            //           child: StatefulBuilder(
-            //             builder: (BuildContext context, StateSetter setMenuState) {
-            //               return SingleChildScrollView(
-            //                 child: CreateSnapshotsOrScenesWidget(
-            //                   headerText: 'Scenes',
-            //                   nameController: _scenesNameController,
-            //                   onCreate: () {
-            //                     /// Add new scenes
-            //                     /// Clear dialog and close popup
-            //                     _addNewScenes(context);
-            //                   },
-            //                   onCancel: () {
-            //                     /// Cancel inside popup: close only popup.
-            //                     _clearSourceSetDialog(pop: true, popContext: context, isScene: true);
-            //                   },
-            //                 ),
-            //               );
-            //             },
-            //           ),
-            //         ),
-            //       ),
-            //     ];
-            //   },
-            //   child: IconButton(
-            //     icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
-            //     onPressed: null,
-            //     padding: EdgeInsets.zero,
-            //     constraints: const BoxConstraints(),
-            //   ),
-            // ),
           ),
 
           /// List of Scenes

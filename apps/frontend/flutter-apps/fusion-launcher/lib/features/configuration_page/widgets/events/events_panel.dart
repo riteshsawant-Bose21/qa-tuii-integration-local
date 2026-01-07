@@ -25,9 +25,9 @@ class _EventsPanelState extends State<EventsPanel> {
 
   final TextEditingController _eventsNameController = TextEditingController();
 
-  void _addNewEvents(BuildContext popupContext) {
+  void _addNewEvents() {
     final FusionEvent newScene = FusionEvent(
-      name: _eventsNameController.text.trim(),
+      name: "New Event ${_projectViewModel.getAllEvents().length + 1}",
       isEnabled: true,
     );
 
@@ -36,9 +36,6 @@ class _EventsPanelState extends State<EventsPanel> {
 
     /// make this snapshot selected
     _projectViewModel.setSelectedEventId(newScene.id);
-
-    /// Clear dialog and close popup
-    _clearSourceSetDialog(pop: true, popContext: popupContext);
   }
 
   /// Clear source set dialog inputs
@@ -62,51 +59,9 @@ class _EventsPanelState extends State<EventsPanel> {
           /// Events Section
           SectionHeader(
             title: 'Events',
-            trailing: PopupMenuButton<dynamic>(
-              onCanceled: () {
-                _clearSourceSetDialog();
-                setState(() {});
-              },
-              tooltip: "Add Events",
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(
-                maxHeight: 500,
-                maxWidth: 250,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              color: Theme.of(context).colorScheme.white,
-              menuPadding: EdgeInsets.zero,
-
-              itemBuilder: (BuildContext context) {
-                return <PopupMenuItem<dynamic>>[
-                  PopupMenuItem<dynamic>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: SizedBox(
-                      width: 250,
-                      child: StatefulBuilder(
-                        builder: (BuildContext context, StateSetter setMenuState) {
-                          return SingleChildScrollView(
-                            child: CreateSnapshotsOrScenesWidget(
-                              headerText: 'Events',
-                              nameController: _eventsNameController,
-                              onCreate: () {
-                                /// Create new Events
-                                _addNewEvents(context);
-                              },
-                              onCancel: () {
-                                /// Cancel inside popup: close only popup.
-                                _clearSourceSetDialog(pop: true, popContext: context);
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ];
+            trailing: GestureDetector(
+              onTap: () {
+                _addNewEvents();
               },
               child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
             ),
