@@ -3,14 +3,13 @@ package validation
 import (
 	"testing"
 
-	"fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/stretchr/testify/assert"
 )
 
 const (
 	testProjectName    = "Test Project"
 	testApplication    = "Test App"
-	testAccountID      = "123"
 	updatedProjectName = "Updated Project"
 )
 
@@ -25,6 +24,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "valid request with project phase",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174001",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -41,6 +41,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "valid request with empty project phase - should default to Proposal",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174002",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -57,6 +58,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "valid request without project phase - should default to Proposal",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174003",
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -79,6 +81,7 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 		{
 			name: "invalid request - missing name",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174004",
 				Name:            "", // Missing name
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -91,9 +94,27 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			expectedErr: true,
 			checkPhase:  false,
 		},
+
 		{
-			name: "invalid request - missing account ID",
+			name: "invalid request - negative budget",
 			request: &types.ProjectCreateRequest{
+				ID:              "123e4567-e89b-42d3-a456-426614174005",
+				Name:            testProjectName,
+				Application:     testApplication,
+				EnvironmentType: types.EnvironmentTypeIndoor,
+				ProjectPhase:    types.ProjectPhaseProposal,
+				Budget: types.Budget{
+					Amount:   -100.0, // Negative budget
+					Currency: "USD",
+				},
+			},
+			expectedErr: true,
+			checkPhase:  false,
+		},
+		{
+			name: "invalid request - missing ID",
+			request: &types.ProjectCreateRequest{
+				// ID field missing - should fail validation
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
@@ -107,14 +128,15 @@ func TestValidateProjectCreateRequest(t *testing.T) {
 			checkPhase:  false,
 		},
 		{
-			name: "invalid request - negative budget",
+			name: "invalid request - invalid UUID format",
 			request: &types.ProjectCreateRequest{
+				ID:              "not-a-valid-uuid", // Invalid UUID format
 				Name:            testProjectName,
 				Application:     testApplication,
 				EnvironmentType: types.EnvironmentTypeIndoor,
 				ProjectPhase:    types.ProjectPhaseProposal,
 				Budget: types.Budget{
-					Amount:   -100.0, // Negative budget
+					Amount:   1000.0,
 					Currency: "USD",
 				},
 			},
@@ -213,6 +235,7 @@ const (
 func TestProjectPhaseDefaulting(t *testing.T) {
 	t.Run("project phase defaults to Proposal when empty", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174006",
 			Name:            phaseTestProjectName,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -236,6 +259,7 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 
 	t.Run("project phase is not changed when already set", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174007",
 			Name:            phaseTestProjectName,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -256,6 +280,7 @@ func TestProjectPhaseDefaulting(t *testing.T) {
 
 	t.Run("project phase defaults when field is uninitialized", func(t *testing.T) {
 		request := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174008",
 			Name:            phaseTestProjectName,
 			Application:     phaseTestApplication,
 			EnvironmentType: types.EnvironmentTypeIndoor,
@@ -449,4 +474,74 @@ func TestValidateProjectSortField(t *testing.T) {
 	assert.True(t, isValidProjectSortField("created_at"))
 	assert.True(t, isValidProjectSortField("updated_at"))
 	assert.False(t, isValidProjectSortField("name"))
+}
+
+func TestValidateProjectCreateRequest_EdgeCases(t *testing.T) {
+	t.Run("whitespace-only name should fail", func(t *testing.T) {
+		req := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174009",
+			Name:            "   ", // Only whitespace
+			Application:     testApplication,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "USD",
+			},
+		}
+		err := ValidateProjectCreateRequest(req)
+		assert.Error(t, err)
+	})
+
+	t.Run("zero budget amount should pass", func(t *testing.T) {
+		req := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174010",
+			Name:            testProjectName,
+			Application:     testApplication,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   0, // Zero should be valid
+				Currency: "USD",
+			},
+		}
+		err := ValidateProjectCreateRequest(req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("maximum valid currency length", func(t *testing.T) {
+		req := &types.ProjectCreateRequest{
+			ID:              "123e4567-e89b-42d3-a456-426614174011",
+			Name:            testProjectName,
+			Application:     testApplication,
+			EnvironmentType: types.EnvironmentTypeIndoor,
+			Budget: types.Budget{
+				Amount:   1000,
+				Currency: "EUR", // Valid 3-letter currency
+			},
+		}
+		err := ValidateProjectCreateRequest(req)
+		assert.NoError(t, err)
+	})
+}
+
+func TestValidateProjectUpdateRequest_EdgeCases(t *testing.T) {
+	t.Run("partial update with valid name only", func(t *testing.T) {
+		req := &types.ProjectUpdateRequest{
+			Name: "New Valid Name",
+			// Other fields empty
+		}
+		err := ValidateProjectUpdateRequest(req)
+		assert.NoError(t, err)
+	})
+
+	t.Run("budget with currency but zero amount should pass", func(t *testing.T) {
+		req := &types.ProjectUpdateRequest{
+			Name: "Valid Name",
+			Budget: types.Budget{
+				Amount:   0, // Zero with currency should be valid
+				Currency: "USD",
+			},
+		}
+		err := ValidateProjectUpdateRequest(req)
+		assert.NoError(t, err)
+	})
 }

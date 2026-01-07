@@ -10,9 +10,6 @@ type Server struct {
 }
 
 const (
-	// Server configuration keys
-	keyAPIHost  string = "API_HOST"
-	keyAPIPort  string = "API_PORT"
 	keySyncPort string = "SYNC_PORT"
 )
 

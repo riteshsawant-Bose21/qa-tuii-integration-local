@@ -143,9 +143,9 @@ const (
 	ErrMsgForbidden           = "Forbidden"
 
 	// Project entity errors
-	ErrMsgProjectNotFound      = "project not found"
-	ErrMsgProjectArchived      = "project is archived"
-	ErrMsgProjectNotArchived   = "project is not archived"
+	ErrMsgProjectNotFound    = "project not found"
+	ErrMsgProjectArchived    = "project is archived"
+	ErrMsgProjectNotArchived = "project is not archived"
 	ErrMsgProjectAlreadyExists = "project with the given ID already exists"
 
 	// Project locking errors

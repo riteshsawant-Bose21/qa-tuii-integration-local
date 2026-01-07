@@ -86,17 +86,21 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 	now := time.Now()
 	projectRecord := &model.Project{
 		ID:                    project.ID,
-		PrimaryOwnerAccountID: accountID,
+		PrimaryOwnerAccountID: null.NewString(accountID	, accountID != ""),
 		Name:                  null.NewString(project.Name, project.Name != ""),
 		Description:           null.NewString(project.Description, project.Description != ""),
 		Venue:                 null.NewString(project.Venue, project.Venue != ""),
 		EnvironmentType:       null.NewString(string(project.EnvironmentType), string(project.EnvironmentType) != ""),
 		ProjectPhase:          null.NewString(string(project.ProjectPhase), string(project.ProjectPhase) != ""),
 		Application:           null.NewString(project.Application, project.Application != ""),
-		BudgetAmount:          boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0)),
-		Currency:              null.NewString(project.Budget.Currency, project.Budget.Currency != ""),
 		CreatedAt:             now,
 		UpdatedAt:             now,
+	}
+
+	// Only set budget fields if Budget is provided (non-zero values)
+	if project.Budget.Currency != "" && project.Budget.Amount > 0 {
+		projectRecord.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
+		projectRecord.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
 	}
 
 	// Insert project
@@ -279,7 +283,7 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 		projectRow.Currency = null.NewString(project.Budget.Currency, project.Budget.Currency != "")
 	}
 
-	if project.Budget.Amount >= 0 {
+	if project.Budget.Amount > 0 {
 		projectRow.BudgetAmount = boilerTypes.NewNullDecimal(ericDecimal.New(project.Budget.Amount, 0))
 	}
 

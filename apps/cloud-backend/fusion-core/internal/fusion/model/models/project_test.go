@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/aarondl/null/v8"
 	"github.com/aarondl/randomize"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
@@ -728,7 +729,7 @@ func testProjectToOneAccountUsingPrimaryOwnerAccount(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	local.PrimaryOwnerAccountID = foreign.ID
+	local.PrimaryOwnerAccountID = null.NewString(foreign.ID, true)
 	if err := local.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
 	}
@@ -919,7 +920,7 @@ func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
 		if x.R.PrimaryOwnerAccountProjects[0] != &a {
 			t.Error("failed to append to foreign relationship struct")
 		}
-		if a.PrimaryOwnerAccountID != x.ID {
+		if a.PrimaryOwnerAccountID.String != x.ID {
 			t.Error("foreign key was wrong value", a.PrimaryOwnerAccountID)
 		}
 
@@ -930,7 +931,7 @@ func testProjectToOneSetOpAccountUsingPrimaryOwnerAccount(t *testing.T) {
 			t.Fatal("failed to reload", err)
 		}
 
-		if a.PrimaryOwnerAccountID != x.ID {
+		if a.PrimaryOwnerAccountID.String != x.ID {
 			t.Error("foreign key was wrong value", a.PrimaryOwnerAccountID, x.ID)
 		}
 	}

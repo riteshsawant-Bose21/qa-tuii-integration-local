@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/google/uuid"
-
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 )
@@ -19,6 +17,11 @@ const (
 
 // generateProjectFileURL generates a presigned URL for project file operations
 func (s *Service) generateProjectFileURL(ctx context.Context, projectID string, fileType types.ProjectFileType, ttl time.Duration, operation string) (string, error) {
+	// If no presigner is configured (e.g., in tests), return empty string
+	if s.presigner == nil {
+		return "", nil
+	}
+
 	key := fmt.Sprintf(projectFilePathFormat, projectID, fileType, projectID)
 
 	switch operation {
@@ -106,7 +109,7 @@ func (s *Service) validateProjectNotLockedByOtherUser(ctx context.Context, proje
 // validatePrimaryOwner checks if user org account is the primary owner of the project
 func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID string) error {
 
-	if projectRow.PrimaryOwnerAccountID != accountID {
+	if projectRow.PrimaryOwnerAccountID.String != accountID {
 		return errors.New(types.ErrMsgForbidden)
 	}
 	return nil
@@ -115,8 +118,11 @@ func (s *Service) validatePrimaryOwner(projectRow *models.Project, accountID str
 // CreateProject adds a new project to the database.
 func (s *Service) CreateProject(ctx context.Context, project *types.ProjectCreateRequest, userAuth types.UserAuthorizationResponse) (*types.ProjectCreateResponse, error) {
 
-	// Generate ID
-	project.ID = uuid.New().String()
+	projectRow, err := s.dbService.GetProjectByID(ctx, project.ID)
+
+	if err == nil && projectRow != nil {
+		return nil, errors.New(types.ErrMsgProjectAlreadyExists)
+	}
 
 	db := s.dbService.GetDB(ctx)
 
@@ -182,13 +188,18 @@ func (s *Service) GetAllProjects(ctx context.Context, queryParams *types.GetAllP
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate presign URL for project %s: %v", projects[i].ID, err)
 		}
-		projects[i].ProjectFileURL = &presignURL
+
+		if presignURL != "" {
+			projects[i].ProjectFileURL = &presignURL
+		}
 
 		thumbnailURL, err := s.generateProjectFileURL(ctx, projects[i].ID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "get")
 		if err != nil {
 			return nil, fmt.Errorf("failed to generate thumbnail URL for project %s: %v", projects[i].ID, err)
 		}
-		projects[i].ThumbnailURL = &thumbnailURL
+		if thumbnailURL != "" {
+			projects[i].ThumbnailURL = &thumbnailURL
+		}
 	}
 
 	return &types.GetAllProjectsResponse{
@@ -512,6 +523,7 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 		CheckDeleted:              true,
 		CheckArchived:             true,
 		CheckNotLockedByOtherUser: false,
+		UserID:                    userAuth.User.ID,
 	}
 
 	if userAuth.Role.RoleName == "Admin" {
@@ -519,7 +531,6 @@ func (s *Service) LockProject(ctx context.Context, projectID string, userAuth ty
 		opts.AccountID = userAuth.Account.ID
 	} else {
 		opts.CheckUserAssigned = true
-		opts.UserID = userAuth.User.ID
 	}
 
 	projectRow, err := s.validateProject(ctx, projectID, opts)

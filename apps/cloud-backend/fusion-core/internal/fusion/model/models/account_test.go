@@ -9,6 +9,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/aarondl/null/v8"
 	"github.com/aarondl/randomize"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries"
@@ -597,8 +598,8 @@ func testAccountToManyPrimaryOwnerAccountProjects(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	b.PrimaryOwnerAccountID = a.ID
-	c.PrimaryOwnerAccountID = a.ID
+	b.PrimaryOwnerAccountID = null.NewString(a.ID, true)
+	c.PrimaryOwnerAccountID = null.NewString(a.ID, true)
 
 	if err = b.Insert(ctx, tx, boil.Infer()); err != nil {
 		t.Fatal(err)
@@ -770,10 +771,10 @@ func testAccountToManyAddOpPrimaryOwnerAccountProjects(t *testing.T) {
 		first := x[0]
 		second := x[1]
 
-		if a.ID != first.PrimaryOwnerAccountID {
+		if a.ID != first.PrimaryOwnerAccountID.String {
 			t.Error("foreign key was wrong value", a.ID, first.PrimaryOwnerAccountID)
 		}
-		if a.ID != second.PrimaryOwnerAccountID {
+		if a.ID != second.PrimaryOwnerAccountID.String {
 			t.Error("foreign key was wrong value", a.ID, second.PrimaryOwnerAccountID)
 		}
 

@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"fusion-core/internal/api/types"
-	"fusion-core/internal/fusion/model/models"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/DATA-DOG/go-sqlmock"
@@ -26,10 +26,9 @@ const (
 	testProjectPhase       = types.ProjectPhaseProposal
 	testProjectApp         = "Test App"
 	testProjectAccountID   = "123"
-	testSelectProjectsStmt = "SELECT .*"
+	testUserID1            = "user-123"
 	testUpdateProjectStmt  = "UPDATE \"project\""
 	testNonExistentID      = "non-existent"
-	fixedTimestamp         = "2025-11-25T15:35:18Z"
 )
 
 func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
@@ -179,18 +178,6 @@ func TestServiceInsert(t *testing.T) {
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
 
-	t.Run("returns error when begin transaction fails", func(t *testing.T) {
-		mock.ExpectBegin().WillReturnError(assert.AnError)
-		// Try to begin a transaction, which will fail
-		tx, err := db.BeginTx(ctx, nil)
-		assert.Error(t, err)
-		assert.Nil(t, tx)
-		// Don't call Insert with nil tx - this would cause panic
-		// Instead, this test should verify the transaction begin failure behavior
-		// at the business logic level, not the db service level
-		assert.NoError(t, mock.ExpectationsWereMet())
-	})
-
 }
 
 func TestServiceSelectAll(t *testing.T) {
@@ -281,6 +268,37 @@ func TestServiceSelectAll(t *testing.T) {
 		assert.Len(t, projects, 1)
 		assert.Equal(t, testProjectID, projects[0].ID)
 		assert.True(t, projects[0].IsStarred) // Should be true from the mock data
+	})
+
+	t.Run("handles empty result set correctly", func(t *testing.T) {
+		queryParams := &types.GetAllProjectsParams{
+			SortBy:     "created_at",
+			SortOrder:  "ASC",
+			IsArchived: false,
+		}
+
+		userAuth := types.UserAuthorizationResponse{
+			User: types.UserInfo{
+				ID:    testUserID1,
+				Email: "test@example.com",
+			},
+			Account: types.AccountInfo{
+				ID:   testProjectAccountID,
+				Name: "Test Account",
+			},
+		}
+
+		// Mock empty result set
+		emptyRows := sqlmock.NewRows([]string{
+			"id", "name", "description",
+			"venue", "environment_type", "project_phase", "application", "budget_amount",
+			"currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at", "is_starred", "locked_by_user_email",
+		})
+		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN app_user u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(emptyRows)
+
+		projects, err := service.SelectAll(ctx, queryParams, userAuth)
+		assert.NoError(t, err)
+		assert.Len(t, projects, 0)
 	})
 }
 
@@ -706,22 +724,20 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	})
 
 	t.Run("user exists query error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "user"`).
+		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "app_user"`).
 			WillReturnError(errors.New("count error"))
 		exists, err := service.UserExists(ctx, testUserID)
 		assert.Error(t, err)
 		assert.False(t, exists)
 	})
-
 	t.Run("get user id by email generic error", func(t *testing.T) {
-		mock.ExpectQuery(`SELECT "user"\.\* FROM "user" WHERE \("user"\."email" = \$1\) LIMIT 1`).
+		mock.ExpectQuery(`SELECT "app_user"\.\* FROM "app_user" WHERE \("app_user"\."email" = \$1\) LIMIT 1`).
 			WithArgs(testEmail).
 			WillReturnError(errors.New("query failed"))
 		id, err := service.GetUserIDByEmail(ctx, testEmail)
 		assert.Error(t, err)
 		assert.Empty(t, id)
 	})
-
 	t.Run("star project already starred no update", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project_user"\.\* FROM "project_user" WHERE \("project_user"\."project_id" = \$1\) AND \("project_user"\."user_id" = \$2\) LIMIT 1`).
 			WithArgs(testProjectID, testUserID).

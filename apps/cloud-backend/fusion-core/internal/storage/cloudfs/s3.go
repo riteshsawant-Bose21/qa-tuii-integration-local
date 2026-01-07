@@ -2,6 +2,7 @@ package cloudfs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"time"
@@ -13,11 +14,14 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
+	"github.com/aws/smithy-go"
 )
 
 type s3Client interface {
 	GetObject(ctx context.Context, params *s3.GetObjectInput, optFns ...func(*s3.Options)) (*s3.GetObjectOutput, error)
 	PutObject(ctx context.Context, params *s3.PutObjectInput, optFns ...func(*s3.Options)) (*s3.PutObjectOutput, error)
+	HeadObject(ctx context.Context, params *s3.HeadObjectInput, optFns ...func(*s3.Options)) (*s3.HeadObjectOutput, error)
 }
 
 type presignClient interface {
@@ -26,8 +30,8 @@ type presignClient interface {
 }
 
 type S3 struct {
-	Client        *s3.Client
-	PresignClient *s3.PresignClient
+	Client        s3Client
+	PresignClient presignClient
 	config        *s3Config
 }
 
@@ -37,9 +41,9 @@ type s3Config struct {
 	region    string
 }
 
-func NewS3Client(ctx context.Context) (*S3, error) {
+func NewS3Client(ctx context.Context, region string) (*S3, error) {
 
-	cfg, err := config.LoadDefaultConfig(ctx)
+	cfg, err := config.LoadDefaultConfig(ctx, config.WithRegion(region))
 	if err != nil {
 		return nil, fmt.Errorf("failed to load AWS config: %w", err)
 	}
@@ -88,7 +92,35 @@ func (b *S3BucketHandle) Upload(ctx context.Context, name string, content io.Rea
 	return nil
 }
 
+func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string) (bool, error) {
+	_, err := b.client.HeadObject(ctx, &s3.HeadObjectInput{
+		Bucket: aws.String(b.bucketName),
+		Key:    aws.String(name),
+	})
+	if err != nil {
+		var apiError smithy.APIError
+		if errors.As(err, &apiError) {
+			switch apiError.(type) {
+			case *types.NotFound:
+				return false, nil
+			default:
+				return false, fmt.Errorf("failed to check if object exists: %w", err)
+			}
+		}
+		return false, fmt.Errorf("failed to check if object exists: %w", err)
+	}
+	return true, nil
+}
+
 func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl time.Duration) (string, error) {
+
+	exists, err := b.ObjectExists(ctx, objectKey)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return "", nil
+	}
 
 	req, err := b.presignClient.PresignGetObject(ctx, &s3.GetObjectInput{
 		Bucket: aws.String(b.bucketName),
@@ -188,7 +220,7 @@ func (s *S3Source) ReadAll() ([]byte, error) {
 		}
 	}
 
-	s3Client, err := NewS3Client(ctx)
+	s3Client, err := NewS3Client(ctx, region)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create S3 client: %w", err)
 	}

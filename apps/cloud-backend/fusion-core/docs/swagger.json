@@ -19,7 +19,7 @@
         },
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "fusionapi.cloud-dev-external-bpro.in:8080",
     "basePath": "/api/v1",
     "paths": {
         "/auth/status": {
@@ -576,6 +576,11 @@
         },
         "/projects": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all projects in the system",
                 "consumes": [
                     "application/json"
@@ -633,6 +638,11 @@
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new project in the system",
                 "consumes": [
                     "application/json"
@@ -679,6 +689,11 @@
         },
         "/projects/{projectId}": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
                     "application/json"
@@ -730,6 +745,11 @@
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing project by its ID",
                 "consumes": [
                     "application/json"
@@ -795,6 +815,11 @@
         },
         "/projects/{projectId}/archive": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Archive or unarchive a project based on request body",
                 "consumes": [
                     "application/json"
@@ -857,6 +882,11 @@
         },
         "/projects/{projectId}/lock": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Lock or unlock a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
@@ -919,6 +949,11 @@
         },
         "/projects/{projectId}/star/{userId}": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Star or unstar a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
@@ -935,13 +970,6 @@
                         "type": "string",
                         "description": "Project ID",
                         "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "userId",
                         "in": "path",
                         "required": true
                     },
@@ -988,6 +1016,11 @@
         },
         "/projects/{projectId}/users/{userEmail}": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Assign a user to a project by project ID and user email",
                 "consumes": [
                     "application/json"
@@ -1034,6 +1067,11 @@
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Remove a user from a project by project ID and user email",
                 "consumes": [
                     "application/json"
@@ -1837,7 +1875,8 @@
             "required": [
                 "application",
                 "environment_type",
-                "name"
+                "name",
+                "projectId"
             ],
             "properties": {
                 "application": {
@@ -1875,6 +1914,10 @@
                     "maxLength": 255,
                     "minLength": 1,
                     "example": "Conference Room Audio Setup"
+                },
+                "projectId": {
+                    "type": "string",
+                    "example": "50000001-0000-4000-8000-000000000008"
                 },
                 "project_phase": {
                     "allOf": [

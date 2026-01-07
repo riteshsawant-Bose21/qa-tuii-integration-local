@@ -578,6 +578,11 @@ const docTemplate = `{
         },
         "/projects": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all projects in the system",
                 "consumes": [
                     "application/json"
@@ -635,6 +640,11 @@ const docTemplate = `{
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new project in the system",
                 "consumes": [
                     "application/json"
@@ -681,6 +691,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
                     "application/json"
@@ -732,6 +747,11 @@ const docTemplate = `{
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing project by its ID",
                 "consumes": [
                     "application/json"
@@ -797,6 +817,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/archive": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Archive or unarchive a project based on request body",
                 "consumes": [
                     "application/json"
@@ -859,6 +884,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/lock": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Lock or unlock a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
@@ -921,6 +951,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/star/{userId}": {
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Star or unstar a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
@@ -937,13 +972,6 @@ const docTemplate = `{
                         "type": "string",
                         "description": "Project ID",
                         "name": "projectId",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "User ID",
-                        "name": "userId",
                         "in": "path",
                         "required": true
                     },
@@ -990,6 +1018,11 @@ const docTemplate = `{
         },
         "/projects/{projectId}/users/{userEmail}": {
             "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Assign a user to a project by project ID and user email",
                 "consumes": [
                     "application/json"
@@ -1036,6 +1069,11 @@ const docTemplate = `{
                 }
             },
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Remove a user from a project by project ID and user email",
                 "consumes": [
                     "application/json"
@@ -1839,7 +1877,8 @@ const docTemplate = `{
             "required": [
                 "application",
                 "environment_type",
-                "name"
+                "name",
+                "projectId"
             ],
             "properties": {
                 "application": {
@@ -1877,6 +1916,10 @@ const docTemplate = `{
                     "maxLength": 255,
                     "minLength": 1,
                     "example": "Conference Room Audio Setup"
+                },
+                "projectId": {
+                    "type": "string",
+                    "example": "50000001-0000-4000-8000-000000000008"
                 },
                 "project_phase": {
                     "allOf": [
@@ -2264,7 +2307,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "fusionapi.cloud-dev-external-bpro.in:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "Fusion Cloud Backend API",

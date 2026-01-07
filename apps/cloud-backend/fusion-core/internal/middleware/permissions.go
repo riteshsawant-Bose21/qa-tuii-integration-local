@@ -35,7 +35,7 @@ func SetupProjectPermissions(acc *AccessControlConfig) {
 	acc.RegisterPermission("PATCH", "/api/v1/projects/:projectId", ProjectUpdate, PermissionWrite, "Update project")
 
 	// Project DELETE endpoint - require admin permission
-	acc.RegisterPermission("DELETE", "/api/v1/projects/:projectId", ProjectDelete, PermissionAdmin, "Delete project")
+	acc.RegisterPermission("DELETE", "/api/v1/projects/:projectId", ProjectDelete, PermissionWrite, "Delete project")
 
 	// Project user assignment endpoints - require write permission
 	acc.RegisterPermission("PUT", "/api/v1/projects/:projectId/users/:userEmail", ProjectUpdate, PermissionWrite, "Assign user to project")

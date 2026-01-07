@@ -10,10 +10,8 @@
 // @license.name MIT
 // @license.url https://opensource.org/licenses/MIT
 
-// @host localhost:8080
 // @BasePath /api/v1
 // @schemes http https
-
 // @securityDefinitions.apikey BearerAuth
 // @in header
 // @name Authorization
@@ -30,6 +28,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
 
@@ -46,8 +45,6 @@ import (
 	"go.uber.org/zap"
 
 	projectdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/project/db"
-
-	_ "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/docs"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
@@ -86,6 +83,9 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to load API config", zap.Error(err))
 	}
+
+	// // Set host dynamically from configuration
+	docs.SwaggerInfo.Host = cfg.Server.SwaggerHost
 
 	// Load general application configuration
 	appConfig, err := config.Load()
@@ -133,7 +133,7 @@ func main() {
 	}
 	logger.Info("Initialized Product Service.")
 
-	s3Handler, err := cloudfs.NewS3Client(ctx)
+	s3Handler, err := cloudfs.NewS3Client(ctx, cfg.S3.Region)
 
 	if err != nil {
 		logger.Fatal("Failed to initialize S3 client", zap.Error(err))

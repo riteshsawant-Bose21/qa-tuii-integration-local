@@ -59,7 +59,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	response, err := h.project.CreateProject(ctx, &p, *user)
 
 	if err != nil {
-		if err.Error() == types.ErrMsgProjectAlreadyExists {
+		if err.Error() == types.ErrMsgProjectAlreadyExists {	
 			ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 			return
 		}

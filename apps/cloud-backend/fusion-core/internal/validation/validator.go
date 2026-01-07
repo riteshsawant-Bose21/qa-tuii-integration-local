@@ -48,6 +48,11 @@ func ValidateProjectCreateRequest(req *types.ProjectCreateRequest) error {
 		req.ProjectPhase = types.ProjectPhaseProposal
 	}
 
+	// Validate name is not whitespace-only
+	if strings.TrimSpace(req.Name) == "" {
+		return errors.New("project name cannot be empty or whitespace-only")
+	}
+
 	// Add struct tags validation
 	if err := validate.Struct(req); err != nil {
 		return formatValidationError(err)
