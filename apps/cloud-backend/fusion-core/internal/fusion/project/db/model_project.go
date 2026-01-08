@@ -1,15 +1,16 @@
 package db
 
 import (
-	"encoding/json"
 	"errors"
 
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	model "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
 var (
-	ProjectTable string = model.TableNames.Projects
+	ProjectTable string = model.TableNames.Project
 )
 
 var (
@@ -20,60 +21,60 @@ var (
 	ProjectColumnUpdatedAt   string = model.ProjectColumns.UpdatedAt
 )
 
-var (
-	projectPrimaryKeyColumns = []string{ProjectColumnID}
-)
-
 // newProject returns a new Project node from the provided Project row
-func newProject(row *model.Project) (*types.Project, error) {
+func newProject(row *customModel.GetProjectModel) (*types.Project, error) {
 	if row == nil {
 		return nil, errors.New("dbProject cannot be nil")
 	}
 	description := ""
-	if row.Description.Valid {
-		description = row.Description.String
+	if row.Project.Description.Valid {
+		description = row.Project.Description.String
 	}
 	venue := ""
-	if row.Venue.Valid {
-		venue = row.Venue.String
+	if row.Project.Venue.Valid {
+		venue = row.Project.Venue.String
 	}
-	venueType := ""
-	if row.VenueType.Valid {
-		venueType = row.VenueType.String
+	environmentType := types.EnvironmentType("")
+	if row.Project.EnvironmentType.Valid {
+		environmentType = types.EnvironmentType(row.Project.EnvironmentType.String)
+	}
+	projectPhase := types.ProjectPhase("")
+	if row.Project.ProjectPhase.Valid {
+		projectPhase = types.ProjectPhase(row.Project.ProjectPhase.String)
 	}
 	application := ""
-	if row.Application.Valid {
-		application = row.Application.String
-	}
-	projectFileURL := ""
-	if row.ProjectFileURL.Valid {
-		projectFileURL = row.ProjectFileURL.String
+	if row.Project.Application.Valid {
+		application = row.Project.Application.String
 	}
 
-	var budget types.Budget
-	if row.Budget.Valid {
-		if err := json.Unmarshal(row.Budget.JSON, &budget); err != nil {
-			return nil, errors.New("failed to unmarshal budget JSON: " + err.Error())
-		}
+	var budgetAmount int64
+	if !row.Project.BudgetAmount.IsZero() {
+		budgetAmount, _ = row.Project.BudgetAmount.Int64()
 	}
 
-	var metaData map[string]interface{}
-	if row.MetaData.Valid {
-		if err := json.Unmarshal(row.MetaData.JSON, &metaData); err != nil {
-			return nil, errors.New("failed to unmarshal meta_data JSON: " + err.Error())
-		}
+	budget := types.Budget{
+		Currency: row.Project.Currency.String,
+		Amount:   budgetAmount,
+	}
+
+	lockedByUser := ""
+	if row.Project.LockedByUserID.Valid && row.LockedByUserEmail != "" {
+		lockedByUser = row.LockedByUserEmail
 	}
 
 	return &types.Project{
-		ID:             row.ID,
-		OrganizationID: row.OrganizationID,
-		Name:           row.Name,
-		Description:    description,
-		Venue:          venue,
-		VenueType:      venueType,
-		Application:    application,
-		Budget:         budget,
-		MetaData:       metaData,
-		ProjectFileURL: projectFileURL,
+		ID:              row.Project.ID,
+		Name:            row.Project.Name.String,
+		Description:     description,
+		Venue:           venue,
+		EnvironmentType: environmentType,
+		ProjectPhase:    projectPhase,
+		Application:     application,
+		Budget:          budget,
+		IsArchived:      row.Project.IsArchived,
+		IsStarred:       row.IsStarred,
+		LockedByUser:    lockedByUser,
+		CreatedAt:       row.Project.CreatedAt,
+		UpdatedAt:       row.Project.UpdatedAt,
 	}, nil
 }

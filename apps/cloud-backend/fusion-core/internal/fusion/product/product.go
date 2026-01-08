@@ -3,44 +3,55 @@ package product
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 )
 
 // GetProductByID retrieves a product by its ID.
-func (p *Service) GetProductByID(ctx context.Context, id string) (*types.ProductResponse, error) {
-	// Implement the logic to get a product by ID.
-	return p.dbService.SelectByID(ctx, id)
+func (p *Service) GetProductByID(ctx context.Context, id string) (*types.SingleProductResponse, error) {
+	// Get the latest version from successful product sync
+	version, err := p.dbService.GetLatestSyncVersion(ctx, "product")
+	if err != nil {
+		// Fallback to configured version if no sync version found
+		version = p.version
+	}
+	return p.dbService.SelectByID(ctx, id, version)
 }
 
 // GetAllProducts retrieves all products.
 func (p *Service) GetAllProducts(ctx context.Context) (*types.ProductResponse, error) {
-	// Check who is viewing
+	// Get the latest version from successful product sync
+	version, err := p.dbService.GetLatestSyncVersion(ctx, "product")
+	if err != nil {
+		// Fallback to configured version if no sync version found
+		version = p.version
+	}
 
-	products, err := p.dbService.SelectAll(ctx)
+	products, err := p.dbService.SelectAll(ctx, version)
 	if err != nil {
 		return nil, fmt.Errorf("error getting products from DB: %w", err)
 	}
 	return products, nil
 }
 
-// UpdateProducts updates the products in the database.
-func (p *Service) UpdateProducts(ctx context.Context, product *types.ProductFetch) error {
-	if product == nil {
-		return fmt.Errorf("product cannot be nil")
+// GetProductPrices retrieves prices for a product by its ID.
+func (p *Service) GetProductPrices(ctx context.Context, id string, currency string, variant string) (*types.PriceResponse, error) {
+	// Convert id string to int
+	productID, err := strconv.Atoi(id)
+	if err != nil {
+		return nil, fmt.Errorf("invalid product ID: %w", err)
 	}
 
-	if product.Speakers != nil {
-		for _, speaker := range product.Speakers {
-			if speaker.ID == 0 {
-				return fmt.Errorf("speaker ID is required")
-			}
-		}
-
-		err := p.dbService.Upsert(ctx, product)
-		if err != nil {
-			return fmt.Errorf("error inserting product into DB: %w", err)
-		}
+	prices, err := p.dbService.GetPricesByProductID(ctx, productID, currency, variant)
+	if err != nil {
+		return nil, fmt.Errorf("error getting prices from DB: %w", err)
 	}
-	return nil
+
+	// Check if no prices found
+	if len(prices.Prices) == 0 {
+		return nil, fmt.Errorf("no prices found for product ID %s", id)
+	}
+
+	return prices, nil
 }

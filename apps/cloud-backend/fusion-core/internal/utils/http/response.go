@@ -35,7 +35,7 @@ func RespondWithAuthStatusSuccess(c *gin.Context, message string, data map[strin
 
 // RespondWithBadRequest sends a bad request response
 func RespondWithBadRequest(c *gin.Context, message string) {
-	c.JSON(http.StatusBadRequest, types.ErrorResponse{
+	c.JSON(http.StatusBadRequest, types.ErrorResponse2{
 		Message: message,
 		Code:    constants.CodeBadRequest,
 	})
@@ -43,7 +43,7 @@ func RespondWithBadRequest(c *gin.Context, message string) {
 
 // RespondWithInternalServerError sends an internal server error response
 func RespondWithInternalServerError(c *gin.Context) {
-	c.JSON(http.StatusInternalServerError, types.ErrorResponse{
+	c.JSON(http.StatusInternalServerError, types.ErrorResponse2{
 		Message: constants.MsgInternalServerError,
 		Code:    constants.CodeInternalServerError,
 	})
@@ -51,7 +51,7 @@ func RespondWithInternalServerError(c *gin.Context) {
 
 // RespondWithNotFound sends a not found response
 func RespondWithNotFound(c *gin.Context, message string) {
-	c.JSON(http.StatusNotFound, types.ErrorResponse{
+	c.JSON(http.StatusNotFound, types.ErrorResponse2{
 		Message: message,
 		Code:    "NOT_FOUND",
 	})

@@ -11,7 +11,14 @@ var TableNames = struct {
 	AppUser           string
 	Feature           string
 	FeaturePermission string
+	Product           string
+	ProductPrice      string
+	ProductSyncJob    string
+	Project           string
+	ProjectUser       string
 	Role              string
+	UserProfile       string
+	UserSettings      string
 }{
 	AccessLevel:       "access_level",
 	Account:           "account",
@@ -20,5 +27,12 @@ var TableNames = struct {
 	AppUser:           "app_user",
 	Feature:           "feature",
 	FeaturePermission: "feature_permission",
+	Product:           "product",
+	ProductPrice:      "product_price",
+	ProductSyncJob:    "product_sync_job",
+	Project:           "project",
+	ProjectUser:       "project_user",
 	Role:              "role",
+	UserProfile:       "user_profile",
+	UserSettings:      "user_settings",
 }

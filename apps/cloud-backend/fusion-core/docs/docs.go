@@ -418,7 +418,7 @@ const docTemplate = `{
         },
         "/products": {
             "get": {
-                "description": "Get all available products including speakers, amplifiers and digital signal processors",
+                "description": "Get all available products including speakers, amplifiers, DSPs, controllers, and endpoints",
                 "consumes": [
                     "application/json"
                 ],
@@ -474,7 +474,72 @@ const docTemplate = `{
                     "200": {
                         "description": "Successful response with product details",
                         "schema": {
-                            "$ref": "#/definitions/types.ProductResponse"
+                            "$ref": "#/definitions/types.SingleProductResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Product ID is required",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Product not found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/products/{id}/prices": {
+            "get": {
+                "description": "Get prices for a specific product by its unique identifier, optionally filtered by currency",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "products"
+                ],
+                "summary": "Get product prices by ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Product ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Currency code (e.g., USD, EUR) to filter prices",
+                        "name": "currency",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful response with product prices",
+                        "schema": {
+                            "$ref": "#/definitions/types.PriceResponse"
                         }
                     },
                     "400": {
@@ -509,6 +574,11 @@ const docTemplate = `{
         },
         "/projects": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Get all projects in the system",
                 "consumes": [
                     "application/json"
@@ -520,28 +590,57 @@ const docTemplate = `{
                     "projects"
                 ],
                 "summary": "Get all projects",
+                "parameters": [
+                    {
+                        "type": "boolean",
+                        "description": "Filter projects by archived status",
+                        "name": "is_archived",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Field to sort projects by (e.g., created_at, updated_at)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "enum": [
+                            "asc",
+                            "desc"
+                        ],
+                        "type": "string",
+                        "description": "Sort order (ascending or descending)",
+                        "name": "sort_order",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successfully retrieved all projects",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/types.Project"
-                            }
+                            "$ref": "#/definitions/types.GetAllProjectsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new project in the system",
                 "consumes": [
                     "application/json"
@@ -556,11 +655,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Project details",
-                        "name": "project",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectCreateRequest"
                         }
                     }
                 ],
@@ -568,80 +667,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Successfully created project",
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectCreateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload or user not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             }
         },
-        "/projects/{id}": {
-            "get": {
-                "description": "Get a specific project by its unique identifier",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "projects"
-                ],
-                "summary": "Get project by ID",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Project ID",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved project",
-                        "schema": {
-                            "$ref": "#/definitions/types.Project"
-                        }
-                    },
-                    "404": {
-                        "description": "Project not found",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
+        "/projects/{projectId}": {
             "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Delete a project by its unique identifier",
                 "consumes": [
                     "application/json"
@@ -657,7 +707,7 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Project ID",
-                        "name": "id",
+                        "name": "projectId",
                         "in": "path",
                         "required": true
                     }
@@ -666,27 +716,38 @@ const docTemplate = `{
                     "204": {
                         "description": "Successfully deleted project"
                     },
-                    "404": {
-                        "description": "Project not found",
+                    "400": {
+                        "description": "Bad request - Missing user ID",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project or user not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             },
             "patch": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Update an existing project by its ID",
                 "consumes": [
                     "application/json"
@@ -702,17 +763,17 @@ const docTemplate = `{
                     {
                         "type": "string",
                         "description": "Project ID",
-                        "name": "id",
+                        "name": "projectId",
                         "in": "path",
                         "required": true
                     },
                     {
                         "description": "Updated project details",
-                        "name": "project",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectUpdateRequest"
                         }
                     }
                 ],
@@ -720,42 +781,44 @@ const docTemplate = `{
                     "200": {
                         "description": "Successfully updated project",
                         "schema": {
-                            "$ref": "#/definitions/types.Project"
+                            "$ref": "#/definitions/types.ProjectUpdateResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
-                        "description": "Project not found",
+                        "description": "Project or user not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             }
         },
-        "/projects/{id}/sync": {
+        "/projects/{projectId}/archive": {
             "post": {
-                "description": "Synchronize project data with external source using metadata and ZIP file URL",
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Archive or unarchive a project based on request body",
                 "consumes": [
                     "application/json"
                 ],
@@ -765,73 +828,64 @@ const docTemplate = `{
                 "tags": [
                     "projects"
                 ],
-                "summary": "Sync project",
+                "summary": "Update project archive status",
                 "parameters": [
                     {
                         "type": "string",
                         "description": "Project ID",
-                        "name": "id",
+                        "name": "projectId",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Sync request containing metadata and ZIP file URL",
-                        "name": "syncRequest",
+                        "description": "Archive/unarchive request",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.SyncProjectRequest"
+                            "$ref": "#/definitions/types.ProjectArchiveRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "200": {
-                        "description": "Successfully initiated project sync",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                    "204": {
+                        "description": "Project archive status updated successfully"
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
                         }
                     },
                     "404": {
                         "description": "Project not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             }
         },
-        "/users": {
+        "/projects/{projectId}/lock": {
             "post": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new user with the specified details",
+                "description": "Lock or unlock a project for a specific user based on request body",
                 "consumes": [
                     "application/json"
                 ],
@@ -839,43 +893,230 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "users"
+                    "projects"
                 ],
-                "summary": "Create a new user",
+                "summary": "Update project lock status",
                 "parameters": [
                     {
-                        "description": "User creation details",
-                        "name": "user",
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lock/unlock request",
+                        "name": "body",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/types.CreateUserRequest"
+                            "$ref": "#/definitions/types.ProjectLockRequest"
                         }
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Successfully created user",
-                        "schema": {
-                            "$ref": "#/definitions/types.User"
-                        }
+                    "204": {
+                        "description": "Successfully updated project lock status"
                     },
                     "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                        "description": "Bad request - Invalid payload",
                         "schema": {
-                            "$ref": "#/definitions/types.BadRequestResponse"
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project or project already locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
             }
         },
-        "/users/authorization": {
+        "/projects/{projectId}/star/{userId}": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Star or unstar a project for a specific user based on request body",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Update project star status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Star/unstar request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.ProjectStarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Successfully updated project star status"
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestError"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden - User not assigned to project, project archived, or locked by another user",
+                        "schema": {
+                            "$ref": "#/definitions/types.ForbiddenError"
+                        }
+                    },
+                    "404": {
+                        "description": "Project or User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/projects/{projectId}/users/{userEmail}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Assign a user to a project by project ID and user email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Assign a user to a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Email",
+                        "name": "userEmail",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User successfully assigned to the project"
+                    },
+                    "404": {
+                        "description": "Project or User not found",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Remove a user from a project by project ID and user email",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "projects"
+                ],
+                "summary": "Remove a user from a project",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Project ID",
+                        "name": "projectId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "User Email",
+                        "name": "userEmail",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "User successfully removed from the project"
+                    },
+                    "404": {
+                        "description": "Project or User not found, or user not assigned to the project",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/user/me/authorization": {
             "get": {
                 "security": [
                     {
@@ -903,6 +1144,61 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized - User email not found in token",
                         "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/user/me/profile": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Get the current authenticated user's profile information",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Get user profile",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved user profile",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
+                        "schema": {
                             "$ref": "#/definitions/types.UnauthorizedResponse"
                         }
                     },
@@ -910,6 +1206,15 @@ const docTemplate = `{
                         "description": "User not found in the system",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
@@ -1120,43 +1425,6 @@ const docTemplate = `{
                 }
             }
         },
-        "types.Amplifier": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "meta_info": {
-                    "$ref": "#/definitions/types.Amplifier_meta_response"
-                }
-            }
-        },
-        "types.Amplifier_meta_response": {
-            "type": "object",
-            "properties": {
-                "channels": {
-                    "type": "integer"
-                },
-                "image_url": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "name": {
-                    "type": "string"
-                },
-                "power_output": {
-                    "$ref": "#/definitions/types.powerOutput"
-                },
-                "total_capacity": {
-                    "type": "number"
-                }
-            }
-        },
         "types.AssignRoleRequest": {
             "type": "object",
             "required": [
@@ -1174,40 +1442,28 @@ const docTemplate = `{
                 }
             }
         },
-        "types.AuthStatusSuccessResponse": {
+        "types.BadRequestError": {
             "type": "object",
             "properties": {
-                "data": {
-                    "type": "object",
-                    "additionalProperties": true
-                },
                 "message": {
-                    "type": "string",
-                    "example": "Authentication status retrieved successfully"
-                }
-            }
-        },
-        "types.BadRequestResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
                     "type": "string",
                     "example": "Bad Request"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "Invalid JSON payload"
                 }
             }
         },
         "types.Budget": {
             "type": "object",
+            "required": [
+                "currency"
+            ],
             "properties": {
                 "amount": {
-                    "type": "number"
+                    "type": "integer",
+                    "example": 50000
                 },
                 "currency": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "USD"
                 }
             }
         },
@@ -1259,193 +1515,18 @@ const docTemplate = `{
                 }
             }
         },
-        "types.DSP_meta": {
-            "type": "object",
-            "properties": {
-                "acoustic_echo_cancellation": {
-                    "type": "object",
-                    "properties": {
-                        "channels": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "configuration_software": {
-                    "type": "string"
-                },
-                "dimensions": {
-                    "type": "object",
-                    "properties": {
-                        "rack_space": {
-                            "type": "string"
-                        },
-                        "size": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "depth": {
-                                        "type": "integer"
-                                    },
-                                    "height": {
-                                        "type": "integer"
-                                    },
-                                    "unit": {
-                                        "type": "string"
-                                    },
-                                    "width": {
-                                        "type": "integer"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                },
-                "dsp_architecture": {
-                    "type": "string"
-                },
-                "firmware": {
-                    "type": "object",
-                    "properties": {
-                        "current_published_version": {
-                            "type": "string"
-                        },
-                        "current_running_version": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "gpio_logic_ports": {
-                    "type": "object",
-                    "properties": {
-                        "inputs": {
-                            "type": "integer"
-                        },
-                        "outputs": {
-                            "type": "integer"
-                        }
-                    }
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "images": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "max_number_of_analog_control": {
-                    "type": "integer"
-                },
-                "max_number_of_digital_control": {
-                    "type": "integer"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "name": {
-                    "type": "string"
-                },
-                "net_weight": {
-                    "type": "array",
-                    "items": {
-                        "type": "object",
-                        "properties": {
-                            "unit": {
-                                "type": "string"
-                            },
-                            "value": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                },
-                "number_of_inputs_and_outputs": {
-                    "type": "object",
-                    "properties": {
-                        "aes67": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "dante": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        },
-                        "fusion_connect": {
-                            "type": "object",
-                            "properties": {
-                                "max_inputs": {
-                                    "type": "integer"
-                                },
-                                "max_outputs": {
-                                    "type": "integer"
-                                }
-                            }
-                        }
-                    }
-                },
-                "product_codes": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "safe_operating_temperature": {
-                    "type": "object",
-                    "properties": {
-                        "max": {
-                            "type": "integer"
-                        },
-                        "min": {
-                            "type": "integer"
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "skus": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
-                },
-                "supported_bose_professional_dante_endpoints": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
-        "types.DigitalSignalProcessor": {
-            "type": "object",
-            "properties": {
-                "category": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "meta_info": {
-                    "$ref": "#/definitions/types.DSP_meta"
-                }
-            }
+        "types.EnvironmentType": {
+            "type": "string",
+            "enum": [
+                "indoor",
+                "outdoor",
+                "hybrid"
+            ],
+            "x-enum-varnames": [
+                "EnvironmentTypeIndoor",
+                "EnvironmentTypeOutdoor",
+                "EnvironmentTypeHybrid"
+            ]
         },
         "types.Feature": {
             "type": "object",
@@ -1489,29 +1570,53 @@ const docTemplate = `{
                 }
             }
         },
-        "types.InternalServerErrorResponse": {
+        "types.ForbiddenError": {
             "type": "object",
             "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Internal Server Error"
-                },
                 "message": {
                     "type": "string",
-                    "example": "Internal server error"
+                    "example": "Forbidden"
                 }
             }
         },
-        "types.NotFoundResponse": {
+        "types.GetAllProjectsResponse": {
             "type": "object",
             "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Not Found"
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.Project"
+                    }
                 },
+                "page": {
+                    "type": "integer",
+                    "example": 1
+                },
+                "total_count": {
+                    "type": "integer",
+                    "example": 25
+                },
+                "total_pages": {
+                    "type": "integer",
+                    "example": 3
+                }
+            }
+        },
+        "types.InternalServerError": {
+            "type": "object",
+            "properties": {
                 "message": {
                     "type": "string",
-                    "example": "User not found in the system"
+                    "example": "Internal Server Error"
+                }
+            }
+        },
+        "types.NotFoundError": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string",
+                    "example": "Not Found"
                 }
             }
         },
@@ -1556,26 +1661,100 @@ const docTemplate = `{
                 }
             }
         },
+        "types.PriceDetail": {
+            "type": "object",
+            "properties": {
+                "currency": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                },
+                "variant": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.PriceResponse": {
+            "type": "object",
+            "properties": {
+                "prices": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.PriceDetail"
+                    }
+                },
+                "product_id": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "types.ProductItemResponse": {
+            "type": "object",
+            "properties": {
+                "assets": {},
+                "description": {
+                    "type": "string"
+                },
+                "is_fusion_compatible": {
+                    "type": "boolean"
+                },
+                "model_family": {
+                    "type": "string"
+                },
+                "model_name": {
+                    "type": "string"
+                },
+                "productid": {
+                    "type": "integer"
+                },
+                "specifications": {}
+            }
+        },
         "types.ProductResponse": {
             "type": "object",
             "properties": {
+                "accessory": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
                 "amplifier": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.Amplifier"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
-                "digital_signal_processors": {
+                "controller": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.DigitalSignalProcessor"
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "dsp": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
+                    }
+                },
+                "io_endpoint": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
                 },
                 "speaker": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/types.Speaker"
+                        "$ref": "#/definitions/types.ProductItemResponse"
                     }
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },
@@ -1583,35 +1762,268 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "application": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Audio System Design"
+                },
+                "budget": {
+                    "$ref": "#/definitions/types.Budget"
+                },
+                "created_at": {
+                    "type": "string",
+                    "example": "2023-10-15T14:30:00Z"
+                },
+                "description": {
+                    "type": "string",
+                    "example": "Professional audio system for corporate conference room"
+                },
+                "environment_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "is_archived": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "is_starred": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "locked_by_user": {
+                    "type": "string",
+                    "example": "user456"
+                },
+                "name": {
+                    "type": "string",
+                    "example": "Conference Room Audio Setup"
+                },
+                "project_file_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/projects/123e4567/project.json"
+                },
+                "project_phase": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Development"
+                },
+                "thumbnail_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/projects/123e4567/thumbnail.jpg"
+                },
+                "updated_at": {
+                    "type": "string",
+                    "example": "2023-10-20T16:45:00Z"
+                },
+                "venue": {
+                    "type": "string",
+                    "example": "Building A - Conference Room 101"
+                }
+            }
+        },
+        "types.ProjectArchiveRequest": {
+            "type": "object",
+            "required": [
+                "is_archived"
+            ],
+            "properties": {
+                "is_archived": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "types.ProjectCreateRequest": {
+            "type": "object",
+            "required": [
+                "application",
+                "environment_type",
+                "name",
+                "projectId"
+            ],
+            "properties": {
+                "application": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Audio System Design"
                 },
                 "budget": {
                     "$ref": "#/definitions/types.Budget"
                 },
                 "description": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Professional audio system for corporate conference room"
                 },
-                "id": {
-                    "type": "string"
+                "environment_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
                 },
-                "meta_data": {
-                    "type": "object",
-                    "additionalProperties": true
+                "is_project_file_created": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "is_project_thumbnail_created": {
+                    "type": "boolean",
+                    "example": false
                 },
                 "name": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Conference Room Audio Setup"
                 },
-                "organization_id": {
-                    "type": "string"
+                "projectId": {
+                    "type": "string",
+                    "example": "50000001-0000-4000-8000-000000000008"
                 },
-                "project_file_url": {
-                    "type": "string"
+                "project_phase": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Proposal"
                 },
                 "venue": {
-                    "type": "string"
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Building A - Conference Room 101"
+                }
+            }
+        },
+        "types.ProjectCreateResponse": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
                 },
-                "venue_type": {
-                    "type": "string"
+                "project_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                },
+                "thumbnail_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                }
+            }
+        },
+        "types.ProjectLockRequest": {
+            "type": "object",
+            "required": [
+                "is_locked"
+            ],
+            "properties": {
+                "is_locked": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "types.ProjectPhase": {
+            "type": "string",
+            "enum": [
+                "Proposal",
+                "Development",
+                "Commissioned"
+            ],
+            "x-enum-varnames": [
+                "ProjectPhaseProposal",
+                "ProjectPhaseDevelopment",
+                "ProjectPhaseCommissioned"
+            ]
+        },
+        "types.ProjectStarRequest": {
+            "type": "object",
+            "required": [
+                "is_starred"
+            ],
+            "properties": {
+                "is_starred": {
+                    "type": "boolean",
+                    "example": true
+                }
+            }
+        },
+        "types.ProjectUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "application": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Audio System Design"
+                },
+                "budget": {
+                    "$ref": "#/definitions/types.Budget"
+                },
+                "description": {
+                    "type": "string",
+                    "maxLength": 1000,
+                    "example": "Updated professional audio system for corporate conference room"
+                },
+                "environment_type": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.EnvironmentType"
+                        }
+                    ],
+                    "example": "indoor"
+                },
+                "is_project_file_dirty": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "is_project_thumbnail_dirty": {
+                    "type": "boolean",
+                    "example": true
+                },
+                "name": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 1,
+                    "example": "Updated Conference Room Audio Setup"
+                },
+                "project_phase": {
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/types.ProjectPhase"
+                        }
+                    ],
+                    "example": "Development"
+                },
+                "venue": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "example": "Building B - Conference Room 205"
+                }
+            }
+        },
+        "types.ProjectUpdateResponse": {
+            "type": "object",
+            "properties": {
+                "project_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
+                },
+                "thumbnail_upload_url": {
+                    "type": "string",
+                    "example": "https://storage.example.com/upload/projects/123e4567"
                 }
             }
         },
@@ -1688,115 +2100,29 @@ const docTemplate = `{
                 }
             }
         },
-        "types.Speaker": {
+        "types.SingleProductResponse": {
             "type": "object",
             "properties": {
-                "category": {
+                "accessory": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "amplifier": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "controller": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "dsp": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "io_endpoint": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "speaker": {
+                    "$ref": "#/definitions/types.ProductItemResponse"
+                },
+                "version": {
                     "type": "string"
-                },
-                "id": {
-                    "type": "integer"
-                },
-                "meta_info": {
-                    "$ref": "#/definitions/types.Speaker_meta_response"
-                }
-            }
-        },
-        "types.Speaker_meta_response": {
-            "type": "object",
-            "properties": {
-                "available_taps": {
-                    "type": "object",
-                    "properties": {
-                        "100v": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        },
-                        "70v": {
-                            "type": "array",
-                            "items": {
-                                "type": "number"
-                            }
-                        }
-                    }
-                },
-                "environment": {
-                    "type": "string"
-                },
-                "image_url": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "is_subwoofer": {
-                    "type": "boolean"
-                },
-                "max_spl": {
-                    "type": "number"
-                },
-                "model": {
-                    "type": "string"
-                },
-                "mount_type": {
-                    "type": "string"
-                },
-                "nominal_impedance": {
-                    "$ref": "#/definitions/types.nominal_impedence"
-                },
-                "power_handling": {
-                    "type": "object",
-                    "properties": {
-                        "long_term_continuous": {
-                            "type": "string"
-                        },
-                        "peak": {
-                            "type": "string"
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
-                },
-                "sensitivity": {
-                    "type": "object",
-                    "properties": {
-                        "at": {
-                            "type": "array",
-                            "items": {
-                                "type": "object",
-                                "properties": {
-                                    "key": {
-                                        "type": "string"
-                                    },
-                                    "value": {
-                                        "type": "string"
-                                    }
-                                }
-                            }
-                        },
-                        "unit": {
-                            "type": "string"
-                        }
-                    }
-                }
-            }
-        },
-        "types.SyncProjectRequest": {
-            "type": "object"
-        },
-        "types.UnauthorizedResponse": {
-            "type": "object",
-            "properties": {
-                "error": {
-                    "type": "string",
-                    "example": "Unauthorized"
-                },
-                "message": {
-                    "type": "string",
-                    "example": "User email not found in token"
                 }
             }
         },
@@ -1936,221 +2262,6 @@ const docTemplate = `{
                     "example": "active"
                 }
             }
-        },
-        "types.nominal_impedence": {
-            "type": "object",
-            "properties": {
-                "unit": {
-                    "type": "string"
-                },
-                "value": {
-                    "type": "string"
-                }
-            }
-        },
-        "types.powerOutput": {
-            "type": "object",
-            "properties": {
-                "asymmetrical": {
-                    "type": "object",
-                    "properties": {
-                        "peak_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "peak_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "rated_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "rated_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                },
-                "symmetrical": {
-                    "type": "object",
-                    "properties": {
-                        "peak_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "peak_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        },
-                        "rated_per_channel": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "impedance": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "unit": {
-                                                        "type": "string"
-                                                    },
-                                                    "value": {
-                                                        "type": "integer"
-                                                    }
-                                                }
-                                            },
-                                            "power": {
-                                                "type": "object",
-                                                "properties": {
-                                                    "unit": {
-                                                        "type": "string"
-                                                    },
-                                                    "value": {
-                                                        "type": "integer"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        },
-                        "rated_per_channel_high_voltage": {
-                            "type": "object",
-                            "properties": {
-                                "at": {
-                                    "type": "array",
-                                    "items": {
-                                        "type": "object",
-                                        "properties": {
-                                            "key": {
-                                                "type": "string"
-                                            },
-                                            "value": {
-                                                "type": "integer"
-                                            }
-                                        }
-                                    }
-                                },
-                                "unit": {
-                                    "type": "string"
-                                }
-                            }
-                        }
-                    }
-                }
-            }
         }
     },
     "securityDefinitions": {
@@ -2166,7 +2277,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8020",
+	Host:             "fusionapi.cloud-dev-external-bpro.in:8080",
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "Fusion Cloud Backend API",

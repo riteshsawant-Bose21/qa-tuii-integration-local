@@ -39,3 +39,12 @@ func (l *Logger) Fatal(msg string, fields ...zapcore.Field) {
 func (l *Logger) Info(msg string, fields ...zapcore.Field) {
 	l.zap.Info(msg, fields...)
 }
+
+// Warn logs a message at WarnLevel.
+func (l *Logger) Warn(msg string, fields ...zapcore.Field) {
+	l.zap.Warn(msg, fields...)
+}
+
+func (l *Logger) JobSyncLog() *zap.Logger {
+	return l.zap
+}
