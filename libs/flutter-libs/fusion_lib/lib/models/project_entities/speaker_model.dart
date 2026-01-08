@@ -71,6 +71,7 @@ class Speaker extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    Color? color,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -96,6 +97,34 @@ class Speaker extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+    );
+  }
+
+  Speaker migrateSpeakerTo({required Speaker speaker}) {
+    return Speaker(
+      id: id,
+      name: speaker.name,
+      pos: pos,
+      wiringPos: wiringPos,
+      rotation: rotation,
+      gain: gain,
+      zAxis: zAxis,
+      assetImagePath: speaker.assetImagePath,
+      type: speaker.type,
+      locationEntity: locationEntity,
+      ipAddress: ipAddress,
+      speakerSKU: speaker.speakerSKU,
+      price: speaker.price,
+      hardwareName: speaker.hardwareName,
+      pitch: pitch,
+      roll: roll,
+      yaw: yaw,
+      equipmentLocationPosition: equipmentLocationPosition,
+      lockListeningArea: lockListeningArea,
+      communicationPorts: speaker.communicationPorts,
+      inputPortsData: speaker.inputPortsData,
+      outputPortsData: speaker.outputPortsData,
+      addedFromBuildingPage: speaker.addedFromBuildingPage,
     );
   }
 

@@ -89,36 +89,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
   Offset? cursorPosition;
 
-  bool isCustomCursorNeeded() {
-    return serviceLocator<ProjectViewModel>().selectedProductToAdd != null;
-    // ||
-    // serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode ||
-    // serviceLocator<ProjectViewModel>().isInZoneSelectionMode;
-  }
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
-  Widget getCustomCursor() {
-    if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
-      return Image.asset(
-        serviceLocator<ProjectViewModel>().selectedProductToAdd!.image, // Your asset icon path
-        width: 32,
-        height: 32,
-      );
-    }
-    // else if (serviceLocator<ProjectViewModel>().isInListeningAreaSelectionMode) {
-    //   return Icon(
-    //     Icons.edit,
-    //     size: 20,
-    //     color: Theme.of(context).colorScheme.primary,
-    //   );
-    // } else if (serviceLocator<ProjectViewModel>().isInZoneSelectionMode) {
-    //   return Icon(
-    //     Icons.layers,
-    //     size: 20,
-    //     color: Theme.of(context).colorScheme.primary,
-    //   );
-    // }
-    else {
-      return const SizedBox.shrink();
+  bool get shouldUseCustomCursor => projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers;
+
+  MouseCursor get cursorType {
+    if (widget.floorCanvasController.isDrawing.value) {
+      return SystemMouseCursors.precise;
+    } else if (projectViewModel.selectedProductToAdd != null || projectViewModel.shouldPlaceNonPlacedSpeakers) {
+      return SystemMouseCursors.none;
+    } else {
+      return SystemMouseCursors.basic;
     }
   }
 
@@ -184,16 +165,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         return ValueListenableBuilder<bool>(
                           valueListenable: widget.floorCanvasController.isDrawing,
                           builder: (BuildContext context, bool isDrawingValue, Widget? child) {
-                            final bool useCustomCursor = isCustomCursorNeeded();
                             return Stack(
                               children: <Widget>[
                                 MouseRegion(
-                                  cursor:
-                                      widget.floorCanvasController.isDrawing.value
-                                          ? SystemMouseCursors.precise
-                                          : (serviceLocator<ProjectViewModel>().selectedProductToAdd != null
-                                              ? SystemMouseCursors.none
-                                              : SystemMouseCursors.basic),
+                                  cursor: cursorType,
                                   onHover: (PointerHoverEvent event) {
                                     setState(() {
                                       cursorPosition = event.localPosition;
@@ -317,15 +292,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       splMin: serviceLocator<ProjectViewModel>().minSPL,
                                       splMax: serviceLocator<ProjectViewModel>().maxSPL,
                                       addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
-                                        if (serviceLocator<ProjectViewModel>().selectedProductToAdd == null) {
-                                          debugPrint("No product selected to add");
-                                          return;
+                                        final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+
+                                        if (viewModel.shouldPlaceNonPlacedSpeakers) {
+                                          viewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
+                                        } else {
+                                          if (viewModel.selectedProductToAdd == null) return;
+                                          viewModel.addSelectedProduct(position: speakerPosition, listeningAreaId: listeningAreaId, isFromBuildingPage: true);
                                         }
-                                        serviceLocator<ProjectViewModel>().addSelectedProduct(
-                                          position: speakerPosition,
-                                          listeningAreaId: listeningAreaId,
-                                          isFromBuildingPage: true,
-                                        );
 
                                         serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
 
@@ -342,14 +316,36 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   ),
                                 ),
 
-                                if (useCustomCursor && cursorPosition != null)
+                                if (shouldUseCustomCursor && cursorPosition != null) ...<Widget>[
                                   Positioned(
                                     left: cursorPosition!.dx - 12,
                                     top: cursorPosition!.dy - 12,
                                     child: IgnorePointer(
-                                      child: getCustomCursor(),
+                                      child: Builder(
+                                        builder: (BuildContext context) {
+                                          if (serviceLocator<ProjectViewModel>().shouldPlaceNonPlacedSpeakers) {
+                                            final List<Speaker> nonPlacedSpeakers =
+                                                serviceLocator<ProjectViewModel>().getNonPlacedSpeakersForCurrentListeningArea();
+                                            if (nonPlacedSpeakers.isEmpty) return const SizedBox();
+                                            return Image.asset(
+                                              nonPlacedSpeakers.first.assetImagePath,
+                                              width: 32,
+                                              height: 32,
+                                            );
+                                          } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
+                                            return Image.asset(
+                                              serviceLocator<ProjectViewModel>().selectedProductToAdd!.image,
+                                              width: 32,
+                                              height: 32,
+                                            );
+                                          } else {
+                                            return const SizedBox.shrink();
+                                          }
+                                        },
+                                      ),
                                     ),
                                   ),
+                                ],
                               ],
                             );
                           },

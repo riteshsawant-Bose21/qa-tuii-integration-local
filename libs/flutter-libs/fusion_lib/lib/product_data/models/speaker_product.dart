@@ -290,6 +290,7 @@ class SpeakerProduct {
   final Sensitivity? sensitivity;
   final String? shortDescription;
   final List<int> skus;
+  final bool isFusionCompatible;
 
   const SpeakerProduct({
     required this.productId,
@@ -314,6 +315,7 @@ class SpeakerProduct {
     this.sensitivity,
     this.shortDescription,
     this.skus = const [],
+    this.isFusionCompatible = false,
   });
 
   factory SpeakerProduct.fromJson(Map<String, dynamic> json) {
@@ -369,6 +371,7 @@ class SpeakerProduct {
               ?.map((e) => (e as num).toInt())
               .toList() ??
           [],
+      isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
@@ -399,6 +402,7 @@ class SpeakerProduct {
           if (shortDescription != null) 'short_description': shortDescription,
           'skus': skus,
         },
+        'is_fusion_compatible': isFusionCompatible,
       };
 
   @override

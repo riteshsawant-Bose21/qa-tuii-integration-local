@@ -37,6 +37,12 @@ dependencies:
   google_fonts: ^6.2.1
   flutter_svg: ^2.2.3
 
+  just_audio: ^0.10.5
+  just_audio_media_kit: ^2.1.0
+  media_kit_libs_linux: any
+  media_kit_libs_windows_audio: any
+
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

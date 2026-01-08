@@ -14,6 +14,7 @@ class AccessoryProduct {
   final String? shortDescription;
   final List<String> skus;
   final String? type;
+  final bool isFusionCompatible;
 
   const AccessoryProduct({
     required this.productId,
@@ -25,6 +26,7 @@ class AccessoryProduct {
     this.shortDescription,
     this.skus = const [],
     this.type,
+    this.isFusionCompatible = false,
   });
 
   factory AccessoryProduct.fromJson(Map<String, dynamic> json) {
@@ -43,6 +45,7 @@ class AccessoryProduct {
               .toList() ??
           [],
       type: specs['type'] as String?,
+      isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
@@ -58,6 +61,7 @@ class AccessoryProduct {
           'skus': skus,
           if (type != null) 'type': type,
         },
+        'is_fusion_compatible': isFusionCompatible,
       };
 
   @override

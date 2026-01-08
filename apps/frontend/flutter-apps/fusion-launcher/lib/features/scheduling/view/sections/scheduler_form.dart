@@ -319,7 +319,7 @@ class SchedulerForm extends StatelessWidget {
                                                 isActive: viewModel.canEnableSubmit,
                                                 onTap: () async {
                                                   try {
-                                                    final bool value = await viewModel.submit();
+                                                    final bool value = await viewModel.submit(initial);
                                                     if (value) {
                                                       Navigator.pop(context);
                                                     }

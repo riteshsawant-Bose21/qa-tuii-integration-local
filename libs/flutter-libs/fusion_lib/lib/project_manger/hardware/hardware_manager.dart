@@ -6,9 +6,7 @@ extension HardwareManager on ProjectManager {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    if (projectService!.hardware.exists(hardware.id)) {
-      throw Exception('Hardware with id ${hardware.id} already exists');
-    }
+
     projectService!.addHardware(hw: hardware, addToCircuit: addToCircuit);
   }
 
@@ -67,6 +65,20 @@ extension HardwareManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     return projectService!.getAllHardwareInFloorWithoutPosition(floorId: floorId);
+  }
+
+  List<HardwareComponent> getAllHardwareInListeningAreaWithPosition(String listeningAreaId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInListeningAreaWithPosition(listeningAreaId: listeningAreaId);
+  }
+
+  List<HardwareComponent> getAllHardwareInListeningAreaWithoutPosition(String listeningAreaId) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId: listeningAreaId);
   }
 
   List<HardwareComponent> getHardwareForFloor(String floorId) {

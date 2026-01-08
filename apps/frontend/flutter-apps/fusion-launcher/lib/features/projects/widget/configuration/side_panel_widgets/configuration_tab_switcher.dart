@@ -44,6 +44,11 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
       assetsName: Assets.schedulingIcon,
       label: 'Scheduling',
     ),
+
+    ConfigurationMenuMode.mediaFiles: TabConfig(
+      assetsName: Assets.playIcon,
+      label: 'Media Files',
+    ),
   };
 
   @override

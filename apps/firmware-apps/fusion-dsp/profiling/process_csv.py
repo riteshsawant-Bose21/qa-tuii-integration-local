@@ -29,6 +29,16 @@ CONFIG_DEFINITIONS = {
         'block': 'peq',
         'max_params': [(40, 16)],
         'format_string': 'T = {0} + {1}*bands + {2}*channels + {3}*bandchannels'
+    },
+    'fir': {
+        'file_pattern': 'timings_fir_*_*_*_processed.csv',
+        'checkpoint_pattern': 'timings_fir_*_*_*_processed.csv',
+        'param_regex': r'timings_fir_(\d+)_(\d+)_(\d+)_processed',
+        'param_names': ['channels', 'num_taps_wfir', 'num_taps_fir'],
+        'features': ['channels', 'num_taps_wfir', 'num_taps_fir', 'total_taps', 'channels_taps_wfir', 'channels_taps_fir', 'channels_total_taps'],
+        'block': 'arbitrary_eq',
+        'max_params': [(4, 512, 512)],
+        'format_string': 'T = {0} + {1}*channels + {2}*num_taps_wfir + {3}*num_taps_fir + {4}*total_taps + {5}*channels_taps_wfir + {6}*channels_taps_fir + {7}*channels_total_taps'
     }
 }
 
@@ -37,7 +47,7 @@ def process_files_in_batches(config_name='matrix_mixer', batch_size=100):
     Process checkpoint files in small batches and save intermediate results to disk.
     
     Args:
-        config_name: Configuration name ('matrix_mixer', 'peq', etc.)
+        config_name: Configuration name ('matrix_mixer', 'peq', 'fir', etc.)
         batch_size: Number of files to process per batch
     """
     config = CONFIG_DEFINITIONS.get(config_name)
@@ -168,9 +178,20 @@ def calculate_all_regression_formulas(config_name='matrix_mixer'):
         actual_max_p2 = max(k[1] for k in all_keys)
         actual_min_p1 = min(k[0] for k in all_keys)
         actual_min_p2 = min(k[1] for k in all_keys)
+    elif all_keys and config_name == 'fir':
+        actual_max_p1 = max(k[0] for k in all_keys)  # channels
+        actual_max_p2 = max(k[1] for k in all_keys)  # num_taps_wfir
+        actual_max_p3 = max(k[2] for k in all_keys)  # num_taps_fir
+        actual_min_p1 = min(k[0] for k in all_keys)
+        actual_min_p2 = min(k[1] for k in all_keys)
+        actual_min_p3 = min(k[2] for k in all_keys)
     else:
-        actual_max_p1, actual_max_p2 = config['max_params'][0]
-        actual_min_p1 = actual_min_p2 = 1
+        if config_name == 'fir':
+            actual_max_p1, actual_max_p2, actual_max_p3 = config['max_params'][0]
+            actual_min_p1 = actual_min_p2 = actual_min_p3 = 1
+        else:
+            actual_max_p1, actual_max_p2 = config['max_params'][0]
+            actual_min_p1 = actual_min_p2 = 1
     
     if config_name == 'matrix_mixer':
         for fixed_output in range(actual_min_p2, actual_max_p2 + 1):
@@ -277,6 +298,42 @@ def calculate_all_regression_formulas(config_name='matrix_mixer'):
                     'coefficient': model.coef_[0],
                     'r2': r2
                 })
+    
+    elif config_name == 'fir':
+        all_x_data = []
+        all_y_data = []
+        
+        for key in all_keys:
+            if key in combination_data:
+                combo_df = pd.concat(combination_data[key])
+                channels, num_taps_wfir, num_taps_fir = key
+                
+                for _, row in combo_df.iterrows():
+                    features = [
+                        row['channels'],
+                        row['num_taps_wfir'], 
+                        row['num_taps_fir'],
+                        row['total_taps'],
+                        row['channels_taps_wfir'],
+                        row['channels_taps_fir'],
+                        row['channels_total_taps']
+                    ]
+                    all_x_data.append(features)
+                    all_y_data.append(row[block_name])
+        
+        if len(all_x_data) > 10:
+            X = np.array(all_x_data)
+            y = np.array(all_y_data)
+            model = LinearRegression().fit(X, y)
+            r2 = model.score(X, y)
+            
+            regression_formulas.append({
+                'feature': 'full_model',
+                'intercept': model.intercept_,
+                'coefficients': model.coef_,
+                'r2': r2,
+                'features': config['features']
+            })
     
     print(f"Calculated {len(regression_formulas)} individual regression formulas")
     return regression_formulas
@@ -599,7 +656,7 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser(description='Process and analyze profiling data from CSV files')
     parser.add_argument('config', nargs='?', default='matrix_mixer',
-                       choices=['matrix_mixer', 'peq'],
+                       choices=['matrix_mixer', 'peq', 'fir'],
                        help='Configuration to process (default: matrix_mixer)')
     parser.add_argument('--batch-size', type=int, default=100,
                        help='Number of files to process per batch (default: 100)')

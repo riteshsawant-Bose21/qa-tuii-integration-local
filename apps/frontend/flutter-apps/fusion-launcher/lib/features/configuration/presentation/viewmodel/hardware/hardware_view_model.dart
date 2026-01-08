@@ -179,6 +179,49 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<HardwareComponent> getAllPlacedHardwareInListeningArea({
+    required String listeningAreaId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInListeningAreaWithPosition(listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get placed hardware for listening area: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<HardwareComponent> getAllNonPlacedHardwareInListeningArea({
+    required String listeningAreaId,
+  }) {
+    try {
+      return projectManager.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId);
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <HardwareComponent>[];
+    }
+  }
+
+  List<Speaker> getNonPlacedSpeakersForCurrentListeningArea() {
+    try {
+      final String? listeningAreaId = currentSelectedListeningAreaId;
+      if (listeningAreaId == null) throw Exception("No listening area selected");
+      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithoutPosition(listeningAreaId);
+      return hardwares.whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <Speaker>[];
+    }
+  }
+
   ResponseCallback<bool> moveHardware({
     required String hardwareId,
     String? listeningAreaId,
@@ -317,6 +360,26 @@ extension HardwareViewModel on ProjectViewModel {
         message: "Failed to reorder hardware: $e",
       );
       throwError("Failed to reorder hardware: $e");
+    }
+  }
+
+  void placeSelectedSpeaker({required Offset position, bool autoSave = true, required bool isFromBuildingPage}) {
+    try {
+      if (autoSave) recordSnapshot();
+
+      final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakersForCurrentListeningArea();
+      if (nonPlacedSpeakers.isEmpty) return;
+      final Speaker updatedSpeaker = nonPlacedSpeakers.first.copyWith(pos: position);
+      updateHardware(hardware: updatedSpeaker);
+
+      if (nonPlacedSpeakers.length == 1) {
+        // Last speaker placed
+        shouldPlaceNonPlacedSpeakers = false;
+        updateProject();
+      }
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
+      shouldPlaceNonPlacedSpeakers = false;
     }
   }
 

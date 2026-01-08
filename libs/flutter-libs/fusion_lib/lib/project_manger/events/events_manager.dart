@@ -34,19 +34,19 @@ extension EventsManager on ProjectManager {
   }
 
   ///Adds new Event for GPI
-  void addEventForGPI({required String gpiId}) {
+  FusionEvent addEventForGPI({required String gpiId}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.addEventForGPI(gpiId: gpiId);
+    return projectService!.addEventForGPI(gpiId: gpiId);
   }
 
   /// Adds Events for Schedule Entries
-  void addEventForSchedule({required String scheduleId}) {
+  FusionEvent addEventForSchedule({required String scheduleId}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
     }
-    projectService!.addEventForSchedule(scheduleId: scheduleId);
+    return projectService!.addEventForSchedule(scheduleId: scheduleId);
   }
 
   List<EventTriggerType> getEventTriggers() {
@@ -152,5 +152,26 @@ extension EventsManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     return projectService!.getEventById(eventId: eventId);
+  }
+
+  FusionEvent? getEventsForGPI({required String gpiId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getEventsForGPI(gpiId: gpiId);
+  }
+
+  FusionEvent? getEventsForSchedule({required String scheduleId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getEventsForSchedule(scheduleId: scheduleId);
+  }
+
+  void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updateEventSelectedState(eventId: eventId, selectedState: selectedState);
   }
 }

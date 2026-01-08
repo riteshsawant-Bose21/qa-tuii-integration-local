@@ -14,13 +14,6 @@ class ListeningAreaProperties extends StatelessWidget {
     required this.selectedListeningArea,
   });
 
-  final List<String> venueOptions = <String>[
-    "Indoor",
-    "Outdoor",
-    "Mixed",
-    "Stadium",
-  ];
-
   final List<String> listeningHeightOptions = <String>[
     "Sitting",
     "Standing",
@@ -160,10 +153,10 @@ class ListeningAreaProperties extends StatelessWidget {
                   _buildLAPropertyRow(
                     context: context,
                     label: "Type",
-                    value: selectedListeningArea.venuType,
-                    options: venueOptions,
+                    value: selectedListeningArea.venuType?.name ?? "",
+                    options: VenueType.values.map((VenueType type) => type.name).toList(),
                     onOptionSelected: (int selectedIndex) {
-                      final String selectedType = venueOptions[selectedIndex];
+                      final VenueType selectedType = VenueType.values[selectedIndex];
                       final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
                       viewModel.updateListeningArea(area: updatedLA);
                     },

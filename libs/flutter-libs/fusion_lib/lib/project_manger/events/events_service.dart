@@ -23,7 +23,7 @@ extension EventsService on ProjectService {
     events.remove(eventId);
   }
 
-  void addEventForGPI({required String gpiId}) {
+  FusionEvent addEventForGPI({required String gpiId}) {
     final newEvent = FusionEvent(
       name: "GPI Event",
       triggerType: EventTriggerType.gpi,
@@ -32,9 +32,10 @@ extension EventsService on ProjectService {
       ),
     );
     events.add(newEvent.id, newEvent);
+    return newEvent;
   }
 
-  void addEventForSchedule({required String scheduleId}) {
+  FusionEvent addEventForSchedule({required String scheduleId}) {
     final newEvent = FusionEvent(
       name: "Scheduled Event",
       triggerType: EventTriggerType.schedule,
@@ -44,6 +45,7 @@ extension EventsService on ProjectService {
       action: EventActionType.timedEvent,
     );
     events.add(newEvent.id, newEvent);
+    return newEvent;
   }
 
   //Get first dropdown
@@ -282,5 +284,32 @@ extension EventsService on ProjectService {
       throw Exception("Event with id $eventId does not exist.");
     }
     return events.get(eventId)!;
+  }
+
+  FusionEvent? getEventsForGPI({required String gpiId}) {
+    final allEvents = events.getAll();
+    try {
+      return allEvents.firstWhere((event) => event.triggerType == EventTriggerType.gpi && event.item?.itemId == gpiId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  FusionEvent? getEventsForSchedule({required String scheduleId}) {
+    final allEvents = events.getAll();
+    try {
+      return allEvents.firstWhere((event) => event.triggerType == EventTriggerType.schedule && event.item?.itemId == scheduleId);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  void updateEventSelectedState({required String eventId, required EventStates selectedState}) {
+    if (!events.exists(eventId)) {
+      throw Exception("Event with id $eventId does not exist.");
+    }
+    final FusionEvent event = events.get(eventId)!;
+    final FusionEvent updated = event.copyWith(selectedState: selectedState);
+    events.add(eventId, updated);
   }
 }
