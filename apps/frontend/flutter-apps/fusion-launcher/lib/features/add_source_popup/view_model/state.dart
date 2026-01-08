@@ -5,19 +5,17 @@ class AddSourceViewModelState extends Equatable {
   final SourceSelectionOption selectedSourceOption;
   final SignalType selectedSignalType;
   final List<SourceData?> selectedSources;
-  final Zone? selectedZone;
-  final SubZone? selectedSubZone;
-  final SourceConnectionLocation? selectedConnectionLocation;
+  final ListeningArea? selectedListeningArea;
+  final AddSourceConnectionType? selectedConnectionType;
   final String? selectedSourceName;
 
   const AddSourceViewModelState({
     this.selectedSourceSectionType = SourceSectionType.microPhone,
     this.selectedSourceOption = SourceSelectionOption.singleSource,
     this.selectedSignalType = SignalType.mono,
-    this.selectedSources = const <SourceData>[],
-    this.selectedZone,
-    this.selectedSubZone,
-    this.selectedConnectionLocation,
+    this.selectedSources = const <SourceData?>[],
+    this.selectedListeningArea,
+    this.selectedConnectionType,
     this.selectedSourceName,
   });
 
@@ -26,9 +24,8 @@ class AddSourceViewModelState extends Equatable {
     SourceSelectionOption? selectedSourceOption,
     SignalType? selectedSignalType,
     List<SourceData?>? selectedSources,
-    Zone? selectedZone,
-    SubZone? selectedSubZone,
-    SourceConnectionLocation? selectedConnectionLocation,
+    ListeningArea? selectedListeningArea,
+    AddSourceConnectionType? selectedConnectionType,
     String? selectedSourceName,
   }) {
     return AddSourceViewModelState(
@@ -36,10 +33,9 @@ class AddSourceViewModelState extends Equatable {
       selectedSourceOption: selectedSourceOption ?? this.selectedSourceOption,
       selectedSignalType: selectedSignalType ?? this.selectedSignalType,
       selectedSources: selectedSources ?? this.selectedSources,
-      selectedZone: selectedZone ?? this.selectedZone,
-      selectedSubZone: selectedSubZone ?? this.selectedSubZone,
-      selectedConnectionLocation: selectedConnectionLocation ?? this.selectedConnectionLocation,
+      selectedConnectionType: selectedConnectionType ?? this.selectedConnectionType,
       selectedSourceName: selectedSourceName ?? this.selectedSourceName,
+      selectedListeningArea: selectedListeningArea ?? this.selectedListeningArea,
     );
   }
 
@@ -49,9 +45,8 @@ class AddSourceViewModelState extends Equatable {
     selectedSourceOption,
     selectedSignalType,
     selectedSources,
-    selectedZone,
-    selectedSubZone,
-    selectedConnectionLocation,
+    selectedListeningArea,
+    selectedConnectionType,
     selectedSourceName,
   ];
 }
@@ -93,12 +88,37 @@ enum SourceSectionType {
         return SourceData.mediaSourceItems;
     }
   }
+
+  List<AddSourceConnectionType> get connectionTypes {
+    switch (this) {
+      case SourceSectionType.microPhone:
+        return <AddSourceConnectionType>[
+          AddSourceConnectionType.wired,
+          AddSourceConnectionType.xlrpal,
+          AddSourceConnectionType.ethernet,
+        ];
+      case SourceSectionType.mediaSources:
+        return <AddSourceConnectionType>[
+          AddSourceConnectionType.usb,
+          AddSourceConnectionType.hdmi,
+          AddSourceConnectionType.bluetooth,
+          AddSourceConnectionType.ethernet,
+          AddSourceConnectionType.wired,
+          AddSourceConnectionType.rca,
+        ];
+    }
+  }
 }
 
-enum SourceConnectionLocation {
-  internal("Internal"),
-  external("External");
+enum AddSourceConnectionType {
+  usb("USB"),
+  hdmi("HDMI"),
+  bluetooth("Bluetooth"),
+  ethernet("Ethernet"),
+  wired("Wired"),
+  xlrpal("XLRPAL"),
+  rca("RCA");
 
-  const SourceConnectionLocation(this.displayName);
+  const AddSourceConnectionType(this.displayName);
   final String displayName;
 }

@@ -76,8 +76,7 @@ class _NewWidget extends StatelessWidget {
                   final AddSourceViewModel addSourceViewModel = context.read<AddSourceViewModel>();
                   final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
-                  final List<Zone> zones = projectViewModel.getAllZones();
-                  final List<SubZone> subZones = projectViewModel.getSubZonesForZone(parentZoneId: state.selectedZone?.id ?? '');
+                  final List<ListeningArea> listeningAreas = projectViewModel.getAllListeningAreas();
 
                   return SingleChildScrollView(
                     padding: const EdgeInsetsGeometry.all(16),
@@ -85,24 +84,21 @@ class _NewWidget extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
-                        FusionRadio<SourceSelectionOption>(
-                          selected: state.selectedSourceOption,
-                          options: SourceSelectionOption.values,
-                          labelBuilder: (SourceSelectionOption option) {
-                            return FusionAppText(
-                              text: option.displayName,
-                              style: context.textTheme.bodyMedium?.copyWith(
-                                color: context.colorScheme.onSurface,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            );
-                          },
-                          onChanged: (SourceSelectionOption value) {
-                            addSourceViewModel.setSourceOption(value);
-                          },
-                        ),
-                        const SizedBox(height: 28),
-
+                        // FusionRadio<SourceSelectionOption>(
+                        //   selected: state.selectedSourceOption,
+                        //   options: SourceSelectionOption.values,
+                        //   labelBuilder: (SourceSelectionOption option) {
+                        //     return FusionAppText(
+                        //       text: option.displayName,
+                        //       style: context.textTheme.bodyMedium?.copyWith(
+                        //         color: context.colorScheme.onSurface,
+                        //         fontWeight: FontWeight.w400,
+                        //       ),
+                        //     );
+                        //   },
+                        //   onChanged: addSourceViewModel.setSourceOption,
+                        // ),
+                        // const SizedBox(height: 28),
                         BuildRowPropertyWidget<SourceSectionType>(
                           label: "Type",
                           value: state.selectedSourceSectionType,
@@ -167,28 +163,89 @@ class _NewWidget extends StatelessWidget {
 
                         const SizedBox(height: 20),
 
-                        BuildRowPropertyWidget<Zone>(
-                          label: "Location",
-                          value: state.selectedZone,
-                          options: zones,
-                          valueBuilder: (Zone option) => option.name,
-                          onOptionSelected: (int value, Zone option) {
-                            addSourceViewModel.setSelectedZone(option);
+                        BuildRowPropertyWidget<ListeningArea>(
+                          label: "Area",
+                          value: state.selectedListeningArea,
+                          options: listeningAreas,
+                          valueBuilder: (ListeningArea option) => option.name,
+                          onOptionSelected: (int value, ListeningArea option) {
+                            addSourceViewModel.setSelectedListeningArea(option);
                           },
                         ),
 
-                        if (state.selectedZone != null && subZones.isNotEmpty) ...<Widget>[
-                          const SizedBox(height: 10),
-                          BuildRowPropertyWidget<SubZone>(
-                            label: "",
-                            value: state.selectedSubZone,
-                            options: projectViewModel.getSubZonesForZone(parentZoneId: state.selectedZone!.id),
-                            valueBuilder: (SubZone option) => option.name,
-                            onOptionSelected: (int value, SubZone option) {
-                              addSourceViewModel.setSelectedSubZone(option);
-                            },
-                          ),
-                        ],
+                        Builder(
+                          builder: (BuildContext context) {
+                            final (String? zoneName, String? subZoneName) = addSourceViewModel.getZonesForListeningArea;
+
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                if (zoneName != null) ...<Widget>[
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: "Location",
+                                          style: context.textTheme.bodyMedium?.copyWith(
+                                            color: context.colorScheme.onSurface,
+                                            fontWeight: FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Container(
+                                          height: 32,
+                                          alignment: Alignment.centerLeft,
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                          decoration: BoxDecoration(
+                                            color: context.colorScheme.surface,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: FusionAppText(
+                                            text: zoneName,
+                                            maxLine: 1,
+                                            style: Theme.of(context).textTheme.labelMedium,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+
+                                if (subZoneName != null) ...<Widget>[
+                                  const SizedBox(height: 10),
+                                  Row(
+                                    children: <Widget>[
+                                      const Expanded(child: SizedBox()),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Container(
+                                          height: 32,
+                                          alignment: Alignment.centerLeft,
+                                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                                          decoration: BoxDecoration(
+                                            color: context.colorScheme.surface,
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: FusionAppText(
+                                            text: subZoneName,
+                                            maxLine: 1,
+                                            style: Theme.of(context).textTheme.labelMedium,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ],
+                            );
+                          },
+                        ),
+
+                        const SizedBox(height: 10),
 
                         const SizedBox(height: 20),
 
@@ -215,13 +272,13 @@ class _NewWidget extends StatelessWidget {
                         ),
                         const SizedBox(height: 20),
 
-                        BuildRowPropertyWidget<SourceConnectionLocation>(
+                        BuildRowPropertyWidget<AddSourceConnectionType>(
                           label: "Connection",
-                          value: state.selectedConnectionLocation,
-                          options: SourceConnectionLocation.values,
-                          valueBuilder: (SourceConnectionLocation option) => option.displayName,
-                          onOptionSelected: (int value, SourceConnectionLocation option) {
-                            addSourceViewModel.setSelectedConnectionLocation(option);
+                          value: state.selectedConnectionType,
+                          options: state.selectedSourceSectionType.connectionTypes,
+                          valueBuilder: (AddSourceConnectionType option) => option.displayName,
+                          onOptionSelected: (int value, AddSourceConnectionType option) {
+                            addSourceViewModel.setSelectedConnectionType(option);
                           },
                         ),
                         const SizedBox(height: 20),
