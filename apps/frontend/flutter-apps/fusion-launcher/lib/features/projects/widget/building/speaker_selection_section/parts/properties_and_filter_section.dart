@@ -115,9 +115,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                               Expanded(
                                 child: TextFormField(
                                   controller: listeningAreaController,
-                                  maxLength: 24,
                                   decoration: InputDecoration(
-                                    counterText: "",
                                     hintText: 'Enter area name',
                                     hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
                                     border: InputBorder.none,
