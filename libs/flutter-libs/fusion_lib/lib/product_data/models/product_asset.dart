@@ -13,9 +13,49 @@ class ProductAsset {
     required this.assets,
   });
 
+  /// Creates a default ProductAsset with placeholder images for a given product type
+  factory ProductAsset.defaultFor(String productType) {
+    // Different product types have different standard color variants
+    switch (productType.toLowerCase()) {
+      case 'speaker':
+        return ProductAsset(assets: {
+          'black': ['packages/fusion_lib/lib/assets/images/default_speaker_black.png'],
+          'white': ['packages/fusion_lib/lib/assets/images/default_speaker_white.png']
+        });
+      case 'amplifier':
+        return ProductAsset(assets: {
+          '_flat': ['packages/fusion_lib/lib/assets/images/default_amplifier_image.png']
+        });
+      case 'controller':
+        return ProductAsset(assets: {
+          '_flat': ['packages/fusion_lib/lib/assets/images/default_controller_image.png']
+        });
+      case 'dsp':
+        return ProductAsset(assets: {
+          '_flat': ['packages/fusion_lib/lib/assets/images/default_dsp_image.png']
+        });
+      case 'io_endpoint':
+        return ProductAsset(assets: {
+          '_flat': ['packages/fusion_lib/lib/assets/images/default_io_endpoint_image.png']
+        });
+      case 'accessory':
+        return ProductAsset(assets: {
+          '_flat': ['packages/fusion_lib/lib/assets/images/default_accessory_image.png']
+        });
+      default:
+        // For non-speaker products, store in a way that can be extracted as flat list
+        return ProductAsset(assets: {
+          '_flat': ['packages/fusion_lib/lib/assets/images/default_${productType.toLowerCase()}.png']
+        });
+    }
+  }
+
   /// Creates from a list of asset maps (API format)
-  factory ProductAsset.fromJsonList(List<dynamic>? jsonList) {
+  factory ProductAsset.fromJsonList(List<dynamic>? jsonList, {String? productType}) {
     if (jsonList == null || jsonList.isEmpty) {
+      if (productType != null) {
+        return ProductAsset.defaultFor(productType);
+      }
       return const ProductAsset(assets: {});
     }
 
@@ -28,16 +68,31 @@ class ProductAsset {
           final value = entry.value;
 
           if (value is List) {
-            allAssets[key] = value.map((e) => e.toString()).toList();
+            // Filter out empty strings and convert to strings
+            final filteredAssets = value
+                .map((e) => e.toString().trim())
+                .where((str) => str.isNotEmpty)
+                .toList();
+            allAssets[key] = filteredAssets;
           } else if (value == null) {
             // Preserve the color/category key even if there are no assets
             allAssets[key] = <String>[];
-          } else if (value is String) {
-            // Be defensive: sometimes APIs may send a single string
-            allAssets[key] = <String>[value];
+          } else if (value is String && value.trim().isNotEmpty) {
+            // Only add non-empty strings
+            allAssets[key] = <String>[value.trim()];
+          } else {
+            // Handle empty strings or other invalid values
+            allAssets[key] = <String>[];
           }
         }
       }
+    }
+
+    // Check if we ended up with any non-empty assets after processing
+    final hasAnyNonEmptyAssets = allAssets.values
+        .any((list) => list.isNotEmpty);
+    if (!hasAnyNonEmptyAssets && productType != null) {
+      return ProductAsset.defaultFor(productType);
     }
 
     return ProductAsset(assets: allAssets);
@@ -64,6 +119,16 @@ class ProductAsset {
   Map<String, dynamic> toJson() => {
     'assets': assets,
   };
+
+  /// Returns a flat list of asset URLs for non-speaker products
+  List<String> toAssetList() {
+    // If this is a default asset with _flat key, return just the URLs
+    if (assets.containsKey('_flat')) {
+      return assets['_flat'] ?? [];
+    }
+    // Otherwise return all asset URLs flattened
+    return allAssetUrls;
+  }
 
   @override
   String toString() => 'ProductAsset(assets: $assets)';

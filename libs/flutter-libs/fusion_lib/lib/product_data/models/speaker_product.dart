@@ -323,10 +323,10 @@ class SpeakerProduct {
 
     return SpeakerProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'speaker'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String? ?? 'Professional speaker delivering exceptional audio quality',
       availableTaps: specs['available_taps'] != null
           ? AvailableTaps.fromJson(
               specs['available_taps'] as Map<String, dynamic>)

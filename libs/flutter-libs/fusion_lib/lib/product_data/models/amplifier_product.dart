@@ -93,10 +93,10 @@ class AmplifierProduct {
 
     return AmplifierProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'amplifier'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String? ?? 'Professional power amplifier for superior audio performance',
       numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] as Map<String, dynamic>?,
       numberOfLoudspeakerInputs:
           (specs['number_of_loudspeaker_inputs'] as num?)?.toInt() ?? 0,
@@ -115,7 +115,7 @@ class AmplifierProduct {
 
   Map<String, dynamic> toJson() => {
         'productid': productId,
-        'assets': [assets.toJson()],
+        'assets': assets.toAssetList(),
         'model_name': modelName,
         'model_family': modelFamily,
         'description': description,
