@@ -114,7 +114,7 @@ const TokenDebug: React.FC<TokenDebugProps> = ({ authorizationData }) => {
             
             <Box>
               <Typography variant="subtitle2" gutterBottom>
-                API Response (/api/v1/user/me/authorization):
+                API Response (/api/v1/users/authorization):
               </Typography>
               <Box sx={{ p: 2, bgcolor: '#f5f5f5', borderRadius: 1, fontFamily: 'monospace', fontSize: '0.75rem', overflow: 'auto', maxHeight: 200 }}>
                 <pre>{JSON.stringify(tokenInfo.apiResponse, null, 2)}</pre>

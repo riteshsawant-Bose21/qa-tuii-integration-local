@@ -311,7 +311,7 @@ export class ApiClient {
    * Get user roles and permissions from backend
    */
   async getUserAuthorization(): Promise<ApiResponse<UserAuthorizationResponse>> {
-    return this.get<UserAuthorizationResponse>('/api/v1/user/me/authorization');
+    return this.get<UserAuthorizationResponse>('/api/v1/users/authorization');
   }
 }
 

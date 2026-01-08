@@ -53,14 +53,14 @@ func (a *API) registerRoutes() {
 
 	// User routes with authentication
 	userHandler := handler.NewUserHandler(a.user)
-	user := v1.Group("/user")
+	user := v1.Group("/users")
 
 	// Apply auth middleware to protected user routes
 	user.Use(a.authMiddleware.Middleware())
 
 	{
-		user.GET("/me/authorization", userHandler.GetUserAuthorization)
-		user.GET("/me/profile", userHandler.GetUserProfile)
+		user.GET("/authorization", userHandler.GetUserAuthorization)
+		user.GET("/profile", userHandler.GetUserProfile)
 	}
 
 	// Additional user management routes

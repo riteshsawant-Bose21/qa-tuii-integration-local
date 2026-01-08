@@ -512,6 +512,15 @@ definitions:
       version:
         type: string
     type: object
+  types.UnauthorizedResponse:
+    properties:
+      error:
+        example: Unauthorized
+        type: string
+      message:
+        example: User email not found in token
+        type: string
+    type: object
   types.UpdateUserRequest:
     properties:
       account_id:
@@ -636,14 +645,11 @@ paths:
         "200":
           description: User is authenticated
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/types.AuthStatusSuccessResponse'
         "401":
           description: User is not authenticated
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.UnauthorizedResponse'
       security:
       - BearerAuth: []
       summary: Check authentication status
@@ -1433,15 +1439,11 @@ paths:
         "400":
           description: Bad request - Invalid JSON payload
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestResponse'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Create a new user
@@ -1468,15 +1470,11 @@ paths:
         "404":
           description: User not found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.NotFoundResponse'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user by email
@@ -1509,24 +1507,77 @@ paths:
         "400":
           description: Bad request - Invalid JSON payload
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.BadRequestResponse'
         "404":
           description: User not found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.NotFoundResponse'
         "500":
           description: Internal server error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/types.InternalServerErrorResponse'
       security:
       - BearerAuth: []
       summary: Update user
+      tags:
+      - users
+  /users/authorization:
+    get:
+      consumes:
+      - application/json
+      description: Get authorization details including user info, account, role, and
+        permissions for the current authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user authorization details
+          schema:
+            $ref: '#/definitions/types.UserAuthorizationResponse'
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            $ref: '#/definitions/types.UnauthorizedResponse'
+        "404":
+          description: User not found in the system
+          schema:
+            $ref: '#/definitions/types.NotFoundResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user authorization details
+      tags:
+      - auth
+  /users/profile:
+    get:
+      consumes:
+      - application/json
+      description: Get the current authenticated user's profile information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved user profile
+          schema:
+            $ref: '#/definitions/types.User'
+        "401":
+          description: Unauthorized - User email not found in token
+          schema:
+            $ref: '#/definitions/types.UnauthorizedResponse'
+        "404":
+          description: User not found in the system
+          schema:
+            $ref: '#/definitions/types.NotFoundResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/types.InternalServerErrorResponse'
+      security:
+      - BearerAuth: []
+      summary: Get user profile
       tags:
       - users
 schemes:

@@ -9,33 +9,17 @@ import (
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model/models"
+	customModel "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/model"
 	"github.com/aarondl/null/v8"
 	"github.com/aarondl/sqlboiler/v4/boil"
 	"github.com/aarondl/sqlboiler/v4/queries/qm"
 )
 
-// UserDBExecutor defines the basic database operations
-type UserDBExecutor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Query(query string, args ...interface{}) (*sql.Rows, error)
-	QueryRow(query string, args ...interface{}) *sql.Row
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
-}
-
-// UserDBContextExecutor can perform SQL queries with context
-type UserDBContextExecutor interface {
-	UserDBExecutor
-
-	ExecContext(ctx context.Context, query string, args ...interface{}) (sql.Result, error)
-	QueryContext(ctx context.Context, query string, args ...interface{}) (*sql.Rows, error)
-	QueryRowContext(ctx context.Context, query string, args ...interface{}) *sql.Row
-}
-
 type Service struct {
-	db UserDBContextExecutor
+	db customModel.DBContextExecutor
 }
 
-func NewService(db UserDBContextExecutor) *Service {
+func NewService(db customModel.DBContextExecutor) *Service {
 	if db == nil {
 		panic("db cannot be nil")
 	}
@@ -65,12 +49,7 @@ func (s *Service) GetUserByEmail(ctx context.Context, email string) (*types.User
 		AccountTypeRoleID: appUser.AccountTypeRoleID,
 		AccountID:         appUser.AccountID,
 		CreatedAt:         appUser.CreatedAt.Time, // Convert null.Time to time.Time
-		UpdatedAt:         nil,                    // Convert null.Time to *time.Time
-	}
-
-	// Handle nullable UpdatedAt field
-	if appUser.UpdatedAt.Valid {
-		user.UpdatedAt = &appUser.UpdatedAt.Time
+		UpdatedAt:         appUser.UpdatedAt.Time, // Convert null.Time to time.Time
 	}
 
 	return user, nil
@@ -232,12 +211,7 @@ func (s *Service) CreateUser(ctx context.Context, req *types.CreateUserRequest) 
 		AccountTypeRoleID: appUser.AccountTypeRoleID,
 		AccountID:         appUser.AccountID,
 		CreatedAt:         appUser.CreatedAt.Time,
-		UpdatedAt:         nil,
-	}
-
-	// Handle nullable UpdatedAt field
-	if appUser.UpdatedAt.Valid {
-		user.UpdatedAt = &appUser.UpdatedAt.Time
+		UpdatedAt:         appUser.UpdatedAt.Time,
 	}
 
 	return user, nil
@@ -287,12 +261,7 @@ func (s *Service) UpdateUser(ctx context.Context, userID string, req *types.Upda
 		AccountTypeRoleID: appUser.AccountTypeRoleID,
 		AccountID:         appUser.AccountID,
 		CreatedAt:         appUser.CreatedAt.Time,
-		UpdatedAt:         nil,
-	}
-
-	// Handle nullable UpdatedAt field
-	if appUser.UpdatedAt.Valid {
-		user.UpdatedAt = &appUser.UpdatedAt.Time
+		UpdatedAt:         appUser.UpdatedAt.Time,
 	}
 
 	return user, nil

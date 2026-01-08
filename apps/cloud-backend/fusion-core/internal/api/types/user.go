@@ -4,13 +4,13 @@ import "time"
 
 // User represents a user in the system
 type User struct {
-	ID                string     `json:"id" db:"id" example:"usr_123456789"`
-	Email             string     `json:"email" db:"email" example:"john.doe@company.com"`
-	FullName          string     `json:"full_name" db:"full_name" example:"John Doe"`
-	AccountTypeRoleID int        `json:"account_type_role_id" db:"account_type_role_id" example:"1"`
-	AccountID         string     `json:"account_id" db:"account_id" example:"acc_987654321"`
-	CreatedAt         time.Time  `json:"created_at" db:"created_at" example:"2023-01-15T10:30:00Z"`
-	UpdatedAt         *time.Time `json:"updated_at" db:"updated_at" example:"2023-06-20T14:45:00Z"`
+	ID                string    `json:"id" db:"id" example:"usr_123456789"`
+	Email             string    `json:"email" db:"email" example:"john.doe@company.com"`
+	FullName          string    `json:"full_name" db:"full_name" example:"John Doe"`
+	AccountTypeRoleID int       `json:"account_type_role_id" db:"account_type_role_id" example:"1"`
+	AccountID         string    `json:"account_id" db:"account_id" example:"acc_987654321"`
+	CreatedAt         time.Time `json:"created_at" db:"created_at" example:"2023-01-15T10:30:00Z"`
+	UpdatedAt         time.Time `json:"updated_at" db:"updated_at" example:"2023-06-20T14:45:00Z"`
 }
 
 // AccountType represents the type of account

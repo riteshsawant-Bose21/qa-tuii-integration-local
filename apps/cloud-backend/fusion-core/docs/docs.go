@@ -46,17 +46,13 @@ const docTemplate = `{
                     "200": {
                         "description": "User is authenticated",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/types.AuthStatusSuccessResponse"
                         }
                     },
                     "401": {
                         "description": "User is not authenticated",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.UnauthorizedResponse"
                         }
                     }
                 }
@@ -1203,10 +1199,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized - User email not found in token",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundResponse"
                         }
                     },
                     "404": {
@@ -1221,23 +1220,20 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
             }
         },
-        "/users": {
-            "post": {
+        "/users/profile": {
+            "get": {
                 "security": [
                     {
                         "BearerAuth": []
                     }
                 ],
-                "description": "Create a new user with the specified details",
+                "description": "Get the current authenticated user's profile information",
                 "consumes": [
                     "application/json"
                 ],
@@ -1247,41 +1243,30 @@ const docTemplate = `{
                 "tags": [
                     "users"
                 ],
-                "summary": "Create a new user",
-                "parameters": [
-                    {
-                        "description": "User creation details",
-                        "name": "user",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/types.CreateUserRequest"
-                        }
-                    }
-                ],
+                "summary": "Get user profile",
                 "responses": {
-                    "201": {
-                        "description": "Successfully created user",
+                    "200": {
+                        "description": "Successfully retrieved user profile",
                         "schema": {
                             "$ref": "#/definitions/types.User"
                         }
                     },
-                    "400": {
-                        "description": "Bad request - Invalid JSON payload",
+                    "401": {
+                        "description": "Unauthorized - User email not found in token",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.UnauthorizedResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User not found in the system",
+                        "schema": {
+                            "$ref": "#/definitions/types.NotFoundResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -1324,19 +1309,13 @@ const docTemplate = `{
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
@@ -1388,28 +1367,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Bad request - Invalid JSON payload",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
                         }
                     }
                 }
