@@ -62,10 +62,10 @@ class DspProduct {
 
     return DspProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'dsp'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String? ?? 'Digital Signal Processor for advanced audio processing and optimization',
       gpioLogicPorts: specs['gpio_logic_ports'] != null
           ? GpioLogicPorts.fromJson(
               specs['gpio_logic_ports'] as Map<String, dynamic>)
@@ -86,7 +86,7 @@ class DspProduct {
 
   Map<String, dynamic> toJson() => {
         'productid': productId,
-        'assets': [assets.toJson()],
+        'assets': assets.toAssetList(),
         'model_name': modelName,
         'model_family': modelFamily,
         'description': description,

@@ -34,10 +34,10 @@ class AccessoryProduct {
 
     return AccessoryProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'accessory'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String? ?? 'Professional audio accessory for enhanced system functionality',
       quantity: (specs['quantity'] as num?)?.toInt(),
       shortDescription: specs['short_description'] as String?,
       skus: (specs['skus'] as List<dynamic>?)
@@ -51,7 +51,7 @@ class AccessoryProduct {
 
   Map<String, dynamic> toJson() => {
         'productid': productId,
-        'assets': [assets.toJson()],
+        'assets': assets.toAssetList(),
         'model_name': modelName,
         'model_family': modelFamily,
         'description': description,
