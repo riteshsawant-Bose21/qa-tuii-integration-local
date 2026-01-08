@@ -6,6 +6,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/amplifier_product.dart';
 import 'package:fusion_lib/product_data/models/dsp_product.dart';
 import 'package:fusion_lib/product_data/models/io_endpoint_product.dart';
+import 'package:fusion_lib/product_data/models/product_port_data.dart';
 import 'package:fusion_lib/product_data/products.dart';
 
 class EqlProductsVm extends Cubit<EQLProductsState> {
@@ -36,6 +37,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.amplifier,
+          portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           price: 290.00,
           specifications: <String, String>{
             "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
@@ -54,6 +56,8 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           name: element.modelName,
           assetPath: element.assets.firstAssetUrl ?? '',
           data: element,
+          //TODO: Check Endpoint Port Data
+          portData: ProductPortData(),
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.endpoint,
           description: element.shortDescription ?? element.description,
@@ -71,6 +75,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     for (final DspProduct element in datasource.dsps) {
       allProducts.add(
         EQLProduct(
+          portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
           assetPath: element.assets.firstAssetUrl ?? '',
           data: element,
@@ -94,7 +99,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     loadProducts();
   }
 
-  final Products datasource = Products(baseUrl: AppConfig.awsApiBaseUrl);
+  final Products datasource = Products(
+    baseUrl: AppConfig.awsApiBaseUrl,
+    fusionOnly: false,
+  );
   final List<EQLProduct> allProducts = <EQLProduct>[];
   void loadProducts() {
     if (!_isInitialized) {
@@ -133,6 +141,13 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
 
   void addProductToLocation({required String equipLocationId, required EQLProduct product}) {
     final HardwareComponent hardware = _createHardwareFor(product);
+    hardware.inputPortsData.clear();
+    hardware.outputPortsData.clear();
+    hardware.communicationPorts.clear();
+    hardware.inputPortsData.addAll(product.portData.inputPorts);
+    hardware.outputPortsData.addAll(product.portData.outputPorts);
+    hardware.communicationPorts.addAll(product.portData.comPorts);
+
     projectViewModel.addHardware(hardware: hardware);
     projectViewModel.addHardwareToEquipLocation(
       equipLocationId: equipLocationId,
@@ -251,6 +266,7 @@ class EQLProduct {
   final EQLDeviceType deviceType;
   final double price;
   final Map<String, String> specifications;
+  final ProductPortData portData;
   EQLProduct({
     required this.name,
     required this.assetPath,
@@ -260,5 +276,6 @@ class EQLProduct {
     required this.deviceType,
     required this.price,
     required this.specifications,
+    required this.portData,
   });
 }
