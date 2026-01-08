@@ -1,4 +1,5 @@
 import 'product_asset.dart';
+import 'product_port_data.dart';
 
 /// Represents a measurement value with key, unit, and value
 class AmplifierMeasurementValue {
@@ -65,7 +66,7 @@ class AmplifierProduct {
   final String modelName;
   final String modelFamily;
   final String description;
-  final Map<String, dynamic>? numberOfInputsAndOutputs;
+  final ProductPortData? numberOfInputsAndOutputs;
   final int numberOfLoudspeakerInputs;
   final Power? power;
   final Map<String, dynamic>? powerOutput;
@@ -97,7 +98,9 @@ class AmplifierProduct {
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       description: json['description'] as String? ?? '',
-      numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] as Map<String, dynamic>?,
+      numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] != null
+          ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>)
+          : null,
       numberOfLoudspeakerInputs:
           (specs['number_of_loudspeaker_inputs'] as num?)?.toInt() ?? 0,
       power: specs['power'] != null
