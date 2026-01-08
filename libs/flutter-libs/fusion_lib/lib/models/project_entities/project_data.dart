@@ -70,7 +70,7 @@ class ProjectData {
       id: json['id'] as String?,
       name: json['name'] as String,
       projectName: json['projectName'] as String? ?? json['name'] as String,
-      metaData: json['metaData'] as String,
+      metaData: (json['metaData']??"") as String,
       projectColors:
           (json['projectColors'] as List<dynamic>?)?.map((dynamic e) => Color(int.parse(e.toString()))).toList() ?? <Color>[Colors.green, Colors.greenAccent],
       projectRawData: json,
