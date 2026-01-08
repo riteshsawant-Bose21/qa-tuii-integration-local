@@ -73,16 +73,26 @@ class ProductAsset {
                 .map((e) => e.toString().trim())
                 .where((str) => str.isNotEmpty)
                 .toList();
-            allAssets[key] = filteredAssets;
+            
+            // Only add the key if there are actual assets or if it's a speaker with standard colors
+            if (filteredAssets.isNotEmpty) {
+              allAssets[key] = filteredAssets;
+            } else if (productType?.toLowerCase() == 'speaker' && 
+                      (key == 'black' || key == 'white')) {
+              // For speakers, add default images for standard colors even if empty
+              final defaultSpeaker = ProductAsset.defaultFor('speaker');
+              allAssets[key] = defaultSpeaker.assets[key] ?? [];
+            }
           } else if (value == null) {
-            // Preserve the color/category key even if there are no assets
-            allAssets[key] = <String>[];
+            // For speakers with standard colors, add defaults for null values
+            if (productType?.toLowerCase() == 'speaker' && 
+                (key == 'black' || key == 'white')) {
+              final defaultSpeaker = ProductAsset.defaultFor('speaker');
+              allAssets[key] = defaultSpeaker.assets[key] ?? [];
+            }
           } else if (value is String && value.trim().isNotEmpty) {
             // Only add non-empty strings
             allAssets[key] = <String>[value.trim()];
-          } else {
-            // Handle empty strings or other invalid values
-            allAssets[key] = <String>[];
           }
         }
       }
