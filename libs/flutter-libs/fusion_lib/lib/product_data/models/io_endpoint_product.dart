@@ -59,10 +59,10 @@ class IoEndpointProduct {
 
     return IoEndpointProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'io_endpoint'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String? ?? 'I/O Endpoint - Professional audio interface for seamless connectivity',
       inputs: specs['inputs'] != null
           ? IoPort.fromJson(specs['inputs'] as Map<String, dynamic>)
           : null,
@@ -81,7 +81,7 @@ class IoEndpointProduct {
 
   Map<String, dynamic> toJson() => {
         'productid': productId,
-        'assets': [assets.toJson()],
+        'assets': assets.toAssetList(),
         'model_name': modelName,
         'model_family': modelFamily,
         'description': description,
