@@ -80,61 +80,61 @@ class SavedProjectsTabContent extends StatelessWidget {
                   ),
                 ),
               ),
-              Expanded(
-                child: Container(
-                  height: 80,
-                  width: double.infinity,
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: _getBorder(context),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      FusionAppText(
-                        text: 'Templates',
-                        style: context.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+              // Expanded(
+              //   child: Container(
+              //     height: 80,
+              //     width: double.infinity,
+              //     padding: const EdgeInsets.all(12),
+              //     decoration: BoxDecoration(
+              //       color: context.colorScheme.surface,
+              //       borderRadius: BorderRadius.circular(12),
+              //       border: _getBorder(context),
+              //     ),
+              //     child: Column(
+              //       crossAxisAlignment: CrossAxisAlignment.start,
+              //       children: <Widget>[
+              //         FusionAppText(
+              //           text: 'Templates',
+              //           style: context.textTheme.titleMedium?.copyWith(
+              //             fontWeight: FontWeight.w600,
+              //           ),
+              //         ),
 
-                      Flexible(
-                        child: Row(
-                          children: <Widget>[
-                            Expanded(
-                              child: FusionAppText(
-                                text: 'Start working from a prebuilt template.',
-                                style: context.textTheme.labelSmall?.copyWith(
-                                  color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                ),
-                              ),
-                            ),
-                            MouseRegion(
-                              cursor: SystemMouseCursors.click,
-                              child: NeumorphicDarkButton(
-                                onTap: () {
-                                  // Navigator.pushNamed(context, Routes.projectPage);
-                                },
-                                height: 26,
-                                width: 38,
-                                borderRadius: 10,
-                                child: FittedBox(
-                                  child: Icon(
-                                    LucideIcons.arrowRight,
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              //         Flexible(
+              //           child: Row(
+              //             children: <Widget>[
+              //               Expanded(
+              //                 child: FusionAppText(
+              //                   text: 'Start working from a prebuilt template.',
+              //                   style: context.textTheme.labelSmall?.copyWith(
+              //                     color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+              //                   ),
+              //                 ),
+              //               ),
+              //               MouseRegion(
+              //                 cursor: SystemMouseCursors.click,
+              //                 child: NeumorphicDarkButton(
+              //                   onTap: () {
+              //                     // Navigator.pushNamed(context, Routes.projectPage);
+              //                   },
+              //                   height: 26,
+              //                   width: 38,
+              //                   borderRadius: 10,
+              //                   child: FittedBox(
+              //                     child: Icon(
+              //                       LucideIcons.arrowRight,
+              //                       color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+              //                     ),
+              //                   ),
+              //                 ),
+              //               ),
+              //             ],
+              //           ),
+              //         ),
+              //       ],
+              //     ),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 8),

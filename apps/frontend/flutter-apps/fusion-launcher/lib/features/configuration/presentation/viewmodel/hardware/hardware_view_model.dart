@@ -461,6 +461,7 @@ extension HardwareViewModel on ProjectViewModel {
       assetImagePath: assetImagePath,
       type: OutputType.analogOutput,
       price: 300,
+      mountingType: MountingType.fromJson(product.mountType),
       // price: product.price, // TODO: add price
       pitch: product.mountType == "pendant" || product.mountType == "ceiling" ? 90.0 : 0.0,
       inputPortsData: <PortData>[

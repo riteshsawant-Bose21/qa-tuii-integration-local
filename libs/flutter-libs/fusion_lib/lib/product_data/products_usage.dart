@@ -14,7 +14,7 @@ Future<void> main() async {
   const bool fusionOnly = true; // Set to true to show only Fusion compatible products
   
   final products = Products(
-    baseUrl: 'http://localhost:8080/api/v1',
+    baseUrl: 'http://fusionapi.cloud-dev-external-bpro.in:8080/api/v1',
     fusionOnly: fusionOnly,
   );
   await products.initialize();
@@ -44,8 +44,11 @@ Map<String, dynamic> _productToMap(dynamic product) {
     'shortDescription': product.shortDescription,
     'isFusionCompatible': product.isFusionCompatible,
     'skus': product.skus,
-    'assets': [product.assets?.assets ?? {}],
   };
+
+  // Use the product's toJson method to get the correct asset structure
+  final productJson = product.toJson();
+  base['assets'] = productJson['assets'];
 
   // Add product-specific fields safely
   try {

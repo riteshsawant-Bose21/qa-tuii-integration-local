@@ -568,43 +568,38 @@ class FloorCanvasPainter extends CustomPainter {
 
       if (comp is Speaker) {
         final double radius = (dst.width / 2) * 0.5;
-        final SpeakerModel? speakerModel = SpeakerCatalog.findByModel(comp.speakerSKU);
 
-        if (speakerModel != null) {
-          final Paint fillPaint = Paint()
-            ..color = Colors.black
-            ..style = PaintingStyle.fill;
+        final Paint fillPaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.fill;
 
-          final Paint outlinePaint = Paint()
-            ..color = Colors.black
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 1.5 / zoomScale;
+        final Paint outlinePaint = Paint()
+          ..color = Colors.black
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1.5 / zoomScale;
 
+        if (comp.mountingType == 'surface') {
           // --- SURFACE-MOUNTED (Rectangle) ---
-          if (speakerModel.mountingType == 'surface') {
-            final Rect rect = Rect.fromCenter(
-              center: comp.pos!,
-              width: radius * 1.5,
-              height: radius * 2,
-            );
-            canvas.drawRect(rect, fillPaint);
-            canvas.drawRect(rect, outlinePaint);
-          }
+          final Rect rect = Rect.fromCenter(
+            center: comp.pos!,
+            width: radius * 1.5,
+            height: radius * 2,
+          );
+          canvas.drawRect(rect, fillPaint);
+          canvas.drawRect(rect, outlinePaint);
+        } else if (comp.mountingType == 'pendant') {
           // --- PENDANT (Triangle) ---
-          else if (speakerModel.mountingType == 'pendant') {
-            final Path path = Path()
-              ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)
-              ..lineTo(comp.pos!.dx - radius * 0.866, comp.pos!.dy + radius * 0.75)
-              ..lineTo(comp.pos!.dx + radius * 0.866, comp.pos!.dy + radius * 0.75)
-              ..close();
-            canvas.drawPath(path, fillPaint);
-            canvas.drawPath(path, outlinePaint);
-          }
+          final Path path = Path()
+            ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)
+            ..lineTo(comp.pos!.dx - radius * 0.866, comp.pos!.dy + radius * 0.75)
+            ..lineTo(comp.pos!.dx + radius * 0.866, comp.pos!.dy + radius * 0.75)
+            ..close();
+          canvas.drawPath(path, fillPaint);
+          canvas.drawPath(path, outlinePaint);
+        } else {
           // --- DEFAULT (Circle) ---
-          else {
-            canvas.drawCircle(comp.pos!, radius, fillPaint);
-            canvas.drawCircle(comp.pos!, radius, outlinePaint);
-          }
+          canvas.drawCircle(comp.pos!, radius, fillPaint);
+          canvas.drawCircle(comp.pos!, radius, outlinePaint);
         }
       } else {
         if (!showSpl) {

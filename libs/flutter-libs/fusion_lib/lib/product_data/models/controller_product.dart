@@ -40,10 +40,10 @@ class ControllerProduct {
 
     return ControllerProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'controller'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
+      description: json['description'] as String? ?? 'System controller for comprehensive audio management',
       additionalSensors: (specs['additional_sensors'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
@@ -66,7 +66,7 @@ class ControllerProduct {
 
   Map<String, dynamic> toJson() => {
         'productid': productId,
-        'assets': [assets.toJson()],
+        'assets': assets.toAssetList(),
         'model_name': modelName,
         'model_family': modelFamily,
         'description': description,

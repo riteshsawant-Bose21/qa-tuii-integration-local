@@ -13,6 +13,7 @@ class Speaker extends HardwareComponent {
   final double pitch;
   final double roll;
   final double yaw;
+  final MountingType? mountingType;
 
   Speaker({
     String? id,
@@ -40,6 +41,7 @@ class Speaker extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
     required super.addedFromBuildingPage,
+     this.mountingType,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -72,6 +74,7 @@ class Speaker extends HardwareComponent {
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
     Color? color,
+    MountingType? mountingType,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -97,6 +100,7 @@ class Speaker extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      mountingType: mountingType ?? this.mountingType,
     );
   }
 
@@ -125,6 +129,7 @@ class Speaker extends HardwareComponent {
       inputPortsData: speaker.inputPortsData,
       outputPortsData: speaker.outputPortsData,
       addedFromBuildingPage: speaker.addedFromBuildingPage,
+      mountingType: speaker.mountingType,
     );
   }
 
@@ -266,6 +271,7 @@ class Speaker extends HardwareComponent {
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
       equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
+      mountingType: MountingType.fromJson(json['mountingType'] as String?),
     );
   }
 }

@@ -27,10 +27,8 @@ extension VenueTypeExtension on VenueType {
 enum MountingType {
   ceiling,
   pendant,
-  wall,
-}
+  wall;
 
-extension MountingTypeExtension on MountingType {
   String get name {
     switch (this) {
       case MountingType.ceiling:
@@ -39,6 +37,19 @@ extension MountingTypeExtension on MountingType {
         return 'Pendant';
       case MountingType.wall:
         return 'Wall';
+    }
+  }
+
+  static MountingType? fromJson(String? value) {
+    switch (value) {
+      case 'ceiling':
+        return MountingType.ceiling;
+      case 'pendant':
+        return MountingType.pendant;
+      case 'wall':
+        return MountingType.wall;
+      default:
+        return null;
     }
   }
 }
@@ -299,6 +310,7 @@ class ListeningArea {
   void setSplData(List<Offset> points, List<double> values) {
     splData = SplData(surfaceId: id, fieldPoints: points, splValues: values);
   }
+
   void clearSplData() {
     splData = null;
   }

@@ -64,59 +64,63 @@ class ProductQuerySpeakerList extends StatelessWidget {
                 builder: (BuildContext context, StateSetter menuSetState) {
                   return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
                     builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
-                      return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
-                        builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                          return SizedBox(
-                            width: 220,
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  FusionAppText(
-                                    text: 'Sort by',
-                                    style: context.textTheme.bodySmall?.copyWith(
-                                      color: context.colorScheme.onSurface,
+                      return BlocProvider<SpeakerSelectionViewModel>.value(
+                        value: speakerSelectionViewModel,
+                        child: BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
+                          builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
+                            return SizedBox(
+                              width: 220,
+                              child: Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: <Widget>[
+                                    FusionAppText(
+                                      text: 'Sort by',
+                                      style: context.textTheme.bodySmall?.copyWith(
+                                        color: context.colorScheme.onSurface,
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 8),
-                                  ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
-                                    final bool selected = vmState.sortOption == entry;
+                                    const SizedBox(height: 8),
+                                    ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
+                                      final bool selected = vmState.sortOption == entry;
 
-                                    return GestureDetector(
-                                      behavior: HitTestBehavior.translucent,
-                                      onTap: () {
-                                        speakerSelectionViewModel.setSortOption(entry);
-                                        menuSetState(() {});
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(vertical: 6.0),
-                                        child: Row(
-                                          children: <Widget>[
-                                            Icon(
-                                              selected ? Icons.circle : Icons.radio_button_unchecked,
-                                              size: 14,
-                                              color: selected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            Expanded(
-                                              child: FusionAppText(
-                                                text: entry.displayName,
-                                                style: context.textTheme.bodySmall?.copyWith(
-                                                  color: context.colorScheme.onSurface,
+                                      return GestureDetector(
+                                        behavior: HitTestBehavior.translucent,
+                                        onTap: () {
+                                          speakerSelectionViewModel.setSortOption(entry);
+                                          menuSetState(() {});
+                                        },
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                          child: Row(
+                                            children: <Widget>[
+                                              Icon(
+                                                selected ? Icons.circle : Icons.radio_button_unchecked,
+                                                size: 14,
+                                                color: selected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                              ),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: FusionAppText(
+                                                  text: entry.displayName,
+                                                  style: context.textTheme.bodySmall?.copyWith(
+                                                    color: context.colorScheme.onSurface,
+                                                  ),
                                                 ),
                                               ),
-                                            ),
-                                          ],
+                                            ],
+                                          ),
                                         ),
-                                      ),
-                                    );
-                                  }),
-                                ],
+                                      );
+                                    }),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
+                            );
+                          },
+                        ),
                       );
                     },
                   );

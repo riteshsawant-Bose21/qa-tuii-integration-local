@@ -63,16 +63,15 @@ class DspProduct {
 
     return DspProduct(
       productId: (json['productid'] as num?)?.toInt() ?? 0,
-      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?),
+      assets: ProductAsset.fromJsonList(json['assets'] as List<dynamic>?, productType: 'dsp'),
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
-      description: json['description'] as String? ?? '',
       gpioLogicPorts: specs['gpio_logic_ports'] != null ? GpioLogicPorts.fromJson(specs['gpio_logic_ports'] as Map<String, dynamic>) : null,
       maxNumberOfAnalogControl: (specs['max_number_of_analog_control'] as num?)?.toInt() ?? 0,
       maxNumberOfDigitalControl: (specs['max_number_of_digital_control'] as num?)?.toInt() ?? 0,
       numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] != null
-          ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>)
-          : null,
+          ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>): null,
+      description: json['description'] as String? ?? 'Digital Signal Processor for advanced audio processing and optimization',
       shortDescription: specs['short_description'] as String?,
       skus: (specs['skus'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [],
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
@@ -80,21 +79,23 @@ class DspProduct {
   }
 
   Map<String, dynamic> toJson() => {
-    'productid': productId,
-    'assets': [assets.toJson()],
-    'model_name': modelName,
-    'model_family': modelFamily,
-    'description': description,
-    'specifications': {
-      if (gpioLogicPorts != null) 'gpio_logic_ports': gpioLogicPorts!.toJson(),
-      'max_number_of_analog_control': maxNumberOfAnalogControl,
-      'max_number_of_digital_control': maxNumberOfDigitalControl,
-      if (numberOfInputsAndOutputs != null) 'number_of_inputs_and_outputs': numberOfInputsAndOutputs,
-      if (shortDescription != null) 'short_description': shortDescription,
-      'skus': skus,
-    },
-    'is_fusion_compatible': isFusionCompatible,
-  };
+        'productid': productId,
+        'assets': assets.toAssetList(),
+        'model_name': modelName,
+        'model_family': modelFamily,
+        'description': description,
+        'specifications': {
+          if (gpioLogicPorts != null)
+            'gpio_logic_ports': gpioLogicPorts!.toJson(),
+          'max_number_of_analog_control': maxNumberOfAnalogControl,
+          'max_number_of_digital_control': maxNumberOfDigitalControl,
+          if (numberOfInputsAndOutputs != null)
+            'number_of_inputs_and_outputs': numberOfInputsAndOutputs!.toMap(),
+          if (shortDescription != null) 'short_description': shortDescription,
+          'skus': skus,
+        },
+        'is_fusion_compatible': isFusionCompatible,
+      };
 
   @override
   String toString() => 'DspProduct(productId: $productId, modelName: $modelName)';
