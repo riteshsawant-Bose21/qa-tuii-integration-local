@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/core/utils/bug_report_popup.dart';
@@ -11,7 +10,6 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
-import '../../../../core/router/routes.dart';
 import '../../../../core/services/user_session_manager.dart';
 
 class FusionSidebar extends StatefulWidget {
@@ -161,44 +159,43 @@ class _FusionSidebarState extends State<FusionSidebar> {
                               isSelected: widget.selectedTab == DashboardTabs.profile,
                               onTap: () => widget.onTabChanged?.call(DashboardTabs.profile),
                             ),
-                            _HoverNavItem(
-                              icon: Icons.settings_sharp,
-                              title: DashboardTabs.settings.name,
-                              semanticsId: 'settings_tab',
-                              isSelected: widget.selectedTab == DashboardTabs.settings,
-                              onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
-                            ),
+                            // _HoverNavItem(
+                            //   icon: Icons.settings_sharp,
+                            //   title: DashboardTabs.settings.name,
+                            //   semanticsId: 'settings_tab',
+                            //   isSelected: widget.selectedTab == DashboardTabs.settings,
+                            //   onTap: () => widget.onTabChanged?.call(DashboardTabs.settings),
+                            // ),
                           ],
                         ),
                       ),
 
-                      const Divider(height: 0),
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            _HoverNavItem(
-                              icon: Icons.public,
-                              title: DashboardTabs.community.name,
-                              semanticsId: 'community_tab',
-                              isSelected: widget.selectedTab == DashboardTabs.community,
-                              onTap: () => widget.onTabChanged?.call(DashboardTabs.community),
-                            ),
-                            // show only in debug mode
-                            if (kDebugMode) ...<Widget>[
-                              _HoverNavItem(
-                                icon: Icons.library_books_sharp,
-                                title: DashboardTabs.testLibrady.name,
-                                semanticsId: 'library_tab',
-                                isSelected: widget.selectedTab == DashboardTabs.testLibrady,
-                                onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-
+                      // const Divider(height: 0),
+                      // Padding(
+                      //   padding: const EdgeInsets.all(16.0),
+                      //   child: Column(
+                      //     crossAxisAlignment: CrossAxisAlignment.start,
+                      //     children: <Widget>[
+                      //       _HoverNavItem(
+                      //         icon: Icons.public,
+                      //         title: DashboardTabs.community.name,
+                      //         semanticsId: 'community_tab',
+                      //         isSelected: widget.selectedTab == DashboardTabs.community,
+                      //         onTap: () => widget.onTabChanged?.call(DashboardTabs.community),
+                      //       ),
+                      //       // show only in debug mode
+                      //       if (kDebugMode) ...<Widget>[
+                      //         _HoverNavItem(
+                      //           icon: Icons.library_books_sharp,
+                      //           title: DashboardTabs.testLibrady.name,
+                      //           semanticsId: 'library_tab',
+                      //           isSelected: widget.selectedTab == DashboardTabs.testLibrady,
+                      //           onTap: () => Navigator.pushNamed(context, Routes.mylibraryPage),
+                      //         ),
+                      //       ],
+                      //     ],
+                      //   ),
+                      // ),
                       const Divider(height: 0),
 
                       Padding(

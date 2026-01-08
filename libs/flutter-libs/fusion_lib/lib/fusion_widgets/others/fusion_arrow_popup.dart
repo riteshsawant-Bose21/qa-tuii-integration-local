@@ -309,17 +309,13 @@ class _PopupRoute extends PopupRoute<void> {
                     return BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
                       child: Container(
-                        color: (barriersColor ?? Colors.black).withValues(
+                        color: (barriersColor ?? Colors.black12).withValues(
                           alpha: animation!.value * 0.2,
                         ),
                       ),
                     );
                   } else {
-                    return Container(
-                      color: (barriersColor ?? Colors.black12).withValues(
-                        alpha: animation!.value,
-                      ),
-                    );
+                    return Container(color: (barriersColor ?? Colors.black12));
                   }
                 },
               ),

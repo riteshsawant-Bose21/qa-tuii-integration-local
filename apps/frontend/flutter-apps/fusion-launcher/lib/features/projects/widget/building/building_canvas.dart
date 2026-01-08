@@ -221,6 +221,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                         );
                                       },
+                                      onRightClick: (PointerDownEvent e) {
+                                        if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                          projectViewModel.shouldPlaceNonPlacedSpeakers = false;
+                                        }
+                                      },
                                       moveHardware: (
                                         HardwareComponent hardware,
                                         String? newListeningAreaId,
@@ -324,13 +329,37 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       child: Builder(
                                         builder: (BuildContext context) {
                                           if (serviceLocator<ProjectViewModel>().shouldPlaceNonPlacedSpeakers) {
-                                            final List<Speaker> nonPlacedSpeakers =
-                                                serviceLocator<ProjectViewModel>().getNonPlacedSpeakersForCurrentListeningArea();
+                                            final List<Speaker> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
+
                                             if (nonPlacedSpeakers.isEmpty) return const SizedBox();
-                                            return Image.asset(
-                                              nonPlacedSpeakers.first.assetImagePath,
-                                              width: 32,
-                                              height: 32,
+
+                                            return Stack(
+                                              clipBehavior: Clip.none,
+                                              children: <Widget>[
+                                                Image.asset(
+                                                  nonPlacedSpeakers.first.assetImagePath,
+                                                  width: 32,
+                                                  height: 32,
+                                                ),
+                                                Positioned(
+                                                  bottom: -10,
+                                                  right: -10,
+                                                  child: Container(
+                                                    decoration: const BoxDecoration(
+                                                      color: Colors.black,
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    padding: const EdgeInsets.all(5),
+                                                    child: FusionAppText(
+                                                      text: '${nonPlacedSpeakers.length}',
+                                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                        color: context.colorScheme.onPrimary,
+                                                        fontSize: 10,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
                                             );
                                           } else if (serviceLocator<ProjectViewModel>().selectedProductToAdd != null) {
                                             return Image.asset(

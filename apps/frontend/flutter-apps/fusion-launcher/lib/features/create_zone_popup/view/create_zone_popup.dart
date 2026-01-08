@@ -12,7 +12,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../projects/widget/building/side_panel_widgets/schematic_properties.dart' show hexToColor;
 import '../view_model/state.dart';
 
-part 'widgets/add_listening_areas_to_zone.dart';
+part 'widgets/select_listening_areas.dart';
 part 'widgets/create_new_location.dart';
 part 'widgets/create_subzone_widget.dart';
 

@@ -137,22 +137,24 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             ],
                           ),
 
-                          BuildRowPropertyWidget(
+                          BuildRowPropertyWidget<String>(
                             label: "Type",
                             value: selectedListeningArea.venuType?.name ?? '',
                             options: VenueType.values.map((VenueType option) => option.name).toList(),
-                            onOptionSelected: (int selectedIndex) {
+                            valueBuilder: (String option) => option,
+                            onOptionSelected: (int selectedIndex, String newValue) {
                               final VenueType selectedType = VenueType.values[selectedIndex];
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
                               projectViewModel.updateListeningArea(area: updatedLA);
                             },
                           ),
                           const SizedBox(height: 5),
-                          BuildRowPropertyWidget(
+                          BuildRowPropertyWidget<String>(
                             label: "Listening Ht",
                             value: listeningHeightOption.displayName,
+                            valueBuilder: (String option) => option,
                             options: ListeningHeightOption.values.map((ListeningHeightOption option) => option.displayName).toList(),
-                            onOptionSelected: (int selectedIndex) {
+                            onOptionSelected: (int selectedIndex, String newValue) {
                               final ListeningHeightOption selectedOption = ListeningHeightOption.values[selectedIndex];
                               final double heightValue = ListeningHeightOption.getValue(selectedOption) ?? 3.0;
                               final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
@@ -224,11 +226,12 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             },
                           ),
                           const SizedBox(height: 5),
-                          BuildRowPropertyWidget(
+                          BuildRowPropertyWidget<String>(
                             label: "SPL Range",
                             value: selectedListeningArea.splRange?.name ?? "",
                             options: SplRange.values.map((SplRange option) => option.name).toList(),
-                            onOptionSelected: (int selectedIndex) {
+                            valueBuilder: (String option) => option,
+                            onOptionSelected: (int selectedIndex, String newValue) {
                               final Map<String, double> splRangeValues = SplRange.values[selectedIndex].splRangeValues;
                               final double minSPL = splRangeValues["min"]!;
                               final double maxSPL = splRangeValues["max"]!;
@@ -454,11 +457,13 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
   }
 }
 
-class BuildRowPropertyWidget extends StatelessWidget {
+class BuildRowPropertyWidget<T> extends StatelessWidget {
   final String label;
-  final String value;
-  final List<String> options;
-  final ValueChanged<int> onOptionSelected;
+  final T? value;
+  final List<T> options;
+  // final ValueChanged<int, T> onOptionSelected;
+  final void Function(int selectedIndex, T value) onOptionSelected;
+  final String Function(T option) valueBuilder;
 
   const BuildRowPropertyWidget({
     super.key,
@@ -466,6 +471,7 @@ class BuildRowPropertyWidget extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onOptionSelected,
+    required this.valueBuilder,
   });
 
   @override
@@ -484,17 +490,17 @@ class BuildRowPropertyWidget extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Expanded(
-          child: BuildingPageDronDown<String>(
+          child: BuildingPageDronDown<T>(
             value: value,
             hintText: "Select type",
             items: options,
-            onSelect: (String newValue) {
+            onSelect: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);
-              onOptionSelected(selectedIndex);
+              onOptionSelected(selectedIndex, newValue);
             },
-            labelBuilder: (String option) {
+            labelBuilder: (T option) {
               return FusionAppText(
-                text: option,
+                text: valueBuilder(option),
                 style: Theme.of(context).textTheme.labelMedium,
               );
             },

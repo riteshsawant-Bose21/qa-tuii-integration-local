@@ -9,18 +9,16 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 
 import '../../../../core/service_locator.dart';
-import '../widgets/community_tab_content.dart';
 import '../widgets/fusion_side_bar.dart';
 import '../widgets/profile_tab_content.dart';
 import '../widgets/saved_projects_tab.dart';
-import '../widgets/settings_tab_content.dart';
 
 enum DashboardTabs {
   home("Home"),
   profile("Profile"),
-  settings("Settings"),
-  community("Community"),
-  testLibrady("Test Library"),
+  // settings("Settings"),
+  // community("Community"),
+  // testLibrady("Test Library"),
   savedProjects("Saved Projects");
 
   final String name;
@@ -112,14 +110,14 @@ class _HomePageState extends State<HomePage> {
                               return const HomeTabContent();
                             case DashboardTabs.profile:
                               return const ProfileTabContent();
-                            case DashboardTabs.settings:
-                              return const SettingsTabContent();
-                            case DashboardTabs.community:
-                              return const CommunityTabContent();
+                            // case DashboardTabs.settings:
+                            //   return const SettingsTabContent();
+                            // case DashboardTabs.community:
+                            //   return const CommunityTabContent();
                             case DashboardTabs.savedProjects:
                               return const SavedProjectsTabContent();
-                            case DashboardTabs.testLibrady:
-                              return const SizedBox.shrink();
+                            // case DashboardTabs.testLibrady:
+                            //   return const SizedBox.shrink();
                           }
                         },
                       );
