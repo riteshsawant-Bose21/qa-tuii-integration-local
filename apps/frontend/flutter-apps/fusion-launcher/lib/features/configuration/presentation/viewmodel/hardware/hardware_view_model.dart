@@ -455,7 +455,7 @@ extension HardwareViewModel on ProjectViewModel {
       name: product.modelFamily,
       pos: null,
       zAxis: 300.0,
-      speakerSKU: product.skus.first.toString(),
+      speakerSKU: product.productId.toString(),
       gain: 0.0,
       addedFromBuildingPage: isFromBuildingPage,
       assetImagePath: assetImagePath,

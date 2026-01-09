@@ -12,6 +12,25 @@ part 'state.dart';
 class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   AddSourceViewModel() : super(const AddSourceViewModelState(selectedSources: <SourceData?>[null]));
 
+  bool isFromBuildingPage = true;
+  void Function()? onSaved;
+
+  void init({
+    required bool fromBuildingPage,
+    required void Function()? onSaved,
+  }) {
+    isFromBuildingPage = fromBuildingPage;
+    this.onSaved = onSaved;
+
+    if (isFromBuildingPage) {
+      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+      final ListeningArea? currentSelectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
+      if (currentSelectedListeningArea != null) {
+        emit(state.copyWith(selectedListeningArea: currentSelectedListeningArea));
+      }
+    }
+  }
+
   void setSourceSectionType(SourceSectionType sourceSectionType) {
     final bool isSrouceSectionTypeSame = state.selectedSourceSectionType == sourceSectionType;
     if (isSrouceSectionTypeSame) return;
@@ -138,9 +157,26 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
         portPosition: PortPosition.topLeft,
       ),
     );
-    serviceLocator<ProjectViewModel>().addHardware(
-      hardware: source,
-    );
-    FusionToast.success(context, message: "Source \"${selectedItem.name}\" added");
+    projectViewModel.addHardware(hardware: source);
+
+    // if this is a building page, add the source to the circuit
+    if (isFromBuildingPage) {
+      // Set device type index first
+      serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+
+      // Create product and set for addition
+      final ProductQueryModel product = ProductQueryModel(
+        name: selectedItem.name,
+        price: 0.0,
+        image: selectedItem.assetPath,
+        type: ProductType.sources,
+        sku: selectedItem.id,
+      );
+      serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+    }
+
+    // place this source in the selected listening area
+    onSaved?.call();
+    Navigator.of(context).pop();
   }
 }

@@ -20,7 +20,24 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     loadProducts();
   }
 
-  final Products productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl);
+  final Products productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
+
+  // Data loading
+  Future<void> loadProducts() async {
+    emit(state.copyWith(isLoading: true));
+    try {
+      await productsApi.initialize();
+      emit(
+        state.copyWith(
+          isLoading: false,
+          speakers: productsApi.speakers,
+        ),
+      );
+    } catch (_) {
+      log("Error loading products");
+      emit(state.copyWith(isLoading: false, speakers: <SpeakerProduct>[]));
+    }
+  }
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
   ListeningArea? get selectedListeningArea => serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
@@ -55,23 +72,6 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   void setSearchQuery(String query) => emit(state.copyWith(searchQuery: query));
 
   void setColors(Iterable<SpeakerColor> colors) => emit(state.copyWith(selectedColors: Set<SpeakerColor>.from(colors)));
-
-  // Data loading
-  Future<void> loadProducts() async {
-    emit(state.copyWith(isLoading: true));
-    try {
-      await productsApi.initialize();
-      emit(
-        state.copyWith(
-          isLoading: false,
-          speakers: productsApi.speakers,
-        ),
-      );
-    } catch (_) {
-      log("Error loading products");
-      emit(state.copyWith(isLoading: false, speakers: <SpeakerProduct>[]));
-    }
-  }
 
   List<Speaker> getAllPlacedNonPlacedSpeakers() {
     final List<Speaker> placedSpeakers = getPlacedSpeakers();
