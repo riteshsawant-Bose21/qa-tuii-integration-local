@@ -1104,4 +1104,12 @@ enum MeasurementUnit {
 
   final String symbol;
   final String displayName;
+
+  static MeasurementUnit? fromString(String value) {
+    try {
+      return MeasurementUnit.values.firstWhere((MeasurementUnit element) => element.name == value);
+    } catch (e) {
+      return null;
+    }
+  }
 }

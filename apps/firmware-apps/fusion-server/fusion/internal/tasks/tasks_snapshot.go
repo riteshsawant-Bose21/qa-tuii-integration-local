@@ -44,6 +44,11 @@ func (tm *TaskManager) CreateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	if err := validateRecurringWindow(task.Recurrence); err != nil {
+		http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
+		return
+	}
+
 	exists, err := tm.persistence.TaskExists(&task)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error checking task existence: %v", err), http.StatusInternalServerError)
@@ -101,23 +106,23 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 	hasSnapshot := patch.Snapshot != nil && strings.TrimSpace(*patch.Snapshot) != ""
 	hasCron := patch.CronExpr != nil && strings.TrimSpace(*patch.CronExpr) != ""
 	hasDesc := patch.Description != nil && strings.TrimSpace(*patch.Description) != ""
+	hasStart := patch.StartAt != nil
+	hasEnd := patch.EndAt != nil
+	hasRecurrence := patch.Recurrence != nil
 
-	if !(hasSnapshot || hasCron || hasDesc) {
-		http.Error(w, "At least one field (snapshot, cron_expr, description) must be provided", http.StatusBadRequest)
+	if !(hasSnapshot || hasCron || hasDesc || hasStart || hasEnd || hasRecurrence) {
+		http.Error(w, "At least one field must be provided", http.StatusBadRequest)
 		return
 	}
 
-	// Update description
 	if hasDesc {
 		task.Description = *patch.Description
 	}
 
-	// Update cron expression
 	if hasCron {
 		task.CronExpr = *patch.CronExpr
 	}
 
-	// Update snapshot
 	if hasSnapshot {
 		exists, err := tm.persistence.SnapshotExists(*patch.Snapshot)
 		if err != nil {
@@ -133,7 +138,22 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 		task.Params[api.SnapshotIDKey] = *patch.Snapshot
 	}
 
-	// Run update
+	if hasStart {
+		task.StartAt = *patch.StartAt
+	}
+
+	if hasEnd {
+		task.EndAt = *patch.EndAt
+	}
+
+	if hasRecurrence {
+		if err := validateRecurringWindow(patch.Recurrence); err != nil {
+			http.Error(w, fmt.Sprintf("Invalid recurrence: %v", err), http.StatusBadRequest)
+			return
+		}
+		task.Recurrence = patch.Recurrence
+	}
+
 	err = tm.UpdateTask(task, tm.taskActivateSnapshotFunc(task))
 	if err != nil {
 		if errors.Is(err, ErrTaskNotFound) {
@@ -149,7 +169,6 @@ func (tm *TaskManager) UpdateApplySnapshotTask(w http.ResponseWriter, r *http.Re
 // taskActivateSnapshotFunc creates a task function that applies a snapshot.
 func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 	return func(ctx context.Context) error {
-		logger := logging.GetLogger()
 
 		// Safely extract snapID as a string
 		var snapID string
@@ -176,25 +195,23 @@ func (tm *TaskManager) taskActivateSnapshotFunc(t *api.Task) TaskFunc {
 		if err := tm.handleSnapshotOperation(
 			tm.node,
 			snapID,
-			api.NotifyOpSnapActivate,
-			nil); err != nil {
+			api.NotifyOpSnapActivate); err != nil {
 			return err
 		}
 
-		logger.Info("Snapshot '%s' activated successfully via task", snapID)
+		logging.GetLogger().Info("Snapshot '%s' activated successfully via task", snapID)
 
 		return nil
 	}
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
-func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp, data map[string]any) error {
+func (tm *TaskManager) handleSnapshotOperation(node string, name string, update api.NotifyOp) error {
 
 	msg := api.NewNotifyMessage(update,
 		node,
 		api.WithSnapshotOperation(&api.SnapshotOperation{
 			Name:      name,
-			Data:      data,
 			Timestamp: time.Now().UTC(),
 		}),
 	)

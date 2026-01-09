@@ -61,6 +61,17 @@ dependencies:
   bloc: ^9.0.0
   equatable: ^2.0.7
   flutter_svg: ^2.2.1
+  lucide_icons_flutter: ^3.1.6
+  flutter_secure_storage: ^9.2.4
+
+
+  # Authentication
+  auth0_flutter: ^1.14.0
+
+  flutter_dotenv: ^6.0.0
+
+  calendar_date_picker2: ^2.0.1
+  date_picker_plus: ^4.2.0
 
   fusion_lib:
     path: ../../../../libs/flutter-libs/fusion_lib
@@ -68,6 +79,7 @@ dependencies:
   dartzmq:
     path:  ../../../../libs/flutter-libs/dartzmq
   recase: ^4.1.0
+
 
 dev_dependencies:
   flutter_test:
@@ -101,6 +113,7 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
+    - .env
     - assets/
     - assets/images/
     - assets/images/speakers/
@@ -112,6 +125,7 @@ flutter:
     - assets/images/splash/
     - assets/icons/
     - assets/icons/wiring_ports/
+    - assets/icons/scheduler/
     # - packages/fusion_lib/lib/assets/
     - assets/svg/
 

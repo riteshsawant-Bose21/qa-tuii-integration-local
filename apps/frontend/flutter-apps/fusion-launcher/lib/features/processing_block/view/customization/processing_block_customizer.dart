@@ -65,36 +65,39 @@ class _ProcessingBlockCustomizerState extends State<ProcessingBlockCustomizer> {
 
   @override
   Widget build(BuildContext context) {
-    return AlgorithmSelectionWrapper(
-      viewModel: _viewModel,
-      builder: (BuildContext context, Algorithm algorithm) {
-        return ChangeNotifierProxyProvider<AlgorithmCustomizationVm, PbcViewmodel>(
-          create: (BuildContext context) => PbcViewmodel(algorithm: algorithm),
-          update: (BuildContext context, AlgorithmCustomizationVm a, PbcViewmodel? b) => b!.algorithm != algorithm ? PbcViewmodel(algorithm: algorithm) : b,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey.shade400)),
-            ),
-            child: const Row(
-              children: <Widget>[
-                Expanded(
-                  child: _PBCItemList(),
-                ),
-                Expanded(
-                  flex: 5,
-                  child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Center(
-                      child: _CanvasView(),
+    return Theme(
+      data: FusionAppTheme.lightTheme,
+      child: AlgorithmSelectionWrapper(
+        viewModel: _viewModel,
+        builder: (BuildContext context, Algorithm algorithm) {
+          return ChangeNotifierProxyProvider<AlgorithmCustomizationVm, PbcViewmodel>(
+            create: (BuildContext context) => PbcViewmodel(algorithm: algorithm),
+            update: (BuildContext context, AlgorithmCustomizationVm a, PbcViewmodel? b) => b!.algorithm != algorithm ? PbcViewmodel(algorithm: algorithm) : b,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey.shade400)),
+              ),
+              child: const Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _PBCItemList(),
+                  ),
+                  Expanded(
+                    flex: 5,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Center(
+                        child: _CanvasView(),
+                      ),
                     ),
                   ),
-                ),
-                Expanded(child: _PropertiesPanel()),
-              ],
+                  Expanded(child: _PropertiesPanel()),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

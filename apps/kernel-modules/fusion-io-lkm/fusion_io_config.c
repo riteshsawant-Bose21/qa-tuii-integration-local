@@ -919,9 +919,10 @@ const struct base_device bd_fusion_c0 = {
             {
                 .name = "ak4137_config",
                 .parent_ep_name = "ep_src_ak4137",
-                .num_msgs = 1,
+                .num_msgs = 2,
                 .msgs = (struct endpoint_cmd_msg[]) {
-                    { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 } // input format i2s
+                    { .reg_addr = AK4137_REG_PCM_CONT0, .data = 0x13 }, // input format i2s
+                    { .reg_addr = AK4137_REG_PCM_CONT1, .data = 0x10 }  // sdo clocked on rising edge of bclk
                 }
             }
         },
