@@ -19,6 +19,7 @@ const (
 	NotifyOpSnapActivate NotifyOp = "snapshot_activate"
 	NotifyOpSnapCreate   NotifyOp = "snapshot_create"
 	NotifyOpSnapDelete   NotifyOp = "snapshot_delete"
+	NotifyOpSnapSave     NotifyOp = "snapshot_save"
 	NotifyOpTaskCreate   NotifyOp = "task_create"
 	NotifyOpTaskDelete   NotifyOp = "task_delete"
 	NotifyOpTaskUpdate   NotifyOp = "task_update"
@@ -29,17 +30,17 @@ const (
 
 // NotifyMessage holds information about a cross-node message
 type NotifyMessage struct {
-	ID             string   `json:"id"`
-	Operation      NotifyOp `json:"operation"`
-	Node           string
-	SentAt         time.Time
-	AudioRemove    *AudioRemoveUpdate
-	AudioSync      *AudioSyncUpdate
-	ConfigUpdate   *ConfigUpdate
-	ConfigValue    *ConfigValue
-	SnapshotUpdate *SnapshotUpdate
-	Task           *Task
-	VersionUpdate  *VersionUpdate
+	ID                string   `json:"id"`
+	Operation         NotifyOp `json:"operation"`
+	Node              string
+	SentAt            time.Time
+	AudioRemove       *AudioRemoveUpdate
+	AudioSync         *AudioSyncUpdate
+	ConfigUpdate      *ConfigUpdate
+	ConfigValue       *ConfigValue
+	SnapshotOperation *SnapshotOperation
+	Task              *Task
+	VersionUpdate     *VersionUpdate
 }
 
 func NewNotifyMessage(op NotifyOp, node string, builder func(*NotifyMessage)) *NotifyMessage {
@@ -63,8 +64,8 @@ func validateTask(m *NotifyMessage) error {
 }
 
 func validateSnapshot(m *NotifyMessage) error {
-	if m.SnapshotUpdate == nil {
-		return errors.New("SnapshotUpdate required for operation")
+	if m.SnapshotOperation == nil {
+		return errors.New("SnapshotOperation required for operation")
 	}
 	return nil
 }
@@ -133,9 +134,9 @@ func WithConfigUpdate(update *ConfigUpdate) func(*NotifyMessage) {
 	}
 }
 
-func WithSnapshotUpdate(update *SnapshotUpdate) func(*NotifyMessage) {
+func WithSnapshotOperation(operation *SnapshotOperation) func(*NotifyMessage) {
 	return func(m *NotifyMessage) {
-		m.SnapshotUpdate = update
+		m.SnapshotOperation = operation
 	}
 }
 

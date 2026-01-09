@@ -17,6 +17,8 @@ enum RelationshipType {
   zonePriorities,
   zoneFunctions,
   sourcePriorityData,
+  sceneSetScenes,
+  sceneActions,
 }
 
 class RelationshipManager {

@@ -53,6 +53,33 @@ class ProcessingChainCubit extends Cubit<ProcessingChainState> {
     );
   }
 
+  void refreshProcessingBlock(ProcessingBlockModel block) {
+    if (state is! UpdatedProcessingChainState) {
+      return;
+    }
+    final UpdatedProcessingChainState currentState = state as UpdatedProcessingChainState;
+
+    // change the id of the block to force refresh
+    final ProcessingBlockModel refreshedBlock = block.copyWith(
+      id: block.id + FusionUtils.shortStringUUID(),
+    );
+
+    // Replace the old block with refreshedBlock in the blocks list
+    final List<ProcessingBlockModel> updatedBlocks = List<ProcessingBlockModel>.from(currentState.blocks);
+    final int blockIndex = updatedBlocks.indexWhere((ProcessingBlockModel b) => b.id == block.id);
+    if (blockIndex != -1) {
+      updatedBlocks.removeAt(blockIndex);
+      updatedBlocks.insert(blockIndex, refreshedBlock);
+    }
+
+    emit(
+      UpdatedProcessingChainState(
+        blocks: updatedBlocks,
+        selectedBlock: refreshedBlock,
+      ),
+    );
+  }
+
   void reorderProcessingBlocks(int oldIndex, int newIndex) {
     viewModel.reOrderProcessingBlocks(
       parentId: param.id,

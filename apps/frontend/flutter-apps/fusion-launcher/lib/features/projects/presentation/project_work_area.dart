@@ -6,6 +6,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/product_query/presentation/pages/product_query.dart';
+import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_device_list_view.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
@@ -23,7 +24,11 @@ import '../../../core/widgets/clean_widgets.dart';
 import '../../bill_of_materials/presentation/bill_of_materials_page.dart';
 import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../configuration_page/pages/configuration_page.dart';
+import '../../configuration_page/pages/configuration_processing_page.dart';
+import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../configuration_page/pages/configuration_processing_page.dart';
+import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../scheduling/view/scheduling_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
 import '../widget/building/building_canvas.dart';
@@ -281,6 +286,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _engine?.dispose();
     _floorCanvasController.dispose();
 
+    /// Reset configuration menu mode to processing on dispose
+    _projectViewModel.setConfigurationMenuMode(ConfigurationMenuMode.processing);
+
     super.dispose();
   }
 
@@ -500,18 +508,34 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         showRight: false,
         mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState state) {
-            return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
-                ? const ConfigurationPage()
-                : Center(
-                  child: FusionAppText(
-                    text:
-                        _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
-                            ? "Sources Configuration Page"
-                            : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
-                            ? "Presets Configuration Page"
-                            : "Scheduling Configuration Page",
-                  ),
-                );
+            return switch (_projectViewModel.currentConfigurationMenuMode) {
+              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+              // add all othere
+              ConfigurationMenuMode.events => const Center(
+                child: FusionAppText(
+                  text: "Presets Configuration Page",
+                ),
+              ),
+              ConfigurationMenuMode.gpio => const Center(
+                child: FusionAppText(
+                  text: "Sources Configuration Page",
+                ),
+              ),
+              ConfigurationMenuMode.scheduling => const SchedulingPage(),
+            };
+            // return _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.processing
+            //     ? const ConfigurationPage()
+            //     : Center(
+            //       child: FusionAppText(
+            //         text:
+            //             _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.gpio
+            //                 ? "Sources Configuration Page"
+            //                 : _projectViewModel.currentConfigurationMenuMode == ConfigurationMenuMode.presets
+            //                 ? "Presets Configuration Page"
+            //                 : "Scheduling Configuration Page",
+            //       ),
+            //     );
           },
         ),
 

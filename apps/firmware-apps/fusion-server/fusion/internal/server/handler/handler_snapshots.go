@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"fusion/internal/api"
+	"fusion/internal/logging"
 	"time"
 )
 
@@ -12,10 +13,8 @@ func (h *Handler) HandleListSnapshots() ([]string, error) {
 }
 
 // HandleActivateSnapshot activates the specified snapshot and broadcasts the change to the cluster.
-func (h *Handler) HandleActivateSnapshot(name string) error {
-
-	// Broadcast snapshot-activation (cluster-sync)
-	if err := h.handleSnapshotOperation(name, api.NotifyOpSnapActivate); err != nil {
+func (h *Handler) HandleActivateSnapshot(snapshot string) error {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapActivate); err != nil {
 		return fmt.Errorf("failed to handle snapshot activate: %w", err)
 	}
 
@@ -23,24 +22,35 @@ func (h *Handler) HandleActivateSnapshot(name string) error {
 }
 
 // HandleCreateSnapshot creates a new snapshot and broadcasts it to the cluster with the current system state.
-func (h *Handler) HandleCreateSnapshot(name string) error {
-	if err := h.handleSnapshotOperation(name, api.NotifyOpSnapCreate); err != nil {
+func (h *Handler) HandleCreateSnapshot(snapshot string) error {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapCreate); err != nil {
 		return fmt.Errorf("failed to handle snapshot create: %w", err)
 	}
 	return nil
 }
 
 // HandleDeleteSnapshot removes the specified snapshot and notifies the cluster.
-func (h *Handler) HandleDeleteSnapshot(name string) error {
-	if err := h.handleSnapshotOperation(name, api.NotifyOpSnapDelete); err != nil {
+func (h *Handler) HandleDeleteSnapshot(snapshot string) error {
+
+	// First, broadcast delete operation (this removes snapshot everywhere)
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapDelete); err != nil {
 		return fmt.Errorf("failed to handle snapshot delete: %w", err)
+	}
+
+	return nil
+}
+
+// HandleSaveSnapshot updates a snapshot and broadcasts it to the cluster with the current system state.
+func (h *Handler) HandleSaveSnapshot(snapshot string) error {
+	if err := h.handleSnapshotOperation(snapshot, api.NotifyOpSnapSave); err != nil {
+		return fmt.Errorf("failed to handle snapshot save: %w", err)
 	}
 	return nil
 }
 
 // HandleSnapshotExists checks if a snapshot with the given name exists.
-func (h *Handler) HandleSnapshotExists(name string) (bool, error) {
-	return h.persistence.SnapshotExists(name)
+func (h *Handler) HandleSnapshotExists(snapshot string) (bool, error) {
+	return h.persistence.SnapshotExists(snapshot)
 }
 
 // HandleGetDatabaseMetadata retrieves metadata for the fusion database.
@@ -49,8 +59,8 @@ func (h *Handler) HandleGetDatabaseMetadata() (*api.DatabaseMetadata, error) {
 }
 
 // HandleGetSnapshot returns the full snapshot data for the specified name.
-func (h *Handler) HandleGetSnapshot(name string) (any, error) {
-	return h.persistence.GetSnapshot(name)
+func (h *Handler) HandleGetSnapshot(snapshot string) (any, error) {
+	return h.persistence.GetSnapshot(snapshot)
 }
 
 // HandleGetActiveSnapshotName returns the name of the active snapshot
@@ -59,20 +69,22 @@ func (h *Handler) HandleGetActiveSnapshotName() string {
 }
 
 // HandleIsDefaultSnapshot returns true is the name is the default snapshot
-func (h *Handler) IsDefaultSnapshot(name string) bool {
-	return h.persistence.IsDefaultSnapshot(name)
+func (h *Handler) IsDefaultSnapshot(snapshot string) bool {
+	return h.persistence.IsDefaultSnapshot(snapshot)
 }
 
 // handleSnapshotOperation constructs a snapshot update message and broadcasts it to the cluster.
-func (h *Handler) handleSnapshotOperation(name string, update api.NotifyOp) error {
+func (h *Handler) handleSnapshotOperation(snapshot string, operation api.NotifyOp) error {
 
-	msg := api.NewNotifyMessage(update,
-		h.StateManager.GetNode(),
-		api.WithSnapshotUpdate(
-			&api.SnapshotUpdate{
-				Name:      name,
+	logging.GetLogger().Debug("Handler::handleSnapshotOperation: %s Node: %s", operation, h.appConfig.NodeName)
+
+	msg := api.NewNotifyMessage(operation,
+		h.appConfig.NodeName,
+		api.WithSnapshotOperation(
+			&api.SnapshotOperation{
+				Name:      snapshot,
 				Timestamp: time.Now().UTC(),
 			}),
 	)
-	return h.broadcastMessage(msg)
+	return h.hub.BroadcastToNodes(msg)
 }

@@ -129,11 +129,10 @@ func (s *FusionServer) CreateSnapshot(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	w.WriteHeader(http.StatusCreated)
 }
 
 // DeleteSnapshot handles HTTP DELETE requests to remove an existing snapshot.
-// It expects a query parameter "name" specifying the snapshot to delete.
 func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 
 	if !utils.RequireDelete(w, r) {
@@ -157,4 +156,44 @@ func (s *FusionServer) DeleteSnapshot(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusNoContent)
+}
+
+// SaveSnapshot handles POST /snapshots/{name}/save
+// It overwrites an existing snapshot with the current active state.
+func (s *FusionServer) SaveSnapshot(w http.ResponseWriter, r *http.Request) {
+
+	if !utils.RequirePost(w, r) {
+		return
+	}
+
+	snapshotName, err := utils.ExtractName(r)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Default snapshot cannot be overwritten
+	if s.handler.IsDefaultSnapshot(snapshotName) {
+		http.Error(w, "default snapshot cannot be overwritten", http.StatusBadRequest)
+		return
+	}
+
+	// Verify snapshot exists before overwriting
+	exists, err := s.handler.HandleSnapshotExists(snapshotName)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error checking snapshot existence: %v", err), http.StatusInternalServerError)
+		return
+	}
+	if !exists {
+		http.Error(w, "Snapshot does not exist", http.StatusNotFound)
+		return
+	}
+
+	// Overwrite the snapshot from live active state
+	if err := s.handler.HandleSaveSnapshot(snapshotName); err != nil {
+		http.Error(w, fmt.Sprintf("Error saving snapshot: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent) // success, no response body
 }

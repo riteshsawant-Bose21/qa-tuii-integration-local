@@ -11,6 +11,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:provider/provider.dart';
 import 'package:recase/recase.dart';
 
+import '../../../../core/service_locator.dart';
 import '../../viewmodel/algorithm_customization_vm.dart';
 import '../../viewmodel/pbc_viewmodel.dart';
 import '../algorithm_selection_wrapper.dart';
@@ -22,40 +23,81 @@ part 'widgets/fields_list.dart';
 part 'widgets/pb_canvas_view.dart';
 part 'widgets/properties_panel.dart';
 
-class ProcessingBlockCustomizer extends StatelessWidget {
-  const ProcessingBlockCustomizer({super.key});
+class ProcessingBlockCustomizer extends StatefulWidget {
+  // selected algorithm
+  final String? selectedAlgorithmId;
+  const ProcessingBlockCustomizer({super.key, this.selectedAlgorithmId});
+
+  @override
+  State<ProcessingBlockCustomizer> createState() => _ProcessingBlockCustomizerState();
+}
+
+class _ProcessingBlockCustomizerState extends State<ProcessingBlockCustomizer> {
+  late AlgorithmCustomizationVm _viewModel;
+
+  @override
+  void initState() {
+    super.initState();
+    _viewModel = AlgorithmCustomizationVm(
+      config: serviceLocator.get<FusionAlgorithmsConfig>(),
+    );
+
+    // Set the selected algorithm if provided
+    if (widget.selectedAlgorithmId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final Algorithm? selectedAlgorithm = _viewModel.availableAlgorithms.cast<Algorithm?>().firstWhere(
+          (Algorithm? algo) => algo?.name == widget.selectedAlgorithmId,
+          orElse: () => null,
+        );
+
+        if (selectedAlgorithm != null) {
+          _viewModel.selectAlgorithm(selectedAlgorithm);
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _viewModel.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return AlgorithmSelectionWrapper(
-      builder: (BuildContext context, Algorithm algorithm) {
-        return ChangeNotifierProxyProvider<AlgorithmCustomizationVm, PbcViewmodel>(
-          create: (BuildContext context) => PbcViewmodel(algorithm: algorithm),
-          update: (BuildContext context, AlgorithmCustomizationVm a, PbcViewmodel? b) => b!.algorithm != algorithm ? PbcViewmodel(algorithm: algorithm) : b,
-          child: Container(
-            decoration: BoxDecoration(
-              border: Border(top: BorderSide(color: Colors.grey.shade400)),
-            ),
-            child: const Row(
-              children: <Widget>[
-                Expanded(
-                  child: _PBCItemList(),
-                ),
-                Expanded(
-                  flex: 5,
-                  child: Padding(
-                    padding: EdgeInsets.all(8.0),
-                    child: Center(
-                      child: _CanvasView(),
+    return Theme(
+      data: FusionAppTheme.lightTheme,
+      child: AlgorithmSelectionWrapper(
+        viewModel: _viewModel,
+        builder: (BuildContext context, Algorithm algorithm) {
+          return ChangeNotifierProxyProvider<AlgorithmCustomizationVm, PbcViewmodel>(
+            create: (BuildContext context) => PbcViewmodel(algorithm: algorithm),
+            update: (BuildContext context, AlgorithmCustomizationVm a, PbcViewmodel? b) => b!.algorithm != algorithm ? PbcViewmodel(algorithm: algorithm) : b,
+            child: Container(
+              decoration: BoxDecoration(
+                border: Border(top: BorderSide(color: Colors.grey.shade400)),
+              ),
+              child: const Row(
+                children: <Widget>[
+                  Expanded(
+                    child: _PBCItemList(),
+                  ),
+                  Expanded(
+                    flex: 5,
+                    child: Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Center(
+                        child: _CanvasView(),
+                      ),
                     ),
                   ),
-                ),
-                Expanded(child: _PropertiesPanel()),
-              ],
+                  Expanded(child: _PropertiesPanel()),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }

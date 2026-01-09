@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"fusion/internal/api"
 	"fusion/internal/logging"
+	"fusion/internal/routes"
 	"io"
 	"net/http"
 	"os"
 	"os/exec"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,17 +21,22 @@ import (
 )
 
 const (
+	nameParam                 = "{name}"
 	snapshotDefaultBucketName = "fusion"
-	snapServerAddress         = "http://192.168.2.100"
-	snapServerPort            = "8080"
-	snapServerAdminPort       = "9090"
-	snapServerAddr            = snapServerAddress + ":" + snapServerPort
-	snapAdminServerAddr       = snapServerAddress + ":" + snapServerAdminPort
 	snapshotSyncTime          = 5 * time.Second
-	snapshotsPath             = "/snapshots"
-	snapshotsURL              = snapServerAddr + snapshotsPath
-	snapshotsURLActivate      = snapshotsURL + "/activate"
-	snapshotsURLValue         = snapServerAddr + "/value"
+
+	snapServerAddress   = "http://192.168.2.100"
+	snapServerPort      = "8080"
+	snapServerAdminPort = "9090"
+	snapServerAddr      = snapServerAddress + ":" + snapServerPort
+	snapAdminServerAddr = snapServerAddress + ":" + snapServerAdminPort
+
+	// Core endpoints
+	snapshotsURL        = snapServerAddr + routes.SnapshotsEndpoint
+	snapshotByNameURL   = snapServerAddr + routes.SnapshotsNameEndpoint
+	snapshotActivateURL = snapServerAddr + routes.SnapshotsActivateEndpoint
+	snapshotUpdateURL   = snapServerAddr + routes.SnapshotsUpdateEndpoint
+	valueURL            = snapServerAddr + routes.ValueEndpoint
 )
 
 func init() {
@@ -46,13 +53,13 @@ func init() {
 
 func TestSnapshotCreateAndList(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusNoContent {
+	if resp.StatusCode != http.StatusCreated {
 		body, _ := io.ReadAll(resp.Body)
 		t.Fatalf("Create snapshot returned %d: %s", resp.StatusCode, string(body))
 	}
@@ -75,14 +82,14 @@ func TestSnapshotCreateAndList(t *testing.T) {
 
 func TestSnapshotActivateAndDelete(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
 	resp.Body.Close()
 
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	client := &http.Client{}
 	resp, err = client.Do(req)
@@ -121,7 +128,7 @@ func TestSnapshotInvalidCreate(t *testing.T) {
 
 func TestSnapshotDuplicateCreate(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
 	if err != nil {
 		t.Fatalf("Create request failed: %v", err)
@@ -139,7 +146,7 @@ func TestSnapshotDuplicateCreate(t *testing.T) {
 
 func TestSnapshotActivateNonExistent(t *testing.T) {
 	snapshotName := "nonexistent"
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -154,7 +161,7 @@ func TestSnapshotActivateNonExistent(t *testing.T) {
 
 func TestSnapshotPropagation(t *testing.T) {
 	snapshotName := fmt.Sprintf("test_snapshot_propagation_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 
 	// Create snapshot on origin node
 	resp, err := http.Post(createURL, api.JsonMIMEType, nil)
@@ -172,7 +179,7 @@ func TestSnapshotPropagation(t *testing.T) {
 	}
 
 	// Activate the snapshot
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	client := &http.Client{}
 	resp, err = client.Do(req)
@@ -274,7 +281,7 @@ func snapshotExistsOnAllNodes(t *testing.T, name string) bool {
 		return false
 	}
 	for _, addr := range nodes {
-		resp, err := http.Get(fmt.Sprintf("%s%s", addr, snapshotsPath))
+		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.SnapshotsEndpoint))
 		if err != nil {
 			return false
 		}
@@ -298,7 +305,7 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 		return false
 	}
 	for _, addr := range nodes {
-		resp, err := http.Get(fmt.Sprintf("%s%s", addr, snapshotsPath))
+		resp, err := http.Get(fmt.Sprintf("%s%s", addr, routes.SnapshotsEndpoint))
 		if err != nil {
 			return false
 		}
@@ -319,11 +326,12 @@ func snapshotRemovedOnAllNodes(t *testing.T, name string) bool {
 //
 
 func TestSnapshotActivationBumpsEpoch(t *testing.T) {
+
 	initial := getAnyClusterEpoch(t)
 
 	snapshotName := fmt.Sprintf("epoch_test_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 
 	// Create snapshot
 	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
@@ -350,8 +358,8 @@ func TestRejectOldEpochUpdatesAfterSnapshot(t *testing.T) {
 
 	// Create + activate snapshot
 	snapshotName := fmt.Sprintf("old_epoch_reject_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 
 	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
@@ -378,7 +386,7 @@ func TestRejectOldEpochUpdatesAfterSnapshot(t *testing.T) {
 	// Send a stale update with older epoch
 	staleUpdate := `{"foo":123}`
 
-	resp, err := http.Post(snapshotsURLValue, api.JsonMIMEType, bytes.NewBuffer([]byte(staleUpdate)))
+	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer([]byte(staleUpdate)))
 	if err != nil {
 		t.Fatalf("Failed sending stale update: %v", err)
 	}
@@ -396,8 +404,8 @@ func TestNewEpochUpdatesApply(t *testing.T) {
 
 	// Create + activate snapshot
 	snapshotName := fmt.Sprintf("epoch_updates_apply_%d", time.Now().UnixNano())
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 
 	http.Post(createURL, api.JsonMIMEType, nil)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
@@ -415,7 +423,7 @@ func TestNewEpochUpdatesApply(t *testing.T) {
 
 	setStateValue(t, "foo_new", 999)
 
-	// Immediate local GET to ensure the write succeeded locally ---
+	// Immediate local GET to ensure the write succeeded locally
 	localVal := getStateValue(t, "foo_new")
 	if asInt(localVal) != 999 {
 		t.Fatalf("Local value write failed: expected 999, got %v (endpoint /value may not be applying writes)",
@@ -536,7 +544,7 @@ func patchStateValue(t *testing.T, key string, value any) {
 		t.Fatalf("Failed to marshal patch payload: %v", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPatch, snapshotsURLValue, bytes.NewBuffer(jsonData))
+	req, err := http.NewRequest(http.MethodPatch, valueURL, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to create PATCH request for key %s: %v", key, err)
 	}
@@ -568,7 +576,7 @@ func setStateValue(t *testing.T, key string, value any) {
 		t.Fatalf("Failed to marshal setState payload: %v", err)
 	}
 
-	resp, err := http.Post(snapshotsURLValue, api.JsonMIMEType, bytes.NewBuffer(jsonData))
+	resp, err := http.Post(valueURL, api.JsonMIMEType, bytes.NewBuffer(jsonData))
 	if err != nil {
 		t.Fatalf("Failed to set state key %s: %v", key, err)
 	}
@@ -583,7 +591,7 @@ func setStateValue(t *testing.T, key string, value any) {
 func getStateValue(t *testing.T, key string) any {
 	t.Helper()
 
-	url := fmt.Sprintf("%s?key=%s", snapshotsURLValue, key)
+	url := fmt.Sprintf("%s?key=%s", valueURL, key)
 	resp, err := http.Get(url)
 	if err != nil {
 		t.Fatalf("Failed to get state key %s: %v", key, err)
@@ -629,7 +637,7 @@ func TestSnapshotRestoresStateExactly(t *testing.T) {
 	patchStateValue(t, barKey, 2)
 
 	// Create snapshot capturing this state
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
@@ -652,7 +660,7 @@ func TestSnapshotRestoresStateExactly(t *testing.T) {
 	}
 
 	// Activate the snapshot
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	if _, err := (&http.Client{}).Do(req); err != nil {
 		t.Fatalf("Failed to activate snapshot: %v", err)
@@ -698,7 +706,7 @@ func TestSnapshotRestoresNestedState(t *testing.T) {
 	}
 
 	// Create snapshot capturing this nested state
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
 		t.Fatalf("Failed to create nested snapshot: %v", err)
 	}
@@ -711,7 +719,7 @@ func TestSnapshotRestoresNestedState(t *testing.T) {
 	patchStateValue(t, configKey, mutatedConfig)
 
 	// Activate the snapshot
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	if _, err := (&http.Client{}).Do(req); err != nil {
 		t.Fatalf("Failed to activate nested snapshot: %v", err)
@@ -809,13 +817,13 @@ func TestActiveSnapshotPropagatesClusterWide(t *testing.T) {
 	snapshotName := fmt.Sprintf("active_snap_%d", time.Now().UnixNano())
 
 	// Create
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
 		t.Fatalf("Failed to create snapshot: %v", err)
 	}
 
 	// Activate
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	if _, err := (&http.Client{}).Do(req); err != nil {
 		t.Fatalf("Failed to activate snapshot: %v", err)
@@ -882,7 +890,8 @@ func TestActiveSnapshotSurvivesRestart(t *testing.T) {
 	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
 
 	// Activate
-	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName), nil)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
+	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	(&http.Client{}).Do(req)
 
 	// Wait for propagation
@@ -893,10 +902,12 @@ func TestActiveSnapshotSurvivesRestart(t *testing.T) {
 		t.Fatalf("Active snapshot mismatch before restart: %v", getClusterActiveSnapshots(t))
 	}
 
-	// Restart cluster
 	restartAllNodes(t)
 
-	// After restart, the active snapshot must remain identical everywhere
+	if !waitForAllNodesReady(10 * time.Second) {
+		t.Fatalf("Cluster did not become ready after restart")
+	}
+
 	ok = waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return activeSnapshotMatchesAllNodes(t, snapshotName)
 	})
@@ -916,7 +927,7 @@ func TestSnapshotDataSurvivesRestart(t *testing.T) {
 	nestedKey := snapshotName + "_nested"
 	removedKey := snapshotName + "_to_be_removed"
 
-	// Set initial state
+	// --- Initial state (before snapshot) ---
 	patchStateValue(t, fooKey, 111)
 	patchStateValue(t, barKey, 222)
 	patchStateValue(t, removedKey, 999)
@@ -925,54 +936,60 @@ func TestSnapshotDataSurvivesRestart(t *testing.T) {
 		"a": 1,
 		"b": []any{10, 20},
 	}
-	setStateValue(t, nestedKey, initialNested)
+	patchStateValue(t, nestedKey, initialNested)
 
-	// Sanity: ensure pre-snapshot state is correct
-	if asInt(getStateValue(t, fooKey)) != 111 {
-		t.Fatalf("Sanity: expected %s=111, got %v", fooKey, getStateValue(t, fooKey))
-	}
-	if asInt(getStateValue(t, barKey)) != 222 {
-		t.Fatalf("Sanity: expected %s=222, got %v", barKey, getStateValue(t, barKey))
+	// Make sure the state is synchronized before snapshot creation
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+		return asInt(getStateValue(t, fooKey)) == 111 &&
+			asInt(getStateValue(t, barKey)) == 222 &&
+			getStateValue(t, removedKey) != nil &&
+			getStateValue(t, nestedKey) != nil
+	}) {
+		t.Fatalf("Pre-snapshot convergence failed: foo=%v bar=%v removed=%v nested=%v",
+			getStateValue(t, fooKey),
+			getStateValue(t, barKey),
+			getStateValue(t, removedKey),
+			getStateValue(t, nestedKey),
+		)
 	}
 
-	// Create snapshot
-	createURL := fmt.Sprintf("%s/%s", snapshotsURL, snapshotName)
+	// Create snapshot capturing the above state
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
 	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
 		t.Fatalf("Failed to create snapshot %q: %v", snapshotName, err)
 	}
 
-	// Mutate state AFTER snapshot
+	//  Mutate state after snapshot
 	patchStateValue(t, fooKey, 999)
 	patchStateValue(t, barKey, 444)
 	patchStateValue(t, nestedKey, map[string]any{"a": 9})
-	patchStateValue(t, removedKey, nil) // delete this key
+	patchStateValue(t, removedKey, nil)
 
-	// Sanity: ensure mutations took effect before restart
-	if asInt(getStateValue(t, fooKey)) != 999 {
-		t.Fatalf("Sanity pre-restart: expected %s=999, got %v", fooKey, getStateValue(t, fooKey))
-	}
-	if asInt(getStateValue(t, barKey)) != 444 {
-		t.Fatalf("Sanity pre-restart: expected %s=444, got %v", barKey, getStateValue(t, barKey))
+	// Validate post-snapshot mutations applied
+	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
+		return asInt(getStateValue(t, fooKey)) == 999 &&
+			asInt(getStateValue(t, barKey)) == 444
+	}) {
+		t.Fatalf("Post-snapshot mutation sanity check failed: foo=%v bar=%v",
+			getStateValue(t, fooKey), getStateValue(t, barKey))
 	}
 
 	restartAllNodes(t)
 
 	// Activate snapshot after restart
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	if _, err := (&http.Client{}).Do(req); err != nil {
 		t.Fatalf("Failed to activate snapshot after restart: %v", err)
 	}
 
-	// Wait for epoch convergence
+	// Wait for cluster to converge to the new epoch
 	if !waitForSnapshotSync(snapshotSyncTime, func() bool {
 		return epochsConverged(t, initialEpoch)
 	}) {
 		t.Fatalf("Epochs did not converge after restart + activation; initial=%d, epochs=%v",
 			initialEpoch, getClusterEpochs(t))
 	}
-
-	// Validate snapshot data restored correctly
 
 	// foo restored
 	if got := asInt(getStateValue(t, fooKey)); got != 111 {
@@ -984,27 +1001,23 @@ func TestSnapshotDataSurvivesRestart(t *testing.T) {
 		t.Fatalf("After restart+activation: expected %s=222, got %v", barKey, got)
 	}
 
-	// nested restored fully
+	// nested restored
 	nv := getStateValue(t, nestedKey)
 	nested, ok := nv.(map[string]any)
 	if !ok {
-		t.Fatalf("After restart+activation: expected nested map for %s, got %T (%v)",
-			nestedKey, nv, nv)
+		t.Fatalf("Expected nested map for %s, got %T (%v)", nestedKey, nv, nv)
 	}
 	if asInt(nested["a"]) != 1 {
-		t.Fatalf("After restart+activation: expected %s.a=1, got %v", nestedKey, nested["a"])
+		t.Fatalf("Expected %s.a=1, got %v", nestedKey, nested["a"])
+	}
+	b := nested["b"].([]any)
+	if len(b) != 2 || asInt(b[0]) != 10 || asInt(b[1]) != 20 {
+		t.Fatalf("Expected %s.b=[10,20], got %v", nestedKey, b)
 	}
 
-	bSlice, ok := nested["b"].([]any)
-	if !ok || len(bSlice) != 2 || asInt(bSlice[0]) != 10 || asInt(bSlice[1]) != 20 {
-		t.Fatalf("After restart+activation: expected %s.b=[10,20], got %v", nestedKey, nested["b"])
-	}
-
-	// removedKey must NOT exist (restored snapshot did not have it deleted)
-	if v := getStateValue(t, removedKey); v == nil {
-		// good
-	} else {
-		t.Fatalf("After restart+activation: expected %s to be absent, got %v", removedKey, v)
+	if got := asInt(getStateValue(t, removedKey)); got != 999 {
+		t.Fatalf("After restart+activation: expected snapshot to restore %s=999, got %v",
+			removedKey, got)
 	}
 }
 
@@ -1024,7 +1037,8 @@ func TestSnapshotActivationOutOfOrderMessages(t *testing.T) {
 	patchStateValue(t, "ooom_key", 123)
 
 	// Activate snapshot
-	activateURL := fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
+
 	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	(&http.Client{}).Do(req)
 
@@ -1043,7 +1057,8 @@ func TestDeleteActiveSnapshotResetsActiveSnapshot(t *testing.T) {
 
 	// Create and activate
 	http.Post(fmt.Sprintf("%s/%s", snapshotsURL, snapshotName), api.JsonMIMEType, nil)
-	req, _ := http.NewRequest(http.MethodPost, fmt.Sprintf("%s/%s", snapshotsURLActivate, snapshotName), nil)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
+	req, _ := http.NewRequest(http.MethodPost, activateURL, nil)
 	(&http.Client{}).Do(req)
 
 	waitForSnapshotSync(snapshotSyncTime, func() bool {
@@ -1089,11 +1104,7 @@ func waitForSnapshotSync(timeout time.Duration, check func() bool) bool {
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
 
-	// Give the cluster half the timeout before starting checks
-	initialDelay := timeout / 2
-	time.Sleep(initialDelay)
-
-	deadline := time.Now().Add(timeout - initialDelay)
+	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
 		if check() {
 			return true
@@ -1132,4 +1143,149 @@ func getLiveNodeAddresses() ([]string, error) {
 		nodes = append(nodes, fmt.Sprintf("http://%s:%s", m.Addr, snapServerPort))
 	}
 	return nodes, nil
+}
+
+func waitForAllNodesReady(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+
+	for time.Now().Before(deadline) {
+		nodes, err := getLiveNodeAddresses()
+		if err != nil || len(nodes) == 0 {
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		allOK := true
+		for _, addr := range nodes {
+			url := fmt.Sprintf("%s/metadata", addr)
+			resp, err := http.Get(url)
+			if err != nil {
+				allOK = false
+				break
+			}
+			resp.Body.Close()
+		}
+
+		if allOK {
+			return true
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	return false
+}
+
+func TestSnapshotUpdateOverwritesState(t *testing.T) {
+	snapshotName := fmt.Sprintf("update_test_%d", time.Now().UnixNano())
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	updateURL := strings.Replace(snapshotUpdateURL, nameParam, snapshotName, 1)
+	activateURL := strings.Replace(snapshotActivateURL, nameParam, snapshotName, 1)
+
+	key := snapshotName + "_foo"
+
+	// Set initial state
+	patchStateValue(t, key, 100)
+
+	// Create snapshot (contains foo = 100)
+	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+
+	// Mutate state after snapshot (foo = 200)
+	patchStateValue(t, key, 200)
+	if asInt(getStateValue(t, key)) != 200 {
+		t.Fatalf("Sanity check: expected foo=200, got %v", getStateValue(t, key))
+	}
+
+	// Overwrite snapshot via /save (snapshot now stores foo = 200)
+	req, _ := http.NewRequest(http.MethodPost, updateURL, nil)
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("Failed to update snapshot: %v", err)
+	}
+	resp.Body.Close()
+	if resp.StatusCode != http.StatusNoContent {
+		body, _ := io.ReadAll(resp.Body)
+		t.Fatalf("Snapshot update returned %d: %s", resp.StatusCode, string(body))
+	}
+
+	// Mutate live state again (foo = 300)
+	patchStateValue(t, key, 300)
+	if asInt(getStateValue(t, key)) != 300 {
+		t.Fatalf("Sanity check: expected foo=300, got %v", getStateValue(t, key))
+	}
+
+	// Activate updated snapshot (should restore foo = 200)
+	req, _ = http.NewRequest(http.MethodPost, activateURL, nil)
+	if _, err := (&http.Client{}).Do(req); err != nil {
+		t.Fatalf("Failed to activate updated snapshot: %v", err)
+	}
+
+	// Wait for state to reflect the restored snapshot value
+	ok := waitForSnapshotSync(snapshotSyncTime, func() bool {
+		return asInt(getStateValue(t, key)) == 200
+	})
+	if !ok {
+		t.Fatalf(
+			"After snapshot update + activation: expected %s=200, got %v",
+			key, getStateValue(t, key),
+		)
+	}
+}
+
+func TestSnapshotUpdateDoesNotBumpEpoch(t *testing.T) {
+	snapshotName := fmt.Sprintf("update_epoch_%d", time.Now().UnixNano())
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	updateURL := strings.Replace(snapshotUpdateURL, nameParam, snapshotName, 1)
+
+	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+
+	before := getAnyClusterEpoch(t)
+
+	req, _ := http.NewRequest(http.MethodPost, updateURL, nil)
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("Failed to update snapshot: %v", err)
+	}
+	resp.Body.Close()
+
+	after := getAnyClusterEpoch(t)
+
+	if after != before {
+		t.Fatalf("Snapshot update incorrectly bumped epoch: before=%d after=%d", before, after)
+	}
+}
+
+func TestSnapshotUpdateDoesNotChangeActiveSnapshot(t *testing.T) {
+	snapshotName := fmt.Sprintf("update_active_%d", time.Now().UnixNano())
+	createURL := strings.Replace(snapshotByNameURL, nameParam, snapshotName, 1)
+	updateURL := strings.Replace(snapshotUpdateURL, nameParam, snapshotName, 1)
+
+	if _, err := http.Post(createURL, api.JsonMIMEType, nil); err != nil {
+		t.Fatalf("Failed to create snapshot: %v", err)
+	}
+
+	activeBefore := getClusterActiveSnapshots(t)
+
+	req, _ := http.NewRequest(http.MethodPost, updateURL, nil)
+	resp, err := (&http.Client{}).Do(req)
+	if err != nil {
+		t.Fatalf("Failed to update snapshot: %v", err)
+	}
+	resp.Body.Close()
+
+	activeAfter := getClusterActiveSnapshots(t)
+
+	if len(activeBefore) != len(activeAfter) {
+		t.Fatalf("Active snapshot count changed after update")
+	}
+
+	for i := range activeBefore {
+		if activeBefore[i] != activeAfter[i] {
+			t.Fatalf("Active snapshot changed after update: before=%v after=%v", activeBefore, activeAfter)
+		}
+	}
 }

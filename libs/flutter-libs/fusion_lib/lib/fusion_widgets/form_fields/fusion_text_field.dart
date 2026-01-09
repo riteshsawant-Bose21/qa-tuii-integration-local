@@ -70,6 +70,8 @@ class FusionTextField extends StatelessWidget {
 
   final List<TextInputFormatter>? inputFormatters;
 
+  final bool autofocus;
+
   const FusionTextField({
     super.key,
     required this.hintText,
@@ -88,6 +90,7 @@ class FusionTextField extends StatelessWidget {
     this.focusNode,
     this.maxLength = 24,
     this.inputFormatters,
+    this.autofocus = false,
   });
 
   @override
@@ -115,6 +118,7 @@ class FusionTextField extends StatelessWidget {
       keyboardType: keyboardType,
       onChanged: onChanged,
       enabled: enabled,
+      autofocus: autofocus,
       style: style ?? theme.textTheme.bodySmall,
       textAlign: textAlign,
       inputFormatters: inputFormatters,

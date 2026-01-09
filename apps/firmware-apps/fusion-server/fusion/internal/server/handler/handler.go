@@ -184,13 +184,9 @@ func (h *Handler) handleConfigUpdate(data map[string]any, clear bool) error {
 		api.WithConfigUpdate(configUpdate),
 	)
 
-	if err := h.broadcastMessage(message); err != nil {
+	if err := h.hub.BroadcastToNodes(message); err != nil {
 		return fmt.Errorf("failed to broadcast config update: %w", err)
 	}
 
 	return nil
-}
-
-func (h *Handler) broadcastMessage(message *api.NotifyMessage) error {
-	return h.hub.BroadcastToNodes(message)
 }
