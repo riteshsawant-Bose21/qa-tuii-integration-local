@@ -176,12 +176,15 @@ class ListeningArea {
   final double maxSPL;
   final double customListeningAreaHeight;
   final bool isDrawn;
-  final MountingType? mountingType;
-  final LowFrequency? lowFrequency;
-  final WiringType? wiringType;
+
   final Color? preferredSpeakerColor;
   final SplRange? splRange;
   final ListeningPreference? listeningPreference;
+
+  /// THESE ARE FILTER OPTIONS
+  final Set<MountingType> mountingTypes;
+  final Set<LowFrequency> lowFrequencies;
+  final WiringType? wiringType;
 
   ListeningArea({
     String? id,
@@ -194,8 +197,8 @@ class ListeningArea {
     this.minSPL = 60.0,
     this.maxSPL = 70.0,
     this.customListeningAreaHeight = 0.0,
-    this.mountingType,
-    this.lowFrequency,
+    this.mountingTypes = const <MountingType>{},
+    this.lowFrequencies = const <LowFrequency>{},
     this.wiringType,
     this.preferredSpeakerColor,
     this.splRange,
@@ -279,8 +282,8 @@ class ListeningArea {
     double? customListeningAreaHeight,
     double? minSPL,
     double? maxSPL,
-    MountingType? mountingType,
-    LowFrequency? lowFrequency,
+    Set<MountingType>? mountingTypes,
+    Set<LowFrequency>? lowFrequencies,
     WiringType? wiringType,
     Color? preferredSpeakerColor,
     SplRange? splRange,
@@ -297,8 +300,8 @@ class ListeningArea {
       minSPL: minSPL ?? this.minSPL,
       maxSPL: maxSPL ?? this.maxSPL,
       customListeningAreaHeight: customListeningAreaHeight ?? this.customListeningAreaHeight,
-      mountingType: mountingType ?? this.mountingType,
-      lowFrequency: lowFrequency ?? this.lowFrequency,
+      mountingTypes: mountingTypes ?? this.mountingTypes,
+      lowFrequencies: lowFrequencies ?? this.lowFrequencies,
       wiringType: wiringType ?? this.wiringType,
       preferredSpeakerColor: preferredSpeakerColor ?? this.preferredSpeakerColor,
       splRange: splRange ?? this.splRange,
@@ -327,9 +330,6 @@ class ListeningArea {
     'maxSPL': maxSPL,
     'customListeningAreaHeight': customListeningAreaHeight,
     'isDrawn': isDrawn,
-    'mountingType': mountingType?.name,
-    'lowFrequency': lowFrequency?.name,
-    'wiringType': wiringType?.name,
     'preferredSpeakerColor': preferredSpeakerColor,
     'splRange': splRange?.name,
     'listeningPreference': listeningPreference?.name,
@@ -365,24 +365,6 @@ class ListeningArea {
       minSPL: (json['minSPL'] as num?)?.toDouble() ?? 60.0,
       maxSPL: (json['maxSPL'] as num?)?.toDouble() ?? 70.0,
       isDrawn: json['isDrawn'] as bool? ?? (verts.isNotEmpty),
-      mountingType: json['mountingType'] != null
-          ? MountingType.values.firstWhere(
-              (MountingType mt) => mt.name == (json['mountingType'] as String),
-              orElse: () => MountingType.ceiling,
-            )
-          : null,
-      lowFrequency: json['lowFrequency'] != null
-          ? LowFrequency.values.firstWhere(
-              (LowFrequency lf) => lf.name == (json['lowFrequency'] as String),
-              orElse: () => LowFrequency.fullRange,
-            )
-          : null,
-      wiringType: json['wiringType'] != null
-          ? WiringType.values.firstWhere(
-              (WiringType wt) => wt.name == (json['wiringType'] as String),
-              orElse: () => WiringType.lowImpedance,
-            )
-          : null,
       preferredSpeakerColor: json['preferredSpeakerColor'] != null ? Color(json['preferredSpeakerColor'] as int) : null,
       splRange: json['splRange'] != null
           ? SplRange.values.firstWhere(

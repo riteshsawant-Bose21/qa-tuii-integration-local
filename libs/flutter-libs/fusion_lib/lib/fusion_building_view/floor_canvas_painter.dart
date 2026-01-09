@@ -474,7 +474,7 @@ class FloorCanvasPainter extends CustomPainter {
     final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
 
     // UI sizing (zoom-invariant)
-    final double fontSize = 11.0 / zs;
+    final double fontSize = (11.0 / zs).clamp(11.0, 16.0);
     final double padH = 8.0 / zs;
     final double padV = 4.0 / zs;
     final double radius = 4.0 / zs;
@@ -483,7 +483,7 @@ class FloorCanvasPainter extends CustomPainter {
     final Rect bounds = path.getBounds();
 
     // Width capped by space to the RIGHT of the left-most vertex
-    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(40.0 / zs, 220.0 / zs);
+    final double maxBadgeWidth = (bounds.right - anchor.dx - 2 * margin).clamp(40.0 / zs, 350.0 / zs);
 
     final TextPainter tp = TextPainter(
       text: TextSpan(

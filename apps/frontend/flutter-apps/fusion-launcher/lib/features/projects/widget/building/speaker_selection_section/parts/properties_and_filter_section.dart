@@ -347,7 +347,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
                         return FusionCheckboxGroup<MountingType>(
                           options: MountingType.values.toList(),
-                          selected: vmState.selectedMountingTypes.toList(),
+                          selected: (selectedListeningArea?.mountingTypes ?? <MountingType>{}).toList(),
                           labelBuilder: (BuildContext context, MountingType option) {
                             return FusionAppText(
                               text: option.name,
@@ -374,7 +374,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
                         return FusionCheckboxGroup<LowFrequency>(
                           options: LowFrequency.values,
-                          selected: vmState.selectedLowFrequencies.toList(),
+                          selected: (selectedListeningArea?.lowFrequencies ?? <LowFrequency>{}).toList(),
                           labelBuilder: (BuildContext context, LowFrequency option) {
                             return FusionAppText(
                               text: option.name,
@@ -426,9 +426,10 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                     const SizedBox(height: 8),
                     BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
                       builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                        final WiringType? selected = vmState.selectedWirings.isEmpty ? null : vmState.selectedWirings.first;
+                        final WiringType? wiringType = selectedListeningArea?.wiringType;
+
                         return FusionRadio<WiringType>(
-                          selected: selected,
+                          selected: wiringType,
                           options: WiringType.values,
                           labelBuilder: (WiringType wiring) {
                             return FusionAppText(
@@ -439,7 +440,7 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                             );
                           },
                           onChanged: (WiringType value) {
-                            speakerSelectionViewModel.setWiring(value);
+                            speakerSelectionViewModel.setWiringType(value);
                           },
                         );
                       },
