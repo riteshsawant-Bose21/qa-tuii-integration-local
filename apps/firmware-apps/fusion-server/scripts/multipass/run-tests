@@ -19,11 +19,13 @@ function show_help() {
     echo "  --tasks       Run only tasks tests"     
     echo "  --udp         Run only UDP tests"     
     echo "  --websocket   Run only websocket tests"     
+    echo "  --integration Run only integration tests (ex: --integration --size 5) (build tag integration)"
     exit 1
 }
 
 test_type="all"
 vip="192.168.2.100:8080"
+cluster_size="3"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -86,6 +88,14 @@ while [[ $# -gt 0 ]]; do
         --websocket)
             test_type="websocket"
             shift
+            ;;
+        --integration)
+            test_type="integration"
+            shift
+            ;;
+        --size)
+            cluster_size="$2"
+            shift 2
             ;;
         --vip)
             vip="$2"
@@ -162,6 +172,23 @@ case "$test_type" in
         ;;
     "websocket")
         go test -v --race ./websocket_test.go
+        ;;
+    "integration")
+        # Export env for integration helpers
+        export FUSION_VIP="${vip%%:*}"
+        export FUSION_PORT="${vip##*:}"
+        export FUSION_ADMIN_PORT="9090"
+
+        if [ -n "$cluster_size" ]; then
+            export FUSION_CLUSTER_SIZE="$cluster_size"
+        fi
+        # Already inside fusion/test; run integration-tagged tests in ./integration
+        if [ ! -d "integration" ]; then
+            echo "Integration test directory ./integration not found (expected at fusion/test/integration)" >&2
+            exit 1
+        fi
+        # Disable test result caching to always re-run integration tests
+        go test -v --race -count=1 -tags=integration ./integration/...
         ;;
 esac
 
