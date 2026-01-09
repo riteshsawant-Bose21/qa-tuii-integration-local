@@ -317,6 +317,10 @@ class _EventValueWidgetState extends State<EventValueWidget> {
             ),
           ),
         );
+
+      case SceneParamValueType.pulse:
+        // Pulse type not implemented yet
+        return const Text('Pulse type not implemented');
     }
   }
 }

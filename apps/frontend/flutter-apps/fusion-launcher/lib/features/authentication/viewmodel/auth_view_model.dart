@@ -109,23 +109,19 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
   /// Handle login success
   Future<void> _handleLoginSuccess(Credentials credentials) async {
     try {
-      //todo: remove this temporary implementation
-      _emitAuthenticated();
-
-      //Todo: uncomment and implement user details fetching from backend
       // Get user authorization from backend
-      // final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
-      //
-      // FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
-      //
-      // if (authDataResponse.success) {
-      //   emit(
-      //     Authenticated(),
-      //   );
-      // } else {
-      //   logout();
-      //   // _emitError('Failed to get user details: ${authDataResponse.message}'));
-      // }
+      final ResponseCallback<UserModel> authDataResponse = await getUserDetails();
+
+      FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
+
+      if (authDataResponse.success) {
+        emit(
+          Authenticated(),
+        );
+      } else {
+        logout();
+        // _emitError('Failed to get user details: ${authDataResponse.message}'));
+      }
     } catch (e) {
       FusionLogger.log(tag: LogTag.exceptions, message: 'Get user authorization error: $e');
       _emitError('Failed to get user details: ${e.toString()}');

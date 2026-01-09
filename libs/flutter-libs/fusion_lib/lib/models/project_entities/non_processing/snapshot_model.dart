@@ -19,7 +19,7 @@ extension SceneActionExtension on SceneActionType {
       case SceneActionType.snapshot:
         return "Snapshot Recall";
       case SceneActionType.scene:
-        return "Mix Scene Recall";
+        return "Scene Recall";
       // case SceneActionType.sourceControl:
       //   return "Source Control";
       case SceneActionType.deviceControl:
@@ -36,14 +36,12 @@ class SceneItemDropdown {
     required this.id,
     required this.name,
   });
-  
+
   @override
   bool operator ==(covariant SceneItemDropdown other) {
     if (identical(this, other)) return true;
-  
-    return 
-      other.id == id &&
-      other.name == name;
+
+    return other.id == id && other.name == name;
   }
 
   @override
@@ -113,6 +111,25 @@ extension SceneParamOptionExtension on SceneParamType {
     }
   }
 
+  bool get isRelatedToZoneFunction {
+    switch (this) {
+      case SceneParamType.sourceSelect:
+      case SceneParamType.mixScene:
+      case SceneParamType.prioritySelect1:
+      case SceneParamType.prioritySelect2:
+        return true;
+      case SceneParamType.setState:
+      case SceneParamType.standby:
+      case SceneParamType.volume:
+      case SceneParamType.mute:
+      case SceneParamType.recall:
+      case SceneParamType.pulse:
+      case SceneParamType.inputLevel:
+      case SceneParamType.inputMute:
+        return false;
+    }
+  }
+
   SceneParamValueType get valueType {
     switch (this) {
       case SceneParamType.volume:
@@ -124,14 +141,15 @@ extension SceneParamOptionExtension on SceneParamType {
       case SceneParamType.recall:
       case SceneParamType.sourceSelect:
       case SceneParamType.mixScene:
+        return SceneParamValueType.dropdownSingle;
       case SceneParamType.prioritySelect1:
       case SceneParamType.prioritySelect2:
-        return SceneParamValueType.dropdownSingle;
+        return SceneParamValueType.onOffButton;
       case SceneParamType.setState:
       case SceneParamType.standby:
         return SceneParamValueType.onOffButton;
       case SceneParamType.pulse:
-        return SceneParamValueType.textInput;
+        return SceneParamValueType.pulse;
     }
   }
 
@@ -165,6 +183,7 @@ enum SceneParamValueType {
   dropdownSingle,
   textInput,
   onOffButton,
+  pulse,
 }
 
 class SceneParam {

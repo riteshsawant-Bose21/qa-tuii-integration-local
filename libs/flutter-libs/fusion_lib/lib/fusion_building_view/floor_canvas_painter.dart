@@ -407,16 +407,18 @@ class FloorCanvasPainter extends CustomPainter {
       }
 
       final anchor = _leftMostVertex(poly, zoomScale);
-      String label = listeningAreas[i].name;
+      String label = "";
 
       // Add zone/subzone information to the label
-      if (parentSubZone != null) {
-        // Listening area belongs to a subzone
-        label = '$label (${parentSubZone.name})';
-      } else if (parentZone != null) {
+     if (parentZone != null) {
         // Listening area belongs directly to a zone
-        label = '$label (${parentZone.name})';
+        label = '${parentZone.name}/';
       }
+     if (parentSubZone != null) {
+        // Listening area belongs to a subzone
+        label += '${parentSubZone.name}/';
+      }
+      label += listeningAreas[i].name;
 
       _drawBadgeAtLeftMostVertexAuto(
         canvas: canvas,
