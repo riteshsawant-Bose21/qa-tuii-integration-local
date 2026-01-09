@@ -473,7 +473,6 @@ func verifyAudioSynced(t *testing.T, ctx context.Context, base string, meta *api
 }
 
 // getClusterNodeURLs returns URLs for all nodes except the VIP itself
-// check!
 func getClusterNodeURLs(t *testing.T, ctx context.Context, vipURL string) []string {
 	req, err := http.NewRequestWithContext(ctx, "GET", vipURL+"/devices", nil)
 	if err != nil {
