@@ -101,7 +101,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
 
   final Products datasource = Products(
     baseUrl: AppConfig.awsApiBaseUrl,
-    fusionOnly: false,
+    fusionOnly: true,
   );
   final List<EQLProduct> allProducts = <EQLProduct>[];
   void loadProducts() {

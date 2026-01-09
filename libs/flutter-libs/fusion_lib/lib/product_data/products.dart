@@ -113,7 +113,7 @@ class Products {
       await _cacheFile.writeAsString(body);
       await _versionFile.writeAsString(catalog.version);
 
-      // Start image caching in background (non-blocking)
+      // Start image caching in background (n on-blocking)
       _cacheImagesInBackground(catalog);
     } finally {
       client.close();
