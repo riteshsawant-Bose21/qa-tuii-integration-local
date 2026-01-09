@@ -7,6 +7,8 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/service/auth/fusion_auth_service.dart';
 
+import '../../../core/services/user_session_manager.dart';
+
 part 'auth_view_model_state.dart';
 
 class AuthViewModel extends Cubit<AuthViewModelState> {
@@ -115,8 +117,22 @@ class AuthViewModel extends Cubit<AuthViewModelState> {
       FusionLogger.log(tag: LogTag.exceptions, message: "User authorization: response received ${authDataResponse.success} ");
 
       if (authDataResponse.success) {
-        emit(
-          Authenticated(),
+        emit(Authenticated());
+
+        // ==== TEMPORARY IMPLEMENTATION ====
+        UserSessionManager().saveUserProfile(
+          UserModel(
+            account: UserAccount(
+              id: credentials.user.sub,
+              description: credentials.user.email,
+              name: credentials.user.name,
+              type: 'email',
+            ),
+            user: UserData(
+              id: credentials.user.sub,
+              email: credentials.user.email,
+            ),
+          ),
         );
       } else {
         logout();

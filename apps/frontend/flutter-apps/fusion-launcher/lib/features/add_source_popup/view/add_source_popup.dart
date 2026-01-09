@@ -184,7 +184,7 @@ class AddSourcePopup extends StatelessWidget {
                           MouseRegion(
                             cursor: isFromBuildingPage ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
                             child: IgnorePointer(
-                              ignoring: !isFromBuildingPage,
+                              ignoring: isFromBuildingPage,
                               child: BuildRowPropertyWidget<ListeningArea>(
                                 label: "Area",
                                 value: state.selectedListeningArea,

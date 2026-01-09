@@ -112,9 +112,42 @@ class _FusionSidebarState extends State<FusionSidebar> {
                         const SizedBox(width: 10),
                       ],
                     ),
-                    Text(
-                      UserSessionManager.getSignedInUserEmail() ?? "",
-                      style: context.textTheme.titleMedium,
+                    FutureBuilder<UserModel?>(
+                      future: UserSessionManager.getSignedInUserProfile(),
+                      builder: (BuildContext context, AsyncSnapshot<UserModel?> asyncSnapshot) {
+                        if (asyncSnapshot.hasData) {
+                          final UserModel user = asyncSnapshot.data!;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              FusionAppText(
+                                text: user.account?.name ?? 'Fusion User',
+                                style: context.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLine: 2,
+                              ),
+                              const SizedBox(height: 8),
+                              Tooltip(
+                                message: user.user?.email ?? '',
+                                child: FusionAppText(
+                                  maxLine: 1,
+                                  text: user.user?.email ?? '--',
+                                  style: context.textTheme.titleSmall,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return FusionShimmer(
+                          baseColor: context.colorScheme.surface.withAlpha(50),
+                          highlightColor: context.colorScheme.onSurface.withOpacity(0.1),
+                          height: 25,
+                          width: double.infinity,
+                          radius: 8,
+                        );
+                      },
                     ),
                   ],
                 ),

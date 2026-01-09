@@ -25,7 +25,9 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
         final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
         final ListeningArea? currentSelectedListeningAreaId = projectViewModel.getCurrentSelectedListeningArea();
 
-        if (currentSelectedListeningAreaId == null) return const SizedBox.shrink();
+        if (currentSelectedListeningAreaId == null || projectViewModel.currentToolbarMode == ToolbarMode.system) {
+          return const SizedBox.shrink();
+        }
 
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 8),
