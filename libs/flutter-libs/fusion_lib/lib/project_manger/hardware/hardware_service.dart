@@ -200,6 +200,13 @@ extension HardwareService on ProjectService {
 
       //remove priority source data for this source
       removePrioritySourceDataForSource(hardwareId);
+
+      //remove linked scene actions
+      final sceneActionIds = relationships.getParents(RelationshipType.actionValueMapping, hardwareId);
+      final sceneActionIdsCopy = List<String>.from(sceneActionIds);
+      for (final actionId in sceneActionIdsCopy) {
+        removeSceneAction(actionId);
+      }
     }
 
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);

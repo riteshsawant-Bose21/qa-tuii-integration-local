@@ -21,6 +21,10 @@ enum RelationshipType {
   sceneSetScenes,
   sceneActions,
   eventActions,
+  actionItemMapping,
+  actionValueMapping,
+  actionParamMapping,
+  eventsItemMapping,
 }
 
 class RelationshipManager {

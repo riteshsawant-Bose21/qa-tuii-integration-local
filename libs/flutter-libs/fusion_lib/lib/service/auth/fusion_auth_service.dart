@@ -76,11 +76,7 @@ class FusionAuthService {
 
       // Use Auth0 credentials manager to refresh
       final newCredentials = await _auth0.api.renewCredentials(refreshToken: refreshToken);
-      print("Logged in, saving credentials");
-      print("Access Token: ${newCredentials.accessToken}");
-      print("ID Token: ${newCredentials.idToken}");
-      print("Refresh Token: ${newCredentials.refreshToken}");
-      print("Expires At: ${newCredentials.expiresAt}");
+
       await _saveCredentials(newCredentials);
       return newCredentials;
     } catch (e) {

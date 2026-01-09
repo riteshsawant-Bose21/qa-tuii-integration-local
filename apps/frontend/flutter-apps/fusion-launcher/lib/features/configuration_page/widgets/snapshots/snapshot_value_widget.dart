@@ -136,9 +136,8 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
           hint: "Select an option",
           display: (SceneValueDropdown e) => e.label,
           onChanged: (SceneValueDropdown? v) {
-            final SceneValue updated = value.copyWith(value: v?.label ?? v?.value);
+            final SceneValue updated = value.copyWith(value: v?.value);
             widget.onChanged(updated);
-            setState(() {});
           },
         );
 
@@ -195,6 +194,12 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               },
             ),
           ),
+        );
+      case SceneParamValueType.pulse:
+        // Not implemented yet
+        return FusionAppText(
+          text: 'Pulse not implemented',
+          style: Theme.of(context).textTheme.bodySmall,
         );
     }
   }
