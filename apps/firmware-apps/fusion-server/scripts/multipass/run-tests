@@ -113,7 +113,7 @@ function test_file_for_type() {
         tasks)        echo "tasks_test.go" ;;
         udp)          echo "udp_test.go" ;;
         websocket)    echo "websocket_test.go" ;;
-        integration)  echo "integrations tests" ;;
+        integration)  echo "integration tests" ;;
         all)          echo "" ;;
     esac
 }
