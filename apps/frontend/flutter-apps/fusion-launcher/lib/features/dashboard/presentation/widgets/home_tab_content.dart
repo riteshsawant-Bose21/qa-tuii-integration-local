@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
@@ -7,7 +8,6 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../../../../core/router/routes.dart';
 import '../../../../core/service_locator.dart';
 import '../../../../core/utils/fusion_utils.dart';
 import '../../../projects/view_model/project_sync_view_model.dart';
@@ -74,44 +74,44 @@ class _HomeTabContentState extends State<HomeTabContent> {
                               fontSize: subHeadingFontSize > 16 ? 16 : subHeadingFontSize,
                             ),
                           ),
-                          const SizedBox(height: 16),
-                          Container(
-                            height: 60,
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: context.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: FusionAppText(
-                                    text: 'Explore More',
-                                    style: context.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ),
-                                MouseRegion(
-                                  cursor: SystemMouseCursors.click,
-                                  child: Container(
-                                    height: 28,
-                                    width: 47,
-                                    decoration: BoxDecoration(
-                                      color: FusionDarkColorPallette.green20,
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: const Icon(
-                                      LucideIcons.arrowRight,
-                                      color: Colors.white,
-                                      size: 12,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
+                          // const SizedBox(height: 16),
+                          // Container(
+                          //   height: 60,
+                          //   width: double.infinity,
+                          //   padding: const EdgeInsets.all(16),
+                          //   decoration: BoxDecoration(
+                          //     color: context.colorScheme.surface,
+                          //     borderRadius: BorderRadius.circular(12),
+                          //   ),
+                          //   child: Row(
+                          //     children: <Widget>[
+                          //       Expanded(
+                          //         child: FusionAppText(
+                          //           text: 'Explore More',
+                          //           style: context.textTheme.titleSmall?.copyWith(
+                          //             fontWeight: FontWeight.w600,
+                          //           ),
+                          //         ),
+                          //       ),
+                          //       MouseRegion(
+                          //         cursor: SystemMouseCursors.click,
+                          //         child: Container(
+                          //           height: 28,
+                          //           width: 47,
+                          //           decoration: BoxDecoration(
+                          //             color: FusionDarkColorPallette.green20,
+                          //             borderRadius: BorderRadius.circular(6),
+                          //           ),
+                          //           child: const Icon(
+                          //             LucideIcons.arrowRight,
+                          //             color: Colors.white,
+                          //             size: 12,
+                          //           ),
+                          //         ),
+                          //       ),
+                          //     ],
+                          //   ),
+                          // ),
                         ],
                       ),
                     ),
@@ -129,7 +129,7 @@ class _HomeTabContentState extends State<HomeTabContent> {
                 // ==============================
                 //   Case Studies and Templates
                 // ==============================
-                const _CaseStudiesAndTemplates(),
+                // const _CaseStudiesAndTemplates(),
               ],
             ),
           ),
@@ -138,10 +138,10 @@ class _HomeTabContentState extends State<HomeTabContent> {
         // ==============================
         //   Getting Started / Right Content
         // ==============================
-        ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 320),
-          child: const _HomeRightContent(),
-        ),
+        // ConstrainedBox(
+        //   constraints: const BoxConstraints(maxWidth: 320),
+        //   child: const _HomeRightContent(),
+        // ),
       ],
     );
   }

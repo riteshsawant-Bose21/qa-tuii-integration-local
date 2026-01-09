@@ -1,0 +1,281 @@
+// ignore_for_file: public_member_api_docs, sort_constructors_first
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/config/app_config.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/product_data/models/amplifier_product.dart';
+import 'package:fusion_lib/product_data/models/dsp_product.dart';
+import 'package:fusion_lib/product_data/models/io_endpoint_product.dart';
+import 'package:fusion_lib/product_data/models/product_port_data.dart';
+import 'package:fusion_lib/product_data/products.dart';
+
+class EqlProductsVm extends Cubit<EQLProductsState> {
+  final ProjectViewModel projectViewModel;
+  EqlProductsVm(this.projectViewModel)
+    : super(
+        EQLProductsState(
+          filters: EQLProductFilters(
+            deviceType: EQLDeviceType.processor,
+            spareCapacity: SpareCapacity.capacity1,
+            monitoringType: MonitoringType.none,
+          ),
+          data: EQLProductsLoading(),
+        ),
+      ) {
+    loadProducts();
+  }
+  bool _isInitialized = false;
+  Future<void> _initialize() async {
+    await datasource.initialize();
+    _isInitialized = true;
+    for (final AmplifierProduct element in datasource.amplifiers) {
+      allProducts.add(
+        EQLProduct(
+          name: element.modelName,
+          assetPath: element.assets.firstAssetUrl ?? '',
+          description: element.description,
+          data: element,
+          searchingFields: '${element.modelName} ${element.description}',
+          deviceType: EQLDeviceType.amplifier,
+          portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
+          price: 290.00,
+          specifications: <String, String>{
+            "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
+            "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
+            "Analog input": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
+            "Analog output": element.numberOfInputsAndOutputs?.analog?.outputs.toString() ?? "0",
+            "FusionConnect input": element.numberOfInputsAndOutputs?.fusionConnect?.maxInputs.toString() ?? "0",
+            "FusionConnect output": element.numberOfInputsAndOutputs?.fusionConnect?.maxOutputs.toString() ?? "0",
+          },
+        ),
+      );
+    }
+    for (final IoEndpointProduct element in datasource.ioEndpoints) {
+      allProducts.add(
+        EQLProduct(
+          name: element.modelName,
+          assetPath: element.assets.firstAssetUrl ?? '',
+          data: element,
+          //TODO: Check Endpoint Port Data
+          portData: ProductPortData(),
+          searchingFields: '${element.modelName} ${element.description}',
+          deviceType: EQLDeviceType.endpoint,
+          description: element.shortDescription ?? element.description,
+          price: 150.00,
+          specifications: <String, String>{
+            "Input Type": element.inputs?.type ?? "-",
+            "no.Of inputs": element.inputs?.quantity.toString() ?? "-",
+            "Output Type": element.outputs?.type ?? "-",
+            "no.Of outputs": element.outputs?.quantity.toString() ?? "-",
+            "Network": element.network ? "Yes" : "No",
+          },
+        ),
+      );
+    }
+    for (final DspProduct element in datasource.dsps) {
+      allProducts.add(
+        EQLProduct(
+          portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
+          name: element.modelName,
+          assetPath: element.assets.firstAssetUrl ?? '',
+          data: element,
+          searchingFields: '${element.modelName} ${element.description}',
+          deviceType: EQLDeviceType.processor,
+          price: 200.00,
+          description: element.shortDescription ?? element.description,
+          specifications: <String, String>{
+            "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
+            "Max Digital Control": element.maxNumberOfDigitalControl.toString() ?? "0",
+            "GPIO Logic Ports":
+                element.gpioLogicPorts != null ? "${element.gpioLogicPorts!.inputs} in / ${element.gpioLogicPorts!.outputs} out" : "0 in / 0 out",
+            "Analog Inputs": element.numberOfInputsAndOutputs?.analog?.inputs.toString() ?? "0",
+            "Analog Outputs": element.numberOfInputsAndOutputs?.analog?.outputs.toString() ?? "0",
+            "FusionConnect Inputs": element.numberOfInputsAndOutputs?.fusionConnect?.maxInputs.toString() ?? "0",
+            "FusionConnect Outputs": element.numberOfInputsAndOutputs?.fusionConnect?.maxOutputs.toString() ?? "0",
+          },
+        ),
+      );
+    }
+    loadProducts();
+  }
+
+  final Products datasource = Products(
+    baseUrl: AppConfig.awsApiBaseUrl,
+    fusionOnly: true,
+  );
+  final List<EQLProduct> allProducts = <EQLProduct>[];
+  void loadProducts() {
+    if (!_isInitialized) {
+      _initialize();
+      return;
+    }
+
+    final EQLProductFilters filters = state.filters;
+    final List<EQLProduct> filteredProducts =
+        allProducts
+            .where((EQLProduct product) {
+              if (product.deviceType != filters.deviceType) {
+                return false;
+              }
+              return true;
+            })
+            .where((EQLProduct e) => e.searchingFields.toLowerCase().contains(filters.searchQuery?.toLowerCase() ?? ''))
+            .toList();
+    emit(
+      EQLProductsState(
+        filters: filters,
+        data: EQLProductsLoaded(products: filteredProducts),
+      ),
+    );
+  }
+
+  void updateFilters(EQLProductFilters newFilters) {
+    emit(
+      EQLProductsState(
+        filters: newFilters,
+        data: state.data,
+      ),
+    );
+    loadProducts();
+  }
+
+  void addProductToLocation({required String equipLocationId, required EQLProduct product}) {
+    final HardwareComponent hardware = _createHardwareFor(product);
+    hardware.inputPortsData.clear();
+    hardware.outputPortsData.clear();
+    hardware.communicationPorts.clear();
+    hardware.inputPortsData.addAll(product.portData.inputPorts);
+    hardware.outputPortsData.addAll(product.portData.outputPorts);
+    hardware.communicationPorts.addAll(product.portData.comPorts);
+
+    projectViewModel.addHardware(hardware: hardware);
+    projectViewModel.addHardwareToEquipLocation(
+      equipLocationId: equipLocationId,
+      hardwareId: hardware.id,
+    );
+  }
+
+  HardwareComponent _createHardwareFor(EQLProduct product) {
+    final HardwareComponent hardware = projectViewModel.fromProductQueryModel(
+      _createPQMFor(product),
+      locationEntity: LocationModel(),
+      isFromBuildingPage: true,
+    );
+    return hardware;
+  }
+
+  ProductQueryModel _createPQMFor(EQLProduct product) {
+    return ProductQueryModel(
+      name: product.name,
+      price: product.price,
+      image: product.assetPath ?? '',
+      type: switch (product.deviceType) {
+        EQLDeviceType.amplifier => ProductType.amplifier,
+        EQLDeviceType.endpoint => ProductType.endpoints,
+        EQLDeviceType.processor => ProductType.dsps,
+        EQLDeviceType.mixerAmp => ProductType.amplifier,
+      },
+      sku: switch (product.data) {
+        final AmplifierProduct a => a.skus.isNotEmpty ? a.skus.first.toString() : 'UNKNOWN',
+        final IoEndpointProduct i => i.skus.isNotEmpty ? i.skus.first.toString() : 'UNKNOWN',
+        final DspProduct d => d.skus.isNotEmpty ? d.skus.first.toString() : 'UNKNOWN',
+        _ => 'UNKNOWN',
+      },
+    );
+  }
+}
+
+enum EQLDeviceType {
+  processor("Processor"),
+  amplifier("Amplifier"),
+  mixerAmp("Mixer-Amp"),
+  endpoint("Endpoint");
+
+  const EQLDeviceType(this.displayName);
+  final String displayName;
+}
+
+enum SpareCapacity {
+  capacity1("Capacity 1"),
+  capacity2("Capacity 2");
+
+  const SpareCapacity(this.displayName);
+  final String displayName;
+}
+
+enum MonitoringType {
+  none("None"),
+  local("Local"),
+  cloud("Cloud");
+
+  const MonitoringType(this.displayName);
+  final String displayName;
+}
+
+class EQLProductFilters {
+  EQLProductFilters({required this.deviceType, required this.spareCapacity, required this.monitoringType, this.searchQuery});
+  final EQLDeviceType deviceType;
+  final SpareCapacity spareCapacity;
+  final MonitoringType monitoringType;
+  final String? searchQuery;
+
+  EQLProductFilters copyWith({
+    EQLDeviceType? deviceType,
+    SpareCapacity? spareCapacity,
+    MonitoringType? monitoringType,
+    String? searchQuery,
+  }) {
+    return EQLProductFilters(
+      deviceType: deviceType ?? this.deviceType,
+      spareCapacity: spareCapacity ?? this.spareCapacity,
+      monitoringType: monitoringType ?? this.monitoringType,
+      searchQuery: searchQuery ?? this.searchQuery,
+    );
+  }
+}
+
+class EQLProductsState {
+  final EQLProductFilters filters;
+  final EQLProductDataState data;
+  EQLProductsState({
+    required this.filters,
+    required this.data,
+  });
+}
+
+abstract class EQLProductDataState {}
+
+class EQLProductsLoading extends EQLProductDataState {}
+
+class EQLProductsLoaded extends EQLProductDataState {
+  final List<EQLProduct> products;
+  EQLProductsLoaded({required this.products});
+}
+
+class EQLProductsError extends EQLProductDataState {
+  final String message;
+  EQLProductsError({required this.message});
+}
+
+class EQLProduct {
+  final String name;
+  final String? assetPath;
+  final String description;
+  final dynamic data;
+  final String searchingFields;
+  final EQLDeviceType deviceType;
+  final double price;
+  final Map<String, String> specifications;
+  final ProductPortData portData;
+  EQLProduct({
+    required this.name,
+    required this.assetPath,
+    required this.description,
+    required this.data,
+    required this.searchingFields,
+    required this.deviceType,
+    required this.price,
+    required this.specifications,
+    required this.portData,
+  });
+}

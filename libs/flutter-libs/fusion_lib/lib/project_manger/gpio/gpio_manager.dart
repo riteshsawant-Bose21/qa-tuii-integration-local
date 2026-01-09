@@ -70,4 +70,17 @@ extension GpioManager on ProjectManager {
     }
     return projectService!.getTotalGpioPorts();
   }
+
+  void reOrderGpio({required String gpioIdToMove, required String gpioAtNewIndexId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, GpioConfig> reorderedList = projectService!.reOrderGpio(
+      gpioIdToMove: gpioIdToMove,
+      gpioAtNewIndexId: gpioAtNewIndexId,
+    );
+    projectService = projectService!.copyWith(
+      gpioRepository: projectService!.gpioConfigs.copyWith(reorderedList),
+    );
+  }
 }

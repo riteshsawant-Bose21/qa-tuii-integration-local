@@ -14,6 +14,8 @@ enum PortPosition {
 enum PortType {
   analogInput('Input'),
   analogOutput('Output'),
+  aes67Input('Input'),
+  aes67Output('Output'),
   ethernet('Ethernet'),
   networkSwitchIn('Ethernet'),
   networkSwitchOut('Ethernet'),
@@ -40,9 +42,14 @@ enum PortType {
   controllerOutput('Output'),
   sourceData('Source Data'),
   speakerData('Speaker Data'),
+  speakerInput('Input'),
+  speakerOutput('Output'),
   digitalInput('Input'),
   digitalOutput('Output'),
-  circuitInput('Input');
+  circuitInput('Input'),
+
+  fusionConnectInput('Input'),
+  fusionConnectOutput('Output');
 
   const PortType(this.description);
 

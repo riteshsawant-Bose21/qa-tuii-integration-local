@@ -68,7 +68,7 @@ class ImageLoaderService {
 
   /// Determines if a path is an asset path or file path
   static bool _isAssetPath(String path) {
-    return path.startsWith('assets/');
+    return path.startsWith('assets/') || path.startsWith('packages/');
   }
 
   /// Gets a cached image if available

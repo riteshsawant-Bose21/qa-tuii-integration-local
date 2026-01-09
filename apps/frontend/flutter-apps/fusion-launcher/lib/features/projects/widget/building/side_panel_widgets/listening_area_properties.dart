@@ -14,13 +14,6 @@ class ListeningAreaProperties extends StatelessWidget {
     required this.selectedListeningArea,
   });
 
-  final List<String> venueOptions = <String>[
-    "Indoor",
-    "Outdoor",
-    "Mixed",
-    "Stadium",
-  ];
-
   final List<String> listeningHeightOptions = <String>[
     "Sitting",
     "Standing",
@@ -88,177 +81,177 @@ class ListeningAreaProperties extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               // Header section with name and delete button
-              Row(
-                children: <Widget>[
-                  Expanded(
-                    flex: 7,
-                    child: TextFormField(
-                      controller: listeningAreaController,
-                      maxLength: 24,
-                      decoration: const InputDecoration(
-                        counterText: "",
-                        hintText: 'Area Name',
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      onFieldSubmitted: (String v) {
-                        if (v.trim().isNotEmpty) {
-                          final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
-                          viewModel.updateListeningArea(area: updatedLA);
-                        } else {
-                          // Reset to previous value if empty
-                          listeningAreaController.text = selectedListeningArea.name;
-                        }
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  //small delete icon button to delete the selectedListeningArea
-                  IconButton(
-                    icon: Icon(
-                      Icons.delete,
-                      size: 18,
-                      color: Theme.of(context).colorScheme.error,
-                    ),
-                    onPressed: () {
-                      viewModel.removeListeningArea(areaId: selectedListeningArea.id);
-                    },
-                  ),
-                ],
-              ),
+              // Row(
+              //   children: <Widget>[
+              //     Expanded(
+              //       flex: 7,
+              //       child: TextFormField(
+              //         controller: listeningAreaController,
+              //         maxLength: 24,
+              //         decoration: const InputDecoration(
+              //           counterText: "",
+              //           hintText: 'Area Name',
+              //           border: InputBorder.none,
+              //           contentPadding: EdgeInsets.zero,
+              //         ),
+              //         style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              //           fontWeight: FontWeight.w600,
+              //           fontSize: 14,
+              //         ),
+              //         onFieldSubmitted: (String v) {
+              //           if (v.trim().isNotEmpty) {
+              //             final ListeningArea updatedLA = selectedListeningArea.copyWith(name: v.trim());
+              //             viewModel.updateListeningArea(area: updatedLA);
+              //           } else {
+              //             // Reset to previous value if empty
+              //             listeningAreaController.text = selectedListeningArea.name;
+              //           }
+              //         },
+              //       ),
+              //     ),
+              //     const SizedBox(width: 8),
+              //     //small delete icon button to delete the selectedListeningArea
+              //     IconButton(
+              //       icon: Icon(
+              //         Icons.delete,
+              //         size: 18,
+              //         color: Theme.of(context).colorScheme.error,
+              //       ),
+              //       onPressed: () {
+              //         viewModel.removeListeningArea(areaId: selectedListeningArea.id);
+              //       },
+              //     ),
+              //   ],
+              // ),
 
-              const SizedBox(height: 20),
+              // const SizedBox(height: 20),
 
               // Properties section
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'Properties',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Zone",
-                    value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
-                    options: viewModel.zones.map((Zone zone) => zone.name).toList(),
-                    onOptionSelected: (int selectedIndex) {
-                      final Zone selectedZone = viewModel.zones[selectedIndex];
-                      viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Type",
-                    value: selectedListeningArea.venuType,
-                    options: venueOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      final String selectedType = venueOptions[selectedIndex];
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "Listening Ht",
-                    value: displayValue,
-                    options: listeningHeightOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      final String selectedOption = listeningHeightOptions[selectedIndex];
-                      final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
+              // Column(
+              //   crossAxisAlignment: CrossAxisAlignment.start,
+              //   children: <Widget>[
+              //     Text(
+              //       'Properties',
+              //       style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              //         fontSize: 11,
+              //         fontWeight: FontWeight.w600,
+              //         color: Theme.of(context).colorScheme.fusionTextViewColor.withValues(alpha: 0.7),
+              //       ),
+              //     ),
+              //     const SizedBox(height: 12),
+              //     _buildLAPropertyRow(
+              //       context: context,
+              //       label: "Zone",
+              //       value: viewModel.getZonesForListeningArea(areaId: selectedListeningArea.id)?.name ?? "N/A",
+              //       options: viewModel.zones.map((Zone zone) => zone.name).toList(),
+              //       onOptionSelected: (int selectedIndex) {
+              //         final Zone selectedZone = viewModel.zones[selectedIndex];
+              //         viewModel.addListeningAreaToZone(listeningAreaId: selectedListeningArea.id, zoneId: selectedZone.id);
+              //       },
+              //     ),
+              //     const SizedBox(height: 10),
+              //     _buildLAPropertyRow(
+              //       context: context,
+              //       label: "Type",
+              //       value: selectedListeningArea.venuType?.name ?? "",
+              //       options: VenueType.values.map((VenueType type) => type.name).toList(),
+              //       onOptionSelected: (int selectedIndex) {
+              //         final VenueType selectedType = VenueType.values[selectedIndex];
+              //         final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
+              //         viewModel.updateListeningArea(area: updatedLA);
+              //       },
+              //     ),
+              //     const SizedBox(height: 10),
+              //     _buildLAPropertyRow(
+              //       context: context,
+              //       label: "Listening Ht",
+              //       value: displayValue,
+              //       options: listeningHeightOptions,
+              //       onOptionSelected: (int selectedIndex) {
+              //         final String selectedOption = listeningHeightOptions[selectedIndex];
+              //         final double heightValue = listeningHeightValues[selectedOption] ?? 3.0;
 
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
+              //         final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: heightValue);
+              //         viewModel.updateListeningArea(area: updatedLA);
+              //       },
+              //     ),
 
-                  // Show custom listening height text field if "Custom" is selected
-                  if (isCustomListeningHeight) ...<Widget>[
-                    const SizedBox(height: 10),
-                    _buildValidatedPropertyRowForTextField(
-                      context: context,
-                      label: "Custom Height",
-                      controller: customListeningHeightController,
-                      hintText: "e.g., 4.5",
-                      onSubmit: (String newValue) {
-                        final double? customHeight = double.tryParse(newValue);
-                        if (customHeight != null && customHeight > 0) {
-                          final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
-                          viewModel.updateListeningArea(area: updatedLA);
-                        }
-                      },
-                      viewModel: viewModel,
-                    ),
-                  ],
+              //     // Show custom listening height text field if "Custom" is selected
+              //     if (isCustomListeningHeight) ...<Widget>[
+              //       const SizedBox(height: 10),
+              //       _buildValidatedPropertyRowForTextField(
+              //         context: context,
+              //         label: "Custom Height",
+              //         controller: customListeningHeightController,
+              //         hintText: "e.g., 4.5",
+              //         onSubmit: (String newValue) {
+              //           final double? customHeight = double.tryParse(newValue);
+              //           if (customHeight != null && customHeight > 0) {
+              //             final ListeningArea updatedLA = selectedListeningArea.copyWith(listeningHeight: customHeight);
+              //             viewModel.updateListeningArea(area: updatedLA);
+              //           }
+              //         },
+              //         viewModel: viewModel,
+              //       ),
+              //     ],
 
-                  const SizedBox(height: 10),
-                  _buildLAPropertyRow(
-                    context: context,
-                    label: "SPL Range",
-                    value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
-                    options: splRangeOptions,
-                    onOptionSelected: (int selectedIndex) {
-                      // Set min/max SPL values based on selection
-                      double minSPL, maxSPL;
-                      switch (selectedIndex) {
-                        case 0: // Background Music
-                          minSPL = 60.0;
-                          maxSPL = 70.0;
-                          break;
-                        case 1: // Paging
-                          minSPL = 70.0;
-                          maxSPL = 80.0;
-                          break;
-                        case 2: // Foreground Music
-                          minSPL = 75.0;
-                          maxSPL = 90.0;
-                          break;
-                        case 3: // Moderate live sound reinforcement
-                          minSPL = 90.0;
-                          maxSPL = 100.0;
-                          break;
-                        case 4: // High-SPL live sound reinforcement
-                          minSPL = 100.0;
-                          maxSPL = 120.0;
-                          break;
-                        default:
-                          minSPL = 60.0;
-                          maxSPL = 70.0;
-                      }
+              //     const SizedBox(height: 10),
+              //     _buildLAPropertyRow(
+              //       context: context,
+              //       label: "SPL Range",
+              //       value: _getCurrentSplRange(selectedListeningArea.minSPL, selectedListeningArea.maxSPL),
+              //       options: splRangeOptions,
+              //       onOptionSelected: (int selectedIndex) {
+              //         // Set min/max SPL values based on selection
+              //         double minSPL, maxSPL;
+              //         switch (selectedIndex) {
+              //           case 0: // Background Music
+              //             minSPL = 60.0;
+              //             maxSPL = 70.0;
+              //             break;
+              //           case 1: // Paging
+              //             minSPL = 70.0;
+              //             maxSPL = 80.0;
+              //             break;
+              //           case 2: // Foreground Music
+              //             minSPL = 75.0;
+              //             maxSPL = 90.0;
+              //             break;
+              //           case 3: // Moderate live sound reinforcement
+              //             minSPL = 90.0;
+              //             maxSPL = 100.0;
+              //             break;
+              //           case 4: // High-SPL live sound reinforcement
+              //             minSPL = 100.0;
+              //             maxSPL = 120.0;
+              //             break;
+              //           default:
+              //             minSPL = 60.0;
+              //             maxSPL = 70.0;
+              //         }
 
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(
-                        minSPL: minSPL,
-                        maxSPL: maxSPL,
-                      );
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                  const SizedBox(height: 10),
-                  _buildPropertyRowForTextField(
-                    context: context,
-                    label: "Ceiling Ht",
-                    controller: ceilingHeightController,
-                    hintText: "e.g., 10 ft",
-                    onSubmit: (String newValue) {
-                      final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
-                      viewModel.updateListeningArea(area: updatedLA);
-                    },
-                  ),
-                ],
-              ),
+              //         final ListeningArea updatedLA = selectedListeningArea.copyWith(
+              //           minSPL: minSPL,
+              //           maxSPL: maxSPL,
+              //         );
+              //         viewModel.updateListeningArea(area: updatedLA);
+              //       },
+              //     ),
+              //     const SizedBox(height: 10),
+              //     _buildPropertyRowForTextField(
+              //       context: context,
+              //       label: "Ceiling Ht",
+              //       controller: ceilingHeightController,
+              //       hintText: "e.g., 10 ft",
+              //       onSubmit: (String newValue) {
+              //         final ListeningArea updatedLA = selectedListeningArea.copyWith(ceilingHeight: newValue);
+              //         viewModel.updateListeningArea(area: updatedLA);
+              //       },
+              //     ),
+              //   ],
+              // ),
 
-              const SizedBox(height: 12),
+              // const SizedBox(height: 12),
 
               // Vertices section
               Column(

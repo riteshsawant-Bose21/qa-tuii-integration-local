@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 export 'circuit/circuit_viewmodel.dart';
@@ -108,6 +109,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
+  
+  bool _shouldPlaceNonPlacedSpeakers = false;
+  bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
+  set shouldPlaceNonPlacedSpeakers(bool shouldPlace) {
+    if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
+    _shouldPlaceNonPlacedSpeakers = shouldPlace;
+    updateProject();
+  }
 
   /// Global hover and selection state management
   SelectedItem? _selectedDevice;
@@ -423,6 +432,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       // Reset selections when switching modes
       changeDeviceTypeIndex(-1);
       setSelectedProductToAdd(null);
+      shouldPlaceNonPlacedSpeakers = false;
       emit(ToolbarModeChanged(mode));
     }
   }
@@ -500,5 +510,17 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   void setSelectedEventId(String? eventId) {
     selectedEventId = eventId;
     emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
+  }
+
+  void increaseQty() {
+    final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
+    final Speaker clonedSpeaker = speakers.last.getClone();
+    addHardware(hardware: clonedSpeaker);
+  }
+
+  void decreaseQty() {
+    final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
+    final Speaker clonedSpeaker = speakers.last;
+    removeHardware(hardwareId: clonedSpeaker.id);
   }
 }

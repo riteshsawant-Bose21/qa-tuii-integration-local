@@ -169,7 +169,7 @@ class ProjectData {
       updatedAt: DateTime.parse(json["updatedAt"] as String),
       lastUploadedAt: json["lastUploadedAt"] != null ? DateTime.parse(json["lastUploadedAt"] as String) : null,
       isCloudInstance: json["isCloudInstance"] as bool? ?? false,
-      projectRawData: json["isCloudInstance"] ? {} : json,
+      projectRawData: (json["isCloudInstance"] ?? false) ? {} : json,
       isDeleted: json["is_deleted"] as bool? ?? false,
     );
   }

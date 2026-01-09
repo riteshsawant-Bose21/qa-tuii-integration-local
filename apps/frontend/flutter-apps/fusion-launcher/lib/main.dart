@@ -15,13 +15,13 @@ import 'package:fusion_launcher/features/projects/view_model/project_sync_view_m
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
+import 'package:universal_platform/universal_platform.dart';
 
 import 'core/config/app_config.dart';
 import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
-import 'package:universal_platform/universal_platform.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
@@ -96,6 +96,7 @@ class MyApp extends StatelessWidget {
         BlocProvider<SessionViewModel>.value(
           value: serviceLocator<SessionViewModel>(),
         ),
+
         BlocProvider<AuthViewModel>.value(
           value: serviceLocator<AuthViewModel>()..initialize(),
           // lazy: false,

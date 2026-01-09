@@ -54,6 +54,8 @@ class FloorCanvas extends StatefulWidget {
   // Mode state
   final bool isAcousticsMode;
 
+  final Function(PointerDownEvent e)? onRightClick;
+
   const FloorCanvas({
     super.key,
     this.gridSize = 100,
@@ -87,6 +89,7 @@ class FloorCanvas extends StatefulWidget {
     required this.isAcousticsMode,
     this.selectedHardwareId,
     this.selectedListeningAreaId,
+    required this.onRightClick,
   });
 
   @override
@@ -255,6 +258,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
                 onPointerMove: _handleMove,
                 onPointerUp: _handleUp,
                 onPointerHover: _handleHover,
+
                 child: AnimatedBuilder(
                   animation: animationController,
                   builder: (context, asyncSnapshot) {
@@ -441,6 +445,11 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   }
 
   void _handleDown(PointerDownEvent e) {
+    if (e.kind == PointerDeviceKind.mouse && e.buttons == kSecondaryMouseButton) {
+      widget.onRightClick?.call(e);
+      return;
+    }
+
     if (_isScaling) return;
     if (e.kind != PointerDeviceKind.mouse && e.kind != PointerDeviceKind.touch) {
       return;

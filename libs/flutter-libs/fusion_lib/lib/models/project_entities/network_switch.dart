@@ -18,6 +18,7 @@ class NetworkSwitch extends HardwareComponent {
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
+    super.equipmentLocationPosition,
     required super.addedFromBuildingPage,
   }) : super(
          id: id ?? "SWITCH${FusionUtils.shortStringUUID()}",
@@ -40,6 +41,7 @@ class NetworkSwitch extends HardwareComponent {
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    int? equipmentLocationPosition,
   }) {
     return NetworkSwitch(
       id: id ?? this.id,
@@ -56,6 +58,7 @@ class NetworkSwitch extends HardwareComponent {
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
     );
   }
 
@@ -77,6 +80,7 @@ class NetworkSwitch extends HardwareComponent {
     'inputPortsData': inputPortsData.map((e) => e.toJson()).toList(),
     'outputPortsData': outputPortsData.map((e) => e.toJson()).toList(),
     'addedFromBuildingPage': addedFromBuildingPage,
+    'equipmentLocationPosition': equipmentLocationPosition,
   };
 
   factory NetworkSwitch.fromJson(Map<String, dynamic> json) {
@@ -96,6 +100,7 @@ class NetworkSwitch extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
     );
   }
 }

@@ -13,6 +13,7 @@ class Speaker extends HardwareComponent {
   final double pitch;
   final double roll;
   final double yaw;
+  final MountingType? mountingType;
 
   Speaker({
     String? id,
@@ -34,11 +35,13 @@ class Speaker extends HardwareComponent {
     required super.price,
     super.lockListeningArea,
     String? hardwareName,
+    super.equipmentLocationPosition,
     super.portData,
     super.communicationPorts,
     super.inputPortsData,
     super.outputPortsData,
     required super.addedFromBuildingPage,
+     this.mountingType,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -65,10 +68,13 @@ class Speaker extends HardwareComponent {
     double? roll,
     double? yaw,
     bool? lockListeningArea,
+    int? equipmentLocationPosition,
     List<PortData>? communicationPorts,
     List<PortData>? inputPortsData,
     List<PortData>? outputPortsData,
     bool? addedFromBuildingPage,
+    Color? color,
+    MountingType? mountingType,
   }) {
     return Speaker(
       id: id ?? this.id,
@@ -88,11 +94,42 @@ class Speaker extends HardwareComponent {
       pitch: pitch ?? this.pitch,
       roll: roll ?? this.roll,
       yaw: yaw ?? this.yaw,
+      equipmentLocationPosition: equipmentLocationPosition ?? this.equipmentLocationPosition,
       lockListeningArea: lockListeningArea ?? this.lockListeningArea,
       communicationPorts: communicationPorts ?? this.communicationPorts,
       inputPortsData: inputPortsData ?? this.inputPortsData,
       outputPortsData: outputPortsData ?? this.outputPortsData,
       addedFromBuildingPage: addedFromBuildingPage ?? this.addedFromBuildingPage,
+      mountingType: mountingType ?? this.mountingType,
+    );
+  }
+
+  Speaker migrateSpeakerTo({required Speaker speaker}) {
+    return Speaker(
+      id: id,
+      name: speaker.name,
+      pos: pos,
+      wiringPos: wiringPos,
+      rotation: rotation,
+      gain: gain,
+      zAxis: zAxis,
+      assetImagePath: speaker.assetImagePath,
+      type: speaker.type,
+      locationEntity: locationEntity,
+      ipAddress: ipAddress,
+      speakerSKU: speaker.speakerSKU,
+      price: speaker.price,
+      hardwareName: speaker.hardwareName,
+      pitch: pitch,
+      roll: roll,
+      yaw: yaw,
+      equipmentLocationPosition: equipmentLocationPosition,
+      lockListeningArea: lockListeningArea,
+      communicationPorts: speaker.communicationPorts,
+      inputPortsData: speaker.inputPortsData,
+      outputPortsData: speaker.outputPortsData,
+      addedFromBuildingPage: speaker.addedFromBuildingPage,
+      mountingType: speaker.mountingType,
     );
   }
 
@@ -204,6 +241,7 @@ class Speaker extends HardwareComponent {
       'outputPortsData': outputPortsData.map((PortData port) => port.toJson()).toList(),
       'inputPortsData': inputPortsData.map((PortData port) => port.toJson()).toList(),
       'addedFromBuildingPage': addedFromBuildingPage,
+      'equipmentLocationPosition': equipmentLocationPosition,
     };
   }
 
@@ -232,6 +270,8 @@ class Speaker extends HardwareComponent {
       outputPortsData: (json['outputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       inputPortsData: (json['inputPortsData'] as List<dynamic>?)?.map((dynamic e) => PortData.fromJson(e as Map<String, dynamic>)).toList() ?? <PortData>[],
       addedFromBuildingPage: json['addedFromBuildingPage'] as bool? ?? false,
+      equipmentLocationPosition: DeserializationUtil.intDeserializer.deserialize(json['equipmentLocationPosition']),
+      mountingType: MountingType.fromJson(json['mountingType'] as String?),
     );
   }
 }
