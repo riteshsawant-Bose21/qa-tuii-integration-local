@@ -26,6 +26,18 @@ extension SceneService on ProjectService {
     if (parentId != null) {
       relationships.unlink(RelationshipType.sceneActions, parentId, actionId);
     }
+
+    final itemIds = relationships.getChildren(RelationshipType.actionItemMapping, actionId);
+    final copyOfItemIds = List<String>.from(itemIds);
+    for (var itemId in copyOfItemIds) {
+      relationships.unlink(RelationshipType.actionItemMapping, actionId, itemId);
+    }
+
+    final valueIds = relationships.getChildren(RelationshipType.actionValueMapping, actionId);
+    final copyOfValueIds = List<String>.from(valueIds);
+    for (var valueId in copyOfValueIds) {
+      relationships.unlink(RelationshipType.actionValueMapping, actionId, valueId);
+    }
   }
 
   void addSceneActionToSnapshot({required String sceneId, required SceneActionModel action}) {
@@ -42,7 +54,7 @@ extension SceneService on ProjectService {
       throw Exception("Scene Action with id $actionId does not exist.");
     }
     relationships.unlink(RelationshipType.sceneActions, sceneId, actionId);
-    sceneActions.remove(actionId);
+    removeSceneAction(actionId);
   }
 
   List<SceneActionModel> getSceneActionsForSnapshot(String sceneId) {
@@ -65,6 +77,13 @@ extension SceneService on ProjectService {
       throw Exception("SceneAction with id $action does not exist.");
     }
     final updatedScene = action.updateItem(item);
+    //check and unlink old item relationship
+    final oldItemId = relationships.getChildren(RelationshipType.actionItemMapping, actionId);
+    if (oldItemId.isNotEmpty) {
+      relationships.unlink(RelationshipType.actionItemMapping, actionId, oldItemId.first);
+    }
+    //link new item relationship
+    relationships.link(RelationshipType.actionItemMapping, actionId, item.itemId);
     sceneActions.add(actionId, updatedScene);
   }
 
@@ -88,6 +107,16 @@ extension SceneService on ProjectService {
       }
     }
 
+    if (param.type == SceneParamType.inputLevel && param.associatedId != null) {
+      final oldValueIds = relationships.getChildren(RelationshipType.actionValueMapping, actionId);
+      final copyOfOldValueIds = List<String>.from(oldValueIds);
+      for (var oldValueId in copyOfOldValueIds) {
+        relationships.unlink(RelationshipType.actionValueMapping, actionId, oldValueId);
+      }
+
+      relationships.link(RelationshipType.actionValueMapping, actionId, param.associatedId!);
+    }
+
     //add a empty value based on param type for rendering purposes
     SceneValue value = SceneValue(
       valueType: param.type.valueType,
@@ -105,27 +134,53 @@ extension SceneService on ProjectService {
     if (scene == null) {
       throw Exception("SceneAction with id $actionId does not exist.");
     }
+    //save dropdown value for mapping
+    if (value.valueType == SceneParamValueType.dropdownSingle) {
+      //remove old mapping
+      final oldValueIds = relationships.getChildren(RelationshipType.actionValueMapping, actionId);
+      final copyOfOldValueIds = List<String>.from(oldValueIds);
+      for (var oldValueId in copyOfOldValueIds) {
+        relationships.unlink(RelationshipType.actionValueMapping, actionId, oldValueId);
+      }
+
+      //link new value
+      if (value.hasStates && value.states != null) {
+        //link both states
+        if (value.states!.value1 != null) {
+          relationships.link(RelationshipType.actionValueMapping, actionId, value.states!.value1!);
+        }
+
+        if (value.states!.value2 != null) {
+          relationships.link(RelationshipType.actionValueMapping, actionId, value.states!.value2!);
+        }
+      } else {
+        if (value.value != null) {
+          relationships.link(RelationshipType.actionValueMapping, actionId, value.value!);
+        }
+      }
+    }
+
     final updatedScene = scene.copyWith(value: value);
     sceneActions.add(actionId, updatedScene);
   }
 
-  void removeSnapshots(String sceneId) {
-    if (!snapshots.exists(sceneId)) {
-      throw Exception("Scene with id $sceneId does not exist.");
+  void removeSnapshots(String snapshotId) {
+    if (!snapshots.exists(snapshotId)) {
+      throw Exception("Scene with id $snapshotId does not exist.");
     }
 
     //remove all scene actions linked to this scene
-    final actionIds = relationships.getChildren(RelationshipType.sceneActions, sceneId);
+    final actionIds = relationships.getChildren(RelationshipType.sceneActions, snapshotId);
     final List<String> actionsToRemove = List.from(actionIds);
     for (var actionId in actionsToRemove) {
-      removeSceneActionFromSnapshot(sceneId: sceneId, actionId: actionId);
+      removeSceneActionFromSnapshot(sceneId: snapshotId, actionId: actionId);
     }
     //check if scene is in any scene set
-    final parentSets = relationships.getParent(RelationshipType.sceneSetScenes, sceneId);
+    final parentSets = relationships.getParent(RelationshipType.sceneSetScenes, snapshotId);
     if (parentSets != null) {
-      removeSnapshotFromSceneSet(sceneSetId: parentSets, sceneId: sceneId);
+      removeSnapshotFromSceneSet(sceneSetId: parentSets, sceneId: snapshotId);
     }
-    snapshots.remove(sceneId);
+    snapshots.remove(snapshotId);
   }
 
   List<SceneActionType> getSceneActionTypes({String? eventId, required bool isFromSnapshot}) {
@@ -434,9 +489,22 @@ extension SceneService on ProjectService {
     if (!sceneSets.exists(sceneSetId)) {
       throw Exception("Scene Set with id $sceneSetId does not exist.");
     }
+
+    //remove all snapshots linked to this scene set
+    final snapshotIds = relationships.getChildren(RelationshipType.sceneSetScenes, sceneSetId);
+    final List<String> snapshotsToRemove = List.from(snapshotIds);
+    for (var snapshotId in snapshotsToRemove) {
+      removeSnapshots(snapshotId);
+    }
+
+    //remove actions associated with scene set
+    final actionIds = relationships.getParents(RelationshipType.actionItemMapping, sceneSetId);
+    final List<String> actionsToRemove = List.from(actionIds);
+    for (var actionId in actionsToRemove) {
+      removeSceneAction(actionId);
+    }
+
     sceneSets.remove(sceneSetId);
-    // Optionally, also remove all relationships
-    relationships.removeAllRelationships(sceneSetId);
   }
 
   List<SceneSetModel> getAllSceneSets() {
@@ -460,6 +528,13 @@ extension SceneService on ProjectService {
     if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
+
+    //check if any action has snapshot recall with this snapshot and remove it
+    final actionIds = relationships.getParents(RelationshipType.actionValueMapping, sceneId);
+    for (var actionId in actionIds) {
+      removeSceneAction(actionId);
+    }
+
     relationships.link(RelationshipType.sceneSetScenes, sceneSetId, sceneId);
   }
 
@@ -471,6 +546,13 @@ extension SceneService on ProjectService {
     if (!snapshots.exists(sceneId)) {
       throw Exception("Scene with id $sceneId does not exist.");
     }
+
+    //check if any action has scene recall with this snapshot and remove it
+    final actionIds = relationships.getParents(RelationshipType.actionValueMapping, sceneId);
+    for (var actionId in actionIds) {
+      removeSceneAction(actionId);
+    }
+
     relationships.unlink(RelationshipType.sceneSetScenes, sceneSetId, sceneId);
   }
 

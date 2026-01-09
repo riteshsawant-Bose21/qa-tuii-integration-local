@@ -65,6 +65,8 @@ extension EventActionExtension on EventActionType {
 
 enum EventConditionType {
   stateChange,
+  stateOn,
+  stateOff,
   threshold,
   valueChange,
 }
@@ -72,6 +74,10 @@ enum EventConditionType {
 extension EventConditionTypeExtension on EventConditionType {
   String get displayName {
     switch (this) {
+      case EventConditionType.stateOn:
+        return "State On";
+      case EventConditionType.stateOff:
+        return "State Off";
       case EventConditionType.stateChange:
         return 'State Change';
       case EventConditionType.threshold:
@@ -95,6 +101,48 @@ abstract class EventCondition {
   EventCondition({
     required this.conditionType,
   });
+}
+
+class StateOnCondition extends EventCondition {
+  final bool hasValue;
+
+  StateOnCondition({
+    super.conditionType = EventConditionType.stateOn,
+    this.hasValue = false,
+  });
+
+  factory StateOnCondition.fromJson(Map<String, dynamic> json) {
+    return StateOnCondition(
+      conditionType: EventConditionType.values.firstWhere((e) => e.name == json['type']),
+      hasValue: json['hasValue'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'type': conditionType.name,
+    'hasValue': hasValue,
+  };
+}
+
+class StateOffCondition extends EventCondition {
+  final bool hasValue;
+
+  StateOffCondition({
+    super.conditionType = EventConditionType.stateOff,
+    this.hasValue = false,
+  });
+
+  factory StateOffCondition.fromJson(Map<String, dynamic> json) {
+    return StateOffCondition(
+      conditionType: EventConditionType.values.firstWhere((e) => e.name == json['type']),
+      hasValue: json['hasValue'] ?? false,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'type': conditionType.name,
+    'hasValue': hasValue,
+  };
 }
 
 class StateChangeCondition extends EventCondition {
@@ -296,6 +344,8 @@ class FusionEvent {
       condition: json['condition'] != null
           ? switch (EventConditionType.values.firstWhere((e) => e.name == json['condition']['type'])) {
               EventConditionType.stateChange => StateChangeCondition.fromJson(json['condition']),
+              EventConditionType.stateOn => StateOnCondition.fromJson(json['condition']),
+              EventConditionType.stateOff => StateOffCondition.fromJson(json['condition']),
               EventConditionType.threshold => ThresholdCondition.fromJson(json['condition']),
               EventConditionType.valueChange => ValueChangeCondition.fromJson(json['condition']),
             }
@@ -315,6 +365,8 @@ class FusionEvent {
     'condition': condition != null
         ? switch (condition?.conditionType) {
             EventConditionType.stateChange => (condition as StateChangeCondition).toJson(),
+            EventConditionType.stateOn => (condition as StateOnCondition).toJson(),
+            EventConditionType.stateOff => (condition as StateOffCondition).toJson(),
             EventConditionType.threshold => (condition as ThresholdCondition).toJson(),
             EventConditionType.valueChange => (condition as ValueChangeCondition).toJson(),
             null => null,
