@@ -201,7 +201,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             itemBuilder: (BuildContext context, int index) {
                               final SpeakerProduct product = items[index];
 
-                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => product.skus.contains(sp.speakerSKU));
+                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.speakerSKU == product.productId.toString());
 
                               return SpeakerCard(
                                 product: product,
@@ -224,11 +224,11 @@ class ProductQuerySpeakerList extends StatelessWidget {
 }
 
 class _SpeakerColorVarient {
-  final String sku;
+  final int productId;
   final SpeakerColor color;
   final String? cachedImagePath;
 
-  const _SpeakerColorVarient({required this.sku, required this.color, required this.cachedImagePath});
+  const _SpeakerColorVarient({required this.productId, required this.color, required this.cachedImagePath});
 }
 
 class SpeakerCard extends StatefulWidget {
@@ -262,7 +262,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
             varients.add(
               _SpeakerColorVarient(
-                sku: widget.product.skus.isNotEmpty ? widget.product.skus.first.toString() : '',
+                productId: widget.product.productId,
                 color: speakerColor,
                 cachedImagePath: assetImagePath,
               ),
