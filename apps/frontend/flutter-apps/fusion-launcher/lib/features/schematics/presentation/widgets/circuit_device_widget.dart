@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/app_enums.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import 'package:fusion_lib/models/project_entities/speaker_model.dart';
@@ -434,10 +436,13 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
               ),
             ),
           ],
-      child: Icon(
-        Icons.more_vert,
-        size: 14,
-        color: Colors.grey[600],
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "location_item_kebab_menu"),
+        child: Icon(
+          Icons.more_vert,
+          size: 14,
+          color: Colors.grey[600],
+        ),
       ),
     );
   }

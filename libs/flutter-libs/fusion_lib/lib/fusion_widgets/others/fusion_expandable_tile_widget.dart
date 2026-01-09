@@ -4,6 +4,8 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
 import '../dockable_side_bar/fusion_dock_floating_panel.dart';
+import '../semantics/semantic_helper.dart';
+import '../semantics/semantic_type.dart';
 import '../text_views/fusion_app_text.dart';
 
 /// A custom expandable tile widget with drag gesture support for Fusion applications.
@@ -108,43 +110,43 @@ class _FusionExpandableTileWidgetState extends State<FusionExpandableTileWidget>
           border: Border(bottom: BorderSide(color: theme.colorScheme.dividerColor, width: 1)),
         ),
         child: ExpansionTile(
-          key: ValueKey<String>(widget.config.title),
-          minTileHeight: 24,
-          controller: widget.controller,
-          dense: true,
-          tilePadding: const EdgeInsets.only(right: 16, left: 16),
-          trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.fusionTextViewColor),
-          onExpansionChanged: _handleExpansionChanged,
-          iconColor: theme.colorScheme.fusionTextViewColor,
-          collapsedIconColor: theme.colorScheme.fusionTextViewColor,
-          title: Draggable<DockItem>(
-            data: widget.item,
-            feedback: FloatingWidget(
-              item: widget.item,
-              config: widget.config,
-              resizing: false,
-              onClose: () {}, // No-op for feedback
-              onResize: (_, __) {}, // No-op for feedback
-            ),
-
-            /// make the original widget semi transparent when dragging
-            childWhenDragging: Opacity(
-              opacity: 0.3,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
-                child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.labelSmall),
+            key: ValueKey<String>(widget.config.title),
+            minTileHeight: 24,
+            controller: widget.controller,
+            dense: true,
+            tilePadding: const EdgeInsets.only(right: 16, left: 16),
+            trailing: _RotatingIcon(animation: _rotationAnimation, color: theme.colorScheme.fusionTextViewColor),
+            onExpansionChanged: _handleExpansionChanged,
+            iconColor: theme.colorScheme.fusionTextViewColor,
+            collapsedIconColor: theme.colorScheme.fusionTextViewColor,
+            title: Draggable<DockItem>(
+              data: widget.item,
+              feedback: FloatingWidget(
+                item: widget.item,
+                config: widget.config,
+                resizing: false,
+                onClose: () {}, // No-op for feedback
+                onResize: (_, __) {}, // No-op for feedback
               ),
+
+              /// make the original widget semi transparent when dragging
+              childWhenDragging: Opacity(
+                opacity: 0.3,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(vertical: 0, horizontal: 0),
+                  child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.labelSmall),
+                ),
+              ),
+
+              /// Only allow undocking if config allows it
+              onDragEnd: (details) => widget.config.allowUndock ? widget.onUndock(widget.item, details) : null,
+              child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
             ),
 
-            /// Only allow undocking if config allows it
-            onDragEnd: (details) => widget.config.allowUndock ? widget.onUndock(widget.item, details) : null,
-            child: FusionAppText(text: widget.config.title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 11)),
+            initiallyExpanded: widget.config.initiallyExpanded,
+            children: <Widget>[widget.config.dockItemWidget],
           ),
-
-          initiallyExpanded: widget.config.initiallyExpanded,
-          children: <Widget>[widget.config.dockItemWidget],
         ),
-      ),
     );
   }
 }

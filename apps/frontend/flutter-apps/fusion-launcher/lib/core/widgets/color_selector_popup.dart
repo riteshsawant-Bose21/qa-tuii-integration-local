@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class ColorSelector extends StatefulWidget {
   final Color selectedColor;
@@ -87,8 +88,8 @@ class _ColorSelectorState extends State<ColorSelector> {
                             mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              const Text(
-                                'Select Color',
+                              const FusionAppText(
+                                text: 'Select Color',
                                 style: TextStyle(
                                   fontSize: 14,
                                   color: Colors.black54,

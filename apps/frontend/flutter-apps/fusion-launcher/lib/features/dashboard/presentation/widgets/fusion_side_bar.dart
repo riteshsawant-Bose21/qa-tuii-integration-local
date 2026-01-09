@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_mode
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/saved_projects_tab.dart';
+import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -291,8 +292,8 @@ class _FusionSidebarState extends State<FusionSidebar> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16.0),
           ),
-          title: const Text(
-            "Create New Project",
+          title: const FusionAppText(
+            text: "Create New Project",
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w600,
@@ -313,7 +314,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     valueListenable: projectNameErrorNotifier,
                     builder: (BuildContext context, String? errorText, _) {
                       return SemanticHelper.formControl(
-                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "Project Name"),
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.projectNameInput),
                         child: TextFormField(
                           controller: projectNameController,
                           autofocus: true,
@@ -335,7 +336,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     valueListenable: venueNameErrorNotifier,
                     builder: (BuildContext context, String? errorText, _) {
                       return SemanticHelper.formControl(
-                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, "Venue Name"),
+                        testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.venueNameInput),
                         child: TextFormField(
                           controller: venueNameController,
                           decoration: _buildInputDecoration(
@@ -552,7 +553,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
                   _buildInputLabel("Budget"),
                   const SizedBox(height: 8),
                   SemanticHelper.formControl(
-                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, "Budget"),
+                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, FusionTestKeys.budgetInput),
                     child: TextFormField(
                       controller: budgetController,
                       keyboardType: TextInputType.number,
@@ -576,7 +577,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
           ),
           actions: <Widget>[
             SemanticHelper.button(
-              testId: SemanticHelper.createTestId(SemanticTypes.button, "Cancel"),
+              testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.cancelCreateProjectButton),
               child: TextButton(
                 onPressed: () => Navigator.pop(ctx),
                 style: TextButton.styleFrom(
@@ -590,7 +591,7 @@ class _FusionSidebarState extends State<FusionSidebar> {
               ),
             ),
             SemanticHelper.button(
-              testId: SemanticHelper.createTestId(SemanticTypes.button, "Create"),
+              testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.createProjectButton),
               child: ElevatedButton(
                 onPressed: () async {
                   final String projectName = projectNameController.text.trim();
@@ -670,12 +671,15 @@ class _FusionSidebarState extends State<FusionSidebar> {
   }
 
   Widget _buildInputLabel(String label) {
-    return Text(
-      label,
-      style: const TextStyle(
-        fontSize: 14,
-        fontWeight: FontWeight.w500,
-        color: Colors.black87,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, label),
+      child: Text(
+        label,
+        style: const TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Colors.black87,
+        ),
       ),
     );
   }

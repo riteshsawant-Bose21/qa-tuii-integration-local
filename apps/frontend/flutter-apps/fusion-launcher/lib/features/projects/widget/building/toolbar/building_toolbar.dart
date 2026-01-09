@@ -215,36 +215,39 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOutCubic,
-        padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(16.0),
-          border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1.0) : null,
-          boxShadow:
-              isSelected
-                  ? <BoxShadow>[
-                    BoxShadow(
-                      color: color.withValues(alpha: 0.15),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
-                    ),
-                  ]
-                  : null,
-        ),
-        child: AnimatedDefaultTextStyle(
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, label),
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
           curve: Curves.easeInOutCubic,
-          style: TextStyle(
-            color: isSelected ? _getDarkerShade(color) : Colors.black54,
-            fontSize: 13.0,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 8.0),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(16.0),
+            border: isSelected ? Border.all(color: color.withValues(alpha: 0.3), width: 1.0) : null,
+            boxShadow:
+                isSelected
+                    ? <BoxShadow>[
+                      BoxShadow(
+                        color: color.withValues(alpha: 0.15),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
+                      ),
+                    ]
+                    : null,
           ),
-          child: Text(label),
+          child: AnimatedDefaultTextStyle(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOutCubic,
+            style: TextStyle(
+              color: isSelected ? _getDarkerShade(color) : Colors.black54,
+              fontSize: 13.0,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+            ),
+            child: FusionAppText(text: label),
+          ),
         ),
       ),
     );
@@ -260,40 +263,43 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }) {
     final Color color = selectedColor ?? Colors.green;
 
-    return Tooltip(
-      message: tooltip,
-      child: GestureDetector(
-        onTap: () {
-          onTap();
-        },
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 1.0),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6.0),
-            border: Border.all(
-              color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
-              width: 1,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, tooltip),
+      child: Tooltip(
+        message: tooltip,
+        child: GestureDetector(
+          onTap: () {
+            onTap();
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 1.0),
+            decoration: BoxDecoration(
+              color: isSelected ? color.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(
+                color: isSelected ? color.withValues(alpha: 0.3) : Colors.transparent,
+                width: 1,
+              ),
             ),
+            child:
+                icon != null
+                    ? Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Icon(
+                        icon,
+                        size: 18.0,
+                        color: isSelected ? _getDarkerShade(color) : Colors.black54,
+                      ),
+                    )
+                    : Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Image.asset(
+                        assetIcon!,
+                        width: 18.0,
+                        height: 18.0,
+                      ),
+                    ),
           ),
-          child:
-              icon != null
-                  ? Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Icon(
-                      icon,
-                      size: 18.0,
-                      color: isSelected ? _getDarkerShade(color) : Colors.black54,
-                    ),
-                  )
-                  : Padding(
-                    padding: const EdgeInsets.all(10.0),
-                    child: Image.asset(
-                      assetIcon!,
-                      width: 18.0,
-                      height: 18.0,
-                    ),
-                  ),
         ),
       ),
     );
@@ -414,19 +420,136 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       onHighlightedSpotTap: (TapDownDetails value) {
         sourcesPopupMenuButtonStateGlobalKey.currentState?.showButtonMenu();
       },
-      child: PopupMenuButton<SourceData>(
-        key: sourcesPopupMenuButtonStateGlobalKey,
-        onSelected: (SourceData selectedItem) {
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_sources"),
+        child: PopupMenuButton<SourceData>(
+          key: sourcesPopupMenuButtonStateGlobalKey,
+          onSelected: (SourceData selectedItem) {
+            // Set device type index first
+            serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+
+            // Create product and set for addition
+            final ProductQueryModel product = ProductQueryModel(
+              name: selectedItem.name,
+              price: 0.0,
+              image: selectedItem.assetPath,
+              type: ProductType.sources,
+              sku: selectedItem.id,
+            );
+            serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+          },
+          constraints: const BoxConstraints(
+            maxHeight: 500,
+            maxWidth: 320,
+          ),
+          color: Colors.white,
+          itemBuilder: (BuildContext context) {
+            return <PopupMenuEntry<SourceData>>[
+              const PopupMenuItem<SourceData>(
+                enabled: false,
+                child: FusionAppText(
+                  text: 'MICROPHONES',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+                ),
+              ),
+              ...SourceData.microphoneItems.map(
+                (SourceData item) => PopupMenuItem<SourceData>(
+                  height: 30,
+                  value: item,
+                  child: Row(
+                    children: <Widget>[
+                      Image.asset(
+                        item.assetPath,
+                        height: 14,
+                        width: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FusionAppText(
+                          text: item.name,
+                          style: const TextStyle(fontSize: 12),
+                          // overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const PopupMenuDivider(),
+              const PopupMenuItem<SourceData>(
+                enabled: false,
+                child: FusionAppText(
+                  text: 'MEDIA SOURCES',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
+                ),
+              ),
+              ...SourceData.mediaSourceItems.map(
+                (SourceData item) => PopupMenuItem<SourceData>(
+                  height: 30,
+                  value: item,
+                  child: Row(
+                    children: <Widget>[
+                      Image.asset(
+                        item.assetPath,
+                        height: 14,
+                        width: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FusionAppText(
+                          text: item.name,
+                          style: const TextStyle(fontSize: 12),
+                          // overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ];
+          },
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 1.0),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(
+                color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+                width: 1,
+              ),
+            ),
+            child: Tooltip(
+              message: "Add Sources",
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Icon(
+                  Icons.mic,
+                  size: 18.0,
+                  color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRackToolWithMenu({required bool isSelected}) {
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_racks"),
+      child: PopupMenuButton<DeviceItemModel>(
+        onSelected: (DeviceItemModel selectedItem) {
           // Set device type index first
-          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+          serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // Rack index
 
           // Create product and set for addition
           final ProductQueryModel product = ProductQueryModel(
             name: selectedItem.name,
             price: 0.0,
-            image: selectedItem.assetPath,
-            type: ProductType.sources,
-            sku: selectedItem.id,
+            image: selectedItem.image,
+            type: ProductType.racks,
+            sku: selectedItem.sku,
           );
           serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
         },
@@ -436,64 +559,31 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         ),
         color: Colors.white,
         itemBuilder: (BuildContext context) {
-          return <PopupMenuEntry<SourceData>>[
-            const PopupMenuItem<SourceData>(
+          return <PopupMenuEntry<DeviceItemModel>>[
+            const PopupMenuItem<DeviceItemModel>(
               enabled: false,
-              child: Text(
-                'MICROPHONES',
+              child: FusionAppText(
+                text: 'RACK OPTIONS',
                 style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
               ),
             ),
-            ...SourceData.microphoneItems.map(
-              (SourceData item) => PopupMenuItem<SourceData>(
+            ..._rackOptions.map(
+              (String option) => PopupMenuItem<DeviceItemModel>(
                 height: 30,
-                value: item,
-                child: Row(
-                  children: <Widget>[
-                    Image.asset(
-                      item.assetPath,
-                      height: 14,
-                      width: 14,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                  ],
+                value: DeviceItemModel(
+                  sku: option.toLowerCase(),
+                  name: '$option Rack',
+                  image: 'assets/images/products/rack.png',
                 ),
-              ),
-            ),
-            const PopupMenuDivider(),
-            const PopupMenuItem<SourceData>(
-              enabled: false,
-              child: Text(
-                'MEDIA SOURCES',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
-              ),
-            ),
-            ...SourceData.mediaSourceItems.map(
-              (SourceData item) => PopupMenuItem<SourceData>(
-                height: 30,
-                value: item,
                 child: Row(
                   children: <Widget>[
                     Image.asset(
-                      item.assetPath,
+                      'assets/images/products/rack.png',
                       height: 14,
                       width: 14,
                     ),
                     const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        item.name,
-                        style: const TextStyle(fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                    FusionAppText(text: '$option Rack'),
                   ],
                 ),
               ),
@@ -511,92 +601,14 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             ),
           ),
           child: Tooltip(
-            message: "Add Sources",
+            message: "Add Racks",
             child: Padding(
               padding: const EdgeInsets.all(10.0),
               child: Icon(
-                Icons.mic,
+                Icons.dns_outlined,
                 size: 18.0,
                 color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
               ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildRackToolWithMenu({required bool isSelected}) {
-    return PopupMenuButton<DeviceItemModel>(
-      onSelected: (DeviceItemModel selectedItem) {
-        // Set device type index first
-        serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // Rack index
-
-        // Create product and set for addition
-        final ProductQueryModel product = ProductQueryModel(
-          name: selectedItem.name,
-          price: 0.0,
-          image: selectedItem.image,
-          type: ProductType.racks,
-          sku: selectedItem.sku,
-        );
-        serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-      },
-      constraints: const BoxConstraints(
-        maxHeight: 500,
-        maxWidth: 320,
-      ),
-      color: Colors.white,
-      itemBuilder: (BuildContext context) {
-        return <PopupMenuEntry<DeviceItemModel>>[
-          const PopupMenuItem<DeviceItemModel>(
-            enabled: false,
-            child: Text(
-              'RACK OPTIONS',
-              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
-            ),
-          ),
-          ..._rackOptions.map(
-            (String option) => PopupMenuItem<DeviceItemModel>(
-              height: 30,
-              value: DeviceItemModel(
-                sku: option.toLowerCase(),
-                name: '$option Rack',
-                image: 'assets/images/products/rack.png',
-              ),
-              child: Row(
-                children: <Widget>[
-                  Image.asset(
-                    'assets/images/products/rack.png',
-                    height: 14,
-                    width: 14,
-                  ),
-                  const SizedBox(width: 8),
-                  Text('$option Rack'),
-                ],
-              ),
-            ),
-          ),
-        ];
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 1.0),
-        decoration: BoxDecoration(
-          color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
-          borderRadius: BorderRadius.circular(6.0),
-          border: Border.all(
-            color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
-            width: 1,
-          ),
-        ),
-        child: Tooltip(
-          message: "Add Racks",
-          child: Padding(
-            padding: const EdgeInsets.all(10.0),
-            child: Icon(
-              Icons.dns_outlined,
-              size: 18.0,
-              color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
             ),
           ),
         ),

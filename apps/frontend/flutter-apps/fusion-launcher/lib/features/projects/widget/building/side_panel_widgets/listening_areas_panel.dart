@@ -67,19 +67,27 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
       return _buildEmptyState();
     }
 
-    return Container(
-      constraints: const BoxConstraints(),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: <Widget>[
-          const SizedBox(height: 3),
-          ...listeningAreas.map(
-            (ListeningArea area) => Container(
-              child: _buildListeningAreaCard(area),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_lists"),
+      child: Container(
+        constraints: const BoxConstraints(),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const SizedBox(height: 3),
+            ...listeningAreas.map(
+              (ListeningArea area) {
+                final int index = listeningAreas.indexOf(area);
+                return SemanticHelper.listItem(
+                  testId: SemanticHelper.createTestId(SemanticTypes.listItem, "listening_area_item_$index"),
+                  index: index,
+                  child: _buildListeningAreaCard(area),
+                );
+              },
             ),
-          ),
-          const SizedBox(height: 8),
-        ],
+            const SizedBox(height: 8),
+          ],
+        ),
       ),
     );
   }
@@ -143,10 +151,14 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     child: AnimatedRotation(
                       duration: const Duration(milliseconds: 200),
                       turns: isExpanded ? 0.25 : 0.0,
-                      child: Icon(
-                        Icons.keyboard_arrow_right,
-                        size: 16,
-                        color: Colors.grey[600],
+                      child: SemanticHelper.toggle(
+                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse"),
+                        value: isExpanded,
+                        child: Icon(
+                          Icons.keyboard_arrow_right,
+                          size: 16,
+                          color: Colors.grey[600],
+                        ),
                       ),
                     ),
                   ),
@@ -184,7 +196,21 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
           firstChild: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
-              if (speakers.isNotEmpty) ...speakers.map((Speaker speaker) => _buildSpeakerItem(speaker)) else _buildNoSpeakersMessage(),
+              if (speakers.isNotEmpty) ...<Widget>[
+                ...speakers.map(
+                  (Speaker speaker) {
+                    final int index = speakers.indexOf(speaker);
+                    return SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_speaker_$index"),
+                      child: _buildSpeakerItem(speaker),
+                    );
+                  },
+                ),
+              ] else
+                SemanticHelper.staticText(
+                  testId: SemanticHelper.createTestId(SemanticTypes.text, "no_speakers_message"),
+                  child: _buildNoSpeakersMessage(),
+                ),
             ],
           ),
           secondChild: const SizedBox.shrink(),

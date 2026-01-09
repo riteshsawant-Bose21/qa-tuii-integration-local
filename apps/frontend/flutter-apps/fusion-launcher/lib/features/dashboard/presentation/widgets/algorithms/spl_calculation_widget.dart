@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_gradient_button.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_drop_down_button_form_field.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_form_field.dart';
@@ -48,7 +49,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
           const SizedBox(height: 20),
           
           // Mounting Type Selection
-          const Text(
+          const FusionAppText(text:
             'Mounting Type',
             style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
           ),
@@ -58,7 +59,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
             children: <String>['ceiling', 'surface', 'pendant'].map((String type) {
               final bool isSelected = selectedMountingTypes.contains(type);
               return FilterChip(
-                label: Text(type.toUpperCase()),
+                label: FusionAppText(text:type.toUpperCase()),
                 selected: isSelected,
                 onSelected: (bool selected) {
                   setState(() {
@@ -137,6 +138,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                   value: selectedEnvironment,
                   options: const <String>['indoor', 'outdoor'],
                   hintText: 'Select Environment',
+                  semanticKey: "environment_dropdown",
                   onChanged: (String? value) {
                     if (value != null) {
                       setState(() {
@@ -182,7 +184,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          const Text(
+          const FusionAppText(text:
             'SPL Calculation Results',
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
@@ -194,7 +196,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    FusionAppText(text:
                       'Mounting: ${result.mountingType.toUpperCase()}',
                       style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
@@ -205,8 +207,8 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              Text('Distance: ${result.distance.toStringAsFixed(2)}m'),
-                              Text('SPL Loss: ${result.splLoss.toStringAsFixed(2)}dB'),
+                              FusionAppText(text:'Distance: ${result.distance.toStringAsFixed(2)}m'),
+                              FusionAppText(text:'SPL Loss: ${result.splLoss.toStringAsFixed(2)}dB'),
                             ],
                           ),
                         ),
@@ -224,11 +226,11 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
-                          const Text('SPL Requirements:', style: TextStyle(fontWeight: FontWeight.w600)),
+                          const FusionAppText(text:'SPL Requirements:', style: TextStyle(fontWeight: FontWeight.w600)),
                           const SizedBox(height: 4),
-                          Text('Minimum: ${result.splRequiredMin.toStringAsFixed(1)}dB'),
-                          Text('Target: ${result.splRequiredMid.toStringAsFixed(1)}dB'),
-                          Text('Maximum: ${result.splRequiredMax.toStringAsFixed(1)}dB'),
+                          FusionAppText(text:'Minimum: ${result.splRequiredMin.toStringAsFixed(1)}dB'),
+                          FusionAppText(text:'Target: ${result.splRequiredMid.toStringAsFixed(1)}dB'),
+                          FusionAppText(text:'Maximum: ${result.splRequiredMax.toStringAsFixed(1)}dB'),
                         ],
                       ),
                     ),
@@ -236,7 +238,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                     const SizedBox(height: 12),
                     
                     // Speaker Recommendations
-                    const Text('Speaker Recommendations:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
+                    const FusionAppText(text:'Speaker Recommendations:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15)),
                     const SizedBox(height: 8),
                     
                     if (result.recommendedModelsMin.isNotEmpty) ...<Widget>[
@@ -251,8 +253,8 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const Text('Minimum SPL:', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.green)),
-                            ...result.recommendedModelsMin.map((String model) => Text('• $model')),
+                            const FusionAppText(text:'Minimum SPL:', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.green)),
+                            ...result.recommendedModelsMin.map((String model) => FusionAppText(text:'• $model')),
                           ],
                         ),
                       ),
@@ -271,8 +273,8 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const Text('Target SPL:', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue)),
-                            ...result.recommendedModelsMid.map((String model) => Text('• $model')),
+                            const FusionAppText(text:'Target SPL:', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.blue)),
+                            ...result.recommendedModelsMid.map((String model) => FusionAppText(text:'• $model')),
                           ],
                         ),
                       ),
@@ -291,8 +293,8 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const Text('Maximum SPL:', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.orange)),
-                            ...result.recommendedModelsMax.map((String model) => Text('• $model')),
+                            const FusionAppText(text:'Maximum SPL:', style: TextStyle(fontWeight: FontWeight.w500, color: Colors.orange)),
+                            ...result.recommendedModelsMax.map((String model) => FusionAppText(text:'• $model')),
                           ],
                         ),
                       ),
@@ -309,7 +311,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
                           borderRadius: BorderRadius.circular(6.0),
                           border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
                         ),
-                        child: const Text(
+                        child: const FusionAppText(text:
                           'No suitable speakers found for this configuration',
                           style: TextStyle(color: Colors.red, fontStyle: FontStyle.italic),
                         ),
@@ -328,7 +330,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
     try {
       if (selectedMountingTypes.isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please select at least one mounting type')),
+          const SnackBar(content: FusionAppText(text:'Please select at least one mounting type')),
         );
         return;
       }
@@ -350,7 +352,7 @@ class _SplCalculationWidgetState extends State<SplCalculationWidget> {
       });
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+        SnackBar(content: FusionAppText(text:'Error: ${e.toString()}')),
       );
     }
   }

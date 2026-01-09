@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
@@ -206,137 +207,140 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                   },
                                   child: GuideShowcaseWrapper(
                                     step: GuideShowCaseSteps.showListeningAreaSelectionArea,
-                                    child: FloorCanvas(
-                                      gridSize: 100,
-                                      controller: widget.floorCanvasController,
-                                      hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(
-                                        floorId: floor.id,
-                                      ),
-                                      listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
-                                        floorId: floor.id,
-                                      ),
-                                      floor: floor,
-                                      floorPlanEntity: floor.floorPlan,
-                                      selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
-                                      selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
-                                      onUpdateHardwareComponent: (HardwareComponent updatedHw) {
-                                        final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
-
-                                        //check for pos && listening area id since only those two can be updated from canvas
-                                        if (oldHw.pos != updatedHw.pos ||
-                                            oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
-                                            oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
-                                          serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
-                                        } else {
-                                          debugPrint(
-                                            "No changes detected for hardware ${updatedHw.id}, skipping update.",
-                                          );
-                                        }
-                                      },
-                                      zones: serviceLocator<ProjectViewModel>().zones,
-                                      subZones: serviceLocator<ProjectViewModel>().subZones,
-                                      splPanelData: widget.splPanelData,
-                                      onCanvasZoomChanged: (double z) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(
-                                          floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
-                                        );
-                                      },
-                                      onCanvasPanChanged: (ui.Offset p) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(
-                                          floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
-                                        );
-                                      },
-                                      moveHardware: (
-                                        HardwareComponent hardware,
-                                        String? newListeningAreaId,
-                                        String? floorId,
-                                      ) {
-                                        serviceLocator<ProjectViewModel>().moveHardware(
-                                          hardwareId: hardware.id,
-                                          floorId: floorId,
-                                          listeningAreaId: newListeningAreaId,
-                                        );
-                                        // serviceLocator<ProjectViewModel>().saveProjectToLocal();
-                                      },
-                                      onAddListeningArea: (
-                                        ListeningArea created,
-                                        List<HardwareComponent>? containedHardware,
-                                      ) {
-                                        serviceLocator<ProjectViewModel>().recordSnapshot();
-                                        serviceLocator<ProjectViewModel>().addListeningArea(
-                                          area: created,
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "building_floor_canvas"),
+                                      child: FloorCanvas(
+                                        gridSize: 100,
+                                        controller: widget.floorCanvasController,
+                                        hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareForFloor(
                                           floorId: floor.id,
-                                          autoSave: false,
-                                        );
-                                        if (containedHardware != null) {
-                                          for (final HardwareComponent hc in containedHardware) {
-                                            serviceLocator<ProjectViewModel>().moveHardware(
-                                              hardwareId: hc.id,
-                                              listeningAreaId: created.id,
-                                              floorId: floor.id,
-                                              autoSave: false,
+                                        ),
+                                        listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
+                                          floorId: floor.id,
+                                        ),
+                                        floor: floor,
+                                        floorPlanEntity: floor.floorPlan,
+                                        selectedHardwareId: serviceLocator<ProjectViewModel>().currentSelectedHardwareId,
+                                        selectedListeningAreaId: serviceLocator<ProjectViewModel>().currentSelectedListeningAreaId,
+                                        onUpdateHardwareComponent: (HardwareComponent updatedHw) {
+                                          final HardwareComponent oldHw = serviceLocator<ProjectViewModel>().getHardware(hardwareId: updatedHw.id)!;
+
+                                          //check for pos && listening area id since only those two can be updated from canvas
+                                          if (oldHw.pos != updatedHw.pos ||
+                                              oldHw.locationEntity.listeningAreaId != updatedHw.locationEntity.listeningAreaId ||
+                                              oldHw.locationEntity.floorId != updatedHw.locationEntity.floorId) {
+                                            serviceLocator<ProjectViewModel>().updateHardware(hardware: updatedHw);
+                                          } else {
+                                            debugPrint(
+                                              "No changes detected for hardware ${updatedHw.id}, skipping update.",
                                             );
                                           }
-                                        }
-                                        widget.onCalculateSpl();
-                                        serviceLocator<ProjectViewModel>().saveProject();
-                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.drawListeningArea);
-                                      },
-                                      onUpdateListeningArea: (ListeningArea area) {
-                                        serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
-                                      },
-                                      onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
-                                        serviceLocator<ProjectViewModel>().updateFloor(
-                                          floor: floor.copyWith(floorPlan: updatedPlan),
-                                        );
-                                      },
-                                      onViewportCenterUpdated: (ui.Offset center) {
-                                        viewPortCenter = center;
-                                      },
-                                      onComponentTransformed: (dynamic component) {
-                                        if (component is Speaker || component is ListeningArea) {
+                                        },
+                                        zones: serviceLocator<ProjectViewModel>().zones,
+                                        subZones: serviceLocator<ProjectViewModel>().subZones,
+                                        splPanelData: widget.splPanelData,
+                                        onCanvasZoomChanged: (double z) {
+                                          serviceLocator<ProjectViewModel>().updateFloor(
+                                            floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasZoom: z)),
+                                          );
+                                        },
+                                        onCanvasPanChanged: (ui.Offset p) {
+                                          serviceLocator<ProjectViewModel>().updateFloor(
+                                            floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
+                                          );
+                                        },
+                                        moveHardware: (
+                                          HardwareComponent hardware,
+                                          String? newListeningAreaId,
+                                          String? floorId,
+                                        ) {
+                                          serviceLocator<ProjectViewModel>().moveHardware(
+                                            hardwareId: hardware.id,
+                                            floorId: floorId,
+                                            listeningAreaId: newListeningAreaId,
+                                          );
+                                          // serviceLocator<ProjectViewModel>().saveProjectToLocal();
+                                        },
+                                        onAddListeningArea: (
+                                          ListeningArea created,
+                                          List<HardwareComponent>? containedHardware,
+                                        ) {
+                                          serviceLocator<ProjectViewModel>().recordSnapshot();
+                                          serviceLocator<ProjectViewModel>().addListeningArea(
+                                            area: created,
+                                            floorId: floor.id,
+                                            autoSave: false,
+                                          );
+                                          if (containedHardware != null) {
+                                            for (final HardwareComponent hc in containedHardware) {
+                                              serviceLocator<ProjectViewModel>().moveHardware(
+                                                hardwareId: hc.id,
+                                                listeningAreaId: created.id,
+                                                floorId: floor.id,
+                                                autoSave: false,
+                                              );
+                                            }
+                                          }
                                           widget.onCalculateSpl();
-                                        }
-                                      },
-                                      onTapListeningArea: (ListeningArea value) {
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
-                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showListeningAreaSelectionArea);
-                                      },
-                                      onSelectedListeningAreaIdChanged: (String? value) {
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                      },
-                                      onSelectedHardwareComponentIdChanged: (String? value) {
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                      },
-                                      onSelectedFloorPlanIdChanged: () {
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-                                        serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
-                                      },
-                                      splMin: serviceLocator<ProjectViewModel>().minSPL,
-                                      splMax: serviceLocator<ProjectViewModel>().maxSPL,
-                                      addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
-                                        if (serviceLocator<ProjectViewModel>().selectedProductToAdd == null) {
-                                          debugPrint("No product selected to add");
-                                          return;
-                                        }
-                                        serviceLocator<ProjectViewModel>().addSelectedProduct(
-                                          position: speakerPosition,
-                                          listeningAreaId: listeningAreaId,
-                                        );
+                                          serviceLocator<ProjectViewModel>().saveProject();
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.drawListeningArea);
+                                        },
+                                        onUpdateListeningArea: (ListeningArea area) {
+                                          serviceLocator<ProjectViewModel>().updateListeningArea(area: area);
+                                        },
+                                        onFloorPlanUpdated: (FloorPlanModel updatedPlan) {
+                                          serviceLocator<ProjectViewModel>().updateFloor(
+                                            floor: floor.copyWith(floorPlan: updatedPlan),
+                                          );
+                                        },
+                                        onViewportCenterUpdated: (ui.Offset center) {
+                                          viewPortCenter = center;
+                                        },
+                                        onComponentTransformed: (dynamic component) {
+                                          if (component is Speaker || component is ListeningArea) {
+                                            widget.onCalculateSpl();
+                                          }
+                                        },
+                                        onTapListeningArea: (ListeningArea value) {
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value.id);
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.showListeningAreaSelectionArea);
+                                        },
+                                        onSelectedListeningAreaIdChanged: (String? value) {
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(value);
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                        },
+                                        onSelectedHardwareComponentIdChanged: (String? value) {
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(value);
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                        },
+                                        onSelectedFloorPlanIdChanged: () {
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                                          serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+                                        },
+                                        splMin: serviceLocator<ProjectViewModel>().minSPL,
+                                        splMax: serviceLocator<ProjectViewModel>().maxSPL,
+                                        addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
+                                          if (serviceLocator<ProjectViewModel>().selectedProductToAdd == null) {
+                                            debugPrint("No product selected to add");
+                                            return;
+                                          }
+                                          serviceLocator<ProjectViewModel>().addSelectedProduct(
+                                            position: speakerPosition,
+                                            listeningAreaId: listeningAreaId,
+                                          );
 
-                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
 
-                                        if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
-                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
-                                        }
-                                        widget.onCalculateSpl();
-                                      },
-                                      listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
-                                      subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
-                                      listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
-                                      isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
+                                          if (serviceLocator<GuideShowCaseController>().isStepCompleted(GuideShowCaseSteps.systemMode)) {
+                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.systemModeTabs);
+                                          }
+                                          widget.onCalculateSpl();
+                                        },
+                                        listeningAreaToZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToZoneMap(),
+                                        subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
+                                        listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
+                                        isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -416,8 +420,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                     child: Row(
                                       mainAxisSize: MainAxisSize.min,
                                       children: <Widget>[
-                                        Text(
-                                          'Select listening areas for ${serviceLocator<ProjectViewModel>().getCurrentSelectionZoneName()}',
+                                        FusionAppText(
+                                          text: 'Select listening areas for ${serviceLocator<ProjectViewModel>().getCurrentSelectionZoneName()}',
                                           style: TextStyle(
                                             fontSize: 14,
                                             color:
@@ -430,6 +434,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           ),
                                         ),
                                         const SizedBox(width: 16),
+                                        SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                                        child:
                                         InkWell(
                                           onTap: () {
                                             serviceLocator<ProjectViewModel>().clearSelectedZone();
@@ -465,6 +471,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
+                                        ),
                                         const SizedBox(width: 12),
                                         GuideShowcaseWrapper(
                                           step: GuideShowCaseSteps.confirmSelectListeningArea,
@@ -474,7 +481,8 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             widget.floorCanvasController.completeListeningAreaSelection();
                                             serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
                                           },
-                                          child: InkWell(
+                                          child:SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
+                                           child: InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
                                               widget.floorCanvasController.completeListeningAreaSelection();
@@ -509,6 +517,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
+                                      ),
                                       ],
                                     ),
                                   );
@@ -690,7 +699,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
               child: FusionOutlinedButton(
                 height: 32,
                 width: 160,
-                semanticsId: "Upload Floor-plan",
+                semanticsId: FusionTestKeys.uploadFloorPlan,
                 label: "Upload Floor-plan",
                 textStyle: Theme.of(context).textTheme.titleSmall,
                 onTap: () {
@@ -736,14 +745,17 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           color: Theme.of(context).colorScheme.fusionTextViewColor,
                         ),
                       ),
-                      IconButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        icon: Icon(
-                          Icons.close,
-                          color: Theme.of(context).colorScheme.greyDark,
-                          size: 20,
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.closeX),
+                        child: IconButton(
+                          onPressed: () => Navigator.of(ctx).pop(),
+                          icon: Icon(
+                            Icons.close,
+                            color: Theme.of(context).colorScheme.greyDark,
+                            size: 20,
+                          ),
+                          splashRadius: 16,
                         ),
-                        splashRadius: 16,
                       ),
                     ],
                   ),
@@ -778,14 +790,15 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   const SizedBox(height: 16),
 
                   Row(
-                    children:
-                        plans
-                            .map(
-                              (String planPath) => Expanded(
-                                child: _buildSamplePlanCard(planPath),
-                              ),
-                            )
-                            .toList(),
+                    children: List<Widget>.generate(
+                      plans.length,
+                      (int index) {
+                        final String planPath = plans[index];
+                        return Expanded(
+                          child: _buildSamplePlanCard(index, planPath),
+                        );
+                      },
+                    ),
                   ),
                 ],
               ),
@@ -870,43 +883,46 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
     );
   }
 
-  Widget _buildSamplePlanCard(String planPath) {
+  Widget _buildSamplePlanCard(int index, String planPath) {
     final String title = planPath.split('/').last.split('.').first.replaceAll('_', ' ').toUpperCase();
 
-    return Container(
-      height: 120,
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.dividerColor,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, 'floor_plan_sample_${index + 1}'),
+      child: Container(
+        height: 120,
+        margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.dividerColor,
+          ),
         ),
-      ),
-      child: GestureDetector(
-        onTap: () => _selectAssetFloorPlan(planPath),
-        child: Column(
-          children: <Widget>[
-            Expanded(
-              child: _buildFloorPlanImage(planPath),
-            ),
-            const SizedBox(
-              height: 8,
-            ),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Colors.black,
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
+        child: GestureDetector(
+          onTap: () => _selectAssetFloorPlan(planPath),
+          child: Column(
+            children: <Widget>[
+              Expanded(
+                child: _buildFloorPlanImage(planPath),
               ),
-              textAlign: TextAlign.center,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(
-              height: 8,
-            ),
-          ],
+              const SizedBox(
+                height: 8,
+              ),
+              FusionAppText(
+                text: title,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Colors.black,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+                maxLine: 1,
+                // overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(
+                height: 8,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -1005,7 +1021,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Error importing floor plan: ${e.toString()}'),
+          content: FusionAppText(text: 'Error importing floor plan: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1135,7 +1151,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                 const Icon(Icons.error, color: Colors.white),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text('Error during calibration: $e'),
+                  child: FusionAppText(text: 'Error during calibration: $e'),
                 ),
               ],
             ),

@@ -342,10 +342,13 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
               ),
             ),
           ],
-      child: Icon(
-        Icons.more_vert,
-        size: 14,
-        color: Colors.grey[600],
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "subzone_item_kebab_menu"),
+        child: Icon(
+          Icons.more_vert,
+          size: 14,
+          color: Colors.grey[600],
+        ),
       ),
     );
   }

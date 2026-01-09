@@ -5,7 +5,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../router/navigation_observer.dart';
 
@@ -164,8 +164,8 @@ class FusionUiUtils {
             }
 
             return AlertDialog(
-              title: Text(
-                '⚠️ API Error ${statusCode != null ? '($statusCode)' : ''}',
+              title: FusionAppText(
+                text: '⚠️ API Error ${statusCode != null ? '($statusCode)' : ''}',
                 style: const TextStyle(
                   color: Colors.red,
                   fontWeight: FontWeight.bold,
@@ -184,19 +184,19 @@ class FusionUiUtils {
               actions: <Widget>[
                 TextButton(
                   onPressed: () => Navigator.of(context).pop(),
-                  child: const Text('Close', style: TextStyle(color: Colors.blueAccent)),
+                  child: const FusionAppText(text: 'Close', style: TextStyle(color: Colors.blueAccent)),
                 ),
                 TextButton(
                   onPressed: () => setState(() => showDetails = !showDetails),
-                  child: Text(
-                    showDetails ? 'Hide Details' : 'Show Details',
+                  child: FusionAppText(
+                    text: showDetails ? 'Hide Details' : 'Show Details',
                     style: const TextStyle(color: Colors.blueAccent),
                   ),
                 ),
                 if (showDetails) ...<Widget>[
                   TextButton(
                     onPressed: () => _copyRequestData(context, requestData),
-                    child: const Text('Copy Request', style: TextStyle(color: Colors.blueAccent)),
+                    child: const FusionAppText(text: 'Copy Request', style: TextStyle(color: Colors.blueAccent)),
                   ),
                   TextButton(
                     onPressed: () {
@@ -211,7 +211,7 @@ Status Code: ${statusCode ?? 'None'}
 ''';
                       _copyToClipboard(context, errorDetails);
                     },
-                    child: const Text('Copy All', style: TextStyle(color: Colors.blueAccent)),
+                    child: const FusionAppText(text: 'Copy All', style: TextStyle(color: Colors.blueAccent)),
                   ),
                 ],
               ],
@@ -254,7 +254,7 @@ Status Code: ${statusCode ?? 'None'}
     // Show confirmation
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Data copied to clipboard'),
+        content: FusionAppText(text: 'Data copied to clipboard'),
         duration: Duration(seconds: 2),
       ),
     );
@@ -266,8 +266,8 @@ Status Code: ${statusCode ?? 'None'}
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
-        Text(
-          title,
+        FusionAppText(
+          text: title,
           style: const TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 14,
