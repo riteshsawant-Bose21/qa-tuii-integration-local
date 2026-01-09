@@ -50,12 +50,9 @@ while [[ $# -gt 0 ]]; do
         --tasks)        test_type="tasks"; shift ;;
         --udp)          test_type="udp"; shift ;;
         --websocket)    test_type="websocket"; shift ;;
-        --integration) test_type="integration" shift ;;
-        --size) cluster_size="$2" shift 2 ;;
-                --vip)
-            vip="$2"
-            shift 2
-            ;;
+        --integration)  test_type="integration"; shift ;;
+        --size)         cluster_size="$2"; shift 2 ;;
+        --vip)          vip="$2"; shift 2 ;;
         --test-name)
             if [[ $# -ge 2 && "$2" != --* ]]; then
                 test_name="$2"
@@ -116,6 +113,7 @@ function test_file_for_type() {
         tasks)        echo "tasks_test.go" ;;
         udp)          echo "udp_test.go" ;;
         websocket)    echo "websocket_test.go" ;;
+        integration)  echo "integrations tests" ;;
         all)          echo "" ;;
     esac
 }

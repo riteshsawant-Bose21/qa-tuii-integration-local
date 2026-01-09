@@ -55,24 +55,24 @@ func NewTestCluster(t *testing.T) FusionCluster {
 	if err != nil {
 		t.Fatalf("initial build cluster failed: %v", err)
 	}
-	fmt.Printf("[integration] discovered cluster nodes:\n")
-	for _, n := range fc.Nodes {
-		fmt.Printf(" - multipass=%s ips=%v fusion=%s(%s) member=%s(%s) primary=%v\n",
-			n.MultipassName, n.MultipassIPs, n.FusionName, n.FusionAddr,
-			n.MemberName, n.MemberAddr, n.IsPrimary)
-	}
+	// fmt.Printf("[integration] discovered cluster nodes:\n")
+	// for _, n := range fc.Nodes {
+	// 	fmt.Printf(" - multipass=%s ips=%v fusion=%s(%s) member=%s(%s) primary=%v\n",
+	// 		n.MultipassName, n.MultipassIPs, n.FusionName, n.FusionAddr,
+	// 		n.MemberName, n.MemberAddr, n.IsPrimary)
+	// }
 
 	// Refresh mappings after restart stabilization
 	time.Sleep(2 * time.Second)
 	if err := fc.Refresh(ctx); err != nil {
 		t.Fatalf("refresh after restart failed: %v", err)
 	}
-	fmt.Printf("[integration] finalized cluster nodes:\n")
-	for _, n := range fc.Nodes {
-		fmt.Printf(" - multipass=%s ips=%v fusion=%s(%s) member=%s(%s) primary=%v\n",
-			n.MultipassName, n.MultipassIPs, n.FusionName, n.FusionAddr,
-			n.MemberName, n.MemberAddr, n.IsPrimary)
-	}
+	// fmt.Printf("[integration] finalized cluster nodes:\n")
+	// for _, n := range fc.Nodes {
+	// 	fmt.Printf(" - multipass=%s ips=%v fusion=%s(%s) member=%s(%s) primary=%v\n",
+	// 		n.MultipassName, n.MultipassIPs, n.FusionName, n.FusionAddr,
+	// 		n.MemberName, n.MemberAddr, n.IsPrimary)
+	// }
 	return fc
 }
 
