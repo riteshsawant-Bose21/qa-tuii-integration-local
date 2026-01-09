@@ -13,68 +13,7 @@ import 'package:fusion_lib/product_data/products.dart';
 import '../parts/constant_enums.dart';
 import '../parts/replace_speaker_warning_dialog.dart';
 
-class SpeakerSelectionViewModelState extends Equatable {
-  const SpeakerSelectionViewModelState({
-    this.mode = SpeakerSelectionMode.select,
-    this.selectedMountingTypes = const <MountingType>{},
-    this.selectedLowFrequencies = const <LowFrequency>{},
-    this.selectedColors = const <SpeakerColor>{},
-    this.selectedWirings = const <WiringType>{},
-    this.sortOption = SpeakerSortOption.nameAsc,
-    this.searchQuery = '',
-    this.isLoading = false,
-    this.speakers,
-    this.selectedSignalType = SignalType.mono,
-  });
-
-  final SpeakerSelectionMode mode;
-  final Set<MountingType> selectedMountingTypes;
-  final Set<LowFrequency> selectedLowFrequencies;
-  final Set<SpeakerColor> selectedColors;
-  final Set<WiringType> selectedWirings;
-  final SpeakerSortOption sortOption;
-  final String searchQuery;
-  final bool isLoading;
-  final List<SpeakerProduct>? speakers;
-  final SignalType selectedSignalType;
-
-  SpeakerSelectionViewModelState copyWith({
-    SpeakerSelectionMode? mode,
-    Set<MountingType>? selectedMountingTypes,
-    Set<LowFrequency>? selectedLowFrequencies,
-    Set<SpeakerColor>? selectedColors,
-    Set<WiringType>? selectedWirings,
-    SpeakerSortOption? sortOption,
-    String? searchQuery,
-    bool? isLoading,
-    List<SpeakerProduct>? speakers,
-  }) {
-    return SpeakerSelectionViewModelState(
-      mode: mode ?? this.mode,
-      selectedMountingTypes: selectedMountingTypes ?? this.selectedMountingTypes,
-      selectedLowFrequencies: selectedLowFrequencies ?? this.selectedLowFrequencies,
-      selectedColors: selectedColors ?? this.selectedColors,
-      selectedWirings: selectedWirings ?? this.selectedWirings,
-      sortOption: sortOption ?? this.sortOption,
-      searchQuery: searchQuery ?? this.searchQuery,
-      isLoading: isLoading ?? this.isLoading,
-      speakers: speakers ?? this.speakers,
-    );
-  }
-
-  @override
-  List<Object?> get props => <Object?>[
-    mode,
-    selectedMountingTypes,
-    selectedLowFrequencies,
-    selectedColors,
-    selectedWirings,
-    sortOption,
-    searchQuery,
-    isLoading,
-    speakers,
-  ];
-}
+part 'state.dart';
 
 class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   SpeakerSelectionViewModel() : super(const SpeakerSelectionViewModelState()) {
@@ -83,40 +22,39 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   final Products productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl);
 
+  ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
+  ListeningArea? get selectedListeningArea => serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
+
   // State updates
   void setMode(SpeakerSelectionMode mode) => emit(state.copyWith(mode: mode));
 
-  void toggleMountingType(MountingType type) {
-    final Set<MountingType> updated = Set<MountingType>.from(state.selectedMountingTypes);
-    updated.contains(type) ? updated.remove(type) : updated.add(type);
-    emit(state.copyWith(selectedMountingTypes: updated));
+  void setMountingTypes(List<MountingType> types) {
+    final Set<MountingType> updated = Set<MountingType>.from(types);
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(mountingTypes: updated);
+    projectViewModel.updateListeningArea(area: updatedLA);
   }
 
-  void toggleLowFrequency(LowFrequency lf) {
-    final Set<LowFrequency> updated = Set<LowFrequency>.from(state.selectedLowFrequencies);
-    updated.contains(lf) ? updated.remove(lf) : updated.add(lf);
-    emit(state.copyWith(selectedLowFrequencies: updated));
+  void setLowFrequencies(List<LowFrequency> lfs) {
+    final Set<LowFrequency> updated = Set<LowFrequency>.from(lfs);
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(lowFrequencies: updated);
+    projectViewModel.updateListeningArea(area: updatedLA);
   }
 
   void toggleColor(SpeakerColor color) {
-    final Set<SpeakerColor> updated = Set<SpeakerColor>.from(state.selectedColors);
-    updated.contains(color) ? updated.remove(color) : updated.add(color);
-    emit(state.copyWith(selectedColors: updated));
+    // final Set<SpeakerColor> updated = Set<SpeakerColor>.from(state.selectedColors);
+    // updated.contains(color) ? updated.remove(color) : updated.add(color);
+    // emit(state.copyWith(selectedColors: updated));
   }
 
-  void toggleWiring(WiringType wiring) {
-    final Set<WiringType> updated = Set<WiringType>.from(state.selectedWirings);
-    updated.contains(wiring) ? updated.remove(wiring) : updated.add(wiring);
-    emit(state.copyWith(selectedWirings: updated));
+  void setWiringType(WiringType? wiringType) {
+    final ListeningArea updatedLA = selectedListeningArea!.copyWith(wiringType: wiringType);
+    projectViewModel.updateListeningArea(area: updatedLA);
   }
 
   void setSortOption(SpeakerSortOption option) => emit(state.copyWith(sortOption: option));
   void setSearchQuery(String query) => emit(state.copyWith(searchQuery: query));
 
-  void setMountingTypes(Iterable<MountingType> types) => emit(state.copyWith(selectedMountingTypes: Set<MountingType>.from(types)));
-  void setLowFrequencies(Iterable<LowFrequency> lfs) => emit(state.copyWith(selectedLowFrequencies: Set<LowFrequency>.from(lfs)));
   void setColors(Iterable<SpeakerColor> colors) => emit(state.copyWith(selectedColors: Set<SpeakerColor>.from(colors)));
-  void setWiring(WiringType? wiring) => emit(state.copyWith(selectedWirings: wiring == null ? <WiringType>{} : <WiringType>{wiring}));
 
   // Data loading
   Future<void> loadProducts() async {
@@ -206,17 +144,21 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       });
     }
 
-    if (state.selectedMountingTypes.isNotEmpty) {
-      final List<String> keys = state.selectedMountingTypes.map((MountingType e) => e.name.toLowerCase()).toList();
+    final Set<MountingType> mountingTypes = selectedListeningArea?.mountingTypes ?? <MountingType>{};
+    final Set<LowFrequency> lowFrequencies = selectedListeningArea?.lowFrequencies ?? <LowFrequency>{};
+
+    if (mountingTypes.isNotEmpty) {
+      final List<String> keys = mountingTypes.map((MountingType e) => e.name.toLowerCase()).toList();
       filtered = filtered.where((SpeakerProduct p) {
         final String mt = (p.mountType ?? '').toLowerCase();
         return keys.any((String k) => mt.contains(k));
       });
     }
 
-    final bool filterWiring = state.selectedWirings.isNotEmpty;
-    if (filterWiring) {
-      final bool wantHiZ = state.selectedWirings.contains(WiringType.highImpedance);
+    final WiringType? wiringType = selectedListeningArea?.wiringType;
+
+    if (wiringType != null) {
+      final bool wantHiZ = wiringType == WiringType.highImpedance;
       filtered = filtered.where((SpeakerProduct p) {
         final bool hasHiZ =
             p.isHighImpedanceRated ||
@@ -228,14 +170,14 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       });
     }
 
-    if (state.selectedLowFrequencies.isNotEmpty) {
+    if (lowFrequencies.isNotEmpty) {
       filtered = filtered.where((SpeakerProduct p) {
         final FrequencyRange? fr = p.frequencyRange;
         final bool isSub =
             p.isSubwoofer || (p.description.toLowerCase().contains('subwoofer') || (p.shortDescription?.toLowerCase().contains('subwoofer') ?? false));
 
         bool matches = false;
-        for (final LowFrequency sel in state.selectedLowFrequencies) {
+        for (final LowFrequency sel in lowFrequencies) {
           switch (sel) {
             case LowFrequency.subwoofer:
               if (isSub) matches = true;
