@@ -137,6 +137,11 @@ class EquipmentLocationSection extends StatelessWidget {
                       final List<HardwareComponent> hardwares = BlocProvider.of<ProjectViewModel>(
                         context,
                       ).getHardwareForEquipLocation(equipLocationId: location.id);
+                      hardwares.sort((HardwareComponent a, HardwareComponent b) {
+                        final int posA = a.equipmentLocationPosition ?? 9999;
+                        final int posB = b.equipmentLocationPosition ?? 9999;
+                        return posA.compareTo(posB);
+                      });
                       return Column(
                         children: <Widget>[
                           for (final HardwareComponent hardware in hardwares)
