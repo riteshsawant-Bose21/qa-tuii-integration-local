@@ -201,7 +201,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             itemBuilder: (BuildContext context, int index) {
                               final SpeakerProduct product = items[index];
 
-                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.speakerSKU == product.skus.first.toString());
+                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => product.skus.contains(sp.speakerSKU));
 
                               return SpeakerCard(
                                 product: product,
@@ -262,7 +262,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
             varients.add(
               _SpeakerColorVarient(
-                sku: widget.product.skus.first.toString(),
+                sku: widget.product.skus.isNotEmpty ? widget.product.skus.first.toString() : '',
                 color: speakerColor,
                 cachedImagePath: assetImagePath,
               ),

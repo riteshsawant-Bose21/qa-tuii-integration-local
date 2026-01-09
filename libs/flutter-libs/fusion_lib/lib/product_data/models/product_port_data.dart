@@ -144,20 +144,20 @@ class ProductPortData {
     }
 
     if (fusionConnect != null) {
-      ports.addAll(
-        List.generate(
-          fusionConnect?.maxInputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
-            type: PortType.fusionConnectInput,
-            portNumber: index + 1,
-            description: "${(PortType.fusionConnectInput).description} ${index + 1}",
-            position: PortPosition.topLeft,
-            compatibleTypes: [PortType.fusionConnectOutput],
-          ),
-        ),
-      );
+      // ports.addAll(
+      //   List.generate(
+      //     fusionConnect?.maxInputs ?? 0,
+      //     (index) => PortData(
+      //       id: FusionUtils.shortStringUUID(),
+      //       name: '${index + 1}',
+      //       type: PortType.fusionConnectInput,
+      //       portNumber: index + 1,
+      //       description: "${(PortType.fusionConnectInput).description} ${index + 1}",
+      //       position: PortPosition.topLeft,
+      //       compatibleTypes: [PortType.fusionConnectOutput],
+      //     ),
+      //   ),
+      // );
     }
     if (loudspeakerPorts != null) {
       ports.addAll(
@@ -213,20 +213,20 @@ class ProductPortData {
       );
     }
     if (fusionConnect != null) {
-      ports.addAll(
-        List.generate(
-          fusionConnect?.maxOutputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
-            type: PortType.fusionConnectOutput,
-            portNumber: index + 1,
-            description: "${(PortType.fusionConnectOutput).description} ${index + 1}",
-            position: PortPosition.topRight,
-            compatibleTypes: [PortType.fusionConnectInput],
-          ),
-        ),
-      );
+      // ports.addAll(
+      //   List.generate(
+      //     fusionConnect?.maxOutputs ?? 0,
+      //     (index) => PortData(
+      //       id: FusionUtils.shortStringUUID(),
+      //       name: '${index + 1}',
+      //       type: PortType.fusionConnectOutput,
+      //       portNumber: index + 1,
+      //       description: "${(PortType.fusionConnectOutput).description} ${index + 1}",
+      //       position: PortPosition.topRight,
+      //       compatibleTypes: [PortType.fusionConnectInput],
+      //     ),
+      //   ),
+      // );
     }
     if (loudspeakerPorts != null) {
       ports.addAll(
@@ -235,11 +235,11 @@ class ProductPortData {
           (index) => PortData(
             id: FusionUtils.shortStringUUID(),
             name: '${index + 1}',
-            type: PortType.speakerOutput,
+            type: PortType.amplifierOutput,
             portNumber: index + 1,
-            description: "${(PortType.speakerOutput).description} ${index + 1}",
+            description: "${(PortType.amplifierOutput).description} ${index + 1}",
             position: PortPosition.topRight,
-            compatibleTypes: [PortType.speakerInput],
+            compatibleTypes: [PortType.circuitInput],
           ),
         ),
       );
@@ -259,7 +259,7 @@ class ProductPortData {
             type: PortType.bleIn,
             portNumber: index + 1,
             description: "${(PortType.bleIn).description} ${index + 1}",
-            position: PortPosition.bottomLeft,
+            position: PortPosition.footerLeft,
             compatibleTypes: [PortType.bleOut],
           ),
         ),
@@ -275,7 +275,7 @@ class ProductPortData {
             type: PortType.hdmiIn,
             portNumber: index + 1,
             description: "${(PortType.hdmiIn).description} ${index + 1}",
-            position: PortPosition.bottomLeft,
+            position: PortPosition.footerLeft,
             compatibleTypes: [PortType.hdmiOut],
           ),
         ),
@@ -289,7 +289,7 @@ class ProductPortData {
             type: PortType.hdmiOut,
             portNumber: index + 1,
             description: "${(PortType.hdmiOut).description} ${index + 1}",
-            position: PortPosition.bottomLeft,
+            position: PortPosition.footerLeft,
             compatibleTypes: [PortType.hdmiIn],
           ),
         ),
@@ -305,7 +305,7 @@ class ProductPortData {
             type: PortType.usbIn,
             portNumber: index + 1,
             description: "${(PortType.usbIn).description} ${index + 1}",
-            position: PortPosition.bottomLeft,
+            position: PortPosition.footerLeft,
             compatibleTypes: [PortType.usbOut],
           ),
         ),
@@ -319,7 +319,7 @@ class ProductPortData {
             type: PortType.usbOut,
             portNumber: index + 1,
             description: "${(PortType.usbOut).description} ${index + 1}",
-            position: PortPosition.bottomLeft,
+            position: PortPosition.footerLeft,
             compatibleTypes: [PortType.usbIn],
           ),
         ),
