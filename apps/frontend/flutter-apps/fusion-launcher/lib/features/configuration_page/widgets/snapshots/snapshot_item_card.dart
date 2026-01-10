@@ -10,6 +10,7 @@ class SnapshotItemCard extends StatefulWidget {
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final VoidCallback? onDuplicate;
   final int index;
 
   const SnapshotItemCard({
@@ -19,6 +20,7 @@ class SnapshotItemCard extends StatefulWidget {
     required this.snapShotData,
     this.onDelete,
     this.onTap,
+    this.onDuplicate,
     required this.index,
   });
 
@@ -93,7 +95,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
               ),
 
               const SizedBox(width: 8),
-              if (!widget.isDragging)
+              if (!widget.isDragging) ...<Widget>[
                 Tooltip(
                   message: 'Delete Snapshot',
                   child: GestureDetector(
@@ -126,6 +128,24 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: 'Duplicate Snapshot',
+                  child: GestureDetector(
+                    onTap: () {
+                      if (widget.onDuplicate != null) {
+                        widget.onDuplicate!();
+                      }
+                    },
+                    child: const FusionImage.asset(
+                      Assets.duplicateIcon,
+                      width: 16,
+                      height: 16,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

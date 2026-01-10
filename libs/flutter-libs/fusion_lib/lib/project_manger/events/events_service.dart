@@ -330,4 +330,23 @@ extension EventsService on ProjectService {
     final FusionEvent updated = event.copyWith(selectedState: selectedState);
     events.add(eventId, updated);
   }
+
+  Map<String, FusionEvent> reOrderEvents({
+    required String eventIdToMove,
+    required String eventAtNewIndexId,
+  }) {
+    List<FusionEvent> items = events.getAll();
+
+    int fromIndex = items.indexWhere((event) => event.id == eventIdToMove);
+    int toIndex = items.indexWhere((event) => event.id == eventAtNewIndexId);
+
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid Event IDs');
+    }
+
+    FusionEvent item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    return {for (var event in items) event.id: event};
+  }
 }

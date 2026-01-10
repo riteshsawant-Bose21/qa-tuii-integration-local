@@ -15,6 +15,38 @@ class ConfigurationMediaFilesPage extends StatelessWidget {
     return Column(
       children: <Widget>[
         const _TopBar(),
+        BlocBuilder<MediaFilesViewModel, ConfigurationMediaFilesState>(
+          builder: (BuildContext context, ConfigurationMediaFilesState state) {
+            if (state.errorMessage != null) {
+              return Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Colors.red.shade50,
+                child: Row(
+                  children: <Widget>[
+                    Icon(Icons.error, color: Colors.red.shade700, size: 16),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        state.errorMessage!,
+                        style: TextStyle(
+                          color: Colors.red.shade700,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => context.read<MediaFilesViewModel>().clearError(),
+                      child: Icon(Icons.close, color: Colors.red.shade700, size: 16),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
         const Divider(height: 1),
         Expanded(
           child: Row(
@@ -85,44 +117,65 @@ class _MediaTable extends StatelessWidget {
                 const Divider(height: 1),
 
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: context.read<MediaFilesViewModel>().getAllFiles().length,
-                    itemBuilder: (BuildContext context, int index) {
-                      final MediaFileModel file = context.read<MediaFilesViewModel>().getAllFiles()[index];
-                      final bool isSelected = state.selectedMediaFileId == file.id;
-
-                      return InkWell(
-                        onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
-                        child: Container(
-                          margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
-                          decoration: BoxDecoration(
-                            color: isSelected ? Colors.grey[200] : null,
-                            borderRadius: BorderRadius.circular(3),
-                            border: Border.all(
-                              color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
-                              width: 1.0,
+                  child:
+                      context.read<MediaFilesViewModel>().getAllFiles().isEmpty
+                          ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: <Widget>[
+                                Icon(
+                                  Icons.audio_file_outlined,
+                                  size: 42,
+                                  color: Colors.grey[400],
+                                ),
+                                const SizedBox(height: 12),
+                                FusionAppText(
+                                  text: "Add files to view media",
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ),
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          child: Row(
-                            children: <Widget>[
-                              Expanded(flex: 4, child: Text(file.name)),
-                              Expanded(flex: 2, child: Text(file.size.toString())),
-                              Expanded(flex: 2, child: Text(file.length.toString())),
-                              Expanded(flex: 3, child: Text(file.date.toString())),
+                          )
+                          : ListView.builder(
+                            itemCount: context.read<MediaFilesViewModel>().getAllFiles().length,
+                            itemBuilder: (BuildContext context, int index) {
+                              final MediaFileModel file = context.read<MediaFilesViewModel>().getAllFiles()[index];
+                              final bool isSelected = state.selectedMediaFileId == file.id;
 
-                              GestureDetector(
-                                onTap: () {
-                                  context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
-                                },
-                                child: const Icon(Icons.delete_outline, size: 18),
-                              ),
-                            ],
+                              return InkWell(
+                                onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
+                                child: Container(
+                                  margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
+                                  decoration: BoxDecoration(
+                                    color: isSelected ? Colors.grey[200] : null,
+                                    borderRadius: BorderRadius.circular(3),
+                                    border: Border.all(
+                                      color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                                      width: 1.0,
+                                    ),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                  child: Row(
+                                    children: <Widget>[
+                                      Expanded(flex: 4, child: Text(file.name)),
+                                      Expanded(flex: 2, child: Text(file.size.toString())),
+                                      Expanded(flex: 2, child: Text(file.length.toString())),
+                                      Expanded(flex: 3, child: Text(file.date.toString())),
+
+                                      GestureDetector(
+                                        onTap: () {
+                                          context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
+                                        },
+                                        child: const Icon(Icons.delete_outline, size: 18),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
                           ),
-                        ),
-                      );
-                    },
-                  ),
                 ),
               ],
             );
@@ -198,7 +251,15 @@ class _PreviewPanel extends StatelessWidget {
       builder: (BuildContext context, ConfigurationMediaFilesState state) {
         final MediaFileModel? selectedFile = context.read<MediaFilesViewModel>().getSelectedFile();
         if (selectedFile == null) {
-          return const Center(child: Text('Select a file'));
+          return Center(
+            child: FusionAppText(
+              text: "Select a media file to preview",
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          );
         }
 
         final MediaFilesViewModel cubit = context.read<MediaFilesViewModel>();

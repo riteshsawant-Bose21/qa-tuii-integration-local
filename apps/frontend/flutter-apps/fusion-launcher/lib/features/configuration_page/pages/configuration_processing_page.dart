@@ -30,6 +30,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   final GlobalKey _popupButtonKey = GlobalKey();
+  final ScrollController _zonesScrollController = ScrollController();
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
   late double _sourcesHeight;
@@ -39,6 +40,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
 
   /// Map to store GlobalKeys for each SourceSetItem
   final Map<String, GlobalKey> _sourceSetKeys = <String, GlobalKey<State<StatefulWidget>>>{};
+
+  /// Map to store GlobalKeys for each ZoneCard
+  final Map<String, GlobalKey> _zoneKeys = <String, GlobalKey<State<StatefulWidget>>>{};
 
   /// Filtered sources list for search functionality
   List<Source> _filteredSources = <Source>[];
@@ -64,8 +68,96 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   void dispose() {
     searchController.dispose();
     _sourceSetNameController.dispose();
+    _zonesScrollController.dispose();
     _sourceSetKeys.clear();
+    _zoneKeys.clear();
     super.dispose();
+  }
+
+  /// Scroll expanded zone into view using GlobalKey for accurate positioning
+  void _scrollZoneIntoView(String zoneId) {
+    final GlobalKey? zoneKey = _zoneKeys[zoneId];
+    if (zoneKey?.currentContext == null || !_zonesScrollController.hasClients) {
+      return;
+    }
+
+    final RenderObject? renderObject = zoneKey!.currentContext!.findRenderObject();
+    if (renderObject is! RenderBox) return;
+
+    // Get the position of the zone relative to the scroll view
+    final RenderObject? scrollViewRenderObject = _zonesScrollController.position.context.storageContext.findRenderObject();
+    if (scrollViewRenderObject is! RenderBox) return;
+
+    try {
+      // Get zone position relative to the scrollable area
+      final Offset zonePosition = renderObject.localToGlobal(Offset.zero, ancestor: scrollViewRenderObject);
+      final double zoneTop = zonePosition.dy + _zonesScrollController.offset;
+
+      // Get viewport dimensions
+      final double viewportHeight = _zonesScrollController.position.viewportDimension;
+      final double currentScrollOffset = _zonesScrollController.offset;
+
+      // Calculate the expanded content height (estimated)
+      final List<SubZone> subZones = _projectViewModel.getSubZonesForZone(parentZoneId: zoneId);
+      final double expandedContentHeight = (subZones.length * 100.0).clamp(200.0, 400.0);
+      final double totalZoneHeight = 32.0 + expandedContentHeight; // header + content
+
+      // Check if zone fits in current viewport
+      final double zoneBottom = zoneTop + totalZoneHeight;
+      final double viewportTop = currentScrollOffset;
+      final double viewportBottom = currentScrollOffset + viewportHeight;
+
+      // Calculate optimal scroll position
+      double targetScrollPosition = currentScrollOffset;
+
+      if (zoneTop < viewportTop) {
+        // Zone starts above viewport, scroll up to show zone at top with padding
+        targetScrollPosition = zoneTop - 20; // 20px padding
+      } else if (zoneBottom > viewportBottom) {
+        // Zone extends below viewport, scroll down to fit the zone
+        if (totalZoneHeight <= viewportHeight) {
+          // Zone fits in viewport, position it optimally
+          targetScrollPosition = zoneBottom - viewportHeight + 20; // 20px padding from bottom
+        } else {
+          // Zone is larger than viewport, just ensure the header is visible at top
+          targetScrollPosition = zoneTop - 20;
+        }
+      }
+
+      // Clamp to valid scroll range
+      targetScrollPosition = targetScrollPosition.clamp(0.0, _zonesScrollController.position.maxScrollExtent);
+
+      // Animate to target position if it's different from current
+      if ((targetScrollPosition - currentScrollOffset).abs() > 5) {
+        _zonesScrollController.animateTo(
+          targetScrollPosition,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+        );
+      }
+    } catch (e) {
+      // Fallback to index-based scrolling if GlobalKey method fails
+      final int zoneIndex = _projectViewModel.zones.indexWhere((Zone zone) => zone.id == zoneId);
+      if (zoneIndex != -1) {
+        _scrollToZone(zoneIndex);
+      }
+    }
+  }
+
+  /// Fallback scroll method using zone index
+  void _scrollToZone(int zoneIndex) {
+    if (_zonesScrollController.hasClients) {
+      // Calculate the position of the zone
+      final double zoneHeaderHeight = 32.0; // Height of zone header
+      final double estimatedPosition = zoneIndex * zoneHeaderHeight;
+
+      // Add some padding and scroll to the estimated position
+      _zonesScrollController.animateTo(
+        (estimatedPosition - 50.0).clamp(0.0, _zonesScrollController.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   /// Filter sources based on search query
@@ -475,52 +567,72 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           ),
 
           /// Zones List
-          BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              return _projectViewModel.zones.isEmpty
-                  ? Padding(
-                    padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.3),
-                    child: FusionAppText(
-                      text: 'No zones added yet',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  )
-                  : ReorderableListView.builder(
-                    shrinkWrap: true,
-                    physics: const ClampingScrollPhysics(),
-                    buildDefaultDragHandles: false,
-                    itemCount: _projectViewModel.zones.length,
-                    onReorder: (int oldIndex, int newIndex) {
-                      if (oldIndex < newIndex) newIndex -= 1;
-                      final String zoneToMove = _projectViewModel.zones[oldIndex].id;
-                      final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
-                      _projectViewModel.reorderZones(
-                        zoneIdToMove: zoneToMove,
-                        zoneIdAtNewIndex: zoneAtNewIndex,
-                      );
-                      _projectViewModel.setSelectedDevice(
-                        zoneToMove,
-                        SelectedItemType.zone,
-                      );
-                    },
-                    itemBuilder: (BuildContext context, int index) {
-                      final Zone zoneData = _projectViewModel.zones[index];
-                      return ReorderableDragStartListener(
-                        key: ValueKey<String>(zoneData.id),
-                        index: index,
-                        child: ZoneCard(
-                          zoneId: zoneData.id,
-                          zoneName: zoneData.name,
-                          bgColor: zoneData.color,
-                          zoneData: zoneData,
+          Expanded(
+            child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+              builder: (BuildContext context, ProjectViewModelState state) {
+                return _projectViewModel.zones.isEmpty
+                    ? Padding(
+                      padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.3),
+                      child: FusionAppText(
+                        text: 'No zones added yet',
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
                         ),
-                      );
-                    },
-                  );
-            },
+                      ),
+                    )
+                    : SingleChildScrollView(
+                      physics: const ClampingScrollPhysics(),
+                      controller: _zonesScrollController,
+                      child: ReorderableListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        buildDefaultDragHandles: false,
+                        itemCount: _projectViewModel.zones.length,
+                        onReorder: (int oldIndex, int newIndex) {
+                          if (oldIndex < newIndex) newIndex -= 1;
+                          final String zoneToMove = _projectViewModel.zones[oldIndex].id;
+                          final String zoneAtNewIndex = _projectViewModel.zones[newIndex].id;
+                          _projectViewModel.reorderZones(
+                            zoneIdToMove: zoneToMove,
+                            zoneIdAtNewIndex: zoneAtNewIndex,
+                          );
+                          _projectViewModel.setSelectedDevice(
+                            zoneToMove,
+                            SelectedItemType.zone,
+                          );
+                        },
+                        itemBuilder: (BuildContext context, int index) {
+                          final Zone zoneData = _projectViewModel.zones[index];
+
+                          // Ensure we have a GlobalKey for each zone
+                          _zoneKeys[zoneData.id] ??= GlobalKey();
+                          final GlobalKey zoneKey = _zoneKeys[zoneData.id]!;
+
+                          return ReorderableDragStartListener(
+                            key: ValueKey<String>(zoneData.id),
+                            index: index,
+                            child: ZoneCard(
+                              key: zoneKey,
+                              zoneId: zoneData.id,
+                              zoneName: zoneData.name,
+                              bgColor: zoneData.color,
+                              zoneData: zoneData,
+                              onExpansionChanged: (bool isExpanded) {
+                                if (isExpanded) {
+                                  // Small delay to allow the widget to expand first
+                                  Future<void>.delayed(const Duration(milliseconds: 100), () {
+                                    _scrollZoneIntoView(zoneData.id);
+                                  });
+                                }
+                              },
+                            ),
+                          );
+                        },
+                      ),
+                    );
+              },
+            ),
           ),
         ],
       ),

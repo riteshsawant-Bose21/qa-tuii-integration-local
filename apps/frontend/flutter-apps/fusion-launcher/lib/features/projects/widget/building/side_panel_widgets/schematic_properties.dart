@@ -20,11 +20,13 @@ class SchematicProperties extends StatefulWidget {
 class SchematicPropertiesState extends State<SchematicProperties> {
   final TextEditingController speakerQtyController = TextEditingController(text: "1"); // default value 1
   final TextEditingController propertyModelNameController = TextEditingController(text: "1"); // default value 1
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+  bool get isListingViewMode => projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
 
   int get speakerQty => int.tryParse(speakerQtyController.text) ?? 1;
 
   void speakerQtyModify({int? qty, bool shouldIncrement = true}) {
-    final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+    // final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
     final SelectedItem? selectedItem = context.read<ProjectViewModel>().selectedDevice;
     if (selectedItem == null || selectedItem.type != SelectedItemType.circuit) return;
 
@@ -329,7 +331,7 @@ class SchematicPropertiesState extends State<SchematicProperties> {
             ),
           ],
 
-          if (selectedItem.type == SelectedItemType.circuit) ...<Widget>[
+          if ((selectedItem.type == SelectedItemType.circuit && isListingViewMode)) ...<Widget>[
             Row(
               spacing: 3,
               children: <Widget>[

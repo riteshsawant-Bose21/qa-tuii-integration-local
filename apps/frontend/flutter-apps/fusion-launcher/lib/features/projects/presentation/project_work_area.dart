@@ -74,8 +74,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
 
   final List<Widget> _tabs = const <Widget>[
     Tab(text: 'Building'),
-    Tab(text: 'Schematics'),
-    Tab(text: 'Budget'),
+    Tab(text: 'Schematic'),
+    Tab(text: 'Cost'),
     Tab(text: 'Configuration'),
     Tab(text: 'Cloud'),
   ];
