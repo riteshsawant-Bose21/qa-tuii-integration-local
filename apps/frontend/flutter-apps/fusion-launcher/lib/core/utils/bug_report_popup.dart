@@ -54,7 +54,7 @@ Future<String?> showShareDownloadPopup(BuildContext context) async {
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
                         child: FusionAppText(
-                         text: 'Support Options',
+                          text: 'Support Options',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,

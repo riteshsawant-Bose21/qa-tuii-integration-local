@@ -187,10 +187,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                       child: FloorCanvas(
                                         gridSize: 100,
                                         controller: widget.floorCanvasController,
-                                      hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
+                                        hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
                                           floorId: floor.id,
                                         ),
-                                      listeningAreas: serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
+                                        listeningAreas: serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
                                           floorId: floor.id,
                                         ),
                                         floor: floor,
@@ -224,11 +224,11 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             floor: floor.copyWith(floorPlan: floor.floorPlan.copyWith(canvasPan: p)),
                                           );
                                         },
-                                      onRightClick: (PointerDownEvent e) {
-                                        if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
-                                          projectViewModel.shouldPlaceNonPlacedSpeakers = false;
-                                        }
-                                      },
+                                        onRightClick: (PointerDownEvent e) {
+                                          if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                            projectViewModel.shouldPlaceNonPlacedSpeakers = false;
+                                          }
+                                        },
                                         moveHardware: (
                                           HardwareComponent hardware,
                                           String? newListeningAreaId,
@@ -300,14 +300,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         splMin: serviceLocator<ProjectViewModel>().minSPL,
                                         splMax: serviceLocator<ProjectViewModel>().maxSPL,
                                         addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
-                                        final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+                                          final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
 
-                                        if (viewModel.shouldPlaceNonPlacedSpeakers) {
-                                          viewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
-                                        } else {
-                                          if (viewModel.selectedProductToAdd == null) return;
-                                          viewModel.addSelectedProduct(position: speakerPosition, listeningAreaId: listeningAreaId, isFromBuildingPage: true);
-                                        }
+                                          if (viewModel.shouldPlaceNonPlacedSpeakers) {
+                                            viewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
+                                          } else {
+                                            if (viewModel.selectedProductToAdd == null) return;
+                                            viewModel.addSelectedProduct(position: speakerPosition, listeningAreaId: listeningAreaId, isFromBuildingPage: true);
+                                          }
 
                                           serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
 
@@ -460,58 +460,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           ),
                                         ),
                                         const SizedBox(width: 16),
-                                        SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
-                                        child:
-                                        InkWell(
-                                          onTap: () {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                            widget.floorCanvasController.cancelListeningAreaSelection();
-                                          },
-                                          borderRadius: BorderRadius.circular(12),
-                                          child: Container(
-                                            padding: const EdgeInsets.all(5),
-                                            decoration: BoxDecoration(
-                                              border: Border.all(
-                                                color:
-                                                    ThemeData.estimateBrightnessForColor(
-                                                              serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                            ) ==
-                                                            Brightness.light
-                                                        ? Colors.grey.shade800
-                                                        : Colors.white,
-                                                width: 1,
-                                              ),
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-
-                                            child: Icon(
-                                              Icons.close,
-                                              size: 16,
-                                              color:
-                                                  ThemeData.estimateBrightnessForColor(
-                                                            serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
-                                                          ) ==
-                                                          Brightness.light
-                                                      ? Colors.grey.shade800
-                                                      : Colors.white,
-                                            ),
-                                          ),
-                                        ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        GuideShowcaseWrapper(
-                                          step: GuideShowCaseSteps.confirmSelectListeningArea,
-                                          onHighlightedSpotTap: (TapDownDetails details) {
-                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
-                                            widget.floorCanvasController.completeListeningAreaSelection();
-                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
-                                          },
-                                          child:SemanticHelper.button(testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
-                                           child: InkWell(
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.close),
+                                          child: InkWell(
                                             onTap: () {
                                               serviceLocator<ProjectViewModel>().clearSelectedZone();
-                                              widget.floorCanvasController.completeListeningAreaSelection();
+                                              widget.floorCanvasController.cancelListeningAreaSelection();
                                             },
                                             borderRadius: BorderRadius.circular(12),
                                             child: Container(
@@ -529,8 +483,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 ),
                                                 borderRadius: BorderRadius.circular(10),
                                               ),
+
                                               child: Icon(
-                                                Icons.check,
+                                                Icons.close,
                                                 size: 16,
                                                 color:
                                                     ThemeData.estimateBrightnessForColor(
@@ -543,7 +498,53 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                             ),
                                           ),
                                         ),
-                                      ),
+                                        const SizedBox(width: 12),
+                                        GuideShowcaseWrapper(
+                                          step: GuideShowCaseSteps.confirmSelectListeningArea,
+                                          onHighlightedSpotTap: (TapDownDetails details) {
+                                            serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                            serviceLocator<ProjectViewModel>().clearSelectedSubZone();
+                                            widget.floorCanvasController.completeListeningAreaSelection();
+                                            serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.confirmSelectListeningArea);
+                                          },
+                                          child: SemanticHelper.button(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.check),
+                                            child: InkWell(
+                                              onTap: () {
+                                                serviceLocator<ProjectViewModel>().clearSelectedZone();
+                                                widget.floorCanvasController.completeListeningAreaSelection();
+                                              },
+                                              borderRadius: BorderRadius.circular(12),
+                                              child: Container(
+                                                padding: const EdgeInsets.all(5),
+                                                decoration: BoxDecoration(
+                                                  border: Border.all(
+                                                    color:
+                                                        ThemeData.estimateBrightnessForColor(
+                                                                  serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                                ) ==
+                                                                Brightness.light
+                                                            ? Colors.grey.shade800
+                                                            : Colors.white,
+                                                    width: 1,
+                                                  ),
+                                                  borderRadius: BorderRadius.circular(10),
+                                                ),
+                                                child: Icon(
+                                                  Icons.check,
+                                                  size: 16,
+                                                  color:
+                                                      ThemeData.estimateBrightnessForColor(
+                                                                serviceLocator<ProjectViewModel>().getCurrentSelectionZoneColor(),
+                                                              ) ==
+                                                              Brightness.light
+                                                          ? Colors.grey.shade800
+                                                          : Colors.white,
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                       ],
                                     ),
                                   );

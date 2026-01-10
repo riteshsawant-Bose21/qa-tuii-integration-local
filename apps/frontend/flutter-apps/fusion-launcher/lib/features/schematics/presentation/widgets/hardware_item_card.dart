@@ -180,13 +180,13 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                Flexible(
-                                  child: FusionAppText(
-                                    text: widget.zoneName ?? "",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                                    maxLine: 1,
-                                    textOverflow: TextOverflow.ellipsis,
-                                  ),
+                                  Flexible(
+                                    child: FusionAppText(
+                                      text: widget.zoneName ?? "",
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                      maxLine: 1,
+                                      textOverflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -231,13 +231,13 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                Flexible(
-                                  child: FusionAppText(
-                                    text: widget.location ?? "",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                                    maxLine: 1,
-                                    textOverflow: TextOverflow.ellipsis,
-                                  ),
+                                  Flexible(
+                                    child: FusionAppText(
+                                      text: widget.location ?? "",
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                      maxLine: 1,
+                                      textOverflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),

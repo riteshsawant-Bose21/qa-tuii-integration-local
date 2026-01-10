@@ -137,14 +137,14 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                           color: Theme.of(context).colorScheme.error,
                         ),
                         onPressed: () {
-                      final bool isSpeaker = widget.selectedHardware is Speaker;
-                      viewModel.removeHardware(
-                        hardwareId: widget.selectedHardware.id,
-                      );
-                      if (isSpeaker) {
-                        widget.onSpeakerDeleted!();
-                      }
-                    },
+                          final bool isSpeaker = widget.selectedHardware is Speaker;
+                          viewModel.removeHardware(
+                            hardwareId: widget.selectedHardware.id,
+                          );
+                          if (isSpeaker) {
+                            widget.onSpeakerDeleted!();
+                          }
+                        },
                       ),
                     ),
                   ],
@@ -227,7 +227,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(
                                           pos: Offset(
                                             xValue * 100,
-                                        widget.selectedHardware.pos?.dy ?? 0.0,
+                                            widget.selectedHardware.pos?.dy ?? 0.0,
                                           ),
                                         );
                                         viewModel.updateHardware(hardware: updated);
@@ -236,9 +236,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         }
                                       } else {
                                         // Reset to previous value if invalid
-                                    if (widget.selectedHardware.pos != null) {
-                                      xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
-                                    }
+                                        if (widget.selectedHardware.pos != null) {
+                                          xController.text = (widget.selectedHardware.pos!.dx / 100).toStringAsFixed(2);
+                                        }
                                         // Show validation error
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -285,7 +285,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         // Multiply by 100 when submitting
                                         final HardwareComponent updated = widget.selectedHardware.copyWith(
                                           pos: Offset(
-                                        widget.selectedHardware.pos?.dx ?? 0.0,
+                                            widget.selectedHardware.pos?.dx ?? 0.0,
                                             yValue * 100,
                                           ),
                                         );
@@ -295,9 +295,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         }
                                       } else {
                                         // Reset to previous value if invalid
-                                    if (widget.selectedHardware.pos != null) {
-                                      yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
-                                    }
+                                        if (widget.selectedHardware.pos != null) {
+                                          yController.text = (widget.selectedHardware.pos!.dy / 100).toStringAsFixed(2);
+                                        }
                                         // Show validation error
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
@@ -349,9 +349,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                                         }
                                       } else {
                                         // Reset to previous value if invalid
-                                    if (widget.selectedHardware.zAxis != null) {
-                                      zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
-                                    }
+                                        if (widget.selectedHardware.zAxis != null) {
+                                          zController.text = (widget.selectedHardware.zAxis! / 100).toStringAsFixed(2);
+                                        }
                                         // Show validation error
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(

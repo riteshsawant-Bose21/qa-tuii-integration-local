@@ -269,7 +269,7 @@ class _AddSpeakersMenuState extends State<AddSpeakersMenu> {
                                           speakerCount: int.tryParse(numberOfSpeakers.text) ?? 1,
                                           zoneId: widget.zoneId,
                                           subZoneId: widget.subZoneId,
-                                        isFromBuildingPage: false,
+                                          isFromBuildingPage: false,
                                           circuitName: "${speakerData!.name} Circuit",
                                         );
                                         FusionToast.success(

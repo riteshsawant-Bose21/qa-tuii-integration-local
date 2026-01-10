@@ -923,11 +923,11 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
 
                         label: "Save",
-                      isActive:
-                          _zoneNameController.text.isNotEmpty &&
-                          _selectedColorHex != null &&
-                          _selectedColorHex!.isNotEmpty &&
-                          _selectedListeningAreaIds.isNotEmpty,
+                        isActive:
+                            _zoneNameController.text.isNotEmpty &&
+                            _selectedColorHex != null &&
+                            _selectedColorHex!.isNotEmpty &&
+                            _selectedListeningAreaIds.isNotEmpty,
                         onTap: () {
                           final Zone newZone = Zone(
                             id: 'zone_${DateTime.now().millisecondsSinceEpoch}',
@@ -938,8 +938,8 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                           serviceLocator<ProjectViewModel>().addZone(zone: newZone, autoSave: false);
                           serviceLocator<ProjectViewModel>().updateListeningAreasInZone(zoneId: newZone.id, listeningAreaIds: _selectedListeningAreaIds);
                           Navigator.of(context).pop();
-                        _selectedColorHex = null;
-                        _selectedListeningAreaIds.clear();
+                          _selectedColorHex = null;
+                          _selectedListeningAreaIds.clear();
                           _zoneNameController.clear();
                         },
                       ),

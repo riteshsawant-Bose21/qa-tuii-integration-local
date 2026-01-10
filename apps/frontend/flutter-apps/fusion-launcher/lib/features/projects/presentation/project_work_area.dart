@@ -70,6 +70,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final FloorCanvasController _floorCanvasController = FloorCanvasController();
   MaceEngine? _engine;
   bool useIsolateEngine = true;
+
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
   String _appVersion = '1.0.0';
 
@@ -470,24 +471,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 return SemanticHelper.container(
                   testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
                   child: BuildingCanvas(
-                  splRangeController: _splRangeController,
-                  onSplStateChanged: (bool value) {
-                    if (value) {
+                    splRangeController: _splRangeController,
+                    onSplStateChanged: (bool value) {
+                      if (value) {
+                        productsController.collapse();
+                        splController.expand();
+                      } else {
+                        splController.collapse();
+                      }
+                    },
+                    floorCanvasController: _floorCanvasController,
+                    onCalculateSpl: calculateSPL,
+                    splPanelData: _lastPanelData!,
+                    onProductSelected: () {
+                      productsController.expand();
+                    },
+                    onProductDeselected: () {
                       productsController.collapse();
-                      splController.expand();
-                    } else {
-                      splController.collapse();
-                    }
-                  },
-                  floorCanvasController: _floorCanvasController,
-                  onCalculateSpl: calculateSPL,
-                  splPanelData: _lastPanelData!,
-                  onProductSelected: () {
-                    productsController.expand();
-                  },
-                  onProductDeselected: () {
-                    productsController.collapse();
-                  },
+                    },
                   ),
                 );
               },
@@ -847,29 +848,30 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             ),
                           ),
                           child: Tooltip(
-                          message: 'Give Feedback',
-                          child: InkWell(
-                            child: Icon(
-                              Icons.feedback_outlined,
-                              size: 24,
-                              color: Theme.of(context).colorScheme.greyDark,
+                            message: 'Give Feedback',
+                            child: InkWell(
+                              child: Icon(
+                                Icons.feedback_outlined,
+                                size: 24,
+                                color: Theme.of(context).colorScheme.greyDark,
+                              ),
+                              onTap: () async {
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (BuildContext context) => const Dialog(
+                                        child: _FeedbackWebView(),
+                                      ),
+                                );
+                              },
                             ),
-                            onTap: () async {
-                              showDialog(
-                                context: context,
-                                builder:
-                                    (BuildContext context) => const Dialog(
-                                      child: _FeedbackWebView(),
-                                    ),
-                              );
-                            },
                           ),
+                          // child: Image.asset(
+                          //   "assets/images/share_icon.png",
+                          //   width: 24,
+                          //   height: 24,
+                          // ),
                         ),
-                        // child: Image.asset(
-                        //   "assets/images/share_icon.png",
-                        //   width: 24,
-                        //   height: 24,
-                        // ),
                       ),
 
                       /// Share Icon Section
@@ -886,24 +888,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                         child: Tooltip(
                           message: 'Feedback and bug reports',
-                            child: InkWell(
-                              child: Icon(
+                          child: InkWell(
+                            child: Icon(
                               Icons.feedback_outlined,
-                                size: 24,
-                                color: Theme.of(context).colorScheme.greyDark,
-                              ),
-                              onTap: () async {
-                                handleExportLogs(context);
-                              },
+                              size: 24,
+                              color: Theme.of(context).colorScheme.greyDark,
                             ),
+                            onTap: () async {
+                              handleExportLogs(context);
+                            },
                           ),
-                          // child: Image.asset(
-                          //   "assets/images/share_icon.png",
-                          //   width: 24,
-                          //   height: 24,
-                          // ),
                         ),
+                        // child: Image.asset(
+                        //   "assets/images/share_icon.png",
+                        //   width: 24,
+                        //   height: 24,
+                        // ),
                       ),
+
                       const ControlDesignTabSwitcher(),
                       // App Build Version
                       Container(
@@ -977,7 +979,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           child: Container(
             key: _projectNameKey,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            width: 197, // Reduced width to account for back button
+            width: 197,
+            // Reduced width to account for back button
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.white,
               border: Border(
@@ -1003,7 +1006,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ) {
                           return FusionAppText(
                             text: serviceLocator<ProjectViewModel>().projectName,
-                        semanticId: FusionTestKeys.projectName,
+                            semanticId: FusionTestKeys.projectName,
                             textOverflow: TextOverflow.ellipsis,
                             maxLine: 1,
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
