@@ -34,7 +34,7 @@ class TestLibraryScreen extends StatelessWidget {
       length: 4,
       child: Scaffold(
         appBar: FusionAppBar(
-          title: const Text('Library'),
+          title: const FusionAppText(text:'Library'),
           themeToggleWidget: ValueListenableBuilder<ThemeMode>(
             valueListenable: FusionThemeController.themeModeNotifier,
             builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
@@ -86,9 +86,9 @@ class TestLibraryScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             // Header
-            Text('Fusion Widget Library', style: Theme.of(context).textTheme.headlineMedium),
+            FusionAppText(text:'Fusion Widget Library', style: Theme.of(context).textTheme.headlineMedium),
             const SizedBox(height: 8),
-            Text('A comprehensive collection of custom Flutter widgets', style: Theme.of(context).textTheme.bodyMedium),
+            FusionAppText(text:'A comprehensive collection of custom Flutter widgets', style: Theme.of(context).textTheme.bodyMedium),
             const SizedBox(height: 24),
 
             // Text Widgets Section
@@ -289,6 +289,7 @@ class TestLibraryScreen extends StatelessWidget {
                   name: 'FusionDropdownButtonFormField',
                   description: 'Dropdown selection field',
                   widget: FusionDropdownButtonFormField(
+                    semanticKey: "test_dropdown",
                     options: <String>['Option 1', 'Option 2', 'Option 3'],
                     hintText: 'Choose option',
                     onChanged: (String? value) {
@@ -387,7 +388,7 @@ class TestLibraryScreen extends StatelessWidget {
                       );
                       debugPrint('Theme toggled to ${isLight ? 'Dark' : 'Light'} mode');
                     },
-                    child: const Text('Toggle Theme'),
+                    child: const FusionAppText(text:'Toggle Theme'),
                   ),
                 ),
               ],
@@ -413,7 +414,7 @@ class TestLibraryScreen extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              Text(
+              FusionAppText(text:
                 title,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
@@ -421,7 +422,7 @@ class TestLibraryScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 4),
-              Text(
+              FusionAppText(text:
                 description,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -470,7 +471,7 @@ class TestLibraryScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
-                    Text(
+                    FusionAppText(text:
                       name,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
@@ -478,7 +479,7 @@ class TestLibraryScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    Text(
+                    FusionAppText(text:
                       description,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
@@ -606,7 +607,7 @@ class TestLibraryScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
+          FusionAppText(text:
             'Theme Palette',
             style: textTheme.headlineMedium?.copyWith(
               color: colorScheme.fusionTextViewColor,
@@ -614,13 +615,13 @@ class TestLibraryScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-          Text(
+          FusionAppText(text:
             'Current theme: ${colorScheme.isDarkMode ? 'Dark Mode' : 'Light Mode'}',
             style: textTheme.bodyLarge?.copyWith(
               color: colorScheme.greyDark,
             ),
           ),
-          Text(
+          FusionAppText(text:
             'Total colors: ${colorPalette.length}',
             style: textTheme.bodyMedium?.copyWith(
               color: colorScheme.greyDark,
@@ -664,17 +665,17 @@ class TestLibraryScreen extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
-                              Text(
+                              FusionAppText(text:
                                 colorInfo['name'],
                                 style: textTheme.labelLarge?.copyWith(
                                   color: colorScheme.fusionTextViewColor,
                                   fontWeight: FontWeight.w600,
                                 ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                                maxLine: 2,
+                                // overflow: TextOverflow.ellipsis,
                               ),
                               const SizedBox(height: 4),
-                              Text(
+                              FusionAppText(text:
                                 colorInfo['value'],
                                 style: textTheme.bodySmall?.copyWith(
                                   color: colorScheme.greyDark,

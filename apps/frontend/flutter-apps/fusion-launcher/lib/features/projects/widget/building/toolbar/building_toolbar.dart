@@ -216,7 +216,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return GestureDetector(
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, label),
+      child: GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
@@ -245,8 +247,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
             fontSize: 13.0,
             fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
           ),
-          child: Text(label),
+          child: FusionAppText(text: label),
         ),
+      ),
       ),
     );
   }
@@ -261,7 +264,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }) {
     final Color color = selectedColor ?? Colors.green;
 
-    return Tooltip(
+    return SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, tooltip),
+        child:Tooltip(
       message: tooltip,
       child: GestureDetector(
         onTap: () {
@@ -297,6 +302,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                   ),
         ),
       ),
+        ),
     );
   }
 
@@ -416,25 +422,28 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       onHighlightedSpotTap: (TapDownDetails value) {
         sourcesPopupMenuButtonStateGlobalKey.currentState?.showButtonMenu();
       },
-      child: AddSourcePopup(
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 1.0),
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
-            borderRadius: BorderRadius.circular(6.0),
-            border: Border.all(
-              color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
-              width: 1,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_sources"),
+        child: AddSourcePopup(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 1.0),
+            decoration: BoxDecoration(
+              color: isSelected ? Colors.green.withValues(alpha: 0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(6.0),
+              border: Border.all(
+                color: isSelected ? Colors.green.withValues(alpha: 0.3) : Colors.transparent,
+                width: 1,
+              ),
             ),
-          ),
-          child: Tooltip(
-            message: "Add Sources",
-            child: Padding(
-              padding: const EdgeInsets.all(10.0),
-              child: Icon(
-                Icons.mic,
-                size: 18.0,
-                color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+            child: Tooltip(
+              message: "Add Sources",
+              child: Padding(
+                padding: const EdgeInsets.all(10.0),
+                child: Icon(
+                  Icons.mic,
+                  size: 18.0,
+                  color: isSelected ? _getDarkerShade(Colors.green) : Colors.black54,
+                ),
               ),
             ),
           ),
@@ -444,7 +453,9 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
   }
 
   Widget _buildRackToolWithMenu({required bool isSelected}) {
-    return PopupMenuButton<DeviceItemModel>(
+    return SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "add_racks"),
+        child: PopupMenuButton<DeviceItemModel>(
       onSelected: (DeviceItemModel selectedItem) {
         // Set device type index first
         serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(6); // Rack index
@@ -468,8 +479,8 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
         return <PopupMenuEntry<DeviceItemModel>>[
           const PopupMenuItem<DeviceItemModel>(
             enabled: false,
-            child: Text(
-              'RACK OPTIONS',
+            child: FusionAppText(
+              text:'RACK OPTIONS',
               style: TextStyle(fontWeight: FontWeight.bold, color: Colors.grey, fontSize: 11),
             ),
           ),
@@ -489,7 +500,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
                     width: 14,
                   ),
                   const SizedBox(width: 8),
-                  Text('$option Rack'),
+                  FusionAppText(text:'$option Rack'),
                 ],
               ),
             ),
@@ -518,6 +529,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
           ),
         ),
       ),
+        ),
     );
   }
 

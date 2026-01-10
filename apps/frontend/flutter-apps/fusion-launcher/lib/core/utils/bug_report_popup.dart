@@ -53,8 +53,8 @@ Future<String?> showShareDownloadPopup(BuildContext context) async {
                       // Title
                       Padding(
                         padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
-                        child: Text(
-                          'Support Options',
+                        child: FusionAppText(
+                         text: 'Support Options',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.w600,
@@ -119,8 +119,8 @@ Future<String?> showShareDownloadPopup(BuildContext context) async {
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            child: Text(
-                              'Cancel',
+                            child: FusionAppText(
+                              text: 'Cancel',
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.w500,
@@ -181,8 +181,8 @@ Widget _buildGlassOption({
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
-                  Text(
-                    title,
+                  FusionAppText(
+                    text: title,
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -190,8 +190,8 @@ Widget _buildGlassOption({
                     ),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    subtitle,
+                  FusionAppText(
+                    text: subtitle,
                     style: TextStyle(
                       fontSize: 13,
                       color: Colors.black.withOpacity(0.5),
@@ -254,7 +254,7 @@ Future<bool> downloadFilesLocally(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Files saved to: ${exportDir.path}'),
+          content: FusionAppText(text: 'Files saved to: ${exportDir.path}'),
           duration: const Duration(seconds: 4),
           action: SnackBarAction(
             label: 'Open',
@@ -277,7 +277,7 @@ Future<bool> downloadFilesLocally(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Download failed: ${e.toString()}'),
+          content: FusionAppText(text: 'Download failed: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -356,7 +356,7 @@ Future<bool> downloadAsZip(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Saved to: $outputPath'),
+          content: FusionAppText(text: 'Saved to: $outputPath'),
           duration: const Duration(seconds: 4),
         ),
       );
@@ -372,7 +372,7 @@ Future<bool> downloadAsZip(
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Download failed: ${e.toString()}'),
+          content: FusionAppText(text: 'Download failed: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );

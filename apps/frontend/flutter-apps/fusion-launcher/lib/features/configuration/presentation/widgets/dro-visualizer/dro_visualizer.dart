@@ -4,8 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/fusion_networking/network/fusion_network_client.dart';
-import 'package:fusion_lib/models/response_callback.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/utils/dro_json_mapper.dart';
 import 'full_screen_image.dart';
@@ -79,13 +78,13 @@ class DROVisualizer extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         children: <Widget>[
-          Text(
-            "Design Visualizer",
+          FusionAppText(
+            text: "Design Visualizer",
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 32),
-          Text(
-            "Input Design",
+          FusionAppText(
+            text: "Input Design",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
@@ -93,8 +92,8 @@ class DROVisualizer extends StatelessWidget {
             imageBytes: inputImageBytes,
           ),
           const SizedBox(height: 32),
-          Text(
-            "Optimized Design",
+          FusionAppText(
+            text: "Optimized Design",
             style: Theme.of(context).textTheme.titleMedium,
           ),
           const SizedBox(height: 16),
@@ -109,8 +108,8 @@ class DROVisualizer extends StatelessWidget {
   Widget _buildErrorWidget(BuildContext context, String errorMessage) {
     return Padding(
       padding: const EdgeInsets.all(16),
-      child: Text(
-        'Error: $errorMessage',
+      child: FusionAppText(
+        text: 'Error: $errorMessage',
         // overflow: TextOverflow.ellipsis,
         // maxLines: 1,
         softWrap: true,
