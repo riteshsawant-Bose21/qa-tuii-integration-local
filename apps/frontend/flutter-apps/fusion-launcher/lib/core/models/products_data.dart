@@ -163,6 +163,14 @@ class SourceData extends DeviceComponent {
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
     ),
+    SourceData(
+      id: "xlr_mic",
+      name: "Xlr",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.xlr,
+      price: 100.0,
+    ),
   ];
 
   static const List<SourceData> mediaSourceItems = <SourceData>[

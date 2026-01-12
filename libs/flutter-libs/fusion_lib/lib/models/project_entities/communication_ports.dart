@@ -50,7 +50,10 @@ enum PortType {
   circuitInput('Input'),
 
   fusionConnectInput('Input'),
-  fusionConnectOutput('Output');
+  fusionConnectOutput('Output'),
+
+  xlrInput('Input'),
+  xlrOutput('Output');
 
   const PortType(this.description);
 

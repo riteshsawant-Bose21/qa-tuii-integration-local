@@ -518,6 +518,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.bluetooth => PortType.bleOut,
           SourceConnectionType.usb => PortType.usbOut,
           SourceConnectionType.audioJack => PortType.audioJackOutput,
+          SourceConnectionType.xlr => PortType.xlrOutput,
         };
         return Source(
           locationEntity: locationEntity,
@@ -546,6 +547,7 @@ extension HardwareViewModel on ProjectViewModel {
                 ],
                 SourceConnectionType.usb => <PortType>[PortType.usbIn],
                 SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+                SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
               },
               type: portType,
               description: portType.description,
