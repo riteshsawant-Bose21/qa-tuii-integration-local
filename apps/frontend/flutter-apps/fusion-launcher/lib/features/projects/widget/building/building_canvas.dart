@@ -190,7 +190,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         hardwareComponents: serviceLocator<ProjectViewModel>().getHardwareInFloorWithPosition(
                                           floorId: floor.id,
                                         ),
-                                        listeningAreas: serviceLocator<ProjectViewModel>().getAllDrawnListeningAreasForFloor(
+                                        listeningAreas: serviceLocator<ProjectViewModel>().getListeningAreasForFloor(
                                           floorId: floor.id,
                                         ),
                                         floor: floor,
@@ -225,6 +225,9 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                           );
                                         },
                                         onRightClick: (PointerDownEvent e) {
+                                          if (widget.floorCanvasController.isDrawing.value) {
+                                            widget.floorCanvasController.toggleDraw();
+                                          }
                                           if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
                                             projectViewModel.shouldPlaceNonPlacedSpeakers = false;
                                           }
@@ -403,10 +406,12 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                       }
 
                       if (state is ListeningAreaSelectionMode) {
-                        widget.floorCanvasController.toggleDraw();
+                        widget.floorCanvasController.setDraw(true);
                       }
 
-                      if (!serviceLocator<ProjectViewModel>().isInListeningAreaMode && widget.floorCanvasController.isDrawing.value) {
+                      if (serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.system &&
+                          !serviceLocator<ProjectViewModel>().isInListeningAreaMode &&
+                          widget.floorCanvasController.isDrawing.value) {
                         widget.floorCanvasController.toggleDraw();
                       }
 

@@ -288,6 +288,7 @@ class ListeningArea {
     Color? preferredSpeakerColor,
     SplRange? splRange,
     ListeningPreference? listeningPreference,
+    bool? isDrawn,
   }) {
     return ListeningArea(
       vertices: vertices ?? this.vertices,
@@ -306,6 +307,7 @@ class ListeningArea {
       preferredSpeakerColor: preferredSpeakerColor ?? this.preferredSpeakerColor,
       splRange: splRange ?? this.splRange,
       listeningPreference: listeningPreference ?? this.listeningPreference,
+      isDrawn: isDrawn ?? this.isDrawn,
     );
   }
 
