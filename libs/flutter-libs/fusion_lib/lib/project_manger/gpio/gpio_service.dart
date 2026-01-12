@@ -27,6 +27,21 @@ extension GpioService on ProjectService {
     if (!gpioConfigs.exists(gpioConfigId)) {
       throw Exception("GPIO Pin with ID $gpioConfigId does not exist.");
     }
+
+    //remove associated events
+    final parentEvents = relationships.getParents(RelationshipType.eventsItemMapping, gpioConfigId);
+    final copyOfParentEvents = List<String>.from(parentEvents);
+    for (final eventId in copyOfParentEvents) {
+      removeEvent(eventId);
+    }
+
+    //remove associated Scene actions
+    final parentActions = relationships.getParents(RelationshipType.actionItemMapping, gpioConfigId);
+    final copyOfParentActions = List<String>.from(parentActions);
+    for (final actionId in copyOfParentActions) {
+      removeSceneAction(actionId);
+    }
+
     gpioConfigs.remove(gpioConfigId);
   }
 

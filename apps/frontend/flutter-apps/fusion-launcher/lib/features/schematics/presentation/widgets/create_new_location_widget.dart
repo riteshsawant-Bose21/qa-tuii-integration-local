@@ -57,135 +57,155 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                 _isExpanded = !_isExpanded;
               });
             },
-            child: Container(
-              padding: const EdgeInsets.only(top: 6, bottom: 6, left: 12, right: 12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: <Widget>[
-                  Expanded(
-                    child: FusionAppText(
-                      text: "Create new location",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.w500,
+            child: SemanticHelper.toggle(
+              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "create_new_location_expand_collapse"),
+              value: _isExpanded,
+              child: Container(
+                padding: const EdgeInsets.only(top: 6, bottom: 6, left: 12, right: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: <Widget>[
+                    Expanded(
+                      child: FusionAppText(
+                        text: "Create new location",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
-                  Icon(
-                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                    size: 20,
-                    color: Colors.grey[600],
-                  ),
-                ],
+                    Icon(
+                      _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                      size: 20,
+                      color: Colors.grey[600],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
 
           /// Expanded form
           if (_isExpanded)
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(color: Colors.grey[50]),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  /// Floor label
-                  FusionAppText(
-                    text: "Floor",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
+            SemanticHelper.container(
+              testId: SemanticHelper.createTestId(SemanticTypes.container, "create_new_location_form_container"),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.grey[50]),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    /// Floor label
+                    FusionAppText(
+                      text: "Floor",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
+                    const SizedBox(height: 4),
 
-                  /// Floor dropdown
-                  Container(
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.white,
-                      border: Border.all(color: Colors.grey[300]!),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        dropdownColor: Theme.of(context).colorScheme.white,
-                        hint: FusionAppText(
-                          text: "Select floor",
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+                    /// Floor dropdown
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "create_new_location_floor_dropdown_container"),
+                      child: Container(
+                        height: 26,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.white,
+                          border: Border.all(color: Colors.grey[300]!),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String>(
+                            dropdownColor: Theme.of(context).colorScheme.white,
+                            hint: FusionAppText(
+                              text: "Select floor",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            value: _selectedFloor,
+                            isExpanded: true,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            items:
+                                serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
+                                  final int index = serviceLocator<ProjectViewModel>().getAllFloors().indexOf(floor);
+
+                                  return DropdownMenuItem<String>(
+                                    value: floor.name,
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "create_new_location_floor_dropdown_container_$index"),
+                                      child: FusionAppText(
+                                        text: floor.name,
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                            onChanged: (String? newValue) {
+                              if (newValue != null) {
+                                widget.setDropdownState(() {
+                                  _selectedFloor = newValue;
+                                  _selectedFloorId = serviceLocator<ProjectViewModel>().getAllFloors().firstWhere((FloorModel f) => f.name == newValue).id;
+                                });
+                              }
+                            },
                           ),
                         ),
-                        value: _selectedFloor,
-                        isExpanded: true,
-                        padding: const EdgeInsets.symmetric(horizontal: 8),
-                        items:
-                            serviceLocator<ProjectViewModel>().getAllFloors().map((FloorModel floor) {
-                              return DropdownMenuItem<String>(
-                                value: floor.name,
-                                child: FusionAppText(
-                                  text: floor.name,
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              );
-                            }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            widget.setDropdownState(() {
-                              _selectedFloor = newValue;
-                              _selectedFloorId = serviceLocator<ProjectViewModel>().getAllFloors().firstWhere((FloorModel f) => f.name == newValue).id;
-                            });
-                          }
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+
+                    /// Location Name
+                    FusionAppText(
+                      text: "Location Name",
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+
+                    SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_location_location_name_field"),
+                      child: FusionTextField(
+                        controller: widget.areaNameController,
+                        hintText: "Enter location name",
+                        decoration: FusionInputDecoration.fusionDense(
+                          colorScheme: Theme.of(context).colorScheme,
+                          hintText: 'Enter location name',
+                        ),
+                        onChanged: (String value) {
+                          widget.setDropdownState(() {});
                         },
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  /// Location Name
-                  FusionAppText(
-                    text: "Location Name",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w500,
+                    /// Add Button
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_location_add_button"),
+                        child: FusionButton(
+                          height: 32,
+                          label: "Add",
+                          isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
+                          onTap: () {
+                            widget.onCreateNewArea(
+                              floorId: _selectedFloorId,
+                              floorName: _selectedFloor ?? '',
+                              locationName: widget.areaNameController.text.trim(),
+                            );
+                            widget.setDropdownState(() {
+                              _isExpanded = !_isExpanded;
+                            });
+                          },
+                        ),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 4),
-
-                  FusionTextField(
-                    controller: widget.areaNameController,
-                    hintText: "Enter location name",
-                    decoration: FusionInputDecoration.fusionDense(
-                      colorScheme: Theme.of(context).colorScheme,
-                      hintText: 'Enter location name',
-                    ),
-                    onChanged: (String value) {
-                      widget.setDropdownState(() {});
-                    },
-                  ),
-                  const SizedBox(height: 12),
-
-                  /// Add Button
-                  Align(
-                    alignment: Alignment.centerRight,
-
-                    child: FusionButton(
-                      height: 32,
-                      label: "Add",
-                      isActive: widget.areaNameController.text.trim().isNotEmpty && _selectedFloorId.isNotEmpty,
-                      onTap: () {
-                        widget.onCreateNewArea(
-                          floorId: _selectedFloorId,
-                          floorName: _selectedFloor ?? '',
-                          locationName: widget.areaNameController.text.trim(),
-                        );
-                        widget.setDropdownState(() {
-                          _isExpanded = !_isExpanded;
-                        });
-                      },
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
         ],

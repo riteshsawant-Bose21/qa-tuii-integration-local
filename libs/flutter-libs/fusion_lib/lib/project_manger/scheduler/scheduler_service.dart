@@ -16,6 +16,13 @@ extension SchedulerService on ProjectService {
     if (!schedulerConfig.exists(scheduleId)) {
       throw Exception("Schedule with ID $scheduleId does not exist.");
     }
+
+    final parentEvents = relationships.getParents(RelationshipType.eventsItemMapping, scheduleId);
+    final copyOfParentEvents = List<String>.from(parentEvents);
+    for (final eventId in copyOfParentEvents) {
+      removeEvent(eventId);
+    }
+
     schedulerConfig.remove(scheduleId);
   }
 

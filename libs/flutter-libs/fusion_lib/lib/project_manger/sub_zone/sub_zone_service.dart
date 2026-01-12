@@ -27,6 +27,12 @@ extension SubZoneService on ProjectService {
     //   removeCircuit(cId);
     // }
 
+    final mappedActions = relationships.getParents(RelationshipType.actionItemMapping, subZoneId);
+    final mappedActionsCopy = List<String>.from(mappedActions);
+    for (final actionId in mappedActionsCopy) {
+      removeSceneAction(actionId);
+    }
+
     // Remove all relationships
     relationships.removeAllRelationships(subZoneId);
     // Remove the subzone

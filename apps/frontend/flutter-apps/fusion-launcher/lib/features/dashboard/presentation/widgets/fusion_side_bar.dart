@@ -5,6 +5,7 @@ import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.da
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/saved_projects_tab.dart';
+import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -112,9 +113,42 @@ class _FusionSidebarState extends State<FusionSidebar> {
                         const SizedBox(width: 10),
                       ],
                     ),
-                    Text(
-                      UserSessionManager.getSignedInUserEmail() ?? "",
-                      style: context.textTheme.titleMedium,
+                    FutureBuilder<UserModel?>(
+                      future: UserSessionManager.getSignedInUserProfile(),
+                      builder: (BuildContext context, AsyncSnapshot<UserModel?> asyncSnapshot) {
+                        if (asyncSnapshot.hasData) {
+                          final UserModel user = asyncSnapshot.data!;
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              FusionAppText(
+                                text: user.account?.name ?? 'Fusion User',
+                                style: context.textTheme.headlineMedium?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                maxLine: 2,
+                              ),
+                              const SizedBox(height: 8),
+                              Tooltip(
+                                message: user.user?.email ?? '',
+                                child: FusionAppText(
+                                  maxLine: 1,
+                                  text: user.user?.email ?? '--',
+                                  style: context.textTheme.titleSmall,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+
+                        return FusionShimmer(
+                          baseColor: context.colorScheme.surface.withAlpha(50),
+                          highlightColor: context.colorScheme.onSurface.withOpacity(0.1),
+                          height: 25,
+                          width: double.infinity,
+                          radius: 8,
+                        );
+                      },
                     ),
                   ],
                 ),

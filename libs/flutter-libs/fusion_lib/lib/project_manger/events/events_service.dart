@@ -106,6 +106,16 @@ extension EventsService on ProjectService {
       // No change needed
       return;
     }
+    //remove old link if exists
+    if (event.item != null) {
+      final oldLinks = relationships.getChildren(RelationshipType.eventsItemMapping, eventId);
+      for (var oldLink in oldLinks) {
+        relationships.unlink(RelationshipType.eventsItemMapping, eventId, oldLink);
+      }
+    }
+    //link event Trigger item mapping
+    relationships.link(RelationshipType.eventsItemMapping, eventId, eventTriggerItem.itemId);
+
     final updatedEvent = event.copyWith(item: eventTriggerItem);
     events.add(eventId, updatedEvent);
   }
@@ -156,6 +166,8 @@ extension EventsService on ProjectService {
     } else if (event.action == EventActionType.digital) {
       return [
         EventConditionType.stateChange,
+        EventConditionType.stateOn,
+        EventConditionType.stateOff,
       ];
     }
     return [];
@@ -165,6 +177,10 @@ extension EventsService on ProjectService {
     switch (conditionType) {
       case EventConditionType.stateChange:
         return StateChangeCondition();
+      case EventConditionType.stateOn:
+        return StateOnCondition();
+      case EventConditionType.stateOff:
+        return StateOffCondition();
       case EventConditionType.threshold:
         return ThresholdCondition(
           threshold: 50,
@@ -184,6 +200,8 @@ extension EventsService on ProjectService {
       case EventConditionType.threshold:
         return [EventStates.above(), EventStates.below()];
       case EventConditionType.valueChange:
+      case EventConditionType.stateOn:
+      case EventConditionType.stateOff:
         return null;
     }
   }
@@ -253,7 +271,7 @@ extension EventsService on ProjectService {
     }
     relationships.unlink(RelationshipType.eventActions, eventId, actionId);
 
-    snapshots.remove(actionId);
+    removeSceneAction(actionId);
   }
 
   void removeAllActionsFromEvent({required String eventId}) {
@@ -311,5 +329,24 @@ extension EventsService on ProjectService {
     final FusionEvent event = events.get(eventId)!;
     final FusionEvent updated = event.copyWith(selectedState: selectedState);
     events.add(eventId, updated);
+  }
+
+  Map<String, FusionEvent> reOrderEvents({
+    required String eventIdToMove,
+    required String eventAtNewIndexId,
+  }) {
+    List<FusionEvent> items = events.getAll();
+
+    int fromIndex = items.indexWhere((event) => event.id == eventIdToMove);
+    int toIndex = items.indexWhere((event) => event.id == eventAtNewIndexId);
+
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid Event IDs');
+    }
+
+    FusionEvent item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    return {for (var event in items) event.id: event};
   }
 }

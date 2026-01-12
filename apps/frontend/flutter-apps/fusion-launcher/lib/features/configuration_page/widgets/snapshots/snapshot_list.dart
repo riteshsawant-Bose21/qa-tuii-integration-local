@@ -27,6 +27,7 @@ class SnapshotList extends StatelessWidget {
   final Color? backgroundColor;
   final Function(String sceneId) onDelete;
   final Function(String sceneId)? onSelect;
+  final Function(String sceneId)? onDuplicate;
   final String? selectedSnapshotId;
   final Function(int oldIndex, int newIndex)? onReorder;
   final Function(String sceneId)? onDragStarted;
@@ -39,6 +40,7 @@ class SnapshotList extends StatelessWidget {
     required this.snapShotList,
     required this.onDelete,
     this.onSelect,
+    this.onDuplicate,
     this.selectedSnapshotId,
     this.onReorder,
     this.onDragStarted,
@@ -120,6 +122,11 @@ class SnapshotList extends StatelessWidget {
                         onSelect!(snapShotData.id);
                       }
                     },
+                    onDuplicate: () {
+                      if (onDuplicate != null) {
+                        onDuplicate!(snapShotData.id);
+                      }
+                    },
                   ),
                 ),
               ),
@@ -139,6 +146,11 @@ class SnapshotList extends StatelessWidget {
                     onSelect!(snapShotData.id);
                   }
                 },
+                onDuplicate: () {
+                  if (onDuplicate != null) {
+                    onDuplicate!(snapShotData.id);
+                  }
+                },
               ),
             ),
             child: SnapshotItemCard(
@@ -152,6 +164,11 @@ class SnapshotList extends StatelessWidget {
               onTap: () {
                 if (onSelect != null) {
                   onSelect!(snapShotData.id);
+                }
+              },
+              onDuplicate: () {
+                if (onDuplicate != null) {
+                  onDuplicate!(snapShotData.id);
                 }
               },
             ),

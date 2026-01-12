@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_value_widget.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
@@ -78,22 +77,25 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
   }
 
   void _deleteAction() {
-    showDialog(
-      context: context,
-      builder:
-          (_) => FusionDialog(
-            title: 'Delete Action?',
-            description: "This will remove action from the Action list.",
-            primaryButtonLabel: 'Delete',
-            secondaryButtonLabel: 'Cancel',
-            onSecondaryPressed: () => Navigator.of(context).pop(),
-            onPrimaryPressed: () {
-              _projectViewModel.removeSceneAction(actionId: widget.action.id);
-              FusionToast.success(context, message: "Action deleted successfully");
-              Navigator.of(context).pop();
-            },
-          ),
-    );
+    // showDialog(
+    //   context: context,
+    //   builder:
+    //       (_) => FusionDialog(
+    //         title: 'Delete Action?',
+    //         description: "This will remove action from the Action list.",
+    //         primaryButtonLabel: 'Delete',
+    //         secondaryButtonLabel: 'Cancel',
+    //         onSecondaryPressed: () => Navigator.of(context).pop(),
+    //         onPrimaryPressed: () {
+    //           _projectViewModel.removeSceneAction(actionId: widget.action.id);
+    //           FusionToast.success(context, message: "Action deleted successfully");
+    //           Navigator.of(context).pop();
+    //         },
+    //       ),
+    // );
+
+    _projectViewModel.removeSceneAction(actionId: widget.action.id);
+    FusionToast.success(context, message: "Action deleted successfully");
   }
 
   void _duplicateAction() {
@@ -143,11 +145,12 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
   }
 
   Widget _buildActionTypeDropdown(SceneActionModel action) {
+    final bool isInSceneSet = _projectViewModel.getSceneSetForSnapshot(snapshotId: _projectViewModel.selectedSnapshotId!) != null;
     return Expanded(
       child: FusionDropdown<SceneActionType>(
         value: action.actionType,
         hint: "Select Action Type",
-        items: _projectViewModel.getSceneActionTypes(),
+        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: !isInSceneSet),
         display: (SceneActionType e) => e.displayName,
         onChanged: _updateActionType,
       ),
@@ -217,7 +220,9 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
               label: action.param!.label,
               valueType: action.param!.valueType,
             ),
-        onChanged: _updateActionValue,
+        onChanged: (SceneValue val) {
+          _updateActionValue(val);
+        },
       ),
     );
   }

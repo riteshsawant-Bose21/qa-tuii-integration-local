@@ -71,22 +71,8 @@ class _EventActionRowDataState extends State<EventActionRowData> {
   }
 
   void _deleteAction() {
-    showDialog(
-      context: context,
-      builder:
-          (_) => FusionDialog(
-            title: 'Delete Action?',
-            description: "This will remove action from the Action list.",
-            primaryButtonLabel: 'Delete',
-            secondaryButtonLabel: 'Cancel',
-            onSecondaryPressed: () => Navigator.of(context).pop(),
-            onPrimaryPressed: () {
-              _projectViewModel.removeActionFromEvent(actionId: widget.action.id, eventId: widget.eventId);
-              FusionToast.success(context, message: "Action deleted successfully");
-              Navigator.of(context).pop();
-            },
-          ),
-    );
+    _projectViewModel.removeActionFromEvent(actionId: widget.action.id, eventId: widget.eventId);
+    FusionToast.success(context, message: "Action deleted successfully");
   }
 
   void _duplicateAction() {
@@ -144,7 +130,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
       child: FusionDropdown<SceneActionType>(
         value: action.actionType,
         hint: "Select Action Type",
-        items: _projectViewModel.getSceneActionTypes(),
+        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false),
         display: (SceneActionType e) => e.displayName,
         onChanged: _updateActionType,
       ),

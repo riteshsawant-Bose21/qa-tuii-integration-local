@@ -598,7 +598,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     }
 
     // POLY DRAG - only allow in acoustics mode
-    if (e.buttons == kPrimaryMouseButton && widget.isAcousticsMode) {
+    if (e.buttons == kPrimaryMouseButton) {
       for (int i = widget.listeningAreas.length - 1; i >= 0; i--) {
         final List<ui.Offset> poly = widget.listeningAreas[i].vertices;
         final ui.Path path = Path()..addPolygon(poly, true);

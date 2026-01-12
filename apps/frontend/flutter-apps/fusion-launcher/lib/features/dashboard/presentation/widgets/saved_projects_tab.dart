@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/router/routes.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
@@ -8,7 +7,6 @@ import 'package:fusion_launcher/features/projects/view_model/project_sync_view_m
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
@@ -220,17 +218,6 @@ class _SavedProjectListState extends State<_SavedProjectList> {
       builder: (BuildContext context, ProjectSyncViewModelState syncState) {
         return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
           listener: (BuildContext context, ProjectViewModelState state) {
-            if (state is ProjectLoaded && context.mounted) {
-              if (state.currentProject != null) {
-                FusionThemeController.setThemeMode(ThemeMode.light);
-
-                FusionUiUtils.hideLoader(context);
-                Navigator.pushNamed(context, Routes.projectPage).then((_) async {
-                  FusionThemeController.setThemeMode(ThemeMode.dark);
-                  await serviceLocator<ProjectViewModel>().loadAllLocalProjects();
-                });
-              }
-            }
             if (state is OpenProjectError && context.mounted) {
               FusionUiUtils.hideLoader(context);
               FusionToast.show(context, message: state.message);
