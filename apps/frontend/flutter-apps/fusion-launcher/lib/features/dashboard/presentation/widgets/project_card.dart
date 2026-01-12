@@ -7,6 +7,7 @@ import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.da
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:intl/intl.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../core/service_locator.dart';
@@ -56,7 +57,7 @@ class ProjectCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Expanded(
-                        flex: 2,
+                        flex: 5,
                         child: LayoutBuilder(
                           builder: (BuildContext context, BoxConstraints constraints) {
                             return Align(
@@ -77,12 +78,22 @@ class ProjectCard extends StatelessWidget {
                         ),
                       ),
                       Expanded(
+                        flex: 4,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: <Widget>[
+                              // created at
+                              Flexible(
+                                child: FusionAppText(
+                                  text: DateFormat("MMM dd, yyyy 'at' hh:mm a").format(projectData.createdAt),
+                                  style: context.textTheme.bodySmall?.copyWith(
+                                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                  ),
+                                ),
+                              ),
                               Flexible(
                                 child: FusionAppText(
                                   text: projectData.name,

@@ -10,6 +10,7 @@ import 'package:fusion_launcher/core/services/user_profile_manager.dart';
 import 'package:fusion_launcher/features/authentication/viewmodel/auth_view_model.dart';
 import 'package:fusion_launcher/features/dynamic_config/domain/usecases/get_panel_entity_usecase.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/di/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_networking/network/rest_client/dio_client.dart';
@@ -189,6 +190,8 @@ Future<void> setupServiceLocator() async {
       sessionViewModel: serviceLocator<SessionViewModel>(),
     ),
   );
+
+  serviceLocator.registerLazySingleton<ProductQueryViewModel>(() => ProductQueryViewModel());
 
   serviceLocator.registerLazySingleton<ProjectSyncService>(
     () => ProjectSyncService(

@@ -1,14 +1,10 @@
-import 'dart:developer';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
-import 'package:fusion_lib/product_data/products.dart';
 
 import '../parts/constant_enums.dart';
 import '../parts/replace_speaker_warning_dialog.dart';
@@ -16,28 +12,7 @@ import '../parts/replace_speaker_warning_dialog.dart';
 part 'state.dart';
 
 class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
-  SpeakerSelectionViewModel() : super(const SpeakerSelectionViewModelState()) {
-    loadProducts();
-  }
-
-  final Products productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
-
-  // Data loading
-  Future<void> loadProducts() async {
-    emit(state.copyWith(isLoading: true));
-    try {
-      await productsApi.initialize();
-      emit(
-        state.copyWith(
-          isLoading: false,
-          speakers: productsApi.speakers,
-        ),
-      );
-    } catch (_) {
-      log("Error loading products");
-      emit(state.copyWith(isLoading: false, speakers: <SpeakerProduct>[]));
-    }
-  }
+  SpeakerSelectionViewModel() : super(const SpeakerSelectionViewModelState());
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
   ListeningArea? get selectedListeningArea => serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
@@ -133,8 +108,8 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return s.replaceFirst(RegExp(r"\.0+"), '').replaceFirst(RegExp(r"(\.\d*[1-9])0+"), r"$1");
   }
 
-  List<SpeakerProduct> applyFilters() {
-    Iterable<SpeakerProduct> filtered = <SpeakerProduct>[...(state.speakers ?? <SpeakerProduct>[])];
+  List<SpeakerProduct> applyFilters(List<SpeakerProduct> speakers) {
+    Iterable<SpeakerProduct> filtered = <SpeakerProduct>[...speakers];
 
     final String query = state.searchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
@@ -236,10 +211,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       }
     }
 
-    return filtered.toList();
+    return _sortProducts(filtered.toList());
   }
 
-  List<SpeakerProduct> sortProducts(List<SpeakerProduct> items) {
+  List<SpeakerProduct> _sortProducts(List<SpeakerProduct> items) {
     final List<SpeakerProduct> copy = List<SpeakerProduct>.from(items);
     switch (state.sortOption) {
       case SpeakerSortOption.nameAsc:
