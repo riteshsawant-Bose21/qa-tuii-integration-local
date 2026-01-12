@@ -6,26 +6,26 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_lib/fusion_lib.dart';
 
 export 'circuit/circuit_viewmodel.dart';
+export 'equip_location/equip_location_view_model.dart';
+export 'events/events_view_model.dart';
 
 ///Export all other view models extensions
 export 'floor/floor_view_model.dart';
+export 'functions/functions_view_model.dart';
 export 'hardware/hardware_view_model.dart';
 export 'listening_area/listening_area_view_model.dart';
+export 'media_files/media_file_view_models.dart';
+export 'mix_scenes/mix_scenes_view_model.dart';
 export 'processing_block/processing_block_viewmodel.dart';
 export 'project_images/project_image_view_model.dart';
 export 'project_properties/project_properties_view_model.dart';
+export 'scenes_view_model/scenes_view_model.dart';
+export 'schedule/schedule_view_model.dart';
 export 'source_set/source_set_view_model.dart';
 export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
-export 'functions/functions_view_model.dart';
-export 'mix_scenes/mix_scenes_view_model.dart';
-export 'equip_location/equip_location_view_model.dart';
-export 'scenes_view_model/scenes_view_model.dart';
-export 'schedule/schedule_view_model.dart';
-export 'events/events_view_model.dart';
-export 'media_files/media_file_view_models.dart';
 
 part 'project_view_model_state.dart';
 
@@ -109,10 +109,10 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
-  
+
   bool _shouldPlaceNonPlacedSpeakers = false;
   bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
-  set shouldPlaceNonPlacedSpeakers(bool shouldPlace) {
+  void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
     if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
     _shouldPlaceNonPlacedSpeakers = shouldPlace;
     updateProject();
@@ -433,7 +433,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       // Reset selections when switching modes
       changeDeviceTypeIndex(-1);
       setSelectedProductToAdd(null);
-      shouldPlaceNonPlacedSpeakers = false;
+      setShouldPlaceNonPlacedSpeakers(false);
       emit(ToolbarModeChanged(mode));
     }
   }

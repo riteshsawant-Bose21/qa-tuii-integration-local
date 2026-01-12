@@ -95,7 +95,9 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                     padding: EdgeInsets.zero,
                                     child: Theme(
                                       data: ThemeData.dark(),
-                                      child: const SpeakerQueryPopup(),
+                                      child: const SpeakerQueryPopup(
+                                        isFromBuildingPage: true,
+                                      ),
                                     ),
                                   ),
                                 ];
@@ -114,10 +116,12 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
 
                       final ListeningArea listeningArea = projectViewModel.getListeningArea(areaId: listeningAreaId);
 
-                      final List<HardwareComponent> allHardware = projectViewModel.getHardwareForListeningArea(listeningAreaId: listeningAreaId);
-                      final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos == null).toList();
+                      final List<HardwareComponent> nonPlacedSpeakers = projectViewModel.getNonPlacedSpeakersForCurrentListeningArea();
+                      final List<Speaker> placedSpeakers = projectViewModel.getPlacedSpeakersForCurrentListeningArea();
 
-                      if (speakers.isEmpty) return const SizedBox.shrink();
+                      final List<Speaker> allSpeaekers = <Speaker>[...nonPlacedSpeakers.whereType<Speaker>(), ...placedSpeakers];
+
+                      if (allSpeaekers.isEmpty) return const SizedBox.shrink();
 
                       final bool shouldPlaceNonPlacedSpeakers = projectViewModel.shouldPlaceNonPlacedSpeakers;
 
@@ -150,14 +154,17 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                 ],
                               ),
                             ),
-                            if (_isExpanded && speakers.isNotEmpty) ...<Widget>[
+
+                            if (_isExpanded) ...<Widget>[
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
                                   const SizedBox(height: 10),
                                   GestureDetector(
                                     onTap: () {
-                                      projectViewModel.shouldPlaceNonPlacedSpeakers = !projectViewModel.shouldPlaceNonPlacedSpeakers;
+                                      if (nonPlacedSpeakers.isNotEmpty) {
+                                        projectViewModel.setShouldPlaceNonPlacedSpeakers(!projectViewModel.shouldPlaceNonPlacedSpeakers);
+                                      }
                                     },
                                     child: Container(
                                       padding: const EdgeInsets.all(4),
@@ -178,19 +185,19 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                               color: Colors.white,
                                               borderRadius: BorderRadius.circular(6),
                                             ),
-                                            child: Image.asset(speakers.first.assetImagePath),
+                                            child: Image.asset(allSpeaekers.first.assetImagePath),
                                           ),
                                           const SizedBox(width: 12),
                                           Expanded(
                                             child: FusionAppText(
-                                              text: speakers.first.name,
+                                              text: allSpeaekers.first.name,
                                               style: context.textTheme.bodySmall?.copyWith(
                                                 fontWeight: FontWeight.w500,
                                               ),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
-                                          if (speakers.isNotEmpty) ...<Widget>[
+                                          if (allSpeaekers.isNotEmpty) ...<Widget>[
                                             // edit icon
                                             PopupMenuButton<String>(
                                               color: Colors.transparent,
@@ -216,7 +223,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                                     padding: EdgeInsets.zero,
                                                     child: Theme(
                                                       data: ThemeData.dark(),
-                                                      child: const SpeakerQueryPopup(),
+                                                      child: const SpeakerQueryPopup(isFromBuildingPage: true),
                                                     ),
                                                   ),
                                                 ];
@@ -227,83 +234,84 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       ),
                                     ),
                                   ),
-
-                                  const SizedBox(height: 10),
-                                  // Total speakers
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 36),
-                                    child: Row(
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: FusionAppText(
-                                            text: 'Quantity',
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              color: context.colorScheme.onSurfaceVariant,
+                                  if (nonPlacedSpeakers.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 10),
+                                    // Total speakers
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: 'Quantity',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.onSurfaceVariant,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        MouseRegion(
-                                          cursor: SystemMouseCursors.click,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-                                              projectViewModel.decreaseQty();
-                                            },
-                                            child: Icon(
-                                              LucideIcons.minus200,
-                                              size: 12,
-                                              color: context.colorScheme.onSurface,
+                                          MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                                projectViewModel.decreaseQty();
+                                              },
+                                              child: Icon(
+                                                LucideIcons.minus200,
+                                                size: 12,
+                                                color: context.colorScheme.onSurface,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        FusionAppText(
-                                          text: "${speakers.length}",
-                                          style: context.textTheme.bodySmall,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        MouseRegion(
-                                          cursor: SystemMouseCursors.click,
-                                          child: GestureDetector(
-                                            onTap: () {
-                                              final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-                                              projectViewModel.increaseQty();
-                                            },
-                                            child: Icon(
-                                              LucideIcons.plus200,
-                                              size: 12,
-                                              color: context.colorScheme.onSurface,
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: "${nonPlacedSpeakers.length}",
+                                            style: context.textTheme.bodySmall,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          MouseRegion(
+                                            cursor: SystemMouseCursors.click,
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
+                                                projectViewModel.increaseQty();
+                                              },
+                                              child: Icon(
+                                                LucideIcons.plus200,
+                                                size: 12,
+                                                color: context.colorScheme.onSurface,
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  // Total speakers
-                                  Padding(
-                                    padding: const EdgeInsets.only(left: 36),
-                                    child: Row(
-                                      children: <Widget>[
-                                        Expanded(
-                                          child: FusionAppText(
-                                            text: 'Not placed speakers',
+                                    const SizedBox(height: 10),
+                                    // Total speakers
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: 'Not placed speakers',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.surfaceDim,
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: "${nonPlacedSpeakers.length}",
                                             style: context.textTheme.bodySmall?.copyWith(
                                               color: context.colorScheme.surfaceDim,
                                             ),
                                           ),
-                                        ),
-
-                                        const SizedBox(width: 8),
-                                        FusionAppText(
-                                          text: "${speakers.length}",
-                                          style: context.textTheme.bodySmall?.copyWith(
-                                            color: context.colorScheme.surfaceDim,
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ],
                               ),
                             ],

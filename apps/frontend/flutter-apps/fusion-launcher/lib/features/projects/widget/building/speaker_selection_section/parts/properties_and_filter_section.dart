@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/constant_enums.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_listening_area.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/text_field.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -34,10 +35,6 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
 
   @override
   Widget build(BuildContext context) {
-    final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
-
-    final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
-
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF292826),
@@ -45,7 +42,11 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
       ),
       child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
         builder: (BuildContext context, ProjectViewModelState state) {
-          final ListeningArea? selectedListeningArea = projectViewModel.getCurrentSelectedListeningArea();
+          final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
+          final ListeningArea? selectedListeningArea = speakerSelectionViewModel.selectedListeningArea;
+
+          final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
+          final bool isFromBuildingPage = speakerSelectionViewModel.isFromBuildingPage;
 
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -82,22 +83,31 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                   physics: const ClampingScrollPhysics(),
                   child: Column(
                     children: <Widget>[
+                      if (!isFromBuildingPage) ...<Widget>[
+                        SelectListeningArea(
+                          speakerSelectionViewModel: speakerSelectionViewModel,
+                        ),
+                        const SizedBox(height: 10),
+                      ],
+
                       Builder(
                         builder: (BuildContext context) {
                           if (selectedListeningArea == null) {
-                            return Center(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: <Widget>[
-                                  FusionAppText(
-                                    text: "Select listening area\nto view properties",
-                                    textAlign: TextAlign.center,
-                                    style: context.textTheme.labelSmall?.copyWith(
-                                      color: context.colorScheme.onSurface.withAlpha(100),
+                            return Column(
+                              children: <Widget>[
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(vertical: 60),
+                                    child: FusionAppText(
+                                      text: "Select listening area\nto view properties",
+                                      textAlign: TextAlign.center,
+                                      style: context.textTheme.labelSmall?.copyWith(
+                                        color: context.colorScheme.onSurface.withAlpha(100),
+                                      ),
                                     ),
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             );
                           }
 
@@ -119,11 +129,22 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                     Expanded(
                                       child: TextFormField(
                                         controller: listeningAreaController,
+                                        maxLength: 24,
                                         decoration: InputDecoration(
+                                          counterText: '',
                                           hintText: 'Enter area name',
                                           hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
                                           border: InputBorder.none,
-                                          contentPadding: EdgeInsets.zero,
+                                          enabledBorder: InputBorder.none,
+                                          focusedBorder: InputBorder.none,
+                                          focusedErrorBorder: InputBorder.none,
+                                          errorBorder: InputBorder.none,
+                                          disabledBorder: InputBorder.none,
+                                          focusColor: Colors.transparent,
+                                          hoverColor: Colors.transparent,
+                                          contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
+                                          isDense: true,
+                                          fillColor: Colors.transparent,
                                         ),
                                         style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                                         onFieldSubmitted: (String value) {
@@ -516,7 +537,7 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
         Expanded(
           child: BuildingPageDronDown<T>(
             value: value,
-            hintText: "Select type",
+            hintText: "Select ${label.toLowerCase()}",
             items: options,
             onSelect: (T newValue) {
               final int selectedIndex = options.indexOf(newValue);

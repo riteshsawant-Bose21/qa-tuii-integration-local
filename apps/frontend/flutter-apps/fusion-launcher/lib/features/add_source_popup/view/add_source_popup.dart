@@ -214,14 +214,14 @@ class AddSourcePopup extends StatelessWidget {
                                     children: <Widget>[
                                       Expanded(
                                         child: FusionAppText(
-                                          text: option.name,
+                                          text: "$floorName / ${option.name}",
                                           style: Theme.of(context).textTheme.labelMedium,
                                         ),
                                       ),
                                       const SizedBox(width: 5),
                                       // floor name/zone name/subszone name
                                       FusionAppText(
-                                        text: "$floorName/$zoneName",
+                                        text: zoneName ?? 'No zone',
                                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                           color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
                                         ),
@@ -369,8 +369,10 @@ class AddSourcePopup extends StatelessWidget {
                               Expanded(
                                 child: TextFormField(
                                   onChanged: (String value) => addSourceViewModel.setSelectedSourceName(value),
+                                  maxLength: 24,
                                   decoration: InputDecoration(
                                     hintText: 'Enter name',
+                                    counterText: '',
                                     hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
                                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
                                     focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),

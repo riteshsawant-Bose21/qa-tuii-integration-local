@@ -146,6 +146,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
         BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
             final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
+
             return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
               builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
                 final ProductQueryViewModel productQueryViewModel = context.watch<ProductQueryViewModel>();
@@ -338,7 +339,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                           children: <Widget>[
                             Flexible(
                               child: FusionAppText(
-                                text: widget.product.modelFamily,
+                                text: widget.product.modelName,
                                 style: context.textTheme.labelSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: context.colorScheme.onSurface,
@@ -550,7 +551,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                       context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
                         context: context,
                         speaker: speaker,
-                        productName: widget.product.modelFamily,
+                        productName: widget.product.modelName,
                       );
                     },
                   ),

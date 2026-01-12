@@ -55,6 +55,7 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   Future<void> loadProducts({int attempt = 1}) async {
     try {
       await _productsApi.initialize();
+
       emit(state.copyWith(products: _productsApi, isLoading: false));
 
       for (SpeakerProduct element in speakers) {

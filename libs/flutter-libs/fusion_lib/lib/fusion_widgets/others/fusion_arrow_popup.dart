@@ -34,8 +34,8 @@ class FusionArrowPopup extends StatefulWidget {
     this.showOnCreate = false,
     this.enabled = true,
     this.onDismiss,
-    this.shouldBlur = true,
-    this.blurAmount = 1.0,
+    this.shouldBlur = false,
+    this.blurAmount = 0,
     this.maxHeight,
     this.maxWidth,
   });
@@ -112,7 +112,8 @@ class _PopupContent extends StatelessWidget {
   });
 
   EdgeInsets get _padding {
-    const arrowHeight = 8.0;
+    if (!showArrow) return EdgeInsets.zero;
+    const double arrowHeight = 8.0;
     return EdgeInsets.only(
       top: arrowDirection == _ArrowDirection.top ? arrowHeight : 0.0,
       bottom: arrowDirection == _ArrowDirection.bottom ? arrowHeight : 0.0,
@@ -309,13 +310,11 @@ class _PopupRoute extends PopupRoute<void> {
                     return BackdropFilter(
                       filter: ImageFilter.blur(sigmaX: blur, sigmaY: blur),
                       child: Container(
-                        color: (barriersColor ?? Colors.black12).withValues(
-                          alpha: animation!.value * 0.2,
-                        ),
+                        color: barriersColor ?? Colors.black12.withValues(alpha: animation!.value * 0.2),
                       ),
                     );
                   } else {
-                    return Container(color: (barriersColor ?? Colors.black12));
+                    return Container(color: (barriersColor ?? Colors.transparent));
                   }
                 },
               ),

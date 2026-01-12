@@ -226,7 +226,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         },
                                         onRightClick: (PointerDownEvent e) {
                                           if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
-                                            projectViewModel.shouldPlaceNonPlacedSpeakers = false;
+                                            projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
                                           }
                                         },
                                         moveHardware: (
@@ -337,13 +337,27 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
 
                                             if (nonPlacedSpeakers.isEmpty) return const SizedBox();
 
+                                            final MountingType? speakerMountType = nonPlacedSpeakers.first.mountingType;
+
                                             return Stack(
                                               clipBehavior: Clip.none,
                                               children: <Widget>[
-                                                Image.asset(
-                                                  nonPlacedSpeakers.first.assetImagePath,
-                                                  width: 32,
-                                                  height: 32,
+                                                Builder(
+                                                  builder: (BuildContext context) {
+                                                    if (speakerMountType == MountingType.surface) {
+                                                      return const RotatedBox(quarterTurns: 1, child: Icon(Icons.rectangle, size: 32, color: Colors.black));
+                                                    } else if (speakerMountType == MountingType.pendant) {
+                                                      return SizedBox(
+                                                        width: 24,
+                                                        height: 24,
+                                                        child: CustomPaint(
+                                                          painter: TrianglePainter(color: Colors.black, isUp: true),
+                                                        ),
+                                                      );
+                                                    } else {
+                                                      return const Icon(Icons.circle, size: 32, color: Colors.black);
+                                                    }
+                                                  },
                                                 ),
                                                 Positioned(
                                                   bottom: -10,
@@ -1227,4 +1241,40 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       throw Exception('Failed to save cropped image to project storage');
     }
   }
+}
+
+class TrianglePainter extends CustomPainter {
+  final Color color;
+  final bool isUp;
+
+  TrianglePainter({required this.color, this.isUp = true});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final ui.Paint paint =
+        Paint()
+          ..color = color
+          ..style = PaintingStyle.fill
+          ..isAntiAlias = true;
+
+    final ui.Path path = Path();
+
+    if (isUp) {
+      path
+        ..moveTo(size.width / 2, 0) // top center
+        ..lineTo(0, size.height) // bottom left
+        ..lineTo(size.width, size.height); // bottom right
+    } else {
+      path
+        ..moveTo(0, 0)
+        ..lineTo(size.width, 0)
+        ..lineTo(size.width / 2, size.height);
+    }
+
+    path.close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

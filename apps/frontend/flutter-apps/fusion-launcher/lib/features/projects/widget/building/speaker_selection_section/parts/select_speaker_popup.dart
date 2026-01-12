@@ -1,16 +1,16 @@
-import 'dart:developer';
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import 'speaker_lists.dart';
-import 'properties_and_filter_section.dart';
 import '../view_model/view_model.dart';
+import 'properties_and_filter_section.dart';
+import 'speaker_lists.dart';
 
 class SpeakerQueryPopup extends StatefulWidget {
-  const SpeakerQueryPopup({super.key});
+  final bool isFromBuildingPage;
+  final String? zoneOrSubzoneId;
+  const SpeakerQueryPopup({super.key, required this.isFromBuildingPage, this.zoneOrSubzoneId});
 
   @override
   State<SpeakerQueryPopup> createState() => SpeakerQueryPopupState();
@@ -22,14 +22,23 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
   @override
   void dispose() {
     searchController.dispose();
-    log("Disposing SpeakerQueryPopupState");
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    assert(
+      widget.isFromBuildingPage || widget.zoneOrSubzoneId != null,
+      'Either zone or subzone id should be provided',
+    );
+
     return BlocProvider<SpeakerSelectionViewModel>(
-      create: (BuildContext context) => SpeakerSelectionViewModel(),
+      create: (BuildContext context) {
+        return SpeakerSelectionViewModel()..init(
+          isFromBuilding: widget.isFromBuildingPage,
+          zoneOrSubzoneId: widget.zoneOrSubzoneId,
+        );
+      },
       child: Container(
         width: 640,
         constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.8),

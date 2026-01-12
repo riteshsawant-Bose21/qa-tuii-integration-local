@@ -341,14 +341,10 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   }
 
   Future<void> _loadPlanImage() async {
-    print("Load Plan Image method called @#@#@@#@#@#@#");
     final String imagePath = widget.floorPlanEntity.imagePath;
     if (imagePath.isNotEmpty) {
-      print("Loading image *&*&*&*&*&*&*& $imagePath");
       final ui.Image img = await fusionLibLocator<ImageLoaderService>().loadImage(imagePath);
-      print("Image Loaded **********");
       if (!mounted) return;
-      print("Updating the state ####################");
       setState(() {
         _floorPlanImage = img;
         _fitToViewport();
