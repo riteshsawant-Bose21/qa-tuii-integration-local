@@ -25,8 +25,9 @@ part 'parts/_rack_visualization.dart';
 part 'parts/_system_requirement_section.dart';
 
 class EquipmentLocationDialog extends StatelessWidget {
-  const EquipmentLocationDialog({super.key, this.equipmentLocationId});
+  const EquipmentLocationDialog({super.key, this.equipmentLocationId, this.currentFilter});
   final String? equipmentLocationId;
+  final EQLDeviceType? currentFilter;
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
@@ -36,6 +37,7 @@ class EquipmentLocationDialog extends StatelessWidget {
               (BuildContext context) => EqlProductsVm(
                 BlocProvider.of<ProjectViewModel>(context),
                 BlocProvider.of<ProductQueryViewModel>(context),
+                initialFilter: currentFilter,
               ),
         ),
         BlocProvider<EquipmentLocationSelectionViewmodel>(
@@ -269,7 +271,10 @@ class EquipmentLocationDialog extends StatelessWidget {
                         ///
                         ///
                         ///
-                        const Padding(padding: EdgeInsets.symmetric(horizontal: 12.0), child: _FilterOptions()),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                          child: _FilterOptions(equipmentLocationId: equipmentLocationId, currentFilter: currentFilter),
+                        ),
                         const SizedBox(height: 24),
 
                         const Divider(thickness: 0.5, height: 0),

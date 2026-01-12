@@ -12,11 +12,11 @@ import '../widget/building/speaker_selection_section/view_model/product_query_vi
 
 class EqlProductsVm extends Cubit<EQLProductsState> {
   final ProjectViewModel projectViewModel;
-  EqlProductsVm(this.projectViewModel, this.datasource)
+  EqlProductsVm(this.projectViewModel, this.datasource, {EQLDeviceType? initialFilter})
     : super(
         EQLProductsState(
           filters: EQLProductFilters(
-            deviceType: EQLDeviceType.processor,
+            deviceType: initialFilter ?? EQLDeviceType.processor,
             spareCapacity: SpareCapacity.capacity1,
             monitoringType: MonitoringType.none,
           ),

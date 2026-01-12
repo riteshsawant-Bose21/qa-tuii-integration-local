@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/projects/widget/building/side_panel_wid
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../../projects/viewmodel/eql_products_vm.dart';
 import 'add_device_expandable_popup_menu_widget.dart';
 
 class CommonDevicesSectionWidget extends StatefulWidget {
@@ -206,7 +207,16 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                   ? AddSourcePopup(isFromBuildingPage: false, child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark))
                   : (title == "Endpoints" || title == "Controllers" || title == "Fusion Devices" || title == "Amplifiers")
                   ? FusionArrowPopup(
-                    content: const EquipmentLocationDialog(),
+                    content: EquipmentLocationDialog(
+                      currentFilter:
+                          title == "Amplifiers"
+                              ? EQLDeviceType.amplifier
+                              : title == "Fusion Devices"
+                              ? EQLDeviceType.processor
+                              : title == "Endpoints"
+                              ? EQLDeviceType.endpoint
+                              : EQLDeviceType.mixerAmp,
+                    ),
                     child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
                   )
                   : const SizedBox(),
