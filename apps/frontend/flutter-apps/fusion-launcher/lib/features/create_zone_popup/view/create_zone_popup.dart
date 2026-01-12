@@ -28,7 +28,6 @@ class CreateZonePopup extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
-      blurAmount: 1,
       backgroundColor: const Color(0xFF292826),
       content: NewWidget(isFromBuildingPage: isFromBuildingPage),
       child: child,

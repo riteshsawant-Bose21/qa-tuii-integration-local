@@ -25,7 +25,7 @@ part 'parts/_rack_visualization.dart';
 part 'parts/_system_requirement_section.dart';
 
 class EquipmentLocationDialog extends StatelessWidget {
-  const EquipmentLocationDialog({super.key, required this.equipmentLocationId});
+  const EquipmentLocationDialog({super.key, this.equipmentLocationId});
   final String? equipmentLocationId;
   @override
   Widget build(BuildContext context) {

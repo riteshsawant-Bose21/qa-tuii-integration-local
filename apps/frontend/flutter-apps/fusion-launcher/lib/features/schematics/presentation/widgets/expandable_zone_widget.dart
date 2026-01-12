@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import 'add_speakers_menu.dart';
 import 'circuit_device_widget.dart';
 import 'create_new_location_widget.dart';
 import 'expandable_sub_zone_widgets.dart';
@@ -147,9 +147,23 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             if (widget.subZones.isEmpty)
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, "add_speakers_menu_container_$index"),
-                child: AddSpeakersMenu(
-                  zoneId: widget.zoneId,
-                  onSpeakerAdded: onSpeakerAdded,
+                child: FusionArrowPopup(
+                  content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId),
+
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.add, size: 10, color: Colors.black87),
+                      const SizedBox(width: 4),
+                      FusionAppText(
+                        text: "Speaker",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(width: 8),
