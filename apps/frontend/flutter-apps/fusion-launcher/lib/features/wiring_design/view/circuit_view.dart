@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/circuit_controller.dart';
-import 'package:fusion_launcher/features/wiring_design/controller/helpers/wiring_stats_methods.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/state/wiring_state.dart';
 import 'package:fusion_launcher/features/wiring_design/model/circuit_port.dart';
-import 'package:fusion_launcher/features/wiring_design/util/color_util.dart';
 import 'package:fusion_launcher/features/wiring_design/view/painters/circuit_painter.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -86,70 +84,69 @@ class CircuitView extends StatelessWidget {
                         ),
                         if (overlay != null) overlay,
 
-                      
                         ///************************************************************************************************************
                         ///
                         ///
                         /// Legends
                         ///
                         ///************************************************************************************************************
-                        Align(
-                          alignment: Alignment.topLeft,
-                          child: Container(
-                            margin: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(0.0),
-                              color: Colors.grey.shade100,
-                              border: Border.all(color: Colors.grey.shade200),
-                              boxShadow: <BoxShadow>[
-                                // BoxShadow(
-                                //   color: Colors.black.withValues(alpha: 0.1),
-                                //   blurRadius: 12.0,
-                                //   offset: const Offset(0, 4),
-                                //   spreadRadius: 0,
-                                // ),
-                              ],
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 8,
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              spacing: 5,
-                              children: <Widget>[
-                                for (final ({Color color, String label}) legend in <({Color color, String label})>[
-                                  (
-                                    color: context.colorScheme.switchWireColor,
-                                    label: "${controller.noOfSwitches} switch connections",
-                                  ),
-                                  (
-                                    color: context.colorScheme.analogWireColor,
-                                    label: "${controller.state.wires.length} analog connections",
-                                  ),
-                                ])
-                                  Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    spacing: 12,
-                                    children: <Widget>[
-                                      Container(
-                                        width: 30,
-                                        height: 3,
-                                        color: legend.color,
-                                      ),
-                                      Text(
-                                        legend.label,
-                                        style: context.textTheme.bodySmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                              ],
-                            ),
-                          ),
-                        ),
+                        // Align(
+                        //   alignment: Alignment.topLeft,
+                        //   child: Container(
+                        //     margin: const EdgeInsets.all(8),
+                        //     decoration: BoxDecoration(
+                        //       borderRadius: BorderRadius.circular(0.0),
+                        //       color: Colors.grey.shade100,
+                        //       border: Border.all(color: Colors.grey.shade200),
+                        //       boxShadow: <BoxShadow>[
+                        //         // BoxShadow(
+                        //         //   color: Colors.black.withValues(alpha: 0.1),
+                        //         //   blurRadius: 12.0,
+                        //         //   offset: const Offset(0, 4),
+                        //         //   spreadRadius: 0,
+                        //         // ),
+                        //       ],
+                        //     ),
+                        //     padding: const EdgeInsets.symmetric(
+                        //       horizontal: 8,
+                        //       vertical: 8,
+                        //     ),
+                        //     child: Column(
+                        //       mainAxisSize: MainAxisSize.min,
+                        //       crossAxisAlignment: CrossAxisAlignment.start,
+                        //       spacing: 5,
+                        //       children: <Widget>[
+                        //         for (final ({Color color, String label}) legend in <({Color color, String label})>[
+                        //           (
+                        //             color: context.colorScheme.switchWireColor,
+                        //             label: "${controller.noOfSwitches} switch connections",
+                        //           ),
+                        //           (
+                        //             color: context.colorScheme.analogWireColor,
+                        //             label: "${controller.state.wires.length} analog connections",
+                        //           ),
+                        //         ])
+                        //           Row(
+                        //             mainAxisSize: MainAxisSize.min,
+                        //             spacing: 12,
+                        //             children: <Widget>[
+                        //               Container(
+                        //                 width: 30,
+                        //                 height: 3,
+                        //                 color: legend.color,
+                        //               ),
+                        //               Text(
+                        //                 legend.label,
+                        //                 style: context.textTheme.bodySmall?.copyWith(
+                        //                   fontWeight: FontWeight.bold,
+                        //                 ),
+                        //               ),
+                        //             ],
+                        //           ),
+                        //       ],
+                        //     ),
+                        //   ),
+                        // ),
 
                         ///************************************************************************************************************
                         ///

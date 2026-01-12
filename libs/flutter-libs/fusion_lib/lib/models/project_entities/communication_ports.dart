@@ -32,7 +32,8 @@ enum PortType {
   wifiOut('Wifi'),
   hdmiIn('Hdmi'),
   hdmiOut('Hdmi'),
-  audioJack('Audio Jack'),
+  audioJackInput('Audio Jack'),
+  audioJackOutput('Audio Jack'),
   amplifierInput('Input'),
   amplifierOutput('Output'),
   dspAnalogInput('Input'),
@@ -49,7 +50,10 @@ enum PortType {
   circuitInput('Input'),
 
   fusionConnectInput('Input'),
-  fusionConnectOutput('Output');
+  fusionConnectOutput('Output'),
+
+  xlrInput('Input'),
+  xlrOutput('Output');
 
   const PortType(this.description);
 
