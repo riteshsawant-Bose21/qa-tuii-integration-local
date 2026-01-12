@@ -1,5 +1,6 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/hardware/product_viewmodel.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/amplifier_product.dart';
@@ -139,15 +140,20 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
   }
 
   void addProductToLocation({required String equipLocationId, required EQLProduct product}) {
-    final HardwareComponent hardware = _createHardwareFor(product);
-    hardware.inputPortsData.clear();
-    hardware.outputPortsData.clear();
-    hardware.communicationPorts.clear();
-    hardware.inputPortsData.addAll(
-      product.portData.getInputPorts(_getProductType(product.deviceType), product.modelFamily.toLowerCase().contains("powersmart")),
+    final HardwareComponent hardware = projectViewModel.assignPortData(
+      hardware: _createHardwareFor(product),
+      type: _getProductType(product.deviceType),
+      portData: product.portData,
+      modelFamily: product.modelFamily,
     );
-    hardware.outputPortsData.addAll(product.portData.getOutputPorts(_getProductType(product.deviceType)));
-    hardware.communicationPorts.addAll(product.portData.comPorts);
+    // hardware.inputPortsData.clear();
+    // hardware.outputPortsData.clear();
+    // hardware.communicationPorts.clear();
+    // hardware.inputPortsData.addAll(
+    //   product.portData.getInputPorts(_getProductType(product.deviceType), product.modelFamily.toLowerCase().contains("powersmart")),
+    // );
+    // hardware.outputPortsData.addAll(product.portData.getOutputPorts(_getProductType(product.deviceType)));
+    // hardware.communicationPorts.addAll(product.portData.comPorts);
 
     projectViewModel.addHardware(hardware: hardware);
     projectViewModel.addHardwareToEquipLocation(
