@@ -22,8 +22,6 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
     isFromBuildingPage = isFromBuilding;
   }
 
-  void update(CreateZoneViewModelState newState) => emit(newState);
-
   void setZoneName(String name) => emit(state.copyWith(zoneName: name));
   void setZoneColor(String color) => emit(state.copyWith(zoneColor: color));
   void setZoneFunctionType(ZoneFunctionsType type) => emit(state.copyWith(zoneFunctionType: type));
