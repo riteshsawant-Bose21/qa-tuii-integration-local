@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -253,8 +253,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                         height: 60,
                         child: Row(
                           children: <Widget>[
-                            const Text(
-                              'Product List',
+                            const FusionAppText(
+                              text: 'Product List',
                               style: TextStyle(
                                 fontSize: 22,
                                 fontWeight: FontWeight.w600,
@@ -314,8 +314,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                   children: <Widget>[
                                     SizedBox(
                                       width: 60,
-                                      child: Text(
-                                        '',
+                                      child: FusionAppText(
+                                        text: '',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -324,8 +324,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     Expanded(
                                       flex: 2,
-                                      child: Text(
-                                        'Item',
+                                      child: FusionAppText(
+                                        text: 'Item',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -334,8 +334,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     Expanded(
                                       flex: 2,
-                                      child: Text(
-                                        'Model/Variant',
+                                      child: FusionAppText(
+                                        text: 'Model/Variant',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -344,8 +344,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     SizedBox(
                                       width: 100,
-                                      child: Text(
-                                        'Unit Price',
+                                      child: FusionAppText(
+                                        text: 'Unit Price',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -354,8 +354,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     SizedBox(
                                       width: 80,
-                                      child: Text(
-                                        'Quantity',
+                                      child: FusionAppText(
+                                        text: 'Quantity',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -364,8 +364,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     SizedBox(
                                       width: 100,
-                                      child: Text(
-                                        'Price',
+                                      child: FusionAppText(
+                                        text: 'Price',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -374,8 +374,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                     ),
                                     SizedBox(
                                       width: 60,
-                                      child: Text(
-                                        'Action',
+                                      child: FusionAppText(
+                                        text: 'Action',
                                         style: TextStyle(
                                           fontWeight: FontWeight.w600,
                                           color: secondaryText,
@@ -428,8 +428,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                           // Item Name
                                           Expanded(
                                             flex: 2,
-                                            child: Text(
-                                              item.name,
+                                            child: FusionAppText(
+                                              text: item.name,
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 color: primaryText,
@@ -440,8 +440,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                           // Model
                                           Expanded(
                                             flex: 2,
-                                            child: Text(
-                                              item.model,
+                                            child: FusionAppText(
+                                              text: item.model,
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 color: primaryText,
@@ -451,8 +451,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                           // Unit Price
                                           SizedBox(
                                             width: 100,
-                                            child: Text(
-                                              '\$ ${item.unitPrice.toStringAsFixed(0)}',
+                                            child: FusionAppText(
+                                              text: '\$ ${item.unitPrice.toStringAsFixed(0)}',
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 color: primaryText,
@@ -464,8 +464,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                             width: 80,
                                             child: Row(
                                               children: <Widget>[
-                                                Text(
-                                                  '${item.quantity}',
+                                                FusionAppText(
+                                                  text: '${item.quantity}',
                                                   style: const TextStyle(
                                                     fontSize: 12,
                                                     color: primaryText,
@@ -483,8 +483,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                           // Price
                                           SizedBox(
                                             width: 100,
-                                            child: Text(
-                                              '\$ ${(item.unitPrice * item.quantity).toStringAsFixed(0)}',
+                                            child: FusionAppText(
+                                              text: '\$ ${(item.unitPrice * item.quantity).toStringAsFixed(0)}',
                                               style: const TextStyle(
                                                 fontSize: 12,
                                                 color: primaryText,
@@ -528,8 +528,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                     const SizedBox(
                       height: 60,
                       child: Center(
-                        child: Text(
-                          'Pricing',
+                        child: FusionAppText(
+                          text: 'Pricing',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w500,
@@ -555,15 +555,15 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: <Widget>[
-                                const Text(
-                                  'Total Price',
+                                const FusionAppText(
+                                  text: 'Total Price',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: secondaryText,
                                   ),
                                 ),
-                                Text(
-                                  '\$${totalPrice.toStringAsFixed(0)}',
+                                FusionAppText(
+                                  text: '\$${totalPrice.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: primaryText,
@@ -576,15 +576,15 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: <Widget>[
-                                const Text(
-                                  'VAT/ Tax',
+                                const FusionAppText(
+                                  text: 'VAT/ Tax',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: secondaryText,
                                   ),
                                 ),
-                                Text(
-                                  '\$${vatAmount.toStringAsFixed(0)}',
+                                FusionAppText(
+                                  text: '\$${vatAmount.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: primaryText,
@@ -597,15 +597,15 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: <Widget>[
-                                const Text(
-                                  'Org Discount',
+                                const FusionAppText(
+                                  text: 'Org Discount',
                                   style: TextStyle(
                                     fontSize: 12,
                                     color: secondaryText,
                                   ),
                                 ),
-                                Text(
-                                  '\$${orgDiscount.toStringAsFixed(0)}',
+                                FusionAppText(
+                                  text: '\$${orgDiscount.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: primaryText,
@@ -620,16 +620,16 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: <Widget>[
-                                const Text(
-                                  'Grand Total',
+                                const FusionAppText(
+                                  text: 'Grand Total',
                                   style: TextStyle(
                                     fontSize: 14,
                                     color: primaryText,
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                Text(
-                                  '\$${grandTotal.toStringAsFixed(0)}',
+                                FusionAppText(
+                                  text: '\$${grandTotal.toStringAsFixed(0)}',
                                   style: const TextStyle(
                                     fontSize: 14,
                                     color: primaryText,
@@ -656,8 +656,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                   ),
                                   elevation: 0,
                                 ),
-                                child: const Text(
-                                  'PROCEED',
+                                child: const FusionAppText(
+                                  text: 'PROCEED',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.w600,
@@ -680,8 +680,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                       Icons.print_outlined,
                                       size: 14,
                                     ),
-                                    label: const Text(
-                                      'Print',
+                                    label: const FusionAppText(
+                                      text: 'Print',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w500,
@@ -708,8 +708,8 @@ class _BillOfMaterialsPageState extends State<BillOfMaterialsPage> {
                                       Icons.file_download_outlined,
                                       size: 14,
                                     ),
-                                    label: const Text(
-                                      'Export BOM',
+                                    label: const FusionAppText(
+                                      text: 'Export BOM',
                                       style: TextStyle(
                                         fontSize: 10,
                                         fontWeight: FontWeight.w500,

@@ -86,7 +86,7 @@ class TriggerPanel extends StatelessWidget {
                   children: <Widget>[
                     /// Events Header Widget
                     EventHeaderWidget(
-                      snapshotName: selectedEvent.name,
+                      eventName: selectedEvent.name,
                       onNameChanged: (String newName) {
                         final FusionEvent event = selectedEvent.copyWith(name: newName);
                         _projectViewModel.updateEvent(event: event);

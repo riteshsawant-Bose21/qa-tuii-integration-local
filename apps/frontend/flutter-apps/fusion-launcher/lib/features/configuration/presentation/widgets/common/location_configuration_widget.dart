@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_lib/models/fusion_models.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/service_locator.dart';
 
@@ -72,15 +72,15 @@ Future<LocationModel?> showConfigureDeviceDialog(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: <Widget>[
-                                  Text(
-                                    'Configure Device',
+                                  FusionAppText(
+                                    text: 'Configure Device',
                                     style: Theme.of(
                                       context,
                                     ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor, fontSize: 18),
                                   ),
                                   const SizedBox(height: 4),
-                                  Text(
-                                    'Set location and port assignments',
+                                  FusionAppText(
+                                    text: 'Set location and port assignments',
                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 14),
                                   ),
                                 ],
@@ -137,7 +137,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                         color: !isLocationSelected ? Theme.of(context).primaryColor : Colors.grey,
                                       ),
                                       const SizedBox(width: 12),
-                                      const Text('No specific location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                                      const FusionAppText(text: 'No specific location', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
                                     ],
                                   ),
                                   value: 'none',
@@ -288,8 +288,8 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                                   Icons.add,
                                                   color: Theme.of(context).primaryColor,
                                                 ),
-                                                const Text(
-                                                  "Add new area",
+                                                const FusionAppText(
+                                                  text: "Add new area",
                                                   style: TextStyle(
                                                     fontSize: 14,
                                                     fontWeight: FontWeight.w600,
@@ -329,8 +329,8 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                         Icons.add,
                                         color: Theme.of(context).primaryColor,
                                       ),
-                                      title: const Text(
-                                        "Add new floor",
+                                      title: const FusionAppText(
+                                        text: "Add new floor",
                                         style: TextStyle(fontWeight: FontWeight.w600),
                                       ),
                                     ),
@@ -392,7 +392,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                               ),
-                              child: const Text('Cancel'),
+                              child: const FusionAppText(text: 'Cancel'),
                             ),
                             const SizedBox(width: 12),
                             ElevatedButton(
@@ -406,7 +406,7 @@ Future<LocationModel?> showConfigureDeviceDialog(
                                 ),
                                 elevation: 2,
                               ),
-                              child: const Text('Save Changes'),
+                              child: const FusionAppText(text: 'Save Changes'),
                             ),
                           ],
                         ),
@@ -438,15 +438,15 @@ Widget _buildSectionHeader(BuildContext context, String title, IconData icon, St
             color: Theme.of(context).primaryColor,
           ),
           const SizedBox(width: 8),
-          Text(
-            title,
+          FusionAppText(
+            text: title,
             style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold, color: Theme.of(context).primaryColor, fontSize: 16),
           ),
         ],
       ),
       const SizedBox(height: 4),
-      Text(
-        subtitle,
+      FusionAppText(
+        text: subtitle,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).textTheme.bodySmall?.color, fontSize: 14),
       ),
     ],
@@ -529,8 +529,8 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                               Icons.home,
                               color: Theme.of(context).primaryColor,
                             ),
-                            title: Text(
-                              floor.name,
+                            title: FusionAppText(
+                              text: floor.name,
                               style: const TextStyle(fontWeight: FontWeight.w600),
                             ),
                             children: <Widget>[
@@ -567,8 +567,8 @@ class _LocationConfigurationTabState extends State<LocationConfigurationTab> wit
                                     ),
                                     child: RadioListTile<String>(
                                       contentPadding: const EdgeInsets.symmetric(horizontal: 12),
-                                      title: Text(
-                                        listeningArea.name,
+                                      title: FusionAppText(
+                                        text: listeningArea.name,
                                         style: TextStyle(
                                           fontSize: 14,
                                           fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
@@ -675,7 +675,7 @@ class NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: <Widget>[
-              const Text('Create New Floor'),
+              const FusionAppText(text: 'Create New Floor'),
               Switch(
                 value: _isCreatingNewFloor,
                 onChanged: (bool val) {
@@ -705,14 +705,14 @@ class NewFloorRoomEntryState extends State<NewFloorRoomEntry> {
               children: <Widget>[
                 Expanded(
                   child: DropdownButtonFormField<FloorModel>(
-                    value: widget.selectedFloor,
+                    initialValue: widget.selectedFloor,
                     decoration: const InputDecoration(labelText: 'Select Floor'),
                     items:
                         widget.existingFloors
                             .map(
                               (FloorModel floor) => DropdownMenuItem<FloorModel>(
                                 value: floor,
-                                child: Text(floor.name),
+                                child: FusionAppText(text: floor.name),
                               ),
                             )
                             .toList(),

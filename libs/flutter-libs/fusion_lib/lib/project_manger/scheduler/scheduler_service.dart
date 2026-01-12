@@ -29,4 +29,24 @@ extension SchedulerService on ProjectService {
   List<ScheduleConfig> getAllSchedules() {
     return schedulerConfig.getAll();
   }
+
+  Map<String, ScheduleConfig> reOrderSchedule({required String scheduleIdToMove, required String scheduleAtNewIndexId}) {
+    List<ScheduleConfig> items = getAllSchedules();
+
+    // Find indices
+    int fromIndex = items.indexWhere((s) => s.id == scheduleIdToMove);
+    int toIndex = items.indexWhere((s) => s.id == scheduleAtNewIndexId);
+
+    // Validate
+    if (fromIndex == -1 || toIndex == -1) {
+      throw ArgumentError('Invalid Schedule IDs');
+    }
+
+    // Reorder using List operations
+    ScheduleConfig item = items.removeAt(fromIndex);
+    items.insert(toIndex, item);
+
+    // Convert back to Map
+    return {for (var s in items) s.id: s};
+  }
 }

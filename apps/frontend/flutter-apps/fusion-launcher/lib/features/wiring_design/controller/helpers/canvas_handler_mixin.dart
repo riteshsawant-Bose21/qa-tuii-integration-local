@@ -10,7 +10,8 @@ mixin CanvasHandlerMixin on ChangeNotifier {
   Size? canvasSize;
 
   bool isWithinViewport(Offset position) {
-    final bool contains = (-canvasState.offset & (canvasSize ?? const Size(100, 100))).contains(
+    final Rect rect = (canvasState.offset & ((canvasSize ?? const Size(100, 100)) * canvasState.scale));
+    final bool contains = rect.contains(
       position,
     );
     return contains;
@@ -20,7 +21,7 @@ mixin CanvasHandlerMixin on ChangeNotifier {
     setCanvasState(
       canvasState.recenter(
         center,
-        ((canvasSize ?? const Size(100, 100)) * 0.5),
+        ((canvasSize ?? const Size(100, 100))),
       ),
     );
   }

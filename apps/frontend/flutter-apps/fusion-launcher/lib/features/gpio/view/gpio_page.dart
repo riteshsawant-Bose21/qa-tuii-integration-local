@@ -142,6 +142,10 @@ class GpioPage extends StatelessWidget {
                             );
                           }
                           return FusionTable(
+                            onReorder: (int oldIndex, int newIndex) {
+                              context.read<GpioViewmodel>().reOrderGpio(oldIndex, newIndex);
+                            },
+                            keyExtractor: (int index) => state.gpios[index].id,
                             headers: <FusionTableHeader>[
                               FusionTableHeader(flex: 1, title: "Name"),
                               FusionTableHeader(flex: 3, title: "In/Out"),
@@ -215,7 +219,6 @@ class GpioPage extends StatelessWidget {
                                 //   ),
                                 // ),
                                 switch (gpio.direction) {
-                                  // TODO: Handle this case.
                                   GpioDirection.input => FusionDropdown<GpiAction>(
                                     value: gpio.gpiAction,
                                     display: (GpiAction action) => action.displayName,
@@ -225,7 +228,6 @@ class GpioPage extends StatelessWidget {
                                       context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpiAction: action));
                                     },
                                   ),
-                                  // TODO: Handle this case.
                                   GpioDirection.output => FusionDropdown<GpoAction>(
                                     value: gpio.gpoAction,
                                     display: (GpoAction action) => action.displayName,
@@ -236,13 +238,17 @@ class GpioPage extends StatelessWidget {
                                     },
                                   ),
                                 },
-                                Checkbox(
-                                  value: gpio.invert,
-                                  onChanged: (bool? value) {
-                                    context.read<GpioViewmodel>().updateGpio(gpio.copyWith(invert: value));
-                                  },
-                                  activeColor: Colors.black,
-                                ),
+                                if ((gpio.direction == GpioDirection.output && gpio.gpoAction == GpoAction.openCollector) ||
+                                    (gpio.direction == GpioDirection.input && gpio.gpiAction == GpiAction.voltageTrigger))
+                                  Checkbox(
+                                    value: gpio.invert,
+                                    onChanged: (bool? value) {
+                                      context.read<GpioViewmodel>().updateGpio(gpio.copyWith(invert: value));
+                                    },
+                                    activeColor: Colors.black,
+                                  )
+                                else
+                                  const SizedBox(),
                                 if (gpio.direction == GpioDirection.output)
                                   const SizedBox()
                                 else
@@ -250,7 +256,7 @@ class GpioPage extends StatelessWidget {
                                     width: 10,
                                     height: 10,
                                     decoration: BoxDecoration(
-                                      color: gpio.status ? Colors.green : Colors.red,
+                                      color: gpio.status ? Colors.blue : Colors.grey,
                                       shape: BoxShape.circle,
                                     ),
                                   ),

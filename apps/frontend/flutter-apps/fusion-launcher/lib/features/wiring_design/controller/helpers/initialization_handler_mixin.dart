@@ -201,46 +201,65 @@ extension InitializationHandlerMixin on CircuitController {
     for (final CircuitComponent component in components) {
       if (component.data is SourceComponentData) {
         component.setPosition(
-          (component.data as SourceComponentData).source.wiringPos ?? Offset(sourceX, sourceY),
+          (component.data as SourceComponentData).source.wiringPos ?? _findNonOverlappingPosition(Offset(sourceX, sourceY), component, components),
         );
         sourceY += component.size.height + 100;
       } else if (component.data is DeviceSchematicComponentData) {
         final HardwareComponent hardware = (component.data as DeviceSchematicComponentData).data;
         if (hardware is Amplifier) {
           component.setPosition(
-            hardware.wiringPos ?? Offset(amplifierX, amplifierY),
+            hardware.wiringPos ?? _findNonOverlappingPosition(Offset(amplifierX, amplifierY), component, components),
           );
           amplifierY += component.size.height + 100;
         } else if (hardware is FusionEndpoints) {
           component.setPosition(
-            hardware.wiringPos ?? Offset(endpointsX, endpointsY),
+            hardware.wiringPos ?? _findNonOverlappingPosition(Offset(endpointsX, endpointsY), component, components),
           );
           endpointsY += component.size.height + 100;
           continue;
         } else if (hardware is FusionDsp) {
           component.setPosition(
-            hardware.wiringPos ?? Offset(dspX, dspY),
+            hardware.wiringPos ?? _findNonOverlappingPosition(Offset(dspX, dspY), component, components),
           );
           dspY += component.size.height + 100;
           continue;
         } else if (hardware is FusionController) {
           component.setPosition(
-            hardware.wiringPos ?? Offset(controllerX, controllerY),
+            hardware.wiringPos ?? _findNonOverlappingPosition(Offset(controllerX, controllerY), component, components),
           );
           controllerY += component.size.height + 100;
           continue;
         }
       } else if (component.data is SpeakerComponentData) {
         component.setPosition(
-          (component.data as SpeakerComponentData).speaker.wiringPos ?? Offset(speakerX, speakerY),
+          (component.data as SpeakerComponentData).speaker.wiringPos ?? _findNonOverlappingPosition(Offset(speakerX, speakerY), component, components),
         );
         speakerY += component.size.height + 100;
       } else if (component.data is ZoneComponentData) {
         component.setPosition(
-          (component.data as ZoneComponentData).zone.wiringPos ?? Offset(speakerX, speakerY),
+          (component.data as ZoneComponentData).zone.wiringPos ?? _findNonOverlappingPosition(Offset(speakerX, speakerY), component, components),
         );
         speakerY += component.size.height + 100;
       }
     }
+  }
+
+  bool _isPositionOccupied(Rect position, CircuitComponent component, List<CircuitComponent> components) {
+    for (final CircuitComponent otherComponent in components) {
+      if (otherComponent == component) continue;
+      final Rect rect = otherComponent.position & otherComponent.size;
+      if (rect.overlaps(position)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  Offset _findNonOverlappingPosition(Offset position, CircuitComponent component, List<CircuitComponent> components) {
+    final double step = 20.0;
+    while (_isPositionOccupied(position & component.size, component, components)) {
+      position = position.translate(0, step);
+    }
+    return position;
   }
 }
