@@ -425,6 +425,7 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
       child: SemanticHelper.button(
         testId: SemanticHelper.createTestId(SemanticTypes.button, "add_sources"),
         child: AddSourcePopup(
+          isFromBuildingPage: true,
           child: Container(
             margin: const EdgeInsets.symmetric(horizontal: 1.0),
             decoration: BoxDecoration(

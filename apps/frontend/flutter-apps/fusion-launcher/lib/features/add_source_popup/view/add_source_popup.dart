@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/models/products_data.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/properties_and_filter_section.dart';
@@ -20,7 +21,7 @@ class AddSourcePopup extends StatelessWidget {
     super.key,
     required this.child,
     this.onSaved,
-    this.isFromBuildingPage = true,
+    required this.isFromBuildingPage,
   });
 
   @override
@@ -105,7 +106,12 @@ class AddSourcePopup extends StatelessWidget {
                             label: "Type",
                             value: state.selectedSourceSectionType,
                             options: SourceSectionType.values,
-                            valueBuilder: (SourceSectionType option) => option.displayName,
+                            labelBuilder: (SourceSectionType option) {
+                              return FusionAppText(
+                                text: option.displayName,
+                                style: Theme.of(context).textTheme.labelMedium,
+                              );
+                            },
                             onOptionSelected: (int value, SourceSectionType option) {
                               addSourceViewModel.setSourceSectionType(option);
                             },
@@ -189,7 +195,40 @@ class AddSourcePopup extends StatelessWidget {
                                 label: "Area",
                                 value: state.selectedListeningArea,
                                 options: listeningAreas,
-                                valueBuilder: (ListeningArea option) => option.name,
+                                labelBuilder: (ListeningArea option) {
+                                  return FusionAppText(
+                                    text: option.name,
+                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                      color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
+                                    ),
+                                  );
+                                },
+                                valueBuilder: (ListeningArea option) {
+                                  final String? floorName = serviceLocator<ProjectViewModel>().getFloorForListeningArea(areaId: option.id)?.name;
+
+                                  String? zoneName;
+                                  zoneName = serviceLocator<ProjectViewModel>().getSubZoneForListeningArea(areaId: option.id)?.name;
+                                  zoneName ??= serviceLocator<ProjectViewModel>().getZonesForListeningArea(areaId: option.id)?.name;
+
+                                  return Row(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: FusionAppText(
+                                          text: option.name,
+                                          style: Theme.of(context).textTheme.labelMedium,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 5),
+                                      // floor name/zone name/subszone name
+                                      FusionAppText(
+                                        text: "$floorName/$zoneName",
+                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                          color: Theme.of(context).colorScheme.onSurface.withAlpha(100),
+                                        ),
+                                      ),
+                                    ],
+                                  );
+                                },
                                 onOptionSelected: (int value, ListeningArea option) {
                                   addSourceViewModel.setSelectedListeningArea(
                                     option,
@@ -302,7 +341,12 @@ class AddSourcePopup extends StatelessWidget {
                             label: "Connection",
                             value: state.selectedConnectionType,
                             options: state.selectedSourceSectionType.connectionTypes,
-                            valueBuilder: (AddSourceConnectionType option) => option.displayName,
+                            labelBuilder: (AddSourceConnectionType option) {
+                              return FusionAppText(
+                                text: option.displayName,
+                                style: Theme.of(context).textTheme.labelMedium,
+                              );
+                            },
                             onOptionSelected: (int value, AddSourceConnectionType option) {
                               addSourceViewModel.setSelectedConnectionType(option);
                             },

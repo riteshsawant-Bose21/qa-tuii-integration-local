@@ -143,7 +143,13 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   label: "Type",
                                   value: selectedListeningArea.venuType?.name ?? '',
                                   options: VenueType.values.map((VenueType option) => option.name).toList(),
-                                  valueBuilder: (String option) => option,
+                                  labelBuilder: (String option) {
+                                    return FusionAppText(
+                                      text: option,
+                                      style: Theme.of(context).textTheme.labelMedium,
+                                    );
+                                  },
+
                                   onOptionSelected: (int selectedIndex, String newValue) {
                                     final VenueType selectedType = VenueType.values[selectedIndex];
                                     final ListeningArea updatedLA = selectedListeningArea.copyWith(venuType: selectedType);
@@ -154,7 +160,12 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                 BuildRowPropertyWidget<String>(
                                   label: "Listening Ht",
                                   value: listeningHeightOption.displayName,
-                                  valueBuilder: (String option) => option,
+                                  labelBuilder: (String option) {
+                                    return FusionAppText(
+                                      text: option,
+                                      style: Theme.of(context).textTheme.labelMedium,
+                                    );
+                                  },
                                   options: ListeningHeightOption.values.map((ListeningHeightOption option) => option.displayName).toList(),
                                   onOptionSelected: (int selectedIndex, String newValue) {
                                     final ListeningHeightOption selectedOption = ListeningHeightOption.values[selectedIndex];
@@ -232,7 +243,12 @@ class SpeakerListeningAreaPropertiesState extends State<SpeakerListeningAreaProp
                                   label: "SPL Range",
                                   value: selectedListeningArea.splRange?.name ?? "",
                                   options: SplRange.values.map((SplRange option) => option.name).toList(),
-                                  valueBuilder: (String option) => option,
+                                  labelBuilder: (String option) {
+                                    return FusionAppText(
+                                      text: option,
+                                      style: Theme.of(context).textTheme.labelMedium,
+                                    );
+                                  },
                                   onOptionSelected: (int selectedIndex, String newValue) {
                                     final Map<String, double> splRangeValues = SplRange.values[selectedIndex].splRangeValues;
                                     final double minSPL = splRangeValues["min"]!;
@@ -469,7 +485,8 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
   final List<T> options;
   // final ValueChanged<int, T> onOptionSelected;
   final void Function(int selectedIndex, T value) onOptionSelected;
-  final String Function(T option) valueBuilder;
+  final Widget Function(T option) labelBuilder;
+  final Widget Function(T option)? valueBuilder;
 
   const BuildRowPropertyWidget({
     super.key,
@@ -477,7 +494,8 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
     required this.value,
     required this.options,
     required this.onOptionSelected,
-    required this.valueBuilder,
+    required this.labelBuilder,
+    this.valueBuilder,
   });
 
   @override
@@ -504,12 +522,8 @@ class BuildRowPropertyWidget<T> extends StatelessWidget {
               final int selectedIndex = options.indexOf(newValue);
               onOptionSelected(selectedIndex, newValue);
             },
-            labelBuilder: (T option) {
-              return FusionAppText(
-                text: valueBuilder(option),
-                style: Theme.of(context).textTheme.labelMedium,
-              );
-            },
+            labelBuilder: labelBuilder,
+            valueBuilder: valueBuilder,
           ),
         ),
       ],

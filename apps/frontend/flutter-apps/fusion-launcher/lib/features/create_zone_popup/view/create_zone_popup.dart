@@ -12,27 +12,33 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../projects/widget/building/side_panel_widgets/schematic_properties.dart' show hexToColor;
 import '../view_model/state.dart';
 
-part 'widgets/select_listening_areas.dart';
-part 'widgets/create_new_location.dart';
+part 'widgets/create_new_listening_area.dart';
 part 'widgets/create_subzone_widget.dart';
+part 'widgets/select_listening_areas.dart';
 
 class CreateZonePopup extends StatelessWidget {
   final Widget child;
-  const CreateZonePopup({super.key, required this.child});
+  final bool isFromBuildingPage;
+  const CreateZonePopup({
+    super.key,
+    required this.child,
+    required this.isFromBuildingPage,
+  });
 
   @override
   Widget build(BuildContext context) {
     return FusionArrowPopup(
       blurAmount: 1,
       backgroundColor: const Color(0xFF292826),
-      content: const NewWidget(),
+      content: NewWidget(isFromBuildingPage: isFromBuildingPage),
       child: child,
     );
   }
 }
 
 class NewWidget extends StatefulWidget {
-  const NewWidget({super.key});
+  const NewWidget({super.key, this.isFromBuildingPage = false});
+  final bool isFromBuildingPage;
 
   @override
   State<NewWidget> createState() => _NewWidgetState();
@@ -44,7 +50,7 @@ class _NewWidgetState extends State<NewWidget> {
   @override
   Widget build(BuildContext context) {
     return BlocProvider<CreateZoneViewModel>(
-      create: (BuildContext context) => CreateZoneViewModel(),
+      create: (BuildContext context) => CreateZoneViewModel()..init(isFromBuilding: widget.isFromBuildingPage),
       child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
         builder: (BuildContext context, CreateZoneViewModelState state) {
           return Container(
