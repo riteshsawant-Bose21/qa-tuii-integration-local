@@ -23,8 +23,7 @@ class PortConnectionOverlay extends StatefulWidget {
 }
 
 class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
-  final Map<CircuitComponent, List<CircuitPort>> possibleConnections =
-      <CircuitComponent, List<CircuitPort>>{};
+  final Map<CircuitComponent, List<CircuitPort>> possibleConnections = <CircuitComponent, List<CircuitPort>>{};
   @override
   void initState() {
     super.initState();
@@ -39,16 +38,14 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
 
   void _initializePossibleConnections() {
     possibleConnections.clear();
-    final List<CircuitComponent> allComponents =
-        widget.controller.state.components;
+    final List<CircuitComponent> allComponents = widget.controller.state.components;
     for (final CircuitComponent component in allComponents) {
       if (component.id == widget.port.parent.id) {
         continue;
       }
       final List<CircuitPort> compatiblePorts = <CircuitPort>[];
       for (final CircuitPort port in component.ports) {
-        if (widget.port.canConnect(port) &&
-            !widget.controller.hasConnection(port)) {
+        if (widget.port.canConnect(port) && !widget.controller.hasConnection(port)) {
           compatiblePorts.add(port);
         }
       }
@@ -114,8 +111,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
         const SizedBox(
           height: 10,
         ),
-        for (final CircuitComponent component
-            in possibleConnections.keys) ...<Widget>[
+        for (final CircuitComponent component in possibleConnections.keys) ...<Widget>[
           FusionExpansionPanel(
             titleBuilder:
                 (BuildContext context, bool isExpanded) => Row(
@@ -140,8 +136,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
             content: Column(
               spacing: 2,
               children: <Widget>[
-                for (final CircuitPort port
-                    in possibleConnections[component]!) ...<Widget>[
+                for (final CircuitPort port in possibleConnections[component]!) ...<Widget>[
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 10,
@@ -207,8 +202,7 @@ class _PortConnectionOverlayState extends State<PortConnectionOverlay> {
 
   String _buildName(CircuitComponent component) {
     final String label2 = component.data.label;
-    final String parentName =
-        component.parent == null ? "" : "${_buildName(component.parent!)} > ";
+    final String parentName = component.parent == null ? "" : "${_buildName(component.parent!)} > ";
     return parentName + label2;
   }
 }

@@ -246,6 +246,14 @@ class SourceData extends DeviceComponent {
       type: SourceType.media,
       price: 100.0,
     ),
+    SourceData(
+      id: "generic_3.5mm_jack",
+      name: "Generic 3.5mm Jack",
+      assetPath: "assets/images/products/audiojack.png",
+      connectionType: SourceConnectionType.audioJack,
+      type: SourceType.media,
+      price: 100.0,
+    ),
   ];
 
   static SourceConnectionType getSourceConnectionType(String id) {

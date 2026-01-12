@@ -60,6 +60,21 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       for (SpeakerProduct element in speakers) {
         _fetchProductPrices(element.productId);
       }
+      for (AmplifierProduct element in amplifiers) {
+        _fetchProductPrices(element.productId);
+      }
+      for (IoEndpointProduct element in ioEndpoints) {
+        _fetchProductPrices(element.productId);
+      }
+      for (DspProduct element in dsps) {
+        _fetchProductPrices(element.productId);
+      }
+      for (ControllerProduct element in controllers) {
+        _fetchProductPrices(element.productId);
+      }
+      for (AccessoryProduct element in accessories) {
+        _fetchProductPrices(element.productId);
+      }
     } catch (e) {
       if (attempt < _maxRetries) {
         // optional small delay before retry

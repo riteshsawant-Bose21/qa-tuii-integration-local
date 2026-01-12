@@ -13,6 +13,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:nested/nested.dart';
 
 import '../../../../viewmodel/equipment_location_viewmodel.dart';
+import '../../speaker_selection_section/view_model/product_query_view_model.dart' show ProductQueryViewModel;
 import '../../widgets/drop_down.dart';
 import '../../widgets/grid_view.dart';
 
@@ -32,6 +33,7 @@ class EquipmentLocationDialog extends StatelessWidget {
           create:
               (BuildContext context) => EqlProductsVm(
                 BlocProvider.of<ProjectViewModel>(context),
+                BlocProvider.of<ProductQueryViewModel>(context),
               ),
         ),
         BlocProvider<EquipmentLocationViewmodel>(

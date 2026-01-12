@@ -128,6 +128,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
       SourceConnectionType.bluetooth => PortType.bleOut,
       SourceConnectionType.usb => PortType.usbOut,
+      SourceConnectionType.audioJack => PortType.audioJackOutput,
     };
 
     final Source source = Source(
@@ -153,6 +154,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
           ],
           SourceConnectionType.bluetooth => <PortType>[PortType.bleIn],
           SourceConnectionType.usb => <PortType>[PortType.usbIn],
+          SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
         },
         portPosition: PortPosition.topLeft,
       ),

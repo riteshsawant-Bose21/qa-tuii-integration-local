@@ -1,17 +1,17 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/config/app_config.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/product_data/models/amplifier_product.dart';
 import 'package:fusion_lib/product_data/models/dsp_product.dart';
 import 'package:fusion_lib/product_data/models/io_endpoint_product.dart';
 import 'package:fusion_lib/product_data/models/product_port_data.dart';
-import 'package:fusion_lib/product_data/products.dart';
+
+import '../widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 
 class EqlProductsVm extends Cubit<EQLProductsState> {
   final ProjectViewModel projectViewModel;
-  EqlProductsVm(this.projectViewModel)
+  EqlProductsVm(this.projectViewModel, this.datasource)
     : super(
         EQLProductsState(
           filters: EQLProductFilters(
@@ -26,19 +26,19 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
   }
   bool _isInitialized = false;
   Future<void> _initialize() async {
-    await datasource.initialize();
     _isInitialized = true;
     for (final AmplifierProduct element in datasource.amplifiers) {
       allProducts.add(
         EQLProduct(
           name: element.modelName,
+          modelFamily: element.modelFamily ?? '',
           assetPath: element.assets.firstAssetUrl ?? '',
           description: element.description,
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.amplifier,
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
-          price: 290.00,
+          price: datasource.getPrice(element.productId),
           specifications: <String, String>{
             "Power ": element.power?.at.map((AmplifierMeasurementValue e) => "${e.value} ${e.unit}").join(", ") ?? "",
             "No.Of Loudspeaker Input": element.numberOfLoudspeakerInputs.toString(),
@@ -54,6 +54,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       allProducts.add(
         EQLProduct(
           name: element.modelName,
+          modelFamily: element.modelFamily ?? '',
           assetPath: element.assets.firstAssetUrl ?? '',
           data: element,
           //TODO: Check Endpoint Port Data
@@ -61,7 +62,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.endpoint,
           description: element.shortDescription ?? element.description,
-          price: 150.00,
+          price: datasource.getPrice(element.productId),
           specifications: <String, String>{
             "Input Type": element.inputs?.type ?? "-",
             "no.Of inputs": element.inputs?.quantity.toString() ?? "-",
@@ -78,10 +79,11 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
           assetPath: element.assets.firstAssetUrl ?? '',
+          modelFamily: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
           deviceType: EQLDeviceType.processor,
-          price: 200.00,
+          price: datasource.getPrice(element.productId),
           description: element.shortDescription ?? element.description,
           specifications: <String, String>{
             "Max Analog Control": element.maxNumberOfAnalogControl.toString() ?? "0",
@@ -99,10 +101,7 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     loadProducts();
   }
 
-  final Products datasource = Products(
-    baseUrl: AppConfig.awsApiBaseUrl,
-    fusionOnly: true,
-  );
+  final ProductQueryViewModel datasource;
   final List<EQLProduct> allProducts = <EQLProduct>[];
   void loadProducts() {
     if (!_isInitialized) {
@@ -144,8 +143,10 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
     hardware.inputPortsData.clear();
     hardware.outputPortsData.clear();
     hardware.communicationPorts.clear();
-    hardware.inputPortsData.addAll(product.portData.inputPorts);
-    hardware.outputPortsData.addAll(product.portData.outputPorts);
+    hardware.inputPortsData.addAll(
+      product.portData.getInputPorts(_getProductType(product.deviceType), product.modelFamily.toLowerCase().contains("powersmart")),
+    );
+    hardware.outputPortsData.addAll(product.portData.getOutputPorts(_getProductType(product.deviceType)));
     hardware.communicationPorts.addAll(product.portData.comPorts);
 
     projectViewModel.addHardware(hardware: hardware);
@@ -182,6 +183,19 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         _ => 'UNKNOWN',
       },
     );
+  }
+
+  ProductType _getProductType(EQLDeviceType deviceType) {
+    switch (deviceType) {
+      case EQLDeviceType.amplifier:
+        return ProductType.amplifier;
+      case EQLDeviceType.endpoint:
+        return ProductType.endpoints;
+      case EQLDeviceType.processor:
+        return ProductType.dsps;
+      case EQLDeviceType.mixerAmp:
+        return ProductType.amplifier;
+    }
   }
 }
 
@@ -261,6 +275,7 @@ class EQLProduct {
   final String name;
   final String? assetPath;
   final String description;
+  final String modelFamily;
   final dynamic data;
   final String searchingFields;
   final EQLDeviceType deviceType;
@@ -271,6 +286,7 @@ class EQLProduct {
     required this.name,
     required this.assetPath,
     required this.description,
+    required this.modelFamily,
     required this.data,
     required this.searchingFields,
     required this.deviceType,
