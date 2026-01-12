@@ -356,7 +356,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   final ExpansibleController splController = ExpansibleController();
   final ExpansibleController zoneAreaController = ExpansibleController();
 
-  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode) {
+  List<DockItemConfig> _createBuildingDockItems(ToolbarMode toolbarMode, FloorCanvasController floorCanvasController) {
     return <DockItemConfig>[
       const DockItemConfig(
         id: "1",
@@ -412,7 +412,12 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         controller: zoneAreaController,
         allowUndock: false,
         initiallyExpanded: true,
-        dockItemWidget: toolbarMode == ToolbarMode.acoustics ? const ListeningAreasPanel() : const ZoneAndListeningAreaPanel(),
+        dockItemWidget:
+            toolbarMode == ToolbarMode.acoustics
+                ? ListeningAreasPanel(
+                  floorCanvasController: floorCanvasController,
+                )
+                : const ZoneAndListeningAreaPanel(),
       ),
       // DockItemConfig(
       //   id: "8",
@@ -493,9 +498,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 );
               },
             ),
-            dockItemList: _createBuildingDockItems(
-              serviceLocator<ProjectViewModel>().currentToolbarMode,
-            ),
+            dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
           );
         },
       ),
