@@ -22,6 +22,7 @@ import 'features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'features/dashboard/presentation/pages/dashboard_page.dart';
 import 'features/dynamic_config/presentation/bloc/panel_bloc.dart';
 import 'features/product_query/presentation/viewModel/product_query_view_model_cubit.dart';
+import 'features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 
 Future<void> main() async {
   await runZonedGuarded(() async {
@@ -95,6 +96,10 @@ class MyApp extends StatelessWidget {
       providers: <SingleChildWidget>[
         BlocProvider<SessionViewModel>.value(
           value: serviceLocator<SessionViewModel>(),
+        ),
+
+        BlocProvider<ProductQueryViewModel>.value(
+          value: serviceLocator<ProductQueryViewModel>()..loadProducts(),
         ),
 
         BlocProvider<AuthViewModel>.value(

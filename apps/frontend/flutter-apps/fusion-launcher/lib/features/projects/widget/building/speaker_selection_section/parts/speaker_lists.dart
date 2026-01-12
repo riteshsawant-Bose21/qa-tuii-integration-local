@@ -1,9 +1,10 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/grid_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -147,9 +148,11 @@ class ProductQuerySpeakerList extends StatelessWidget {
             final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
             return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
               builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                final List<SpeakerProduct>? speakers = vmState.speakers;
+                final ProductQueryViewModel productQueryViewModel = context.watch<ProductQueryViewModel>();
+                final bool isProductsLoading = productQueryViewModel.isLoading;
+                final List<SpeakerProduct> speakers = productQueryViewModel.speakers;
 
-                if (speakers == null) {
+                if (isProductsLoading) {
                   return const Expanded(
                     child: Center(
                       child: Padding(
@@ -168,8 +171,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                     ),
                   );
                 } else {
-                  final List<SpeakerProduct> filtered = speakerSelectionViewModel.applyFilters();
-                  final List<SpeakerProduct> items = speakerSelectionViewModel.sortProducts(filtered);
+                  final List<SpeakerProduct> items = speakerSelectionViewModel.applyFilters(speakers);
 
                   if (items.isEmpty) {
                     final bool isSearchActive = vmState.searchQuery.trim().isNotEmpty;
@@ -256,7 +258,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = addSpeakerViewModel.productsApi.getImagePath(values.first);
+          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
@@ -302,6 +304,8 @@ class _SpeakerCardState extends State<SpeakerCard> {
   Widget build(BuildContext context) {
     return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
       builder: (BuildContext context, SpeakerSelectionViewModelState state) {
+        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
+
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
@@ -466,7 +470,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                         ),
 
                         FusionAppText(
-                          text: "\$290.00",
+                          text: "\$$productPrice",
                           style: context.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.normal,
                             color: context.colorScheme.onSurface.withValues(alpha: 0.5),

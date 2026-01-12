@@ -7,7 +7,6 @@ class SpeakerSelectionViewModelState extends Equatable {
     this.sortOption = SpeakerSortOption.nameAsc,
     this.searchQuery = '',
     this.isLoading = false,
-    this.speakers,
     this.selectedSignalType = SignalType.mono,
   });
 
@@ -16,7 +15,6 @@ class SpeakerSelectionViewModelState extends Equatable {
   final SpeakerSortOption sortOption;
   final String searchQuery;
   final bool isLoading;
-  final List<SpeakerProduct>? speakers;
   final SignalType selectedSignalType;
 
   SpeakerSelectionViewModelState copyWith({
@@ -33,7 +31,6 @@ class SpeakerSelectionViewModelState extends Equatable {
       sortOption: sortOption ?? this.sortOption,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
-      speakers: speakers ?? this.speakers,
     );
   }
 
@@ -44,6 +41,5 @@ class SpeakerSelectionViewModelState extends Equatable {
     sortOption,
     searchQuery,
     isLoading,
-    speakers,
   ];
 }
