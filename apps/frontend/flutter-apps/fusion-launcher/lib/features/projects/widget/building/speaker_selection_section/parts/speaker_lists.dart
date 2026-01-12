@@ -314,6 +314,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 10,
                 children: <Widget>[
                   Container(
@@ -336,6 +337,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Flexible(
                               child: FusionAppText(
@@ -461,10 +463,13 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                   ),
                                 ),
                               ),
-                              child: Icon(
-                                LucideIcons.info200,
-                                size: 12,
-                                color: context.colorScheme.onSurface,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Icon(
+                                  LucideIcons.info200,
+                                  size: 12,
+                                  color: context.colorScheme.onSurface,
+                                ),
                               ),
                             ),
                           ],
@@ -535,7 +540,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                     ),
                     onTap: () async {
                       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-                      final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
+                      final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
                       final FloorModel currentFloor = projectViewModel.currentFloor;
 
                       final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);

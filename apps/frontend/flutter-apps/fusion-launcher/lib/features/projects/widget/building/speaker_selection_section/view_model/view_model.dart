@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -18,26 +20,36 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   // THESE ARE FOR SCHEMATIC PAGE
   bool isFromBuildingPage = false;
-  String? zoneOrSubzoneId;
+  String? zoneId;
+  String? subZoneId;
 
-  void init({required bool isFromBuilding, String? zoneOrSubzoneId}) {
+  void init({required bool isFromBuilding, String? zoneId, String? subZoneId}) {
     isFromBuildingPage = isFromBuilding;
-    this.zoneOrSubzoneId = zoneOrSubzoneId;
+    this.zoneId = zoneId;
+    this.subZoneId = subZoneId;
+  }
+
+  List<ListeningArea> getListeningAreas() {
+    List<ListeningArea> allListeningAreas = <ListeningArea>[];
+    if (subZoneId != null) {
+      // allListeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZoneId!);
+      allListeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZoneId!);
+    } else if (zoneId != null) {
+      allListeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zoneId!);
+    } else {
+      allListeningAreas = projectViewModel.getAllListeningAreas();
+    }
+
+    return allListeningAreas;
   }
 
   ListeningArea? get selectedListeningArea {
-    final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
-    if (listeningArea != null) return listeningArea;
-
-    List<ListeningArea> allListeningAreas = <ListeningArea>[];
-
-    if (zoneOrSubzoneId != null) {
-      allListeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zoneOrSubzoneId!);
-      if (allListeningAreas.isEmpty) {
-        allListeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: zoneOrSubzoneId!);
-      }
+    if (isFromBuildingPage) {
+      final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
+      if (listeningArea != null) return listeningArea;
     }
 
+    final List<ListeningArea> allListeningAreas = projectViewModel.getAllListeningAreas();
     for (final ListeningArea la in allListeningAreas) {
       if (la.id == state.selectedListeningAreaForDropDown?.id) {
         return la;
@@ -260,9 +272,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   Future<void> addOrReplaceSpeaker({required BuildContext context, required Speaker speaker, required String productName}) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
 
-    if (listeningArea == null) return;
+    if (selectedListeningArea == null) return;
+
+    log("Listening area id: ${selectedListeningArea!.id} === ${selectedListeningArea!.name}");
 
     List<Speaker> speakerList = getPlacedSpeakers();
     if (speakerList.isEmpty) speakerList = getNonPlacedSpeakers();
@@ -275,7 +288,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         final String existingName = speakerList.first.name;
         final bool? confirm = await ReplaceSpeakersWarningDialog.show(
           context,
-          listeningAreaName: listeningArea.name,
+          listeningAreaName: selectedListeningArea!.name,
           existingSpeakerName: existingName,
           currentSpeakerName: productName,
         );

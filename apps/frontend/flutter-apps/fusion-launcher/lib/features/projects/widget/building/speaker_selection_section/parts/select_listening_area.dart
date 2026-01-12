@@ -27,11 +27,9 @@ class SelectListeningArea extends StatelessWidget {
           value: speakerSelectionViewModel,
           child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
-              // final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
+              final SpeakerSelectionViewModel speakerSelectionViewModel = context.watch<SpeakerSelectionViewModel>();
 
-              final ProjectViewModel projectViewModel = context.read<ProjectViewModel>();
-
-              final List<ListeningArea> listeningAreas = projectViewModel.getAllListeningAreas();
+              final List<ListeningArea> listeningAreas = speakerSelectionViewModel.getListeningAreas();
 
               return SingleChildScrollView(
                 physics: const ClampingScrollPhysics(),
@@ -160,7 +158,16 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
       ],
     );
 
+    final String? zoneId = context.read<SpeakerSelectionViewModel>().zoneId;
+    final String? subZoneId = context.read<SpeakerSelectionViewModel>().subZoneId;
     serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);
+
+    if (subZoneId != null) {
+      projectViewModel.addListeningAreaToSubZone(subZoneId: subZoneId, areaId: newListeningArea.id);
+    } else if (zoneId != null) {
+      projectViewModel.addListeningAreaToZone(zoneId: zoneId, listeningAreaId: newListeningArea.id);
+    }
+
     FusionToast.success(context, message: "Listening area '${newListeningArea.name}' created");
     widget.onListeningAreaCreated(newListeningArea);
 

@@ -9,8 +9,14 @@ import 'speaker_lists.dart';
 
 class SpeakerQueryPopup extends StatefulWidget {
   final bool isFromBuildingPage;
-  final String? zoneOrSubzoneId;
-  const SpeakerQueryPopup({super.key, required this.isFromBuildingPage, this.zoneOrSubzoneId});
+  final String? zoneId;
+  final String? subZoneId;
+  const SpeakerQueryPopup({
+    super.key,
+    required this.isFromBuildingPage,
+    this.zoneId,
+    this.subZoneId,
+  });
 
   @override
   State<SpeakerQueryPopup> createState() => SpeakerQueryPopupState();
@@ -28,15 +34,16 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
   @override
   Widget build(BuildContext context) {
     assert(
-      widget.isFromBuildingPage || widget.zoneOrSubzoneId != null,
-      'Either zone or subzone id should be provided',
+      widget.isFromBuildingPage || widget.zoneId != null,
+      'zoneId must be provided when not coming from Building Page',
     );
 
     return BlocProvider<SpeakerSelectionViewModel>(
       create: (BuildContext context) {
         return SpeakerSelectionViewModel()..init(
           isFromBuilding: widget.isFromBuildingPage,
-          zoneOrSubzoneId: widget.zoneOrSubzoneId,
+          zoneId: widget.zoneId,
+          subZoneId: widget.subZoneId,
         );
       },
       child: Container(

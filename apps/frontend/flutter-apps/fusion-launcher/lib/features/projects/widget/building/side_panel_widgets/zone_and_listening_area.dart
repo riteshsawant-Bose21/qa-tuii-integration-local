@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
@@ -127,22 +128,22 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.addZone,
             onHighlightedSpotTap: (TapDownDetails details) => _addNewZone(),
-            child: OutlinedButton(
-              onPressed: () {
-                _addNewZone();
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.black54),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                minimumSize: const Size(0, 32),
-              ),
-              child: const FusionAppText(
-                text: '+ Add Zone',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+            child: CreateZonePopup(
+              isFromBuildingPage: true,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey, width: 1),
+                ),
+                child: const FusionAppText(
+                  text: '+ Add Zone',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             ),
