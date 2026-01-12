@@ -6,12 +6,15 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 class EquipmentLocationViewmodel extends Cubit<EquipmentLocationState> {
   final ProjectViewModel viewModel;
-  final String equipLocationId;
+  final String? equipLocationId;
   EquipmentLocationViewmodel(this.viewModel, this.equipLocationId) : super(EquipmentLocationLoading()) {
     _initialize();
   }
   void _initialize() {
-    final EquipLocation location = viewModel.getEquipLocationById(equipLocationId: equipLocationId);
+    if (equipLocationId == null) {
+      return;
+    }
+    final EquipLocation location = viewModel.getEquipLocationById(equipLocationId: equipLocationId!);
     setEquipmentLocation(location);
   }
 

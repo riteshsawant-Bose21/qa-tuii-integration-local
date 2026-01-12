@@ -580,7 +580,7 @@ class FloorCanvasPainter extends CustomPainter {
           ..style = PaintingStyle.stroke
           ..strokeWidth = 1.5 / zoomScale;
 
-        if (comp.mountingType == 'surface') {
+        if (comp.mountingType == MountingType.surface) {
           // --- SURFACE-MOUNTED (Rectangle) ---
           final Rect rect = Rect.fromCenter(
             center: comp.pos!,
@@ -589,7 +589,7 @@ class FloorCanvasPainter extends CustomPainter {
           );
           canvas.drawRect(rect, fillPaint);
           canvas.drawRect(rect, outlinePaint);
-        } else if (comp.mountingType == 'pendant') {
+        } else if (comp.mountingType == MountingType.pendant) {
           // --- PENDANT (Triangle) ---
           final Path path = Path()
             ..moveTo(comp.pos!.dx, comp.pos!.dy - radius)

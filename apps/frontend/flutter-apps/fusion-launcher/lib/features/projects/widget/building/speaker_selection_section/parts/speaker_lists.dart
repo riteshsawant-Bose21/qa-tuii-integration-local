@@ -1,9 +1,10 @@
-import 'package:flutter/cupertino.dart';
+import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/widgets/grid_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -145,11 +146,14 @@ class ProductQuerySpeakerList extends StatelessWidget {
         BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState projectViewModelState) {
             final List<Speaker> listeningAreaSpeakers = speakerSelectionViewModel.getAllPlacedNonPlacedSpeakers();
+
             return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
               builder: (BuildContext context, SpeakerSelectionViewModelState vmState) {
-                final List<SpeakerProduct>? speakers = vmState.speakers;
+                final ProductQueryViewModel productQueryViewModel = context.watch<ProductQueryViewModel>();
+                final bool isProductsLoading = productQueryViewModel.isLoading;
+                final List<SpeakerProduct> speakers = productQueryViewModel.speakers;
 
-                if (speakers == null) {
+                if (isProductsLoading) {
                   return const Expanded(
                     child: Center(
                       child: Padding(
@@ -168,8 +172,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                     ),
                   );
                 } else {
-                  final List<SpeakerProduct> filtered = speakerSelectionViewModel.applyFilters();
-                  final List<SpeakerProduct> items = speakerSelectionViewModel.sortProducts(filtered);
+                  final List<SpeakerProduct> items = speakerSelectionViewModel.applyFilters(speakers);
 
                   if (items.isEmpty) {
                     final bool isSearchActive = vmState.searchQuery.trim().isNotEmpty;
@@ -256,7 +259,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
     widget.product.assets.assets.forEach(
       (String key, List<String> values) {
         if (values.isNotEmpty) {
-          final String assetImagePath = addSpeakerViewModel.productsApi.getImagePath(values.first);
+          final String assetImagePath = context.read<ProductQueryViewModel>().getImagePath(values.first);
 
           final SpeakerColor speakerColor = SpeakerColor.getValueBasedOnKey(key);
           if (filterColors.isEmpty || filterColors.contains(speakerColor)) {
@@ -302,6 +305,8 @@ class _SpeakerCardState extends State<SpeakerCard> {
   Widget build(BuildContext context) {
     return BlocBuilder<SpeakerSelectionViewModel, SpeakerSelectionViewModelState>(
       builder: (BuildContext context, SpeakerSelectionViewModelState state) {
+        final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
+
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 4),
           decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
@@ -309,6 +314,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 spacing: 10,
                 children: <Widget>[
                   Container(
@@ -331,10 +337,11 @@ class _SpeakerCardState extends State<SpeakerCard> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Flexible(
                               child: FusionAppText(
-                                text: widget.product.modelFamily,
+                                text: widget.product.modelName,
                                 style: context.textTheme.labelSmall?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: context.colorScheme.onSurface,
@@ -456,17 +463,20 @@ class _SpeakerCardState extends State<SpeakerCard> {
                                   ),
                                 ),
                               ),
-                              child: Icon(
-                                LucideIcons.info200,
-                                size: 12,
-                                color: context.colorScheme.onSurface,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 6),
+                                child: Icon(
+                                  LucideIcons.info200,
+                                  size: 12,
+                                  color: context.colorScheme.onSurface,
+                                ),
                               ),
                             ),
                           ],
                         ),
 
                         FusionAppText(
-                          text: "\$290.00",
+                          text: "\$$productPrice",
                           style: context.textTheme.bodySmall?.copyWith(
                             fontWeight: FontWeight.normal,
                             color: context.colorScheme.onSurface.withValues(alpha: 0.5),
@@ -530,7 +540,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                     ),
                     onTap: () async {
                       final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-                      final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
+                      final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
                       final FloorModel currentFloor = projectViewModel.currentFloor;
 
                       final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);
@@ -546,7 +556,7 @@ class _SpeakerCardState extends State<SpeakerCard> {
                       context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
                         context: context,
                         speaker: speaker,
-                        productName: widget.product.modelFamily,
+                        productName: widget.product.modelName,
                       );
                     },
                   ),

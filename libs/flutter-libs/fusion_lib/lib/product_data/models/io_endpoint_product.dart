@@ -1,4 +1,5 @@
 import 'product_asset.dart';
+import 'product_port_data.dart';
 
 /// Represents I/O endpoint port configuration
 class IoPort {
@@ -18,9 +19,32 @@ class IoPort {
   }
 
   Map<String, dynamic> toJson() => {
-        'quantity': quantity,
-        'type': type,
-      };
+    'quantity': quantity,
+    'type': type,
+  };
+}
+
+/// Represents ports grouped by input/output for a specific connection type
+class ConnectionTypePorts {
+  final int inputs;
+  final int outputs;
+
+  const ConnectionTypePorts({
+    this.inputs = 0,
+    this.outputs = 0,
+  });
+
+  factory ConnectionTypePorts.fromJson(Map<String, dynamic> json) {
+    return ConnectionTypePorts(
+      inputs: (json['inputs'] as num?)?.toInt() ?? 0,
+      outputs: (json['outputs'] as num?)?.toInt() ?? 0,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'inputs': inputs,
+    'outputs': outputs,
+  };
 }
 
 /// I/O Endpoint product model
@@ -33,9 +57,8 @@ class IoEndpointProduct {
   final String modelName;
   final String modelFamily;
   final String description;
-  final IoPort? inputs;
+  final ProductPortData numberOfInputsAndOutputs;
   final bool network;
-  final IoPort? outputs;
   final String? shortDescription;
   final List<int> skus;
   final bool isFusionCompatible;
@@ -46,9 +69,8 @@ class IoEndpointProduct {
     required this.modelName,
     required this.modelFamily,
     required this.description,
-    this.inputs,
+    required this.numberOfInputsAndOutputs,
     this.network = false,
-    this.outputs,
     this.shortDescription,
     this.skus = const [],
     this.isFusionCompatible = false,
@@ -63,39 +85,31 @@ class IoEndpointProduct {
       modelName: json['model_name'] as String? ?? '',
       modelFamily: json['model_family'] as String? ?? '',
       description: json['description'] as String? ?? 'I/O Endpoint - Professional audio interface for seamless connectivity',
-      inputs: specs['inputs'] != null
-          ? IoPort.fromJson(specs['inputs'] as Map<String, dynamic>)
-          : null,
+      numberOfInputsAndOutputs: specs['number_of_inputs_and_outputs'] != null
+          ? ProductPortData.fromMap(specs['number_of_inputs_and_outputs'] as Map<String, dynamic>)
+          : ProductPortData(),
       network: specs['network'] as bool? ?? false,
-      outputs: specs['outputs'] != null
-          ? IoPort.fromJson(specs['outputs'] as Map<String, dynamic>)
-          : null,
       shortDescription: specs['short_description'] as String?,
-      skus: (specs['skus'] as List<dynamic>?)
-              ?.map((e) => (e as num).toInt())
-              .toList() ??
-          [],
+      skus: (specs['skus'] as List<dynamic>?)?.map((e) => (e as num).toInt()).toList() ?? [],
       isFusionCompatible: json['is_fusion_compatible'] as bool? ?? false,
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'productid': productId,
-        'assets': assets.toAssetList(),
-        'model_name': modelName,
-        'model_family': modelFamily,
-        'description': description,
-        'specifications': {
-          if (inputs != null) 'inputs': inputs!.toJson(),
-          'network': network,
-          if (outputs != null) 'outputs': outputs!.toJson(),
-          if (shortDescription != null) 'short_description': shortDescription,
-          'skus': skus,
-        },
-        'is_fusion_compatible': isFusionCompatible,
-      };
+    'productid': productId,
+    'assets': assets.toAssetList(),
+    'model_name': modelName,
+    'model_family': modelFamily,
+    'description': description,
+    'specifications': {
+      'numberOfInputsAndOutputs': numberOfInputsAndOutputs.toJson(),
+      'network': network,
+      if (shortDescription != null) 'short_description': shortDescription,
+      'skus': skus,
+    },
+    'is_fusion_compatible': isFusionCompatible,
+  };
 
   @override
-  String toString() =>
-      'IoEndpointProduct(productId: $productId, modelName: $modelName)';
+  String toString() => 'IoEndpointProduct(productId: $productId, modelName: $modelName)';
 }

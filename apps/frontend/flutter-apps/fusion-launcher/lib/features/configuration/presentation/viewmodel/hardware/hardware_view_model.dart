@@ -222,6 +222,21 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  List<Speaker> getPlacedSpeakersForCurrentListeningArea() {
+    try {
+      final String? listeningAreaId = currentSelectedListeningAreaId;
+      if (listeningAreaId == null) throw Exception("No listening area selected");
+      final List<HardwareComponent> hardwares = projectManager.getAllHardwareInListeningAreaWithPosition(listeningAreaId);
+      return hardwares.whereType<Speaker>().toList();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to get unplaced hardware for listening area: $e",
+      );
+      return <Speaker>[];
+    }
+  }
+
   ResponseCallback<bool> moveHardware({
     required String hardwareId,
     String? listeningAreaId,
@@ -374,12 +389,12 @@ extension HardwareViewModel on ProjectViewModel {
 
       if (nonPlacedSpeakers.length == 1) {
         // Last speaker placed
-        shouldPlaceNonPlacedSpeakers = false;
+        setShouldPlaceNonPlacedSpeakers(false);
         updateProject();
       }
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to add selected product as hardware: $e");
-      shouldPlaceNonPlacedSpeakers = false;
+      setShouldPlaceNonPlacedSpeakers(false);
     }
   }
 
@@ -452,7 +467,7 @@ extension HardwareViewModel on ProjectViewModel {
   ) {
     return Speaker(
       locationEntity: locationEntity,
-      name: product.modelFamily,
+      name: product.modelName,
       pos: null,
       zAxis: 300.0,
       speakerSKU: product.productId.toString(),
@@ -517,6 +532,8 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
           SourceConnectionType.bluetooth => PortType.bleOut,
           SourceConnectionType.usb => PortType.usbOut,
+          SourceConnectionType.audioJack => PortType.audioJackOutput,
+          SourceConnectionType.xlr => PortType.xlrOutput,
         };
         return Source(
           locationEntity: locationEntity,
@@ -544,6 +561,8 @@ extension HardwareViewModel on ProjectViewModel {
                   PortType.bleIn,
                 ],
                 SourceConnectionType.usb => <PortType>[PortType.usbIn],
+                SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+                SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
               },
               type: portType,
               description: portType.description,

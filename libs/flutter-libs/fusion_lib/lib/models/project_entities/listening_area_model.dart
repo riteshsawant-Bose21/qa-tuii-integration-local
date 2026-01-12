@@ -25,9 +25,9 @@ extension VenueTypeExtension on VenueType {
 }
 
 enum MountingType {
-  ceiling,
+  surface,
   pendant,
-  wall;
+  ceiling;
 
   String get name {
     switch (this) {
@@ -35,19 +35,19 @@ enum MountingType {
         return 'Ceiling';
       case MountingType.pendant:
         return 'Pendant';
-      case MountingType.wall:
-        return 'Wall';
+      case MountingType.surface:
+        return 'Surface';
     }
   }
 
   static MountingType? fromJson(String? value) {
-    switch (value) {
-      case 'ceiling':
-        return MountingType.ceiling;
+    switch (value?.toLowerCase()) {
+      case 'surface':
+        return MountingType.surface;
       case 'pendant':
         return MountingType.pendant;
-      case 'wall':
-        return MountingType.wall;
+      case 'ceiling':
+        return MountingType.ceiling;
       default:
         return null;
     }

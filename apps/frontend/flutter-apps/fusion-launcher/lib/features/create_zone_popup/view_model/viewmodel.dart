@@ -16,6 +16,12 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
         ),
       );
 
+  bool isFromBuildingPage = false;
+
+  void init({required bool isFromBuilding, void Function()? onSaved}) {
+    isFromBuildingPage = isFromBuilding;
+  }
+
   void setZoneName(String name) => emit(state.copyWith(zoneName: name));
   void setZoneColor(String color) => emit(state.copyWith(zoneColor: color));
   void setZoneFunctionType(ZoneFunctionsType type) => emit(state.copyWith(zoneFunctionType: type));
@@ -80,8 +86,8 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
     return false;
   }
 
-  void updateZoneListeningArea(ListeningArea listeningArea, bool isSelected) {
-    if (isSelected) {
+  void updateZoneListeningArea(ListeningArea listeningArea, bool isAlreadySelected) {
+    if (isAlreadySelected) {
       _removeListeningAreaFromZone(listeningArea);
     } else {
       _addListeningAreaToZone(listeningArea);

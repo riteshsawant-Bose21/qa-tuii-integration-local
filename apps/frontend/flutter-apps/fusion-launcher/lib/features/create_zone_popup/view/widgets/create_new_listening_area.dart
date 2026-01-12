@@ -1,15 +1,15 @@
 part of '../create_zone_popup.dart';
 
-class _CreateNewLocationWidget extends StatefulWidget {
+class _CreateNewListeningAreaWidget extends StatefulWidget {
   final ValueChanged<ListeningArea> onListeningAreaCreated;
 
-  const _CreateNewLocationWidget({required this.onListeningAreaCreated});
+  const _CreateNewListeningAreaWidget({required this.onListeningAreaCreated});
 
   @override
-  State<_CreateNewLocationWidget> createState() => __CreateNewLocationWidgetState();
+  State<_CreateNewListeningAreaWidget> createState() => __CreateNewListeningAreaWidgetState();
 }
 
-class __CreateNewLocationWidgetState extends State<_CreateNewLocationWidget> {
+class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaWidget> {
   final TextEditingController listeningAreaNameController = TextEditingController();
   bool _isExpanded = false;
   FloorModel? _selectedFloor;

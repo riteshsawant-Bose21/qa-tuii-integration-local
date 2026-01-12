@@ -163,6 +163,14 @@ class SourceData extends DeviceComponent {
       connectionType: SourceConnectionType.analogInput,
       price: 100.0,
     ),
+    SourceData(
+      id: "xlr_mic",
+      name: "Xlr",
+      assetPath: "assets/images/products/paging_mic.png",
+      type: SourceType.mic,
+      connectionType: SourceConnectionType.xlr,
+      price: 100.0,
+    ),
   ];
 
   static const List<SourceData> mediaSourceItems = <SourceData>[
@@ -243,6 +251,14 @@ class SourceData extends DeviceComponent {
       name: "DeskPC - USB - or HDMI",
       assetPath: "assets/images/products/laptop.png",
       connectionType: SourceConnectionType.usb,
+      type: SourceType.media,
+      price: 100.0,
+    ),
+    SourceData(
+      id: "generic_3.5mm_jack",
+      name: "Generic 3.5mm Jack",
+      assetPath: "assets/images/products/audiojack.png",
+      connectionType: SourceConnectionType.audioJack,
       type: SourceType.media,
       price: 100.0,
     ),

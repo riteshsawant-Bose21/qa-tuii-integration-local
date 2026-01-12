@@ -204,7 +204,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         });
         // }
       },
-      setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
+      // setHardwareComponentListeningAreaId: (HardwareComponent hardwareComponent) => _updateHardwareComponentListeningAreaId(hardwareComponent),
     );
   }
 
@@ -341,14 +341,10 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   }
 
   Future<void> _loadPlanImage() async {
-    print("Load Plan Image method called @#@#@@#@#@#@#");
     final String imagePath = widget.floorPlanEntity.imagePath;
     if (imagePath.isNotEmpty) {
-      print("Loading image *&*&*&*&*&*&*& $imagePath");
       final ui.Image img = await fusionLibLocator<ImageLoaderService>().loadImage(imagePath);
-      print("Image Loaded **********");
       if (!mounted) return;
-      print("Updating the state ####################");
       setState(() {
         _floorPlanImage = img;
         _fitToViewport();
@@ -522,8 +518,8 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
                 vertices: List<Offset>.of(_current),
                 isDrawn: true,
               );
-              final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
-              widget.onAddListeningArea(newArea, hardwareForArea);
+              // final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
+              widget.onAddListeningArea(newArea, []);
             }
           }
 
@@ -829,13 +825,13 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       });
     }
     if (_isHardwareComponentDragging) {
-      print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
+      // print("is dragging up $_isHardwareComponentDragging is true, calling _updateHardwareComponentListeningAreaId ");
       final HardwareComponent hardwareComponent = widget.hardwareComponents.firstWhere(
         (HardwareComponent sp) => sp.id == _selectedHardwareComponentId,
       );
       setState(() {
         _isHardwareComponentDragging = false;
-        _updateHardwareComponentListeningAreaId(hardwareComponent);
+        // _updateHardwareComponentListeningAreaId(hardwareComponent);
         widget.onComponentTransformed(hardwareComponent);
       });
     }
@@ -915,31 +911,31 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     return worldCenter;
   }
 
-  void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
-    // Find the listening area at the component’s position (if any)
-    final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos!);
+  // void _updateHardwareComponentListeningAreaId(HardwareComponent hardwareComponent) {
+  //   // Find the listening area at the component’s position (if any)
+  //   final ListeningArea? hit = _findListeningAreaAt(hardwareComponent.pos!);
 
-    // Determine the new listeningAreaId (use empty string when none)
-    final String newListeningAreaId = hit?.id ?? '';
+  //   // Determine the new listeningAreaId (use empty string when none)
+  //   final String newListeningAreaId = hit?.id ?? '';
 
-    final HardwareComponent originalHardware = originalHardwareList.firstWhere(
-      (comp) => comp.id == hardwareComponent.id,
-    );
+  //   final HardwareComponent originalHardware = originalHardwareList.firstWhere(
+  //     (comp) => comp.id == hardwareComponent.id,
+  //   );
 
-    print(
-      "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
-    );
-    if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
-      print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
+  //   print(
+  //     "Original hardware listeningAreaId: ${originalHardware.locationEntity.listeningAreaId}, New listeningAreaId: $newListeningAreaId, pos: ${hardwareComponent.pos} vs original pos: ${originalHardware.pos}",
+  //   );
+  //   if (newListeningAreaId != originalHardware.locationEntity.listeningAreaId || hardwareComponent.pos != originalHardware.pos) {
+  //     print("Calling moveHardware with listeningAreaId: $newListeningAreaId , && pos: ${hardwareComponent.pos}");
 
-      //new logic
-      widget.moveHardware(
-        hardwareComponent,
-        newListeningAreaId.isNotEmpty ? newListeningAreaId : null,
-        widget.floor.id,
-      );
-    }
-  }
+  //     //new logic
+  //     widget.moveHardware(
+  //       hardwareComponent,
+  //       newListeningAreaId.isNotEmpty ? newListeningAreaId : null,
+  //       widget.floor.id,
+  //     );
+  //   }
+  // }
 
   ListeningArea? _findListeningAreaAt(Offset worldPos) {
     for (final ListeningArea area in widget.listeningAreas) {

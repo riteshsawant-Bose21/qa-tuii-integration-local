@@ -1,8 +1,10 @@
 // ignore_for_file: public_member_api_docs, sort_constructors_first
 import 'dart:convert';
+import 'dart:math';
 
 import 'package:fusion_lib/fusion_utils/fusion_utils.dart';
 
+import '../../fusion_utils/app_enums.dart';
 import '../../models/fusion_models.dart';
 
 class ProductPortData {
@@ -14,6 +16,8 @@ class ProductPortData {
   final HdmiPortData? hdmiIo;
   final USBPortData? usbIoPorts;
   final LoudspeakerPortData? loudspeakerPorts;
+  final XlrPortData? xlr;
+  final TrsPortData? trs;
   ProductPortData({
     this.aes67,
     this.analog,
@@ -23,6 +27,8 @@ class ProductPortData {
     this.hdmiIo,
     this.usbIoPorts,
     this.loudspeakerPorts,
+    this.xlr,
+    this.trs,
   });
 
   ProductPortData copyWith({
@@ -34,6 +40,8 @@ class ProductPortData {
     HdmiPortData? hdmiIo,
     USBPortData? usbIoPorts,
     LoudspeakerPortData? loudspeakerPorts,
+    XlrPortData? xlr,
+    TrsPortData? trs,
   }) {
     return ProductPortData(
       aes67: aes67 ?? this.aes67,
@@ -44,6 +52,8 @@ class ProductPortData {
       hdmiIo: hdmiIo ?? this.hdmiIo,
       usbIoPorts: usbIoPorts ?? this.usbIoPorts,
       loudspeakerPorts: loudspeakerPorts ?? this.loudspeakerPorts,
+      xlr: xlr ?? this.xlr,
+      trs: trs ?? this.trs,
     );
   }
 
@@ -57,6 +67,8 @@ class ProductPortData {
       'hdmi_io': hdmiIo?.toMap(),
       'usb_io_ports': usbIoPorts?.toMap(),
       'loudspeaker': loudspeakerPorts?.toMap(),
+      'XLR': xlr?.toMap(),
+      'TRS': trs?.toMap(),
     };
   }
 
@@ -70,6 +82,8 @@ class ProductPortData {
       hdmiIo: map['hdmi_io'] != null ? HdmiPortData.fromMap(map['hdmi_io'] as Map<String, dynamic>) : null,
       usbIoPorts: map['usb_io_ports'] != null ? USBPortData.fromMap(map['usb_io_ports'] as Map<String, dynamic>) : null,
       loudspeakerPorts: map['loudspeaker'] != null ? LoudspeakerPortData.fromMap(map['loudspeaker'] as Map<String, dynamic>) : null,
+      xlr: map['XLR'] != null ? XlrPortData.fromMap(map['XLR'] as Map<String, dynamic>) : null,
+      trs: map['TRS'] != null ? TrsPortData.fromMap(map['TRS'] as Map<String, dynamic>) : null,
     );
   }
 
@@ -79,7 +93,7 @@ class ProductPortData {
 
   @override
   String toString() {
-    return 'ProductPortData(aes67: $aes67, analog: $analog, bluetoothIo: $bluetoothIo, fusionConnect: $fusionConnect, gpio: $gpio, hdmiIo: $hdmiIo, usbIoPorts: $usbIoPorts)';
+    return 'ProductPortData(aes67: $aes67, analog: $analog, bluetoothIo: $bluetoothIo, fusionConnect: $fusionConnect, gpio: $gpio, hdmiIo: $hdmiIo, usbIoPorts: $usbIoPorts, loudspeakerPorts: $loudspeakerPorts, xlr: $xlr, trs: $trs)';
   }
 
   @override
@@ -93,7 +107,9 @@ class ProductPortData {
         other.gpio == gpio &&
         other.hdmiIo == hdmiIo &&
         other.loudspeakerPorts == loudspeakerPorts &&
-        other.usbIoPorts == usbIoPorts;
+        other.usbIoPorts == usbIoPorts &&
+        other.xlr == xlr &&
+        other.trs == trs;
   }
 
   @override
@@ -105,150 +121,200 @@ class ProductPortData {
         gpio.hashCode ^
         hdmiIo.hashCode ^
         usbIoPorts.hashCode ^
+        xlr.hashCode ^
+        trs.hashCode ^
         loudspeakerPorts.hashCode;
   }
 
-  List<PortData> get inputPorts {
-    final ports = <PortData>[];
-    if (aes67 != null) {
-      ports.addAll(
-        List.generate(
-          aes67?.maxInputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
-            type: PortType.aes67Input,
-            portNumber: index + 1,
-            description: "${(PortType.aes67Input).description} ${index + 1}",
-            position: PortPosition.topLeft,
-            compatibleTypes: [PortType.aes67Output],
-          ),
-        ),
-      );
-    }
-    if (analog != null) {
-      ports.addAll(
-        List.generate(
-          analog?.inputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
-            type: PortType.analogInput,
-            portNumber: index + 1,
-            description: "${(PortType.analogInput).description} ${index + 1}",
-            position: PortPosition.topLeft,
-            compatibleTypes: [PortType.analogOutput],
-          ),
-        ),
-      );
-    }
+  List<PortData> getInputPorts(ProductType productType, bool isPSM) {
+    return [
+      ...List.generate(
+        ((analog?.inputBalanced ?? analog?.inputs ?? 0)),
+        (index) {
+          final type = switch (productType) {
+            ProductType.speaker => PortType.analogOutput,
+            ProductType.amplifier => isPSM ? PortType.dspAnalogInput : PortType.amplifierInput,
+            ProductType.dsps => PortType.dspAnalogInput,
+            ProductType.endpoints => PortType.endpointInput,
 
-    if (fusionConnect != null) {
-      // ports.addAll(
-      //   List.generate(
-      //     fusionConnect?.maxInputs ?? 0,
-      //     (index) => PortData(
-      //       id: FusionUtils.shortStringUUID(),
-      //       name: '${index + 1}',
-      //       type: PortType.fusionConnectInput,
-      //       portNumber: index + 1,
-      //       description: "${(PortType.fusionConnectInput).description} ${index + 1}",
-      //       position: PortPosition.topLeft,
-      //       compatibleTypes: [PortType.fusionConnectOutput],
-      //     ),
-      //   ),
-      // );
-    }
-    if (loudspeakerPorts != null) {
-      ports.addAll(
-        List.generate(
-          loudspeakerPorts?.inputs ?? 0,
-          (index) => PortData(
+            _ => PortType.analogInput,
+          };
+          return PortData(
             id: FusionUtils.shortStringUUID(),
             name: '${index + 1}',
-            type: PortType.speakerInput,
+            type: type,
             portNumber: index + 1,
-            description: "${(PortType.speakerInput).description} ${index + 1}",
+            description: "${(type).description} ${index + 1}",
             position: PortPosition.topLeft,
-            compatibleTypes: [PortType.speakerOutput],
-          ),
+            compatibleTypes: switch (type) {
+              PortType.analogOutput => [PortType.analogInput],
+              PortType.amplifierInput => [PortType.dspAnalogOutput],
+              PortType.dspAnalogInput => [PortType.analogOutput],
+              PortType.endpointInput => [PortType.analogOutput],
+              _ => [],
+            },
+          );
+        },
+      ),
+      ...List.generate(
+        xlr?.inputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: '${index + 1}',
+          type: PortType.xlrInput,
+          portNumber: index + 1,
+          description: "${(PortType.xlrInput).description} ${index + 1}",
+          position: PortPosition.topLeft,
+          compatibleTypes: [PortType.xlrOutput],
         ),
-      );
-    }
-    return ports;
+      ),
+      ...List.generate(
+        loudspeakerPorts?.inputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: '${index + 1}',
+          type: PortType.circuitInput,
+          portNumber: index + 1,
+          description: "${(PortType.circuitInput).description} ${index + 1}",
+          position: PortPosition.topLeft,
+          compatibleTypes: [PortType.speakerOutput],
+        ),
+      ),
+    ];
   }
 
-  List<PortData> get outputPorts {
-    final ports = <PortData>[];
-    if (aes67 != null) {
-      ports.addAll(
-        List.generate(
-          aes67?.maxOutputs ?? 0,
-          (index) => PortData(
+  List<PortData> getOutputPorts(ProductType productType) {
+    return [
+      ...List.generate(
+        analog?.outputs ?? ((analog?.outputBalanced ?? 0) + (analog?.outputUnbalanced ?? 0)),
+        (index) {
+          final type = switch (productType) {
+            ProductType.speaker => PortType.analogInput,
+            ProductType.amplifier => PortType.amplifierOutput,
+            ProductType.dsps => PortType.dspAnalogOutput,
+            _ => PortType.analogOutput,
+          };
+          return PortData(
             id: FusionUtils.shortStringUUID(),
             name: '${index + 1}',
-            type: PortType.aes67Output,
+            type: type,
             portNumber: index + 1,
-            description: "${(PortType.aes67Output).description} ${index + 1}",
+            description: "${(type).description} ${index + 1}",
             position: PortPosition.topRight,
-            compatibleTypes: [PortType.aes67Input],
-          ),
+            compatibleTypes: switch (type) {
+              PortType.analogInput => [PortType.analogOutput],
+              PortType.amplifierOutput => [PortType.circuitInput],
+              PortType.dspAnalogOutput => [PortType.amplifierInput],
+              _ => [],
+            },
+          );
+        },
+      ),
+      ...List.generate(
+        loudspeakerPorts?.outputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: '${index + 1}',
+          type: PortType.amplifierOutput,
+          portNumber: index + 1,
+          description: "${(PortType.amplifierOutput).description} ${index + 1}",
+          position: PortPosition.topRight,
+          compatibleTypes: [PortType.circuitInput],
         ),
-      );
-    }
-    if (analog != null) {
-      ports.addAll(
-        List.generate(
-          analog?.outputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
-            type: PortType.analogOutput,
-            portNumber: index + 1,
-            description: "${(PortType.analogOutput).description} ${index + 1}",
-            position: PortPosition.topRight,
-            compatibleTypes: [PortType.analogInput],
-          ),
-        ),
-      );
-    }
-    if (fusionConnect != null) {
-      // ports.addAll(
-      //   List.generate(
-      //     fusionConnect?.maxOutputs ?? 0,
-      //     (index) => PortData(
-      //       id: FusionUtils.shortStringUUID(),
-      //       name: '${index + 1}',
-      //       type: PortType.fusionConnectOutput,
-      //       portNumber: index + 1,
-      //       description: "${(PortType.fusionConnectOutput).description} ${index + 1}",
-      //       position: PortPosition.topRight,
-      //       compatibleTypes: [PortType.fusionConnectInput],
-      //     ),
-      //   ),
-      // );
-    }
-    if (loudspeakerPorts != null) {
-      ports.addAll(
-        List.generate(
-          loudspeakerPorts?.outputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: '${index + 1}',
-            type: PortType.amplifierOutput,
-            portNumber: index + 1,
-            description: "${(PortType.amplifierOutput).description} ${index + 1}",
-            position: PortPosition.topRight,
-            compatibleTypes: [PortType.circuitInput],
-          ),
-        ),
-      );
-    }
-    return ports;
+      ),
+    ];
+    // final ports = <PortData>[];
+    // if (aes67 != null) {
+    //   ports.addAll(
+    //     List.generate(
+    //       aes67?.maxOutputs ?? 0,
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: '${index + 1}',
+    //         type: PortType.aes67Output,
+    //         portNumber: index + 1,
+    //         description: "${(PortType.aes67Output).description} ${index + 1}",
+    //         position: PortPosition.topRight,
+    //         compatibleTypes: [PortType.aes67Input],
+    //       ),
+    //     ),
+    //   );
+    // }
+    // if (analog != null) {
+    //   ports.addAll(
+    //     List.generate(
+    //       analog?.outputs ?? 0,
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: '${index + 1}',
+    //         type: PortType.analogOutput,
+    //         portNumber: index + 1,
+    //         description: "${(PortType.analogOutput).description} ${index + 1}",
+    //         position: PortPosition.topRight,
+    //         compatibleTypes: [PortType.analogInput],
+    //       ),
+    //     ),
+    //   );
+    // }
+    // if (fusionConnect != null) {
+    // ports.addAll(
+    //   List.generate(
+    //     fusionConnect?.maxOutputs ?? 0,
+    //     (index) => PortData(
+    //       id: FusionUtils.shortStringUUID(),
+    //       name: '${index + 1}',
+    //       type: PortType.fusionConnectOutput,
+    //       portNumber: index + 1,
+    //       description: "${(PortType.fusionConnectOutput).description} ${index + 1}",
+    //       position: PortPosition.topRight,
+    //       compatibleTypes: [PortType.fusionConnectInput],
+    //     ),
+    //   ),
+    // );
+    // }
+    // if (loudspeakerPorts != null) {
+    //   ports.addAll(
+    //     List.generate(
+    //       loudspeakerPorts?.outputs ?? 0,
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: '${index + 1}',
+    //         type: PortType.amplifierOutput,
+    //         portNumber: index + 1,
+    //         description: "${(PortType.amplifierOutput).description} ${index + 1}",
+    //         position: PortPosition.topRight,
+    //         compatibleTypes: [PortType.circuitInput],
+    //       ),
+    //     ),
+    //   );
+    // }
+    // return ports;
   }
 
   List<PortData> get comPorts {
-    final ports = <PortData>[];
+    final ports = <PortData>[
+      ...List.generate((analog?.inputUnbalanced ?? 0), (index) {
+        final type = PortType.audioJackInput;
+        return PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: '3.5mm Jack',
+          type: type,
+          portNumber: index + 1,
+          description: "${(type).description} ${index + 1}",
+          position: PortPosition.footerLeft,
+
+          compatibleTypes: [PortType.audioJackOutput],
+          // compatibleTypes: switch (type) {
+          //   PortType.analogOutput => [PortType.analogInput],
+          //   PortType.amplifierInput => [PortType.dspAnalogOutput],
+          //   PortType.dspAnalogInput => [PortType.analogOutput],
+          //   PortType.endpointInput => [PortType.analogOutput],
+          //   _ => [],
+          // },
+        );
+      }),
+    ];
+
     if (bluetoothIo != null) {
       ports.addAll(
         List.generate(
@@ -271,7 +337,7 @@ class ProductPortData {
           hdmiIo?.inputs ?? 0,
           (index) => PortData(
             id: FusionUtils.shortStringUUID(),
-            name: 'HDMI In ${index + 1}',
+            name: 'HDMI',
             type: PortType.hdmiIn,
             portNumber: index + 1,
             description: "${(PortType.hdmiIn).description} ${index + 1}",
@@ -285,7 +351,7 @@ class ProductPortData {
           hdmiIo?.outputs ?? 0,
           (index) => PortData(
             id: FusionUtils.shortStringUUID(),
-            name: 'HDMI Out ${index + 1}',
+            name: 'HDMI',
             type: PortType.hdmiOut,
             portNumber: index + 1,
             description: "${(PortType.hdmiOut).description} ${index + 1}",
@@ -298,7 +364,7 @@ class ProductPortData {
     if (usbIoPorts != null) {
       ports.addAll(
         List.generate(
-          usbIoPorts?.inputs ?? 0,
+          max(usbIoPorts?.inputs ?? 0, usbIoPorts?.outputs ?? 0),
           (index) => PortData(
             id: FusionUtils.shortStringUUID(),
             name: 'USB ${index + 1}',
@@ -310,20 +376,20 @@ class ProductPortData {
           ),
         ),
       );
-      ports.addAll(
-        List.generate(
-          usbIoPorts?.outputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: 'USB ${index + 1}',
-            type: PortType.usbOut,
-            portNumber: index + 1,
-            description: "${(PortType.usbOut).description} ${index + 1}",
-            position: PortPosition.footerLeft,
-            compatibleTypes: [PortType.usbIn],
-          ),
-        ),
-      );
+      // ports.addAll(
+      //   List.generate(
+      //     usbIoPorts?.outputs ?? 0,
+      //     (index) => PortData(
+      //       id: FusionUtils.shortStringUUID(),
+      //       name: 'USB ${index + 1}',
+      //       type: PortType.usbOut,
+      //       portNumber: index + 1,
+      //       description: "${(PortType.usbOut).description} ${index + 1}",
+      //       position: PortPosition.footerLeft,
+      //       compatibleTypes: [PortType.usbIn],
+      //     ),
+      //   ),
+      // );
     }
     return ports;
   }
@@ -416,22 +482,22 @@ class AnalogPortData {
   Map<String, dynamic> toMap() {
     return <String, dynamic>{
       'inputs': inputs,
-      'input_balanced': inputBalanced,
-      'input_unbalanced': inputUnbalanced,
+      'inputs_balanced': inputBalanced,
+      'inputs_unbalanced': inputUnbalanced,
       'outputs': outputs,
-      'output_balanced': outputBalanced,
-      'output_unbalanced': outputUnbalanced,
+      'outputs_balanced': outputBalanced,
+      'outputs_unbalanced': outputUnbalanced,
     };
   }
 
   factory AnalogPortData.fromMap(Map<String, dynamic> map) {
     return AnalogPortData(
       inputs: DeserializationUtil.intDeserializer.deserialize(map['inputs']),
-      inputBalanced: DeserializationUtil.intDeserializer.deserialize(map['input_balanced']),
-      inputUnbalanced: DeserializationUtil.intDeserializer.deserialize(map['input_unbalanced']),
+      inputBalanced: DeserializationUtil.intDeserializer.deserialize(map['inputs_balanced']),
+      inputUnbalanced: DeserializationUtil.intDeserializer.deserialize(map['inputs_unbalanced']),
       outputs: DeserializationUtil.intDeserializer.deserialize(map['outputs']),
-      outputBalanced: DeserializationUtil.intDeserializer.deserialize(map['output_balanced']),
-      outputUnbalanced: DeserializationUtil.intDeserializer.deserialize(map['output_unbalanced']),
+      outputBalanced: DeserializationUtil.intDeserializer.deserialize(map['outputs_balanced']),
+      outputUnbalanced: DeserializationUtil.intDeserializer.deserialize(map['outputs_unbalanced']),
     );
   }
 
@@ -744,6 +810,94 @@ class LoudspeakerPortData {
   bool operator ==(covariant LoudspeakerPortData other) {
     if (identical(this, other)) return true;
 
+    return other.inputs == inputs && other.outputs == outputs;
+  }
+
+  @override
+  int get hashCode => inputs.hashCode ^ outputs.hashCode;
+}
+
+class XlrPortData {
+  final int? inputs;
+  final int? outputs;
+  XlrPortData({
+    this.inputs,
+    this.outputs,
+  });
+  XlrPortData copyWith({
+    int? inputs,
+    int? outputs,
+  }) {
+    return XlrPortData(
+      inputs: inputs ?? this.inputs,
+      outputs: outputs ?? this.outputs,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'inputs': inputs,
+      'outputs': outputs,
+    };
+  }
+
+  factory XlrPortData.fromMap(Map<String, dynamic> map) {
+    return XlrPortData(
+      inputs: DeserializationUtil.intDeserializer.deserialize(map['inputs']),
+      outputs: DeserializationUtil.intDeserializer.deserialize(map['outputs']),
+    );
+  }
+  String toJson() => json.encode(toMap());
+  factory XlrPortData.fromJson(String source) => XlrPortData.fromMap(json.decode(source) as Map<String, dynamic>);
+  @override
+  String toString() => 'XlrPortData(inputs: $inputs, outputs: $outputs)';
+  @override
+  bool operator ==(covariant XlrPortData other) {
+    if (identical(this, other)) return true;
+    return other.inputs == inputs && other.outputs == outputs;
+  }
+
+  @override
+  int get hashCode => inputs.hashCode ^ outputs.hashCode;
+}
+
+class TrsPortData {
+  final int? inputs;
+  final int? outputs;
+  TrsPortData({
+    this.inputs,
+    this.outputs,
+  });
+  TrsPortData copyWith({
+    int? inputs,
+    int? outputs,
+  }) {
+    return TrsPortData(
+      inputs: inputs ?? this.inputs,
+      outputs: outputs ?? this.outputs,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      'inputs': inputs,
+      'outputs': outputs,
+    };
+  }
+
+  factory TrsPortData.fromMap(Map<String, dynamic> map) {
+    return TrsPortData(
+      inputs: DeserializationUtil.intDeserializer.deserialize(map['inputs']),
+      outputs: DeserializationUtil.intDeserializer.deserialize(map['outputs']),
+    );
+  }
+  String toJson() => json.encode(toMap());
+  factory TrsPortData.fromJson(String source) => TrsPortData.fromMap(json.decode(source) as Map<String, dynamic>);
+  @override
+  String toString() => 'TrsPortData(inputs: $inputs, outputs: $outputs)';
+  @override
+  bool operator ==(covariant TrsPortData other) {
+    if (identical(this, other)) return true;
     return other.inputs == inputs && other.outputs == outputs;
   }
 
