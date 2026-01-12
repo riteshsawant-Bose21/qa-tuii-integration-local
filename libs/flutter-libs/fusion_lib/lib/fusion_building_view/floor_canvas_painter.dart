@@ -11,7 +11,7 @@ class FloorCanvasPainter extends CustomPainter {
   final Offset panOffset;
   final List<Offset> current;
   final Offset? previewPoint;
-  final int? highlightedIndex;
+  final String? highlightedAreaId;
   final String? selectedHardwareComponentId;
   final bool showSpl;
   final bool floorPlanImageSelected;
@@ -63,7 +63,7 @@ class FloorCanvasPainter extends CustomPainter {
     required this.splMin,
     required this.isAcousticsMode,
     this.previewPoint,
-    this.highlightedIndex,
+    this.highlightedAreaId,
     this.selectedHardwareComponentId,
     required this.splPanelData,
     required this.listeningAreaToZoneMap,
@@ -368,7 +368,7 @@ class FloorCanvasPainter extends CustomPainter {
           zoneColor = defaultListeningAreaColor;
         }
       } else {
-        selected = i == highlightedIndex;
+        selected = listeningAreas[i].id == highlightedAreaId;
       }
 
       final ui.Paint fill = Paint()
@@ -410,11 +410,11 @@ class FloorCanvasPainter extends CustomPainter {
       String label = "";
 
       // Add zone/subzone information to the label
-     if (parentZone != null) {
+      if (parentZone != null) {
         // Listening area belongs directly to a zone
         label = '${parentZone.name}/';
       }
-     if (parentSubZone != null) {
+      if (parentSubZone != null) {
         // Listening area belongs to a subzone
         label += '${parentSubZone.name}/';
       }
@@ -755,7 +755,7 @@ class FloorCanvasPainter extends CustomPainter {
         old.subZones != subZones ||
         old.current != current ||
         old.previewPoint != previewPoint ||
-        old.highlightedIndex != highlightedIndex ||
+        old.highlightedAreaId != highlightedAreaId ||
         old.floorPlanEntity != floorPlanEntity ||
         old.floorPlanImageSelected != floorPlanImageSelected ||
         old.showSpl != showSpl ||

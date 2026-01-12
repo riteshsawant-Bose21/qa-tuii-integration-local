@@ -116,7 +116,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
   int? _dragVertexIndex;
   Offset? _dragStartWorld;
   List<Offset>? _dragOriginal;
-  int? _highlightIndex;
+  String? highlightedAreaId;
 
   FloorPlanModel? _tempFloorPlan;
 
@@ -184,7 +184,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         setState(() {
           _isDrawing = !_isDrawing;
           _current.clear();
-          _highlightIndex = null;
+          highlightedAreaId = null;
           _selectedHardwareComponentId = null;
         });
       },
@@ -269,12 +269,12 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
                         gridSize: widget.gridSize,
                         zoomScale: _zoomScale,
                         panOffset: _panOffset,
-                        listeningAreas: widget.listeningAreas,
+                        listeningAreas: widget.listeningAreas.where((ListeningArea area) => area.isDrawn).toList(),
                         zones: widget.zones,
                         subZones: widget.subZones,
                         current: _current,
                         previewPoint: _isDrawing && _current.isNotEmpty ? _hoverWorldPos : null,
-                        highlightedIndex: _highlightIndex,
+                        highlightedAreaId: highlightedAreaId,
                         floorPlanImageSelected: _isImageSelected || _isImageVertexDrag,
                         hardwareComponents: widget.hardwareComponents,
                         selectedHardwareComponentId: _selectedHardwareComponentId,
@@ -378,14 +378,14 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       _isListeningAreaDragging = false;
       _dragIndex = null;
       _dragVertexIndex = null;
-      _highlightIndex = null;
+      highlightedAreaId = null;
     });
   }
 
   void _stopListeningAreaSelection() {
     widget.controller.cancelListeningAreaSelection();
     setState(() {
-      _highlightIndex = null;
+      highlightedAreaId = null;
     });
   }
 
@@ -506,19 +506,32 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
       if (e.buttons == kPrimaryMouseButton) {
         if (_current.isNotEmpty && (worldPos - _current.first).distance < 10.0 / _zoomScale) {
           if (_current.length >= 3) {
-            final ListeningArea newArea = ListeningArea(
-              name: "Area ${widget.listeningAreas.length + 1}",
-              vertices: List<Offset>.of(_current),
-            );
-            final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
-            widget.onAddListeningArea(newArea, hardwareForArea);
+            if (widget.selectedListeningAreaId != null &&
+                widget.listeningAreas.any((area) => (area.id == widget.selectedListeningAreaId && area.vertices.isEmpty))) {
+              // Update existing listening area
+              final ListeningArea areaToUpdate = widget.listeningAreas.firstWhere((area) => area.id == widget.selectedListeningAreaId);
+              final ListeningArea updatedArea = areaToUpdate.copyWith(
+                vertices: List<Offset>.of(_current),
+                isDrawn: true,
+              );
+              widget.onUpdateListeningArea(updatedArea);
+            } else {
+              // Add new listening area
+              final ListeningArea newArea = ListeningArea(
+                name: "Area ${widget.listeningAreas.length + 1}",
+                vertices: List<Offset>.of(_current),
+                isDrawn: true,
+              );
+              final List<HardwareComponent> hardwareForArea = _getHardwareComponentsInListeningAreas(newArea);
+              widget.onAddListeningArea(newArea, hardwareForArea);
+            }
           }
 
           setState(() {
             _current.clear();
             _isDrawing = false;
             widget.controller.isDrawing.value = _isDrawing;
-            _highlightIndex = widget.listeningAreas.length - 1;
+            highlightedAreaId = widget.listeningAreas.last.id;
           });
         } else {
           setState(() => _current.add(worldPos));
@@ -565,7 +578,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
 
             // Update highlight for visual feedback
             setState(() {
-              _highlightIndex = i;
+              highlightedAreaId = area.id;
             });
             return;
           }
@@ -589,7 +602,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
               _isListeningAreaVertexDragging = true;
               _dragIndex = i;
               _dragVertexIndex = j;
-              _highlightIndex = i;
+              highlightedAreaId = widget.listeningAreas[i].id;
             });
             return;
           }
@@ -609,7 +622,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
             _dragIndex = i;
             _dragStartWorld = worldPos;
             _dragOriginal = List<Offset>.of(poly);
-            _highlightIndex = i;
+            highlightedAreaId = widget.listeningAreas[i].id;
           });
           return;
         }
@@ -667,7 +680,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         if (path.contains(worldPos)) {
           widget.onSelectedListeningAreaIdChanged(widget.listeningAreas[i].id);
           setState(() {
-            _highlightIndex = i;
+            highlightedAreaId = widget.listeningAreas[i].id;
           });
           return;
         }
@@ -962,17 +975,21 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
 
   /// Update the internal highlight index based on the external selected listening area ID
   void _updateHighlightIndexFromSelectedListeningArea() {
+    print("Updating highlight index from selected listening area id: ${widget.selectedListeningAreaId}");
     if (widget.selectedListeningAreaId != null) {
       // Find the index of the selected listening area
       final int index = widget.listeningAreas.indexWhere(
         (ListeningArea area) => area.id == widget.selectedListeningAreaId,
       );
       if (index != -1) {
-        _highlightIndex = index;
+        highlightedAreaId = widget.selectedListeningAreaId;
+      } else {
+        // Selected listening area ID not found, clear highlight
+        highlightedAreaId = null;
       }
     } else {
       // No listening area selected externally, clear highlight
-      _highlightIndex = null;
+      highlightedAreaId = null;
     }
   }
 }

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class ListeningAreasPanel extends StatefulWidget {
-  const ListeningAreasPanel({super.key});
+  final FloorCanvasController floorCanvasController;
+
+  const ListeningAreasPanel({super.key, required this.floorCanvasController});
 
   @override
   ListeningAreasPanelState createState() => ListeningAreasPanelState();
@@ -131,56 +134,84 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         // Listening Area Header
-        Container(
-          decoration: BoxDecoration(
-            color: isSelected ? Colors.grey[200] : Colors.transparent,
-          ),
-          child: Container(
-            padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-            child: InkWell(
-              onTap: () {
-                serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
-                serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
-              },
-              child: Row(
-                children: <Widget>[
-                  // Expand/Collapse icon
-                  InkWell(
-                    onTap: () => _toggleListeningAreaExpansion(area.id),
-                    child: AnimatedRotation(
-                      duration: const Duration(milliseconds: 200),
-                      turns: isExpanded ? 0.25 : 0.0,
-                      child: SemanticHelper.toggle(
-                        testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse"),
-                        value: isExpanded,
-                        child: Icon(
-                          Icons.keyboard_arrow_right,
-                          size: 16,
-                          color: Colors.grey[600],
+        ValueListenableBuilder<bool>(
+          valueListenable: widget.floorCanvasController.isDrawing,
+          builder: (BuildContext context, bool isDrawingValue, Widget? child) {
+            print("Rebuilding listening area header for area: ${area.name}, isDrawing: $isDrawingValue");
+            return Container(
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.grey[200] : Colors.transparent,
+              ),
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
+                child: InkWell(
+                  onTap: () {
+                    serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
+                    serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
+                    print("Selected listening area: ${area.name}");
+                    if (!area.isDrawn) {
+                      widget.floorCanvasController.setDraw(true);
+                    } else if (area.isDrawn && widget.floorCanvasController.isDrawing.value) {
+                      widget.floorCanvasController.setDraw(false);
+                    }
+                  },
+                  child: Row(
+                    children: <Widget>[
+                      // Expand/Collapse icon
+                      InkWell(
+                        onTap: () => _toggleListeningAreaExpansion(area.id),
+                        child: AnimatedRotation(
+                          duration: const Duration(milliseconds: 200),
+                          turns: isExpanded ? 0.25 : 0.0,
+                          child: SemanticHelper.toggle(
+                            testId: SemanticHelper.createTestId(SemanticTypes.toggle, "listening_area_expand_collapse"),
+                            value: isExpanded,
+                            child: Icon(
+                              Icons.keyboard_arrow_right,
+                              size: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(
-                    LucideIcons.maximize200,
-                    size: 12,
-                    color: context.colorScheme.onSurface,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: FusionAppText(
-                      text: "$floorName / ${area.name}",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 11,
-                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                      const SizedBox(width: 4),
+                      Icon(
+                        LucideIcons.maximize200,
+                        size: 12,
+                        color: context.colorScheme.onSurface,
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: FusionAppText(
+                          text: "$floorName / ${area.name}",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                            color: (!area.isDrawn) ? context.colorScheme.error : null,
+                          ),
+                        ),
+                      ),
+
+                      if (!area.isDrawn) ...<Widget>[
+                        Tooltip(
+                          message: 'Start drawing to place this listening area',
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            color: (isSelected && widget.floorCanvasController.isDrawing.value) ? context.colorScheme.errorContainer : Colors.transparent,
+                            child: Icon(
+                              Icons.info_outline_rounded,
+                              size: 12,
+                              color: context.colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
 
         // Expandable Speakers Section

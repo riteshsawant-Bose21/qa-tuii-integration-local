@@ -109,7 +109,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
-  
+
   bool _shouldPlaceNonPlacedSpeakers = false;
   bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
   set shouldPlaceNonPlacedSpeakers(bool shouldPlace) {

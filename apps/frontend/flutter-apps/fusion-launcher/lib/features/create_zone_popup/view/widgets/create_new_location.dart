@@ -1,4 +1,3 @@
-
 part of '../create_zone_popup.dart';
 
 class _CreateNewLocationWidget extends StatefulWidget {
@@ -28,12 +27,8 @@ class __CreateNewLocationWidgetState extends State<_CreateNewLocationWidget> {
 
     final ListeningArea newListeningArea = ListeningArea(
       name: locationName,
-      vertices: <Offset>[
-        const Offset(0, 0),
-        const Offset(100, 0),
-        const Offset(100, 100),
-        const Offset(0, 100),
-      ],
+      vertices: <Offset>[],
+      isDrawn: false,
     );
 
     serviceLocator<ProjectViewModel>().addListeningArea(area: newListeningArea, floorId: floorId);

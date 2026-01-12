@@ -832,12 +832,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
                       final ListeningArea newListeningArea = ListeningArea(
                         name: locationName.trim(),
-                        vertices: <Offset>[
-                          const Offset(0, 0),
-                          const Offset(100, 0),
-                          const Offset(100, 100),
-                          const Offset(0, 100),
-                        ],
+                        vertices: <Offset>[],
+                        isDrawn: false,
                       );
 
                       try {
