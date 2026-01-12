@@ -75,8 +75,7 @@ class EquipmentLocationDialog extends StatelessWidget {
                 Expanded(
                   child: Column(
                     children: <Widget>[
-                      // if (equipmentLocationId == null)
-                      const _EquipmentLocationDropdown(),
+                      if (equipmentLocationId == null) const _EquipmentLocationDropdown(),
                       Expanded(
                         child: BlocBuilder<EquipmentLocationSelectionViewmodel, String?>(
                           builder: (BuildContext context, String? equipmentId) {

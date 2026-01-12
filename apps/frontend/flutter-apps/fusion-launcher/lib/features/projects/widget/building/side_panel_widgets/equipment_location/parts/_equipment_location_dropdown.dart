@@ -11,16 +11,22 @@ class _EquipmentLocationDropdown extends StatelessWidget {
 
         return BlocBuilder<EquipmentLocationSelectionViewmodel, String?>(
           builder: (BuildContext context, String? selected) {
-            return BuildingPageDronDown<EquipLocation>(
+            return BuildingPageDronDown<EquipLocation?>(
               value: selected != null ? equipmentLocations.firstWhere((EquipLocation element) => element.id == selected) : null,
               hintText: "Select Equipment Location",
-              items: equipmentLocations,
-              onSelect: (EquipLocation newValue) {
-                BlocProvider.of<EquipmentLocationSelectionViewmodel>(context).selectEquipmentLocation(newValue.id);
+              items: <EquipLocation?>[...equipmentLocations, null],
+              onSelect: (EquipLocation? newValue) {
+                if (newValue != null) {
+                  BlocProvider.of<EquipmentLocationSelectionViewmodel>(context).selectEquipmentLocation(newValue.id);
+                } else {
+                  BlocProvider.of<ProjectViewModel>(
+                    context,
+                  ).addEquipLocation(equipLocation: EquipLocation(name: "Equipment Location ${equipmentLocations.length + 1}"));
+                }
               },
-              labelBuilder: (EquipLocation option) {
+              labelBuilder: (EquipLocation? option) {
                 return FusionAppText(
-                  text: option.name,
+                  text: option?.name ?? 'Create New Location',
                   style: Theme.of(context).textTheme.labelMedium,
                 );
               },
