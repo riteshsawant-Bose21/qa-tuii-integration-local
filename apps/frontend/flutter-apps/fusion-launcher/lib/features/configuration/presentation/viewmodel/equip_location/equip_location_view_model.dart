@@ -50,6 +50,10 @@ extension EquipLocationViewModel on ProjectViewModel {
     return projectManager.getEquipLocationById(equipLocationId);
   }
 
+  EquipLocation? getEquipLocationForHardware({required String hardwareId}) {
+    return projectManager.getEquipmentLocationForHardware(hardwareId);
+  }
+
   void addHardwareToEquipLocation({required String hardwareId, required String equipLocationId, bool autoSave = true}) {
     try {
       if (autoSave) {
