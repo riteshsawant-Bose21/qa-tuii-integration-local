@@ -1082,7 +1082,8 @@ const struct base_device bd_fusion_fm8y = {
             .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,
             .export = true,
-            .num = 7 // GPIO1_IO7
+            .num = 7, // GPIO1_IO7
+            .default_val = EP_GPIO_VAL_HI
         },
         {
             .name = "gpio_ui_boot0",
