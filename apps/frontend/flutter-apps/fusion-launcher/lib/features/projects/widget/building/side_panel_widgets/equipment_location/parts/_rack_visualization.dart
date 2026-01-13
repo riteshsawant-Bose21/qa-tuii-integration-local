@@ -24,7 +24,10 @@ class _EQLRackPreview extends StatelessWidget {
               return BlocBuilder<EqlProductsVm, EQLProductsState>(
                 builder: (BuildContext context, EQLProductsState eqlProductsState) {
                   return const Center(
-                    child: FusionAppText(text: "Please select a equipment location to add devices."),
+                    child: FusionAppText(
+                      text: "Please select a equipment location to add devices.",
+                      textAlign: TextAlign.center,
+                    ),
                   );
                 },
               );

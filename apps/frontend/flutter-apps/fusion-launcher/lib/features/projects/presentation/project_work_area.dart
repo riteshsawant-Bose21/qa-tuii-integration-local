@@ -836,46 +836,46 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       ),
 
                       /// Share Icon Section
-                      SemanticHelper.button(
-                        testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
-                        child: Container(
-                          width: 56,
-                          height: 48,
-                          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.white,
-                            // border horizontal
-                            border: Border(
-                              left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                              right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                            ),
-                          ),
-                          child: Tooltip(
-                            message: 'Give Feedback',
-                            child: InkWell(
-                              child: Icon(
-                                Icons.feedback_outlined,
-                                size: 24,
-                                color: Theme.of(context).colorScheme.greyDark,
-                              ),
-                              onTap: () async {
-                                showDialog(
-                                  context: context,
-                                  builder:
-                                      (BuildContext context) => const Dialog(
-                                        child: _FeedbackWebView(),
-                                      ),
-                                );
-                              },
-                            ),
-                          ),
-                          // child: Image.asset(
-                          //   "assets/images/share_icon.png",
-                          //   width: 24,
-                          //   height: 24,
-                          // ),
-                        ),
-                      ),
+                      // SemanticHelper.button(
+                      //   testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.bugReport),
+                      //   child: Container(
+                      //     width: 56,
+                      //     height: 48,
+                      //     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                      //     decoration: BoxDecoration(
+                      //       color: Theme.of(context).colorScheme.white,
+                      //       // border horizontal
+                      //       border: Border(
+                      //         left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                      //         right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                      //       ),
+                      //     ),
+                      //     child: Tooltip(
+                      //       message: 'Give Feedback',
+                      //       child: InkWell(
+                      //         child: Icon(
+                      //           Icons.feedback_outlined,
+                      //           size: 24,
+                      //           color: Theme.of(context).colorScheme.greyDark,
+                      //         ),
+                      //         onTap: () async {
+                      //           showDialog(
+                      //             context: context,
+                      //             builder:
+                      //                 (BuildContext context) => const Dialog(
+                      //                   child: _FeedbackWebView(),
+                      //                 ),
+                      //           );
+                      //         },
+                      //       ),
+                      //     ),
+                      // child: Image.asset(
+                      //   "assets/images/share_icon.png",
+                      //   width: 24,
+                      //   height: 24,
+                      // ),
+                      // ),
+                      // ),
 
                       /// Share Icon Section
                       Container(
