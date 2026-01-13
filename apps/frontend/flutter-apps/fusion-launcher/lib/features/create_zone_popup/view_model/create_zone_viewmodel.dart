@@ -133,9 +133,11 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
   }
 
   void createZone(BuildContext context) {
-    // Check is subzones are created
-    if (isCreatingSubZonesAlongSide) {
-      // check any of the subzones,listening areas are empty
+    if (state.zoneFunctionType == null) return FusionToast.error(context, message: 'Please select a function type for the zone.');
+
+    if (!isCreatingSubZonesAlongSide && state.zoneListeningAreas.isEmpty) {
+      return FusionToast.error(context, message: 'Select atleast one listening area');
+    } else {
       for (final AddListeningAreaToSubzoneModel subzone in state.subzones) {
         if (subzone.listeningAreas.isEmpty) {
           return FusionToast.error(context, message: 'Cannot create zone. One of the subzones has no listening areas assigned.');
@@ -143,17 +145,12 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
       }
     }
 
-    if (state.zoneFunctionType == null) return FusionToast.error(context, message: 'Please select a function type for the zone.');
+    // if selected listeing areas empty
 
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
     final Zone zone = Zone(name: state.zoneName, zoneColor: state.zoneColor);
     serviceLocator<ProjectViewModel>().addZone(zone: zone);
-
-    serviceLocator<ProjectViewModel>().addFunctionToZone(function: getNewZoneFunction(type: state.zoneFunctionType!), zoneId: zone.id);
-
-    /// Create new zone
-    projectViewModel.addZone(zone: zone);
 
     if (!isCreatingSubZonesAlongSide && state.zoneListeningAreas.isNotEmpty) {
       projectViewModel.updateListeningAreasInZone(
@@ -174,7 +171,12 @@ class CreateZoneViewModel extends Cubit<CreateZoneViewModelState> {
       }
     }
 
-    // CLose popup
+    serviceLocator<ProjectViewModel>().addFunctionToZone(
+      function: getNewZoneFunction(type: state.zoneFunctionType!),
+      zoneId: zone.id,
+    );
+
+    // Close popup
     Navigator.of(context).pop();
   }
 }
