@@ -60,9 +60,9 @@ class _OverlayContainerState extends State<OverlayContainer> {
       topPadding = 20;
     }
 
-    if (widget.position.dy + (childHeight ?? 0) > widget.viewPort.bottom) {
-      topPadding += (widget.viewPort.bottom - (widget.position.dy + (childHeight ?? 0))).abs();
-    }
+    // if (widget.position.dy + (childHeight ?? 0) > widget.viewPort.bottom) {
+    //   topPadding += (widget.viewPort.bottom - (widget.position.dy + (childHeight ?? 0))).abs();
+    // }
     return Stack(
       children: <Widget>[
         Positioned(
@@ -89,5 +89,3 @@ class _OverlayContainerState extends State<OverlayContainer> {
     );
   }
 }
-
-enum _Side { left, right, top }

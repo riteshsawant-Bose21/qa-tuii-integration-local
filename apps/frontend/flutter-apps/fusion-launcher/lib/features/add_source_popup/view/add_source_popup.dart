@@ -10,7 +10,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../view_model/viewmodel.dart';
+import '../view_model/add_source_viewmodel.dart';
 
 class AddSourcePopup extends StatelessWidget {
   final Widget child;
@@ -192,7 +192,7 @@ class AddSourcePopup extends StatelessWidget {
                             child: IgnorePointer(
                               ignoring: isFromBuildingPage,
                               child: BuildRowPropertyWidget<ListeningArea>(
-                                label: "Area",
+                                label: "Location",
                                 value: state.selectedListeningArea,
                                 options: listeningAreas,
                                 labelBuilder: (ListeningArea option) {
@@ -252,7 +252,7 @@ class AddSourcePopup extends StatelessWidget {
                                       children: <Widget>[
                                         Expanded(
                                           child: FusionAppText(
-                                            text: "Location",
+                                            text: "",
                                             style: context.textTheme.bodyMedium?.copyWith(
                                               color: context.colorScheme.onSurface,
                                               fontWeight: FontWeight.normal,
@@ -337,17 +337,17 @@ class AddSourcePopup extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
 
-                          BuildRowPropertyWidget<AddSourceConnectionType>(
+                          BuildRowPropertyWidget<SourceConnectionType>(
                             label: "Connection",
                             value: state.selectedConnectionType,
                             options: state.selectedSourceSectionType.connectionTypes,
-                            labelBuilder: (AddSourceConnectionType option) {
+                            labelBuilder: (SourceConnectionType option) {
                               return FusionAppText(
                                 text: option.displayName,
                                 style: Theme.of(context).textTheme.labelMedium,
                               );
                             },
-                            onOptionSelected: (int value, AddSourceConnectionType option) {
+                            onOptionSelected: (int value, SourceConnectionType option) {
                               addSourceViewModel.setSelectedConnectionType(option);
                             },
                           ),

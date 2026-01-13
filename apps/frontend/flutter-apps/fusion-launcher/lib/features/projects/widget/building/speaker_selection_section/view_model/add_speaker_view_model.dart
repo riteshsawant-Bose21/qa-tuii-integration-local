@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:equatable/equatable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -97,6 +95,12 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final List<Speaker> placedSpeakers = getPlacedSpeakers();
     final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakers();
     return Set<Speaker>.from(<Speaker>{...placedSpeakers, ...nonPlacedSpeakers}).toList();
+  }
+
+  bool isListeningAreaSelected(String listeningAreaId) {
+    final ListeningArea? selectedArea = selectedListeningArea;
+    if (selectedArea == null) return false;
+    return selectedArea.id == listeningAreaId;
   }
 
   List<Speaker> getPlacedSpeakers() {
@@ -261,14 +265,27 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   List<SpeakerProduct> _sortProducts(List<SpeakerProduct> items) {
     final List<SpeakerProduct> copy = List<SpeakerProduct>.from(items);
-    switch (state.sortOption) {
-      case SpeakerSortOption.nameAsc:
-        copy.sort((SpeakerProduct a, SpeakerProduct b) => a.modelName.toLowerCase().compareTo(b.modelName.toLowerCase()));
-        break;
-      case SpeakerSortOption.nameDesc:
-        copy.sort((SpeakerProduct a, SpeakerProduct b) => b.modelName.toLowerCase().compareTo(a.modelName.toLowerCase()));
-        break;
+
+    // Bring currently selected/placed speaker products to the top (if any)
+    final Set<int> selectedProductIds = getAllPlacedNonPlacedSpeakers().map((Speaker sp) => sp.productId).whereType<int>().toSet();
+
+    int compareByOption(SpeakerProduct a, SpeakerProduct b) {
+      switch (state.sortOption) {
+        case SpeakerSortOption.nameAsc:
+          return a.modelName.toLowerCase().compareTo(b.modelName.toLowerCase());
+        case SpeakerSortOption.nameDesc:
+          return b.modelName.toLowerCase().compareTo(a.modelName.toLowerCase());
+      }
     }
+
+    copy.sort((SpeakerProduct a, SpeakerProduct b) {
+      final bool aSelected = selectedProductIds.contains(a.productId);
+      final bool bSelected = selectedProductIds.contains(b.productId);
+      if (aSelected && !bSelected) return -1;
+      if (!aSelected && bSelected) return 1;
+      return compareByOption(a, b);
+    });
+
     return copy;
   }
 
@@ -277,27 +294,32 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     if (selectedListeningArea == null) return;
 
-    log("Listening area id: ${selectedListeningArea!.id} === ${selectedListeningArea!.name}");
-
     List<Speaker> speakerList = getPlacedSpeakers();
     if (speakerList.isEmpty) speakerList = getNonPlacedSpeakers();
     final String newSku = speaker.speakerSKU;
+
+    bool shouldReplace = false;
 
     if (speakerList.isNotEmpty) {
       final String existingSku = speakerList.first.speakerSKU;
 
       if (existingSku != newSku) {
         final String existingName = speakerList.first.name;
-        final bool? confirm = await ReplaceSpeakersWarningDialog.show(
+        final bool? isConfirmed = await ReplaceSpeakersWarningDialog.show(
           context,
           listeningAreaName: selectedListeningArea!.name,
           existingSpeakerName: existingName,
           currentSpeakerName: productName,
         );
-        if (confirm != true) return;
+        if (isConfirmed != true) return;
+        shouldReplace = true;
       }
     }
 
-    projectViewModel.addHardware(hardware: speaker);
+    if (shouldReplace) {
+      projectViewModel.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: selectedListeningArea!.id);
+    } else {
+      projectViewModel.addHardware(hardware: speaker);
+    }
   }
 }

@@ -98,7 +98,23 @@ extension ListeningAreaService on ProjectService {
     if (!listeningAreas.exists(area.id)) {
       throw Exception('ListeningArea with id ${area.id} does not exist');
     }
+
+    ListeningArea existingArea = listeningAreas.get(area.id)!;
+
     listeningAreas.add(area.id, area);
+
+    //Place all the sources in center of listening area when it is drawn for first time
+    if (!existingArea.isDrawn && area.isDrawn) {
+      final hardwareInArea = relationships.getChildren(RelationshipType.hardwareLocation, area.id);
+      final List<HardwareComponent> allSources = hardwareInArea.map((hwId) => hardware.get(hwId)).whereType<Source>().toList();
+      //update all sources position
+      for (final source in allSources) {
+        final updatedSource = source.copyWith(
+          pos: area.getCenterPositionOfVertices(),
+        );
+        updateHardware(updatedSource);
+      }
+    }
   }
 
   /// Return all ListeningArea objects that belong to the given floorId.

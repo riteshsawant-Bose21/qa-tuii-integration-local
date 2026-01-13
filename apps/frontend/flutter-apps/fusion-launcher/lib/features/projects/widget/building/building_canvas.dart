@@ -108,14 +108,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
   Widget build(BuildContext context) {
     return FusionKeyboardWrapper(
       onUndo: () {
-        if (serviceLocator<ProjectViewModel>().canUndo) {
-          serviceLocator<ProjectViewModel>().undo();
-        }
+        // if (serviceLocator<ProjectViewModel>().canUndo) {
+        //   serviceLocator<ProjectViewModel>().undo();
+        // }
       },
       onRedo: () {
-        if (serviceLocator<ProjectViewModel>().canRedo) {
-          serviceLocator<ProjectViewModel>().redo();
-        }
+        // if (serviceLocator<ProjectViewModel>().canRedo) {
+        //   serviceLocator<ProjectViewModel>().redo();
+        // }
       },
       onDelete: () {
         //IN Building page
@@ -302,15 +302,20 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         },
                                         splMin: serviceLocator<ProjectViewModel>().minSPL,
                                         splMax: serviceLocator<ProjectViewModel>().maxSPL,
-                                        addNewHardwareComponent: (Offset speakerPosition, String? listeningAreaId) {
-                                          final ProjectViewModel viewModel = serviceLocator<ProjectViewModel>();
+                                        addNewHardwareComponent: (Offset speakerPosition) {
+                                          final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
-                                          if (viewModel.shouldPlaceNonPlacedSpeakers) {
-                                            viewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
-                                          } else {
-                                            if (viewModel.selectedProductToAdd == null) return;
-                                            viewModel.addSelectedProduct(position: speakerPosition, listeningAreaId: listeningAreaId, isFromBuildingPage: true);
+                                          if (projectViewModel.shouldPlaceNonPlacedSpeakers) {
+                                            projectViewModel.placeSelectedSpeaker(position: speakerPosition, isFromBuildingPage: true);
                                           }
+                                          // else {
+                                          //   if (projectViewModel.selectedProductToAdd == null) return;
+                                          //   projectViewModel.addSelectedProduct(
+                                          //     position: speakerPosition,
+                                          //     listeningAreaId: listeningAreaId,
+                                          //     isFromBuildingPage: true,
+                                          //   );
+                                          // }
 
                                           serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.addSpeakers);
 
@@ -323,6 +328,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                         subZoneToZoneMap: serviceLocator<ProjectViewModel>().getSubZoneToZoneMap(),
                                         listeningAreaToSubZoneMap: serviceLocator<ProjectViewModel>().getListeningAreaToSubZoneMap(),
                                         isAcousticsMode: serviceLocator<ProjectViewModel>().currentToolbarMode == ToolbarMode.acoustics,
+                                        isInSpeakerPlacementMode: projectViewModel.shouldPlaceNonPlacedSpeakers,
                                       ),
                                     ),
                                   ),

@@ -139,7 +139,6 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
         ValueListenableBuilder<bool>(
           valueListenable: widget.floorCanvasController.isDrawing,
           builder: (BuildContext context, bool isDrawingValue, Widget? child) {
-            print("Rebuilding listening area header for area: ${area.name}, isDrawing: $isDrawingValue");
             return Container(
               decoration: BoxDecoration(
                 color: isSelected ? Colors.grey[200] : Colors.transparent,

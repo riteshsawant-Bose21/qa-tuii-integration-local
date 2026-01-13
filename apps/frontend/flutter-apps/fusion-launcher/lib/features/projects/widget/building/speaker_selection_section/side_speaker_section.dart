@@ -234,18 +234,44 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                       ),
                                     ),
                                   ),
-                                  if (nonPlacedSpeakers.isNotEmpty) ...<Widget>[
-                                    const SizedBox(height: 10),
-                                    // Total speakers
+                                  if (placedSpeakers.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 5),
                                     Padding(
                                       padding: const EdgeInsets.only(left: 36),
                                       child: Row(
                                         children: <Widget>[
                                           Expanded(
                                             child: FusionAppText(
-                                              text: 'Quantity',
+                                              text: 'Placed',
                                               style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.onSurfaceVariant,
+                                                color: context.colorScheme.onSurface,
+                                              ),
+                                            ),
+                                          ),
+
+                                          const SizedBox(width: 8),
+                                          FusionAppText(
+                                            text: "${placedSpeakers.length}",
+                                            style: context.textTheme.bodySmall?.copyWith(
+                                              color: context.colorScheme.onSurface,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+
+                                  if (nonPlacedSpeakers.isNotEmpty) ...<Widget>[
+                                    const SizedBox(height: 5),
+                                    Padding(
+                                      padding: const EdgeInsets.only(left: 36),
+                                      child: Row(
+                                        children: <Widget>[
+                                          Expanded(
+                                            child: FusionAppText(
+                                              text: 'Non-placed',
+                                              style: context.textTheme.bodySmall?.copyWith(
+                                                color: context.colorScheme.onSurface,
                                               ),
                                             ),
                                           ),
@@ -281,31 +307,6 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                                 size: 12,
                                                 color: context.colorScheme.onSurface,
                                               ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 10),
-                                    // Total speakers
-                                    Padding(
-                                      padding: const EdgeInsets.only(left: 36),
-                                      child: Row(
-                                        children: <Widget>[
-                                          Expanded(
-                                            child: FusionAppText(
-                                              text: 'Not placed speakers',
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.surfaceDim,
-                                              ),
-                                            ),
-                                          ),
-
-                                          const SizedBox(width: 8),
-                                          FusionAppText(
-                                            text: "${nonPlacedSpeakers.length}",
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              color: context.colorScheme.surfaceDim,
                                             ),
                                           ),
                                         ],

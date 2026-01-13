@@ -7,7 +7,7 @@ import '../../../core/models/products_data.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
-part 'state.dart';
+part 'add_source_viewmodel_state.dart';
 
 class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   AddSourceViewModel() : super(const AddSourceViewModelState(selectedSources: <SourceData?>[null]));
@@ -39,7 +39,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
 
   void setSelectedListeningArea(ListeningArea listeningArea) => emit(state.copyWith(selectedListeningArea: listeningArea));
 
-  void setSelectedConnectionType(AddSourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
+  void setSelectedConnectionType(SourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
   void setSignalType(SignalType signalType) => emit(state.copyWith(selectedSignalType: signalType));
   void setSelectedSourceName(String sourceName) => emit(state.copyWith(selectedSourceName: sourceName));
 
@@ -93,7 +93,13 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     } else {
       sources[index] = source;
     }
-    emit(state.copyWith(selectedSources: sources.toList()));
+
+    emit(
+      state.copyWith(
+        selectedSources: sources.toList(),
+        selectedConnectionType: source.connectionType,
+      ),
+    );
   }
 
   void onSaveTap(BuildContext context) {
@@ -103,7 +109,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (selectedSources.isEmpty) return FusionToast.error(context, message: "Please select at least one source");
 
     // if listening area is not selected
-    if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a listening area");
+    if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
     if (state.selectedConnectionType == null) return FusionToast.error(context, message: "Please select a connection type");
@@ -123,18 +129,19 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (selectedItem == null) return;
 
     /// Sources [onTapAddDevice]
-    final SourceConnectionType connectType = SourceData.getSourceConnectionType(selectedItem.id);
+    final SourceConnectionType connectType = state.selectedConnectionType ?? SourceData.getSourceConnectionType(selectedItem.id);
     final PortType portType = switch (connectType) {
       SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
       SourceConnectionType.bluetooth => PortType.bleOut,
       SourceConnectionType.usb => PortType.usbOut,
       SourceConnectionType.audioJack => PortType.audioJackOutput,
       SourceConnectionType.xlr => PortType.xlrOutput,
+      SourceConnectionType.hdmi => PortType.hdmiOut,
     };
 
     final Source source = Source(
       name: state.selectedSourceName ?? selectedItem.name,
-      pos: null,
+      pos: selectedArea.getCenterPositionOfVertices(),
       type: selectedItem.type,
       addedFromBuildingPage: false,
       connectionType: connectType,
@@ -157,27 +164,29 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
           SourceConnectionType.usb => <PortType>[PortType.usbIn],
           SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
           SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+          SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
         },
         portPosition: PortPosition.topLeft,
       ),
     );
     projectViewModel.addHardware(hardware: source);
+    projectViewModel.setCurrentSelectedHardware(source.id);
 
     // if this is a building page, add the source to the circuit
-    if (isFromBuildingPage) {
-      // Set device type index first
-      serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
-
-      // Create product and set for addition
-      final ProductQueryModel product = ProductQueryModel(
-        name: selectedItem.name,
-        price: 0.0,
-        image: selectedItem.assetPath,
-        type: ProductType.sources,
-        sku: selectedItem.id,
-      );
-      serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-    }
+    // if (isFromBuildingPage) {
+    //   // Set device type index first
+    //   serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+    //
+    //   // Create product and set for addition
+    //   final ProductQueryModel product = ProductQueryModel(
+    //     name: selectedItem.name,
+    //     price: 0.0,
+    //     image: selectedItem.assetPath,
+    //     type: ProductType.sources,
+    //     sku: selectedItem.id,
+    //   );
+    //   serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+    // }
 
     // place this source in the selected listening area
     onSaved?.call();

@@ -417,7 +417,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 ? ListeningAreasPanel(
                   floorCanvasController: floorCanvasController,
                 )
-                : const ZoneAndListeningAreaPanel(),
+                : ZoneAndListeningAreaPanel(
+                  floorCanvasController: floorCanvasController,
+                ),
       ),
       // DockItemConfig(
       //   id: "8",
@@ -715,74 +717,74 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         ),
                       ),
 
-                      /// Undo Icon Section
-                      Visibility(
-                        visible: true,
-                        child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.undo),
-                          child: GestureDetector(
-                            onTap: () {
-                              if (serviceLocator<ProjectViewModel>().canUndo) {
-                                serviceLocator<ProjectViewModel>().undo();
-                              }
-                            },
-                            child: Tooltip(
-                              message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
-                              child: Container(
-                                width: 56,
-                                height: 48,
-                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.white,
-                                ),
-                                child: const FusionImage.asset(
-                                  "assets/images/return_icon.png",
-                                  width: 20,
-                                  height: 20,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      /// Redo Icon Section
-                      Visibility(
-                        visible: true,
-                        child: SemanticHelper.button(
-                          testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.redo),
-                          child: GestureDetector(
-                            onTap: () {
-                              if (serviceLocator<ProjectViewModel>().canRedo) {
-                                serviceLocator<ProjectViewModel>().redo();
-                              }
-                            },
-                            child: Tooltip(
-                              message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
-                              child: Container(
-                                width: 56,
-                                height: 48,
-                                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.white,
-                                ),
-
-                                child: Transform(
-                                  alignment: Alignment.center,
-                                  transform: Matrix4.rotationY(3.14),
-                                  child: const FusionImage.asset(
-                                    "assets/images/return_icon.png",
-                                    width: 20,
-                                    height: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
+                      // /// Undo Icon Section
+                      // Visibility(
+                      //   visible: true,
+                      //   child: SemanticHelper.button(
+                      //     testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.undo),
+                      //     child: GestureDetector(
+                      //       onTap: () {
+                      //         if (serviceLocator<ProjectViewModel>().canUndo) {
+                      //           serviceLocator<ProjectViewModel>().undo();
+                      //         }
+                      //       },
+                      //       child: Tooltip(
+                      //         message: serviceLocator<ProjectViewModel>().canUndo ? "Undo" : "Nothing to undo",
+                      //         child: Container(
+                      //           width: 56,
+                      //           height: 48,
+                      //           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      //
+                      //           decoration: BoxDecoration(
+                      //             color: Theme.of(context).colorScheme.white,
+                      //           ),
+                      //           child: const FusionImage.asset(
+                      //             "assets/images/return_icon.png",
+                      //             width: 20,
+                      //             height: 20,
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
+                      //
+                      // /// Redo Icon Section
+                      // Visibility(
+                      //   visible: true,
+                      //   child: SemanticHelper.button(
+                      //     testId: SemanticHelper.createTestId(SemanticTypes.button, FusionTestKeys.redo),
+                      //     child: GestureDetector(
+                      //       onTap: () {
+                      //         if (serviceLocator<ProjectViewModel>().canRedo) {
+                      //           serviceLocator<ProjectViewModel>().redo();
+                      //         }
+                      //       },
+                      //       child: Tooltip(
+                      //         message: serviceLocator<ProjectViewModel>().canRedo ? "Redo" : "Nothing to redo",
+                      //         child: Container(
+                      //           width: 56,
+                      //           height: 48,
+                      //           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                      //
+                      //           decoration: BoxDecoration(
+                      //             color: Theme.of(context).colorScheme.white,
+                      //           ),
+                      //
+                      //           child: Transform(
+                      //             alignment: Alignment.center,
+                      //             transform: Matrix4.rotationY(3.14),
+                      //             child: const FusionImage.asset(
+                      //               "assets/images/return_icon.png",
+                      //               width: 20,
+                      //               height: 20,
+                      //             ),
+                      //           ),
+                      //         ),
+                      //       ),
+                      //     ),
+                      //   ),
+                      // ),
 
                       /// Save Icon Section
                       SemanticHelper.button(
