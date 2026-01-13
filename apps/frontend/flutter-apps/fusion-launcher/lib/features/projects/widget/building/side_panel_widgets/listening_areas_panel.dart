@@ -200,6 +200,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                             Flexible(
                               child: TitleTextFieldSwitcher(
                                 value: area.name,
+                                hintText: "Enter listening area name",
                                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                   fontSize: 11,
                                   fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
@@ -310,6 +311,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                   Expanded(
                     child: TitleTextFieldSwitcher(
                       value: speaker.name,
+                      hintText: "Enter speaker name",
                       style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,

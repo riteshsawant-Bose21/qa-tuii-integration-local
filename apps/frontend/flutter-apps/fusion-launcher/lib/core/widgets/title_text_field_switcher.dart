@@ -7,8 +7,10 @@ class TitleTextFieldSwitcher extends StatefulWidget {
     required this.save,
     required this.style,
     required this.value,
+    required this.hintText,
   });
   final String value;
+  final String hintText;
   final ValueChanged<String> save;
   final TextStyle style;
   @override
@@ -96,7 +98,13 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
                   controller: controller,
                   focusNode: focusNode,
                   style: widget.style,
-                  decoration: const InputDecoration(
+                  maxLength: 24,
+                  decoration: InputDecoration(
+                    hint: Text(
+                      widget.hintText,
+                      style: widget.style,
+                    ),
+                    counter: const SizedBox.shrink(),
                     border: InputBorder.none,
                     contentPadding: EdgeInsets.zero,
                     isDense: true,
