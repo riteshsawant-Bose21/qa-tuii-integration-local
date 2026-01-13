@@ -80,36 +80,40 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
 
   @override
   Widget build(BuildContext context) {
-    if (isEditing) {
-      return Focus(
-        onKeyEvent: (FocusNode node, KeyEvent event) {
-          if (event.logicalKey == LogicalKeyboardKey.escape) {
-            _cancelEditing();
-            return KeyEventResult.handled;
-          }
-          return KeyEventResult.ignored;
-        },
-        child: TextField(
-          controller: controller,
-          focusNode: focusNode,
-          style: widget.style,
-          decoration: const InputDecoration(
-            border: InputBorder.none,
-            contentPadding: EdgeInsets.zero,
-            isDense: true,
-          ),
-          onSubmitted: (_) => _saveValue(),
-          onTapOutside: (_) => _saveValue(),
-        ),
-      );
-    }
+    return Semantics(
+      excludeSemantics: isEditing,
+      child:
+          isEditing
+              ? Focus(
+                onKeyEvent: (FocusNode node, KeyEvent event) {
+                  if (event.logicalKey == LogicalKeyboardKey.escape) {
+                    _cancelEditing();
+                    return KeyEventResult.handled;
+                  }
+                  return KeyEventResult.ignored;
+                },
+                child: TextField(
+                  controller: controller,
+                  focusNode: focusNode,
+                  style: widget.style,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.zero,
+                    isDense: true,
+                  ),
+                  onSubmitted: (_) => _saveValue(),
+                  onTapOutside: (_) => _saveValue(),
+                ),
+              )
+              : GestureDetector(
+                behavior: HitTestBehavior.translucent,
 
-    return InkWell(
-      onTap: _startEditing,
-      child: Text(
-        currentValue,
-        style: widget.style,
-      ),
+                onDoubleTap: _startEditing,
+                child: Text(
+                  currentValue,
+                  style: widget.style,
+                ),
+              ),
     );
   }
 }
