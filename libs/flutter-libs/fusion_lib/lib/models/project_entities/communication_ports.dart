@@ -49,6 +49,9 @@ enum PortType {
   digitalOutput('Output'),
   circuitInput('Input'),
 
+  gpioInput('Input'),
+  gpioOutput('Output'),
+
   fusionConnectInput('Input'),
   fusionConnectOutput('Output'),
 

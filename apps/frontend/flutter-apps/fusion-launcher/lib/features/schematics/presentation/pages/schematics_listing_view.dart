@@ -268,6 +268,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         SourceConnectionType.usb => PortType.usbOut,
                         SourceConnectionType.audioJack => PortType.audioJackOutput,
                         SourceConnectionType.xlr => PortType.xlrOutput,
+                        SourceConnectionType.hdmi => PortType.hdmiOut,
                       };
                       final Source source = Source(
                         name: item.name,
@@ -299,6 +300,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                             SourceConnectionType.usb => <PortType>[PortType.usbIn],
                             SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
                             SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+                            SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
                           },
                           portPosition: PortPosition.topLeft,
                         ),

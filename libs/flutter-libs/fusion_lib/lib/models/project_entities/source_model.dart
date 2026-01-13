@@ -4,7 +4,19 @@ import 'package:fusion_lib/fusion_lib.dart';
 
 enum SourceType { mic, media, generic }
 
-enum SourceConnectionType { analogInput, aes67input, bluetooth, usb,audioJack, xlr }
+enum SourceConnectionType {
+  analogInput("Wired"),
+  aes67input("Aes67"),
+  bluetooth("Bluetooth"),
+  usb("USB"),
+  audioJack("Audio Jack"),
+  xlr("XLR"),
+  hdmi("HDMI");
+
+  const SourceConnectionType(this.displayName);
+
+  final String displayName;
+}
 
 class Source extends HardwareComponent {
   /// Type of the source

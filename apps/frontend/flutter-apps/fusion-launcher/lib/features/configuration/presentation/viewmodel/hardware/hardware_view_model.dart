@@ -95,6 +95,26 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  void migrateAllSpeakersTo({required Speaker speaker, required String targetListeningAreaId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: targetListeningAreaId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to migrate all speakers to: $e",
+      );
+      throwError("Failed to migrate all speakers to: $e");  
+    }
+  }
+
   void removeHardware({required String hardwareId, bool autoSave = true}) {
     try {
       if (autoSave) {
@@ -525,6 +545,7 @@ extension HardwareViewModel on ProjectViewModel {
           SourceConnectionType.usb => PortType.usbOut,
           SourceConnectionType.audioJack => PortType.audioJackOutput,
           SourceConnectionType.xlr => PortType.xlrOutput,
+          SourceConnectionType.hdmi => PortType.hdmiOut,
         };
         return Source(
           locationEntity: locationEntity,
@@ -554,6 +575,7 @@ extension HardwareViewModel on ProjectViewModel {
                 SourceConnectionType.usb => <PortType>[PortType.usbIn],
                 SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
                 SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+                SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
               },
               type: portType,
               description: portType.description,

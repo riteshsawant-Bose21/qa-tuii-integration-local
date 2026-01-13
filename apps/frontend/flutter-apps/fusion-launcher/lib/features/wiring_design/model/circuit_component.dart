@@ -88,7 +88,7 @@ class CircuitComponent extends CanvasElement {
           id: element.id,
           relativePosition: Offset(
             data.portRadius + WiringViewConstants.portSpacing,
-            data.portRadius + data.portOffset.dy + (WiringViewConstants.portSpacing * (i + 1)) + i * data.portRadius * 2,
+            (element.image != null ? 50 : 0) + data.portRadius + data.portOffset.dy + (WiringViewConstants.portSpacing * (i + 1)) + i * data.portRadius * 2,
           ),
           padding: Offset(-50 - i * 10, 0),
           parent: circuitComponent,
@@ -164,6 +164,7 @@ class CircuitComponent extends CanvasElement {
           ..sort(
             (ComponentPort a, ComponentPort b) => b.index.compareTo(a.index),
           );
+
     for (int i = 0; i < leftSidePorts.length; i++) {
       final ComponentPort element = leftSidePorts[i];
 

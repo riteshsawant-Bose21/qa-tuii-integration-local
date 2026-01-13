@@ -115,37 +115,63 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
       final Path portPath = Path();
 
       /// Port
-      portPath.addOval(
-        Rect.fromCircle(
-          center: port.absolutePosition,
-          radius: WiringViewConstants.portRadius,
-        ),
-      );
+
       final bool hasConnection = painter.hasConnection(port);
+      if (port.data.image != null) {
+        painter.drawImage(
+          canvas: canvas,
+          path: port.data.image!,
+          rect: Rect.fromCircle(
+            center: port.absolutePosition,
+            radius: WiringViewConstants.portRadius,
+          ),
+        );
+        final PortPosition? position2 = port.data.position;
+        painter.drawText(
+          canvas: canvas,
+          text: port.data.label ?? "",
+          position:
+              port.absolutePosition +
+              Offset(
+                (position2 == PortPosition.bottomLeft || position2 == PortPosition.topLeft)
+                    ? WiringViewConstants.portRadius * 1.5
+                    : -WiringViewConstants.portRadius * 1.5,
+                0,
+              ),
+          positionAlignment: (position2 == PortPosition.bottomLeft || position2 == PortPosition.topLeft) ? Alignment.centerLeft : Alignment.centerRight,
+        );
+      } else {
+        portPath.addOval(
+          Rect.fromCircle(
+            center: port.absolutePosition,
+            radius: WiringViewConstants.portRadius,
+          ),
+        );
+
+        /// Port Label
+        final TextPainter tp = TextPainter(
+          text: TextSpan(
+            text: port.data.label ?? Random().nextInt(20).toString(),
+            style: TextStyle(
+              color: hasConnection ? painter.colorScheme.activePortFG : painter.colorScheme.inactivePortFG,
+              fontSize: WiringViewConstants.portRadius * 0.75,
+            ),
+          ),
+          textDirection: TextDirection.ltr,
+        )..layout();
+
+        // Align text to center
+        tp.paint(
+          canvas,
+          Offset(
+            port.absolutePosition.dx - tp.width / 2,
+            port.absolutePosition.dy - tp.height / 2,
+          ),
+        );
+      }
       canvas.drawPath(
         portPath,
         hasConnection ? connectedPortPaint : freePortPaint,
-      );
-
-      /// Port Label
-      final TextPainter tp = TextPainter(
-        text: TextSpan(
-          text: port.data.label ?? Random().nextInt(20).toString(),
-          style: TextStyle(
-            color: hasConnection ? painter.colorScheme.activePortFG : painter.colorScheme.inactivePortFG,
-            fontSize: WiringViewConstants.portRadius * 0.75,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-
-      // Align text to center
-      tp.paint(
-        canvas,
-        Offset(
-          port.absolutePosition.dx - tp.width / 2,
-          port.absolutePosition.dy - tp.height / 2,
-        ),
       );
     }
 
@@ -164,12 +190,33 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
             radius: WiringViewConstants.portRadius,
           ),
         );
+      } else {
+        final Path portPath = Path();
+        portPath.addOval(
+          Rect.fromCircle(
+            center: port.absolutePosition,
+            radius: WiringViewConstants.portRadius,
+          ),
+        );
+        final bool hasConnection = painter.hasConnection(port);
+        final Paint portPaint = hasConnection ? connectedPortPaint : freePortPaint;
+        canvas.drawPath(
+          portPath,
+          portPaint,
+        );
+        painter.drawText(
+          canvas: canvas,
+          text: port.data.label ?? port.data.index.toString(),
+          maxWidth: WiringViewConstants.comPortWidth,
+          positionAlignment: Alignment.center,
+          position: port.absolutePosition,
+        );
       }
 
       final PortPosition? position2 = port.data.position;
       painter.drawText(
         canvas: canvas,
-        text: port.data.label ?? port.data.type.name,
+        text: port.data.description ?? port.data.type.name,
         maxWidth: WiringViewConstants.comPortWidth,
         positionAlignment: switch (position2) {
           PortPosition.bottomRight => Alignment.bottomRight,

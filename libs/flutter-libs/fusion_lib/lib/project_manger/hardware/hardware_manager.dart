@@ -10,6 +10,13 @@ extension HardwareManager on ProjectManager {
     projectService!.addHardware(hw: hardware, addToCircuit: addToCircuit);
   }
 
+  void migrateAllSpeakersTo({required Speaker speaker, required String targetListeningAreaId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: targetListeningAreaId);
+  }
+
   /// Remove Hardware
   void removeHardware(String hardwareId) {
     if (projectService == null) {
