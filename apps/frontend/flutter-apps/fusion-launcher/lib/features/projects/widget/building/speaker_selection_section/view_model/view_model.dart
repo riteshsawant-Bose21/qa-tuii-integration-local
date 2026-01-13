@@ -56,7 +56,9 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       }
     }
 
-    return state.selectedListeningAreaForDropDown;
+    final ListeningArea? selectedListeningAreaForDropDown = state.selectedListeningAreaForDropDown;
+
+    return selectedListeningAreaForDropDown ?? allListeningAreas.firstOrNull;
   }
 
   void setListeningAreaForDropDown(ListeningArea? listeningArea) => emit(state.copyWith(selectedListeningAreaForDropDown: listeningArea));

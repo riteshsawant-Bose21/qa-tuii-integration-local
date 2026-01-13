@@ -108,6 +108,7 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                             },
                             behavior: HitTestBehavior.translucent,
                             child: Container(
+                              width: double.infinity,
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                               child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
                             ),

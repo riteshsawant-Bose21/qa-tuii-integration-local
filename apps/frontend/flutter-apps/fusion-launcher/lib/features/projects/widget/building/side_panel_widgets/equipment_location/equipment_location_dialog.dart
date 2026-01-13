@@ -170,8 +170,16 @@ class EquipmentLocationDialog extends StatelessWidget {
                                     return _ProductTile(
                                       product: product,
                                       addProduct: () {
+                                        final String? state2 = BlocProvider.of<EquipmentLocationSelectionViewmodel>(context).state;
+                                        if (state2 == null) {
+                                          FusionToast.error(
+                                            context,
+                                            message: "Please select an equipment location to add devices.",
+                                          );
+                                          return;
+                                        }
                                         vm.addProductToLocation(
-                                          equipLocationId: BlocProvider.of<EquipmentLocationSelectionViewmodel>(context).state!,
+                                          equipLocationId: state2,
                                           product: product,
                                         );
                                       },
