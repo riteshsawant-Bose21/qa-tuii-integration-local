@@ -64,49 +64,54 @@ class _ProductTile extends StatelessWidget {
                         FusionArrowPopup(
                           content: SizedBox(
                             width: 300,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                FusionAppText(
-                                  text: product.description, //"L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
-                                  style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.onSurface,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  FusionAppText(
+                                    text: product.description, //"L 22.4cm | W 14.7cm | H 8.3cm | 9kg", // TODO: hardcoded
+                                    style: context.textTheme.bodySmall?.copyWith(
+                                      color: context.colorScheme.onSurface,
+                                    ),
                                   ),
-                                ),
 
-                                // GRID VIEW
-                                Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
-                                Builder(
-                                  builder: (BuildContext context) {
-                                    final Map<String, String> details = product.specifications;
+                                  // GRID VIEW
+                                  Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
+                                  Builder(
+                                    builder: (BuildContext context) {
+                                      final Map<String, String> details = product.specifications;
 
-                                    final List<Widget> children = <Widget>[
-                                      ...details.keys.map((String key) {
-                                        return Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: <Widget>[
-                                            FusionAppText(
-                                              text: key,
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.normal,
+                                      final List<Widget> children = <Widget>[
+                                        ...details.keys.map((String key) {
+                                          return Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: <Widget>[
+                                              FusionAppText(
+                                                text: key,
+                                                style: context.textTheme.bodySmall?.copyWith(
+                                                  fontWeight: FontWeight.normal,
+                                                ),
                                               ),
-                                            ),
-                                            FusionAppText(
-                                              text: details[key]!,
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.normal,
-                                                color: context.colorScheme.onSurface.withAlpha(128),
+                                              FusionAppText(
+                                                text: details[key]!,
+                                                style: context.textTheme.bodySmall?.copyWith(
+                                                  fontWeight: FontWeight.normal,
+                                                  color: context.colorScheme.onSurface.withAlpha(128),
+                                                ),
                                               ),
-                                            ),
-                                          ],
-                                        );
-                                      }),
-                                    ];
+                                            ],
+                                          );
+                                        }),
+                                      ];
 
-                                    return BuildingPageGridView(children: children);
-                                  },
-                                ),
-                              ],
+                                      return BuildingPageGridView(children: children);
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                           child: Icon(
