@@ -186,12 +186,13 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
         EQLDeviceType.processor => ProductType.dsps,
         EQLDeviceType.mixerAmp => ProductType.amplifier,
       },
-      sku: switch (product.data) {
-        final AmplifierProduct a => a.skus.isNotEmpty ? a.skus.first.toString() : 'UNKNOWN',
-        final IoEndpointProduct i => i.skus.isNotEmpty ? i.skus.first.toString() : 'UNKNOWN',
-        final DspProduct d => d.skus.isNotEmpty ? d.skus.first.toString() : 'UNKNOWN',
-        _ => 'UNKNOWN',
-      },
+      sku: product.name,
+      // sku: switch (product.data) {
+      //   final AmplifierProduct a => a.skus.isNotEmpty ? a.skus.first.toString() : 'UNKNOWN',
+      //   final IoEndpointProduct i => i.skus.isNotEmpty ? i.skus.first.toString() : 'UNKNOWN',
+      //   final DspProduct d => d.skus.isNotEmpty ? d.skus.first.toString() : 'UNKNOWN',
+      //   _ => 'UNKNOWN',
+      // },
     );
   }
 
