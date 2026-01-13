@@ -197,10 +197,10 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                                 color: (!area.isDrawn) ? context.colorScheme.error : null,
                               ),
                             ),
-                            Flexible(
+                            Expanded(
                               child: TitleTextFieldSwitcher(
                                 value: area.name,
-                                hintText: "Enter listening area name",
+                                hintText: "listening area name",
                                 style: Theme.of(context).textTheme.bodySmall!.copyWith(
                                   fontSize: 11,
                                   fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
