@@ -84,6 +84,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     return zoneColor;
   }
 
+  String? getEquipmentLocationForHardware(String hardwareId) {
+    return _projectViewModel.getEquipLocationForHardware(hardwareId: hardwareId)?.name;
+  }
+
   /// sources & endpoints result count
   int _sourcesEndpointsResultCount() {
     if (_sourcesEndpointsSearchQuery.isEmpty) {
@@ -641,6 +645,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(controller.id),
               zoneColor: getZoneColor(controller.id),
               location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add location",
+
+              equipmentLocation: getEquipmentLocationForHardware(controller.id),
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -712,6 +718,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(source.id),
               zoneColor: getZoneColor(source.id),
               location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(source.id),
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -787,6 +794,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(endpoint.id),
               zoneColor: getZoneColor(endpoint.id),
               location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(endpoint.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -858,6 +867,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(processor.id),
               zoneColor: getZoneColor(processor.id),
               location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(processor.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -927,6 +938,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(amplifier.id),
               zoneColor: getZoneColor(amplifier.id),
               location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(amplifier.id),
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -1000,6 +1012,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     hardwareRack.locationEntity.listeningAreaId,
                   ) ??
                   "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(hardwareRack.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -1074,6 +1088,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     networkSwitch.locationEntity.listeningAreaId,
                   ) ??
                   "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(networkSwitch.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
