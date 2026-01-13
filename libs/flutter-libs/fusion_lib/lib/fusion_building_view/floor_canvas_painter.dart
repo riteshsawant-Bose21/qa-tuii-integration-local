@@ -574,8 +574,16 @@ class FloorCanvasPainter extends CustomPainter {
 
       final Rect dst = Rect.fromCenter(
         center: comp.pos!,
-        width: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
-        height: comp is SpeakerModel ? iconSize / 1.5 : iconSize,
+        width: comp is SpeakerModel
+            ? iconSize / 1.5
+            : comp is Source
+            ? iconSize * 2
+            : iconSize,
+        height: comp is SpeakerModel
+            ? iconSize / 1.5
+            : comp is Source
+            ? iconSize * 2
+            : iconSize,
       );
 
       if (comp is Speaker) {
@@ -619,27 +627,29 @@ class FloorCanvasPainter extends CustomPainter {
           if (img != null) {
             // draw the loaded image, scaling it into dst
             final ui.Rect src = Rect.fromLTWH(0, 0, img.width.toDouble(), img.height.toDouble());
+            dst.intersect(Rect.fromLTWH(0, 0, double.infinity, double.infinity));
             canvas.drawImageRect(img, src, dst, Paint());
           } else {
             // fallback: draw a grey box until the image is ready
-            canvas.drawRect(
-              dst,
-              Paint()
-                ..color = Colors.grey.shade700.withValues(alpha: 0.5)
-                ..style = PaintingStyle.fill,
-            );
+            final Paint paint = Paint();
+            paint.color = Colors.grey.shade700.withValues(alpha: 0.5);
+            paint.style = PaintingStyle.fill;
+            canvas.drawRect(dst, paint);
           }
         }
       }
 
       // draw selection border - in acoustics mode, only show selection for speakers
       if (comp.id == selectedHardwareComponentId && (!isAcousticsMode || comp is Speaker)) {
+        final Paint paint = Paint();
+        paint.color = Colors.pinkAccent;
+        paint.style = PaintingStyle.stroke;
+        paint.strokeWidth = 2 / zoomScale;
         canvas.drawRect(
-          Rect.fromCenter(center: comp.pos!, width: gridSize, height: gridSize),
-          Paint()
-            ..color = Colors.pinkAccent
-            ..style = PaintingStyle.stroke
-            ..strokeWidth = 2 / zoomScale,
+          comp is Source
+              ? Rect.fromCenter(center: comp.pos!, width: gridSize * 2, height: gridSize * 2)
+              : Rect.fromCenter(center: comp.pos!, width: gridSize, height: gridSize),
+          paint,
         );
       }
     }

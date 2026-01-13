@@ -482,7 +482,7 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
         }
 
         // simplest circular hit‐test:
-        final double hitRadius = widget.gridSize * 0.3;
+        final double hitRadius = sp is Source ? widget.gridSize : widget.gridSize * 0.3;
         if ((worldPos - sp.pos!).distance < hitRadius) {
           _stopListeningAreaSelection();
           widget.onSelectedHardwareComponentIdChanged(sp.id);
