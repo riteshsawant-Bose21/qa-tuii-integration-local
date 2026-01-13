@@ -10,6 +10,7 @@ class Speaker extends HardwareComponent {
   OutputType type;
   String? ipAddress; // Optional field for AES67 output type
   String speakerSKU;
+  final int? productId;
   final double pitch;
   final double roll;
   final double yaw;
@@ -21,6 +22,7 @@ class Speaker extends HardwareComponent {
     required super.name,
     required super.pos,
     super.wiringPos,
+    this.productId,
     required this.speakerSKU,
     this.rotation = 0.0,
     required this.gain,
@@ -41,7 +43,7 @@ class Speaker extends HardwareComponent {
     super.inputPortsData,
     super.outputPortsData,
     required super.addedFromBuildingPage,
-     this.mountingType,
+    this.mountingType,
   }) : super(
          hardwareName: hardwareName ?? name,
          id: id ?? "SPEAKER${FusionUtils.shortStringUUID()}",
@@ -61,6 +63,7 @@ class Speaker extends HardwareComponent {
     String? listeningAreaId,
     LocationModel? locationEntity,
     String? ipAddress,
+    int? productId,
     String? speakerSKU,
     double? price,
     String? hardwareName,
@@ -88,6 +91,7 @@ class Speaker extends HardwareComponent {
       type: type ?? this.type,
       locationEntity: locationEntity ?? this.locationEntity,
       ipAddress: ipAddress ?? this.ipAddress,
+      productId: productId ?? this.productId,
       speakerSKU: speakerSKU ?? this.speakerSKU,
       price: price ?? this.price,
       hardwareName: hardwareName ?? this.hardwareName,
@@ -117,6 +121,7 @@ class Speaker extends HardwareComponent {
       type: speaker.type,
       locationEntity: locationEntity,
       ipAddress: ipAddress,
+      productId: speaker.productId,
       speakerSKU: speaker.speakerSKU,
       price: speaker.price,
       hardwareName: speaker.hardwareName,
@@ -229,6 +234,7 @@ class Speaker extends HardwareComponent {
       'type': type.name,
       'locationEntity': locationEntity.toJson(),
       'ipAddress': ipAddress,
+      "productId": productId,
       'speakerSKU': speakerSKU,
       'price': price,
       "zAxis": zAxis,
@@ -257,6 +263,7 @@ class Speaker extends HardwareComponent {
       type: OutputType.values.firstWhere((OutputType e) => e.name == json['type'], orElse: () => OutputType.analogOutput),
       locationEntity: LocationModel.fromJson(json['locationEntity'] as Map<String, dynamic>),
       ipAddress: json['ipAddress'] as String?,
+      productId: json['productId'] as int?,
       speakerSKU: json['speakerSKU'] as String,
       price: (json['price'] as num?)?.toDouble() ?? 0.0,
       hardwareName: json['hardwareName'] as String? ?? '',

@@ -52,9 +52,9 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
   static const int _maxRetries = 3;
   final Products _productsApi = Products(baseUrl: AppConfig.awsApiBaseUrl, fusionOnly: true);
 
-  Future<void> loadProducts({int attempt = 1}) async {
+  Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
-      await _productsApi.initialize();
+      await (refresh ? _productsApi.refresh() : _productsApi.initialize());
 
       emit(state.copyWith(products: _productsApi, isLoading: false));
 
@@ -87,6 +87,8 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
       emit(state.copyWith(products: null, isLoading: false, errorMessage: 'Failed to load products'));
     }
   }
+
+  void refresh() => loadProducts(refresh: true);
 
   // ---------- get image ----------
   String getImagePath(String imageUrl) => _productsApi.getImagePath(imageUrl);

@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
-import '../view_model/view_model.dart';
+import '../view_model/add_speaker_view_model.dart';
 import 'properties_and_filter_section.dart';
 import 'speaker_lists.dart';
 

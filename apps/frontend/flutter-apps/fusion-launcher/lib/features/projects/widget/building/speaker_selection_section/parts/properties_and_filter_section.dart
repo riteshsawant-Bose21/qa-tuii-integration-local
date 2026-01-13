@@ -11,7 +11,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_checkbox_group.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../view_model/view_model.dart';
+import '../view_model/add_speaker_view_model.dart';
 
 class SpeakerListeningAreaProperties extends StatefulWidget {
   const SpeakerListeningAreaProperties({super.key});

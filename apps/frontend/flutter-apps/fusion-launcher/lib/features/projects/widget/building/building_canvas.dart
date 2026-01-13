@@ -348,17 +348,31 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                                                 Builder(
                                                   builder: (BuildContext context) {
                                                     if (speakerMountType == MountingType.surface) {
-                                                      return const RotatedBox(quarterTurns: 1, child: Icon(Icons.rectangle, size: 32, color: Colors.black));
+                                                      return const RotatedBox(
+                                                        quarterTurns: 1,
+                                                        child: Icon(
+                                                          Icons.rectangle,
+                                                          size: 32,
+                                                          color: Colors.black,
+                                                        ),
+                                                      );
                                                     } else if (speakerMountType == MountingType.pendant) {
                                                       return SizedBox(
                                                         width: 24,
                                                         height: 24,
                                                         child: CustomPaint(
-                                                          painter: TrianglePainter(color: Colors.black, isUp: true),
+                                                          painter: TrianglePainter(
+                                                            color: Colors.black,
+                                                            isUp: true,
+                                                          ),
                                                         ),
                                                       );
                                                     } else {
-                                                      return const Icon(Icons.circle, size: 32, color: Colors.black);
+                                                      return const Icon(
+                                                        Icons.circle,
+                                                        size: 32,
+                                                        color: Colors.black,
+                                                      );
                                                     }
                                                   },
                                                 ),

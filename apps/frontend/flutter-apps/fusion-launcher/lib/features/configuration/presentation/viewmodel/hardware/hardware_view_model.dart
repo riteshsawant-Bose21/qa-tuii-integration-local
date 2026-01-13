@@ -459,26 +459,22 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
-  Speaker fromSpeakerProductModel(
-    String assetImagePath,
-    SpeakerProduct product,
-    LocationModel locationEntity,
-    bool isFromBuildingPage,
-  ) {
+  Speaker fromSpeakerProductModel(String assetImagePath, SpeakerProduct product, LocationModel locationEntity, bool isFromBuildingPage) {
+    final MountingType? mountingType = MountingType.fromJson(product.mountType);
     return Speaker(
       locationEntity: locationEntity,
       name: product.modelName,
+      productId: product.productId,
       pos: null,
       zAxis: 300.0,
-      speakerSKU: product.productId.toString(),
+      speakerSKU: product.modelName,
       gain: 0.0,
       addedFromBuildingPage: isFromBuildingPage,
       assetImagePath: assetImagePath,
       type: OutputType.analogOutput,
       price: 300,
-      mountingType: MountingType.fromJson(product.mountType),
-      // price: product.price, // TODO: add price
-      pitch: product.mountType == "pendant" || product.mountType == "ceiling" ? 90.0 : 0.0,
+      mountingType: mountingType,
+      pitch: mountingType == MountingType.pendant || mountingType == MountingType.ceiling ? 90.0 : 0.0,
       inputPortsData: <PortData>[
         PortData(
           name: "In",
@@ -493,12 +489,7 @@ extension HardwareViewModel on ProjectViewModel {
     );
   }
 
-  HardwareComponent fromProductQueryModel(
-    ProductQueryModel product, {
-    Offset? pos,
-    required LocationModel locationEntity,
-    required bool isFromBuildingPage,
-  }) {
+  HardwareComponent fromProductQueryModel(ProductQueryModel product, {Offset? pos, required LocationModel locationEntity, required bool isFromBuildingPage}) {
     switch (product.type) {
       case ProductType.speaker:
         return Speaker(

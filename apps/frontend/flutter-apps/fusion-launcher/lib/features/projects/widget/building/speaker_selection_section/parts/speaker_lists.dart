@@ -11,7 +11,7 @@ import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/product_data/models/models.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
-import '../view_model/view_model.dart';
+import '../view_model/add_speaker_view_model.dart';
 import 'constant_enums.dart';
 
 class ProductQuerySpeakerList extends StatelessWidget {
@@ -58,6 +58,23 @@ class ProductQuerySpeakerList extends StatelessWidget {
                 },
               ),
             ),
+            const SizedBox(width: 8),
+
+            GestureDetector(
+              onTap: context.read<ProductQueryViewModel>().refresh,
+              child: const Tooltip(
+                message: "Refresh products",
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Icon(
+                    LucideIcons.refreshCw200,
+                    size: 16,
+                    color: Colors.white70,
+                  ),
+                ),
+              ),
+            ),
+
             const SizedBox(width: 8),
             FusionArrowPopup(
               blurAmount: 0,
@@ -129,9 +146,12 @@ class ProductQuerySpeakerList extends StatelessWidget {
               ),
               child: MouseRegion(
                 cursor: SystemMouseCursors.click,
-                child: FusionSvgIcon(
-                  icon: "assets/svg/sort.svg",
-                  color: context.colorScheme.onSurface,
+                child: Tooltip(
+                  message: "Sort products",
+                  child: FusionSvgIcon(
+                    icon: "assets/svg/sort.svg",
+                    color: context.colorScheme.onSurface,
+                  ),
                 ),
               ),
             ),

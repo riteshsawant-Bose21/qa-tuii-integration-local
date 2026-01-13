@@ -1,4 +1,4 @@
-part of 'view_model.dart';
+part of 'add_speaker_view_model.dart';
 
 class SpeakerSelectionViewModelState extends Equatable {
   const SpeakerSelectionViewModelState({
