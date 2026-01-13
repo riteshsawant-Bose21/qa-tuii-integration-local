@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -18,6 +19,7 @@ class ListeningAreasPanel extends StatefulWidget {
 
 class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerProviderStateMixin {
   final Set<String> _expandedListeningAreas = <String>{};
+  final ProjectViewModel _projectViewModel = serviceLocator<ProjectViewModel>();
 
   @override
   void initState() {
@@ -143,8 +145,10 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
               ),
               child: Container(
                 padding: const EdgeInsets.fromLTRB(8, 6, 8, 6),
-                child: InkWell(
+                child: GestureDetector(
                   onTap: () {
+                    print("outside single");
+
                     serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(area.id);
                     serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(null);
                     print("Selected listening area: ${area.name}");
@@ -157,7 +161,7 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                   child: Row(
                     children: <Widget>[
                       // Expand/Collapse icon
-                      InkWell(
+                      GestureDetector(
                         onTap: () => _toggleListeningAreaExpansion(area.id),
                         child: AnimatedRotation(
                           duration: const Duration(milliseconds: 200),
@@ -180,14 +184,37 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                         color: context.colorScheme.onSurface,
                       ),
                       const SizedBox(width: 4),
+
+                      /// Listening area name display
                       Expanded(
-                        child: FusionAppText(
-                          text: "$floorName / ${area.name}",
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
-                            color: (!area.isDrawn) ? context.colorScheme.error : null,
-                          ),
+                        child: Row(
+                          children: <Widget>[
+                            FusionAppText(
+                              text: "$floorName /",
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                fontSize: 11,
+                                fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                                color: (!area.isDrawn) ? context.colorScheme.error : null,
+                              ),
+                            ),
+                            Flexible(
+                              child: TitleTextFieldSwitcher(
+                                value: area.name,
+                                hintText: "Enter listening area name",
+                                style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                                  fontSize: 11,
+                                  fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                                  color: (!area.isDrawn) ? context.colorScheme.error : null,
+                                ),
+                                save: (String value) {
+                                  if (value.trim().isNotEmpty) {
+                                    final ListeningArea updatedLA = area.copyWith(name: value.trim());
+                                    _projectViewModel.updateListeningArea(area: updatedLA);
+                                  }
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                       ),
 
@@ -254,12 +281,12 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
             color: isSelected ? Colors.grey[200] : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: InkWell(
+          child: GestureDetector(
             onTap: () {
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(speaker.id);
               serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
             },
-            borderRadius: BorderRadius.circular(4),
+            // borderRadius: BorderRadius.circular(4),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
@@ -270,14 +297,32 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     height: 14,
                   ),
                   const SizedBox(width: 6),
+
+                  // Expanded(
+                  //   child: FusionAppText(
+                  //     text: speaker.name,
+                  //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  //       fontSize: 11,
+                  //       fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                  //       color: Colors.grey[700],
+                  //     ),
+                  //   ),
+                  // ),
                   Expanded(
-                    child: FusionAppText(
-                      text: speaker.name,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    child: TitleTextFieldSwitcher(
+                      value: speaker.name,
+                      hintText: "Enter speaker name",
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                         color: Colors.grey[700],
                       ),
+                      save: (String value) {
+                        if (value.trim().isNotEmpty) {
+                          final HardwareComponent updated = speaker.copyWith(name: value);
+                          _projectViewModel.updateHardware(hardware: updated);
+                        }
+                      },
                     ),
                   ),
                 ],

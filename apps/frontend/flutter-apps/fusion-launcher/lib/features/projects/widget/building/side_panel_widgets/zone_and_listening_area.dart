@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
@@ -22,6 +23,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   final Set<String> _expandedListeningAreas = <String>{};
   final Set<String> _expandedSubZones = <String>{};
   final Set<String> _expandedCircuitSections = <String>{};
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   @override
   void initState() {
@@ -701,14 +703,24 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                     height: 14,
                   ),
                   const SizedBox(width: 6),
+
                   Expanded(
-                    child: FusionAppText(
-                      text: hardware.name,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    child: TitleTextFieldSwitcher(
+                      value: hardware.name,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                         color: Colors.grey[700],
                       ),
+                      save: (String value) {
+                        if (value.isNotEmpty) {
+                          if (hardware is Source) {
+                            final HardwareComponent updatedHw = hardware.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: updatedHw);
+                          }
+                        }
+                      },
+                      hintText: 'Enter source name',
                     ),
                   ),
                 ],
@@ -1009,14 +1021,31 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       height: 14,
                     ),
                     const SizedBox(width: 6),
+                    // Expanded(
+                    //   child: FusionAppText(
+                    //     text: speaker.name,
+                    //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    //       fontSize: 10,
+                    //       fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                    //       color: Colors.black87,
+                    //     ),
+                    //   ),
+                    // ),
                     Expanded(
-                      child: FusionAppText(
-                        text: speaker.name,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      child: TitleTextFieldSwitcher(
+                        value: speaker.name,
+                        hintText: "Speaker Name",
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           fontSize: 10,
                           fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                           color: Colors.black87,
                         ),
+                        save: (String value) {
+                          if (value.isNotEmpty) {
+                            final HardwareComponent hardware = speaker.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: hardware);
+                          }
+                        },
                       ),
                     ),
                     // Remove from circuit action

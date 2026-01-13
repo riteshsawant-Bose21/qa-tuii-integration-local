@@ -171,6 +171,7 @@ class GpioPage extends StatelessWidget {
                               return <Widget>[
                                 TitleTextFieldSwitcher(
                                   value: gpio.name,
+                                  hintText: "Enter Name",
                                   style: context.textTheme.bodyMedium!,
                                   save: (String value) {
                                     context.read<GpioViewmodel>().updateGpio(gpio.copyWith(name: value));
