@@ -1,7 +1,6 @@
 import 'package:flutter/cupertino.dart' show CupertinoActivityIndicator;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
@@ -565,25 +564,11 @@ class _SpeakerCardState extends State<SpeakerCard> {
                       size: 12,
                       color: context.colorScheme.onSurface,
                     ),
-                    onTap: () async {
-                      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-                      final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
-                      final FloorModel currentFloor = projectViewModel.currentFloor;
-
-                      final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);
-
-                      final Speaker speaker = projectViewModel.fromSpeakerProductModel(
-                        selectedVarient?.cachedImagePath ?? '',
-                        widget.product,
-                        location,
-                        true,
-                        // selectedVarient?.color.color,
-                      );
-
+                    onTap: () {
                       context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
                         context: context,
-                        speaker: speaker,
-                        productName: widget.product.modelName,
+                        cachedImagePath: selectedVarient?.cachedImagePath,
+                        product: widget.product,
                       );
                     },
                   ),

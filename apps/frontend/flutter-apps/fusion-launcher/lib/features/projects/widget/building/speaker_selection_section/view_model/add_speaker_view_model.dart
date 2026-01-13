@@ -289,18 +289,27 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return copy;
   }
 
-  Future<void> addOrReplaceSpeaker({required BuildContext context, required Speaker speaker, required String productName}) async {
+  Future<void> addOrReplaceSpeaker({
+    required BuildContext context,
+    String? cachedImagePath,
+    required SpeakerProduct product,
+  }) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
+    final FloorModel currentFloor = projectViewModel.currentFloor;
 
+    final LocationModel location = LocationModel(floorId: currentFloor.id, listeningAreaId: listeningAreaId);
+
+    final Speaker speaker = projectViewModel.fromSpeakerProductModel(cachedImagePath ?? '', product, location, isFromBuildingPage);
     if (selectedListeningArea == null) return;
 
     List<Speaker> speakerList = getPlacedSpeakers();
     if (speakerList.isEmpty) speakerList = getNonPlacedSpeakers();
-    final String newSku = speaker.speakerSKU;
 
     bool shouldReplace = false;
 
     if (speakerList.isNotEmpty) {
+      final String newSku = speaker.speakerSKU;
       final String existingSku = speakerList.first.speakerSKU;
 
       if (existingSku != newSku) {
@@ -309,7 +318,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
           context,
           listeningAreaName: selectedListeningArea!.name,
           existingSpeakerName: existingName,
-          currentSpeakerName: productName,
+          currentSpeakerName: product.modelName,
         );
         if (isConfirmed != true) return;
         shouldReplace = true;
