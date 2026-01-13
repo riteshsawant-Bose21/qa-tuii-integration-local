@@ -476,7 +476,7 @@ class FloorCanvasPainter extends CustomPainter {
     final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
 
     // UI sizing (zoom-invariant)
-    final double fontSize = (11.0 / zs).clamp(11.0, 16.0);
+    final double fontSize = (22.0 / zs);
     final double padH = 8.0 / zs;
     final double padV = 4.0 / zs;
     final double radius = 4.0 / zs;
