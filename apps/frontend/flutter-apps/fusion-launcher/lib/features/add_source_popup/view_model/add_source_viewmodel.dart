@@ -7,7 +7,7 @@ import '../../../core/models/products_data.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
-part 'state.dart';
+part 'add_source_viewmodel_state.dart';
 
 class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
   AddSourceViewModel() : super(const AddSourceViewModelState(selectedSources: <SourceData?>[null]));

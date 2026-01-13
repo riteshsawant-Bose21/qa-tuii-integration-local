@@ -1,4 +1,4 @@
-part of 'viewmodel.dart';
+part of 'add_source_viewmodel.dart';
 
 class AddSourceViewModelState extends Equatable {
   final SourceSectionType selectedSourceSectionType;
