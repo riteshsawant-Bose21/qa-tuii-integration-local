@@ -111,7 +111,7 @@ extension HardwareViewModel on ProjectViewModel {
         tag: LogTag.project,
         message: "Failed to migrate all speakers to: $e",
       );
-      throwError("Failed to migrate all speakers to: $e");  
+      throwError("Failed to migrate all speakers to: $e");
     }
   }
 
@@ -510,6 +510,7 @@ extension HardwareViewModel on ProjectViewModel {
   }
 
   HardwareComponent fromProductQueryModel(ProductQueryModel product, {Offset? pos, required LocationModel locationEntity, required bool isFromBuildingPage}) {
+    final ListeningArea? listeningArea = (locationEntity.listeningAreaId != null) ? getListeningArea(areaId: locationEntity.listeningAreaId!) : null;
     switch (product.type) {
       case ProductType.speaker:
         return Speaker(
@@ -623,7 +624,7 @@ extension HardwareViewModel on ProjectViewModel {
         return FusionController(
           locationEntity: locationEntity,
           name: product.name,
-          pos: pos,
+          pos: listeningArea?.getCenterPositionOfVertices(),
           assetImagePath: product.image,
           sku: product.sku,
           addedFromBuildingPage: isFromBuildingPage,

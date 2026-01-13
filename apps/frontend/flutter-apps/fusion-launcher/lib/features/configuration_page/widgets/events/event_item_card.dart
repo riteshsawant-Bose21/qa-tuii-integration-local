@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
 
 class EventItemCard extends StatefulWidget {
   final FusionEvent eventData;
+  final ProjectViewModel projectViewModel;
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
@@ -20,6 +23,7 @@ class EventItemCard extends StatefulWidget {
     this.onTap,
     required this.index,
     this.onSwitchChanged,
+    required this.projectViewModel,
   });
 
   @override
@@ -78,11 +82,18 @@ class _EventItemCardState extends State<EventItemCard> {
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
+
               Expanded(
-                child: FusionAppText(
-                  text: widget.eventData.name,
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                child: TitleTextFieldSwitcher(
+                  value: widget.eventData.name,
+                  hintText: "Event name",
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
+                  save: (String value) {
+                    if (value.isNotEmpty) {
+                      final FusionEvent newSnapshot = widget.eventData.copyWith(name: value);
+                      widget.projectViewModel.updateEvent(event: newSnapshot);
+                    }
+                  },
                 ),
               ),
 
