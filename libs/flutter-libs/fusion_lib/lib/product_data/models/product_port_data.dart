@@ -180,6 +180,50 @@ class ProductPortData {
           compatibleTypes: [PortType.speakerOutput],
         ),
       ),
+      ...List.generate((analog?.inputUnbalanced ?? 0), (index) {
+        final type = PortType.audioJackInput;
+        return PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: '3.5mm Jack',
+          type: type,
+          portNumber: index + 1,
+          description: "${(type).description} ${index + 1}",
+          position: PortPosition.bottomLeft,
+
+          compatibleTypes: [PortType.audioJackOutput],
+          // compatibleTypes: switch (type) {
+          //   PortType.analogOutput => [PortType.analogInput],
+          //   PortType.amplifierInput => [PortType.dspAnalogOutput],
+          //   PortType.dspAnalogInput => [PortType.analogOutput],
+          //   PortType.endpointInput => [PortType.analogOutput],
+          //   _ => [],
+          // },
+        );
+      }),
+      ...List.generate(
+        max(usbIoPorts?.inputs ?? 0, usbIoPorts?.outputs ?? 0),
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: 'USB ${index + 1}',
+          type: PortType.usbIn,
+          portNumber: index + 1,
+          description: "${(PortType.usbIn).description} ${index + 1}",
+          position: PortPosition.bottomLeft,
+          compatibleTypes: [PortType.usbOut],
+        ),
+      ),
+      ...List.generate(
+        hdmiIo?.inputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: 'HDMI',
+          type: PortType.hdmiIn,
+          portNumber: index + 1,
+          description: "${(PortType.hdmiIn).description} ${index + 1}",
+          position: PortPosition.bottomLeft,
+          compatibleTypes: [PortType.hdmiOut],
+        ),
+      ),
     ];
   }
 
@@ -220,6 +264,19 @@ class ProductPortData {
           description: "${(PortType.amplifierOutput).description} ${index + 1}",
           position: PortPosition.topRight,
           compatibleTypes: [PortType.circuitInput],
+        ),
+      ),
+
+      ...List.generate(
+        hdmiIo?.outputs ?? 0,
+        (index) => PortData(
+          id: FusionUtils.shortStringUUID(),
+          name: 'HDMI',
+          type: PortType.hdmiOut,
+          portNumber: index + 1,
+          description: "${(PortType.hdmiOut).description} ${index + 1}",
+          position: PortPosition.bottomRight,
+          compatibleTypes: [PortType.hdmiIn],
         ),
       ),
     ];
@@ -292,29 +349,37 @@ class ProductPortData {
   }
 
   List<PortData> get comPorts {
-    final ports = <PortData>[
-      ...List.generate((analog?.inputUnbalanced ?? 0), (index) {
-        final type = PortType.audioJackInput;
-        return PortData(
-          id: FusionUtils.shortStringUUID(),
-          name: '3.5mm Jack',
-          type: type,
-          portNumber: index + 1,
-          description: "${(type).description} ${index + 1}",
-          position: PortPosition.footerLeft,
-
-          compatibleTypes: [PortType.audioJackOutput],
-          // compatibleTypes: switch (type) {
-          //   PortType.analogOutput => [PortType.analogInput],
-          //   PortType.amplifierInput => [PortType.dspAnalogOutput],
-          //   PortType.dspAnalogInput => [PortType.analogOutput],
-          //   PortType.endpointInput => [PortType.analogOutput],
-          //   _ => [],
-          // },
-        );
-      }),
-    ];
-
+    final ports = <PortData>[];
+    // if (hdmiIo != null) {
+    //   ports.addAll(
+    //     List.generate(
+    //       hdmiIo?.inputs ?? 0,
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: 'HDMI',
+    //         type: PortType.hdmiIn,
+    //         portNumber: ports.length + index + 1,
+    //         description: "${(PortType.hdmiIn).description} ${index + 1}",
+    //         position: PortPosition.footerLeft,
+    //         compatibleTypes: [PortType.hdmiOut],
+    //       ),
+    //     ),
+    //   );
+    //   ports.addAll(
+    //     List.generate(
+    //       hdmiIo?.outputs ?? 0,
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: 'HDMI',
+    //         type: PortType.hdmiOut,
+    //         portNumber: ports.length + index + 1,
+    //         description: "${(PortType.hdmiOut).description} ${index + 1}",
+    //         position: PortPosition.footerLeft,
+    //         compatibleTypes: [PortType.hdmiIn],
+    //       ),
+    //     ),
+    //   );
+    // }
     if (bluetoothIo != null) {
       ports.addAll(
         List.generate(
@@ -323,7 +388,7 @@ class ProductPortData {
             id: FusionUtils.shortStringUUID(),
             name: 'BT${index + 1}',
             type: PortType.bleIn,
-            portNumber: index + 1,
+            portNumber: ports.length + index + 1,
             description: "${(PortType.bleIn).description} ${index + 1}",
             position: PortPosition.footerLeft,
             compatibleTypes: [PortType.bleOut],
@@ -331,66 +396,67 @@ class ProductPortData {
         ),
       );
     }
-    if (hdmiIo != null) {
+
+    if (gpio != null) {
       ports.addAll(
         List.generate(
-          hdmiIo?.inputs ?? 0,
+          gpio?.totalGpio ?? 0,
           (index) => PortData(
             id: FusionUtils.shortStringUUID(),
-            name: 'HDMI',
-            type: PortType.hdmiIn,
-            portNumber: index + 1,
-            description: "${(PortType.hdmiIn).description} ${index + 1}",
-            position: PortPosition.footerLeft,
-            compatibleTypes: [PortType.hdmiOut],
-          ),
-        ),
-      );
-      ports.addAll(
-        List.generate(
-          hdmiIo?.outputs ?? 0,
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: 'HDMI',
-            type: PortType.hdmiOut,
-            portNumber: index + 1,
-            description: "${(PortType.hdmiOut).description} ${index + 1}",
-            position: PortPosition.footerLeft,
-            compatibleTypes: [PortType.hdmiIn],
-          ),
-        ),
-      );
-    }
-    if (usbIoPorts != null) {
-      ports.addAll(
-        List.generate(
-          max(usbIoPorts?.inputs ?? 0, usbIoPorts?.outputs ?? 0),
-          (index) => PortData(
-            id: FusionUtils.shortStringUUID(),
-            name: 'USB ${index + 1}',
-            type: PortType.usbIn,
-            portNumber: index + 1,
-            description: "${(PortType.usbIn).description} ${index + 1}",
-            position: PortPosition.footerLeft,
-            compatibleTypes: [PortType.usbOut],
+            name: '${index + 1}',
+            type: PortType.gpioInput,
+            portNumber: ports.length + index + 1,
+            description: "GPIO ${index + 1}",
+            position: PortPosition.footerRight,
+            compatibleTypes: [PortType.gpioOutput],
           ),
         ),
       );
       // ports.addAll(
       //   List.generate(
-      //     usbIoPorts?.outputs ?? 0,
+      //     gpio?.assignableOutputs ?? 0,
       //     (index) => PortData(
       //       id: FusionUtils.shortStringUUID(),
-      //       name: 'USB ${index + 1}',
-      //       type: PortType.usbOut,
-      //       portNumber: index + 1,
-      //       description: "${(PortType.usbOut).description} ${index + 1}",
-      //       position: PortPosition.footerLeft,
-      //       compatibleTypes: [PortType.usbIn],
+      //       name: 'GPIO OUT ${index + 1}',
+      //       type: PortType.gpioOutput,
+      //       portNumber: ports.length + index + 1,
+      //       description: "${(PortType.gpioOutput).description} ${index + 1}",
+      //       position: PortPosition.bottomRight,
+      //       compatibleTypes: [PortType.gpioInput],
       //     ),
       //   ),
       // );
     }
+    // if (usbIoPorts != null) {
+    //   ports.addAll(
+    //     List.generate(
+    //       max(usbIoPorts?.inputs ?? 0, usbIoPorts?.outputs ?? 0),
+    //       (index) => PortData(
+    //         id: FusionUtils.shortStringUUID(),
+    //         name: 'USB ${index + 1}',
+    //         type: PortType.usbIn,
+    //         portNumber: index + 1,
+    //         description: "${(PortType.usbIn).description} ${index + 1}",
+    //         position: PortPosition.footerLeft,
+    //         compatibleTypes: [PortType.usbOut],
+    //       ),
+    //     ),
+    //   );
+    //   // ports.addAll(
+    //   //   List.generate(
+    //   //     usbIoPorts?.outputs ?? 0,
+    //   //     (index) => PortData(
+    //   //       id: FusionUtils.shortStringUUID(),
+    //   //       name: 'USB ${index + 1}',
+    //   //       type: PortType.usbOut,
+    //   //       portNumber: index + 1,
+    //   //       description: "${(PortType.usbOut).description} ${index + 1}",
+    //   //       position: PortPosition.footerLeft,
+    //   //       compatibleTypes: [PortType.usbIn],
+    //   //     ),
+    //   //   ),
+    //   // );
+    // }
     return ports;
   }
 }

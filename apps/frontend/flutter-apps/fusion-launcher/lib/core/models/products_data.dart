@@ -203,7 +203,7 @@ class SourceData extends DeviceComponent {
       name: "Sat/Cable - HDMI",
       assetPath: "assets/images/products/hdmi.png",
       type: SourceType.media,
-      connectionType: SourceConnectionType.analogInput,
+      connectionType: SourceConnectionType.hdmi,
       price: 100.0,
     ),
     SourceData(

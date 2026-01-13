@@ -337,17 +337,17 @@ class AddSourcePopup extends StatelessWidget {
                           ),
                           const SizedBox(height: 20),
 
-                          BuildRowPropertyWidget<AddSourceConnectionType>(
+                          BuildRowPropertyWidget<SourceConnectionType>(
                             label: "Connection",
                             value: state.selectedConnectionType,
                             options: state.selectedSourceSectionType.connectionTypes,
-                            labelBuilder: (AddSourceConnectionType option) {
+                            labelBuilder: (SourceConnectionType option) {
                               return FusionAppText(
                                 text: option.displayName,
                                 style: Theme.of(context).textTheme.labelMedium,
                               );
                             },
-                            onOptionSelected: (int value, AddSourceConnectionType option) {
+                            onOptionSelected: (int value, SourceConnectionType option) {
                               addSourceViewModel.setSelectedConnectionType(option);
                             },
                           ),
