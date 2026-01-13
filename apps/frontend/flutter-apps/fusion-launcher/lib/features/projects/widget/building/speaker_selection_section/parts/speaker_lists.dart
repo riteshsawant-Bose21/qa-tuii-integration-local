@@ -224,7 +224,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                             itemBuilder: (BuildContext context, int index) {
                               final SpeakerProduct product = items[index];
 
-                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.speakerSKU == product.productId.toString());
+                              final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.productId);
 
                               return SpeakerCard(
                                 product: product,

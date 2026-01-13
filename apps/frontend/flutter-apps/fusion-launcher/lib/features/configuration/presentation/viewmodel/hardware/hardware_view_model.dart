@@ -95,6 +95,26 @@ extension HardwareViewModel on ProjectViewModel {
     }
   }
 
+  void migrateAllSpeakersTo({required Speaker speaker, required String targetListeningAreaId, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: targetListeningAreaId);
+
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(
+        tag: LogTag.project,
+        message: "Failed to migrate all speakers to: $e",
+      );
+      throwError("Failed to migrate all speakers to: $e");  
+    }
+  }
+
   void removeHardware({required String hardwareId, bool autoSave = true}) {
     try {
       if (autoSave) {

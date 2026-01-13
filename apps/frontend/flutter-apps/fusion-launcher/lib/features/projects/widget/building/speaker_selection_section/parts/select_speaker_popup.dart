@@ -1,6 +1,8 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../view_model/add_speaker_view_model.dart';
@@ -24,6 +26,13 @@ class SpeakerQueryPopup extends StatefulWidget {
 
 class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
   final TextEditingController searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+    projectViewModel.setShouldPlaceNonPlacedSpeakers(false);
+  }
 
   @override
   void dispose() {
