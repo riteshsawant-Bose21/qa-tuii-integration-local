@@ -60,19 +60,28 @@ class ProductQuerySpeakerList extends StatelessWidget {
             ),
             const SizedBox(width: 8),
 
-            GestureDetector(
-              onTap: context.read<ProductQueryViewModel>().refresh,
-              child: const Tooltip(
-                message: "Refresh products",
-                child: MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Icon(
-                    LucideIcons.refreshCw200,
-                    size: 16,
-                    color: Colors.white70,
-                  ),
-                ),
-              ),
+            BlocBuilder<ProductQueryViewModel, ProductQueryViewModelState>(
+              buildWhen: (ProductQueryViewModelState previous, ProductQueryViewModelState current) => previous.isRefreshing != current.isRefreshing,
+              builder: (BuildContext context, ProductQueryViewModelState productQueryViewModelState) {
+                if (productQueryViewModelState.isRefreshing) {
+                  return const CupertinoActivityIndicator(radius: 8);
+                } else {
+                  return GestureDetector(
+                    onTap: context.read<ProductQueryViewModel>().refresh,
+                    child: const Tooltip(
+                      message: "Refresh products",
+                      child: MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: Icon(
+                          LucideIcons.refreshCw200,
+                          size: 16,
+                          color: Colors.white70,
+                        ),
+                      ),
+                    ),
+                  );
+                }
+              },
             ),
 
             const SizedBox(width: 8),
@@ -157,11 +166,9 @@ class ProductQuerySpeakerList extends StatelessWidget {
             ),
           ],
         ),
+
         const SizedBox(height: 10),
-        const Divider(
-          thickness: 0.5,
-          height: 0,
-        ),
+        const Divider(thickness: 0.5, height: 0),
 
         BlocBuilder<ProjectViewModel, ProjectViewModelState>(
           builder: (BuildContext context, ProjectViewModelState projectViewModelState) {

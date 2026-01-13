@@ -16,11 +16,13 @@ class ProductQueryViewModelState extends Equatable {
   final Products? products;
   final Map<int, List<ProductPriceModel>> prices; // productId: list of prices
   final bool isLoading;
+  final bool isRefreshing;
   final String errorMessage;
 
   const ProductQueryViewModelState({
     this.products,
     this.isLoading = false,
+    this.isRefreshing = false,
     this.errorMessage = '',
     this.prices = const <int, List<ProductPriceModel>>{},
   });
@@ -31,19 +33,21 @@ class ProductQueryViewModelState extends Equatable {
   ProductQueryViewModelState copyWith({
     Products? products,
     bool? isLoading,
+    bool? isRefreshing,
     String? errorMessage,
     Map<int, List<ProductPriceModel>>? prices,
   }) {
     return ProductQueryViewModelState(
       products: products ?? this.products,
       isLoading: isLoading ?? this.isLoading,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
       errorMessage: errorMessage ?? this.errorMessage,
       prices: prices ?? this.prices,
     );
   }
 
   @override
-  List<Object?> get props => <Object?>[products, isLoading, errorMessage, prices];
+  List<Object?> get props => <Object?>[products, isLoading, isRefreshing, errorMessage, prices];
 }
 
 class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
@@ -54,9 +58,11 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
 
   Future<void> loadProducts({int attempt = 1, bool refresh = false}) async {
     try {
-      await (refresh ? _productsApi.refresh() : _productsApi.initialize());
+      if (state.isRefreshing) return;
 
-      emit(state.copyWith(products: _productsApi, isLoading: false));
+      if (refresh) emit(state.copyWith(isRefreshing: true));
+      await (refresh ? _productsApi.refresh() : _productsApi.initialize());
+      emit(state.copyWith(products: _productsApi, isLoading: false, isRefreshing: false));
 
       for (SpeakerProduct element in speakers) {
         _fetchProductPrices(element.productId);
