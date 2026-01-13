@@ -147,6 +147,10 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
             radius: WiringViewConstants.portRadius,
           ),
         );
+        canvas.drawPath(
+          portPath,
+          hasConnection ? connectedPortPaint : freePortPaint,
+        );
 
         /// Port Label
         final TextPainter tp = TextPainter(
@@ -169,10 +173,6 @@ class DeviceSchematicComponentPainter extends ComponentDataPainter {
           ),
         );
       }
-      canvas.drawPath(
-        portPath,
-        hasConnection ? connectedPortPaint : freePortPaint,
-      );
     }
 
     /// --------------------------------------------------------------------------------------------------------------------------

@@ -70,9 +70,11 @@ class _SchedulingPageState extends State<SchedulingPage> {
                 // FusionOutlinedButton(label: "Share", onTap: () {}),
                 BlocBuilder<SchedulerViewmodel, SchedulerState>(
                   builder: (BuildContext context, SchedulerState state) {
-                    return FusionButton(
-                      label: "+",
-                      width: 36,
+                    return InkWell(
+                      child: const Icon(
+                        Icons.add,
+                        color: Colors.grey,
+                      ),
                       onTap: () {
                         SchedulerForm.show(
                           context,
@@ -82,6 +84,7 @@ class _SchedulingPageState extends State<SchedulingPage> {
                     );
                   },
                 ),
+                const SizedBox(width: 10),
               ],
             ),
           ),
