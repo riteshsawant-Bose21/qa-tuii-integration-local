@@ -417,7 +417,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 ? ListeningAreasPanel(
                   floorCanvasController: floorCanvasController,
                 )
-                : const ZoneAndListeningAreaPanel(),
+                : ZoneAndListeningAreaPanel(
+                  floorCanvasController: floorCanvasController,
+                ),
       ),
       // DockItemConfig(
       //   id: "8",

@@ -3,12 +3,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
+import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
-  const ZoneAndListeningAreaPanel({super.key});
+  final FloorCanvasController floorCanvasController;
+
+  const ZoneAndListeningAreaPanel({super.key, required this.floorCanvasController});
 
   @override
   ZoneAndListeningAreaPanelState createState() => ZoneAndListeningAreaPanelState();
@@ -266,6 +269,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
                     // Show individual circuits directly in this zone ONLY if there are no subzones
                     if (subZones.isEmpty) ..._buildZoneCircuits(zone),
+
+                    _buildListeningAreaSectionForZone(zoneId: zone.id),
                     const SizedBox(height: 2),
                   ],
                 ),
@@ -624,6 +629,94 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildListeningAreaSectionForZone({String? zoneId, String? subZoneId}) {
+    if (zoneId == null && subZoneId == null) {
+      return const SizedBox.shrink();
+    }
+    final List<ListeningArea> listeningAreas =
+        subZoneId != null
+            ? serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZoneId)
+            : serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+              zoneId: zoneId!,
+            );
+
+    final List<HardwareComponent> allHardware = <HardwareComponent>[];
+
+    for (ListeningArea area in listeningAreas) {
+      final List<HardwareComponent> hardwareForArea =
+          serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id).where((HardwareComponent hw) => hw is! Speaker).toList();
+      allHardware.addAll(hardwareForArea);
+    }
+
+    if (allHardware.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        // Expandable Speakers Section
+        if (allHardware.isNotEmpty) ...<Widget>[
+          ...allHardware.map(
+            (HardwareComponent hardware) {
+              final int index = allHardware.indexOf(hardware);
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_hardware_$index"),
+                child: _buildHardwareItem(hardware),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildHardwareItem(HardwareComponent hardware) {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == hardware.id;
+
+        return Container(
+          margin: const EdgeInsets.only(left: 24, top: 2),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.grey[200] : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: InkWell(
+            onTap: () {
+              serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(hardware.id);
+              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+            },
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: <Widget>[
+                  Image.asset(
+                    hardware.assetImagePath,
+                    width: 14,
+                    height: 14,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: FusionAppText(
+                      text: hardware.name,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -1393,6 +1486,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                   children: <Widget>[
                     // Show individual circuits in subzones
                     ..._buildSubZoneCircuits(subZone),
+
+                    Container(
+                      margin: const EdgeInsets.only(left: 24, top: 1, right: 12, bottom: 1),
+                      child: _buildListeningAreaSectionForZone(subZoneId: subZone.id),
+                    ),
                   ],
                 ),
                 secondChild: const SizedBox.shrink(),
