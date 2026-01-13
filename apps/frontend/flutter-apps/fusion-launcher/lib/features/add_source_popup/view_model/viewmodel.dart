@@ -39,7 +39,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
 
   void setSelectedListeningArea(ListeningArea listeningArea) => emit(state.copyWith(selectedListeningArea: listeningArea));
 
-  void setSelectedConnectionType(AddSourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
+  void setSelectedConnectionType(SourceConnectionType type) => emit(state.copyWith(selectedConnectionType: type));
   void setSignalType(SignalType signalType) => emit(state.copyWith(selectedSignalType: signalType));
   void setSelectedSourceName(String sourceName) => emit(state.copyWith(selectedSourceName: sourceName));
 
@@ -123,13 +123,14 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (selectedItem == null) return;
 
     /// Sources [onTapAddDevice]
-    final SourceConnectionType connectType = SourceData.getSourceConnectionType(selectedItem.id);
+    final SourceConnectionType connectType = state.selectedConnectionType ?? SourceData.getSourceConnectionType(selectedItem.id);
     final PortType portType = switch (connectType) {
       SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
       SourceConnectionType.bluetooth => PortType.bleOut,
       SourceConnectionType.usb => PortType.usbOut,
       SourceConnectionType.audioJack => PortType.audioJackOutput,
       SourceConnectionType.xlr => PortType.xlrOutput,
+      SourceConnectionType.hdmi => PortType.hdmiOut,
     };
 
     final Source source = Source(
@@ -157,6 +158,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
           SourceConnectionType.usb => <PortType>[PortType.usbIn],
           SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
           SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+          SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
         },
         portPosition: PortPosition.topLeft,
       ),

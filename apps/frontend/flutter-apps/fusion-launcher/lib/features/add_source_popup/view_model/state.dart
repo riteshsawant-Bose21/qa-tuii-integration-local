@@ -6,7 +6,7 @@ class AddSourceViewModelState extends Equatable {
   final SignalType selectedSignalType;
   final List<SourceData?> selectedSources;
   final ListeningArea? selectedListeningArea;
-  final AddSourceConnectionType? selectedConnectionType;
+  final SourceConnectionType? selectedConnectionType;
   final String? selectedSourceName;
 
   const AddSourceViewModelState({
@@ -25,7 +25,7 @@ class AddSourceViewModelState extends Equatable {
     SignalType? selectedSignalType,
     List<SourceData?>? selectedSources,
     ListeningArea? selectedListeningArea,
-    AddSourceConnectionType? selectedConnectionType,
+    SourceConnectionType? selectedConnectionType,
     String? selectedSourceName,
   }) {
     return AddSourceViewModelState(
@@ -89,36 +89,37 @@ enum SourceSectionType {
     }
   }
 
-  List<AddSourceConnectionType> get connectionTypes {
+  List<SourceConnectionType> get connectionTypes {
     switch (this) {
       case SourceSectionType.microPhone:
-        return <AddSourceConnectionType>[
-          AddSourceConnectionType.wired,
-          AddSourceConnectionType.xlrpal,
-          AddSourceConnectionType.ethernet,
+        return <SourceConnectionType>[
+          SourceConnectionType.analogInput,
+          SourceConnectionType.xlr,
+          // SourceConnectionType.ethernet,
         ];
       case SourceSectionType.mediaSources:
-        return <AddSourceConnectionType>[
-          AddSourceConnectionType.usb,
-          AddSourceConnectionType.hdmi,
-          AddSourceConnectionType.bluetooth,
-          AddSourceConnectionType.ethernet,
-          AddSourceConnectionType.wired,
-          AddSourceConnectionType.rca,
+        return <SourceConnectionType>[
+          SourceConnectionType.usb,
+          SourceConnectionType.hdmi,
+          SourceConnectionType.bluetooth,
+          SourceConnectionType.audioJack,
+          // SourceConnectionType.ethernet,
+          // SourceConnectionType.wired,
+          // SourceConnectionType.rca,
         ];
     }
   }
 }
 
-enum AddSourceConnectionType {
-  usb("USB"),
-  hdmi("HDMI"),
-  bluetooth("Bluetooth"),
-  ethernet("Ethernet"),
-  wired("Wired"),
-  xlrpal("XLRPAL"),
-  rca("RCA");
+// enum SourceConnectionType {
+//   usb("USB"),
+//   hdmi("HDMI"),
+//   bluetooth("Bluetooth"),
+//   ethernet("Ethernet"),
+//   wired("Wired"),
+//   xlrpal("XLRPAL"),
+//   rca("RCA");
 
-  const AddSourceConnectionType(this.displayName);
-  final String displayName;
-}
+//   const AddSourceConnectionType(this.displayName);
+//   final String displayName;
+// }
