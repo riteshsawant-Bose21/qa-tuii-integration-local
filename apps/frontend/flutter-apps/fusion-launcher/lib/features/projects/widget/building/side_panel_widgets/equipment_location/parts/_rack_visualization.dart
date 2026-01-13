@@ -21,7 +21,13 @@ class _EQLRackPreview extends StatelessWidget {
         child: BlocBuilder<EquipmentLocationViewmodel, EquipmentLocationState>(
           builder: (BuildContext context, EquipmentLocationState? state) {
             if (state is! EquipmentLocationLoaded) {
-              return const SizedBox.shrink();
+              return BlocBuilder<EqlProductsVm, EQLProductsState>(
+                builder: (BuildContext context, EQLProductsState eqlProductsState) {
+                  return const Center(
+                    child: FusionAppText(text: "Please select a equipment location to add devices."),
+                  );
+                },
+              );
             }
             final int length = max(10, state.hardwares.length);
             final double height = 32.0;
