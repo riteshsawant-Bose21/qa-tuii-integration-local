@@ -47,13 +47,26 @@ extension EquipLocationService on ProjectService {
       hardwareId,
     );
     if (currentEquipLocation != null) {
-      relationships.unlink(RelationshipType.equipLocation, equipLocationId, hardwareId);
+      relationships.unlink(RelationshipType.equipLocation, currentEquipLocation, hardwareId);
     }
     relationships.link(
       RelationshipType.equipLocation,
       equipLocationId,
       hardwareId,
     );
+  }
+
+  EquipLocation? getEquipLocationForHardware(String hardwareId) {
+    final equipLocationId = relationships.getParent(
+      RelationshipType.equipLocation,
+      hardwareId,
+    );
+    if (equipLocationId == null) {
+      return null;
+    }
+    final equipLocation = equipLocations.get(equipLocationId);
+
+    return equipLocation;
   }
 
   List<HardwareComponent> getHardwareForEquipLocation(String equipLocationId) {
