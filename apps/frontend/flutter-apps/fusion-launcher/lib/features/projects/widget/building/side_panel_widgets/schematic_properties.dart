@@ -944,8 +944,10 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                       final bool isAvailable = availableListeningAreas.any((ListeningArea availableArea) => availableArea.id == area.id);
                       final bool isSelected = selectedListeningAreaIDs.contains(area.id);
 
+                      final bool isAvailableToSelectOrDeselect = isAvailable || zoneName == null;
+
                       return InkWell(
-                        onTap: isSelected || isAvailable ? () => onListeningAreaTap(area.id) : null,
+                        onTap: isSelected || isAvailableToSelectOrDeselect ? () => onListeningAreaTap(area.id) : null,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
                           child: Row(
@@ -955,9 +957,9 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 width: 14,
                                 height: 4,
                                 child: Checkbox(
-                                  value: !isAvailable ? true : isSelected,
+                                  value: !isAvailableToSelectOrDeselect ? true : isSelected,
                                   activeColor: Theme.of(context).colorScheme.greyDark,
-                                  onChanged: !isAvailable ? null : (_) => onListeningAreaTap(area.id),
+                                  onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
                                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
                                   shape: const RoundedRectangleBorder(
@@ -975,7 +977,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                     fontWeight: FontWeight.w500,
                                     fontSize: 10,
-                                    color: !isAvailable ? Colors.grey[400] : Theme.of(context).textTheme.bodySmall?.color,
+                                    color: !isAvailableToSelectOrDeselect ? Colors.grey[400] : Theme.of(context).textTheme.bodySmall?.color,
                                   ),
                                 ),
                               ),
@@ -983,7 +985,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 text: zoneName ?? "No zone",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 9,
-                                  color: !isAvailable ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                                  color: !isAvailableToSelectOrDeselect ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
