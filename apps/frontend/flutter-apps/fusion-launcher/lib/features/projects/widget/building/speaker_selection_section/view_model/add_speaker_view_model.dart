@@ -47,7 +47,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
       if (listeningArea != null) return listeningArea;
     }
 
-    final List<ListeningArea> allListeningAreas = projectViewModel.getAllListeningAreas();
+    final List<ListeningArea> allListeningAreas = getListeningAreas();
     for (final ListeningArea la in allListeningAreas) {
       if (la.id == state.selectedListeningAreaForDropDown?.id) {
         return la;
