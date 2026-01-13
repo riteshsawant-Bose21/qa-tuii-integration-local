@@ -295,6 +295,25 @@ extension ZoneService on ProjectService {
     // relationships.reOrder(RelationshipType.prioritySources, zoneId, priorityOrder);
   }
 
+  void checkAndRemoveSourceFromZonePrioritySources({
+    required String sourceId,
+  }) {
+    final allZones = zones.getAll();
+
+    for (final zone in allZones) {
+      final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zone.id).toList();
+
+      for (final priorityId in prioritySources) {
+        final priorityData = prioritySourceData.get(priorityId);
+        if (priorityData?.sourceId == sourceId) {
+          relationships.unlink(RelationshipType.zonePriorities, zone.id, priorityId);
+          prioritySourceData.remove(priorityId);
+          break;
+        }
+      }
+    }
+  }
+
   void reOrderPrioritySourcesInZone({
     required String zoneId,
     required List<String> newOrder,

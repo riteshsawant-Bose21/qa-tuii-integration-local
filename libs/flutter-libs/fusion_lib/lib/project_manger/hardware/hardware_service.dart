@@ -207,6 +207,8 @@ extension HardwareService on ProjectService {
       for (final actionId in sceneActionIdsCopy) {
         removeSceneAction(actionId);
       }
+
+      checkAndRemoveSourceFromZonePrioritySources(sourceId: hardwareId);
     }
 
     final wireConnections = relationships.getChildren(RelationshipType.wireConnection, hardwareId);
