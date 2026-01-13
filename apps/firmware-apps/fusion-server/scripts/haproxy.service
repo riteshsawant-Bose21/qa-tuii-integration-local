@@ -1,8 +1,7 @@
 # Fusion haproxy service file
 [Unit]
 Description=HAProxy Load Balancer
-Wants=network-online.target
-After=network-online.target
+After=network.target
 ConditionKernelCommandLine=service_profile=prod
 
 [Service]

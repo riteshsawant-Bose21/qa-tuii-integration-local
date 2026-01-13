@@ -85,7 +85,7 @@
         {
             "name": "fusion_connect",
             "property_settings": [
-                { "name": "period_ms", "value": 1000 }
+                { "name": "period_ms", "value": 100 }
             ],
             "blocks": [
                 {
@@ -93,28 +93,6 @@
                     "module": "fusion_connect_client",
                     "parameters": [
                         { "name": "audio_streams_update" }
-                    ]
-                }
-            ]
-        },
-        {
-            "name": "amp_control",
-            "property_settings": [
-                { "name": "period_ms", "value": 100 }
-            ],
-            "blocks": [
-                {
-                    "name": "amp_control",
-                    "module": "bdif_client",
-                    "property_settings": [
-                        { 
-                            "name": "num_gain_chs",
-                            "value": 4
-                        },
-                        { 
-                            "name": "num_php_chs",
-                            "value": 4
-                        }
                     ]
                 }
             ]

@@ -183,14 +183,14 @@ const struct base_device bd_fusion_fm6 = {
             .type = EP_GPIO_TYPE_PHYS,
             .is_irq = true,
             .num = 6, // GPIO1_IO6
-            .trigger_type = IRQ_TYPE_EDGE_FALLING
+            .trigger_type = IRQ_TYPE_LEVEL_LOW
         },
         {
             .name = "gpio_tcal6408_int",
             .type = EP_GPIO_TYPE_PHYS,
             .is_irq = true,
             .num = 14, // GPIO1_IO14
-            .trigger_type = IRQ_TYPE_EDGE_FALLING
+            .trigger_type = IRQ_TYPE_LEVEL_LOW
         },
         {
             .name = "gpio_uv_warn",
@@ -235,7 +235,7 @@ const struct base_device bd_fusion_fm6 = {
                     .name = "gpio_tca9544_int",
                     .type = EP_GPIO_TYPE_PHYS,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING
+                    .trigger_type = IRQ_TYPE_LEVEL_LOW
                 }
             }
         },
@@ -276,7 +276,7 @@ const struct base_device bd_fusion_fm6 = {
                     .name = "gpio_tcal6408_int",
                     .type = EP_GPIO_TYPE_PHYS,
                     .is_irq = true,
-                    .trigger_type = IRQ_TYPE_EDGE_FALLING
+                    .trigger_type = IRQ_TYPE_LEVEL_LOW
                 }
             }
         }
@@ -1063,7 +1063,7 @@ const struct base_device bd_fusion_fm8y = {
         .sn = "tbd",
         .type = BD_TYPE_FUSION_FM8Y
     },
-    .num_gpios = 4,
+    .num_gpios = 6,
     .gpios = (struct endpoint_gpio[]) {
         {
             .name = "gpio_a_mute_out",
@@ -1077,6 +1077,18 @@ const struct base_device bd_fusion_fm8y = {
             .is_irq = true,
             .num = 6, // GPIO1_IO6
             .trigger_type = IRQ_TYPE_EDGE_FALLING
+        },
+        {
+            .name = "gpio_ui_rstn",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 7 // GPIO1_IO7
+        },
+        {
+            .name = "gpio_ui_boot0",
+            .type = EP_GPIO_TYPE_PHYS,
+            .export = true,
+            .num = 8 // GPIO1_IO8
         },
         {
             .name = "gpio_tcal6408_int",

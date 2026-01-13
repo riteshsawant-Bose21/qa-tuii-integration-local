@@ -52,7 +52,6 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_NONE = 0,
     FUSION_CN_CTRL_CMD_START_MANAGER,
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
-    FUSION_CN_CTRL_CMD_SET_PTP_SYNC,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
     FUSION_CN_CTRL_CMD_GET_METRICS
@@ -61,7 +60,6 @@ enum fusion_cn_ctrl_cmd {
 enum mgr_start_errno {
     MGR_START_OK = 0,
     MGR_START_ERRNO_RUNNING,
-    MGR_START_ERRNO_PTP,
     MGR_START_ERRNO_MODE
 };
 
@@ -334,15 +332,6 @@ public:
 //     return reply.err == 0;
 // }
 
-static bool nl_set_ptp_sync_raw(NetlinkClient& c, bool sync) {
-    fusion_cn_ctrl_msg reply{};
-    uint8_t v = sync ? 1 : 0;
-    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_PTP_SYNC, &v, sizeof(v), &reply)) return false;
-    if (reply.err != 0) SPDLOG_ERROR("SET_PTP_SYNC({}) err={}", (int)sync, reply.err);
-    if (reply.data) free(reply.data);
-    return reply.err == 0;
-}
-
 static bool get_all_metrics(NetlinkClient &client,
                             std::vector<fusion_cn_metrics_record> *out)
 {
@@ -533,7 +522,6 @@ public:
 
 private:
     NetlinkClient client;
-    uint8_t ptp_synchronized;
     bool mgr_started;
     std::string device_id;
     std::string system_ip;
@@ -558,7 +546,7 @@ private:
 MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
-    : bosepro::Module(configuration), ptp_synchronized(0), mgr_started(false), device_id(""),
+    : bosepro::Module(configuration), mgr_started(false), device_id(""),
       network_interface("lan1"), sap_announcer(get_system_ip()), announce_counter(0) {
     system_ip = get_system_ip();
     if (system_ip.empty()) {
@@ -993,32 +981,21 @@ void FusionConnectClient::audio_streams_update_func() {
 }
 
 void FusionConnectClient::process() { 
-    if (!ptp_synchronized) {
-        if (!nl_set_ptp_sync_raw(client, true)) {
-            SPDLOG_ERROR("Failed to set PTP sync");
-        } else {
-            SPDLOG_DEBUG("Successfully set PTP sync");
-            ptp_synchronized = 1;
-        }
-    }
-
-    if (ptp_synchronized && !mgr_started) {
+    if (!mgr_started) {
         fusion_cn_ctrl_msg reply{};
         if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
-            if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
+            if (reply.err == MGR_START_OK) {
                 SPDLOG_DEBUG("Successfully started FC manager");
                 mgr_started = true;
-            } else if (reply.err == -MGR_START_ERRNO_PTP) {
-                ptp_synchronized = 0;
-                if (reply.data) free(reply.data);
-                return;
+            } else {
+                SPDLOG_ERROR("Failed to start FC manager: err={}", reply.err);
             }
         }
         if (reply.data) free(reply.data);
+
+        return;
     }
-
-    if (!(ptp_synchronized && mgr_started)) return;
-
+    
     // --- Fusion Connect ---
     for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end();) {
         const std::string& name = it->first;

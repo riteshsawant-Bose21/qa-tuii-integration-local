@@ -34,7 +34,7 @@
         {
             "name": "fusion_connect",
             "property_settings": [
-                { "name": "period_ms", "value": 1000 }
+                { "name": "period_ms", "value": 100 }
             ],
             "blocks": [
                 {

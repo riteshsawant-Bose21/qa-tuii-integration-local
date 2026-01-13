@@ -1,8 +1,7 @@
 # Fusion fusion-server service file
 [Unit]
 Description=Fusion Server
-After=network-online.target
-Wants=network-online.target
+After=network.target
 ConditionKernelCommandLine=service_profile=prod
 
 [Service]

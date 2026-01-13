@@ -379,28 +379,39 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
     u8 buf[1];
     int ret;
     u8 irq_mask;
+    const int max_iters = 8;
 
     msg.addr = client->addr;
     msg.flags = I2C_SMBUS_READ;
     msg.len = 1;
     msg.buf = buf;
 
-    ret = i2c_transfer(client->adapter, &msg, 1);
-    if (ret < 0) {
-        printk(KERN_ERR "tca9544_handle_irq: failed transfer\n");
-        return ret;
-    }
+    for (int iter = 0; iter < max_iters; ++iter) {
+        ret = i2c_transfer(client->adapter, &msg, 1);
+        if (ret < 0) {
+            printk(KERN_ERR "tca9544_handle_irq: failed transfer\n");
+            return ret;
+        }
 
-    // last 4 bits are irq mask
-    irq_mask = *buf >> 4;
-    for (int i = 0; i < tca9544->num_gpios; ++i) {
-        if ((irq_mask >> i) & 1) {
-            if (tca9544->gpios[i].is_irq && tca9544->gpios[i].num != 0) {
-                if (tca9544->gpios[i].linked_gpio == NULL) {
-                    continue;
+        // last 4 bits are irq mask
+        irq_mask = *buf >> 4;
+        if (!irq_mask) {
+            break;
+        }
+
+        for (int i = 0; i < tca9544->num_gpios; ++i) {
+            if ((irq_mask >> i) & 1) {
+                if (tca9544->gpios[i].is_irq && tca9544->gpios[i].num != 0) {
+                    if (tca9544->gpios[i].linked_gpio == NULL) {
+                        continue;
+                    }
+                    handle_irq(tca9544->gpios[i].linked_gpio);
                 }
-                handle_irq(tca9544->gpios[i].linked_gpio);
             }
+        }
+
+        if (iter == max_iters - 1 && irq_mask) {
+            printk(KERN_ERR "tca9544_handle_irq: irq storm (mask=0x%02x)\n", irq_mask);
         }
     }
 
@@ -416,6 +427,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     u8 rd_buf[1];
     int ret;
     u8 irq_mask;
+    const int max_iters = 8;
 
     wr_buf[0] = TCAL6408_REG_INT_STATUS_REG;
     msgs[0].addr = client->addr;
@@ -428,21 +440,30 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     msgs[1].len = 1;
     msgs[1].buf = rd_buf;
 
-    ret = i2c_transfer(client->adapter, msgs, 2);
-    if (ret < 0) {
-        return ret;
-    }
+    for (int iter = 0; iter < max_iters; ++iter) {
+        ret = i2c_transfer(client->adapter, msgs, 2);
+        if (ret < 0) {
+            return ret;
+        }
 
-    irq_mask = *rd_buf;
+        irq_mask = *rd_buf;
+        if (!irq_mask) {
+            break;
+        }
 
-    for (int i = 0; i < tcal6408->num_gpios; ++i) {
-        if ((irq_mask >> i) & 1) {
-            if (tcal6408->gpios[i].is_irq && tcal6408->gpios[i].num != 0) {
-                if (tcal6408->gpios[i].linked_gpio == NULL) {
-                    continue;
+        for (int i = 0; i < tcal6408->num_gpios; ++i) {
+            if ((irq_mask >> i) & 1) {
+                if (tcal6408->gpios[i].is_irq && tcal6408->gpios[i].num != 0) {
+                    if (tcal6408->gpios[i].linked_gpio == NULL) {
+                        continue;
+                    }
+                    handle_irq(tcal6408->gpios[i].linked_gpio);
                 }
-                handle_irq(tcal6408->gpios[i].linked_gpio);
             }
+        }
+
+        if (iter == max_iters - 1 && irq_mask) {
+            printk(KERN_ERR "tcal6408_handle_irq: irq storm (mask=0x%02x)\n", irq_mask);
         }
     }
 
@@ -1247,6 +1268,7 @@ static int get_device_id(struct device *dev, char *device_id, size_t len)
     const char *device_id_prop;
     int ret;
 
+    // first try devicetree property
     ret = device_property_read_string(dev, "device-id", &device_id_prop);
     if (!ret && device_id_prop && device_id_prop[0]) {
         strscpy(device_id, device_id_prop, len);
@@ -1254,6 +1276,7 @@ static int get_device_id(struct device *dev, char *device_id, size_t len)
         return 0;
     }
 
+    // if no devicetree property, try bootargs
     ret = parse_device_id_from_bootargs(dev, device_id, len);
     if (ret)
         dev_err(dev, "Failed to get device_id from devicetree property or bootargs\n");

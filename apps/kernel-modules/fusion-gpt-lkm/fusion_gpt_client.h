@@ -11,4 +11,7 @@ struct fusion_gpt_client_ops {
 int fusion_gpt_register_client(const struct fusion_gpt_client_ops *ops,
                                void *ctx, struct module *owner);
 void fusion_gpt_unregister_client(void);
+int  fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps);
+int fusion_gpt_get_phc_status(bool *epoch_valid, bool *aligned, u32 *pps_seq);
+u64  fusion_gpt_read_phc_ns(void);
 u64 fusion_gpt_read_ticks64(void);

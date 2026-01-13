@@ -2,9 +2,9 @@
 #include <linux/kernel.h>
 #include "fusion_connect_manager.h"
 
-static char *eth_iface = "lan1";
+static char *eth_iface = "lan1@eth0";
 module_param(eth_iface, charp, 0444);
-MODULE_PARM_DESC(eth_iface, "Ethernet interface for FusionConnect traffic (default: lan1)");
+MODULE_PARM_DESC(eth_iface, "Ethernet interface for FusionConnect traffic (default: lan1@eth0)");
 
 static bool debug = false;
 module_param(debug, bool, 0444);
@@ -16,7 +16,6 @@ static int __init fusion_cn_init(void)
 {
   int ret;
   strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
-  mgr.ptp.ptp_timing_mode = TIMING_GPT;
   mgr.debug = mgr.rtp.debug = debug;
 
   ret = fusion_cn_mgr_init(&mgr);
