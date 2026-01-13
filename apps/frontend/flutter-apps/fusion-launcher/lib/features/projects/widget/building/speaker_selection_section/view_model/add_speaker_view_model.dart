@@ -289,11 +289,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     return copy;
   }
 
-  Future<void> addOrReplaceSpeaker({
-    required BuildContext context,
-    String? cachedImagePath,
-    required SpeakerProduct product,
-  }) async {
+  Future<void> addOrReplaceSpeaker({required BuildContext context, String? cachedImagePath, required SpeakerProduct product}) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
     final String? listeningAreaId = context.read<SpeakerSelectionViewModel>().selectedListeningArea?.id;
     final FloorModel currentFloor = projectViewModel.currentFloor;
@@ -327,6 +323,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
     if (shouldReplace) {
       projectViewModel.migrateAllSpeakersTo(speaker: speaker, targetListeningAreaId: selectedListeningArea!.id);
+      if (context.mounted) Navigator.of(context).pop();
     } else {
       projectViewModel.addHardware(hardware: speaker);
     }

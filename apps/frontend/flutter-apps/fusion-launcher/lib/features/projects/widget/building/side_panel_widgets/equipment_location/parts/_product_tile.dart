@@ -37,8 +37,8 @@ class _ProductTile extends StatelessWidget {
                       return const SizedBox();
                     }
 
-                    return Image.file(
-                      File(assetImagePath),
+                    return Image.asset(
+                      assetImagePath,
                       fit: BoxFit.contain,
                     );
                   },

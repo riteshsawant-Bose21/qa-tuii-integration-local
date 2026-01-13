@@ -1,5 +1,3 @@
-import 'dart:developer';
-
 import 'package:dio/dio.dart';
 import 'package:equatable/equatable.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -130,8 +128,6 @@ class ProductQueryViewModel extends Cubit<ProductQueryViewModelState> {
           final ProductPriceModel price = ProductPriceModel.fromJson(priceJson as Map<String, dynamic>);
           pricesVarientMap.add(price);
         }
-
-        log("Total varient price: ${pricesVarientMap.length}");
 
         final Map<int, List<ProductPriceModel>> updatedPrices = Map<int, List<ProductPriceModel>>.from(state.prices);
         updatedPrices[productId] = pricesVarientMap;

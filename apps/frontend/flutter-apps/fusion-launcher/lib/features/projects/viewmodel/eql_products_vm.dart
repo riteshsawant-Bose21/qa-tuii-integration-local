@@ -29,11 +29,12 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
   Future<void> _initialize() async {
     _isInitialized = true;
     for (final AmplifierProduct element in datasource.amplifiers) {
+      final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: element.assets.firstAssetUrl ?? '',
+          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
           description: element.description,
           data: element,
           searchingFields: '${element.modelName} ${element.description}',
@@ -52,11 +53,12 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       );
     }
     for (final IoEndpointProduct element in datasource.ioEndpoints) {
+      final String key = element.assets.assets.keys.firstOrNull ?? '';
       allProducts.add(
         EQLProduct(
           name: element.modelName,
           modelFamily: element.modelFamily ?? '',
-          assetPath: element.assets.firstAssetUrl ?? '',
+          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
           data: element,
           //TODO: Check Endpoint Port Data
           portData: element.numberOfInputsAndOutputs,
@@ -75,11 +77,13 @@ class EqlProductsVm extends Cubit<EQLProductsState> {
       );
     }
     for (final DspProduct element in datasource.dsps) {
+      final String key = element.assets.assets.keys.firstOrNull ?? '';
+
       allProducts.add(
         EQLProduct(
           portData: element.numberOfInputsAndOutputs ?? ProductPortData(),
           name: element.modelName,
-          assetPath: element.assets.firstAssetUrl ?? '',
+          assetPath: datasource.getImagePath(element.assets.assets[key]?.firstOrNull ?? ''),
           modelFamily: element.modelFamily,
           data: element,
           searchingFields: '${element.modelName} ${element.description}',

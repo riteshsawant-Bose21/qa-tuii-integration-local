@@ -66,8 +66,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                             final String? areaId = projectViewModel.currentSelectedListeningAreaId;
                             if (areaId == null) return const SizedBox.shrink();
 
-                            final List<HardwareComponent> allHardware = projectViewModel.getHardwareForListeningArea(listeningAreaId: areaId);
-                            final List<Speaker> speakers = allHardware.whereType<Speaker>().where((Speaker element) => element.pos == null).toList();
+                            final List<HardwareComponent> speakers = projectViewModel.getPlacedSpeakersForCurrentListeningArea();
 
                             if (speakers.isNotEmpty) return const SizedBox.shrink();
 
