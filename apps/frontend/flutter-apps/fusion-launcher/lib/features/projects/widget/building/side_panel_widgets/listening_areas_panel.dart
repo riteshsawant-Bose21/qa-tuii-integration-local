@@ -280,12 +280,12 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
             color: isSelected ? Colors.grey[200] : Colors.transparent,
             borderRadius: BorderRadius.circular(4),
           ),
-          child: InkWell(
+          child: GestureDetector(
             onTap: () {
               serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(speaker.id);
               serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
             },
-            borderRadius: BorderRadius.circular(4),
+            // borderRadius: BorderRadius.circular(4),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               child: Row(
@@ -296,14 +296,31 @@ class ListeningAreasPanelState extends State<ListeningAreasPanel> with TickerPro
                     height: 14,
                   ),
                   const SizedBox(width: 6),
+
+                  // Expanded(
+                  //   child: FusionAppText(
+                  //     text: speaker.name,
+                  //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  //       fontSize: 11,
+                  //       fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                  //       color: Colors.grey[700],
+                  //     ),
+                  //   ),
+                  // ),
                   Expanded(
-                    child: FusionAppText(
-                      text: speaker.name,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    child: TitleTextFieldSwitcher(
+                      value: speaker.name,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
                         fontSize: 11,
                         fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                         color: Colors.grey[700],
                       ),
+                      save: (String value) {
+                        if (value.trim().isNotEmpty) {
+                          final HardwareComponent updated = speaker.copyWith(name: value);
+                          _projectViewModel.updateHardware(hardware: updated);
+                        }
+                      },
                     ),
                   ),
                 ],
