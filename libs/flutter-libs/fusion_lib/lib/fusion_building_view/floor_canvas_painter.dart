@@ -476,7 +476,17 @@ class FloorCanvasPainter extends CustomPainter {
     final double zs = (zoomScale <= 0.35) ? 0.35 : zoomScale;
 
     // UI sizing (zoom-invariant)
-    final double fontSize = 22.0 / zs;
+    late double fontSize;
+    if (zoomScale <= 0.2) {
+      fontSize = 24.0 / zs;
+    } else if (zoomScale <= 0.4) {
+      fontSize = 24.0 / zs;
+    } else if (zoomScale <= 0.6) {
+      fontSize = 20.0 / zs;
+    } else {
+      fontSize = 16.0 / zs;
+    }
+
     final double padH = 8.0 / zs;
     final double padV = 4.0 / zs;
     final double radius = 4.0 / zs;
@@ -569,7 +579,7 @@ class FloorCanvasPainter extends CustomPainter {
       );
 
       if (comp is Speaker) {
-        final double radius = (dst.width / 2) * 0.5;
+        final double radius = (dst.width / 2) * 0.8;
 
         final Paint fillPaint = Paint()
           ..color = Colors.black
