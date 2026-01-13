@@ -134,7 +134,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
 
     final Source source = Source(
       name: state.selectedSourceName ?? selectedItem.name,
-      pos: null,
+      pos: selectedArea.getCenterPositionOfVertices(),
       type: selectedItem.type,
       addedFromBuildingPage: false,
       connectionType: connectType,
@@ -162,22 +162,23 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
       ),
     );
     projectViewModel.addHardware(hardware: source);
+    projectViewModel.setCurrentSelectedHardware(source.id);
 
     // if this is a building page, add the source to the circuit
-    if (isFromBuildingPage) {
-      // Set device type index first
-      serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
-
-      // Create product and set for addition
-      final ProductQueryModel product = ProductQueryModel(
-        name: selectedItem.name,
-        price: 0.0,
-        image: selectedItem.assetPath,
-        type: ProductType.sources,
-        sku: selectedItem.id,
-      );
-      serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
-    }
+    // if (isFromBuildingPage) {
+    //   // Set device type index first
+    //   serviceLocator<ProjectViewModel>().changeDeviceTypeIndex(1); // Sources index
+    //
+    //   // Create product and set for addition
+    //   final ProductQueryModel product = ProductQueryModel(
+    //     name: selectedItem.name,
+    //     price: 0.0,
+    //     image: selectedItem.assetPath,
+    //     type: ProductType.sources,
+    //     sku: selectedItem.id,
+    //   );
+    //   serviceLocator<ProjectViewModel>().setSelectedProductToAdd(product);
+    // }
 
     // place this source in the selected listening area
     onSaved?.call();

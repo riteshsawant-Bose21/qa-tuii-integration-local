@@ -270,6 +270,23 @@ class ListeningArea {
     return pts;
   }
 
+  Offset? getCenterPositionOfVertices() {
+    if (vertices.isEmpty) return null;
+
+    double sumX = 0.0;
+    double sumY = 0.0;
+
+    for (final Offset vertex in vertices) {
+      sumX += vertex.dx;
+      sumY += vertex.dy;
+    }
+
+    final double centerX = sumX / vertices.length;
+    final double centerY = sumY / vertices.length;
+
+    return Offset(centerX, centerY);
+  }
+
   ListeningArea copyWith({
     String? id,
     List<Offset>? vertices,

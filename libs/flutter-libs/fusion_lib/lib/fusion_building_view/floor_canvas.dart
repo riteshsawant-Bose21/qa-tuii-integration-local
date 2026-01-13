@@ -46,10 +46,11 @@ class FloorCanvas extends StatefulWidget {
   final Function onSelectedFloorPlanIdChanged;
   final Function(HardwareComponent, String? listeningAreaId, String? floorId) moveHardware;
   final Function(ListeningArea newArea, List<HardwareComponent>? hardwaresInsideArea) onAddListeningArea;
-  final Function(Offset speakerPosition, String? listeningAreaId) addNewHardwareComponent;
+  final Function(Offset speakerPosition) addNewHardwareComponent;
   final Map<String, String> listeningAreaToZoneMap;
   final Map<String, String> subZoneToZoneMap;
   final Map<String, String> listeningAreaToSubZoneMap;
+  final bool isInSpeakerPlacementMode;
 
   // Mode state
   final bool isAcousticsMode;
@@ -90,6 +91,7 @@ class FloorCanvas extends StatefulWidget {
     this.selectedHardwareId,
     this.selectedListeningAreaId,
     required this.onRightClick,
+    required this.isInSpeakerPlacementMode,
   });
 
   @override
@@ -450,12 +452,13 @@ class FloorCanvasState extends State<FloorCanvas> with SingleTickerProviderState
     if (e.kind != PointerDeviceKind.mouse && e.kind != PointerDeviceKind.touch) {
       return;
     }
-
     final Offset worldPos = (e.localPosition - _panOffset) / _zoomScale;
-
-    //just calls add new hardware component
-    final ListeningArea? hit = _findListeningAreaAt(worldPos);
-    widget.addNewHardwareComponent(worldPos, hit?.id);
+    if (widget.isInSpeakerPlacementMode) {
+      //To check what is under the cursor
+      // final ListeningArea? hit = _findListeningAreaAt(worldPos);
+      widget.addNewHardwareComponent(worldPos);
+      return;
+    }
 
     // PAN
     if (e.buttons == kMiddleMouseButton) {
