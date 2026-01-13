@@ -93,7 +93,13 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     } else {
       sources[index] = source;
     }
-    emit(state.copyWith(selectedSources: sources.toList()));
+
+    emit(
+      state.copyWith(
+        selectedSources: sources.toList(),
+        selectedConnectionType: source.connectionType,
+      ),
+    );
   }
 
   void onSaveTap(BuildContext context) {
@@ -103,7 +109,7 @@ class AddSourceViewModel extends Cubit<AddSourceViewModelState> {
     if (selectedSources.isEmpty) return FusionToast.error(context, message: "Please select at least one source");
 
     // if listening area is not selected
-    if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a listening area");
+    if (state.selectedListeningArea == null) return FusionToast.error(context, message: "Please select a location");
 
     // if connection location is not selected
     if (state.selectedConnectionType == null) return FusionToast.error(context, message: "Please select a connection type");

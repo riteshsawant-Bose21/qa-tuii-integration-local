@@ -192,7 +192,7 @@ class AddSourcePopup extends StatelessWidget {
                             child: IgnorePointer(
                               ignoring: isFromBuildingPage,
                               child: BuildRowPropertyWidget<ListeningArea>(
-                                label: "Area",
+                                label: "Location",
                                 value: state.selectedListeningArea,
                                 options: listeningAreas,
                                 labelBuilder: (ListeningArea option) {
@@ -252,7 +252,7 @@ class AddSourcePopup extends StatelessWidget {
                                       children: <Widget>[
                                         Expanded(
                                           child: FusionAppText(
-                                            text: "Location",
+                                            text: "",
                                             style: context.textTheme.bodyMedium?.copyWith(
                                               color: context.colorScheme.onSurface,
                                               fontWeight: FontWeight.normal,
