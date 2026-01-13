@@ -103,6 +103,7 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
                     hint: Text(
                       widget.hintText,
                       style: widget.style,
+                      maxLines: 1,
                     ),
                     counter: const SizedBox.shrink(),
                     border: InputBorder.none,
