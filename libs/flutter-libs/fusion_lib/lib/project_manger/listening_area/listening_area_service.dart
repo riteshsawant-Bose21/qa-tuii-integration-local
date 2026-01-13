@@ -1,3 +1,5 @@
+import 'package:fusion_lib/models/project_entities/controller.dart';
+
 import '../../fusion_lib.dart';
 
 extension ListeningAreaService on ProjectService {
@@ -113,6 +115,14 @@ extension ListeningAreaService on ProjectService {
           pos: area.getCenterPositionOfVertices(),
         );
         updateHardware(updatedSource);
+      }
+
+      final List<HardwareComponent> allController = hardwareInArea.map((hwId) => hardware.get(hwId)).whereType<FusionController>().toList();
+      for (final controller in allController) {
+        final updatedController = controller.copyWith(
+          pos: area.getCenterPositionOfVertices(),
+        );
+        updateHardware(updatedController);
       }
     }
   }

@@ -177,7 +177,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             ];
           },
           child:
-              (widget.sectionTitle == "Processors & Amplifiers" || widget.sectionTitle == "Sources & Endpoints" || widget.sectionTitle == "Controllers")
+              (widget.sectionTitle == "Processors & Amplifiers" || widget.sectionTitle == "Sources & Endpoints")
                   ? const SizedBox()
                   : SemanticHelper.button(
                     testId: SemanticHelper.createTestId(SemanticTypes.button, "add_${widget.sectionTitle}"),

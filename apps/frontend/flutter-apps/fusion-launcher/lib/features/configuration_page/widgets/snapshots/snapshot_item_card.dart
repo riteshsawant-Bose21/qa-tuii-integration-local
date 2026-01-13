@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -11,6 +12,7 @@ class SnapshotItemCard extends StatefulWidget {
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
   final VoidCallback? onDuplicate;
+  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
   final int index;
 
   const SnapshotItemCard({
@@ -22,6 +24,7 @@ class SnapshotItemCard extends StatefulWidget {
     this.onTap,
     this.onDuplicate,
     required this.index,
+    this.onRenameSave,
   });
 
   @override
@@ -86,11 +89,21 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
+
+              /// Snapshot name with edit capability
               Expanded(
-                child: FusionAppText(
-                  text: widget.snapShotData.name,
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                child: TitleTextFieldSwitcher(
+                  value: widget.snapShotData.name,
+                  hintText: "Enter snapshot name",
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
+                  save: (String value) {
+                    if (value.isNotEmpty) {
+                      if (widget.onRenameSave != null) {
+                        final SnapshotsModel newSnapshot = widget.snapShotData.copyWith(name: value);
+                        widget.onRenameSave!.call(value, newSnapshot);
+                      }
+                    }
+                  },
                 ),
               ),
 

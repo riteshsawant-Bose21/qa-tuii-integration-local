@@ -74,6 +74,7 @@ class _EventsPanelState extends State<EventsPanel> {
                 }
                 return EventList(
                   eventList: eventList,
+                  projectViewModel: _projectViewModel,
                   onDelete: (String eventId) {
                     _projectViewModel.removeEvent(eventId: eventId);
 

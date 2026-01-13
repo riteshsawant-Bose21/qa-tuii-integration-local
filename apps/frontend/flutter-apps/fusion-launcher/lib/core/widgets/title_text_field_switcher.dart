@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 class TitleTextFieldSwitcher extends StatefulWidget {
   const TitleTextFieldSwitcher({
@@ -99,6 +100,8 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
                   focusNode: focusNode,
                   style: widget.style,
                   maxLength: 24,
+
+                  maxLines: 1,
                   decoration: InputDecoration(
                     hint: Text(
                       widget.hintText,
@@ -118,8 +121,10 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
                 behavior: HitTestBehavior.translucent,
 
                 onDoubleTap: _startEditing,
-                child: Text(
-                  currentValue,
+                child: FusionAppText(
+                  text: currentValue,
+                  maxLine: 1,
+                  textOverflow: TextOverflow.ellipsis,
                   style: widget.style,
                 ),
               ),

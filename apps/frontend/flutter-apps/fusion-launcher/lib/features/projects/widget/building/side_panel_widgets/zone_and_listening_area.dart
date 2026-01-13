@@ -6,6 +6,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
 
@@ -715,6 +716,9 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       save: (String value) {
                         if (value.isNotEmpty) {
                           if (hardware is Source) {
+                            final HardwareComponent updatedHw = hardware.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: updatedHw);
+                          } else if (hardware is FusionController) {
                             final HardwareComponent updatedHw = hardware.copyWith(name: value);
                             projectViewModel.updateHardware(hardware: updatedHw);
                           }
