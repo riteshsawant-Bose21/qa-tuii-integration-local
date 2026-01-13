@@ -1,9 +1,10 @@
 part of '../create_zone_popup.dart';
 
-Widget _buildListeningAreaSelectionSection(BuildContext rootContextFromParent, {int? subZoneIndex}) {
+Widget _buildListeningAreaSelectionSection(
+  BuildContext rootContextFromParent, {
+  int? subZoneIndex,
+}) {
   final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-
-  final List<ListeningArea> allListeningAreas = serviceLocator<ProjectViewModel>().getAllListeningAreas();
 
   String? zoneName(String areaId) {
     String? zoneName = projectViewModel.getZonesForListeningArea(areaId: areaId)?.name;
@@ -15,13 +16,13 @@ Widget _buildListeningAreaSelectionSection(BuildContext rootContextFromParent, {
 
   final CreateZoneViewModel createZoneViewModel = rootContextFromParent.read<CreateZoneViewModel>();
 
-  void onSelect(bool isSelected, ListeningArea area, StateSetter setPopupState) {
+  void onListeningAreaTap(bool isAlreadySelected, ListeningArea area, StateSetter setPopupState) {
     final bool isCreatingSubZonesAlongSide = createZoneViewModel.isCreatingSubZonesAlongSide;
 
     if (isCreatingSubZonesAlongSide) {
-      createZoneViewModel.updateSubzoneListeningArea(subZoneIndex!, area, isSelected);
+      createZoneViewModel.updateSubzoneListeningArea(subZoneIndex!, area, isAlreadySelected);
     } else {
-      createZoneViewModel.updateZoneListeningArea(area, isSelected);
+      createZoneViewModel.updateZoneListeningArea(area, isAlreadySelected);
     }
     setPopupState(() {});
   }
@@ -32,6 +33,8 @@ Widget _buildListeningAreaSelectionSection(BuildContext rootContextFromParent, {
     backgroundColor: const Color(0xFF292826),
     content: StatefulBuilder(
       builder: (BuildContext context, StateSetter setPopupState) {
+        final List<ListeningArea> allListeningAreas = context.watch<ProjectViewModel>().getAllListeningAreas();
+
         return SizedBox(
           width: 280,
           child: BlocProvider<CreateZoneViewModel>.value(
@@ -39,6 +42,8 @@ Widget _buildListeningAreaSelectionSection(BuildContext rootContextFromParent, {
             child: BlocBuilder<CreateZoneViewModel, CreateZoneViewModelState>(
               builder: (BuildContext context, CreateZoneViewModelState state) {
                 final bool isCreatingSubZonesAlongSide = createZoneViewModel.isCreatingSubZonesAlongSide;
+
+                final bool isFromBuildingPage = rootContextFromParent.read<CreateZoneViewModel>().isFromBuildingPage;
 
                 return Column(
                   mainAxisSize: MainAxisSize.min,
@@ -101,15 +106,15 @@ Widget _buildListeningAreaSelectionSection(BuildContext rootContextFromParent, {
                                         isAvailableToSelectOrDeselect = createZoneViewModel.isListeningAreaSelectedForZone(area.id);
                                       }
 
-                                      return InkWell(
-                                        onTap: isAvailable ? () => onSelect(isListeningAreaSelected, area, setPopupState) : null,
+                                      return GestureDetector(
+                                        onTap: isAvailable ? () => onListeningAreaTap(isListeningAreaSelected, area, setPopupState) : null,
                                         child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                          padding: const EdgeInsets.all(12),
                                           color: isAvailable ? Colors.transparent : Colors.grey.withOpacity(0.05),
                                           child: Row(
                                             children: <Widget>[
                                               GestureDetector(
-                                                onTap: isAvailable ? () => onSelect(isListeningAreaSelected, area, setPopupState) : null,
+                                                onTap: isAvailable ? () => onListeningAreaTap(isListeningAreaSelected, area, setPopupState) : null,
                                                 child: Icon(
                                                   (isAvailable ? isListeningAreaSelected : true) ? Icons.check_box : Icons.check_box_outline_blank,
                                                   size: 14,
@@ -165,17 +170,18 @@ Widget _buildListeningAreaSelectionSection(BuildContext rootContextFromParent, {
                         },
                       ),
                     ),
-                    // const SizedBox(height: 10),
-                    // const Divider(thickness: 0.5, height: 0),
 
-                    /// Create New Location Section
-                    // _CreateNewLocationWidget(
-                    //   onListeningAreaCreated: (ListeningArea value) {
-                    // _selectedListeningAreaIds = <String>[value.id];
-                    //     setPopupState(() {});
-                    //     setState(() {});
-                    //   },
-                    // ),
+                    if (!isFromBuildingPage) ...<Widget>[
+                      const SizedBox(height: 10),
+                      const Divider(thickness: 0.5, height: 0),
+
+                      // / Create New Location Section
+                      _CreateNewListeningAreaWidget(
+                        onListeningAreaCreated: (ListeningArea value) {
+                          onListeningAreaTap(false, value, setPopupState);
+                        },
+                      ),
+                    ],
                   ],
                 );
               },

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
@@ -106,83 +107,88 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
 
   @override
   Widget build(BuildContext context) {
-    return PopupMenuButton<dynamic>(
-      onCanceled: () {
-        /// Clear selections when menu is closed without adding
-        setState(() {
-          _selectedPopupDevice = null;
-          _selectedListeningAreaIds.clear();
-          _expandedSection = null;
-          _zoneNameController.clear();
-          _selectedColorHex = null;
-        });
-      },
-      tooltip: getSectionToolTip(),
-      padding: EdgeInsets.zero,
-      constraints: const BoxConstraints(
-        maxHeight: 500,
-        maxWidth: 300,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
-      color: Theme.of(context).colorScheme.white,
-      menuPadding: EdgeInsets.zero,
-
-      itemBuilder: (BuildContext context) {
-        return <PopupMenuItem<dynamic>>[
-          PopupMenuItem<dynamic>(
-            enabled: false,
-            padding: EdgeInsets.zero,
-            child: Container(
-              width: 300,
-              constraints: const BoxConstraints(
-                maxHeight: 460,
-                maxWidth: 300,
-              ),
-              child: StatefulBuilder(
-                builder: (BuildContext context, StateSetter setMenuState) {
-                  return SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: _buildSectionsForTitle(setMenuState),
-                    ),
-                  );
-                },
-              ),
+    return (widget.sectionTitle == "Speakers")
+        ? CreateZonePopup(
+          isFromBuildingPage: false,
+          child: SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_button_${widget.sectionTitle}"),
+            child: Row(
+              children: <Widget>[
+                Icon(Icons.add_sharp, size: 12, color: Theme.of(context).colorScheme.greyDark),
+                const SizedBox(width: 2),
+                FusionAppText(
+                  text: "Add Zone",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    fontSize: 8,
+                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  ),
+                ),
+              ],
             ),
           ),
-        ];
-      },
-      child:
-          widget.sectionTitle == "Speakers"
-              ? SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_button_${widget.sectionTitle}"),
-                child: Row(
-                  children: <Widget>[
-                    Icon(Icons.add_sharp, size: 12, color: Theme.of(context).colorScheme.greyDark),
-                    const SizedBox(width: 2),
-                    FusionAppText(
-                      text: "Add Zone",
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 8,
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
-                      ),
-                    ),
-                  ],
-                ),
-              )
-              : SemanticHelper.button(
-                testId: SemanticHelper.createTestId(SemanticTypes.button, "add_${widget.sectionTitle}"),
-                child: IconButton(
-                  icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
-                  onPressed: null,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
+        )
+        : PopupMenuButton<dynamic>(
+          onCanceled: () {
+            /// Clear selections when menu is closed without adding
+            setState(() {
+              _selectedPopupDevice = null;
+              _selectedListeningAreaIds.clear();
+              _expandedSection = null;
+              _zoneNameController.clear();
+              _selectedColorHex = null;
+            });
+          },
+          tooltip: getSectionToolTip(),
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints(
+            maxHeight: 500,
+            maxWidth: 300,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+          color: Theme.of(context).colorScheme.white,
+          menuPadding: EdgeInsets.zero,
+
+          itemBuilder: (BuildContext context) {
+            return <PopupMenuItem<dynamic>>[
+              PopupMenuItem<dynamic>(
+                enabled: false,
+                padding: EdgeInsets.zero,
+                child: Container(
+                  width: 300,
+                  constraints: const BoxConstraints(
+                    maxHeight: 460,
+                    maxWidth: 300,
+                  ),
+                  child: StatefulBuilder(
+                    builder: (BuildContext context, StateSetter setMenuState) {
+                      return SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: _buildSectionsForTitle(setMenuState),
+                        ),
+                      );
+                    },
+                  ),
                 ),
               ),
-    );
+            ];
+          },
+          child:
+              (widget.sectionTitle == "Processors & Amplifiers" || widget.sectionTitle == "Sources & Endpoints" || widget.sectionTitle == "Controllers")
+                  ? const SizedBox()
+                  : SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "add_${widget.sectionTitle}"),
+                    child: IconButton(
+                      icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                      onPressed: null,
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ),
+        );
   }
 
   /// Build add device expandable sections based on the section title

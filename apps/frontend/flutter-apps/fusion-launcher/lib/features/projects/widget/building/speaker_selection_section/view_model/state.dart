@@ -8,6 +8,7 @@ class SpeakerSelectionViewModelState extends Equatable {
     this.searchQuery = '',
     this.isLoading = false,
     this.selectedSignalType = SignalType.mono,
+    this.selectedListeningAreaForDropDown,
   });
 
   final SpeakerSelectionMode mode;
@@ -17,6 +18,9 @@ class SpeakerSelectionViewModelState extends Equatable {
   final bool isLoading;
   final SignalType selectedSignalType;
 
+  /// THIS WILL BE USED ONLY FOR SCHEMATIC PAGE WHEN THIS POPUP IS OPENED FROM THERE
+  final ListeningArea? selectedListeningAreaForDropDown;
+
   SpeakerSelectionViewModelState copyWith({
     SpeakerSelectionMode? mode,
     Set<SpeakerColor>? selectedColors,
@@ -24,6 +28,7 @@ class SpeakerSelectionViewModelState extends Equatable {
     String? searchQuery,
     bool? isLoading,
     List<SpeakerProduct>? speakers,
+    ListeningArea? selectedListeningAreaForDropDown,
   }) {
     return SpeakerSelectionViewModelState(
       mode: mode ?? this.mode,
@@ -31,6 +36,7 @@ class SpeakerSelectionViewModelState extends Equatable {
       sortOption: sortOption ?? this.sortOption,
       searchQuery: searchQuery ?? this.searchQuery,
       isLoading: isLoading ?? this.isLoading,
+      selectedListeningAreaForDropDown: selectedListeningAreaForDropDown ?? this.selectedListeningAreaForDropDown,
     );
   }
 
@@ -41,5 +47,6 @@ class SpeakerSelectionViewModelState extends Equatable {
     sortOption,
     searchQuery,
     isLoading,
+    selectedListeningAreaForDropDown,
   ];
 }

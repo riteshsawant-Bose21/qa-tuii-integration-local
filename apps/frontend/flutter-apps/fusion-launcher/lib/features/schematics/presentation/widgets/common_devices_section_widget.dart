@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/add_source_popup/view/add_source_popup.dart';
+import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
+import '../../../projects/viewmodel/eql_products_vm.dart';
 import 'add_device_expandable_popup_menu_widget.dart';
 
 class CommonDevicesSectionWidget extends StatefulWidget {
@@ -165,7 +168,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
   }
 
   /// Helper method to build expandable section headers
-  Widget _buildExpandableHeader(String title, bool isExpanded, VoidCallback onTap) {
+  Widget _buildExpandableHeader({required String title, required bool isExpanded, required VoidCallback onTap}) {
     return GestureDetector(
       onTap: () {
         onTap();
@@ -197,6 +200,26 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                   color: Colors.black,
                 ),
               ),
+              const Spacer(),
+
+              /// Add device icon
+              title == "Sources"
+                  ? AddSourcePopup(isFromBuildingPage: false, child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark))
+                  : (title == "Endpoints" || title == "Controllers" || title == "Fusion Devices" || title == "Amplifiers")
+                  ? FusionArrowPopup(
+                    content: EquipmentLocationDialog(
+                      currentFilter:
+                          title == "Amplifiers"
+                              ? EQLDeviceType.amplifier
+                              : title == "Fusion Devices"
+                              ? EQLDeviceType.processor
+                              : title == "Endpoints"
+                              ? EQLDeviceType.endpoint
+                              : EQLDeviceType.mixerAmp,
+                    ),
+                    child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                  )
+                  : const SizedBox(),
             ],
           ),
         ),
@@ -252,9 +275,9 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                   child: Column(
                     children: <Widget>[
                       _buildExpandableHeader(
-                        section.title,
-                        isExpanded,
-                        () {
+                        title: section.title,
+                        isExpanded: isExpanded,
+                        onTap: () {
                           setState(() {
                             _sectionExpansionState[section.title] = !isExpanded;
                           });
@@ -480,10 +503,12 @@ class ExpandableSection {
   final String title;
   final Widget content;
   final bool initiallyExpanded;
+  final void Function()? onAddDevice;
 
   const ExpandableSection({
     required this.title,
     required this.content,
     this.initiallyExpanded = true,
+    this.onAddDevice,
   });
 }

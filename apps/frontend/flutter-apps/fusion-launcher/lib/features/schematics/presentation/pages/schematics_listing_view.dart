@@ -391,38 +391,38 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ],
                   listeningAreas: _projectViewModel.listeningAreas,
                   selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
-                  onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                    print("Adding hardware of type: ${item.type}");
-
-                    if (item is ProductQueryModel) {
-                      final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
-                        item,
-                        locationEntity: LocationModel(
-                          listeningAreaId: areaId,
-                          floorId: floorId,
-                        ),
-                        isFromBuildingPage: false,
-                      );
-                      if (item.type == ProductType.dsps) {
-                        serviceLocator<ProjectViewModel>().addHardware(
-                          hardware: hardware,
-                        );
-                        FusionToast.success(
-                          context,
-                          message: "Processors \"${item.name}\" added",
-                        );
-                      } else {
-                        serviceLocator<ProjectViewModel>().addHardware(
-                          hardware: hardware,
-                        );
-                        FusionToast.success(
-                          context,
-                          message: "Amplifier \"${item.name}\" added",
-                        );
-                        return;
-                      }
-                    }
-                  },
+                  // onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                  //   print("Adding hardware of type: ${item.type}");
+                  //
+                  //   if (item is ProductQueryModel) {
+                  //     final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                  //       item,
+                  //       locationEntity: LocationModel(
+                  //         listeningAreaId: areaId,
+                  //         floorId: floorId,
+                  //       ),
+                  //       isFromBuildingPage: false,
+                  //     );
+                  //     if (item.type == ProductType.dsps) {
+                  //       serviceLocator<ProjectViewModel>().addHardware(
+                  //         hardware: hardware,
+                  //       );
+                  //       FusionToast.success(
+                  //         context,
+                  //         message: "Processors \"${item.name}\" added",
+                  //       );
+                  //     } else {
+                  //       serviceLocator<ProjectViewModel>().addHardware(
+                  //         hardware: hardware,
+                  //       );
+                  //       FusionToast.success(
+                  //         context,
+                  //         message: "Amplifier \"${item.name}\" added",
+                  //       );
+                  //       return;
+                  //     }
+                  //   }
+                  // },
                 ),
 
                 /// Speakers

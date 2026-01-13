@@ -8,6 +8,7 @@ class BuildingPageDronDown<T> extends StatefulWidget {
   final List<T> items;
   final ValueChanged<T> onSelect;
   final Widget Function(T option) labelBuilder;
+  final Widget Function(T option)? valueBuilder;
 
   const BuildingPageDronDown({
     super.key,
@@ -16,6 +17,7 @@ class BuildingPageDronDown<T> extends StatefulWidget {
     required this.items,
     required this.onSelect,
     required this.labelBuilder,
+    this.valueBuilder,
   });
 
   @override
@@ -107,7 +109,7 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
                             behavior: HitTestBehavior.translucent,
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                              child: widget.labelBuilder(value),
+                              child: widget.valueBuilder != null ? widget.valueBuilder!(value) : widget.labelBuilder(value),
                             ),
                           ),
                         ),

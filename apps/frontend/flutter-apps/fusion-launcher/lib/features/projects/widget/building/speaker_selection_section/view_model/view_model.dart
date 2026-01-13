@@ -1,3 +1,5 @@
+import 'dart:developer';
+
 import 'package:equatable/equatable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -15,30 +17,69 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   SpeakerSelectionViewModel() : super(const SpeakerSelectionViewModelState());
 
   ProjectViewModel get projectViewModel => serviceLocator<ProjectViewModel>();
-  ListeningArea? get selectedListeningArea => serviceLocator<ProjectViewModel>().getCurrentSelectedListeningArea();
+
+  // THESE ARE FOR SCHEMATIC PAGE
+  bool isFromBuildingPage = false;
+  String? zoneId;
+  String? subZoneId;
+
+  void init({required bool isFromBuilding, String? zoneId, String? subZoneId}) {
+    isFromBuildingPage = isFromBuilding;
+    this.zoneId = zoneId;
+    this.subZoneId = subZoneId;
+  }
+
+  List<ListeningArea> getListeningAreas() {
+    List<ListeningArea> allListeningAreas = <ListeningArea>[];
+    if (subZoneId != null) {
+      // allListeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZoneId!);
+      allListeningAreas = projectViewModel.getListeningAreasInSubZone(subZoneId: subZoneId!);
+    } else if (zoneId != null) {
+      allListeningAreas = projectViewModel.getListeningAreasForZone(zoneId: zoneId!);
+    } else {
+      allListeningAreas = projectViewModel.getAllListeningAreas();
+    }
+
+    return allListeningAreas;
+  }
+
+  ListeningArea? get selectedListeningArea {
+    if (isFromBuildingPage) {
+      final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
+      if (listeningArea != null) return listeningArea;
+    }
+
+    final List<ListeningArea> allListeningAreas = projectViewModel.getAllListeningAreas();
+    for (final ListeningArea la in allListeningAreas) {
+      if (la.id == state.selectedListeningAreaForDropDown?.id) {
+        return la;
+      }
+    }
+
+    return state.selectedListeningAreaForDropDown;
+  }
+
+  void setListeningAreaForDropDown(ListeningArea? listeningArea) => emit(state.copyWith(selectedListeningAreaForDropDown: listeningArea));
 
   // State updates
   void setMode(SpeakerSelectionMode mode) => emit(state.copyWith(mode: mode));
 
   void setMountingTypes(List<MountingType> types) {
+    if (selectedListeningArea == null) return;
     final Set<MountingType> updated = Set<MountingType>.from(types);
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(mountingTypes: updated);
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
   void setLowFrequencies(List<LowFrequency> lfs) {
+    if (selectedListeningArea == null) return;
     final Set<LowFrequency> updated = Set<LowFrequency>.from(lfs);
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(lowFrequencies: updated);
     projectViewModel.updateListeningArea(area: updatedLA);
   }
 
-  void toggleColor(SpeakerColor color) {
-    // final Set<SpeakerColor> updated = Set<SpeakerColor>.from(state.selectedColors);
-    // updated.contains(color) ? updated.remove(color) : updated.add(color);
-    // emit(state.copyWith(selectedColors: updated));
-  }
-
   void setWiringType(WiringType? wiringType) {
+    if (selectedListeningArea == null) return;
     final ListeningArea updatedLA = selectedListeningArea!.copyWith(wiringType: wiringType);
     projectViewModel.updateListeningArea(area: updatedLA);
   }
@@ -49,22 +90,24 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
   void setColors(Iterable<SpeakerColor> colors) => emit(state.copyWith(selectedColors: Set<SpeakerColor>.from(colors)));
 
   List<Speaker> getAllPlacedNonPlacedSpeakers() {
+    if (selectedListeningArea == null) return <Speaker>[];
+
     final List<Speaker> placedSpeakers = getPlacedSpeakers();
     final List<Speaker> nonPlacedSpeakers = getNonPlacedSpeakers();
     return Set<Speaker>.from(<Speaker>{...placedSpeakers, ...nonPlacedSpeakers}).toList();
   }
 
   List<Speaker> getPlacedSpeakers() {
+    if (selectedListeningArea == null) return <Speaker>[];
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
-    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getAllPlacedHardwareInListeningArea(listeningAreaId: listeningAreaId!);
+    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getAllPlacedHardwareInListeningArea(listeningAreaId: selectedListeningArea!.id);
     return listeningAreaSpeakers.whereType<Speaker>().toList();
   }
 
   List<Speaker> getNonPlacedSpeakers() {
+    if (selectedListeningArea == null) return <Speaker>[];
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final String? listeningAreaId = projectViewModel.currentSelectedListeningAreaId;
-    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getAllNonPlacedHardwareInListeningArea(listeningAreaId: listeningAreaId!);
+    final List<HardwareComponent> listeningAreaSpeakers = projectViewModel.getAllNonPlacedHardwareInListeningArea(listeningAreaId: selectedListeningArea!.id);
     return listeningAreaSpeakers.whereType<Speaker>().toList();
   }
 
@@ -114,7 +157,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final String query = state.searchQuery.trim().toLowerCase();
     if (query.isNotEmpty) {
       filtered = filtered.where((SpeakerProduct p) {
-        final String hay = '${p.modelName} ${p.modelFamily} ${p.description} ${p.shortDescription ?? ''}'.toLowerCase();
+        final String hay = '${p.modelName} ${p.modelName} ${p.description} ${p.shortDescription ?? ''}'.toLowerCase();
         return hay.contains(query);
       });
     }
@@ -218,10 +261,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
     final List<SpeakerProduct> copy = List<SpeakerProduct>.from(items);
     switch (state.sortOption) {
       case SpeakerSortOption.nameAsc:
-        copy.sort((SpeakerProduct a, SpeakerProduct b) => a.modelFamily.toLowerCase().compareTo(b.modelFamily.toLowerCase()));
+        copy.sort((SpeakerProduct a, SpeakerProduct b) => a.modelName.toLowerCase().compareTo(b.modelName.toLowerCase()));
         break;
       case SpeakerSortOption.nameDesc:
-        copy.sort((SpeakerProduct a, SpeakerProduct b) => b.modelFamily.toLowerCase().compareTo(a.modelFamily.toLowerCase()));
+        copy.sort((SpeakerProduct a, SpeakerProduct b) => b.modelName.toLowerCase().compareTo(a.modelName.toLowerCase()));
         break;
     }
     return copy;
@@ -229,9 +272,10 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
 
   Future<void> addOrReplaceSpeaker({required BuildContext context, required Speaker speaker, required String productName}) async {
     final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
-    final ListeningArea? listeningArea = projectViewModel.getCurrentSelectedListeningArea();
 
-    if (listeningArea == null) return;
+    if (selectedListeningArea == null) return;
+
+    log("Listening area id: ${selectedListeningArea!.id} === ${selectedListeningArea!.name}");
 
     List<Speaker> speakerList = getPlacedSpeakers();
     if (speakerList.isEmpty) speakerList = getNonPlacedSpeakers();
@@ -244,7 +288,7 @@ class SpeakerSelectionViewModel extends Cubit<SpeakerSelectionViewModelState> {
         final String existingName = speakerList.first.name;
         final bool? confirm = await ReplaceSpeakersWarningDialog.show(
           context,
-          listeningAreaName: listeningArea.name,
+          listeningAreaName: selectedListeningArea!.name,
           existingSpeakerName: existingName,
           currentSpeakerName: productName,
         );
