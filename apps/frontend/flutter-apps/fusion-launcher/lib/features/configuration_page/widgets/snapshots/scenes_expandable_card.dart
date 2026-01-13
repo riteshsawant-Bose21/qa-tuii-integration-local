@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/snapshot_list.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
@@ -195,13 +196,19 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
 
                           /// Source set name
                           Expanded(
-                            child: FusionAppText(
-                              text: widget.sceneSetData.name,
-                              maxLine: 1,
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            child: TitleTextFieldSwitcher(
+                              value: widget.sceneSetData.name,
+                              hintText: "Enter scenes set name",
+                              style: Theme.of(context).textTheme.bodyMedium!.copyWith(
                                 fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
+                              save: (String value) {
+                                if (value.isNotEmpty) {
+                                  final SceneSetModel newScenesSet = widget.sceneSetData.copyWith(name: value);
+                                  _projectViewModel.updateSceneSet(sceneSet: newScenesSet);
+                                }
+                              },
                             ),
                           ),
                           const SizedBox(width: 8),
@@ -304,6 +311,9 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                               onDragStarted: widget.onDragStarted,
                               onDragEnd: widget.onDragEnd,
                               draggingSnapshotId: widget.draggingSnapshotId,
+                              onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                                _projectViewModel.updateSnapshots(scene: newSnapshot);
+                              },
                             ),
                   ),
               ],

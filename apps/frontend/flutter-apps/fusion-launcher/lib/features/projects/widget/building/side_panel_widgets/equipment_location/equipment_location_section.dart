@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/right_aligned_popup_menu.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
@@ -36,49 +37,56 @@ class EquipmentLocationSection extends StatelessWidget {
                       ),
                     ),
                   ),
-
-                  PopupMenuButton<dynamic>(
-                    onSelected: (dynamic value) {},
-                    shadowColor: Colors.transparent,
-                    color: Colors.transparent,
-                    itemBuilder:
-                        (BuildContext context) => <PopupMenuItem<dynamic>>[
-                          PopupMenuItem<dynamic>(
-                            enabled: false,
-                            padding: EdgeInsets.zero,
-                            child: SizedBox(
-                              width: 250,
-                              child: StatefulBuilder(
-                                builder: (BuildContext context, StateSetter setMenuState) {
-                                  final TextEditingController snapshotsNameController = TextEditingController();
-                                  return SingleChildScrollView(
-                                    child: CreateSnapshotsOrScenesWidget(
-                                      headerText: 'Equipment Location',
-                                      nameController: snapshotsNameController,
-                                      onCreate: () {
-                                        /// Pass popup context so only the menu closes.
-                                        BlocProvider.of<ProjectViewModel>(context).addEquipLocation(
-                                          equipLocation: EquipLocation(
-                                            name: snapshotsNameController.text,
-                                          ),
-                                        );
-                                        if (Navigator.of(context).canPop()) {
-                                          Navigator.of(context).pop();
-                                        }
-                                      },
-                                      onCancel: () {
-                                        /// Cancel inside popup: close only popup.
-                                        if (Navigator.of(context).canPop()) {
-                                          Navigator.of(context).pop();
-                                        }
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-                        ],
+                  InkWell(
+                    onTap: () {
+                      BlocProvider.of<ProjectViewModel>(context).addEquipLocation(
+                        equipLocation: EquipLocation(
+                          name: "Equipment Location ${equipmentLocations.length + 1}",
+                        ),
+                      );
+                    },
+                    // PopupMenuButton<dynamic>(
+                    // onSelected: (dynamic value) {},
+                    // shadowColor: Colors.transparent,
+                    // color: Colors.transparent,
+                    // itemBuilder:
+                    //     (BuildContext context) => <PopupMenuItem<dynamic>>[
+                    //       PopupMenuItem<dynamic>(
+                    //         enabled: false,
+                    //         padding: EdgeInsets.zero,
+                    //         child: SizedBox(
+                    //           width: 250,
+                    //           child: StatefulBuilder(
+                    //             builder: (BuildContext context, StateSetter setMenuState) {
+                    //               final TextEditingController snapshotsNameController = TextEditingController();
+                    //               return SingleChildScrollView(
+                    //                 child: CreateSnapshotsOrScenesWidget(
+                    //                   headerText: 'Equipment Location',
+                    //                   nameController: snapshotsNameController,
+                    //                   onCreate: () {
+                    //                     /// Pass popup context so only the menu closes.
+                    //                     BlocProvider.of<ProjectViewModel>(context).addEquipLocation(
+                    //                       equipLocation: EquipLocation(
+                    //                         name: snapshotsNameController.text,
+                    //                       ),
+                    //                     );
+                    //                     if (Navigator.of(context).canPop()) {
+                    //                       Navigator.of(context).pop();
+                    //                     }
+                    //                   },
+                    //                   onCancel: () {
+                    //                     /// Cancel inside popup: close only popup.
+                    //                     if (Navigator.of(context).canPop()) {
+                    //                       Navigator.of(context).pop();
+                    //                     }
+                    //                   },
+                    //                 ),
+                    //               );
+                    //             },
+                    //           ),
+                    //         ),
+                    //       ),
+                    //     ],
                     child: Padding(
                       padding: const EdgeInsets.all(3.0),
                       child: Icon(
@@ -259,12 +267,20 @@ class __ExpansionTileState extends State<_ExpansionTile> {
                   data: ThemeData.dark(),
                   child: EquipmentLocationDialog(equipmentLocationId: widget.location.id),
                 ),
-                child: FusionAppText(
-                  text: widget.title,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                child: TitleTextFieldSwitcher(
+                  hintText: "Name",
+                  value: widget.title,
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(
                     fontSize: 11,
                     fontWeight: FontWeight.w400,
                   ),
+                  save: (String newValue) {
+                    BlocProvider.of<ProjectViewModel>(context).updateEquipLocation(
+                      equipLocation: widget.location.copyWith(
+                        name: newValue,
+                      ),
+                    );
+                  },
                 ),
               ),
             ),

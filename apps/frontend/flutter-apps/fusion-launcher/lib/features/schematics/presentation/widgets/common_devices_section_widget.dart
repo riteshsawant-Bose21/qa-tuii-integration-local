@@ -205,7 +205,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
               /// Add device icon
               title == "Sources"
                   ? AddSourcePopup(isFromBuildingPage: false, child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark))
-                  : (title == "Endpoints" || title == "Controllers" || title == "Fusion Devices" || title == "Amplifiers")
+                  : (title == "Endpoints" || title == "Fusion Devices" || title == "Amplifiers")
                   ? FusionArrowPopup(
                     content: EquipmentLocationDialog(
                       currentFilter:

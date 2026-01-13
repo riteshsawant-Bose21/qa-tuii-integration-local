@@ -210,6 +210,9 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
                           });
                         },
                         draggingSnapshotId: _draggingSnapshotId,
+                        onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                          _projectViewModel.updateSnapshots(scene: newSnapshot);
+                        },
                       );
                     },
                   ),

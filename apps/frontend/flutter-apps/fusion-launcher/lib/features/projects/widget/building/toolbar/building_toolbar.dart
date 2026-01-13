@@ -364,49 +364,49 @@ class _BuildingToolbarState extends State<BuildingToolbar> {
     return <Widget>[
       if (isListeningAreaSelected) ...<Widget>[
         _buildSourcesToolWithMenu(isSelected: currentDeviceIndex == 1),
-        _buildToolItem(
-          icon: Icons.spoke_outlined,
-          "Add Endpoints",
-          onTap: () {
-            widget.onAddEndpointSelected();
-            widget.onProductSelected(); // Expand products panel
-          },
-          isSelected: currentDeviceIndex == 2,
-          selectedColor: Colors.green,
-        ),
-        _buildToolItem(
-          icon: Icons.amp_stories,
-          "Add Amplifiers",
-          onTap: () {
-            widget.onAddAmplifierSelected();
-            widget.onProductSelected(); // Expand products panel
-          },
-          isSelected: currentDeviceIndex == 3,
-          selectedColor: Colors.green,
-        ),
-        _buildToolItem(
-          icon: Icons.memory,
-          "Add DSPs",
-          onTap: () {
-            widget.onAddDspSelected();
-            widget.onProductSelected(); // Expand products panel
-          },
-          isSelected: currentDeviceIndex == 4,
-          selectedColor: Colors.green,
-        ),
-        _buildToolItem(
-          icon: Icons.tune,
-          "Add Controllers",
-          onTap: () {
-            widget.onAddControllerSelected();
-            widget.onProductSelected(); // Expand products panel
-          },
-          isSelected: currentDeviceIndex == 5,
-          selectedColor: Colors.green,
-        ),
-        _buildRackToolWithMenu(
-          isSelected: currentDeviceIndex == 6,
-        ),
+        // _buildToolItem(
+        //   icon: Icons.spoke_outlined,
+        //   "Add Endpoints",
+        //   onTap: () {
+        //     widget.onAddEndpointSelected();
+        //     widget.onProductSelected(); // Expand products panel
+        //   },
+        //   isSelected: currentDeviceIndex == 2,
+        //   selectedColor: Colors.green,
+        // ),
+        // _buildToolItem(
+        //   icon: Icons.amp_stories,
+        //   "Add Amplifiers",
+        //   onTap: () {
+        //     widget.onAddAmplifierSelected();
+        //     widget.onProductSelected(); // Expand products panel
+        //   },
+        //   isSelected: currentDeviceIndex == 3,
+        //   selectedColor: Colors.green,
+        // ),
+        // _buildToolItem(
+        //   icon: Icons.memory,
+        //   "Add DSPs",
+        //   onTap: () {
+        //     widget.onAddDspSelected();
+        //     widget.onProductSelected(); // Expand products panel
+        //   },
+        //   isSelected: currentDeviceIndex == 4,
+        //   selectedColor: Colors.green,
+        // ),
+        // _buildToolItem(
+        //   icon: Icons.tune,
+        //   "Add Controllers",
+        //   onTap: () {
+        //     widget.onAddControllerSelected();
+        //     widget.onProductSelected(); // Expand products panel
+        //   },
+        //   isSelected: currentDeviceIndex == 5,
+        //   selectedColor: Colors.green,
+        // ),
+        // _buildRackToolWithMenu(
+        //   isSelected: currentDeviceIndex == 6,
+        // ),
       ],
       _buildToolItem(
         icon: Icons.fit_screen_rounded,

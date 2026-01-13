@@ -33,6 +33,7 @@ class SnapshotList extends StatelessWidget {
   final Function(String sceneId)? onDragStarted;
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
+  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
 
   const SnapshotList({
     super.key,
@@ -46,6 +47,7 @@ class SnapshotList extends StatelessWidget {
     this.onDragStarted,
     this.onDragEnd,
     this.draggingSnapshotId,
+    this.onRenameSave,
   });
 
   @override
@@ -158,6 +160,13 @@ class SnapshotList extends StatelessWidget {
               snapShotData: snapShotData,
               isDragging: isDragging,
               isSelected: selectedSnapshotId == snapShotData.id,
+              onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                if (value.isNotEmpty) {
+                  if (onRenameSave != null) {
+                    onRenameSave!.call(value, newSnapshot);
+                  }
+                }
+              },
               onDelete: () {
                 onDelete(snapShotData.id);
               },
