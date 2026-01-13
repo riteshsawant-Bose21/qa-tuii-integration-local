@@ -89,6 +89,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
         final List<SceneItemDropdown> itemList = _itemList;
         final List<SceneParam> paramList = _paramList;
         final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
+        final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
 
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -103,7 +104,13 @@ class _EventActionRowDataState extends State<EventActionRowData> {
               _buildActionTypeDropdown(action),
               _buildItemDropdown(action, itemList, isItemEnabled),
               _buildParamDropdown(action, paramList),
-              _buildValueWidget(action),
+              (event.condition is! ValueChangeCondition)
+                  ? _buildValueWidget(action)
+                  : const Expanded(
+                    child: Center(
+                      child: FusionAppText(text: "--"),
+                    ),
+                  ),
               _buildActionButtons(),
             ],
           ),
@@ -130,7 +137,7 @@ class _EventActionRowDataState extends State<EventActionRowData> {
       child: FusionDropdown<SceneActionType>(
         value: action.actionType,
         hint: "Select Action Type",
-        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false),
+        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false, eventId: widget.eventId),
         display: (SceneActionType e) => e.displayName,
         onChanged: _updateActionType,
       ),
