@@ -4,7 +4,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../../core/service_locator.dart';
-import 'add_speakers_menu.dart';
+import '../../../projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'circuit_device_widget.dart';
 
 /// Separate widget for subzones with its own expansion state and full features
@@ -94,11 +94,29 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           ),
                         ),
 
-                        /// Add device button
-                        AddSpeakersMenu(
-                          zoneId: widget.zoneId ?? "",
-                          subZoneId: widget.subZoneId,
-                          onSpeakerAdded: onSpeakerAdded,
+                        // /// Add device button
+                        // AddSpeakersMenu(
+                        //   zoneId: widget.zoneId ?? "",
+                        //   subZoneId: widget.subZoneId,
+                        //   onSpeakerAdded: onSpeakerAdded,
+                        // ),
+                        FusionArrowPopup(
+                          content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
+
+                          child: Row(
+                            children: <Widget>[
+                              const Icon(Icons.add, size: 10, color: Colors.black87),
+                              const SizedBox(width: 4),
+                              FusionAppText(
+                                text: "Speaker",
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 8),
                         _buildKebabMenu(context),

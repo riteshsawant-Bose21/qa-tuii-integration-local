@@ -34,8 +34,8 @@ class FusionArrowPopup extends StatefulWidget {
     this.showOnCreate = false,
     this.enabled = true,
     this.onDismiss,
-    this.shouldBlur = false,
-    this.blurAmount = 0,
+    this.shouldBlur = true,
+    this.blurAmount = 0.0,
     this.maxHeight,
     this.maxWidth,
   });

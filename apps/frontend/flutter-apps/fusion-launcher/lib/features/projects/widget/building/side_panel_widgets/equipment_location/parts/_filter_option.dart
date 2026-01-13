@@ -1,7 +1,10 @@
 part of '../equipment_location_dialog.dart';
 
 class _FilterOptions extends StatelessWidget {
-  const _FilterOptions({super.key});
+  const _FilterOptions({this.equipmentLocationId, this.currentFilter});
+
+  final String? equipmentLocationId;
+  final EQLDeviceType? currentFilter;
 
   @override
   Widget build(BuildContext context) {
@@ -27,7 +30,7 @@ class _FilterOptions extends StatelessWidget {
 
                 FusionRadio<EQLDeviceType>(
                   selected: state.filters.deviceType,
-                  options: EQLDeviceType.values,
+                  options: currentFilter != null ? <EQLDeviceType>[currentFilter!] : EQLDeviceType.values,
                   labelBuilder: (EQLDeviceType mountingType) {
                     return FusionAppText(
                       text: mountingType.displayName,
