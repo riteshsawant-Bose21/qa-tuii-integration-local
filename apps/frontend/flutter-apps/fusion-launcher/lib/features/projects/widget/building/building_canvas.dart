@@ -108,14 +108,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
   Widget build(BuildContext context) {
     return FusionKeyboardWrapper(
       onUndo: () {
-        if (serviceLocator<ProjectViewModel>().canUndo) {
-          serviceLocator<ProjectViewModel>().undo();
-        }
+        // if (serviceLocator<ProjectViewModel>().canUndo) {
+        //   serviceLocator<ProjectViewModel>().undo();
+        // }
       },
       onRedo: () {
-        if (serviceLocator<ProjectViewModel>().canRedo) {
-          serviceLocator<ProjectViewModel>().redo();
-        }
+        // if (serviceLocator<ProjectViewModel>().canRedo) {
+        //   serviceLocator<ProjectViewModel>().redo();
+        // }
       },
       onDelete: () {
         //IN Building page

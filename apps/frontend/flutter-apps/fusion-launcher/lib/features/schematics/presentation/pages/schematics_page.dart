@@ -27,14 +27,14 @@ class _SchematicsPageState extends State<SchematicsPage> {
       builder: (BuildContext context, Object? state) {
         return FusionKeyboardWrapper(
           onUndo: () {
-            if (serviceLocator<ProjectViewModel>().canUndo) {
-              serviceLocator<ProjectViewModel>().undo();
-            }
+            // if (serviceLocator<ProjectViewModel>().canUndo) {
+            //   serviceLocator<ProjectViewModel>().undo();
+            // }
           },
           onRedo: () {
-            if (serviceLocator<ProjectViewModel>().canRedo) {
-              serviceLocator<ProjectViewModel>().redo();
-            }
+            // if (serviceLocator<ProjectViewModel>().canRedo) {
+            //   serviceLocator<ProjectViewModel>().redo();
+            // }
           },
           onDelete: () {
             //delete selected item with a confirmation dialog
