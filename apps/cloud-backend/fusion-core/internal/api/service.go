@@ -48,12 +48,7 @@ func New(cfg *Config,
 	// Initialize engine with proper configuration
 	engine := gin.New()
 
-	// Add middleware
-	engine.Use(gin.Recovery())
-	// engine.Use(ginLogger(logger)) // Custom logging middleware
-	engine.Use(corsMiddleware()) // CORS if needed
-
-	// Initialize logger
+	// Initialize logger first
 	var logger *zap.Logger
 	var err error
 	if cfg.Mode == "release" {
@@ -65,6 +60,9 @@ func New(cfg *Config,
 		return nil, fmt.Errorf("failed to initialize logger: %w", err)
 	}
 
+	// Add middleware in proper order
+	engine.Use(gin.Recovery())
+	engine.Use(corsMiddleware())                           // CORS if needed
 	engine.Use(middleware.RequestLoggerMiddleware(logger)) // Add request logging middleware
 
 	if productSvc == nil {

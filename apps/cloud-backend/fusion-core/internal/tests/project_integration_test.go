@@ -26,6 +26,7 @@ import (
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	sqlpkg "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/storage/sql"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -41,39 +42,7 @@ import (
 // Constants for frequently used literals
 const (
 	// HTTP Headers
-	headerUserID      = "X-User-ID"
-	headerAccountID   = "X-Account-ID"
-	headerContentType = "Content-Type"
-	headerAuth        = "Authorization"
-
-	// Content Types
-	contentTypeJSON = "application/json"
-
-	// API Endpoints
-	apiV1Projects            = "/api/v1/projects"
-	apiV1ProjectsArchived    = "/api/v1/projects?is_archived=true"
-	apiV1ProjectsBase        = "/api/v1/projects/"
-	apiV1ProjectsInvalidUUID = "/api/v1/projects/invalid-uuid"
-	apiV1ProjectsQuery       = "/api/v1/projects?"
-	usersPath                = "/users/"
-	starPath                 = "/star/"
-	archivePath              = "/archive"
-	lockPath                 = "/lock?"
-
-	// Test Values
-	testApplication     = "Test Application"
-	testVenue           = "Test Venue"
-	validApplication    = "Valid Application"
-	validProject        = "Valid Project"
-	updatedName         = "Updated Name"
-	testProjectTemplate = "Test Project - %s"
-	bearerTestToken     = "Bearer test-token"
-
-	// Error Messages
-	invalidProjectIDMsg = "should fail with invalid project ID"
-
-	// SQL Queries
-	countProjectsSQL = "SELECT COUNT(*) FROM project"
+	headerUserID = "X-User-ID"
 )
 
 // ProjectIntegrationTestSuite defines the test suite structure
@@ -327,8 +296,15 @@ func (suite *ProjectIntegrationTestSuite) createTestRouter(projectSVC *project.S
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
 
+	// Create a logger for the router middleware
+	zapLogger, err := zap.NewDevelopment()
+	if err != nil {
+		suite.T().Fatalf("Failed to create logger for test router: %v", err)
+	}
+
 	// Add middleware for testing
 	router.Use(gin.Recovery())
+	router.Use(middleware.RequestLoggerMiddleware(zapLogger)) // Add logger middleware
 	router.Use(suite.createMockAuthMiddleware())
 	router.Use(suite.createMockAccessControlMiddleware(userSVC))
 

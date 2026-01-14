@@ -9,6 +9,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/validation"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 const ()
@@ -37,6 +38,15 @@ func NewProjectHandler(project fusion.Project) *ProjectHandler {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects [post]
 func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+
+	logger := loggerFromContext.(*zap.Logger)
+
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
 		ctx.JSON(http.StatusUnauthorized, types.ErrorResponse{Message: types.ErrMsgUnauthorized})
@@ -56,10 +66,10 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 		return
 	}
 
-	response, err := h.project.CreateProject(ctx, &p, *user)
+	response, err := h.project.CreateProject(ctx, &p, *user, logger)
 
 	if err != nil {
-		if err.Error() == types.ErrMsgProjectAlreadyExists {	
+		if err.Error() == types.ErrMsgProjectAlreadyExists {
 			ctx.JSON(http.StatusBadRequest, types.ErrorResponse{Message: err.Error()})
 			return
 		}
@@ -86,6 +96,13 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects [get]
 func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
+
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
 
 	params := types.GetAllProjectsParams{}
 
@@ -120,7 +137,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 		params.SortOrder = "desc"
 	}
 
-	response, err := h.project.GetAllProjects(ctx, &params, *user)
+	response, err := h.project.GetAllProjects(ctx, &params, *user, logger)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: err.Error()})
 		return
@@ -145,6 +162,13 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId} [patch]
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 
 	userAuth, exists := ctx.Get("user_auth")
@@ -177,7 +201,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	p.ID = projectID
 
 	// Use authenticated update method which includes all validations
-	response, err := h.project.UpdateProject(ctx, &p, *user)
+	response, err := h.project.UpdateProject(ctx, &p, *user, logger)
 	if err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
@@ -221,6 +245,13 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId} [delete]
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 
 	userAuth, exists := ctx.Get("user_auth")
@@ -237,7 +268,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 		return
 	}
 
-	if err := h.project.DeleteProject(ctx, projectID, *user); err != nil {
+	if err := h.project.DeleteProject(ctx, projectID, *user, logger); err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
 			ctx.JSON(http.StatusNotFound, types.ErrorResponse{Message: err.Error()})
@@ -275,6 +306,13 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/users/{userEmail} [put]
 func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 	userAuth, exists := ctx.Get("user_auth")
@@ -290,7 +328,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 		return
 	}
 
-	_, err := h.project.AssignUserToProject(ctx, projectID, userEmail, *user)
+	_, err := h.project.AssignUserToProject(ctx, projectID, userEmail, *user, logger)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -320,6 +358,13 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/users/{userEmail} [delete]
 func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 	userEmail := strings.TrimSpace(ctx.Param("userEmail"))
 
@@ -336,7 +381,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 		return
 	}
 
-	_, err := h.project.RemoveUserFromProject(ctx, projectID, userEmail, *user)
+	_, err := h.project.RemoveUserFromProject(ctx, projectID, userEmail, *user, logger)
 	if err != nil {
 		errorMsg := err.Error()
 		// Check for specific error types
@@ -372,6 +417,13 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/star/{userId} [post]
 func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 
 	userAuth, exists := ctx.Get("user_auth")
@@ -401,9 +453,9 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 
 	var err error
 	if req.IsStarred {
-		err = h.project.StarProject(ctx, projectID, user.User.ID)
+		err = h.project.StarProject(ctx, projectID, user.User.ID, logger)
 	} else {
-		err = h.project.UnstarProject(ctx, projectID, user.User.ID)
+		err = h.project.UnstarProject(ctx, projectID, user.User.ID, logger)
 	}
 
 	if err != nil {
@@ -441,6 +493,13 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/archive [post]
 func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 
 	userAuth, exists := ctx.Get("user_auth")
@@ -470,9 +529,9 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 
 	var err error
 	if req.Archive {
-		err = h.project.ArchiveProject(ctx, projectID, *user)
+		err = h.project.ArchiveProject(ctx, projectID, *user, logger)
 	} else {
-		err = h.project.UnarchiveProject(ctx, projectID, *user)
+		err = h.project.UnarchiveProject(ctx, projectID, *user, logger)
 	}
 
 	if err != nil {
@@ -513,6 +572,13 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /projects/{projectId}/lock [post]
 func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
+	loggerFromContext, exists := ctx.Get("logger")
+	if !exists {
+		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		return
+	}
+	logger := loggerFromContext.(*zap.Logger)
+
 	projectID := ctx.Param("projectId")
 
 	userAuth, exists := ctx.Get("user_auth")
@@ -542,9 +608,9 @@ func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 
 	var err error
 	if req.IsLocked {
-		err = h.project.LockProject(ctx, projectID, *user)
+		err = h.project.LockProject(ctx, projectID, *user, logger)
 	} else {
-		err = h.project.UnlockProject(ctx, projectID, *user)
+		err = h.project.UnlockProject(ctx, projectID, *user, logger)
 	}
 
 	if err != nil {
