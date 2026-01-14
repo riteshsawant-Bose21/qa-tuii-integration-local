@@ -2,24 +2,30 @@ import 'dart:io';
 
 import 'package:bloc/bloc.dart';
 import 'package:flutter/material.dart';
+import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 export 'circuit/circuit_viewmodel.dart';
+export 'equip_location/equip_location_view_model.dart';
+export 'events/events_view_model.dart';
 
 ///Export all other view models extensions
 export 'floor/floor_view_model.dart';
+export 'functions/functions_view_model.dart';
 export 'hardware/hardware_view_model.dart';
 export 'listening_area/listening_area_view_model.dart';
+export 'media_files/media_file_view_models.dart';
+export 'mix_scenes/mix_scenes_view_model.dart';
 export 'processing_block/processing_block_viewmodel.dart';
 export 'project_images/project_image_view_model.dart';
 export 'project_properties/project_properties_view_model.dart';
+export 'scenes_view_model/scenes_view_model.dart';
+export 'schedule/schedule_view_model.dart';
 export 'source_set/source_set_view_model.dart';
 export 'subzones/subzone_view_model.dart';
 export 'undo_redo/undo_redo_view_model.dart';
 export 'wiring_connection/wiring_connection_view_model.dart';
 export 'zone/zone_view_model.dart';
-export 'functions/functions_view_model.dart';
-export 'mix_scenes/mix_scenes_view_model.dart';
 
 part 'project_view_model_state.dart';
 
@@ -34,7 +40,7 @@ enum ProjectMode {
 
 enum ToolbarMode { acoustics, system }
 
-enum ConfigurationMenuMode { processing, presets, gpio, scheduling }
+enum ConfigurationMenuMode { processing, snapshots, events, gpio, scheduling, mediaFiles }
 
 enum SelectedItemType {
   source,
@@ -103,6 +109,14 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   ConfigurationMenuMode currentConfigurationMenuMode = ConfigurationMenuMode.processing;
 
   ProductQueryModel? selectedProductToAdd;
+
+  bool _shouldPlaceNonPlacedSpeakers = false;
+  bool get shouldPlaceNonPlacedSpeakers => _shouldPlaceNonPlacedSpeakers;
+  void setShouldPlaceNonPlacedSpeakers(bool shouldPlace) {
+    if (shouldPlace == _shouldPlaceNonPlacedSpeakers) return;
+    _shouldPlaceNonPlacedSpeakers = shouldPlace;
+    updateProject();
+  }
 
   /// Global hover and selection state management
   SelectedItem? _selectedDevice;
@@ -178,10 +192,42 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  ProjectData? getCurrentProjectData() {
+    try {
+      return projectManager.getCurrentProjectData();
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> updateProjectLastSyncedAt({required String projectId, required DateTime lastSyncedAt}) async {
+    try {
+      await projectManager.updateProjectLastSyncedAt(projectId, lastSyncedAt);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Failed to update project last synced at: $e");
+    }
+  }
+
+  Future<File> getProjectZipFile({required String projectId}) async {
+    return projectManager.getProjectDirectoryZip(projectId);
+  }
+
+  Future<List<ProjectData>> getAllProjectsToUpload() async {
+    return await projectManager.getAllProjectsToUpload();
+  }
+
+  Future<Directory> getFusionProjectsDirectory() async {
+    return projectManager.getFusionProjectDirectory();
+  }
+
+  Future<ResponseCallback<bool>> saveProjects(List<ProjectData> projects) async {
+    return await projectManager.saveProjects(projects);
+  }
+
   /// Delete Project from local storage
   Future<void> deleteProjectFromLocal(String projectId) async {
     try {
-      final ResponseCallback<void> deleteResponse = await projectManager.deleteProject(projectId);
+      final ResponseCallback<void> deleteResponse = await projectManager.deleteProjectLocally(projectId);
       if (deleteResponse.success) {
         // Reload projects after deletion
         await loadAllLocalProjects();
@@ -199,6 +245,16 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
     }
   }
 
+  Future<void> softDeleteProject(String projectId) async {
+    try {
+      await projectManager.softDeleteProject(projectId);
+      await loadAllLocalProjects();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.exceptions, message: "Failed to soft delete project: $e");
+      emit(ProjectError(message: "Failed to soft delete project: $e"));
+    }
+  }
+
   /// Delete Current Project from local storage
   Future<void> deleteCurrentProjectFromLocal() async {
     if (_currentProject == null) {
@@ -206,6 +262,12 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       return;
     }
     await deleteProjectFromLocal(_currentProject!.id);
+    _currentProject = null;
+  }
+
+  Future<void> deleteFusionProjectDirectory() async {
+    await projectManager.deleteFusionProjectsDirectory();
+    allProjects.clear();
     _currentProject = null;
   }
 
@@ -283,6 +345,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
   }
 
   void throwError(String message) {
+    FusionLogger.log(tag: LogTag.project, message: message);
     emit(ProjectError(message: message));
   }
 
@@ -370,6 +433,7 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       // Reset selections when switching modes
       changeDeviceTypeIndex(-1);
       setSelectedProductToAdd(null);
+      setShouldPlaceNonPlacedSpeakers(false);
       emit(ToolbarModeChanged(mode));
     }
   }
@@ -431,5 +495,33 @@ class ProjectViewModel extends Cubit<ProjectViewModelState> {
       FusionLogger.log(tag: LogTag.exceptions, message: "No project is currently open.");
       return null;
     }
+  }
+
+  /// Selected snapshot ID for actions panel
+  String? selectedSnapshotId;
+
+  void setSelectedSnapshotId(String? snapshotId) {
+    selectedSnapshotId = snapshotId;
+    emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
+  }
+
+  /// Selected event ID for actions panel
+  String? selectedEventId;
+
+  void setSelectedEventId(String? eventId) {
+    selectedEventId = eventId;
+    emit(ProjectUpdated(projectId: _currentProject?.id ?? ''));
+  }
+
+  void increaseQty() {
+    final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
+    final Speaker clonedSpeaker = speakers.last.getClone();
+    addHardware(hardware: clonedSpeaker);
+  }
+
+  void decreaseQty() {
+    final List<Speaker> speakers = getAllNonPlacedHardwareInListeningArea(listeningAreaId: currentSelectedListeningAreaId!).whereType<Speaker>().toList();
+    final Speaker clonedSpeaker = speakers.last;
+    removeHardware(hardwareId: clonedSpeaker.id);
   }
 }

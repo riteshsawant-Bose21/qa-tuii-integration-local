@@ -9,6 +9,32 @@ extension ZoneFunctionService on ProjectService {
     if (currentZoneFunctions.isNotEmpty) {
       //remove old function
       removeFunction(functionId: currentZoneFunctions.first);
+
+      final linkedSceneActions = relationships.getParents(RelationshipType.actionItemMapping, zoneId);
+      final copyOfLinkedSceneActions = List<String>.from(linkedSceneActions);
+      for (final actionId in copyOfLinkedSceneActions) {
+        print("Checking action $actionId for removal due to function change");
+        final action = sceneActions.get(actionId);
+        if (action != null && action.param != null) {
+          if (action.param!.type.isRelatedToZoneFunction) {
+            final SceneParamType paramType = action.param!.type;
+            if (paramType == SceneParamType.prioritySelect1 || paramType == SceneParamType.prioritySelect2) {
+              //check if current function also has priority or not, if not remove the action
+              if (!function.hasPriority) {
+                removeSceneAction(actionId);
+              }
+            } else {
+              if (paramType == SceneParamType.sourceSelect &&
+                  (function.type == ZoneFunctionsType.sourceSelect || function.type == ZoneFunctionsType.sourceSelectWithPriority)) {
+                //Do nothing, valid action
+              } else {
+                //invalid action for the new function, remove it
+                removeSceneAction(actionId);
+              }
+            }
+          }
+        }
+      }
     }
 
     relationships.link(RelationshipType.zoneFunctions, zoneId, function.id);
@@ -17,33 +43,16 @@ extension ZoneFunctionService on ProjectService {
   }
 
   void removeFunction({required String functionId}) {
-    //remove all mix scenes associated with this function
-    final mixSceneIds = relationships.getChildren(RelationshipType.functionScenes, functionId);
-    final copyOfMixSceneIds = List<String>.from(mixSceneIds);
-    for (final mixSceneId in copyOfMixSceneIds) {
-      removeScene(mixSceneId);
-    }
-
-    //remove all mix settings for this scene
-    final mixSettingsToRemove = mixSettings.getByFunction(functionId);
-    final copyOfMixSettings = List<MixSettings>.from(mixSettingsToRemove);
-    for (final setting in copyOfMixSettings) {
-      mixSettings.remove(setting.id);
-    }
-
-    // Remove all matrix settings for this scene
-    final matrixSettingsToRemove = matrixSettings.getByFunction(functionId);
-    final copyOfMatrixSettings = List<MatrixSettings>.from(matrixSettingsToRemove);
-    for (final setting in copyOfMatrixSettings) {
-      matrixSettings.remove(setting.id);
-    }
-
     zoneFunctions.remove(functionId);
     relationships.removeAllRelationships(functionId);
   }
 
-  ZoneFunctions? getZoneFunction({required String zoneId}) {
-    final zoneFunctions = relationships.getChildren(RelationshipType.zoneFunctions, zoneId);
+  ZoneFunctions? getZoneFunction({required String zoneOrSubZoneId}) {
+    // final zoneId = zones.exists(zoneOrSubZoneId)
+    //     ? zoneOrSubZoneId
+    //     : relationships.getParent(RelationshipType.zoneSubZones, zoneOrSubZoneId)!;
+
+    final zoneFunctions = relationships.getChildren(RelationshipType.zoneFunctions, zoneOrSubZoneId);
     if (zoneFunctions.isEmpty) {
       return null;
     }
@@ -80,23 +89,19 @@ extension ZoneFunctionService on ProjectService {
 
   //return selected Source for given function
   String? getSelectedSourceForFunction({required String functionId}) {
-    final selectedSources = relationships.getChildren(RelationshipType.selectedSourceForFunction, functionId);
-    if (selectedSources.isEmpty) {
+    final ZoneFunctions? function = getZoneFunctionById(functionId: functionId);
+    if (function == null) {
       return null;
-    } else {
-      return selectedSources.first;
     }
+    return function.selectedSourceId;
   }
 
   void selectSourceForFunction({required String functionId, required String sourceId}) {
-    //remove previous selection
-    final currentSelectedSources = relationships.getChildren(RelationshipType.selectedSourceForFunction, functionId);
-    final copyOfCurrentSelectedSources = List<String>.from(currentSelectedSources);
-    for (final selectedSourceId in copyOfCurrentSelectedSources) {
-      relationships.unlink(RelationshipType.selectedSourceForFunction, functionId, selectedSourceId);
+    final ZoneFunctions? function = getZoneFunctionById(functionId: functionId);
+    if (function == null) {
+      return;
     }
-
-    //link new selection
-    relationships.link(RelationshipType.selectedSourceForFunction, functionId, sourceId);
+    final updatedFunction = function.copyWith(selectedSourceId: sourceId);
+    zoneFunctions.add(functionId, updatedFunction);
   }
 }

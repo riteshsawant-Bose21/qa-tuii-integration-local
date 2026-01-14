@@ -170,26 +170,6 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
-  //add Speaker to zone with a new circuit
-  void addSpeakerToZone({required String hardwareId, required String zoneId, bool autoSave = true}) {
-    try {
-      if (autoSave) {
-        recordSnapshot();
-      }
-      final CircuitModel circuitModel = CircuitModel(name: "New Circuit");
-      projectManager.addCircuit(circuitModel);
-      projectManager.addHardwareToCircuit(hardwareId, circuitModel.id);
-      projectManager.addCircuitToZone(circuitModel.id, zoneId);
-      if (autoSave) {
-        saveProject();
-      }
-      updateProject();
-    } catch (e) {
-      FusionLogger.log(tag: LogTag.project, message: "Failed to add speaker to zone: $e");
-      throwError("Failed to add speaker to zone: $e");
-    }
-  }
-
   // Add Source Set to Zone
   void addSourceSetToZone({required String sourceSetId, required String zoneId, bool autoSave = true}) {
     try {
@@ -433,6 +413,15 @@ extension ZoneViewModel on ProjectViewModel {
     }
   }
 
+  int getSourceCountInZone({required String zoneId}) {
+    try {
+      return projectManager.getSourcesAndSourceSetSourcesInZone(zoneId).length;
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get sources and source set sources in zone: $e");
+      return 0;
+    }
+  }
+
   void addPrioritySourceToZone({required String zoneId, required String sourceId, required int priority, bool autoSave = true}) {
     try {
       if (autoSave) {
@@ -505,6 +494,22 @@ extension ZoneViewModel on ProjectViewModel {
     } catch (e) {
       FusionLogger.log(tag: LogTag.project, message: "Failed to get priority source data by id: $e");
       return null;
+    }
+  }
+
+  void updatePrioritySourceData({required PrioritySourceData updatedData, bool autoSave = true}) {
+    try {
+      if (autoSave) {
+        recordSnapshot();
+      }
+      projectManager.updatePrioritySourceData(updatedData: updatedData);
+      if (autoSave) {
+        saveProject();
+      }
+      updateProject();
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to update priority source data: $e");
+      throwError("Failed to update priority source data: $e");
     }
   }
 

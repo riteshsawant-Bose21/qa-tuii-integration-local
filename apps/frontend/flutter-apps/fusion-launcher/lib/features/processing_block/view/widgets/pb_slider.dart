@@ -67,6 +67,7 @@ class VerticalSlider extends StatefulWidget {
     this.thumbSize = 16.0,
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
+    this.intervalGap,
   });
 
   final num value;
@@ -84,6 +85,7 @@ class VerticalSlider extends StatefulWidget {
   final double thumbSize;
   final double intervalSpacing;
   final double intervalTickWidth;
+  final num? intervalGap;
 
   @override
   State<VerticalSlider> createState() => _VerticalSliderState();
@@ -145,6 +147,18 @@ class _VerticalSliderState extends State<VerticalSlider> {
   }
 
   List<num> _generateIntervals(double height) {
+    // If intervalGap is provided, use it to generate intervals
+    if (widget.intervalGap != null) {
+      final num range = widget.max - widget.min;
+      final int tickCount = (range / widget.intervalGap!).floor() + 1;
+
+      return List<num>.generate(
+        tickCount,
+        (int i) => widget.max - (i * widget.intervalGap!),
+      ).where((num v) => v >= widget.min && v <= widget.max).toList();
+    }
+
+    // Otherwise, generate based on height
     final int tickCount = ((height / widget.intervalSpacing).floor()).clamp(3, 12);
     final double step = (widget.max - widget.min) / (tickCount - 1);
 
@@ -192,7 +206,7 @@ class _VerticalSliderState extends State<VerticalSlider> {
                         children: <Widget>[
                           ...intervals.map((num v) {
                             return Row(
-                              spacing: 5,
+                              spacing: 2,
                               mainAxisSize: MainAxisSize.min,
                               children: <Widget>[
                                 Text(
@@ -211,7 +225,6 @@ class _VerticalSliderState extends State<VerticalSlider> {
                                     borderRadius: BorderRadius.circular(1),
                                   ),
                                 ),
-                                const SizedBox(),
                               ],
                             );
                           }),

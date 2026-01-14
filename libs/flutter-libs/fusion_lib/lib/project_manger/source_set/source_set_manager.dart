@@ -9,7 +9,7 @@ extension SourceSetManager on ProjectManager {
     if (projectService!.sourceSets.exists(sourceSet.id)) {
       throw Exception('SourceSet with id ${sourceSet.id} already exists');
     }
-    projectService!.sourceSets.add(sourceSet.id, sourceSet);
+    projectService!.addSourceSet(sourceSet);
   }
 
   /// Remove SourceSet

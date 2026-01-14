@@ -3,22 +3,32 @@ import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
-import '../../model/schedule_model.dart';
 import '../../viewmodel/scheduler_form_viewmodel.dart';
+import '../../viewmodel/scheduler_viewmodel.dart';
 
 class SchedulerForm extends StatelessWidget {
-  const SchedulerForm({super.key});
-
+  const SchedulerForm({super.key, required this.viewModel, this.initial});
+  final SchedulerViewmodel viewModel;
+  final ScheduleConfig? initial;
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      constraints: const BoxConstraints(maxWidth: 750),
       insetPadding: const EdgeInsets.symmetric(horizontal: 200, vertical: 100),
       child: ChangeNotifierProvider<SchedulerFormViewModel>(
-        create: (BuildContext context) => SchedulerFormViewModel(),
+        create:
+            (BuildContext context) => SchedulerFormViewModel(
+              viewModel: viewModel,
+              initial: initial,
+            ),
+
         child: Material(
+          color: context.colorScheme.white,
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Container(
                 color: Colors.black,
@@ -28,7 +38,10 @@ class SchedulerForm extends StatelessWidget {
                     const SizedBox(
                       width: 10,
                     ),
-                    Text("Create Schedule", style: context.textTheme.titleMedium?.copyWith(color: Colors.white)),
+                    Text(
+                      initial == null ? "Create Schedule" : "Edit Schedule",
+                      style: context.textTheme.titleMedium?.copyWith(color: Colors.white),
+                    ),
                     const Spacer(),
                     IconButton(
                       icon: const Icon(
@@ -42,224 +55,264 @@ class SchedulerForm extends StatelessWidget {
                   ],
                 ),
               ),
-              Consumer<SchedulerFormViewModel>(
-                builder: (BuildContext context, SchedulerFormViewModel viewModel, Widget? child) {
-                  return Padding(
-                    padding: const EdgeInsets.all(15.0),
-                    child: Form(
-                      key: viewModel.key,
-                      child: Column(
-                        spacing: 24,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Row(
-                            children: <Widget>[
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    /// Zone Name Field
-                                    FusionAppText(
-                                      text: "Schedule Name",
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    FusionTextField(
-                                      controller: viewModel.name,
-                                      hintText: "Enter schedule name",
-                                      decoration: FusionInputDecoration.fusionDense(
-                                        colorScheme: Theme.of(context).colorScheme,
-                                        hintText: 'Enter schedule name',
-                                      ),
-                                      onChanged: (String value) {},
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(child: Container()),
-                            ],
-                          ),
-
-                          /// Color Picker Placeholder
-                          Column(
+              Flexible(
+                child: Consumer<SchedulerFormViewModel>(
+                  builder: (BuildContext context, SchedulerFormViewModel viewModel, Widget? child) {
+                    return Padding(
+                      padding: const EdgeInsets.all(15.0),
+                      child: SingleChildScrollView(
+                        child: Form(
+                          key: viewModel.key,
+                          child: Column(
+                            spacing: 24,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: <Widget>[
-                              FusionAppText(
-                                text: "Color",
-                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-
-                              /// Color Grid
-                              SizedBox(
-                                width: 400,
-                                child: GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                    maxCrossAxisExtent: 20,
-                                    crossAxisSpacing: 12,
-                                    mainAxisSpacing: 12,
-                                  ),
-                                  itemCount: Zone.zoneColors.length,
-                                  itemBuilder: (BuildContext context, int index) {
-                                    final String hexCode = Zone.zoneColors[index];
-                                    final Color color = hexToColor(hexCode);
-                                    final bool isSelected = viewModel.color == hexCode;
-
-                                    return GestureDetector(
-                                      onTap: () {
-                                        viewModel.color = hexCode;
-                                      },
-                                      child: Container(
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(4),
-                                          border:
-                                              isSelected
-                                                  ? Border.all(
-                                                    color: Theme.of(context).colorScheme.greyDark,
-                                                    width: 2,
-                                                  )
-                                                  : null,
-                                        ),
-                                        child:
-                                            isSelected
-                                                ? Container(
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context).colorScheme.greyDark.withOpacity(0.2),
-                                                    borderRadius: BorderRadius.circular(4),
-                                                  ),
-                                                  child: const Icon(
-                                                    Icons.check,
-                                                    color: Colors.white,
-                                                    size: 16,
-                                                  ),
-                                                )
-                                                : null,
-                                      ),
-                                    );
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-
-                            children: <Widget>[
-                              FusionAppText(text: "Recurrence", style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
-                              const SizedBox(height: 8),
-                              SegmentedButton<RecurrenceType>(
-                                value: viewModel.recurrenceType,
-                                labels: const <RecurrenceType, String>{
-                                  RecurrenceType.none: "Once",
-                                  RecurrenceType.daily: "Daily",
-                                  RecurrenceType.weekly: "Weekly",
-                                },
-                                onChanged: (RecurrenceType value) {
-                                  viewModel.recurrenceType = value;
-                                },
-                              ),
-                            ],
-                          ),
-
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: <Widget>[
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    FusionAppText(
-                                      text: "Select Date Range",
-                                      style: context.textTheme.bodySmall?.copyWith(
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                    CalendarDatePicker2(
-                                      // key: ValueKey<RecurrenceType>(viewModel.recurrenceType),
-                                      config: CalendarDatePicker2Config(
-                                        calendarType:
-                                            viewModel.recurrenceType == RecurrenceType.none ? CalendarDatePicker2Type.single : CalendarDatePicker2Type.range,
-
-                                        selectedDayHighlightColor: Colors.black,
-                                        daySplashColor: Colors.black12,
-                                        firstDate: DateTime.now(), //.subtract(const Duration(hours: 24)),
-                                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                                      ),
-                                      value:
-                                          viewModel.recurrenceType == RecurrenceType.none
-                                              ? <DateTime?>[viewModel.startDate]
-                                              : <DateTime?>[viewModel.startDate, viewModel.endDate],
-                                      onValueChanged: (List<DateTime> dates) {
-                                        if (viewModel.recurrenceType == RecurrenceType.none && dates.isNotEmpty) {
-                                          viewModel.startDate = dates.first;
-                                          viewModel.endDate = dates.first;
-                                          return;
-                                        }
-                                        if (dates.length >= 2) {
-                                          viewModel.startDate = dates.first;
-                                          viewModel.endDate = dates.last;
-                                        } else {
-                                          // viewModel.startDate = dates.first;
-                                          // viewModel.endDate = dates.first;
-                                        }
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 32),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Row(
-                                      crossAxisAlignment: CrossAxisAlignment.end,
-                                      mainAxisAlignment: MainAxisAlignment.start,
-                                      spacing: 10,
+                              Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
                                       children: <Widget>[
-                                        _TimePicker(
-                                          title: "Start",
-                                          time: viewModel.startTime,
-                                          onChanged: (TimeOfDay value) {
-                                            viewModel.startTime = value;
-                                          },
+                                        /// Zone Name Field
+                                        FusionAppText(
+                                          text: "Schedule Name",
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w500,
+                                          ),
                                         ),
-                                        // const SizedBox(height: 50, child: Icon(Icons.arrow_forward)),
-                                        // _TimePicker(
-                                        //   title: "End",
-                                        //   time: viewModel.endTime,
-                                        //   onChanged: (TimeOfDay value) {
-                                        //     viewModel.endTime = value;
-                                        //   },
-                                        // ),
+                                        FusionTextField(
+                                          controller: viewModel.name,
+                                          hintText: "Enter schedule name",
+                                          decoration: FusionInputDecoration.fusionDense(
+                                            colorScheme: Theme.of(context).colorScheme,
+                                            hintText: 'Enter schedule name',
+                                          ),
+
+                                          onChanged: (String value) {},
+                                        ),
                                       ],
                                     ),
-                                    const SizedBox(height: 24),
-                                    switch (viewModel.recurrenceType) {
-                                      RecurrenceType.weekly => const _WeeklyDaySelection(),
-                                      _ => const SizedBox(),
+                                  ),
+                                  Expanded(child: Container()),
+                                ],
+                              ),
+
+                              /// Color Picker Placeholder
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  FusionAppText(
+                                    text: "Color",
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  /// Color Grid
+                                  SizedBox(
+                                    width: 400,
+                                    child: GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: const NeverScrollableScrollPhysics(),
+                                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                        maxCrossAxisExtent: 20,
+                                        crossAxisSpacing: 12,
+                                        mainAxisSpacing: 12,
+                                      ),
+                                      itemCount: Zone.zoneColors.length,
+                                      itemBuilder: (BuildContext context, int index) {
+                                        final String hexCode = Zone.zoneColors[index];
+                                        final Color color = hexToColor(hexCode);
+                                        final bool isSelected = viewModel.color == hexCode;
+
+                                        return GestureDetector(
+                                          onTap: () {
+                                            viewModel.color = hexCode;
+                                          },
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: color,
+                                              borderRadius: BorderRadius.circular(4),
+                                              border:
+                                                  isSelected
+                                                      ? Border.all(
+                                                        color: Theme.of(context).colorScheme.greyDark,
+                                                        width: 2,
+                                                      )
+                                                      : null,
+                                            ),
+                                            child:
+                                                isSelected
+                                                    ? Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context).colorScheme.greyDark.withOpacity(0.2),
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Icon(
+                                                        Icons.check,
+                                                        color: Colors.white,
+                                                        size: 16,
+                                                      ),
+                                                    )
+                                                    : null,
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+
+                                children: <Widget>[
+                                  FusionAppText(text: "Recurrence", style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
+                                  const SizedBox(height: 8),
+                                  RadioGroup<RecurrenceType>(
+                                    groupValue: viewModel.recurrenceType,
+                                    onChanged: (RecurrenceType? selected) {
+                                      if (selected != null) {
+                                        viewModel.recurrenceType = selected;
+                                      }
                                     },
+                                    child: Row(
+                                      children: <Widget>[
+                                        for (final RecurrenceType type in RecurrenceType.values)
+                                          Padding(
+                                            padding: const EdgeInsets.only(right: 12.0),
+                                            child: Row(
+                                              children: <Widget>[
+                                                Radio<RecurrenceType>(
+                                                  value: type,
+                                                  fillColor: WidgetStateColor.resolveWith((Set<WidgetState> states) => Colors.black),
+                                                ),
+                                                Text(
+                                                  type.label,
+                                                  style: context.textTheme.bodySmall,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                      ],
+                                    ),
+                                  ),
+                                  // FusionSegmentedButton<RecurrenceType>(
+                                  //   value: viewModel.recurrenceType,
+                                  //   labels: <RecurrenceType, String>{
+                                  //     RecurrenceType.none: RecurrenceType.none.label,
+                                  //     RecurrenceType.daily: RecurrenceType.daily.label,
+                                  //     RecurrenceType.weekly: RecurrenceType.weekly.label,
+                                  //   },
+                                  //   onChanged: (RecurrenceType value) {
+                                  //     viewModel.recurrenceType = value;
+                                  //   },
+                                  // ),
+                                ],
+                              ),
+                              // FusionAppText(
+                              //   text: "Select Date Range",
+                              //   style: context.textTheme.bodySmall?.copyWith(
+                              //     fontWeight: FontWeight.w500,
+                              //   ),
+                              // ),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 200),
+                                alignment: Alignment.centerLeft,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: <Widget>[
+                                    _DatePickerField(
+                                      label: "From",
+                                      selectedDate: viewModel.startDate,
+                                      onDateSelected: (DateTime date) {
+                                        viewModel.startDate = date;
+                                      },
+                                      validator: (DateTime? date) {
+                                        if (viewModel.startDate == null) {
+                                          return "Please select a start date";
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    if (viewModel.recurrenceType != RecurrenceType.none) ...<Widget>[
+                                      const SizedBox(width: 12),
+                                      _DatePickerField(
+                                        validator: (DateTime? value) {
+                                          if (viewModel.endDate == null) {
+                                            return "Please select an end date";
+                                          }
+                                          if (viewModel.startDate != null && viewModel.endDate!.isBefore(viewModel.startDate!)) {
+                                            return "End date cannot be before start date";
+                                          }
+                                          return null;
+                                        },
+                                        label: "To",
+                                        selectedDate: viewModel.endDate,
+                                        minDate: viewModel.startDate,
+                                        onDateSelected: (DateTime date) {
+                                          viewModel.endDate = date;
+                                        },
+                                      ),
+                                    ],
+                                    const SizedBox(width: 12),
+                                    _TimePicker(
+                                      title: "Start",
+                                      time: viewModel.startTime,
+                                      onChanged: (TimeOfDay value) {
+                                        viewModel.startTime = value;
+                                      },
+                                    ),
                                   ],
                                 ),
                               ),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 200),
+                                child: switch (viewModel.recurrenceType) {
+                                  RecurrenceType.weekly => const _WeeklyDaySelection(),
+                                  _ => const SizedBox(),
+                                },
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: <Widget>[
+                                  FusionOutlinedButton(
+                                    label: "Cancel",
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  const SizedBox(width: 12),
+                                  FusionButton(
+                                    label: "Done",
+                                    isActive: viewModel.canEnableSubmit,
+                                    onTap: () async {
+                                      try {
+                                        final bool value = await viewModel.submit(initial);
+                                        if (value) {
+                                          Navigator.pop(context);
+                                        }
+                                      } catch (e) {
+                                        FusionToast.error(context, message: e.toString());
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 12),
+                                ],
+                              ),
+                              // const SizedBox(height: 24),
                             ],
                           ),
-
-                          const SizedBox(height: 24),
-                        ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -268,11 +321,11 @@ class SchedulerForm extends StatelessWidget {
     );
   }
 
-  static Future<void> show(BuildContext context) async {
+  static Future<void> show(BuildContext context, SchedulerViewmodel viewModel, {ScheduleConfig? initial}) async {
     await showDialog(
       context: context,
       builder: (BuildContext context) {
-        return const SchedulerForm();
+        return SchedulerForm(viewModel: viewModel, initial: initial);
       },
     );
   }
@@ -402,7 +455,7 @@ class _TimePicker extends StatelessWidget {
 }
 
 class _WeeklyDaySelection extends StatelessWidget {
-  const _WeeklyDaySelection({super.key});
+  const _WeeklyDaySelection();
 
   @override
   Widget build(BuildContext context) {
@@ -449,81 +502,103 @@ class _WeeklyDaySelection extends StatelessWidget {
   }
 }
 
-class SegmentedButton<T> extends StatelessWidget {
-  const SegmentedButton({super.key, required this.value, required this.labels, required this.onChanged});
-  final T value;
-  final Map<T, String> labels;
-  final ValueChanged<T> onChanged;
+class _DatePickerField extends StatelessWidget {
+  const _DatePickerField({super.key, required this.label, this.selectedDate, this.onDateSelected, this.minDate, this.validator});
+  final String label;
+  final DateTime? selectedDate;
+  final DateTime? minDate;
+  final ValueChanged<DateTime>? onDateSelected;
+  final String? Function(DateTime?)? validator;
+
   @override
   Widget build(BuildContext context) {
-    final List<T> keys = labels.keys.toList();
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        for (int i = 0; i < keys.length; i++)
-          GestureDetector(
-            onTap: () {
-              onChanged(keys[i]);
-            },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              decoration: BoxDecoration(
-                color: keys[i] == value ? Colors.black : Colors.transparent,
-                border: const Border.symmetric(horizontal: BorderSide(color: Colors.grey, width: 1), vertical: BorderSide(color: Colors.grey, width: 0.5)),
-                borderRadius: BorderRadius.horizontal(
-                  left: i == 0 ? const Radius.circular(20) : Radius.zero,
-                  right: i == keys.length - 1 ? const Radius.circular(20) : Radius.zero,
-                ),
+    return FormField<DateTime>(
+      validator: validator,
+      initialValue: selectedDate,
+      builder: (FormFieldState<DateTime> state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            FusionAppText(
+              text: label,
+              style: context.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.bold,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: Text(
-                labels[keys[i]]!,
-                style: context.textTheme.bodySmall?.copyWith(
-                  color: keys[i] == value ? Colors.white : Colors.black,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: state.hasError ? Colors.red : Colors.grey),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              clipBehavior: Clip.hardEdge,
+              height: 50,
+              child: PopupMenuButton<dynamic>(
+                position: PopupMenuPosition.under,
+                tooltip: 'Select Date',
+                itemBuilder:
+                    (BuildContext context) => <PopupMenuEntry<dynamic>>[
+                      PopupMenuItem<dynamic>(
+                        enabled: false,
+                        padding: const EdgeInsets.all(0),
+                        child: SizedBox(
+                          width: 600,
+                          child: CalendarDatePicker2(
+                            // key: ValueKey<RecurrenceType>(viewModel.recurrenceType),
+                            config: CalendarDatePicker2Config(
+                              calendarType: CalendarDatePicker2Type.single,
+
+                              selectedDayHighlightColor: Colors.black,
+                              daySplashColor: Colors.black12,
+                              firstDate: minDate ?? DateTime.now(), //.subtract(const Duration(hours: 24)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            ),
+                            displayedMonthDate: selectedDate,
+                            value: <DateTime?>[selectedDate],
+                            onValueChanged: (List<DateTime> dates) {
+                              if (dates.isNotEmpty && onDateSelected != null) {
+                                onDateSelected!(dates.first);
+                                Navigator.of(context).pop();
+                              }
+                              // if (viewModel.recurrenceType == RecurrenceType.none && dates.isNotEmpty) {
+                              //   viewModel.startDate = dates.first;
+                              //   viewModel.endDate = dates.first;
+                              //   return;
+                              // }
+                              // if (dates.length >= 2) {
+                              //   viewModel.startDate = dates.first;
+                              //   viewModel.endDate = dates.last;
+                              // }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                child: Container(
+                  // constraints: const BoxConstraints(maxWidth: 300),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  child: Row(
+                    spacing: 18,
+                    children: <Widget>[
+                      Text(
+                        selectedDate != null ? DateFormat('dd-MM-yyyy').format(selectedDate!) : "Select Date",
+                        style: context.textTheme.bodySmall,
+                      ),
+                      const Icon(Icons.calendar_month, color: Colors.black),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-      ],
-    );
-  }
-}
-
-class _MonthlyDaySelection extends StatelessWidget {
-  const _MonthlyDaySelection({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Consumer<SchedulerFormViewModel>(
-      builder: (BuildContext context, SchedulerFormViewModel viewModel, Widget? child) {
-        return Row(
-          children: <Widget>[
-            for (final RecurrenceDay day in RecurrenceDay.values)
-              Builder(
-                builder: (BuildContext context) {
-                  final bool isSelected = viewModel.recurrenceDays.contains(day);
-                  return Column(
-                    children: <Widget>[
-                      Checkbox(
-                        activeColor: Colors.black,
-                        value: isSelected,
-                        onChanged: (_) {
-                          if (viewModel.recurrenceDays.contains(day)) {
-                            viewModel.removeRecurrenceDay(day);
-                          } else {
-                            viewModel.addRecurrenceDay(day);
-                          }
-                        },
-                      ),
-                      Text(
-                        day.name.substring(0, 3).toUpperCase(),
-                        style: context.textTheme.bodySmall,
-                      ),
-                    ],
-                  );
-                },
+            if (state.hasError) ...<Widget>[
+              const SizedBox(height: 5),
+              Text(
+                state.errorText!,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: Colors.red,
+                ),
               ),
+            ],
           ],
         );
       },

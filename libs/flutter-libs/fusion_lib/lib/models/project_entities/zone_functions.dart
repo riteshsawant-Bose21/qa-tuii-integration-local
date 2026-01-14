@@ -27,7 +27,7 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
     }
   }
 
-  bool get hasMixScenes {
+  bool get hasScenes {
     switch (this) {
       case ZoneFunctionsType.sourceSelect:
       case ZoneFunctionsType.sourceSelectWithPriority:
@@ -40,7 +40,7 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
     }
   }
 
-  bool get hasMixSettings {
+  bool get hasSourceMixSettings {
     switch (this) {
       case ZoneFunctionsType.sourceSelect:
       case ZoneFunctionsType.sourceSelectWithPriority:
@@ -65,6 +65,19 @@ extension ZoneFunctionsTypeList on ZoneFunctionsType {
         return true;
     }
   }
+
+  bool get hasPriority {
+    switch (this) {
+      case ZoneFunctionsType.sourceSelect:
+      case ZoneFunctionsType.sourceMix:
+      case ZoneFunctionsType.miniMatrix:
+        return false;
+      case ZoneFunctionsType.sourceSelectWithPriority:
+      case ZoneFunctionsType.sourceMixWithPriority:
+      case ZoneFunctionsType.miniMatrixWithPriority:
+        return true;
+    }
+  }
 }
 
 class ZoneFunctions {
@@ -72,12 +85,22 @@ class ZoneFunctions {
   final String name;
   final ZoneFunctionsType type;
   final bool hasPriority;
+  final List<MixSettings>? mixSettings;
+  final MatrixMixer? matrixMixer;
+  final List<MixScene> mixScenes;
+  final String? selectedMixSceneId;
+  final String? selectedSourceId;
 
   ZoneFunctions({
     String? id,
     required this.name,
     required this.type,
     required this.hasPriority,
+    this.mixSettings,
+    this.matrixMixer,
+    this.selectedMixSceneId,
+    this.mixScenes = const [],
+    this.selectedSourceId,
   }) : id = id ?? "FUNC${FusionUtils.shortStringUUID()}";
 
   ZoneFunctions copyWith({
@@ -85,12 +108,22 @@ class ZoneFunctions {
     String? name,
     ZoneFunctionsType? type,
     bool? hasPriority,
+    List<MixSettings>? mixSettings,
+    MatrixMixer? matrixMixer,
+    List<MixScene>? mixScenes,
+    String? selectedMixSceneId,
+    String? selectedSourceId,
   }) {
     return ZoneFunctions(
       id: id ?? this.id,
       name: name ?? this.name,
       type: type ?? this.type,
       hasPriority: hasPriority ?? this.hasPriority,
+      mixSettings: mixSettings ?? this.mixSettings,
+      matrixMixer: matrixMixer ?? this.matrixMixer,
+      mixScenes: mixScenes ?? this.mixScenes,
+      selectedMixSceneId: selectedMixSceneId ?? this.selectedMixSceneId,
+      selectedSourceId: selectedSourceId ?? this.selectedSourceId,
     );
   }
 
@@ -101,6 +134,11 @@ class ZoneFunctions {
       'name': name,
       'type': type.name,
       'hasPriority': hasPriority,
+      "mixSettings": mixSettings?.map((e) => e.toJson()).toList(),
+      "matrixMixer": matrixMixer?.toJson(),
+      'mixScenes': mixScenes.map((e) => e.toJson()).toList(),
+      'selectedMixSceneId': selectedMixSceneId,
+      'selectedSourceId': selectedSourceId,
     };
   }
 
@@ -113,6 +151,21 @@ class ZoneFunctions {
         (e) => e.name == json['type'],
       ),
       hasPriority: json['hasPriority'],
+      mixSettings: json['mixSettings'] != null ? (json['mixSettings'] as List).map((e) => MixSettings.fromJson(e)).toList() : null,
+      matrixMixer: json['matrixMixer'] != null
+          ? json['matrixMixer']['type'] == SignalType.mono.name
+                ? MonoMatrixMixer.fromJson(json['matrixMixer'])
+                : StereoMatrixMixer.fromJson(json['matrixMixer'])
+          : null,
+      mixScenes: ((json['mixScenes'] ?? []) as List).map((e) {
+        if (e['type'] == MixSceneType.source.name) {
+          return SourceMixScene.fromJson(e);
+        } else {
+          return MatrixMixScene.fromJson(e);
+        }
+      }).toList(),
+      selectedMixSceneId: json['selectedMixSceneId'],
+      selectedSourceId: json['selectedSourceId'],
     );
   }
 }

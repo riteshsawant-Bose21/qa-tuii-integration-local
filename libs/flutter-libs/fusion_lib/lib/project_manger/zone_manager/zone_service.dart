@@ -31,6 +31,13 @@ extension ZoneService on ProjectService {
 
     removeAllPrioritySourcesFromZone(zoneId);
 
+    //remove all associated Scene actions
+    final sceneActionsIds = relationships.getParents(RelationshipType.actionItemMapping, zoneId).toList();
+    final sceneActionsIdsCopy = List<String>.from(sceneActionsIds);
+    for (final actionId in sceneActionsIdsCopy) {
+      removeSceneAction(actionId);
+    }
+
     //remove all the circuits in zone
     // final circuitIds = relationships.getChildren(RelationshipType.zoneCircuits, zoneId).toList();
     // final circuitIdsCopy = List<String>.from(circuitIds);
@@ -102,6 +109,13 @@ extension ZoneService on ProjectService {
     final sourcesInSourceSetCopy = List<String>.from(sourcesInSourceSet);
     for (final source in sourcesInSourceSetCopy) {
       removeSourceFromAllScenes(source);
+
+      //check if this source is used in any Source action, if yes, remove it
+      final sourceActions = relationships.getParents(RelationshipType.actionValueMapping, source);
+      final sourceActionsCopy = List<String>.from(sourceActions);
+      for (final actionId in sourceActionsCopy) {
+        removeSceneAction(actionId);
+      }
     }
   }
 
@@ -114,7 +128,7 @@ extension ZoneService on ProjectService {
   //Add Circuit to Zone
   void addCircuitToZone(String circuitId, String zoneId) {
     if (!circuits.exists(circuitId)) throw Exception('Circuit $circuitId not found');
-    if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
+    // if (!zones.exists(zoneId)) throw Exception('Zone $zoneId not found');
 
     // Update relationship graph (idempotent)
     relationships.link(RelationshipType.zoneCircuits, zoneId, circuitId);
@@ -162,6 +176,14 @@ extension ZoneService on ProjectService {
     return {for (var zone in items) zone.id: zone};
   }
 
+  List<Zone> getZonesWithoutSubzones() {
+    final allZones = zones.getAll();
+    return allZones.where((zone) {
+      final subZoneIds = relationships.getChildren(RelationshipType.zoneSubZones, zone.id);
+      return subZoneIds.isEmpty;
+    }).toList();
+  }
+
   //Zone Sources
   void addSourceToZone(String sourceId, String zoneId) {
     if (!hardware.exists(sourceId)) throw Exception('Source $sourceId not found');
@@ -185,6 +207,12 @@ extension ZoneService on ProjectService {
     relationships.unlink(RelationshipType.zoneSources, zoneId, sourceId);
 
     removeSourceFromAllScenes(sourceId);
+
+    final sourceActions = relationships.getParents(RelationshipType.actionValueMapping, sourceId);
+    final sourceActionsCopy = List<String>.from(sourceActions);
+    for (final actionId in sourceActionsCopy) {
+      removeSceneAction(actionId);
+    }
   }
 
   List<Source> getSourcesInZone(String zoneId) {
@@ -265,6 +293,25 @@ extension ZoneService on ProjectService {
     // }
     //
     // relationships.reOrder(RelationshipType.prioritySources, zoneId, priorityOrder);
+  }
+
+  void checkAndRemoveSourceFromZonePrioritySources({
+    required String sourceId,
+  }) {
+    final allZones = zones.getAll();
+
+    for (final zone in allZones) {
+      final prioritySources = relationships.getChildren(RelationshipType.zonePriorities, zone.id).toList();
+
+      for (final priorityId in prioritySources) {
+        final priorityData = prioritySourceData.get(priorityId);
+        if (priorityData?.sourceId == sourceId) {
+          relationships.unlink(RelationshipType.zonePriorities, zone.id, priorityId);
+          prioritySourceData.remove(priorityId);
+          break;
+        }
+      }
+    }
   }
 
   void reOrderPrioritySourcesInZone({
@@ -357,6 +404,17 @@ extension ZoneService on ProjectService {
 
   PrioritySourceData? getPrioritySourceDataById({required String priorityDataId}) {
     return prioritySourceData.get(priorityDataId);
+  }
+
+  void updatePrioritySourceData({
+    required PrioritySourceData updatedData,
+  }) {
+    final existingData = prioritySourceData.get(updatedData.id);
+    if (existingData == null) {
+      throw Exception('PrioritySourceData ${updatedData.id} not found');
+    }
+
+    prioritySourceData.add(updatedData.id, updatedData);
   }
 
   void removeAllPrioritySourcesFromZone(String zoneId) {

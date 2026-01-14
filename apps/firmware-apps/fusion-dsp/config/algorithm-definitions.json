@@ -1,5 +1,5 @@
 {
-    "version": "0.1.9",
+    "version": "0.1.13",
     "algorithms": [
         {
             "name": "alsa_in",
@@ -380,6 +380,111 @@
                     "maximum_value": 0.0,
                     "telemetry_type": "meter",
                     "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "fir_hybrid",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "num_taps",
+                    "value_type": "integer",
+                    "default_value": 512,
+                    "minimum_value": 32,
+                    "maximum_value": 98304
+                },
+                {
+                    "name": "direct_taps",
+                    "value_type": "integer",
+                    "default_value": 128,
+                    "minimum_value": 0,
+                    "maximum_value": 1024
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "coefficients",
+                    "value_type": "float",
+                    "dimensions": ["num_taps"],
+                    "default_value": 0.0,
+                    "minimum_value": -10.0,
+                    "maximum_value": 10.0
+                }
+            ]
+        },
+        {
+            "name": "fir_direct",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "num_taps",
+                    "value_type": "integer",
+                    "default_value": 512,
+                    "minimum_value": 32,
+                    "maximum_value": 98304
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "coefficients",
+                    "value_type": "float",
+                    "dimensions": ["num_taps"],
+                    "default_value": 0.0,
+                    "minimum_value": -10.0,
+                    "maximum_value": 10.0
                 }
             ]
         },
@@ -1967,6 +2072,189 @@
             ]
         },
         {
+            "name": "tilt_filter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                },
+                {
+                    "name": "coefficients_file",
+                    "value_type": "string",
+                    "default_value": "config/tilt_filter_coefficients.json",
+                    "maximum_length": 256
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "tilt",
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -6.0,
+                    "maximum_value": 6.0
+                },
+                {
+                    "name": "out_gain",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -30.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
+            "name": "dynamic_eq",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "calibration_mode",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "calibration_hold",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "input_gain",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 12.0
+                },
+                {
+                    "name": "calibration_gain",
+                    "value_type": "float",
+                    "default_value": 7.0,
+                    "minimum_value": -20.0,
+                    "maximum_value": 40.0
+                },
+                {
+                    "name": "detect_attack",
+                    "value_type": "float",
+                    "default_value": 0.1,
+                    "minimum_value": 0.001,
+                    "maximum_value": 1.0
+                },
+                {
+                    "name": "detect_release",
+                    "value_type": "float",
+                    "default_value": 2.0,
+                    "minimum_value": 0.1,
+                    "maximum_value": 10.0
+                },
+                {
+                    "name": "smooth_attack",
+                    "value_type": "float",
+                    "default_value": 0.001,
+                    "minimum_value": 0.0001,
+                    "maximum_value": 0.1
+                },
+                {
+                    "name": "smooth_release",
+                    "value_type": "float",
+                    "default_value": 0.001,
+                    "minimum_value": 0.0001,
+                    "maximum_value": 0.1
+                },
+                {
+                    "name": "hpf_frequency",
+                    "value_type": "float",
+                    "default_value": 100.0,
+                    "minimum_value": 20.0,
+                    "maximum_value": 20000.0
+                },
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "calibration_spl",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 120.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
+        },
+        {
             "name": "source_selector",
             "terminals": [
                 {
@@ -2073,6 +2361,32 @@
                     "dimensions": [1],
                     "value_type": "bool",
                     "default_value": false
+                }
+            ]
+        },
+        {
+            "name": "unshifter",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels"
                 }
             ]
         },
@@ -2216,6 +2530,185 @@
                     "default_value": false
                 }
             ]
+        },
+        {
+            "name": "vadagc",
+            "properties": [
+                {
+                    "name": "channels",
+                    "value_type": "integer",
+                    "default_value": 1,
+                    "minimum_value": 1,
+                    "maximum_value": 32
+                }
+            ],
+            "terminals": [
+                {
+                    "name": "in",
+                    "signal_type": "audio",
+                    "direction": "input",
+                    "channels": "channels"
+                },
+                {
+                    "name": "out",
+                    "signal_type": "audio",
+                    "direction": "output",
+                    "channels": "channels",
+                    "bypass_source": "in"
+                }
+            ],
+            "parameters": [
+                {
+                    "name": "activity_threshold",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": -40.0,
+                    "minimum_value": -70.0,
+                    "maximum_value": 0.0
+                },
+                {
+                    "name": "target_minimum",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": -6.0,
+                    "minimum_value": -40.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "target_maximum",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 6.0,
+                    "minimum_value": -40.0,
+                    "maximum_value": 24.0
+                },
+                {
+                    "name": "cut_rate",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 5.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 9000.0
+                },
+                {
+                    "name": "boost_rate",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 5.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 9000.0
+                },
+                {
+                    "name": "cut_range",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 18.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 30.0
+                },
+                {
+                    "name": "boost_range",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 6.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 30.0
+                },
+                {
+                    "name": "cut_hold",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 3.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "boost_hold",
+                    "value_type": "float",
+                    "dimensions": ["channels"],
+                    "default_value": 3.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "max_total_boost",
+                    "value_type": "float",
+                    "default_value": 24.0,
+                    "minimum_value": 0.0,
+                    "maximum_value": 60.0
+                },
+                {
+                    "name": "channel_bypass",
+                    "value_type": "bool",
+                    "dimensions": ["channels"],
+                    "default_value": false
+                },
+                {
+                    "name": "bypass",
+                    "value_type": "bool",
+                    "default_value": false
+                },
+                {
+                    "name": "denoise_frame",
+                    "value_type": "bool",
+                    "default_value": true
+                },
+                {
+                    "name": "vad_threshold",
+                    "value_type": "float",
+                    "default_value": 0.9,
+                    "minimum_value": 0.0,
+                    "maximum_value": 1.0
+                },
+                {
+                    "name": "alpha",
+                    "value_type": "float",
+                    "default_value": 0.5,
+                    "minimum_value": 0.0,
+                    "maximum_value": 1.0
+                }
+            ],
+            "telemetry": [
+                {
+                    "name": "in_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -36.0,
+                    "minimum_value": -36.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "out_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": -60.0,
+                    "minimum_value": -60.0,
+                    "maximum_value": 0.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "gain_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "float",
+                    "default_value": 0.0,
+                    "minimum_value": -24.0,
+                    "maximum_value": 24.0,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                },
+                {
+                    "name": "hold_meter",
+                    "dimensions": ["channels"],
+                    "value_type": "bool",
+                    "default_value": false,
+                    "telemetry_type": "meter",
+                    "period_type": "HI"
+                }
+            ]
         }
+        
     ]
 }

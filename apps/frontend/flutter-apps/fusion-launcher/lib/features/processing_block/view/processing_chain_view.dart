@@ -202,11 +202,27 @@ class ProcessingChainView extends StatelessWidget {
                               message: "Customize Processing Block Layout",
                               child: InkWell(
                                 onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute<void>(
-                                      builder: (BuildContext context) => Scaffold(appBar: AppBar(), body: const ProcessingBlockCustomizer()),
-                                    ),
-                                  );
+                                  Navigator.of(context)
+                                      .push(
+                                        MaterialPageRoute<void>(
+                                          builder:
+                                              (BuildContext context) => Theme(
+                                                data: FusionAppTheme.lightTheme,
+                                                child: Scaffold(
+                                                  appBar: AppBar(),
+                                                  body: ProcessingBlockCustomizer(
+                                                    selectedAlgorithmId: state.selectedBlock.algorithmId,
+                                                  ),
+                                                ),
+                                              ),
+                                        ),
+                                      )
+                                      // refresh the layout from storage
+                                      .whenComplete(
+                                        () {
+                                          viewModel.refreshProcessingBlock(state.selectedBlock);
+                                        },
+                                      );
                                 },
                                 child: const Icon(Icons.edit_outlined),
                               ),
@@ -216,8 +232,11 @@ class ProcessingChainView extends StatelessWidget {
                         ),
                         const Divider(),
                         Flexible(
-                          child: ProcessingBlockPage(
-                            processingBlock: state.selectedBlock,
+                          child: Theme(
+                            data: FusionAppTheme.lightTheme,
+                            child: ProcessingBlockPage(
+                              processingBlock: state.selectedBlock,
+                            ),
                           ),
                         ),
                       ],

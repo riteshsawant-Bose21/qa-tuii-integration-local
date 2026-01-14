@@ -27,11 +27,11 @@ class ResponseCallback<T> {
     return ResponseCallback<T>(success: success, message: message, data: data);
   }
 
-  factory ResponseCallback.success(T data, {String message = ''}) {
+  factory ResponseCallback.success(T? data, {String message = ''}) {
     return ResponseCallback<T>(success: true, message: message, data: data);
   }
 
-  factory ResponseCallback.failure(String message) {
-    return ResponseCallback<T>(success: false, message: message, data: null);
+  factory ResponseCallback.failure(String message, {T? data}) {
+    return ResponseCallback<T>(success: false, message: message, data: data);
   }
 }

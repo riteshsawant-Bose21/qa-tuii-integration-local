@@ -5,16 +5,20 @@ import (
 	"fusion/internal/api"
 	"fusion/internal/logging"
 	"fusion/internal/network"
+	"fusion/internal/routes"
 	"fusion/internal/utils"
+	"io"
 	"net"
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	json "github.com/goccy/go-json"
 	"github.com/hashicorp/memberlist"
 )
 
@@ -50,18 +54,16 @@ type ClusterMember struct {
 
 // ClusterStatus holds information of the cluster state
 type ClusterStatus struct {
-	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.64.100")
+	VIP       string   `json:"vip"`     // Current VIP address (eg. "192.168.2.100")
 	Host      string   `json:"host"`    // Local IP address of the node holding VIP
 	Cluster   []string `json:"cluster"` // All known cluster node addresses
 	Timestamp int64    `json:"ts"`      // Unix timestamp for freshness
 }
 
 type Cluster struct {
-	nodeName         string
-	bindAddr         string
-	bindPort         int
+	appConfig        *api.AppConfig
 	delegate         *ClusterDelegate
-	config           *api.AppConfig
+	httpClient       *http.Client
 	Memberlist       *memberlist.Memberlist
 	vip              string
 	vipHolder        string
@@ -75,11 +77,9 @@ type Cluster struct {
 func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist *memberlist.Memberlist) *Cluster {
 
 	cluster := &Cluster{
-		nodeName:         appConfig.NodeName,
-		bindAddr:         appConfig.BindAddr,
-		bindPort:         appConfig.BindPort,
+		appConfig:        appConfig,
 		delegate:         delegate,
-		config:           appConfig,
+		httpClient:       &http.Client{Timeout: api.HTTPTimeout},
 		Memberlist:       memberlist,
 		configPath:       configPath,
 		Metrics:          NewMetricsCollector(memberlist, delegate.stateManager),
@@ -88,7 +88,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 
 	logger := logging.GetLogger()
 
-	if !cluster.config.Local {
+	if !cluster.appConfig.Local {
 
 		if err := cluster.startVRRPListener(appConfig.NetIface); err != nil {
 			logger.Fatal("startVRRPListener: %v", err)
@@ -109,6 +109,7 @@ func NewCluster(appConfig *api.AppConfig, delegate *ClusterDelegate, memberlist 
 
 	cluster.updateDeviceInfo()
 
+	go cluster.initialAudioSync()
 	go cluster.startStateMonitor()
 	go cluster.startNetworkLatencyProbes()
 
@@ -158,7 +159,7 @@ func (c *Cluster) getClusterIPs() []string {
 }
 
 // canonicalVIP canonicalizes an IP address.
-// "192.168.64.100/24" becomes "192.168.64.100"
+// "192.168.2.100/24" becomes "192.168.2.100"
 func canonicalVIP(s string) string {
 	if s == "" {
 		return ""
@@ -202,16 +203,13 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 
 		logger.Info("VIP %s removed (old holder %s)", oldVIP, oldHolder)
 
-		// Update state
 		c.vip = ""
 		c.vipHolder = ""
 
-		// Notify locally and stop any VIP tasks
 		c.notifyLocalVIPChange(false)
 		return
 	}
 
-	// No change
 	if newVIP == oldVIP && srcIP == oldHolder {
 		logger.Warn("listenerUpdated called but VIP state is unchanged.")
 		return
@@ -238,7 +236,6 @@ func (c *Cluster) listenerUpdated(vip, srcIP string) {
 		}
 	}
 
-	// Update current state
 	c.vip = newVIP
 	c.vipHolder = srcIP
 
@@ -519,7 +516,7 @@ func fetchFromAdminSingle[T any](
 	// remoteFetch: decode one T, then wrap into []T
 	remoteFetch := func(addr, endpoint string) ([]T, error) {
 		var tmp T
-		if err := fetchAndDecode(addr, endpoint, &tmp); err != nil {
+		if err := fetchAndDecode(c, addr, endpoint, &tmp); err != nil {
 			return nil, err
 		}
 		return []T{tmp}, nil
@@ -540,7 +537,7 @@ func fetchFromAdminSlice[T any](
 
 	remoteFetch := func(addr, endpoint string) ([]T, error) {
 		var remoteSlice []T
-		if err := fetchAndDecode(addr, endpoint, &remoteSlice); err != nil {
+		if err := fetchAndDecode(c, addr, endpoint, &remoteSlice); err != nil {
 			return nil, err
 		}
 		return remoteSlice, nil
@@ -569,10 +566,11 @@ func fetchAllFromAdmin[T any](
 
 // fetchAndDecode calls an endpoint and decodes the value
 func fetchAndDecode[T any](
+	c *Cluster,
 	addr, endpoint string,
 	dest *T,
 ) error {
-	resp, err := getLocalEndpointResponse(addr, endpoint)
+	resp, err := getLocalEndpointResponse(c, addr, endpoint)
 	if err != nil {
 		return err
 	}
@@ -608,10 +606,10 @@ func postGenericToAdmin(
 }
 
 // getLocalEndpointResponse calls a endpoint
-func getLocalEndpointResponse(addr, endpoint string) (response *http.Response, err error) {
+func getLocalEndpointResponse(c *Cluster, addr, endpoint string) (response *http.Response, err error) {
 
 	url := getLocalURL(addr, endpoint)
-	resp, err := httpClient.Get(url)
+	resp, err := c.httpClient.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -650,7 +648,7 @@ func (c *Cluster) notifyLocalVIPChange(gained bool) {
 
 	msg := map[string]any{
 		"vip":       c.vip,
-		"host":      c.bindAddr,
+		"host":      c.appConfig.BindAddr,
 		"event":     event,
 		"timestamp": time.Now().Unix(),
 	}
@@ -669,4 +667,111 @@ func ternary(cond bool, a, b string) string {
 		return a
 	}
 	return b
+}
+
+func (c *Cluster) initialAudioSync() {
+	peers := c.Memberlist.Members()
+	if len(peers) <= 1 {
+		return
+	}
+
+	var peer *memberlist.Node
+	for _, p := range peers {
+		if p.Name != c.Memberlist.LocalNode().Name {
+			peer = p
+			break
+		}
+	}
+
+	if peer != nil {
+		_ = c.initialAudioSyncFromPeer(peer)
+	}
+
+	c.reconcileLocalAudioState()
+}
+
+func (c *Cluster) initialAudioSyncFromPeer(peer *memberlist.Node) error {
+	logger := logging.GetLogger()
+
+	url := fmt.Sprintf("http://%s:%s%s", peer.Addr, api.HTTPPort, routes.PAVAMessagesEndpoint)
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return fmt.Errorf("messages fetch: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return fmt.Errorf("metadata list error: %d %s", resp.StatusCode, string(body))
+	}
+
+	var metas []api.AudioMetadata
+	if err := json.NewDecoder(resp.Body).Decode(&metas); err != nil {
+		return fmt.Errorf("decode metadata: %w", err)
+	}
+
+	peerURL := fmt.Sprintf("http://%s:%s", peer.Addr, api.HTTPPort)
+
+	for _, meta := range metas {
+		update := api.AudioSyncUpdate{
+			Metadata: meta,
+			URL:      peerURL,
+		}
+		if err := c.delegate.persistence.SyncAudioFile(&update); err != nil {
+			logger.Error("initial sync failed for %s: %v", meta.Filename, err)
+		}
+	}
+
+	return nil
+}
+
+// reconcileLocalAudioState reconciles audio files and metadata
+func (c *Cluster) reconcileLocalAudioState() {
+	logger := logging.GetLogger()
+
+	metas, err := c.delegate.persistence.ListAudioMetadata()
+	if err != nil {
+		logger.Error("Audio reconciliation: failed to list metadata: %v", err)
+		return
+	}
+
+	metaByFilename := make(map[string]*api.AudioMetadata, len(metas))
+	for _, m := range metas {
+		metaByFilename[m.Filename] = m
+	}
+
+	files, err := os.ReadDir(api.AudioFilesLocation)
+	if err != nil {
+		logger.Error("Audio reconciliation: failed to read audio directory: %v", err)
+		return
+	}
+
+	fileSet := make(map[string]bool, len(files))
+	for _, f := range files {
+		if !f.IsDir() {
+			fileSet[f.Name()] = true
+		}
+	}
+
+	// Remove metadata whose files do not exist on disk
+	for _, m := range metas {
+		if !fileSet[m.Filename] {
+			logger.Warn("Audio reconciliation: removing stale metadata for %s", m.Filename)
+			if err := c.delegate.persistence.DeleteAudioMetadata(m.Id); err != nil {
+				logger.Error("Failed to delete stale metadata %s: %v", m.Id, err)
+			}
+		}
+	}
+
+	// Remove files on disk with no metadata entry
+	for file := range fileSet {
+		if _, ok := metaByFilename[file]; !ok {
+			full := filepath.Join(api.AudioFilesLocation, file)
+			logger.Warn("Audio reconciliation: removing orphaned file %s", file)
+			if err := os.Remove(full); err != nil && !os.IsNotExist(err) {
+				logger.Error("Failed to delete orphaned file %s: %v", file, err)
+			}
+		}
+	}
 }

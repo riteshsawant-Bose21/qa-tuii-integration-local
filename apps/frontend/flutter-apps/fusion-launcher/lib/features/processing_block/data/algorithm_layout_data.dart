@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fusion_launcher/features/processing_block/dto/pb_layout.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -14,15 +16,19 @@ part 'algo_layout/peq.dart';
 part 'algo_layout/tone_control.dart';
 
 class AlgorithmLayoutData {
-  static PBLayout? getForAlgorithm(String algorithmId) {
+  static Future<PBLayout?> getForAlgorithm(String algorithmId) async {
     // return PBLayout.fromMap(SampleData.sampleData);
-    _initPreferences();
+    await _initPreferences();
     final String? layoutJson = _preferences?.getString("layout_$algorithmId");
     if (layoutJson != null) {
       try {
+        // Layout loaded from stored preferences
         return PBLayout.fromJson(layoutJson);
-      } catch (e) {}
+      } catch (e) {
+        // Error parsing stored layout, falling back to default
+      }
     }
+    // Using default layout for algorithm: $algorithmId
     final Map<String, dynamic> layout = switch (algorithmId) {
       'delay' => _delay,
       'compressor' => _compressor,
@@ -50,10 +56,23 @@ class AlgorithmLayoutData {
   }
 
   static SharedPreferences? _preferences;
-  static bool isInitilizing = false;
+  static Completer<void>? _initCompleter;
+
   static Future<void> _initPreferences() async {
-    if (isInitilizing) return;
-    isInitilizing = true;
-    _preferences ??= await SharedPreferences.getInstance();
+    if (_preferences != null) return;
+
+    if (_initCompleter != null) {
+      return _initCompleter!.future;
+    }
+
+    _initCompleter = Completer<void>();
+    try {
+      _preferences = await SharedPreferences.getInstance();
+      _initCompleter!.complete();
+    } catch (error) {
+      _initCompleter!.completeError(error);
+      _initCompleter = null;
+      rethrow;
+    }
   }
 }

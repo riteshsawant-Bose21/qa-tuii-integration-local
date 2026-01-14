@@ -18,7 +18,12 @@ class PbcViewmodel extends ChangeNotifier {
 
   final ScrollController scrollController = ScrollController();
   PbcViewmodel({required this.algorithm}) {
-    final PBLayout? layout = AlgorithmLayoutData.getForAlgorithm(algorithm.name);
+    _loadLayout();
+  }
+  PBCState state = PBCState(items: <PBItem>[], selectedItems: <String>[]);
+
+  Future<void> _loadLayout() async {
+    final PBLayout? layout = await AlgorithmLayoutData.getForAlgorithm(algorithm.name);
     if (layout == null) return;
     final List<PBItem> items = <PBItem>[];
     for (final PBItem item in layout.children) {
@@ -27,7 +32,6 @@ class PbcViewmodel extends ChangeNotifier {
     _setState(PBCState(items: items, selectedItems: <String>[]));
     width = layout.width.toDouble();
   }
-  PBCState state = PBCState(items: <PBItem>[], selectedItems: <String>[]);
 
   List<PBItem> get items => state.items;
   List<PBItem> get selectedItems => state.items.where((PBItem item) => state.selectedItems.contains(item.id)).toList();

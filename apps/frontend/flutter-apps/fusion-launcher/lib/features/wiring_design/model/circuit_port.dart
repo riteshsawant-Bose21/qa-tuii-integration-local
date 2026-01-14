@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/wiring_design/dto/component_data.dart';
-import 'package:fusion_launcher/features/wiring_design/util/wiring_serialization_util.dart';
+import 'package:fusion_lib/fusion_utils/deserialization_util.dart';
 
 import 'canvas_element.dart';
 import 'circuit_component.dart';
@@ -49,12 +49,12 @@ class CircuitPort extends CanvasElement {
   @override
   void restoreFromMap(Map<dynamic, dynamic> map) {
     relativePosition =
-        WiringSerializationUtil.offsetDeserializer.deserialize(
+        DeserializationUtil.offsetDeserializer.deserialize(
           map['position'],
         ) ??
         relativePosition;
     padding =
-        WiringSerializationUtil.offsetDeserializer.deserialize(
+        DeserializationUtil.offsetDeserializer.deserialize(
           map['padding'],
         ) ??
         padding;

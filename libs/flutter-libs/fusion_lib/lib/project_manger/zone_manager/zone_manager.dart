@@ -186,6 +186,13 @@ extension ZoneManager on ProjectManager {
     return projectService!.getPrioritySourcesDataInZone(zoneId);
   }
 
+  void updatePrioritySourceData({required PrioritySourceData updatedData}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    projectService!.updatePrioritySourceData(updatedData: updatedData);
+  }
+
   void updatePrioritySourceGain({required String priorityDataId, required double newGain}) {
     if (projectService == null) {
       throw Exception('No project is currently open');
@@ -198,5 +205,12 @@ extension ZoneManager on ProjectManager {
       throw Exception('No project is currently open');
     }
     return projectService!.getPrioritySourceDataById(priorityDataId: priorityDataId);
+  }
+
+  List<Zone> getZonesWithoutSubZones() {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    return projectService!.getZonesWithoutSubzones();
   }
 }

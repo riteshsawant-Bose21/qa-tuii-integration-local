@@ -76,7 +76,7 @@ class _SessionListPageState extends State<SessionListPage> {
   }
 
   Future<List<dynamic>> fetchSessions() async {
-    final uri = Uri.parse('http://192.168.64.100:8080/sessions');
+    final uri = Uri.parse('http://192.168.2.100:8080/sessions');
     try {
       final resp = await http.get(uri);
       if (resp.statusCode != 200) {

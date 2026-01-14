@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_utils/app_enums.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/listening_area_model.dart';
 import 'package:fusion_lib/models/project_entities/speaker_model.dart';
@@ -18,6 +21,7 @@ class CircuitDeviceWidget extends StatefulWidget {
   final String circuitDeviceName;
   final String assetImagePath;
   final int circuitDeviceCount;
+  final CircuitModel circuitModel;
   final ProjectViewModel projectViewModel;
   final VoidCallback onRename;
   final VoidCallback onDuplicate;
@@ -36,6 +40,7 @@ class CircuitDeviceWidget extends StatefulWidget {
     required this.onRename,
     required this.onDuplicate,
     required this.onDelete,
+    required this.circuitModel,
     required this.circuitDeviceCount,
     required this.onDecrementHardwareInCircuit,
     required this.onIncrementHardwareInCircuit,
@@ -146,11 +151,30 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                   ),
 
                   const SizedBox(width: 4),
-                  _buildAddOrRemoveButton(context: context),
+                  if (!widget.circuitModel.addedInBuildingPage) ...<Widget>[
+                    _buildAddOrRemoveButton(context: context),
 
-                  /// Kebab menu
-                  const SizedBox(width: 8),
-                  _buildKebabMenu(context),
+                    /// Kebab menu
+                    const SizedBox(width: 8),
+                    _buildKebabMenu(context),
+                  ] else ...<Widget>[
+                    const SizedBox(width: 2),
+                    Container(
+                      height: 20,
+                      width: 20,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                      child: FusionAppText(
+                        text: widget.circuitDeviceCount.toString(),
+                        maxLine: 1,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 8),
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                  ],
                 ],
               ),
             ),
@@ -434,10 +458,13 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
               ),
             ),
           ],
-      child: Icon(
-        Icons.more_vert,
-        size: 14,
-        color: Colors.grey[600],
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "location_item_kebab_menu"),
+        child: Icon(
+          Icons.more_vert,
+          size: 14,
+          color: Colors.grey[600],
+        ),
       ),
     );
   }

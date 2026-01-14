@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/sub_zone_card.dart';
+import 'package:fusion_launcher/features/processing_block/view/functions/source_select.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../core/constants/assets_constants.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
+import '../../processing_block/view/functions/mini_matrix.dart';
+import '../../processing_block/view/functions/source_mix.dart';
 import '../../processing_block/view/processing_chain_view.dart';
 
 class ZoneCard extends StatefulWidget {
@@ -14,12 +17,15 @@ class ZoneCard extends StatefulWidget {
   final String zoneName;
   final Color bgColor;
   final Zone zoneData;
+  final Function(bool)? onExpansionChanged;
+
   const ZoneCard({
     super.key,
     required this.zoneId,
     required this.zoneName,
     required this.bgColor,
     required this.zoneData,
+    this.onExpansionChanged,
   });
 
   @override
@@ -41,7 +47,7 @@ class _ZoneCardState extends State<ZoneCard> {
   @override
   void initState() {
     super.initState();
-    _isZoneExpanded = ValueNotifier<bool>(false);
+    _isZoneExpanded = ValueNotifier<bool>(true);
   }
 
   @override
@@ -95,7 +101,11 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget _buildZoneHeader({required BuildContext context, required bool expanded, required bool isHovered, required bool isSelected}) {
     return GestureDetector(
       onTap: () {
-        _isZoneExpanded.value = !_isZoneExpanded.value;
+        final bool newExpandedState = !_isZoneExpanded.value;
+        _isZoneExpanded.value = newExpandedState;
+
+        /// Trigger the expansion callback
+        widget.onExpansionChanged?.call(newExpandedState);
 
         /// Select zone on tap
         _projectViewModel.setSelectedDevice(widget.zoneId, SelectedItemType.zone);
@@ -482,7 +492,8 @@ class _ZoneCardState extends State<ZoneCard> {
                     }
                   }
 
-                  /// Divider
+                  // todo : source sets priority selection disabled for now according to robs feedback
+                  /*/// Divider
                   entries.add(const PopupMenuDivider(height: 4));
 
                   /// Header: Source Sets
@@ -517,7 +528,8 @@ class _ZoneCardState extends State<ZoneCard> {
                         ),
                       ),
                     );
-                  } else {
+                  } else
+                  {
                     for (final SourceSet sourceSet in allSourceSets) {
                       final List<Source> sources = _projectViewModel.getSourcesInSourceSet(sourceSetId: sourceSet.id);
                       for (final Source src in sources) {
@@ -579,7 +591,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         );
                       }
                     }
-                  }
+                  }*/
 
                   return entries;
                 },
@@ -744,7 +756,22 @@ class _ZoneCardState extends State<ZoneCard> {
   Widget buildSelectedFunctionButton() {
     return GestureDetector(
       onTap: () {
-        print('Selected function: $selectedFunction');
+        if (selectedFunction == ZoneFunctionsType.sourceSelect || selectedFunction == ZoneFunctionsType.sourceSelectWithPriority) {
+          SourceSelectZoneControlPanel.showDialog(
+            context,
+            zoneID: widget.zoneId,
+          );
+        } else if (selectedFunction == ZoneFunctionsType.sourceMix || selectedFunction == ZoneFunctionsType.sourceMixWithPriority) {
+          SourceMixZoneControlPanel.showDialog(
+            context,
+            zoneID: widget.zoneId,
+          );
+        } else if (selectedFunction == ZoneFunctionsType.miniMatrix || selectedFunction == ZoneFunctionsType.miniMatrixWithPriority) {
+          MiniMatrixZoneControlPanel.showDialog(
+            context,
+            zoneID: widget.zoneId,
+          );
+        }
       },
       child: Container(
         height: 22,
@@ -1175,6 +1202,13 @@ class _ZoneCardState extends State<ZoneCard> {
                               subZoneId: subZone.id,
                               subZoneName: subZone.name,
                               subZoneData: subZone,
+                              onExpansionChanged: (bool isExpanded) {
+                                if (isExpanded) {
+                                  // Trigger the zone's expansion callback to scroll the zone into view
+                                  // when a subzone expands
+                                  widget.onExpansionChanged?.call(true);
+                                }
+                              },
                             ),
                           ),
                         );

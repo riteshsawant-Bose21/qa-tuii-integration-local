@@ -29,6 +29,7 @@ class PBMeter extends StatelessWidget {
   }
 }
 
+// Vertical meter with intervals
 class VerticalMeter extends StatelessWidget {
   const VerticalMeter({
     super.key,
@@ -40,7 +41,7 @@ class VerticalMeter extends StatelessWidget {
     this.inactiveColor = const Color(0xFFBABABA),
     this.intervalSpacing = 50.0,
     this.intervalTickWidth = 10.0,
-    this.intervalGap = 8.0,
+    this.intervalGap,
     this.animationDuration = const Duration(milliseconds: 300),
   });
 
@@ -54,7 +55,7 @@ class VerticalMeter extends StatelessWidget {
   final Color inactiveColor;
   final double intervalSpacing;
   final double intervalTickWidth;
-  final double intervalGap;
+  final num? intervalGap;
   final Duration animationDuration;
 
   static const double _borderRadius = 100;
@@ -66,6 +67,18 @@ class VerticalMeter extends StatelessWidget {
   }
 
   List<num> _generateIntervals(double height) {
+    // If intervalGap is provided, use it to generate intervals
+    if (intervalGap != null) {
+      final num range = max - min;
+      final int tickCount = (range / intervalGap!).floor() + 1;
+
+      return List<num>.generate(
+        tickCount,
+        (int i) => max - (i * intervalGap!),
+      ).where((num v) => v >= min && v <= max).toList();
+    }
+
+    // Otherwise, generate based on height
     final int tickCount = ((height / intervalSpacing).floor()).clamp(3, 12);
     final double step = (max - min) / (tickCount - 1);
 
@@ -142,37 +155,38 @@ class VerticalMeter extends StatelessWidget {
                 // Intervals (if enabled) - positioned to the right
                 if (showIntervals)
                   Padding(
-                    padding: EdgeInsets.only(left: intervalGap),
+                    padding: const EdgeInsets.only(left: 4),
                     child: SizedBox(
                       height: height,
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children:
-                            intervals.map((num v) {
-                              return Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  Container(
-                                    height: 2,
-                                    width: intervalTickWidth,
-                                    decoration: BoxDecoration(
-                                      color: inactiveColor,
-                                      borderRadius: BorderRadius.circular(1),
-                                    ),
+                        children: <Widget>[
+                          ...intervals.map((num v) {
+                            return Row(
+                              spacing: 2,
+                              mainAxisSize: MainAxisSize.min,
+                              children: <Widget>[
+                                Container(
+                                  height: 2,
+                                  width: intervalTickWidth,
+                                  decoration: BoxDecoration(
+                                    color: inactiveColor,
+                                    borderRadius: BorderRadius.circular(1),
                                   ),
-                                  SizedBox(width: intervalGap),
-                                  Text(
-                                    v.round().toString(),
-                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                      color: inactiveColor,
-                                      fontWeight: FontWeight.w500,
-                                      fontSize: 8,
-                                    ),
+                                ),
+                                Text(
+                                  v.round().toString(),
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: inactiveColor,
+                                    fontWeight: FontWeight.w500,
+                                    fontSize: 8,
                                   ),
-                                ],
-                              );
-                            }).toList(),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
                       ),
                     ),
                   ),
