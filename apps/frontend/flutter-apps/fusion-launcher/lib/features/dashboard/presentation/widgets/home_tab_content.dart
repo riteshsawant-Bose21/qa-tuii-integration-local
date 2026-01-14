@@ -150,124 +150,128 @@ class _RecentProjects extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      decoration: BoxDecoration(
-        color: context.colorScheme.surface,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          Padding(
-            padding: const EdgeInsets.all(16).copyWith(bottom: 0),
-            child: Row(
-              children: <Widget>[
-                /// Recent Projects
-                Expanded(
-                  child: FusionAppText(
-                    text: 'RECENT PROJECTS',
-                    style: context.textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "dashboard_recent_projects_section"),
+      child: Container(
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: context.colorScheme.surface,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            Padding(
+              padding: const EdgeInsets.all(16).copyWith(bottom: 0),
+              child: Row(
+                children: <Widget>[
+                  /// Recent Projects
+                  Expanded(
+                    child: FusionAppText(
+                      text: 'RECENT PROJECTS',
+                      style: context.textTheme.titleSmall?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                      ),
                     ),
                   ),
-                ),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: Container(
-                    height: 24,
-                    width: 24,
-                    decoration: BoxDecoration(
-                      color: context.colorScheme.onSurface.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      LucideIcons.chevronRight,
-                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                      size: 12,
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Container(
+                      height: 24,
+                      width: 24,
+                      decoration: BoxDecoration(
+                        color: context.colorScheme.onSurface.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Icon(
+                        LucideIcons.chevronRight,
+                        color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                        size: 12,
+                      ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
 
-          BlocBuilder<ProjectSyncViewModel, ProjectSyncViewModelState>(
-            builder: (BuildContext context, ProjectSyncViewModelState syncState) {
-              return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
-                listener: (BuildContext context, ProjectViewModelState state) {
-                  if (state is OpenProjectError && context.mounted) {
-                    FusionUiUtils.hideLoader(context);
-                    FusionToast.show(context, message: state.message);
-                  }
-                },
-                builder: (BuildContext context, ProjectViewModelState state) {
-                  //Add a circle progress indicator when loading projects
-                  if (syncState is LoadingAllProjects) {
-                    return Column(
-                      children: <Widget>[
-                        Center(
-                          child: SizedBox(
-                            height: 30,
-                            width: 30,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: context.colorScheme.onSurface,
+            BlocBuilder<ProjectSyncViewModel, ProjectSyncViewModelState>(
+              builder: (BuildContext context, ProjectSyncViewModelState syncState) {
+                return BlocConsumer<ProjectViewModel, ProjectViewModelState>(
+                  listener: (BuildContext context, ProjectViewModelState state) {
+                    if (state is OpenProjectError && context.mounted) {
+                      FusionUiUtils.hideLoader(context);
+                      FusionToast.show(context, message: state.message);
+                    }
+                  },
+                  builder: (BuildContext context, ProjectViewModelState state) {
+                    //Add a circle progress indicator when loading projects
+                    if (syncState is LoadingAllProjects) {
+                      return Column(
+                        children: <Widget>[
+                          Center(
+                            child: SizedBox(
+                              height: 30,
+                              width: 30,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: context.colorScheme.onSurface,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 40),
+                        ],
+                      );
+                    }
+
+                    if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+                      return Center(
+                        child: SizedBox(
+                          width: 262,
+                          height: 166,
+                          child: Center(
+                            child: FusionAppText(
+                              text: "No Projects Available",
+                              style: context.textTheme.labelLarge?.copyWith(
+                                fontSize: 16,
+                                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                              ),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 40),
-                      ],
-                    );
-                  }
+                      );
+                    }
 
-                  if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
-                    return Center(
-                      child: SizedBox(
-                        width: 262,
-                        height: 166,
-                        child: Center(
-                          child: FusionAppText(
-                            text: "No Projects Available",
-                            style: context.textTheme.labelLarge?.copyWith(
-                              fontSize: 16,
-                              color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                            ),
-                          ),
+                    final List<ProjectData> projects = serviceLocator<ProjectViewModel>().allProjects;
+
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(16.0),
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        spacing: 16,
+                        children: List<Widget>.generate(
+                          projects.length,
+                          (int index) {
+                            final ProjectData project = projects[index];
+
+                            return GestureDetector(
+                              onTap: () => ProjectDetailsDialog.show(context, project: project),
+                              child: ProjectCard(
+                                index: index,
+                                projectData: project,
+                                onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
+                              ),
+                            );
+                          },
                         ),
                       ),
                     );
-                  }
-
-                  final List<ProjectData> projects = serviceLocator<ProjectViewModel>().allProjects;
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.all(16.0),
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      spacing: 16,
-                      children: List<Widget>.generate(
-                        projects.length,
-                        (int index) {
-                          final ProjectData project = projects[index];
-
-                          return GestureDetector(
-                            onTap: () => ProjectDetailsDialog.show(context, project: project),
-                            child: ProjectCard(
-                              projectData: project,
-                              onDelete: () => serviceLocator<ProjectViewModel>().deleteProjectFromLocal(project.id),
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ],
+                  },
+                );
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -375,6 +379,7 @@ class _CaseStudiesAndTemplates extends StatelessWidget {
                       // serviceLocator<ProjectViewModel>().openProject(project.id);
                     },
                     child: ProjectCard(
+                      index: index,
                       projectData: ProjectData(
                         id: "id",
                         name: "name",

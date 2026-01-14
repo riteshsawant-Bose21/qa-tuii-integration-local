@@ -80,33 +80,39 @@ class ReplaceSpeakersWarningDialog extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(false),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FusionAppText(
-                        text: "Cancel",
-                        style: context.textTheme.labelLarge?.copyWith(
-                          color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "cancel_replace_speakers_button"),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(false),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: FusionAppText(
+                          text: "Cancel",
+                          style: context.textTheme.labelLarge?.copyWith(
+                            color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                MouseRegion(
-                  cursor: SystemMouseCursors.click,
-                  child: GestureDetector(
-                    onTap: () => Navigator.of(context).pop(true),
-                    child: Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: FusionAppText(
-                        text: "Replace",
-                        style: context.textTheme.labelLarge?.copyWith(
-                          color: Colors.red,
-                          fontWeight: FontWeight.bold,
+                SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "replace_speakers_button"),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: () => Navigator.of(context).pop(true),
+                      child: Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: FusionAppText(
+                          text: "Replace",
+                          style: context.textTheme.labelLarge?.copyWith(
+                            color: Colors.red,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     ),

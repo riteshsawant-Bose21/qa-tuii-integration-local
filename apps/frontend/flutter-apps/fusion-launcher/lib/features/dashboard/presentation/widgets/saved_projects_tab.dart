@@ -58,18 +58,21 @@ class SavedProjectsTabContent extends StatelessWidget {
                       ),
                       MouseRegion(
                         cursor: SystemMouseCursors.click,
-                        child: NeumorphicDarkButton(
-                          onTap: () {
-                            CreateNewProjectDialog.show(context);
-                          },
-                          height: 50,
-                          width: 50,
-                          borderRadius: 10,
-                          child: FittedBox(
-                            child: Icon(
-                              LucideIcons.plus100,
-                              color: context.colorScheme.onSurface,
-                              size: 34,
+                        child: SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
+                          child: NeumorphicDarkButton(
+                            onTap: () {
+                              CreateNewProjectDialog.show(context);
+                            },
+                            height: 50,
+                            width: 50,
+                            borderRadius: 10,
+                            child: FittedBox(
+                              child: Icon(
+                                LucideIcons.plus100,
+                                color: context.colorScheme.onSurface,
+                                size: 34,
+                              ),
                             ),
                           ),
                         ),
@@ -228,222 +231,238 @@ class _SavedProjectListState extends State<_SavedProjectList> {
 
             return LayoutBuilder(
               builder: (BuildContext context, BoxConstraints constraints) {
-                return Container(
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    color: context.colorScheme.surface,
-                    borderRadius: BorderRadius.circular(12),
-                    border: _getBorder(context),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Padding(
-                        padding: const EdgeInsets.all(16).copyWith(bottom: 0),
-                        child: Row(
-                          spacing: 10,
-                          children: <Widget>[
-                            /// Recent Projects
-                            Expanded(
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: <Widget>[
-                                  FusionAppText(
-                                    text: 'Projects',
-                                    style: context.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  //cloud sync icon button
-                                  IconButton(
-                                    onPressed: () {
-                                      serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
-                                    },
-                                    tooltip: "Upload All Projects to Cloud",
-                                    icon: Icon(
-                                      LucideIcons.cloudUpload,
-                                      size: 18,
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                  //cloud download icon button
-                                  IconButton(
-                                    onPressed: () {
-                                      serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
-                                    },
-                                    tooltip: "Download All Projects from Cloud",
-                                    icon: Icon(
-                                      LucideIcons.cloudDownload,
-                                      size: 18,
-                                      color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            ValueListenableBuilder<bool>(
-                              valueListenable: showSearchBarNotifier,
-                              builder: (BuildContext context, bool showSearchBar, Widget? child) {
-                                return AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  height: 32,
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(60),
-                                  ),
-                                  child: Row(
-                                    children: <Widget>[
-                                      AnimatedContainer(
-                                        duration: const Duration(milliseconds: 200),
-                                        width: showSearchBar ? 250 : 0,
-                                        child: TextFormField(
-                                          focusNode: _searchFocusNode,
-                                          controller: _searchController,
-                                          style: context.textTheme.labelLarge,
-                                          cursorColor: context.colorScheme.onSurface,
-                                          cursorWidth: 1,
-                                          cursorHeight: 15,
-                                          decoration: InputDecoration(
-                                            filled: true,
-                                            isDense: true,
-                                            fillColor: Colors.transparent,
-                                            border: InputBorder.none,
-                                            enabledBorder: InputBorder.none,
-                                            focusedBorder: InputBorder.none,
-                                            hintText: "Search projects",
-                                            hoverColor: Colors.transparent,
-                                            contentPadding: EdgeInsets.zero,
-                                            hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
-                                          ),
-                                        ),
+                return SemanticHelper.container(
+                  testId: SemanticHelper.createTestId(SemanticTypes.container, "saved_projects_section"),
+                  child: Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: context.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: _getBorder(context),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Padding(
+                          padding: const EdgeInsets.all(16).copyWith(bottom: 0),
+                          child: Row(
+                            spacing: 10,
+                            children: <Widget>[
+                              /// Recent Projects
+                              Expanded(
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: <Widget>[
+                                    FusionAppText(
+                                      text: 'Projects',
+                                      style: context.textTheme.titleMedium?.copyWith(
+                                        fontWeight: FontWeight.w600,
                                       ),
-                                      InkWell(
-                                        onTap: () {
-                                          showSearchBarNotifier.value = !showSearchBarNotifier.value;
-
-                                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                                            showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
-                                            _searchController.clear();
-                                          });
+                                    ),
+                                    const Spacer(),
+                                    //cloud sync icon button
+                                    SemanticHelper.button(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          serviceLocator<ProjectSyncViewModel>().uploadAllProjects();
                                         },
-                                        child: AnimatedSwitcher(
-                                          duration: const Duration(milliseconds: 200),
-                                          transitionBuilder: (Widget child, Animation<double> animation) {
-                                            return FadeTransition(
-                                              opacity: animation,
-                                              child: child,
-                                            );
-                                          },
-                                          child: Icon(
-                                            key: ValueKey<bool>(showSearchBar),
-                                            showSearchBar ? LucideIcons.x : LucideIcons.search,
-                                            size: 18,
-                                          ),
+                                        tooltip: "Upload All Projects to Cloud",
+                                        icon: Icon(
+                                          LucideIcons.cloudUpload,
+                                          size: 18,
+                                          color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                );
-                              },
-                            ),
-
-                            // ==============================
-                            //   Sort by Widget
-                            // ==============================
-                            _SortByWidget(
-                              selectedSortOption: selectedSortOption,
-                              onSelect: (_SavedProjectsSortOption value) {
-                                setState(() {
-                                  selectedSortOption = value == selectedSortOption ? null : value;
-                                });
-                              },
-                            ),
-
-                            // ==============================
-                            //   Filter by Widget
-                            // ==============================
-                            const _FilterByWidget(), // TODO: Implement filter functionality
-                          ],
-                        ),
-                      ),
-
-                      Expanded(
-                        child: Builder(
-                          builder: (BuildContext context) {
-                            //Add a circle progress indicator when loading projects
-                            if (syncState is LoadingAllProjects) {
-                              return Center(
-                                child: SizedBox(
-                                  height: 50,
-                                  width: 50,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: context.colorScheme.onSurface,
-                                  ),
-                                ),
-                              );
-                            }
-
-                            if (_isSearching && projects.isEmpty) {
-                              return Center(
-                                child: FusionAppText(
-                                  text: "No Projects Found for \"${_searchController.text}\"",
-                                  style: context.textTheme.labelLarge?.copyWith(
-                                    fontSize: 16,
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                  ),
-                                ),
-                              );
-                            } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
-                              return Center(
-                                child: FusionAppText(
-                                  text: "No Projects Saved Yet",
-                                  style: context.textTheme.labelLarge?.copyWith(
-                                    fontSize: 16,
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                  ),
-                                ),
-                              );
-                            } else {
-                              int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
-                              if (constraints.maxWidth > 1200) crossAxisCount = 5;
-
-                              return GridView.builder(
-                                itemCount: projects.length,
-                                padding: const EdgeInsets.all(16),
-                                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: crossAxisCount,
-                                  childAspectRatio: 16 / 12,
-                                  crossAxisSpacing: 16,
-                                  mainAxisSpacing: 16,
-                                ),
-                                itemBuilder: (BuildContext context, int index) {
-                                  final ProjectData project = projects[index];
-
-                                  return GestureDetector(
-                                    onTap: () => ProjectDetailsDialog.show(context, project: project),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: context.colorScheme.surface,
-                                        borderRadius: BorderRadius.circular(12),
-                                        border: _getBorder(context),
+                                    ),
+                                    //cloud download icon button
+                                    SemanticHelper.button(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_download"),
+                                      child: IconButton(
+                                        onPressed: () {
+                                          serviceLocator<ProjectSyncViewModel>().getAllProjects(forceFetch: true);
+                                        },
+                                        tooltip: "Download All Projects from Cloud",
+                                        icon: Icon(
+                                          LucideIcons.cloudDownload,
+                                          size: 18,
+                                          color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                                        ),
                                       ),
-                                      child: ProjectCard(
-                                        projectData: project,
-                                        onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
-                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+
+                              ValueListenableBuilder<bool>(
+                                valueListenable: showSearchBarNotifier,
+                                builder: (BuildContext context, bool showSearchBar, Widget? child) {
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    height: 32,
+                                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                                    decoration: BoxDecoration(
+                                      color: showSearchBar ? context.colorScheme.onSurface.withValues(alpha: 0.1) : Colors.transparent,
+                                      borderRadius: BorderRadius.circular(60),
+                                    ),
+                                    child: Row(
+                                      children: <Widget>[
+                                        AnimatedContainer(
+                                          duration: const Duration(milliseconds: 200),
+                                          width: showSearchBar ? 250 : 0,
+                                          child: SemanticHelper.formControl(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.textInput, "saved_projects_section_search_input"),
+                                            child: TextFormField(
+                                              focusNode: _searchFocusNode,
+                                              controller: _searchController,
+                                              style: context.textTheme.labelLarge,
+                                              cursorColor: context.colorScheme.onSurface,
+                                              cursorWidth: 1,
+                                              cursorHeight: 15,
+                                              decoration: InputDecoration(
+                                                filled: true,
+                                                isDense: true,
+                                                fillColor: Colors.transparent,
+                                                border: InputBorder.none,
+                                                enabledBorder: InputBorder.none,
+                                                focusedBorder: InputBorder.none,
+                                                hintText: "Search projects",
+                                                hoverColor: Colors.transparent,
+                                                contentPadding: EdgeInsets.zero,
+                                                hintStyle: context.textTheme.labelMedium?.copyWith(color: Colors.grey),
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        InkWell(
+                                          onTap: () {
+                                            showSearchBarNotifier.value = !showSearchBarNotifier.value;
+
+                                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                                              showSearchBar ? _searchFocusNode.unfocus() : _searchFocusNode.requestFocus();
+                                              _searchController.clear();
+                                            });
+                                          },
+                                          child: AnimatedSwitcher(
+                                            duration: const Duration(milliseconds: 200),
+                                            transitionBuilder: (Widget child, Animation<double> animation) {
+                                              return FadeTransition(
+                                                opacity: animation,
+                                                child: child,
+                                              );
+                                            },
+                                            child: SemanticHelper.button(
+                                              testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_search_button"),
+                                              child: Icon(
+                                                key: ValueKey<bool>(showSearchBar),
+                                                showSearchBar ? LucideIcons.x : LucideIcons.search,
+                                                size: 18,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   );
                                 },
-                              );
-                            }
-                          },
+                              ),
+
+                              // ==============================
+                              //   Sort by Widget
+                              // ==============================
+                              _SortByWidget(
+                                selectedSortOption: selectedSortOption,
+                                onSelect: (_SavedProjectsSortOption value) {
+                                  setState(() {
+                                    selectedSortOption = value == selectedSortOption ? null : value;
+                                  });
+                                },
+                              ),
+
+                              // ==============================
+                              //   Filter by Widget
+                              // ==============================
+                              // const _FilterByWidget(), // TODO: Implement filter functionality
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+
+                        Expanded(
+                          child: Builder(
+                            builder: (BuildContext context) {
+                              //Add a circle progress indicator when loading projects
+                              if (syncState is LoadingAllProjects) {
+                                return Center(
+                                  child: SizedBox(
+                                    height: 50,
+                                    width: 50,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                );
+                              }
+
+                              if (_isSearching && projects.isEmpty) {
+                                return Center(
+                                  child: FusionAppText(
+                                    text: "No Projects Found for \"${_searchController.text}\"",
+                                    style: context.textTheme.labelLarge?.copyWith(
+                                      fontSize: 16,
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                );
+                              } else if (state is! ProjectLoading && !serviceLocator<ProjectViewModel>().hasProjects) {
+                                return Center(
+                                  child: FusionAppText(
+                                    text: "No Projects Saved Yet",
+                                    style: context.textTheme.labelLarge?.copyWith(
+                                      fontSize: 16,
+                                      color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                    ),
+                                  ),
+                                );
+                              } else {
+                                int crossAxisCount = constraints.maxWidth > 900 ? 4 : 3;
+                                if (constraints.maxWidth > 1200) crossAxisCount = 5;
+
+                                return GridView.builder(
+                                  itemCount: projects.length,
+                                  padding: const EdgeInsets.all(16),
+                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: crossAxisCount,
+                                    childAspectRatio: 16 / 12,
+                                    crossAxisSpacing: 16,
+                                    mainAxisSpacing: 16,
+                                  ),
+                                  itemBuilder: (BuildContext context, int index) {
+                                    final ProjectData project = projects[index];
+
+                                    return GestureDetector(
+                                      onTap: () => ProjectDetailsDialog.show(context, project: project),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: context.colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(12),
+                                          border: _getBorder(context),
+                                        ),
+                                        child: ProjectCard(
+                                          index: index,
+                                          projectData: project,
+                                          onDelete: () => serviceLocator<ProjectSyncViewModel>().deleteProject(projectId: project.id),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -502,31 +521,34 @@ class _SortByWidget extends StatelessWidget {
                     children: <Widget>[
                       ..._SavedProjectsSortOption.values.map(
                         (_SavedProjectsSortOption sortBy) {
-                          return InkWell(
-                            onTap: () {
-                              onSelect?.call(sortBy);
-                              Navigator.of(context).pop();
-                            },
-                            // behavior: HitTestBehavior.opaque,
-                            child: Row(
-                              children: <Widget>[
-                                Expanded(
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-                                    child: FusionAppText(
-                                      text: sortBy.title,
-                                      style: context.textTheme.labelMedium,
+                          return SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button_$sortBy"),
+                            child: InkWell(
+                              onTap: () {
+                                onSelect?.call(sortBy);
+                                Navigator.of(context).pop();
+                              },
+                              // behavior: HitTestBehavior.opaque,
+                              child: Row(
+                                children: <Widget>[
+                                  Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+                                      child: FusionAppText(
+                                        text: sortBy.title,
+                                        style: context.textTheme.labelMedium,
+                                      ),
                                     ),
                                   ),
-                                ),
-                                if (sortBy == selectedSortOption) ...<Widget>[
-                                  Icon(
-                                    LucideIcons.check,
-                                    color: context.colorScheme.onSurface,
-                                  ),
-                                  const SizedBox(width: 10),
+                                  if (sortBy == selectedSortOption) ...<Widget>[
+                                    Icon(
+                                      LucideIcons.check,
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                    const SizedBox(width: 10),
+                                  ],
                                 ],
-                              ],
+                              ),
                             ),
                           );
                         },
@@ -538,27 +560,30 @@ class _SortByWidget extends StatelessWidget {
             ),
           ];
         },
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: context.colorScheme.onSurface.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(60),
-          ),
-          child: Row(
-            children: <Widget>[
-              FusionAppText(
-                text: 'Sort by',
-                style: context.textTheme.labelSmall?.copyWith(
+        child: SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_sort_button"),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(60),
+            ),
+            child: Row(
+              children: <Widget>[
+                FusionAppText(
+                  text: 'Sort by',
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Icon(
+                  LucideIcons.chevronDown200,
+                  size: 18,
                   color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
-              ),
-              Icon(
-                LucideIcons.chevronDown200,
-                size: 18,
-                color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -637,27 +662,30 @@ class _FilterByWidget extends StatelessWidget {
             ),
           ];
         },
-        child: Container(
-          height: 32,
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: context.colorScheme.onSurface.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(60),
-          ),
-          child: Row(
-            children: <Widget>[
-              FusionAppText(
-                text: 'Filter',
-                style: context.textTheme.labelSmall?.copyWith(
+        child: SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, "saved_projects_section_item_upload"),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            decoration: BoxDecoration(
+              color: context.colorScheme.onSurface.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(60),
+            ),
+            child: Row(
+              children: <Widget>[
+                FusionAppText(
+                  text: 'Filter',
+                  style: context.textTheme.labelSmall?.copyWith(
+                    color: context.colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+                Icon(
+                  LucideIcons.chevronDown200,
+                  size: 18,
                   color: context.colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
-              ),
-              Icon(
-                LucideIcons.chevronDown200,
-                size: 18,
-                color: context.colorScheme.onSurface.withValues(alpha: 0.6),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

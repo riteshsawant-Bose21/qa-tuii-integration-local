@@ -26,20 +26,23 @@ class ProductQuerySpeakerList extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
-        NeumorphicDarkTextField(
-          controller: searchController,
-          prefix: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 6),
-            child: Icon(
-              LucideIcons.search200,
-              color: Colors.grey[500],
+        SemanticHelper.formControl(
+          testId: SemanticHelper.createTestId(SemanticTypes.textInput, "speaker_search_input"),
+          child: NeumorphicDarkTextField(
+            controller: searchController,
+            prefix: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Icon(
+                LucideIcons.search200,
+                color: Colors.grey[500],
+              ),
             ),
+            borderRadius: 8,
+            contentPadding: const EdgeInsets.all(10),
+            hintText: "Search devices...",
+            hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
+            onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
           ),
-          borderRadius: 8,
-          contentPadding: const EdgeInsets.all(10),
-          hintText: "Search devices...",
-          hintStyle: context.textTheme.labelSmall?.copyWith(fontWeight: FontWeight.normal),
-          onChanged: (String value) => speakerSelectionViewModel.setSearchQuery(value),
         ),
         const SizedBox(height: 10),
         Row(
@@ -65,16 +68,19 @@ class ProductQuerySpeakerList extends StatelessWidget {
                 if (productQueryViewModelState.isRefreshing) {
                   return const CupertinoActivityIndicator(radius: 8);
                 } else {
-                  return GestureDetector(
-                    onTap: context.read<ProductQueryViewModel>().refresh,
-                    child: const Tooltip(
-                      message: "Refresh products",
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: Icon(
-                          LucideIcons.refreshCw200,
-                          size: 16,
-                          color: Colors.white70,
+                  return SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "refresh_products_button"),
+                    child: GestureDetector(
+                      onTap: context.read<ProductQueryViewModel>().refresh,
+                      child: const Tooltip(
+                        message: "Refresh products",
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: Icon(
+                            LucideIcons.refreshCw200,
+                            size: 16,
+                            color: Colors.white70,
+                          ),
                         ),
                       ),
                     ),
@@ -112,31 +118,38 @@ class ProductQuerySpeakerList extends StatelessWidget {
                                     ...SpeakerSortOption.values.map((SpeakerSortOption entry) {
                                       final bool selected = vmState.sortOption == entry;
 
-                                      return GestureDetector(
-                                        behavior: HitTestBehavior.translucent,
-                                        onTap: () {
-                                          speakerSelectionViewModel.setSortOption(entry);
-                                          menuSetState(() {});
-                                        },
-                                        child: Padding(
-                                          padding: const EdgeInsets.symmetric(vertical: 6.0),
-                                          child: Row(
-                                            children: <Widget>[
-                                              Icon(
-                                                selected ? Icons.circle : Icons.radio_button_unchecked,
-                                                size: 14,
-                                                color: selected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
-                                              ),
-                                              const SizedBox(width: 8),
-                                              Expanded(
-                                                child: FusionAppText(
-                                                  text: entry.displayName,
-                                                  style: context.textTheme.bodySmall?.copyWith(
-                                                    color: context.colorScheme.onSurface,
+                                      return SemanticHelper.container(
+                                        testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_sort_option_${entry.index}"),
+                                        child: GestureDetector(
+                                          behavior: HitTestBehavior.translucent,
+                                          onTap: () {
+                                            speakerSelectionViewModel.setSortOption(entry);
+                                            menuSetState(() {});
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(vertical: 6.0),
+                                            child: Row(
+                                              children: <Widget>[
+                                                SemanticHelper.toggle(
+                                                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "speaker_sort_option_toggle_${entry.index}"),
+                                                  value: selected,
+                                                  child: Icon(
+                                                    selected ? Icons.circle : Icons.radio_button_unchecked,
+                                                    size: 14,
+                                                    color: selected ? context.colorScheme.primary : context.colorScheme.onSurface.withValues(alpha: 0.5),
                                                   ),
                                                 ),
-                                              ),
-                                            ],
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: FusionAppText(
+                                                    text: entry.displayName,
+                                                    style: context.textTheme.bodySmall?.copyWith(
+                                                      color: context.colorScheme.onSurface,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       );
@@ -152,13 +165,16 @@ class ProductQuerySpeakerList extends StatelessWidget {
                   );
                 },
               ),
-              child: MouseRegion(
-                cursor: SystemMouseCursors.click,
-                child: Tooltip(
-                  message: "Sort products",
-                  child: FusionSvgIcon(
-                    icon: "assets/svg/sort.svg",
-                    color: context.colorScheme.onSurface,
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "sort_products_button"),
+                child: MouseRegion(
+                  cursor: SystemMouseCursors.click,
+                  child: Tooltip(
+                    message: "Sort products",
+                    child: FusionSvgIcon(
+                      icon: "assets/svg/sort.svg",
+                      color: context.colorScheme.onSurface,
+                    ),
                   ),
                 ),
               ),
@@ -180,20 +196,26 @@ class ProductQuerySpeakerList extends StatelessWidget {
                 final List<SpeakerProduct> speakers = productQueryViewModel.speakers;
 
                 if (isProductsLoading) {
-                  return const Expanded(
-                    child: Center(
-                      child: Padding(
-                        padding: EdgeInsets.all(16.0),
-                        child: CupertinoActivityIndicator(),
+                  return Expanded(
+                    child: SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_products_loading_indicator"),
+                      child: const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CupertinoActivityIndicator(),
+                        ),
                       ),
                     ),
                   );
                 } else if (speakers.isEmpty) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(16.0),
-                      child: FusionAppText(
-                        text: 'No products found',
+                  return SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_products_empty_indicator"),
+                    child: const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(16.0),
+                        child: FusionAppText(
+                          text: 'No products found',
+                        ),
                       ),
                     ),
                   );
@@ -233,6 +255,7 @@ class ProductQuerySpeakerList extends StatelessWidget {
                               final bool isSelected = listeningAreaSpeakers.any((Speaker sp) => sp.productId == product.productId);
 
                               return SpeakerCard(
+                                index: index,
                                 product: product,
                                 isSelected: isSelected,
                               );
@@ -263,10 +286,12 @@ class _SpeakerColorVarient {
 class SpeakerCard extends StatefulWidget {
   const SpeakerCard({
     super.key,
+    required this.index,
     required this.product,
     required this.isSelected,
   });
 
+  final int index;
   final SpeakerProduct product;
   final bool isSelected;
 
@@ -333,248 +358,267 @@ class _SpeakerCardState extends State<SpeakerCard> {
       builder: (BuildContext context, SpeakerSelectionViewModelState state) {
         final double productPrice = context.read<ProductQueryViewModel>().getPrice(widget.product.productId);
 
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                spacing: 10,
-                children: <Widget>[
-                  Container(
-                    width: 40,
-                    height: 40,
-                    padding: const EdgeInsets.all(4),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(6),
+        return SemanticHelper.container(
+          testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_${widget.index}"),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            decoration: BoxDecoration(borderRadius: BorderRadius.circular(8)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  spacing: 10,
+                  children: <Widget>[
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_image_${widget.index}"),
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Builder(
+                          builder: (BuildContext context) {
+                            if (selectedVarient?.cachedImagePath == null) return const SizedBox();
+                            return Image.asset(selectedVarient!.cachedImagePath!, fit: BoxFit.cover);
+                          },
+                        ),
+                      ),
                     ),
-                    child: Builder(
-                      builder: (BuildContext context) {
-                        if (selectedVarient?.cachedImagePath == null) return const SizedBox();
-                        return Image.asset(selectedVarient!.cachedImagePath!, fit: BoxFit.cover);
-                      },
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: <Widget>[
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: <Widget>[
-                            Flexible(
-                              child: FusionAppText(
-                                text: widget.product.modelName,
-                                style: context.textTheme.labelSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: context.colorScheme.onSurface,
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: <Widget>[
+                              Flexible(
+                                child: FusionAppText(
+                                  text: widget.product.modelName,
+                                  style: context.textTheme.labelSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                    color: context.colorScheme.onSurface,
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 4),
-                            FusionArrowPopup(
-                              content: SizedBox(
-                                width: 400,
-                                height: 280,
-                                child: SingleChildScrollView(
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: <Widget>[
-                                      Row(
-                                        children: <Widget>[
-                                          if (selectedVarient?.cachedImagePath != null) ...<Widget>[
-                                            Center(
-                                              child: ClipRRect(
-                                                borderRadius: BorderRadius.circular(4),
-                                                child: Image.asset(
-                                                  selectedVarient!.cachedImagePath!,
-                                                  width: 36,
-                                                  height: 36,
-                                                  fit: BoxFit.cover,
+                              const SizedBox(width: 4),
+                              FusionArrowPopup(
+                                content: SizedBox(
+                                  width: 400,
+                                  height: 280,
+                                  child: SingleChildScrollView(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: <Widget>[
+                                        Row(
+                                          children: <Widget>[
+                                            if (selectedVarient?.cachedImagePath != null) ...<Widget>[
+                                              Center(
+                                                child: ClipRRect(
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  child: Image.asset(
+                                                    selectedVarient!.cachedImagePath!,
+                                                    width: 36,
+                                                    height: 36,
+                                                    fit: BoxFit.cover,
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 8),
+                                            ],
+                                            Expanded(
+                                              child: FusionAppText(
+                                                text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg",
+                                                style: context.textTheme.bodySmall?.copyWith(
+                                                  color: context.colorScheme.onSurface,
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(width: 8),
                                           ],
-                                          Expanded(
-                                            child: FusionAppText(
-                                              text: "L 22.4cm | W 14.7cm | H 8.3cm | 9kg",
-                                              style: context.textTheme.bodySmall?.copyWith(
-                                                color: context.colorScheme.onSurface,
-                                              ),
+                                        ),
+
+                                        Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
+                                        Builder(
+                                          builder: (BuildContext context) {
+                                            final String frequencyResponse = SpeakerSelectionViewModel.formatFrequencyRange(
+                                              widget.product.frequencyRange,
+                                            );
+                                            final String environment = SpeakerSelectionViewModel.computeEnvironment(
+                                              widget.product.environment,
+                                              isWeatherRated: widget.product.isWeatherRated,
+                                            );
+                                            final String sensitivity = SpeakerSelectionViewModel.formatSensitivity(
+                                              widget.product.sensitivity,
+                                            );
+                                            final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(widget.product.maxSpl);
+                                            final PowerHandling? p = widget.product.powerHandling;
+                                            final String peakPower = SpeakerSelectionViewModel.formatPowerValue(
+                                              value: p?.peak,
+                                              unit: p?.unit,
+                                            );
+                                            final String longTermPower = SpeakerSelectionViewModel.formatPowerValue(
+                                              value: p?.longTermRms,
+                                              unit: p?.unit,
+                                            );
+                                            final String powerHandlingSummary = SpeakerSelectionViewModel.formatPowerSummary(
+                                              longTermRms: p?.longTermRms,
+                                              peak: p?.peak,
+                                              unit: p?.unit,
+                                            );
+
+                                            final Map<String, String> details = <String, String>{
+                                              'Mounting': widget.product.mountType ?? 'N/A',
+                                              'Frequency Response': frequencyResponse,
+                                              'Environment': environment,
+                                              'HF Size': 'N/A',
+                                              'Power Handling': powerHandlingSummary,
+                                              'LF Size': 'N/A',
+                                              'Sensitivity': sensitivity,
+                                              'Max. SPL': maxSpl,
+                                              'Peak Power': peakPower,
+                                              'Long Term Power': longTermPower,
+                                            };
+
+                                            final List<Widget> children = <Widget>[
+                                              ...details.entries.map((MapEntry<String, String> entry) {
+                                                final String key = entry.key;
+                                                final String value = entry.value;
+
+                                                return Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: <Widget>[
+                                                    FusionAppText(
+                                                      text: key,
+                                                      style: context.textTheme.bodySmall?.copyWith(
+                                                        fontWeight: FontWeight.normal,
+                                                      ),
+                                                    ),
+                                                    FusionAppText(
+                                                      text: value,
+                                                      style: context.textTheme.bodySmall?.copyWith(
+                                                        fontWeight: FontWeight.normal,
+                                                        color: context.colorScheme.onSurface.withAlpha(128),
+                                                      ),
+                                                    ),
+                                                  ],
+                                                );
+                                              }),
+                                            ];
+
+                                            return BuildingPageGridView(
+                                              width: 140,
+                                              children: children,
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                child: SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.container, "speaker_card_info_${widget.index}"),
+                                  child: Padding(
+                                    padding: const EdgeInsets.only(top: 6),
+                                    child: Icon(
+                                      LucideIcons.info200,
+                                      size: 12,
+                                      color: context.colorScheme.onSurface,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          FusionAppText(
+                            semanticId: "speaker_card_price_${widget.index}",
+                            text: "\$$productPrice",
+                            style: context.textTheme.bodySmall?.copyWith(
+                              fontWeight: FontWeight.normal,
+                              color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            runAlignment: WrapAlignment.start,
+                            children: <Widget>[
+                              ...productVarients.map((_SpeakerColorVarient colorVarient) {
+                                final bool isSelected = selectedVarient?.color == colorVarient.color;
+
+                                return SemanticHelper.container(
+                                  testId: SemanticHelper.createTestId(
+                                    SemanticTypes.container,
+                                    "speaker_color_varient_${widget.index}_${colorVarient.color.name}",
+                                  ),
+                                  child: GestureDetector(
+                                    onTap: () {
+                                      selectedVarient = colorVarient;
+                                      setState(() {});
+                                    },
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+                                        borderRadius: BorderRadius.circular(60),
+                                      ),
+                                      child: Row(
+                                        spacing: 4,
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: <Widget>[
+                                          FusionAppText(
+                                            text: colorVarient.color.displayName,
+                                            style: context.textTheme.labelSmall?.copyWith(
+                                              color: Colors.white,
+                                              fontSize: 7,
                                             ),
                                           ),
+                                          if (isSelected)
+                                            const Icon(
+                                              Icons.check,
+                                              size: 12,
+                                            ),
                                         ],
                                       ),
-
-                                      Divider(color: context.colorScheme.onSurface.withValues(alpha: 0.2)),
-                                      Builder(
-                                        builder: (BuildContext context) {
-                                          final String frequencyResponse = SpeakerSelectionViewModel.formatFrequencyRange(
-                                            widget.product.frequencyRange,
-                                          );
-                                          final String environment = SpeakerSelectionViewModel.computeEnvironment(
-                                            widget.product.environment,
-                                            isWeatherRated: widget.product.isWeatherRated,
-                                          );
-                                          final String sensitivity = SpeakerSelectionViewModel.formatSensitivity(
-                                            widget.product.sensitivity,
-                                          );
-                                          final String maxSpl = SpeakerSelectionViewModel.formatMaxSpl(widget.product.maxSpl);
-                                          final PowerHandling? p = widget.product.powerHandling;
-                                          final String peakPower = SpeakerSelectionViewModel.formatPowerValue(
-                                            value: p?.peak,
-                                            unit: p?.unit,
-                                          );
-                                          final String longTermPower = SpeakerSelectionViewModel.formatPowerValue(
-                                            value: p?.longTermRms,
-                                            unit: p?.unit,
-                                          );
-                                          final String powerHandlingSummary = SpeakerSelectionViewModel.formatPowerSummary(
-                                            longTermRms: p?.longTermRms,
-                                            peak: p?.peak,
-                                            unit: p?.unit,
-                                          );
-
-                                          final Map<String, String> details = <String, String>{
-                                            'Mounting': widget.product.mountType ?? 'N/A',
-                                            'Frequency Response': frequencyResponse,
-                                            'Environment': environment,
-                                            'HF Size': 'N/A',
-                                            'Power Handling': powerHandlingSummary,
-                                            'LF Size': 'N/A',
-                                            'Sensitivity': sensitivity,
-                                            'Max. SPL': maxSpl,
-                                            'Peak Power': peakPower,
-                                            'Long Term Power': longTermPower,
-                                          };
-
-                                          final List<Widget> children = <Widget>[
-                                            ...details.entries.map((MapEntry<String, String> entry) {
-                                              final String key = entry.key;
-                                              final String value = entry.value;
-
-                                              return Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: <Widget>[
-                                                  FusionAppText(
-                                                    text: key,
-                                                    style: context.textTheme.bodySmall?.copyWith(
-                                                      fontWeight: FontWeight.normal,
-                                                    ),
-                                                  ),
-                                                  FusionAppText(
-                                                    text: value,
-                                                    style: context.textTheme.bodySmall?.copyWith(
-                                                      fontWeight: FontWeight.normal,
-                                                      color: context.colorScheme.onSurface.withAlpha(128),
-                                                    ),
-                                                  ),
-                                                ],
-                                              );
-                                            }),
-                                          ];
-
-                                          return BuildingPageGridView(
-                                            width: 140,
-                                            children: children,
-                                          );
-                                        },
-                                      ),
-                                    ],
+                                    ),
                                   ),
-                                ),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.only(top: 6),
-                                child: Icon(
-                                  LucideIcons.info200,
-                                  size: 12,
-                                  color: context.colorScheme.onSurface,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        FusionAppText(
-                          text: "\$$productPrice",
-                          style: context.textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.normal,
-                            color: context.colorScheme.onSurface.withValues(alpha: 0.5),
+                                );
+                              }),
+                            ],
                           ),
-                        ),
-                        const SizedBox(height: 5),
-                        Wrap(
-                          spacing: 4,
-                          runSpacing: 4,
-                          runAlignment: WrapAlignment.start,
-                          children: <Widget>[
-                            ...productVarients.map((_SpeakerColorVarient colorVarient) {
-                              final bool isSelected = selectedVarient?.color == colorVarient.color;
-
-                              return GestureDetector(
-                                onTap: () {
-                                  selectedVarient = colorVarient;
-                                  setState(() {});
-                                },
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                  decoration: BoxDecoration(
-                                    color: context.colorScheme.onSurface.withValues(alpha: 0.4),
-                                    borderRadius: BorderRadius.circular(60),
-                                  ),
-                                  child: Row(
-                                    spacing: 4,
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: <Widget>[
-                                      FusionAppText(
-                                        text: colorVarient.color.displayName,
-                                        style: context.textTheme.labelSmall?.copyWith(
-                                          color: Colors.white,
-                                          fontSize: 7,
-                                        ),
-                                      ),
-                                      if (isSelected)
-                                        const Icon(
-                                          Icons.check,
-                                          size: 12,
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                  NeumorphicDarkButton(
-                    height: 24,
-                    width: 24,
-                    borderRadius: 6,
-                    backgroundColor: widget.isSelected ? FusionDarkColorPallette.green20 : null,
-                    child: Icon(
-                      LucideIcons.plus,
-                      size: 12,
-                      color: context.colorScheme.onSurface,
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "add_speaker_button_${widget.index}"),
+                      child: NeumorphicDarkButton(
+                        height: 24,
+                        width: 24,
+                        borderRadius: 6,
+                        backgroundColor: widget.isSelected ? FusionDarkColorPallette.green20 : null,
+                        child: Icon(
+                          LucideIcons.plus,
+                          size: 12,
+                          color: context.colorScheme.onSurface,
+                        ),
+                        onTap: () {
+                          context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
+                            context: context,
+                            cachedImagePath: selectedVarient?.cachedImagePath,
+                            product: widget.product,
+                          );
+                        },
+                      ),
                     ),
-                    onTap: () {
-                      context.read<SpeakerSelectionViewModel>().addOrReplaceSpeaker(
-                        context: context,
-                        cachedImagePath: selectedVarient?.cachedImagePath,
-                        product: widget.product,
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
         );
       },
