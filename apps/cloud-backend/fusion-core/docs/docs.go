@@ -437,7 +437,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal server error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.InternalServerError"
                         }
@@ -475,19 +475,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid payload\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Bad request - Product ID is required",
+                        "description": "Bad request - Product ID is required",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "404": {
-                        "description": "Product not found\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Product not found",
+                        "description": "Product not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
-                        "description": "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal server error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.InternalServerError"
                         }
@@ -521,6 +521,12 @@ const docTemplate = `{
                         "description": "Currency code (e.g., USD, EUR) to filter prices",
                         "name": "currency",
                         "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Product variant to filter prices",
+                        "name": "variant",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -531,19 +537,19 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid payload\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Bad request - Product ID is required",
+                        "description": "Bad request - Product ID is required",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "404": {
-                        "description": "Product price not found\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Product not found",
+                        "description": "Product not found",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
-                        "description": "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal server error",
+                        "description": "Internal server error",
                         "schema": {
                             "$ref": "#/definitions/types.InternalServerError"
                         }
