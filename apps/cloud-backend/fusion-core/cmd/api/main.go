@@ -167,19 +167,12 @@ func main() {
 	}
 	logger.Info("Initialized User Service.")
 
-	// Initialize Role Management Service
-	roleManagementSvc := userdb.NewRoleManagementService(pgs)
-	if roleManagementSvc == nil {
-		logger.Fatal("Failed to initialize role management service")
-	}
-	logger.Info("Initialized Role Management Service.")
-
 	// Initialize API Server (with configurable host and port)
 	server, err := api.New(&api.Config{
 		Host:        appConfig.Server.APIHost,
 		Port:        appConfig.Server.APIPort,
 		Auth0Domain: cfg.Auth0.Domain,
-	}, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
+	}, productSVC, projectSVC, userSVC)
 	if err != nil {
 		logger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))
 	}

@@ -309,7 +309,7 @@ func (suite *ProjectIntegrationTestSuite) setupAPI() error {
 		Auth0Domain: "test-domain.auth0.com", // Mock Auth0 domain for testing
 	}
 
-	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC, userDBSvc, roleManagementSvc)
+	apiServer, err := api.New(apiConfig, productSVC, projectSVC, userSVC)
 	if err != nil {
 		return fmt.Errorf("failed to initialize API server: %w", err)
 	}

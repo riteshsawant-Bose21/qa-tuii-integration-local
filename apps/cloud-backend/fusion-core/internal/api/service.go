@@ -11,6 +11,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+	"go.uber.org/zap"
 
 	"github.com/gin-gonic/gin"
 )
@@ -27,10 +28,10 @@ type API struct {
 }
 
 type Config struct {
-	Mode          string // "debug" or "release"
-	Host          string
-	Port          string
-	Auth0Domain   string
+	Mode        string // "debug" or "release"
+	Host        string
+	Port        string
+	Auth0Domain string
 }
 
 // New returns a new API from the given services.
@@ -52,6 +53,20 @@ func New(cfg *Config,
 	// engine.Use(ginLogger(logger)) // Custom logging middleware
 	engine.Use(corsMiddleware()) // CORS if needed
 
+	// Initialize logger
+	var logger *zap.Logger
+	var err error
+	if cfg.Mode == "release" {
+		logger, err = zap.NewProduction()
+	} else {
+		logger, err = zap.NewDevelopment()
+	}
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize logger: %w", err)
+	}
+
+	engine.Use(middleware.RequestLoggerMiddleware(logger)) // Add request logging middleware
+
 	if productSvc == nil {
 		return nil, errors.New("missing product service")
 	}
@@ -69,7 +84,7 @@ func New(cfg *Config,
 		return nil, errors.New("Auth0Domain is required for authentication")
 	}
 	auth0Config := auth.Auth0Config{
-    	Domain: cfg.Auth0Domain,
+		Domain: cfg.Auth0Domain,
 	}
 
 	auth0Validator := auth.NewAuth0Validator(auth0Config)
@@ -83,7 +98,7 @@ func New(cfg *Config,
 
 		// userDBService:         userDBSvc,
 		// roleManagementService: roleManagementSvc,
-		authMiddleware:        authMiddleware,
+		authMiddleware: authMiddleware,
 	}
 
 	api.registerRoutes()
