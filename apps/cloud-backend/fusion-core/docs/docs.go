@@ -437,12 +437,9 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
@@ -478,30 +475,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Product ID is required",
+                        "description": "Bad request - Invalid payload\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Bad request - Product ID is required",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "404": {
-                        "description": "Product not found",
+                        "description": "Product not found\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Product not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
@@ -543,30 +531,21 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Product ID is required",
+                        "description": "Bad request - Invalid payload\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Bad request - Product ID is required",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.BadRequestError"
                         }
                     },
                     "404": {
-                        "description": "Product not found",
+                        "description": "Product price not found\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Product not found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.NotFoundError"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal server error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/types.InternalServerError"
                         }
                     }
                 }
@@ -671,7 +650,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad request - Invalid payload or user not found",
+                        "description": "Bad request - Invalid payload or user not found or project Id already exists",
                         "schema": {
                             "$ref": "#/definitions/types.BadRequestError"
                         }
@@ -1116,7 +1095,58 @@ const docTemplate = `{
                 }
             }
         },
-        "/user/me/authorization": {
+        "/users": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Create a new user with the specified details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "users"
+                ],
+                "summary": "Create a new user",
+                "parameters": [
+                    {
+                        "description": "User creation details",
+                        "name": "user",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/types.CreateUserRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Successfully created user",
+                        "schema": {
+                            "$ref": "#/definitions/types.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad request - Invalid JSON payload",
+                        "schema": {
+                            "$ref": "#/definitions/types.BadRequestResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/types.InternalServerErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/users/authorization": {
             "get": {
                 "security": [
                     {
@@ -1144,61 +1174,6 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized - User email not found in token",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "404": {
-                        "description": "User not found in the system",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/user/me/profile": {
-            "get": {
-                "security": [
-                    {
-                        "BearerAuth": []
-                    }
-                ],
-                "description": "Get the current authenticated user's profile information",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "users"
-                ],
-                "summary": "Get user profile",
-                "responses": {
-                    "200": {
-                        "description": "Successfully retrieved user profile",
-                        "schema": {
-                            "$ref": "#/definitions/types.User"
-                        }
-                    },
-                    "401": {
-                        "description": "Unauthorized - User email not found in token",
-                        "schema": {
                             "$ref": "#/definitions/types.UnauthorizedResponse"
                         }
                     },
@@ -1206,15 +1181,6 @@ const docTemplate = `{
                         "description": "User not found in the system",
                         "schema": {
                             "$ref": "#/definitions/types.NotFoundResponse"
-                        }
-                    },
-                    "404": {
-                        "description": "User not found in the system",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
                         }
                     },
                     "500": {
@@ -1442,12 +1408,38 @@ const docTemplate = `{
                 }
             }
         },
+        "types.AuthStatusSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "object",
+                    "additionalProperties": true
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Authentication status retrieved successfully"
+                }
+            }
+        },
         "types.BadRequestError": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
                     "example": "Bad Request"
+                }
+            }
+        },
+        "types.BadRequestResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Bad Request"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Invalid JSON payload"
                 }
             }
         },
@@ -1611,12 +1603,38 @@ const docTemplate = `{
                 }
             }
         },
+        "types.InternalServerErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Internal Server Error"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "Internal server error"
+                }
+            }
+        },
         "types.NotFoundError": {
             "type": "object",
             "properties": {
                 "message": {
                     "type": "string",
                     "example": "Not Found"
+                }
+            }
+        },
+        "types.NotFoundResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Not Found"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User not found in the system"
                 }
             }
         },
@@ -2126,6 +2144,19 @@ const docTemplate = `{
                 }
             }
         },
+        "types.UnauthorizedResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Unauthorized"
+                },
+                "message": {
+                    "type": "string",
+                    "example": "User email not found in token"
+                }
+            }
+        },
         "types.UpdateUserRequest": {
             "type": "object",
             "properties": {
@@ -2277,7 +2308,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "fusionapi.cloud-dev-external-bpro.in:8080",
+	Host:             "",
 	BasePath:         "/api/v1",
 	Schemes:          []string{"http", "https"},
 	Title:            "Fusion Cloud Backend API",

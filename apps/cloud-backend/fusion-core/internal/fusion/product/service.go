@@ -205,9 +205,10 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 	}
 
 	// Add source-specific metadata
-	if request.SourceType == "local" {
+	switch request.SourceType {
+	case "local":
 		jobMetadata["source_path"] = request.FilePath
-	} else if request.SourceType == "s3" {
+	case "s3":
 		jobMetadata["s3_bucket"] = request.S3Bucket
 		jobMetadata["s3_key"] = request.S3Key
 		jobMetadata["region"] = request.Region
@@ -273,27 +274,6 @@ func (s *Service) Execute(ctx context.Context, request *types.SyncRequest) (*typ
 	)
 
 	return syncResult, nil
-}
-
-// extractVersionFromDataSource attempts to extract version from data source
-func (s *Service) extractVersionFromDataSource(dataSource DataSource) (string, error) {
-	// For local files, try to extract from file path
-	path := dataSource.GetPath()
-	if path != "" {
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return "", fmt.Errorf("failed to read file: %w", err)
-		}
-		return s.extractVersionFromData(data)
-	}
-
-	// For S3 and other sources, read the data directly and parse it
-	data, err := dataSource.ReadAll()
-	if err != nil {
-		return "1.0", fmt.Errorf("failed to read data source: %w", err)
-	}
-
-	return s.extractVersionFromData(data)
 }
 
 // extractVersionFromData extracts version from JSON data bytes
@@ -501,128 +481,6 @@ func (s *Service) SyncProducts(ctx context.Context, jsonData []byte, jobID strin
 	}
 
 	return result, nil
-}
-
-// extractSpecificationsFromProductData extracts specification fields from product data using field validator
-func (s *Service) extractSpecificationsFromProductData(itemMap map[string]interface{}, productType string) (string, error) {
-	// Get field definitions for the product type from validator
-	fieldDefinitions, exists := s.validator.ProductTypeDefinitions[productType]
-	if !exists {
-		// Use generic definitions if specific type not found
-		fieldDefinitions = s.validator.ProductTypeDefinitions["generic"]
-	}
-
-	// Extract specification fields (excluding basic product info fields)
-	specifications := make(map[string]interface{})
-	basicFields := map[string]bool{
-		"id": true, "product_id": true, "model_name": true, "model_family": true,
-		"description": true, "short_description": true, "images": true, "skus": true,
-		"updated_at": true, "created_at": true,
-	}
-
-	// Collect all specification-related fields based on field definitions
-	for _, fieldDef := range fieldDefinitions {
-		// Skip basic product information fields
-		if basicFields[fieldDef.JSONPath] {
-			continue
-		}
-
-		// Extract the field value if it exists
-		if value, exists := itemMap[fieldDef.JSONPath]; exists {
-			specifications[fieldDef.JSONPath] = value
-		}
-	}
-
-	// Convert to JSON string if we found any specifications
-	if len(specifications) > 0 {
-		specsJSON, err := json.Marshal(specifications)
-		if err != nil {
-			return "", fmt.Errorf("failed to marshal specifications: %w", err)
-		}
-		return string(specsJSON), nil
-	}
-
-	return "", nil
-}
-
-// convertJSONToDBProduct converts a raw JSON product item to types.DBProduct
-func (s *Service) convertJSONToDBProduct(item interface{}, category string) *types.DBProduct {
-	itemMap, ok := item.(map[string]interface{})
-	if !ok {
-		return nil
-	}
-
-	// Extract product ID from 'id' field
-	productID, ok := itemMap["id"].(float64)
-	if !ok {
-		return nil
-	}
-
-	// Extract model name
-	modelName, _ := itemMap["model_name"].(string)
-	if modelName == "" {
-		return nil
-	}
-
-	// Map category names to database enum values
-	var productType string
-	switch category {
-	case "speakers":
-		productType = "speaker"
-	case "amplifiers":
-		productType = "amplifier"
-	case "digital_signal_processors":
-		productType = "dsp"
-	case "controllers":
-		productType = "controller"
-	case "i_o_endpoints":
-		productType = "io_endpoint"
-	case "additional_accessories":
-		productType = "accessory"
-	default:
-		productType = "unknown"
-	}
-
-	// Create DBProduct
-	product := &types.DBProduct{
-		ProductID:   int(productID),
-		ProductType: productType,
-		ModelName:   modelName,
-	}
-
-	// Extract optional fields
-	if modelFamily, ok := itemMap["model_family"].(string); ok {
-		product.ModelFamily = modelFamily
-	}
-
-	if description, ok := itemMap["description"].(string); ok {
-		product.Description = description
-	}
-
-	if shortDesc, ok := itemMap["short_description"].(string); ok {
-		product.ShortDescription = shortDesc
-	}
-
-	// Extract fusion compatibility flag
-	if fusionCompatible, ok := itemMap["is_fusion_compatible"].(bool); ok {
-		product.IsFusionCompatible = fusionCompatible
-	}
-
-	// Convert complex fields to JSON strings
-	if images, ok := itemMap["images"]; ok {
-		if imagesJSON, err := json.Marshal(images); err == nil {
-			product.Images = string(imagesJSON)
-		}
-	}
-
-	// Extract specifications using field validator
-	// Map category to validation product type
-	validationProductType := validation.GetProductTypeFromCategory(category)
-	if specificationsJSON, err := s.extractSpecificationsFromProductData(itemMap, validationProductType); err == nil && specificationsJSON != "" {
-		product.Specifications = specificationsJSON
-	}
-
-	return product
 }
 
 // parseProductJSON parses JSON data into ProductData structure
@@ -1233,97 +1091,6 @@ func (s *Service) validateDBPrice(dbPrice *types.DBPrice) error {
 	return nil
 }
 
-// processPrice processes an individual price with comprehensive validation and error handling
-func (s *Service) processPrice(ctx context.Context, price validation.PriceData, goroutineID int, errorCollector *errors.ErrorCollector, validator *validation.FieldValidator, validationWarnings *[]string, warningsMutex *sync.Mutex) error {
-	// Validate price data
-	priceMap := s.convertPriceToMap(price)
-	validationResult := validator.ValidatePriceFields(priceMap)
-
-	// Check for validation errors
-	hasErrors := false
-	if validationResult != nil && !validationResult.IsValid {
-		for _, reqErr := range validationResult.RequiredErrors {
-			errorCollector.AddMissingRequiredFieldError(price.ProductID, reqErr.FieldName, reqErr.JSONPath, reqErr.Description)
-			hasErrors = true
-		}
-
-		for _, optWarn := range validationResult.OptionalWarnings {
-			warnMsg := fmt.Sprintf("price for product %d: optional field '%s' %s", price.ProductID, optWarn.FieldName, optWarn.Issue)
-			warningsMutex.Lock()
-			*validationWarnings = append(*validationWarnings, warnMsg)
-			warningsMutex.Unlock()
-			errorCollector.AddMissingOptionalFieldError(price.ProductID, optWarn.FieldName, optWarn.JSONPath, optWarn.Description)
-		}
-	}
-
-	// If there are required field errors, skip the price
-	if hasErrors {
-		return fmt.Errorf("price for product %d has required field validation failures", price.ProductID)
-	}
-
-	// Check if product exists
-	_, exists, err := s.dbService.LookupProductIDBySKU(ctx, price.ProductID)
-	if err != nil {
-		syncErr := errors.NewError(errors.DatabaseError, errors.SeverityHigh, "Failed to lookup product for price").
-			WithOriginalError(err).
-			WithProductID(price.ProductID).
-			WithContext(errors.ErrorContext{
-				SyncType:  "price",
-				Goroutine: goroutineID,
-			}).
-			Build()
-		errorCollector.Add(syncErr)
-		return err
-	}
-
-	if !exists {
-		syncErr := errors.NewError(errors.NotFoundError, errors.SeverityMedium, "Product not found, skipping price").
-			WithProductID(price.ProductID).
-			WithContext(errors.ErrorContext{
-				SyncType:  "price",
-				Goroutine: goroutineID,
-			}).
-			Build()
-		errorCollector.Add(syncErr)
-		return fmt.Errorf("product %d not found", price.ProductID)
-	}
-
-	// Convert to database format
-	dbPrice := s.convertToDBPrice(price)
-
-	// Validate transformation output
-	if err := s.validateDBPrice(dbPrice); err != nil {
-		syncErr := errors.NewError(errors.TransformError, errors.SeverityMedium, "Price transformation validation failed").
-			WithOriginalError(err).
-			WithProductID(price.ProductID).
-			WithContext(errors.ErrorContext{
-				SyncType:  "price",
-				Goroutine: goroutineID,
-			}).
-			Build()
-		errorCollector.Add(syncErr)
-		return err
-	}
-
-	// Upsert price into database
-	err = s.dbService.UpsertPrice(ctx, dbPrice)
-	if err != nil {
-		syncErr := errors.NewError(errors.DatabaseError, errors.SeverityHigh, "Failed to upsert price into database").
-			WithOriginalError(err).
-			WithProductID(price.ProductID).
-			WithContext(errors.ErrorContext{
-				SyncType:  "price",
-				Goroutine: goroutineID,
-			}).
-			AsRetryable().
-			Build()
-		errorCollector.Add(syncErr)
-		return err
-	}
-
-	return nil
-}
-
 // DetectChangedPricesByTimestamp compares file timestamps with database timestamps to identify changed prices
 func (s *Service) DetectChangedPricesByTimestamp(ctx context.Context, prices []validation.PriceData, logger *zap.Logger) ([]validation.PriceData, error) {
 	if len(prices) == 0 {
@@ -1482,14 +1249,6 @@ func (s *Service) extractPricesFromContainer(container *validation.PriceContaine
 	}
 
 	return s.normalizePrices(allPrices)
-}
-
-// isSkipError checks if an error indicates the operation should be skipped rather than failed
-func isSkipError(err error) bool {
-	errorMsg := err.Error()
-	isProductNotFound := strings.Contains(errorMsg, "not found")
-	isProductSkip := strings.Contains(errorMsg, "skipping")
-	return isProductNotFound || isProductSkip
 }
 
 // SyncPrices processes price data from JSON and syncs to database
