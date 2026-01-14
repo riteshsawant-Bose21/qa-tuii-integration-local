@@ -936,8 +936,7 @@ paths:
           schema:
             $ref: '#/definitions/types.ProductResponse'
         "500":
-          description: "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal
-            server error"
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
       summary: Get all products
@@ -962,18 +961,15 @@ paths:
           schema:
             $ref: '#/definitions/types.SingleProductResponse'
         "400":
-          description: "Bad request - Invalid payload\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Bad
-            request - Product ID is required"
+          description: Bad request - Product ID is required
           schema:
             $ref: '#/definitions/types.BadRequestError'
         "404":
-          description: "Product not found\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Product
-            not found"
+          description: Product not found
           schema:
             $ref: '#/definitions/types.NotFoundError'
         "500":
-          description: "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal
-            server error"
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
       summary: Get product by ID
@@ -995,6 +991,10 @@ paths:
         in: query
         name: currency
         type: string
+      - description: Product variant to filter prices
+        in: query
+        name: variant
+        type: string
       produces:
       - application/json
       responses:
@@ -1003,18 +1003,15 @@ paths:
           schema:
             $ref: '#/definitions/types.PriceResponse'
         "400":
-          description: "Bad request - Invalid payload\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Bad
-            request - Product ID is required"
+          description: Bad request - Product ID is required
           schema:
             $ref: '#/definitions/types.BadRequestError'
         "404":
-          description: "Product price not found\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Product
-            not found"
+          description: Product not found
           schema:
             $ref: '#/definitions/types.NotFoundError'
         "500":
-          description: "Internal server error\"\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\"Internal
-            server error"
+          description: Internal server error
           schema:
             $ref: '#/definitions/types.InternalServerError'
       summary: Get product prices by ID

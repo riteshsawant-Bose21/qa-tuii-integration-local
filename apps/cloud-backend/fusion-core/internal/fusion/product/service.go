@@ -1509,7 +1509,6 @@ func (s *Service) validatePriceVersion(container *validation.PriceContainer, val
 	}
 
 	// Check if version is supported
-	// Check if version is supported
 	for _, supportedVersion := range validationCfg.SupportedVersions {
 		if version == supportedVersion {
 			return nil
