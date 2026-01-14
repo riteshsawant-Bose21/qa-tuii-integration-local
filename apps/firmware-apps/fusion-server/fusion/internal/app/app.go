@@ -454,7 +454,7 @@ func initBLEServer() *network.BLEServer {
 
 	bleServer, err := network.NewBLEServer(bleServiceUUID, bleCharacterUUID)
 	if err != nil {
-		logging.GetLogger().Info("Bluetooth not available: %v", err)
+		logging.GetLogger().Error("Bluetooth not available: %v", err)
 		return nil
 	}
 	return bleServer

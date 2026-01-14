@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"fusion/internal/logging"
 	"net/http"
 	"time"
 )
@@ -172,8 +171,8 @@ func WaitForClusterSizeFromVIP(ctx context.Context, env Env, n int) error {
 	return PollUntil(ctx, 1*time.Second, func() (bool, error) {
 		devices, err := GetDevices(ctx, env.BaseURL())
 		if err != nil {
-			logging.GetLogger().Info("WaitForClusterSize: GetDevices error from %s: %v", env.BaseURL(), err)
-			return false, nil
+			// logging.GetLogger().Info("WaitForClusterSize: GetDevices error from %s: %v", env.BaseURL(), err)
+			return false, err
 		}
 		if len(devices) >= n {
 			return true, nil
