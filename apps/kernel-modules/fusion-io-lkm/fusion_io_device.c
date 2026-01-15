@@ -409,10 +409,6 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
                 }
             }
         }
-
-        if (iter == max_iters - 1 && irq_mask) {
-            printk(KERN_ERR "tca9544_handle_irq: irq storm (mask=0x%02x)\n", irq_mask);
-        }
     }
 
     return 0;
@@ -460,10 +456,6 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
                     handle_irq(tcal6408->gpios[i].linked_gpio);
                 }
             }
-        }
-
-        if (iter == max_iters - 1 && irq_mask) {
-            printk(KERN_ERR "tcal6408_handle_irq: irq storm (mask=0x%02x)\n", irq_mask);
         }
     }
 
