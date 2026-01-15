@@ -393,9 +393,6 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
 
     // last 4 bits are irq mask
     irq_mask = *buf >> 4;
-    if (!irq_mask) {
-        break;
-    }
 
     for (int i = 0; i < tca9544->num_gpios; ++i) {
         if ((irq_mask >> i) & 1) {
@@ -441,9 +438,6 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
     }
 
     irq_mask = *rd_buf;
-    if (!irq_mask) {
-        break;
-    }
 
     for (int i = 0; i < tcal6408->num_gpios; ++i) {
         if ((irq_mask >> i) & 1) {
