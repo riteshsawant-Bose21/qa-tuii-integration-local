@@ -403,6 +403,9 @@ int tca9544_handle_irq(struct endpoint_gpio *ep_gpio)
                 if (tca9544->gpios[i].linked_gpio == NULL) {
                     continue;
                 }
+
+                printk(KERN_INFO "tca9544_handle_irq: handling irq for gpio %s\n", tca9544->gpios[i].linked_gpio->name);
+
                 handle_irq(tca9544->gpios[i].linked_gpio);
             }
         }
@@ -448,6 +451,7 @@ int tcal6408_handle_irq(struct endpoint_gpio *ep_gpio)
                 if (tcal6408->gpios[i].linked_gpio == NULL) {
                     continue;
                 }
+
                 handle_irq(tcal6408->gpios[i].linked_gpio);
             }
         }
