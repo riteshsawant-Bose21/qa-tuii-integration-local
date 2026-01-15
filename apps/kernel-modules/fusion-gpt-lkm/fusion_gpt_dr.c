@@ -211,9 +211,21 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     if (!g)
         return -ENODEV;
 
-    /* Touch shared PPS/epoch state from process context: IRQ-safe */
     spin_lock_irqsave(&g->pps_lock, flags);
 
+    if (phc_ns_at_pps == 0) {
+        g->pending_future_anchor = false;
+        g->pending_future_phc_ns = 0;
+        g->phc_epoch_ns = 0;
+        g->pps_epoch_cnt64 = 0;
+        g->phc_epoch_valid = false;
+        g->phc_aligned = false;
+        rc = 0;
+        spin_unlock_irqrestore(&g->pps_lock, flags);
+        return rc;
+    }
+
+    /* Touch shared PPS/epoch state from process context: IRQ-safe */
     g->pending_future_anchor = true;
     g->pending_future_phc_ns = phc_ns_at_pps;
 

@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <ctime>
 #include <climits>
 #include <cstring>
 #include <iomanip>
@@ -22,6 +23,7 @@
 
 #include <arpa/inet.h>
 #include <curl/curl.h>
+#include <fcntl.h>
 #include <ifaddrs.h>
 #include <json/json.h>
 #include <linux/if_addr.h>
@@ -54,7 +56,9 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_STOP_MANAGER,
     FUSION_CN_CTRL_CMD_ADD_STREAM,
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
-    FUSION_CN_CTRL_CMD_GET_METRICS
+    FUSION_CN_CTRL_CMD_GET_METRICS,
+    FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
+    FUSION_CN_CTRL_CMD_GET_PHC_STATUS
 };
 
 enum mgr_start_errno {
@@ -122,6 +126,20 @@ struct fusion_cn_metrics_record {
     uint64_t stream_handle;
     char stream_name[32];
     struct fusion_cn_metrics_snapshot snap;
+} __attribute__((packed));
+
+#ifndef CLOCKFD
+#define CLOCKFD 3
+#endif
+#ifndef FD_TO_CLOCKID
+#define FD_TO_CLOCKID(fd) ((clockid_t)((((unsigned int)~(fd)) << 3) | CLOCKFD))
+#endif
+
+struct fc_get_phc_status_reply
+{
+    uint8_t epoch_valid;
+    uint8_t aligned;
+    uint32_t pps_seq;
 } __attribute__((packed));
 
 // Helper function to convert uint32_t IP to string
@@ -405,6 +423,114 @@ static bool get_all_metrics(NetlinkClient &client,
 //     return true;
 // }
 
+static bool nl_set_phc_anchor(NetlinkClient& c, uint64_t phc_ns_at_pps) {
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, &phc_ns_at_pps, sizeof(phc_ns_at_pps), &reply)) {
+        return false;
+    }
+    if (reply.err != 0) {
+        SPDLOG_ERROR("SET_PHC_ANCHOR({}) err={}", phc_ns_at_pps, reply.err);
+    }
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
+static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply* out) {
+    if (!out) return false;
+    fusion_cn_ctrl_msg reply{};
+    if (!c.send_message(FUSION_CN_CTRL_CMD_GET_PHC_STATUS, nullptr, 0, &reply)) return false;
+    if (reply.err != 0) {
+        SPDLOG_ERROR("GET_PHC_STATUS err={}", reply.err);
+        if (reply.data) free(reply.data);
+        return false;
+    }
+    if (reply.data_size != sizeof(fc_get_phc_status_reply) || !reply.data) {
+        SPDLOG_ERROR("GET_PHC_STATUS bad payload size={}", reply.data_size);
+        if (reply.data) free(reply.data);
+        return false;
+    }
+    memcpy(out, reply.data, sizeof(*out));
+    if (reply.data) free(reply.data);
+    return true;
+}
+
+static bool read_phc_ns(uint64_t *out_ns)
+{
+    static int ptp_fd = -1;
+
+    if (!out_ns) return false;
+    if (ptp_fd < 0) {
+        ptp_fd = open("/dev/ptp0", O_RDONLY);
+        if (ptp_fd < 0) {
+            SPDLOG_ERROR("Failed to open /dev/ptp0: {}", strerror(errno));
+            return false;
+        }
+    }
+
+    timespec ts{};
+    clockid_t clkid = FD_TO_CLOCKID(ptp_fd);
+    if (clock_gettime(clkid, &ts) != 0) {
+        SPDLOG_ERROR("clock_gettime(/dev/ptp0) failed: {}", strerror(errno));
+        return false;
+    }
+
+    *out_ns = (static_cast<uint64_t>(ts.tv_sec) * 1000000000ULL) +
+              static_cast<uint64_t>(ts.tv_nsec);
+    return true;
+}
+
+static bool poll_time_status_np(bool *gm_present, bool *gm_present_valid,
+                                long long *master_offset, bool *master_offset_valid)
+{
+    if (gm_present) *gm_present = false;
+    if (gm_present_valid) *gm_present_valid = false;
+    if (master_offset) *master_offset = 0;
+    if (master_offset_valid) *master_offset_valid = false;
+
+    FILE* fp = popen("/usr/sbin/pmc -u -b 0 -f /etc/linuxptp/ptp4l.conf 'GET TIME_STATUS_NP'", "r");
+    if (!fp) return false;
+
+    char buf[512];
+    auto trim = [](std::string s){
+        const char* ws = " \t\r\n";
+        size_t a = s.find_first_not_of(ws);
+        size_t b = s.find_last_not_of(ws);
+        return a == std::string::npos ? std::string() : s.substr(a, b - a + 1);
+    };
+
+    while (fgets(buf, sizeof(buf), fp)) {
+        std::string line(buf);
+        auto gm_pos = line.find("gmPresent");
+        if (gm_pos != std::string::npos && gm_present && gm_present_valid) {
+            std::string v = trim(line.substr(gm_pos + std::strlen("gmPresent")));
+            for (char& ch : v) ch = (char)std::tolower((unsigned char)ch);
+            if (v.find("true") != std::string::npos) {
+                *gm_present = true;
+                *gm_present_valid = true;
+            } else if (v.find("false") != std::string::npos) {
+                *gm_present = false;
+                *gm_present_valid = true;
+            }
+        }
+
+        auto mo_pos = line.find("master_offset");
+        if (mo_pos != std::string::npos && master_offset && master_offset_valid) {
+            std::string v = trim(line.substr(mo_pos + std::strlen("master_offset")));
+            const char* s = v.c_str();
+            char* endp   = nullptr;
+            errno = 0;
+            long long val = std::strtoll(s, &endp, 10);
+            if (errno == 0 && endp != s) {
+                *master_offset = val;
+                *master_offset_valid = true;
+            }
+        }
+    }
+
+    pclose(fp);
+    return true;
+}
+
 // Callback for curl to write response data
 size_t curl_write_callback(void* contents, size_t size, size_t nmemb, std::string* output) {
     size_t total_size = size * nmemb;
@@ -533,12 +659,23 @@ private:
     uint32_t announce_counter;
 
     std::string audio_streams_update;
+    bool ptp_sync_good;
+    bool ptp_anchor_pending;
+    int ptp_good_streak;
+    int ptp_role_flag;
+    int ptp_false_streak;
+    std::chrono::steady_clock::time_point ptp_last_poll;
+    std::chrono::steady_clock::time_point ptp_last_role_probe;
+    std::chrono::steady_clock::time_point ptp_last_anchor;
+    std::chrono::steady_clock::time_point ptp_last_status_poll;
 
     bool is_source_stream(uint64_t stream_handle);
     int create_stream(fusion_cn_stream_config& config);
     int remove_stream(uint64_t stream_handle);
     void join_multicast_group(uint32_t multicast_ip);
     void audio_streams_update_func();
+    void update_ptp_state();
+    void maybe_set_phc_anchor();
 
     MODULE_DECLARE(FusionConnectClient);
 };
@@ -547,7 +684,9 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
-      network_interface("lan1"), sap_announcer(get_system_ip()), announce_counter(0) {
+      network_interface("lan1"), sap_announcer(get_system_ip()), announce_counter(0),
+      ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
+      ptp_role_flag(-1), ptp_false_streak(0) {
     system_ip = get_system_ip();
     if (system_ip.empty()) {
         SPDLOG_ERROR("Failed to initialize: No valid system IP found");
@@ -561,6 +700,11 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
 
     assign_parameter("audio_streams_update", &audio_streams_update, 
                      POST_FUNCTION_SCALAR(audio_streams_update_func));
+
+    ptp_last_poll = std::chrono::steady_clock::now();
+    ptp_last_role_probe = ptp_last_poll;
+    ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
+    ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
 }
 
 static bool is_source_stream_by_name(const char *name) {
@@ -980,6 +1124,105 @@ void FusionConnectClient::audio_streams_update_func() {
     }
 }
 
+void FusionConnectClient::update_ptp_state()
+{
+    constexpr int GM_FALSE_CONSEC = 25;
+    constexpr long long OFFSET_OK_NS = 1000; // 1 us window
+    const auto now = std::chrono::steady_clock::now();
+
+    if (now - ptp_last_poll < std::chrono::milliseconds(500)) return;
+    ptp_last_poll = now;
+
+    bool gm_present = false;
+    bool gm_present_valid = false;
+    long long master_offset = 0;
+    bool master_offset_valid = false;
+    poll_time_status_np(&gm_present, &gm_present_valid, &master_offset, &master_offset_valid);
+
+    if (gm_present_valid) {
+        if (gm_present) {
+            ptp_role_flag = 1;
+            ptp_false_streak = 0;
+        } else if (ptp_role_flag != 0) {
+            if (++ptp_false_streak >= GM_FALSE_CONSEC) ptp_role_flag = 0;
+        }
+        ptp_last_role_probe = now;
+    } else if (now - ptp_last_role_probe > std::chrono::seconds(3)) {
+        ptp_last_role_probe = now;
+    }
+
+    const bool i_am_gm = (ptp_role_flag == 0);
+    bool good_now = false;
+
+    if (i_am_gm) {
+        good_now = (gm_present_valid && !gm_present);
+    } else {
+        if (master_offset_valid) {
+            long long best_abs = master_offset ? std::llabs(master_offset) : 0;
+            good_now = (best_abs <= OFFSET_OK_NS);
+        }
+    }
+
+    ptp_good_streak = good_now ? (ptp_good_streak + 1) : 0;
+    const bool was_good = ptp_sync_good;
+    ptp_sync_good = (ptp_good_streak >= 3);
+
+    if (!ptp_sync_good && was_good) {
+        ptp_anchor_pending = true;
+        SPDLOG_WARN("PTP sync lost; clearing PHC anchor");
+        nl_set_phc_anchor(client, 0);
+    } else if (ptp_sync_good && !was_good) {
+        ptp_anchor_pending = true;
+        SPDLOG_INFO("PTP sync good; preparing PHC anchor");
+    }
+
+    SPDLOG_DEBUG("PTP status: gm_present_valid={} gm_present={} role={} master_offset_valid={} master_offset={} good={}",
+                 gm_present_valid, gm_present, i_am_gm ? "GM" : "Follower",
+                 master_offset_valid, master_offset, ptp_sync_good);
+}
+
+void FusionConnectClient::maybe_set_phc_anchor()
+{
+    constexpr uint64_t ONE_SEC_NS = 1000000000ULL;
+    constexpr uint64_t MIN_LEAD_NS = 500000000ULL; // 500 ms
+    constexpr auto REANCHOR_INTERVAL = std::chrono::seconds(60);
+
+    if (!ptp_sync_good) return;
+
+    const auto now = std::chrono::steady_clock::now();
+
+    if (now - ptp_last_status_poll > std::chrono::seconds(1)) {
+        fc_get_phc_status_reply st{};
+        if (nl_get_phc_status(client, &st)) {
+            if (!st.epoch_valid || !st.aligned) {
+                ptp_anchor_pending = true;
+            }
+            const uint32_t pps_seq = st.pps_seq;
+            SPDLOG_DEBUG("PHC status: epoch_valid={} aligned={} pps_seq={}",
+                         st.epoch_valid, st.aligned, pps_seq);
+        }
+        ptp_last_status_poll = now;
+    }
+
+    if (!ptp_anchor_pending && (now - ptp_last_anchor < REANCHOR_INTERVAL)) return;
+
+    uint64_t phc_ns = 0;
+    if (!read_phc_ns(&phc_ns)) return;
+
+    uint64_t next_pps_ns = ((phc_ns / ONE_SEC_NS) + 1ULL) * ONE_SEC_NS;
+    uint64_t delta = next_pps_ns - phc_ns;
+    if (delta < MIN_LEAD_NS) {
+        SPDLOG_DEBUG("PHC anchor delayed: next PPS in {} ns (< {} ns)", delta, MIN_LEAD_NS);
+        return;
+    }
+
+    if (nl_set_phc_anchor(client, next_pps_ns)) {
+        ptp_last_anchor = now;
+        ptp_anchor_pending = false;
+        SPDLOG_INFO("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+    }
+}
+
 void FusionConnectClient::process() { 
     if (!mgr_started) {
         fusion_cn_ctrl_msg reply{};
@@ -995,6 +1238,9 @@ void FusionConnectClient::process() {
 
         return;
     }
+
+    update_ptp_state();
+    maybe_set_phc_anchor();
     
     // --- Fusion Connect ---
     for (auto it = fusion_connect_stream_map.begin(); it != fusion_connect_stream_map.end();) {
