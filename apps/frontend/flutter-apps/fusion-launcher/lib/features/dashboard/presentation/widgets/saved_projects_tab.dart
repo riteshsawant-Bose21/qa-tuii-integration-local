@@ -1039,62 +1039,65 @@ class _CreateNewProjectDialogState extends State<CreateNewProjectDialog> {
 
                                 Align(
                                   alignment: Alignment.centerRight,
-                                  child: NeumorphicDarkButton(
-                                    onTap: () async {
-                                      final bool isFormFilled = _formKey.currentState?.validate() ?? false;
-                                      if (!isFormFilled) return;
+                                  child: SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "create_new_project_button"),
+                                    child: NeumorphicDarkButton(
+                                      onTap: () async {
+                                        final bool isFormFilled = _formKey.currentState?.validate() ?? false;
+                                        if (!isFormFilled) return;
 
-                                      final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
+                                        final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
-                                      final String projectName = projectNameController.text.trim();
+                                        final String projectName = projectNameController.text.trim();
 
-                                      FusionUiUtils.showLoader(context);
-                                      final NewProjectDetails newProject = NewProjectDetails(name: projectName);
-                                      final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
-                                      if (context.mounted) FusionUiUtils.hideLoader(context);
-                                      projectViewModel.openProject(projectData!.id);
+                                        FusionUiUtils.showLoader(context);
+                                        final NewProjectDetails newProject = NewProjectDetails(name: projectName);
+                                        final ProjectData? projectData = await projectViewModel.createAndSaveNewProject(newProject);
+                                        if (context.mounted) FusionUiUtils.hideLoader(context);
+                                        projectViewModel.openProject(projectData!.id);
 
-                                      if (context.mounted) {
-                                        serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
-                                        Navigator.of(context).pop();
-                                        // Navigator.pushNamed(context, Routes.projectPage);
-                                      }
-                                    },
-                                    width: 160,
-                                    child: Container(
-                                      height: 60,
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
-                                      decoration: BoxDecoration(
-                                        color: context.colorScheme.surface,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        children: <Widget>[
-                                          Expanded(
-                                            child: FusionAppText(
-                                              text: 'Continue',
-                                              style: context.textTheme.titleSmall?.copyWith(
-                                                fontWeight: FontWeight.w600,
+                                        if (context.mounted) {
+                                          serviceLocator<GuideShowCaseController>().completeStep(GuideShowCaseSteps.myProjects);
+                                          Navigator.of(context).pop();
+                                          // Navigator.pushNamed(context, Routes.projectPage);
+                                        }
+                                      },
+                                      width: 160,
+                                      child: Container(
+                                        height: 60,
+                                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                                        decoration: BoxDecoration(
+                                          color: context.colorScheme.surface,
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Row(
+                                          children: <Widget>[
+                                            Expanded(
+                                              child: FusionAppText(
+                                                text: 'Continue',
+                                                style: context.textTheme.titleSmall?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                          MouseRegion(
-                                            cursor: SystemMouseCursors.click,
-                                            child: Container(
-                                              height: 28,
-                                              width: 47,
-                                              decoration: BoxDecoration(
-                                                color: FusionDarkColorPallette.green20,
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: const Icon(
-                                                LucideIcons.arrowRight,
-                                                color: Colors.white,
-                                                size: 12,
+                                            MouseRegion(
+                                              cursor: SystemMouseCursors.click,
+                                              child: Container(
+                                                height: 28,
+                                                width: 47,
+                                                decoration: BoxDecoration(
+                                                  color: FusionDarkColorPallette.green20,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: const Icon(
+                                                  LucideIcons.arrowRight,
+                                                  color: Colors.white,
+                                                  size: 12,
+                                                ),
                                               ),
                                             ),
-                                          ),
-                                        ],
+                                          ],
+                                        ),
                                       ),
                                     ),
                                   ),
@@ -1123,6 +1126,7 @@ class BorderedTextfield extends StatefulWidget {
   final int minLines, maxLines;
   final bool isEnabled, isObscured;
   final FormFieldValidator<String>? validator;
+  final String? sementicFieldId;
 
   const BorderedTextfield({
     super.key,
@@ -1135,6 +1139,7 @@ class BorderedTextfield extends StatefulWidget {
     this.isEnabled = true,
     this.isObscured = false,
     this.validator,
+    this.sementicFieldId,
   });
 
   @override
@@ -1178,43 +1183,46 @@ class _BorderedTextfieldState extends State<BorderedTextfield> {
           ),
         ),
         const SizedBox(height: 12),
-        TextFormField(
-          controller: widget.controller,
-          initialValue: widget.initialValue,
-          minLines: widget.minLines,
-          maxLines: widget.maxLines,
-          enabled: widget.isEnabled,
-          obscureText: isObscured,
-          style: context.textTheme.labelLarge?.copyWith(
-            color: context.colorScheme.onSurface,
-          ),
-          validator: widget.validator,
-          mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
-          decoration: InputDecoration(
-            hintText: widget.hintText,
-            hintStyle: context.textTheme.labelLarge?.copyWith(
-              color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+        SemanticHelper.formControl(
+          testId: SemanticHelper.createTestId(SemanticTypes.textInput, widget.sementicFieldId ?? "${widget.label}_input"),
+          child: TextFormField(
+            controller: widget.controller,
+            initialValue: widget.initialValue,
+            minLines: widget.minLines,
+            maxLines: widget.maxLines,
+            enabled: widget.isEnabled,
+            obscureText: isObscured,
+            style: context.textTheme.labelLarge?.copyWith(
+              color: context.colorScheme.onSurface,
             ),
-            isDense: true,
-            filled: true,
-            fillColor: Colors.transparent,
-            contentPadding: const EdgeInsets.all(14),
-            suffixIcon: widget.isObscured ? obsecuredWidget : null,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
-            ),
-            disabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(borderRadius),
-              borderSide: BorderSide(color: context.colorScheme.primary, width: 2),
+            validator: widget.validator,
+            mouseCursor: widget.isEnabled ? null : SystemMouseCursors.forbidden,
+            decoration: InputDecoration(
+              hintText: widget.hintText,
+              hintStyle: context.textTheme.labelLarge?.copyWith(
+                color: context.colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+              isDense: true,
+              filled: true,
+              fillColor: Colors.transparent,
+              contentPadding: const EdgeInsets.all(14),
+              suffixIcon: widget.isObscured ? obsecuredWidget : null,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+              ),
+              disabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(color: context.colorScheme.surfaceDim.withValues(alpha: 0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(borderRadius),
+                borderSide: BorderSide(color: context.colorScheme.primary, width: 2),
+              ),
             ),
           ),
         ),
@@ -1337,31 +1345,34 @@ class FusionDarkDropdown<T> extends StatelessWidget {
                       ),
                     ];
                   },
-                  child: Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(borderRadius),
-                      border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        Expanded(
-                          child: FusionAppText(
-                            text: selectedValue != null ? labelBuilder(selectedValue as T) : placeholder,
-                            style: context.textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(
-                                alpha: selectedValue != null ? 1.0 : 0.4,
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "${title ?? 'dropdown'}_dropdown_button"),
+                    child: Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(borderRadius),
+                        border: Border.all(color: context.colorScheme.onSurface.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          Expanded(
+                            child: FusionAppText(
+                              text: selectedValue != null ? labelBuilder(selectedValue as T) : placeholder,
+                              style: context.textTheme.labelLarge?.copyWith(
+                                color: context.colorScheme.onSurface.withValues(
+                                  alpha: selectedValue != null ? 1.0 : 0.4,
+                                ),
                               ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 4),
-                        Icon(
-                          LucideIcons.chevronDown,
-                          color: context.colorScheme.onSurface.withAlpha(150),
-                        ),
-                      ],
+                          const SizedBox(width: 4),
+                          Icon(
+                            LucideIcons.chevronDown,
+                            color: context.colorScheme.onSurface.withAlpha(150),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
