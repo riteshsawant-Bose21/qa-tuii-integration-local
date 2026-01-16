@@ -191,14 +191,33 @@ int addattr_l(struct nlmsghdr *n, size_t maxlen, int type, const void *data, siz
     return 0;
 }
 
-// Helper function to get system IP address
-std::string get_system_ip() {
+// Helper function to get system IP address (prefers a named interface if provided)
+std::string get_system_ip(const std::string& preferred_ifname = "", bool log_on_fail = true) {
     struct ifaddrs *ifaddr, *ifa;
     char addr_str[INET_ADDRSTRLEN] = {0};
 
     if (getifaddrs(&ifaddr) == -1) {
         SPDLOG_ERROR("Failed to get interface addresses: {}", strerror(errno));
         return "";
+    }
+
+    auto name_matches = [&](const char* name) -> bool {
+        if (!name || preferred_ifname.empty()) return false;
+        if (preferred_ifname == name) return true;
+        const size_t n = preferred_ifname.size();
+        return (strncmp(name, preferred_ifname.c_str(), n) == 0 && name[n] == '@');
+    };
+
+    if (!preferred_ifname.empty()) {
+        for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+            if (!ifa->ifa_addr || ifa->ifa_addr->sa_family != AF_INET) continue;
+            if (!name_matches(ifa->ifa_name)) continue;
+            struct sockaddr_in *sa = (struct sockaddr_in *)ifa->ifa_addr;
+            if (inet_ntop(AF_INET, &sa->sin_addr, addr_str, sizeof(addr_str))) {
+                freeifaddrs(ifaddr);
+                return std::string(addr_str);
+            }
+        }
     }
 
     for (ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
@@ -219,7 +238,13 @@ std::string get_system_ip() {
     }
 
     freeifaddrs(ifaddr);
-    SPDLOG_ERROR("No valid IPv4 address found on non-loopback interfaces");
+    if (log_on_fail) {
+        if (!preferred_ifname.empty()) {
+            SPDLOG_ERROR("No valid IPv4 address found on interface '{}'", preferred_ifname);
+        } else {
+            SPDLOG_ERROR("No valid IPv4 address found on non-loopback interfaces");
+        }
+    }
     return "";
 }
 
@@ -668,12 +693,15 @@ private:
     std::chrono::steady_clock::time_point ptp_last_role_probe;
     std::chrono::steady_clock::time_point ptp_last_anchor;
     std::chrono::steady_clock::time_point ptp_last_status_poll;
+    std::chrono::steady_clock::time_point ip_last_probe;
+    bool ip_missing_logged;
 
     bool is_source_stream(uint64_t stream_handle);
     int create_stream(fusion_cn_stream_config& config);
     int remove_stream(uint64_t stream_handle);
     void join_multicast_group(uint32_t multicast_ip);
     void audio_streams_update_func();
+    bool refresh_system_ip();
     void update_ptp_state();
     void maybe_set_phc_anchor();
 
@@ -684,13 +712,14 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
-      network_interface("lan1"), sap_announcer(get_system_ip()), announce_counter(0),
+      network_interface("lan1"), sap_announcer(""), announce_counter(0),
       ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
-      ptp_role_flag(-1), ptp_false_streak(0) {
-    system_ip = get_system_ip();
-    if (system_ip.empty()) {
-        SPDLOG_ERROR("Failed to initialize: No valid system IP found");
-        return;
+      ptp_role_flag(-1), ptp_false_streak(0), ip_missing_logged(false) {
+    system_ip = get_system_ip(network_interface, false);
+    if (!system_ip.empty()) {
+        sap_announcer.setSystemIp(system_ip);
+    } else {
+        SPDLOG_ERROR("No valid system IP found at startup; will retry");
     }
 
     if (!client.is_valid()) {
@@ -705,6 +734,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     ptp_last_role_probe = ptp_last_poll;
     ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
     ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
+    ip_last_probe = ptp_last_poll - std::chrono::seconds(1);
 }
 
 static bool is_source_stream_by_name(const char *name) {
@@ -846,6 +876,10 @@ void FusionConnectClient::audio_streams_update_func() {
     SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
 
     // --- Crucial pre-reqs -----------------------------------------------------
+    if (!refresh_system_ip()) {
+        SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
+        return;
+    }
     if (device_id.empty()) {
         device_id = get_device_id(system_ip);
         if (device_id.empty()) {
@@ -1124,6 +1158,29 @@ void FusionConnectClient::audio_streams_update_func() {
     }
 }
 
+bool FusionConnectClient::refresh_system_ip()
+{
+    if (!system_ip.empty()) return true;
+
+    const auto now = std::chrono::steady_clock::now();
+    if (now - ip_last_probe < std::chrono::seconds(1)) return false;
+    ip_last_probe = now;
+
+    system_ip = get_system_ip(network_interface, false);
+    if (system_ip.empty()) {
+        if (!ip_missing_logged) {
+            SPDLOG_ERROR("No valid system IP found; retrying");
+            ip_missing_logged = true;
+        }
+        return false;
+    }
+
+    sap_announcer.setSystemIp(system_ip);
+    ip_missing_logged = false;
+    SPDLOG_INFO("Detected system IP: {}", system_ip);
+    return true;
+}
+
 void FusionConnectClient::update_ptp_state()
 {
     constexpr int GM_FALSE_CONSEC = 25;
@@ -1239,6 +1296,7 @@ void FusionConnectClient::process() {
         return;
     }
 
+    const bool have_ip = refresh_system_ip();
     update_ptp_state();
     maybe_set_phc_anchor();
     
@@ -1364,19 +1422,21 @@ void FusionConnectClient::process() {
     }
 
     // SAP announcements every 30 seconds
-    if (announce_counter++ % 30 == 0) {
+    if (have_ip && (announce_counter++ % 30 == 0)) {
         sap_announcer.announceAll();
     }
     // Handle deletion packets
-    std::vector<std::string> to_delete;
-    for (const auto& pair : sap_announcer.getAnnouncements()) {
-        if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
-            sap_announcer.sendAnnouncement(pair.second);
-            to_delete.push_back(pair.first);
+    if (have_ip) {
+        std::vector<std::string> to_delete;
+        for (const auto& pair : sap_announcer.getAnnouncements()) {
+            if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
+                sap_announcer.sendAnnouncement(pair.second);
+                to_delete.push_back(pair.first);
+            }
         }
-    }
-    for (const auto& stream_name : to_delete) {
-        sap_announcer.handleDeletion(stream_name);
+        for (const auto& stream_name : to_delete) {
+            sap_announcer.handleDeletion(stream_name);
+        }
     }
 }
 
