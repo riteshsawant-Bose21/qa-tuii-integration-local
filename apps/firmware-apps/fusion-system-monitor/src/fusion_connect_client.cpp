@@ -706,6 +706,7 @@ private:
     bool debug_enabled;
     bool debug_sent;
     bool iface_sent;
+    bool phc_anchor_logged;
     SAPAnnouncer sap_announcer;
 
     std::string audio_streams_update;
@@ -739,7 +740,7 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
       enet_iface("lan1"), period_ms(1000), debug_enabled(false),
-      debug_sent(false), iface_sent(false), sap_announcer(""),
+      debug_sent(false), iface_sent(false), phc_anchor_logged(false), sap_announcer(""),
       ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
       ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0) {
     system_ip = "";
@@ -1328,7 +1329,12 @@ void FusionConnectClient::maybe_set_phc_anchor()
     if (nl_set_phc_anchor(client, next_pps_ns)) {
         ptp_last_anchor = now;
         ptp_anchor_pending = false;
-        SPDLOG_INFO("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+        if (!phc_anchor_logged) {
+            SPDLOG_INFO("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+            phc_anchor_logged = true;
+        } else if (debug_enabled) {
+            SPDLOG_DEBUG("Set PHC anchor for next PPS at {} ns (lead {} ns)", next_pps_ns, delta);
+        }
     }
 }
 
@@ -1396,7 +1402,7 @@ void FusionConnectClient::process() {
             SPDLOG_DEBUG("Created AES67 stream {} in process loop", name);
             if (!cfg.is_source && is_ip_mcast(cfg.dest_ip)) {
                 join_multicast_group(cfg.dest_ip);
-            } else {
+            } else if (cfg.is_source) {
                 sap_announcer.addAnnouncement(name, cfg.dest_ip, cfg.channels,
                                             cfg.sample_rate, cfg.format, cfg.dest_port,
                                             cfg.payload_type, cfg.stream_handle);

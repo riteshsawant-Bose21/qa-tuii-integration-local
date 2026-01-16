@@ -1084,13 +1084,13 @@ const struct base_device bd_fusion_fm8y = {
             .num = 5, // GPIO1_IO5
             .dir = EP_GPIO_DIR_I
         },
-        {
-            .name = "gpio_tca9544_int",
-            .type = EP_GPIO_TYPE_PHYS,
-            .is_irq = true,
-            .num = 6, // GPIO1_IO6
-            .trigger_type = IRQ_TYPE_LEVEL_LOW
-        },
+        // {
+        //     .name = "gpio_tca9544_int",
+        //     .type = EP_GPIO_TYPE_PHYS,
+        //     .is_irq = true,
+        //     .num = 6, // GPIO1_IO6
+        //     .trigger_type = IRQ_TYPE_LEVEL_LOW
+        // },
         {
             .name = "gpio_ui_rstn",
             .type = EP_GPIO_TYPE_PHYS,

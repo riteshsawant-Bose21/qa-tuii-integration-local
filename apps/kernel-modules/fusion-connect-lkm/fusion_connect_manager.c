@@ -891,6 +891,8 @@ static int handle_set_phc_anchor(struct fusion_cn_manager *mgr,
 
     phc_ns_at_pps = *(const u64 *)msg->data;
     reply->err = fusion_gpt_set_phc_anchor(phc_ns_at_pps);
+    if (!reply->err)
+        pr_info("fusion_cn: set_phc_anchor %llu\n", phc_ns_at_pps);
     return 0;
 }
 
@@ -934,6 +936,7 @@ static int handle_set_debug(struct fusion_cn_manager *mgr,
     if (mgr->alsa.alsa_chip)
         mgr->alsa.alsa_chip->debug = mgr->debug;
 
+    pr_info("fusion_cn: debug %s\n", mgr->debug ? "on" : "off");
     reply->err = 0;
     return 0;
 }
@@ -957,6 +960,7 @@ static int handle_set_eth_iface(struct fusion_cn_manager *mgr,
         return reply->err = -EINVAL;
 
     strscpy(mgr->netfilter.iface_name, iface, IFNAMSIZ);
+    pr_info("fusion_cn: iface %s\n", mgr->netfilter.iface_name);
     reply->err = 0;
     return 0;
 }

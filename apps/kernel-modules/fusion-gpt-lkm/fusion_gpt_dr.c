@@ -220,6 +220,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
         g->pps_epoch_cnt64 = 0;
         g->phc_epoch_valid = false;
         g->phc_aligned = false;
+        pr_info("fusion_gpt: phc anchor cleared\n");
         rc = 0;
         spin_unlock_irqrestore(&g->pps_lock, flags);
         return rc;
@@ -235,6 +236,7 @@ int fusion_gpt_set_phc_anchor(u64 phc_ns_at_pps)
     /* Epoch becomes valid at the next ICR1 edge (when we bind cap64 -> PHC) */
     g->phc_epoch_valid   = false;
 
+    pr_info("fusion_gpt: phc anchor armed %llu\n", phc_ns_at_pps);
     rc = 0;
     spin_unlock_irqrestore(&g->pps_lock, flags);
 
@@ -343,13 +345,15 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 		g->pps_valid       = true;
 
 		/* If armed for the next PPS, bind the epoch now */
-		if (g->pending_future_anchor) {
-			g->phc_epoch_ns        = g->pending_future_phc_ns;
-			g->pps_epoch_cnt64     = cap64;
-			g->phc_epoch_valid     = true;
-			g->phc_aligned         = false; /* ensure OF1 one-shot align runs */
-			g->pending_future_anchor = false;
-		}
+        if (g->pending_future_anchor) {
+            g->phc_epoch_ns        = g->pending_future_phc_ns;
+            g->pps_epoch_cnt64     = cap64;
+            g->phc_epoch_valid     = true;
+            g->phc_aligned         = false; /* ensure OF1 one-shot align runs */
+            g->pending_future_anchor = false;
+            pr_info("fusion_gpt: phc anchor latched epoch=%llu cnt=%llu\n",
+                    g->phc_epoch_ns, g->pps_epoch_cnt64);
+        }
 		spin_unlock(&g->pps_lock);
 
 		clr |= SR_IF1;
@@ -405,7 +409,8 @@ static irqreturn_t gpt_irq(int irq, void *dev_id)
 			g->next_ocr1 = g->last32 + inc;
 			wrl(g, g->next_ocr1, GPT_OCR1);
 
-			WRITE_ONCE(g->phc_aligned, true);          /* only once */
+            WRITE_ONCE(g->phc_aligned, true);          /* only once */
+            pr_info("fusion_gpt: phc aligned to 1/3ms grid\n");
 
 			clr |= SR_OF1;                              /* clear the latched OF1 */
 			if (clr) wrl(g, clr, GPT_SR);
