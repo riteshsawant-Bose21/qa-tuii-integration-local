@@ -34,11 +34,7 @@ class Routes {
       /// Project Page
       case projectPage:
         return CupertinoPageRoute<void>(
-          builder:
-              (BuildContext context) => Theme(
-                data: FusionAppTheme.lightTheme, //Theme.of(context).copyWith(brightness: Brightness.light),
-                child: const ProjectWorkArea(),
-              ),
+          builder: (BuildContext context) => const ProjectWorkArea(),
           settings: const RouteSettings(name: projectPage),
         );
 

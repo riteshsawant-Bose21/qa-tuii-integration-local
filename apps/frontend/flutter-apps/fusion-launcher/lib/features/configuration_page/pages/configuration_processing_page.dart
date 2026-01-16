@@ -175,7 +175,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: context.colorScheme.elevation2,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -203,7 +203,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Build Input Panel
   Widget _buildInputPanel() {
     return Container(
-      color: Colors.white,
+      color: context.colorScheme.elevation2,
       child: Column(
         children: <Widget>[
           // const PanelHeader(title: 'INPUT'),

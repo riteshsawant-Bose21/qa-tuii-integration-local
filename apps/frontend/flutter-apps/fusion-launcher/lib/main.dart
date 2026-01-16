@@ -14,6 +14,7 @@ import 'package:fusion_launcher/features/authentication/viewmodel/session_view_m
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:nested/nested.dart' show SingleChildWidget;
 import 'package:universal_platform/universal_platform.dart';
 
@@ -138,27 +139,32 @@ class MyApp extends StatelessWidget {
               }
             },
             builder: (BuildContext context, SessionViewModelState state) {
-              return MaterialApp(
-                title: 'Fusion Launcher',
-                debugShowCheckedModeBanner: false,
-                theme: FusionAppTheme.lightTheme,
-                darkTheme: FusionAppTheme.darkTheme,
-                themeMode: ThemeMode.dark,
+              return ValueListenableBuilder<ThemeMode>(
+                valueListenable: FusionThemeController.themeModeNotifier,
+                builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
+                  return MaterialApp(
+                    title: 'Fusion Launcher',
+                    debugShowCheckedModeBanner: false,
+                    theme: FusionAppTheme.lightTheme,
+                    darkTheme: FusionAppTheme.darkTheme,
+                    themeMode: themeMode,
 
-                home:
-                    (state is SessionValid)
-                        ? const HomePage()
-                        : const Scaffold(
-                          body: Center(
-                            child: CircularProgressIndicator(),
-                          ),
-                        ),
+                    home:
+                        (state is SessionValid)
+                            ? const HomePage()
+                            : const Scaffold(
+                              body: Center(
+                                child: CircularProgressIndicator(),
+                              ),
+                            ),
 
-                navigatorKey: globalNavigatorKey,
-                navigatorObservers: <NavigatorObserver>[
-                  AppNavigatorObserver(),
-                ],
-                onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+                    navigatorKey: globalNavigatorKey,
+                    navigatorObservers: <NavigatorObserver>[
+                      AppNavigatorObserver(),
+                    ],
+                    onGenerateRoute: (RouteSettings settings) => Routes.onGenerateRoute(settings),
+                  );
+                },
               );
             },
           );
