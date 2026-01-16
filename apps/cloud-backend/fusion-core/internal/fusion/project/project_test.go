@@ -171,13 +171,13 @@ type mockPresigner struct {
 	mock.Mock
 }
 
-func (m *mockPresigner) PresignGet(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	args := m.Called(ctx, key, ttl)
+func (m *mockPresigner) PresignGet(ctx context.Context, key string, ttl time.Duration, logger *zap.Logger) (string, error) {
+	args := m.Called(ctx, key, ttl, logger)
 	return args.String(0), args.Error(1)
 }
 
-func (m *mockPresigner) PresignPut(ctx context.Context, key string, ttl time.Duration) (string, error) {
-	args := m.Called(ctx, key, ttl)
+func (m *mockPresigner) PresignPut(ctx context.Context, key string, ttl time.Duration, logger *zap.Logger) (string, error) {
+	args := m.Called(ctx, key, ttl, logger)
 	return args.String(0), args.Error(1)
 }
 
@@ -301,10 +301,10 @@ func TestCreateProject(t *testing.T) {
 					mockDB.On("InsertProjectUser", mock.Anything, tt.mockID, "test-user-id", mock.Anything, mock.AnythingOfType("*zap.Logger")).Return(nil)
 					// Presign expectations when flags set
 					if tt.project.IsProjectFileCreated {
-						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
+						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectFile/%s.zip", tt.mockID, tt.mockID), time.Minute*15, mock.Anything).Return(tt.presignFileURL, tt.presignFileErr)
 					}
 					if tt.project.IsProjectThumbnailCreated {
-						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
+						mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", tt.mockID, tt.mockID), time.Minute*15, mock.Anything).Return(tt.presignThumbURL, tt.presignThumbErr)
 					}
 				}
 			}
@@ -423,6 +423,7 @@ func TestGetAllProjects(t *testing.T) {
 						mock.Anything,
 						fmt.Sprintf("projects/%s/projectFile/%s.zip", p.ID, p.ID),
 						time.Minute*5,
+						mock.Anything,
 					).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
 
 					// Mock thumbnail URL generation
@@ -430,6 +431,7 @@ func TestGetAllProjects(t *testing.T) {
 						mock.Anything,
 						fmt.Sprintf("projects/%s/projectThumbnail/%s.zip", p.ID, p.ID),
 						time.Minute*5,
+						mock.Anything,
 					).Return(tt.mockPresignURL, tt.mockPresignErr).Maybe()
 				}
 			}
@@ -583,10 +585,10 @@ func TestUpdateProjectPresignURLs(t *testing.T) {
 			mockDB.On("IsUserAssigned", mock.Anything, mockProjectRow.ID, testUserID1, mock.AnythingOfType("*zap.Logger")).Return(true, nil)
 			mockDB.On("Update", mock.Anything, mockProjectRow, tt.req, mock.AnythingOfType("*zap.Logger")).Return(nil)
 			if tt.req.IsProjectFileDirty {
-				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectFile, mockProjectRow.ID), time.Minute*15).Return(tt.presignFileURL, tt.presignFileErr)
+				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectFile, mockProjectRow.ID), time.Minute*15, mock.Anything).Return(tt.presignFileURL, tt.presignFileErr)
 			}
 			if tt.req.IsProjectThumbnailDirty && tt.presignFileErr == nil { // only proceed if previous not failing so function reaches here
-				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectThumbnail, mockProjectRow.ID), time.Minute*15).Return(tt.presignThumbURL, tt.presignThumbErr)
+				mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", mockProjectRow.ID, types.ProjectFileTypeProjectThumbnail, mockProjectRow.ID), time.Minute*15, mock.Anything).Return(tt.presignThumbURL, tt.presignThumbErr)
 			}
 			service := &Service{dbService: mockDB, presigner: mockPresigner}
 
@@ -1828,17 +1830,18 @@ func TestGenerateProjectFileURL(t *testing.T) {
 	ctx := context.Background()
 	projectID := "proj-123"
 	// GET
-	mockPresigner.On("PresignGet", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectFile, projectID), time.Minute*10).Return("https://get-url", nil)
-	url, err := service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectFile, time.Minute*10, "get")
+	logger := zap.NewNop()
+	mockPresigner.On("PresignGet", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectFile, projectID), time.Minute*10, mock.Anything).Return("https://get-url", nil)
+	url, err := service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectFile, time.Minute*10, "get", logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://get-url", url)
 	// PUT
-	mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectThumbnail, projectID), time.Minute*5).Return("https://put-url", nil)
-	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "put")
+	mockPresigner.On("PresignPut", mock.Anything, fmt.Sprintf("projects/%s/%s/%s.zip", projectID, types.ProjectFileTypeProjectThumbnail, projectID), time.Minute*5, mock.Anything).Return("https://put-url", nil)
+	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute*5, "put", logger)
 	assert.NoError(t, err)
 	assert.Equal(t, "https://put-url", url)
 	// Unsupported
-	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute, "delete")
+	url, err = service.generateProjectFileURL(ctx, projectID, types.ProjectFileTypeProjectThumbnail, time.Minute, "delete", logger)
 	assert.Error(t, err)
 	assert.Empty(t, url)
 	assert.Contains(t, err.Error(), "unsupported operation")

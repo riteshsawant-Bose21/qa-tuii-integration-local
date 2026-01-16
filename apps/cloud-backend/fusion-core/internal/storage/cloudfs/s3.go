@@ -11,6 +11,7 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	"go.uber.org/zap"
 
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
@@ -92,7 +93,7 @@ func (b *S3BucketHandle) Upload(ctx context.Context, name string, content io.Rea
 	return nil
 }
 
-func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string) (bool, error) {
+func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string, logger *zap.Logger) (bool, error) {
 	_, err := b.client.HeadObject(ctx, &s3.HeadObjectInput{
 		Bucket: aws.String(b.bucketName),
 		Key:    aws.String(name),
@@ -104,17 +105,19 @@ func (b *S3BucketHandle) ObjectExists(ctx context.Context, name string) (bool, e
 			case *types.NotFound:
 				return false, nil
 			default:
+				logger.Error("Failed to check if object exists", zap.Error(err))
 				return false, fmt.Errorf("failed to check if object exists: %w", err)
 			}
 		}
+		logger.Error("Failed to check if object exists", zap.Error(err))
 		return false, fmt.Errorf("failed to check if object exists: %w", err)
 	}
 	return true, nil
 }
 
-func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl time.Duration) (string, error) {
+func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error) {
 
-	exists, err := b.ObjectExists(ctx, objectKey)
+	exists, err := b.ObjectExists(ctx, objectKey, logger)
 	if err != nil {
 		return "", err
 	}
@@ -127,18 +130,20 @@ func (b *S3BucketHandle) PresignGet(ctx context.Context, objectKey string, ttl t
 		Key:    aws.String(objectKey),
 	}, func(po *s3.PresignOptions) { po.Expires = ttl })
 	if err != nil {
+		logger.Error("Failed to presign get object request", zap.Error(err))
 		return "", fmt.Errorf("failed to presign get object request: %w", err)
 	}
 	return req.URL, nil
 }
 
-func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl time.Duration) (string, error) {
+func (b *S3BucketHandle) PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error) {
 
 	req, err := b.presignClient.PresignPutObject(ctx, &s3.PutObjectInput{
 		Bucket: aws.String(b.bucketName),
 		Key:    aws.String(objectKey),
 	}, func(po *s3.PresignOptions) { po.Expires = ttl })
 	if err != nil {
+		logger.Error("Failed to presign put object request", zap.Error(err))
 		return "", fmt.Errorf("failed to presign put object request: %w", err)
 	}
 	return req.URL, nil

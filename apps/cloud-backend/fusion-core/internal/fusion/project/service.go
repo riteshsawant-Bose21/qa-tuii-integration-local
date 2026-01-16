@@ -43,8 +43,8 @@ type DatabaseService interface {
 
 // PresignerService defines the interface for generating presigned URLs.
 type PresignerService interface {
-	PresignGet(ctx context.Context, objectKey string, ttl time.Duration) (string, error)
-	PresignPut(ctx context.Context, objectKey string, ttl time.Duration) (string, error)
+	PresignGet(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
+	PresignPut(ctx context.Context, objectKey string, ttl time.Duration, logger *zap.Logger) (string, error)
 }
 
 // NewService creates a new project service.
