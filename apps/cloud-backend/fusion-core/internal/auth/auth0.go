@@ -147,12 +147,6 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 			if key.Kid == kid {
 				targetKey = publicKey
 			}
-
-			// Cache the key
-			a.jwksCache[kid] = publicKey
-			a.cacheTime = time.Now()
-
-			return publicKey, nil
 		}
 	}
 	a.cacheTime = time.Now() // Update cache time after successful fetch
