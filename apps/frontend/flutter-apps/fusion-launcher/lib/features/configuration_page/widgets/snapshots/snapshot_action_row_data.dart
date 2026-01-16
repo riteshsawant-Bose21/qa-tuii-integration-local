@@ -3,6 +3,8 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/sn
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -147,12 +149,15 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
   Widget _buildActionTypeDropdown(SceneActionModel action) {
     final bool isInSceneSet = _projectViewModel.getSceneSetForSnapshot(snapshotId: _projectViewModel.selectedSnapshotId!) != null;
     return Expanded(
-      child: FusionDropdown<SceneActionType>(
-        value: action.actionType,
-        hint: "Select Action Type",
-        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: !isInSceneSet),
-        display: (SceneActionType e) => e.displayName,
-        onChanged: _updateActionType,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_${widget.index}"),
+        child: FusionDropdown<SceneActionType>(
+          value: action.actionType,
+          hint: "Select Action Type",
+          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: !isInSceneSet),
+          display: (SceneActionType e) => e.displayName,
+          onChanged: _updateActionType,
+        ),
       ),
     );
   }
@@ -176,13 +181,16 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
             : "Select Action Item";
 
     return Expanded(
-      child: FusionDropdown<SceneItemDropdown>(
-        value: selected,
-        items: itemList,
-        hint: hint,
-        display: (SceneItemDropdown e) => e.name,
-        isEnabled: isEnabled,
-        onChanged: isEnabled ? _updateActionItem : null,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_type_${widget.index}"),
+        child: FusionDropdown<SceneItemDropdown>(
+          value: selected,
+          items: itemList,
+          hint: hint,
+          display: (SceneItemDropdown e) => e.name,
+          isEnabled: isEnabled,
+          onChanged: isEnabled ? _updateActionItem : null,
+        ),
       ),
     );
   }
@@ -197,12 +205,15 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     }
 
     return Expanded(
-      child: FusionDropdown<SceneParam>(
-        hint: "Select Parameter",
-        value: selected,
-        items: paramList,
-        display: (SceneParam e) => e.label,
-        onChanged: _updateActionParam,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_param_${widget.index}"),
+        child: FusionDropdown<SceneParam>(
+          hint: "Select Parameter",
+          value: selected,
+          items: paramList,
+          display: (SceneParam e) => e.label,
+          onChanged: _updateActionParam,
+        ),
       ),
     );
   }
@@ -211,18 +222,21 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
     if (action.param == null) return const Expanded(child: SizedBox.shrink());
 
     return Expanded(
-      child: SnapshotValueWidget(
-        actionId: action.id,
-        value:
-            action.value ??
-            SceneValue(
-              value: null,
-              label: action.param!.label,
-              valueType: action.param!.valueType,
-            ),
-        onChanged: (SceneValue val) {
-          _updateActionValue(val);
-        },
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_value_${widget.index}"),
+        child: SnapshotValueWidget(
+          actionId: action.id,
+          value:
+              action.value ??
+              SceneValue(
+                value: null,
+                label: action.param!.label,
+                valueType: action.param!.valueType,
+              ),
+          onChanged: (SceneValue val) {
+            _updateActionValue(val);
+          },
+        ),
       ),
     );
   }
@@ -233,23 +247,29 @@ class _SnapshotActionRowDataState extends State<SnapshotActionRowData> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          GestureDetector(
-            onTap: _deleteAction,
-            child: const FusionImage.asset(
-              Assets.deleteIcon,
-              width: 20,
-              height: 20,
-              fit: BoxFit.contain,
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_delete_${widget.index}"),
+            child: GestureDetector(
+              onTap: _deleteAction,
+              child: const FusionImage.asset(
+                Assets.deleteIcon,
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
-            onTap: _duplicateAction,
-            child: const FusionImage.asset(
-              Assets.duplicateIcon,
-              width: 20,
-              height: 20,
-              fit: BoxFit.contain,
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_action_duplicate_${widget.index}"),
+            child: GestureDetector(
+              onTap: _duplicateAction,
+              child: const FusionImage.asset(
+                Assets.duplicateIcon,
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ],

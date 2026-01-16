@@ -143,125 +143,134 @@ class _PrioritySelectionWidgetState extends State<PrioritySelectionWidget> {
           return ReorderableDragStartListener(
             key: ValueKey<String>('priority_widget_$index'),
             index: index,
-            child: Container(
-              padding: const EdgeInsets.all(12.0),
-              decoration: BoxDecoration(
-                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  FusionAppText(
-                    text: "Priority $priorityIndex",
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      fontSize: 10,
+            child: SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_selection_widget_$priorityIndex"),
+              child: Container(
+                padding: const EdgeInsets.all(12.0),
+                decoration: BoxDecoration(
+                  border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.3))),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    FusionAppText(
+                      text: "Priority $priorityIndex",
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontSize: 10,
+                      ),
                     ),
-                  ),
-                  Builder(
-                    builder: (BuildContext context) {
-                      if (selectedSourceName == null) {
-                        return FusionAppText(
-                          text: "No source selected for priority $priorityIndex",
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontSize: 10,
-                            color: const Color(0xFF888888),
-                          ),
+                    Builder(
+                      builder: (BuildContext context) {
+                        if (selectedSourceName == null) {
+                          return FusionAppText(
+                            text: "No source selected for priority $priorityIndex",
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              fontSize: 10,
+                              color: const Color(0xFF888888),
+                            ),
+                          );
+                        }
+
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            Row(
+                              spacing: 8,
+                              children: <Widget>[
+                                Expanded(
+                                  child: Container(
+                                    height: 24,
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF4F4F4),
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                    child: Row(
+                                      spacing: 4,
+                                      children: <Widget>[
+                                        Container(
+                                          height: 16,
+                                          width: 16,
+                                          alignment: Alignment.center,
+                                          decoration: BoxDecoration(
+                                            color: zoneColor,
+                                            borderRadius: BorderRadius.circular(3),
+                                          ),
+                                          child: FusionAppText(
+                                            text: "P1",
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              fontSize: 10,
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Expanded(
+                                          child: FusionAppText(
+                                            text: selectedSourceName,
+                                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+
+                                const Icon(
+                                  Icons.circle,
+                                  color: Color(0xFFF4F4F4),
+                                  size: 16,
+                                ),
+
+                                SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_active_button_$priorityIndex"),
+                                  child: NeumorphicActiveBlueButton(
+                                    text: "Active",
+                                    isActive: false,
+                                    width: 72,
+                                    onTap: () {
+                                      //
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
+
+                            Row(
+                              spacing: 8,
+                              children: <Widget>[
+                                const Expanded(child: SizedBox()),
+
+                                FusionAppText(
+                                  text: "Volume",
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    fontSize: 10,
+                                    color: const Color(0xFF171717),
+                                  ),
+                                ),
+
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  child: SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "priority_volume_slider_$priorityIndex"),
+                                    child: const NeumorphicTextWithPopupSliderButton(
+                                      isActive: false,
+                                      width: 72,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
                         );
-                      }
-
-                      return Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: <Widget>[
-                          Row(
-                            spacing: 8,
-                            children: <Widget>[
-                              Expanded(
-                                child: Container(
-                                  height: 24,
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF4F4F4),
-                                    borderRadius: BorderRadius.circular(3),
-                                  ),
-                                  child: Row(
-                                    spacing: 4,
-                                    children: <Widget>[
-                                      Container(
-                                        height: 16,
-                                        width: 16,
-                                        alignment: Alignment.center,
-                                        decoration: BoxDecoration(
-                                          color: zoneColor,
-                                          borderRadius: BorderRadius.circular(3),
-                                        ),
-                                        child: FusionAppText(
-                                          text: "P1",
-                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                            fontSize: 10,
-                                            color: Colors.white,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: FusionAppText(
-                                          text: selectedSourceName,
-                                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                            fontSize: 10,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-
-                              const Icon(
-                                Icons.circle,
-                                color: Color(0xFFF4F4F4),
-                                size: 16,
-                              ),
-
-                              NeumorphicActiveBlueButton(
-                                text: "Active",
-                                isActive: false,
-                                width: 72,
-                                onTap: () {
-                                  //
-                                },
-                              ),
-                            ],
-                          ),
-
-                          Row(
-                            spacing: 8,
-                            children: <Widget>[
-                              const Expanded(child: SizedBox()),
-
-                              FusionAppText(
-                                text: "Volume",
-                                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                  fontSize: 10,
-                                  color: const Color(0xFF171717),
-                                ),
-                              ),
-
-                              const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: NeumorphicTextWithPopupSliderButton(
-                                  isActive: false,
-                                  width: 72,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           );

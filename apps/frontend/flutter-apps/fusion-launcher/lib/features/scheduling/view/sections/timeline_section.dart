@@ -17,49 +17,52 @@ class _TimelineSection extends StatelessWidget {
         },
         child: BlocBuilder<TimelineCubit, TimelineState>(
           builder: (BuildContext context, TimelineState state) {
-            return Column(
-              children: <Widget>[
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    children: <Widget>[
-                      FusionAppText(
-                        text: DateFormat("MMMM yyyy").format(state.visibleMonth),
-                        textAlign: TextAlign.center,
-                        style: context.textTheme.bodyMedium,
-                      ),
-                      const Spacer(),
+            return SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "timeline_section"),
+              child: Column(
+                children: <Widget>[
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: Row(
+                      children: <Widget>[
+                        FusionAppText(
+                          text: DateFormat("MMMM yyyy").format(state.visibleMonth),
+                          textAlign: TextAlign.center,
+                          style: context.textTheme.bodyMedium,
+                        ),
+                        const Spacer(),
 
-                      FusionTextButton(
-                        width: 100,
-                        label: "Now",
-                        onTap: () {
-                          BlocProvider.of<TimelineCubit>(context).goToMonth(DateTime.now());
-                        },
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          BlocProvider.of<TimelineCubit>(context).previousMonth();
-                        },
-                        icon: const Icon(Icons.chevron_left_rounded),
-                      ),
-                      IconButton(
-                        onPressed: () {
-                          BlocProvider.of<TimelineCubit>(context).nextMonth();
-                        },
-                        icon: const Icon(Icons.chevron_right_rounded),
-                      ),
-                    ],
+                        FusionTextButton(
+                          width: 100,
+                          label: "Now",
+                          onTap: () {
+                            BlocProvider.of<TimelineCubit>(context).goToMonth(DateTime.now());
+                          },
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            BlocProvider.of<TimelineCubit>(context).previousMonth();
+                          },
+                          icon: const Icon(Icons.chevron_left_rounded),
+                        ),
+                        IconButton(
+                          onPressed: () {
+                            BlocProvider.of<TimelineCubit>(context).nextMonth();
+                          },
+                          icon: const Icon(Icons.chevron_right_rounded),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                Expanded(
-                  child: CalenderView(
-                    viewingMonth: state.visibleMonth,
-                    events: state.currentMonthEvents,
-                    eventsByDate: state.eventsByDate,
+                  Expanded(
+                    child: CalenderView(
+                      viewingMonth: state.visibleMonth,
+                      events: state.currentMonthEvents,
+                      eventsByDate: state.eventsByDate,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),
