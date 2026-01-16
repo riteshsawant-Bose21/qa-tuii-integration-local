@@ -122,7 +122,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                               fontSize: 12,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.fusionTextViewColor.withOpacity(0.7),
+                              ).colorScheme.textPrimary.withOpacity(0.7),
                             ),
                           ),
                         ],
@@ -604,6 +604,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: <Widget>[
                     const SizedBox(height: 12),
+
                     // Row(
                     //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     //   children: <Widget>[
@@ -619,7 +620,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     //                 context,
                     //               ).textTheme.bodySmall?.copyWith(
                     //                 fontSize: 11,
-                    //                 color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                    //                 color: Theme.of(context).colorScheme.textPrimary.withOpacity(0.5),
                     //               ),
                     //             ),
                     //             // Right: Value + Arrow
@@ -731,7 +732,6 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                     //     ),
                     //   ],
                     // ),
-
                     const SizedBox(height: 8),
                     _buildHardwarePropertyTextRow(
                       context: context,
@@ -782,9 +782,9 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
         offset: const Offset(50, 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(6),
-          side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+          side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
         ),
-        color: Theme.of(context).colorScheme.white,
+        color: Theme.of(context).colorScheme.primaryWhite,
         elevation: 1,
         itemBuilder: (BuildContext context) {
           if (options == null || options.isEmpty) {
@@ -820,7 +820,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                   fontSize: 11,
                   color: Theme.of(
                     context,
-                  ).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                  ).colorScheme.textPrimary.withOpacity(0.5),
                 ),
               ),
               // Right: Value + Arrow
@@ -844,7 +844,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
                         child: Icon(
                           Icons.keyboard_arrow_down,
                           size: 16,
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          color: Theme.of(context).colorScheme.textPrimary,
                         ),
                       ),
                     ],
@@ -876,7 +876,7 @@ class _HardwareComponentPropertiesState extends State<HardwareComponentPropertie
               fontSize: 11,
               color: Theme.of(
                 context,
-              ).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              ).colorScheme.textPrimary.withOpacity(0.5),
             ),
           ),
           // Right: Value
@@ -919,7 +919,7 @@ class _CircuitSelection extends StatelessWidget {
               text: "Circuit",
               style: context.textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: context.colorScheme.fusionTextViewColor.withValues(
+                color: context.colorScheme.textPrimary.withValues(
                   alpha: 0.5,
                 ),
               ),

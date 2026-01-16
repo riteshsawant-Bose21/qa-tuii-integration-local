@@ -231,7 +231,7 @@ class _FusionDockableAreaState extends State<FusionDockableArea> {
               child: LayoutBuilder(
                 builder: (BuildContext context, BoxConstraints constraints) {
                   return Container(
-                    color: Theme.of(context).colorScheme.white,
+                    color: context.colorScheme.primaryWhite,
                     width: constraints.maxWidth,
                     height: constraints.maxHeight,
                     child: widget.mainArea,

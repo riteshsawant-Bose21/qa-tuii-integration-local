@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_launcher/features/schematics/presentation/pages/schematics_listing_view.dart';
 import 'package:fusion_launcher/features/wiring_design/view/wiring_page.dart';
 import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -75,9 +76,9 @@ class _SchematicsPageState extends State<SchematicsPage> {
               Container(
                 height: 44,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.white,
+                  color: Theme.of(context).colorScheme.primaryWhite,
                   border: Border(
-                    bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                    bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
                   ),
                 ),
                 child: Row(

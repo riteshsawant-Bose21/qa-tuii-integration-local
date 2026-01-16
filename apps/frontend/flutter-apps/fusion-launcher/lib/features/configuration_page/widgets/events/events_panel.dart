@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_button.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_outlined_button.dart';
@@ -40,7 +41,7 @@ class _EventsPanelState extends State<EventsPanel> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
+        color: Theme.of(context).colorScheme.primaryWhite,
       ),
       child: Column(
         children: <Widget>[
@@ -51,7 +52,7 @@ class _EventsPanelState extends State<EventsPanel> {
               onTap: () {
                 _addNewEvents();
               },
-              child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+              child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
             ),
           ),
 
@@ -137,7 +138,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -193,7 +194,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                   label: "Create",
                   isActive: widget.nameController.text.trim().isNotEmpty,

@@ -6,6 +6,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 // ignore: constant_identifier_names
 const int _MAX_SPEAKER_COUNT = 25;
@@ -276,13 +277,13 @@ class SchematicPropertiesState extends State<SchematicProperties> {
                                               decoration: BoxDecoration(
                                                 color: color,
                                                 borderRadius: BorderRadius.circular(4),
-                                                border: isSelected ? Border.all(color: Theme.of(context).colorScheme.greyDark, width: 2) : null,
+                                                border: isSelected ? Border.all(color: context.colorScheme.primaryBlack, width: 2) : null,
                                               ),
                                               child:
                                                   isSelected
                                                       ? Container(
                                                         decoration: BoxDecoration(
-                                                          color: Theme.of(context).colorScheme.greyDark.withOpacity(0.2),
+                                                          color: context.colorScheme.primaryBlack.withOpacity(0.2),
                                                           borderRadius: BorderRadius.circular(4),
                                                         ),
                                                         child: const Icon(Icons.check, color: Colors.white, size: 16),
@@ -620,7 +621,7 @@ class _LocationSelecDropDown extends StatelessWidget {
             Icon(
               Icons.keyboard_arrow_down,
               size: 16,
-              color: Theme.of(context).colorScheme.fusionTextViewColor,
+              color: Theme.of(context).colorScheme.textPrimary,
             ),
         ],
       ),
@@ -685,14 +686,14 @@ class _LocationSelecDropDown extends StatelessWidget {
                                         child: Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                           decoration: BoxDecoration(
-                                            color: isSelected ? Theme.of(context).colorScheme.grey : null,
+                                            color: isSelected ? context.colorScheme.primaryBlack : null,
                                           ),
                                           child: Row(
                                             children: <Widget>[
                                               /// Radio Button
                                               Radio<String>(
                                                 value: area.id,
-                                                activeColor: Theme.of(context).colorScheme.greyDark,
+                                                activeColor: context.colorScheme.primaryBlack,
                                                 groupValue: selectedListeningAreaIds.isNotEmpty ? selectedListeningAreaIds.first : null,
                                                 onChanged: (String? value) {
                                                   if (value != null) _toggleListeningAreaSelection(context, value);
@@ -758,7 +759,7 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
     final ProjectViewModel projectViewModel = context.watch<ProjectViewModel>();
 
     return PopupMenuButton<String>(
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       position: PopupMenuPosition.under,
       child: Row(
         children: <Widget>[
@@ -777,13 +778,13 @@ class _ZonesListeningAreaSelectionWidget extends StatelessWidget {
                   text: listeningAreas.isEmpty ? "Select Location" : "${listeningAreas.length} location${listeningAreas.length > 1 ? '(s)' : ''} selected",
                   maxLine: 1,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: listeningAreas.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                    color: listeningAreas.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                   ),
                 );
               },
             ),
           ),
-          Icon(Icons.keyboard_arrow_down, size: 20, color: Theme.of(context).colorScheme.greyDark),
+          Icon(Icons.keyboard_arrow_down, size: 20, color: context.colorScheme.primaryBlack),
         ],
       ),
       itemBuilder: (BuildContext context) {
@@ -916,7 +917,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                 child: Icon(
                   Icons.close,
                   size: 16,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
             ],
@@ -958,7 +959,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 height: 4,
                                 child: Checkbox(
                                   value: !isAvailableToSelectOrDeselect ? true : isSelected,
-                                  activeColor: Theme.of(context).colorScheme.greyDark,
+                                  activeColor: context.colorScheme.primaryBlack,
                                   onChanged: !isAvailableToSelectOrDeselect ? null : (_) => onListeningAreaTap(area.id),
                                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                   visualDensity: VisualDensity.compact,
@@ -985,7 +986,7 @@ class _SelectListeningAreaForZoneAndSubzonePopupWidgetState extends State<Select
                                 text: zoneName ?? "No zone",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 9,
-                                  color: !isAvailableToSelectOrDeselect ? Theme.of(context).colorScheme.grey : Theme.of(context).colorScheme.greyDark,
+                                  color: !isAvailableToSelectOrDeselect ? context.colorScheme.primaryBlack : context.colorScheme.primaryBlack,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -1117,13 +1118,13 @@ class _AddNewLocationWidgetState extends State<AddNewLocationWidget> {
                   Container(
                     height: 26,
                     decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.white,
+                      color: Theme.of(context).colorScheme.primaryWhite,
                       border: Border.all(color: Colors.grey[300]!),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: DropdownButtonHideUnderline(
                       child: DropdownButton<String>(
-                        dropdownColor: Theme.of(context).colorScheme.white,
+                        dropdownColor: Theme.of(context).colorScheme.primaryWhite,
                         hint: FusionAppText(
                           text: "Select floor",
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(

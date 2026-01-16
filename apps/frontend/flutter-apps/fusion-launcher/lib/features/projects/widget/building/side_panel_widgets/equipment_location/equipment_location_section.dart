@@ -4,13 +4,13 @@ import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/equipment_location_dialog.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/equipment_location/right_aligned_popup_menu.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/equip_location.dart';
 import 'package:fusion_lib/models/project_entities/hardware_component_model.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../../../../configuration_page/widgets/snapshots/snapshots_and_scenes_panel.dart';
 
 class EquipmentLocationSection extends StatelessWidget {
   const EquipmentLocationSection({super.key});
@@ -92,7 +92,7 @@ class EquipmentLocationSection extends StatelessWidget {
                       child: Icon(
                         LucideIcons.plus200,
                         size: 14,
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        color: Theme.of(context).colorScheme.primaryBlack,
                       ),
                     ),
                   ),

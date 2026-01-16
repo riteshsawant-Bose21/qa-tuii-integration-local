@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../../../../core/service_locator.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -189,9 +190,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
+        color: Theme.of(context).colorScheme.primaryWhite,
         border: Border(
-          bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+          bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
         ),
       ),
       child: Column(
@@ -212,7 +213,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                     child: Icon(
                       Icons.add_sharp,
                       size: 14,
-                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                      color: Theme.of(context).colorScheme.textPrimary,
                     ),
                   ),
                 ),
@@ -243,7 +244,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                 return Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.greyLight,
+                    color: context.colorScheme.primaryBlack,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: FusionAppText(
@@ -266,7 +267,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         testId: SemanticHelper.createTestId(SemanticTypes.listItem, "floor_item_$index"),
                         child: Container(
                           decoration: BoxDecoration(
-                            color: isSelected ? Theme.of(context).colorScheme.grey.withOpacity(0.3) : Colors.transparent,
+                            color: isSelected ? context.colorScheme.primaryBlack.withOpacity(0.3) : Colors.transparent,
                             borderRadius: BorderRadius.circular(1),
                           ),
                           child: Material(
@@ -295,10 +296,10 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                           height: 18,
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.greyDark,
+                                            color: context.colorScheme.primaryBlack,
                                             borderRadius: BorderRadius.circular(2),
                                             border: Border.all(
-                                              color: Theme.of(context).colorScheme.dividerColor,
+                                              color: Theme.of(context).colorScheme.primaryBlack,
                                               width: 1,
                                             ),
                                           ),
@@ -308,7 +309,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                               fontSize: 8,
                                               fontWeight: FontWeight.w600,
-                                              color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                                              color: context.colorScheme.primaryBlack,
                                             ),
                                           ),
                                         ),
@@ -327,7 +328,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                         fontSize: 12,
                                                         fontWeight: FontWeight.w600,
-                                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                        color: Theme.of(context).colorScheme.textPrimary,
                                                       ),
                                                       decoration: InputDecoration(
                                                         counterText: "",
@@ -364,7 +365,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                                       fontSize: 12,
                                                       fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                                                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                      color: Theme.of(context).colorScheme.textPrimary,
                                                     ),
                                                   ),
                                         ),
@@ -378,7 +379,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                   icon: Icon(
                                                     Icons.check,
                                                     size: 16,
-                                                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                    color: Theme.of(context).colorScheme.textPrimary,
                                                   ),
                                                   onPressed: () async {
                                                     // Prevent multiple rapid taps
@@ -401,7 +402,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                                                   icon: Icon(
                                                     Icons.edit,
                                                     size: 16,
-                                                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                    color: Theme.of(context).colorScheme.textPrimary,
                                                   ),
                                                   onPressed: () {
                                                     // Prevent starting edit if already editing
@@ -618,9 +619,9 @@ class _BuildingPlanState extends State<BuildingPlan> {
       position: position,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 1,
       constraints: const BoxConstraints(minWidth: 250, maxWidth: 300),
       items: <PopupMenuEntry<String>>[
@@ -656,27 +657,27 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         maxLength: 24,
                         autofocus: true,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          color: Theme.of(context).colorScheme.textPrimary,
                           fontSize: 12,
                         ),
                         decoration: InputDecoration(
                           counterText: "",
                           hintText: 'Enter floor name',
                           hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.grey,
+                            color: context.colorScheme.primaryBlack,
                             fontSize: 12,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
+                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.primaryBlack),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.dividerColor),
+                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.primaryBlack),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor),
+                            borderSide: BorderSide(color: _errorMessage != null ? Colors.red : Theme.of(context).colorScheme.textPrimary),
                           ),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                           isDense: true,
@@ -727,7 +728,7 @@ class _BuildingPlanState extends State<BuildingPlan> {
                         FusionButton(
                           height: 28,
                           width: 80,
-                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                          textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                           label: "Add Floor",
                           onTap: () {

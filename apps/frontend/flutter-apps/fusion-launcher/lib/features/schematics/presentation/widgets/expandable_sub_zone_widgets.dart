@@ -69,9 +69,9 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                     height: 36,
                     decoration: BoxDecoration(
                       border: Border.all(
-                        color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                        color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
                       ),
-                      color: _isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight,
+                      color: _isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack,
                     ),
                     child: Row(
                       children: <Widget>[
@@ -143,7 +143,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
     if (widget.subZoneCircuit.isEmpty) {
       print("no devices in subzone ${widget.subZoneId}");
       return Container(
-        color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+        color: context.colorScheme.primaryBlack.withAlpha(50),
         padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
         child: const Center(
           child: Text(
@@ -157,7 +157,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
     return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
       builder: (BuildContext context, ProjectViewModelState state) {
         return Container(
-          color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+          color: context.colorScheme.primaryBlack.withAlpha(50),
           padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
           child: ReorderableListView.builder(
             shrinkWrap: true,
@@ -324,7 +324,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   Widget _buildExpandIcon(BuildContext context, bool expanded) {
     return Icon(
       expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-      color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
+      color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
     );
   }
 
@@ -347,7 +347,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
@@ -362,7 +362,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
             ),

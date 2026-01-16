@@ -96,7 +96,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
+        color: Theme.of(context).colorScheme.primaryWhite,
       ),
       child: Column(
         children: <Widget>[
@@ -110,7 +110,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
               child: Icon(
                 Icons.add_sharp,
                 size: 16,
-                color: Theme.of(context).colorScheme.greyDark,
+                color: context.colorScheme.primaryBlack,
               ),
             ),
           ),
@@ -231,7 +231,7 @@ class _SnapshotsAndScenesPanelState extends State<SnapshotsAndScenesPanel> {
               onTap: () {
                 _addNewScenes();
               },
-              child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+              child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
             ),
           ),
 
@@ -342,7 +342,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -398,7 +398,7 @@ class CreateSnapshotsOrScenesWidgetState extends State<CreateSnapshotsOrScenesWi
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                   label: "Create",
                   isActive: widget.nameController.text.trim().isNotEmpty,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 class FusionSwitch extends StatelessWidget {
@@ -28,15 +29,15 @@ class FusionSwitch extends StatelessWidget {
           materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
           thumbColor: WidgetStateProperty.resolveWith<Color>((states) {
             if (states.contains(WidgetState.selected)) {
-              return context.colorScheme.white;
+              return context.colorScheme.primaryWhite;
             }
-            return context.colorScheme.greyDark;
+            return context.colorScheme.primaryBlack;
           }),
           trackColor: WidgetStateProperty.resolveWith<Color>((states) {
             if (states.contains(WidgetState.selected)) {
-              return context.colorScheme.greyDark;
+              return context.colorScheme.primaryBlack;
             }
-            return context.colorScheme.grey;
+            return context.colorScheme.primaryBlack;
           }),
           trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
         ),

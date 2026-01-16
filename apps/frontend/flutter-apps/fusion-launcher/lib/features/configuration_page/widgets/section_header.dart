@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 class SectionHeader extends StatelessWidget {
@@ -17,7 +17,7 @@ class SectionHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
         ),
       ),
       child: Row(

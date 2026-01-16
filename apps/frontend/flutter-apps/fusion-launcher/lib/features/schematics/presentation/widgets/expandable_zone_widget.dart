@@ -109,7 +109,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
         decoration: BoxDecoration(
           color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
           border: Border.all(
-            color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+            color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
           ),
         ),
         child: Row(
@@ -202,7 +202,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
           BlocBuilder<ProjectViewModel, ProjectViewModelState>(
             builder: (BuildContext context, ProjectViewModelState state) {
               return Container(
-                color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+                color: context.colorScheme.primaryBlack.withAlpha(50),
                 padding: const EdgeInsets.only(left: 46, right: 8, top: 8, bottom: 8),
                 child: ReorderableListView.builder(
                   shrinkWrap: true,
@@ -405,7 +405,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
   Widget _buildExpandIcon(BuildContext context, bool expanded) {
     return Icon(
       expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-      color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
+      color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
     );
   }
 
@@ -428,7 +428,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       menuPadding: EdgeInsets.zero,
 
       itemBuilder:
@@ -452,7 +452,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
             ),
@@ -474,7 +474,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
       tooltip: "",
       offset: const Offset(254, 16),
       constraints: const BoxConstraints(maxWidth: 250),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 8,
       padding: EdgeInsets.zero,
       onOpened: () => setState(() => showSubzonePopup = true),
@@ -501,13 +501,13 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 text: "Sub zone",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
               Icon(
                 Icons.keyboard_arrow_right_sharp,
                 size: 12,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
+                color: Theme.of(context).colorScheme.textPrimary,
               ),
             ],
           ),
@@ -558,14 +558,14 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                       child: Icon(
                         Icons.close,
                         size: 16,
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        color: Theme.of(context).colorScheme.textPrimary,
                       ),
                     ),
                   ),
                 ],
               ),
               Divider(
-                color: Theme.of(context).colorScheme.dividerColor,
+                color: Theme.of(context).colorScheme.primaryBlack,
                 thickness: 1,
               ),
               const SizedBox(height: 8),
@@ -636,7 +636,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         width: double.infinity,
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontSize: 10,
-                          color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                          color: context.colorScheme.primaryBlack,
                         ),
                         label: "Save",
                         isActive: _zoneNameController.text.trim().isNotEmpty && _selectedListeningAreaIds.isNotEmpty,
@@ -666,7 +666,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
         child: PopupMenuButton<String>(
           constraints: const BoxConstraints(maxHeight: 250, maxWidth: 236),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          color: Theme.of(context).colorScheme.white,
+          color: Theme.of(context).colorScheme.primaryWhite,
           offset: const Offset(6, 35),
           itemBuilder:
               (BuildContext context) => <PopupMenuEntry<String>>[
@@ -690,14 +690,14 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                               ? "Select Location"
                               : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: _selectedListeningAreaIds.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                        color: _selectedListeningAreaIds.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                       ),
                     ),
                   ),
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 20,
-                    color: Theme.of(context).colorScheme.greyDark,
+                    color: context.colorScheme.primaryBlack,
                   ),
                 ],
               ),
@@ -780,7 +780,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           child: Icon(
                             Icons.close,
                             size: 16,
-                            color: Theme.of(context).colorScheme.fusionTextViewColor,
+                            color: Theme.of(context).colorScheme.textPrimary,
                           ),
                         ),
                       ),
@@ -929,7 +929,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                   value: isAvailable ? !_selectedListeningAreaIds.contains(area.id) : true,
                   child: Checkbox(
                     value: !isAvailable ? true : _selectedListeningAreaIds.contains(area.id),
-                    activeColor: Theme.of(context).colorScheme.greyDark,
+                    activeColor: context.colorScheme.primaryBlack,
                     onChanged: isAvailable ? (bool? checked) => toggleSelection() : null,
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     visualDensity: VisualDensity.compact,
@@ -957,7 +957,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                 text: zoneData?.name ?? "No zone",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 9,
-                  color: isAvailable ? Theme.of(context).colorScheme.greyDark : Theme.of(context).colorScheme.grey,
+                  color: isAvailable ? context.colorScheme.primaryBlack : context.colorScheme.primaryBlack,
                   fontWeight: FontWeight.w600,
                 ),
               ),

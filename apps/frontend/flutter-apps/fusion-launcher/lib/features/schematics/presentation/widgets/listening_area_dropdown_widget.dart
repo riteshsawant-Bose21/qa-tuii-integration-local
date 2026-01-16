@@ -190,7 +190,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                                             decoration: BoxDecoration(
-                                              color: isSelected ? Theme.of(context).colorScheme.grey : null,
+                                              color: isSelected ? context.colorScheme.primaryBlack : null,
                                             ),
                                             child: Row(
                                               children: <Widget>[
@@ -200,7 +200,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                                   value: isSelected,
                                                   child: Radio<String>(
                                                     value: area.id,
-                                                    activeColor: Theme.of(context).colorScheme.greyDark,
+                                                    activeColor: context.colorScheme.primaryBlack,
                                                     groupValue: widget.selectedListeningAreaIds.isNotEmpty ? widget.selectedListeningAreaIds.first : null,
                                                     onChanged: (String? value) {
                                                       if (value != null) {
@@ -309,14 +309,14 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
                                       Container(
                                         height: 26,
                                         decoration: BoxDecoration(
-                                          color: Theme.of(context).colorScheme.white,
+                                          color: Theme.of(context).colorScheme.primaryWhite,
 
                                           border: Border.all(color: Colors.grey[300]!),
                                           borderRadius: BorderRadius.circular(4),
                                         ),
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<String>(
-                                            dropdownColor: Theme.of(context).colorScheme.white,
+                                            dropdownColor: Theme.of(context).colorScheme.primaryWhite,
                                             hint: const FusionAppText(text: "Select floor"),
                                             value: _selectedFloor,
                                             isExpanded: true,
@@ -433,7 +433,7 @@ class _ListeningAreaDropdownWidgetState extends State<ListeningAreaDropdownWidge
               Icon(
                 Icons.keyboard_arrow_down,
                 size: 16,
-                color: Theme.of(context).colorScheme.fusionTextViewColor,
+                color: Theme.of(context).colorScheme.textPrimary,
               ),
             ],
           ),

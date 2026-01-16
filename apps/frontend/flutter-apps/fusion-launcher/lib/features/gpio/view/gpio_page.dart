@@ -9,6 +9,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/gp
 import 'package:fusion_launcher/features/scheduling/view/scheduling_page.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/widgets/snapshots/action_drop_down.dart';
@@ -271,15 +272,15 @@ class GpioPage extends StatelessWidget {
                                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                     thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                                       if (states.contains(WidgetState.selected)) {
-                                        return Theme.of(context).colorScheme.white;
+                                        return Theme.of(context).colorScheme.primaryWhite;
                                       }
-                                      return Theme.of(context).colorScheme.greyDark;
+                                      return context.colorScheme.primaryBlack;
                                     }),
                                     trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                                       if (states.contains(WidgetState.selected)) {
-                                        return Theme.of(context).colorScheme.black;
+                                        return Theme.of(context).colorScheme.primaryBlack;
                                       }
-                                      return Theme.of(context).colorScheme.grey;
+                                      return context.colorScheme.primaryBlack;
                                     }),
                                     trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                                   )

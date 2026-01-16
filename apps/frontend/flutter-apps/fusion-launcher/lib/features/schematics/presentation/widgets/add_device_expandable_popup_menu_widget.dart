@@ -114,13 +114,13 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
             testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_button_${widget.sectionTitle}"),
             child: Row(
               children: <Widget>[
-                Icon(Icons.add_sharp, size: 12, color: Theme.of(context).colorScheme.greyDark),
+                Icon(Icons.add_sharp, size: 12, color: context.colorScheme.primaryBlack),
                 const SizedBox(width: 2),
                 FusionAppText(
                   text: "Add Zone",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 8,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ),
               ],
@@ -147,7 +147,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          color: Theme.of(context).colorScheme.white,
+          color: context.colorScheme.primaryWhite,
           menuPadding: EdgeInsets.zero,
 
           itemBuilder: (BuildContext context) {
@@ -182,7 +182,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                   : SemanticHelper.button(
                     testId: SemanticHelper.createTestId(SemanticTypes.button, "add_${widget.sectionTitle}"),
                     child: IconButton(
-                      icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                      icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
                       onPressed: null,
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(),
@@ -323,7 +323,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 Icon(
                   isExpanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
                   size: 22,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
                 const SizedBox(width: 6),
                 Expanded(
@@ -354,10 +354,10 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(4),
                   border: Border.all(
-                    color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.black : Theme.of(context).colorScheme.grey,
+                    color: _isDeviceSelected(_selectedPopupDevice, item) ? Colors.black : context.colorScheme.primaryBlack,
                     width: _isDeviceSelected(_selectedPopupDevice, item) ? 1 : 1,
                   ),
-                  color: _isDeviceSelected(_selectedPopupDevice, item) ? Theme.of(context).colorScheme.grey : null,
+                  color: _isDeviceSelected(_selectedPopupDevice, item) ? context.colorScheme.primaryBlack : null,
                 ),
                 child: Row(
                   children: <Widget>[
@@ -505,14 +505,14 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       child: Icon(
                         Icons.close,
                         size: 16,
-                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                        color: Theme.of(context).colorScheme.textPrimary,
                       ),
                     ),
                   ),
                 ],
               ),
               Divider(
-                color: Theme.of(context).colorScheme.dividerColor,
+                color: Theme.of(context).colorScheme.primaryBlack,
                 thickness: 1,
               ),
               const SizedBox(height: 4),
@@ -569,7 +569,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  color: Theme.of(context).colorScheme.white,
+                  color: context.colorScheme.primaryWhite,
                   offset: const Offset(0, 35),
                   itemBuilder: (BuildContext context) {
                     return <PopupMenuEntry<String>>[
@@ -611,7 +611,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                             child: Icon(
                                               Icons.close,
                                               size: 16,
-                                              color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                              color: Theme.of(context).colorScheme.textPrimary,
                                             ),
                                           ),
                                         ),
@@ -691,7 +691,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                                                                 setMenuState(() {});
                                                                               }
                                                                               : null,
-                                                                      activeColor: Theme.of(context).colorScheme.greyDark,
+                                                                      activeColor: context.colorScheme.primaryBlack,
                                                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                                       visualDensity: VisualDensity.compact,
                                                                       shape: const RoundedRectangleBorder(
@@ -814,14 +814,14 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                                     ? "Select Location"
                                     : "${_selectedListeningAreaIds.length} location${_selectedListeningAreaIds.length > 1 ? '(s)' : ''} selected",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: _selectedListeningAreaIds.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                              color: _selectedListeningAreaIds.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                             ),
                           ),
                         ),
                         Icon(
                           Icons.keyboard_arrow_down,
                           size: 20,
-                          color: Theme.of(context).colorScheme.greyDark,
+                          color: context.colorScheme.primaryBlack,
                         ),
                       ],
                     ),
@@ -872,7 +872,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                           border:
                               isSelected
                                   ? Border.all(
-                                    color: Theme.of(context).colorScheme.greyDark,
+                                    color: context.colorScheme.primaryBlack,
                                     width: 2,
                                   )
                                   : null,
@@ -881,7 +881,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                             isSelected
                                 ? Container(
                                   decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.greyDark.withOpacity(0.2),
+                                    color: context.colorScheme.primaryBlack.withOpacity(0.2),
                                     borderRadius: BorderRadius.circular(4),
                                   ),
                                   child: const Icon(
@@ -922,7 +922,7 @@ class _AddDeviceExpandablePopupMenuWidgetState extends State<AddDeviceExpandable
                       testId: SemanticHelper.createTestId(SemanticTypes.button, "add_zone_save_button"),
                       child: FusionButton(
                         width: double.infinity,
-                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                        textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                         label: "Save",
                         isActive:

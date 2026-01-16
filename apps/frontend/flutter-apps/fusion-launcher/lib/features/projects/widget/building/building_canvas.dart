@@ -12,6 +12,7 @@ import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:fusion_lib/fusion_utils/image_loader_service.dart';
 
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -132,7 +133,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.white,
+          color: Theme.of(context).colorScheme.primaryWhite,
           // borderRadius: BorderRadius.circular(6),
           // border: Border.all(color: Colors.grey.shade200),
         ),
@@ -791,7 +792,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
       context: context,
       builder:
           (BuildContext ctx) => Dialog(
-            backgroundColor: Theme.of(context).colorScheme.white,
+            backgroundColor: Theme.of(context).colorScheme.primaryWhite,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
             child: Container(
               width: 720,
@@ -808,7 +809,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                         text: 'Upload Floor Plan',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          color: Theme.of(context).colorScheme.textPrimary,
                         ),
                       ),
                       SemanticHelper.button(
@@ -817,7 +818,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                           onPressed: () => Navigator.of(ctx).pop(),
                           icon: Icon(
                             Icons.close,
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: context.colorScheme.primaryBlack,
                             size: 20,
                           ),
                           splashRadius: 16,
@@ -838,18 +839,18 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   // Divider
                   Row(
                     children: <Widget>[
-                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                      Expanded(child: Divider(color: Theme.of(context).colorScheme.primaryBlack)),
                       Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16),
                         child: FusionAppText(
                           text: 'or choose from samples',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: context.colorScheme.primaryBlack,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
                       ),
-                      Expanded(child: Divider(color: Theme.of(context).colorScheme.dividerColor)),
+                      Expanded(child: Divider(color: Theme.of(context).colorScheme.primaryBlack)),
                     ],
                   ),
 
@@ -887,10 +888,10 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
           child: Container(
             width: double.infinity,
             decoration: BoxDecoration(
-              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : Theme.of(context).colorScheme.greyLight,
+              color: isDragActive ? Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05) : context.colorScheme.primaryBlack,
               border: Border.all(
                 width: isDragActive ? 2 : 1,
-                color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.dividerColor,
+                color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.primaryBlack,
                 style: BorderStyle.solid,
               ),
             ),
@@ -918,14 +919,14 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   text: isDragActive ? 'Drop your file here!' : 'Click here to upload',
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w600,
-                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 FusionAppText(
                   text: 'Upload .JPEG and .PNG files',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : Theme.of(context).colorScheme.greyDark,
+                    color: isDragActive ? Theme.of(context).colorScheme.primaryColor : context.colorScheme.primaryBlack,
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -936,7 +937,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
                   textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     fontWeight: FontWeight.w500,
                   ),
-                  foregroundColor: Theme.of(context).colorScheme.fusionTextViewColor,
+                  foregroundColor: Theme.of(context).colorScheme.textPrimary,
                   activeBorderColor: Theme.of(context).colorScheme.primaryColor,
                   backgroundColor: Theme.of(context).colorScheme.primaryColor.withValues(alpha: 0.05),
                   onTap: () => _importFloorPlan(),
@@ -960,7 +961,7 @@ class _BuildingCanvasState extends State<BuildingCanvas> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-            color: Theme.of(context).colorScheme.dividerColor,
+            color: Theme.of(context).colorScheme.primaryBlack,
           ),
         ),
         child: GestureDetector(

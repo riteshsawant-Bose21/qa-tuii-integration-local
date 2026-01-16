@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
@@ -55,7 +55,7 @@ class _EventItemCardState extends State<EventItemCard> {
             color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: widget.isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+              color: widget.isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
               width: 1.0,
             ),
           ),

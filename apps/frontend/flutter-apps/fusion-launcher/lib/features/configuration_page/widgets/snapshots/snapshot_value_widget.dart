@@ -45,7 +45,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               Icon(
                 isMute ? Icons.volume_off : Icons.volume_up,
                 size: 20,
-                color: Theme.of(context).colorScheme.greyDark,
+                color: context.colorScheme.primaryBlack,
               ),
               const SizedBox(width: 8),
               FusionAppText(
@@ -68,13 +68,13 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                   thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                   overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
                   trackHeight: 1,
-                  thumbColor: Theme.of(context).colorScheme.greyDark,
+                  thumbColor: context.colorScheme.primaryBlack,
                 ),
                 child: Slider(
                   value: currentValue,
                   padding: EdgeInsets.zero,
-                  activeColor: Theme.of(context).colorScheme.greyDark,
-                  inactiveColor: Theme.of(context).colorScheme.grey,
+                  activeColor: context.colorScheme.primaryBlack,
+                  inactiveColor: context.colorScheme.primaryBlack,
                   min: 0,
                   max: 100,
                   divisions: 100,
@@ -95,7 +95,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               alignment: Alignment.center,
               padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.greyLight,
+                color: context.colorScheme.primaryBlack,
                 borderRadius: BorderRadius.circular(2),
               ),
               child: FusionAppText(text: currentValue.toStringAsFixed(0), style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9)),
@@ -176,15 +176,15 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.white;
+                  return Theme.of(context).colorScheme.primaryWhite;
                 }
-                return Theme.of(context).colorScheme.greyDark;
+                return context.colorScheme.primaryBlack;
               }),
               trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.greyDark;
+                  return context.colorScheme.primaryBlack;
                 }
-                return Theme.of(context).colorScheme.grey;
+                return context.colorScheme.primaryBlack;
               }),
               trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
               onChanged: (bool v) {
@@ -216,15 +216,15 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                     if (states.contains(MaterialState.selected)) {
-                      return Theme.of(context).colorScheme.white;
+                      return Theme.of(context).colorScheme.primaryWhite;
                     }
-                    return Theme.of(context).colorScheme.greyDark;
+                    return context.colorScheme.primaryBlack;
                   }),
                   trackColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                     if (states.contains(MaterialState.selected)) {
-                      return Theme.of(context).colorScheme.greyDark;
+                      return context.colorScheme.primaryBlack;
                     }
-                    return Theme.of(context).colorScheme.grey;
+                    return context.colorScheme.primaryBlack;
                   }),
                   trackOutlineColor: MaterialStateProperty.all(Colors.transparent),
                   onChanged: (bool val) {
@@ -253,7 +253,7 @@ class _SnapshotValueWidgetState extends State<SnapshotValueWidget> {
                     // enabled: isEnabled,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.dividerColor)),
+                      border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.primaryBlack)),
                       isDense: true,
                       labelText: "Duration (ms)",
                       labelStyle: const TextStyle(fontSize: 10),

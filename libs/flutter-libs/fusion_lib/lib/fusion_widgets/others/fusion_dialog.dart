@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../buttons/fusion_button.dart';
@@ -100,7 +101,7 @@ class FusionDialog extends StatelessWidget {
   Widget build(BuildContext context) {
     return Dialog(
       shape: roundedCorners ? RoundedRectangleBorder(borderRadius: BorderRadius.circular(borderRadius)) : null,
-      backgroundColor: backgroundColor ?? Theme.of(context).colorScheme.white,
+      backgroundColor: backgroundColor ?? context.colorScheme.primaryWhite,
       insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
 
       child: ConstrainedBox(
@@ -157,7 +158,7 @@ class FusionDialog extends StatelessWidget {
                         label: primaryButtonLabel,
                         textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                           fontSize: 11,
-                          color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                          color: context.colorScheme.primaryBlack,
                         ),
                         isActive: true,
                         onTap: () {

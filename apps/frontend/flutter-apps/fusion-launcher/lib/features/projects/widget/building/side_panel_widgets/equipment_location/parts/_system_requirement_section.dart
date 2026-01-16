@@ -40,7 +40,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                         Text(
                           "Inputs",
                           style: context.textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.fusionTextViewColor,
+                            color: context.colorScheme.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -63,7 +63,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                         Text(
                           "Outputs",
                           style: context.textTheme.bodySmall?.copyWith(
-                            color: context.colorScheme.fusionTextViewColor,
+                            color: context.colorScheme.textPrimary,
                           ),
                         ),
                         const SizedBox(height: 4),
@@ -176,7 +176,7 @@ class _EqlSystemRequirementSection extends StatelessWidget {
                                   text: input.$2,
                                   textAlign: TextAlign.right,
                                   style: context.textTheme.bodySmall?.copyWith(
-                                    color: context.colorScheme.green,
+                                    color: context.colorScheme.primaryBlack,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -235,7 +235,7 @@ class _SrRow extends StatelessWidget {
             text: baseValue,
             textAlign: TextAlign.right,
             style: context.textTheme.bodySmall?.copyWith(
-              color: context.colorScheme.green,
+              color: context.colorScheme.primaryBlack,
 
               fontWeight: FontWeight.bold,
             ),
