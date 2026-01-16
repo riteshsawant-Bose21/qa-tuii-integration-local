@@ -41,19 +41,22 @@ class EventActionRowHeader extends StatelessWidget {
               ),
 
               /// add actions
-              GestureDetector(
-                onTap: () {
-                  final String eventId = _projectViewModel.selectedEventId!;
+              SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "add_event_action"),
+                child: GestureDetector(
+                  onTap: () {
+                    final String eventId = _projectViewModel.selectedEventId!;
 
-                  final FusionEvent selectedEvent = _projectViewModel.getEventById(eventId);
-                  if (selectedEvent.isComplete) {
-                    final SceneActionModel action = SceneActionModel();
-                    _projectViewModel.addActionToEvent(eventId: eventId, action: action);
-                  } else {
-                    FusionToast.error(context, message: "Please complete the event trigger details before adding actions.");
-                  }
-                },
-                child: const Icon(Icons.add, size: 16),
+                    final FusionEvent selectedEvent = _projectViewModel.getEventById(eventId);
+                    if (selectedEvent.isComplete) {
+                      final SceneActionModel action = SceneActionModel();
+                      _projectViewModel.addActionToEvent(eventId: eventId, action: action);
+                    } else {
+                      FusionToast.error(context, message: "Please complete the event trigger details before adding actions.");
+                    }
+                  },
+                  child: const Icon(Icons.add, size: 16),
+                ),
               ),
             ],
           ),

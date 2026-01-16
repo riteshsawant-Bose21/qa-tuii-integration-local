@@ -95,37 +95,42 @@ class _TitleTextFieldSwitcherState extends State<TitleTextFieldSwitcher> {
                   }
                   return KeyEventResult.ignored;
                 },
-                child: TextField(
-                  controller: controller,
-                  focusNode: focusNode,
-                  style: widget.style,
-                  maxLength: 24,
+                child: SemanticHelper.formControl(
+                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "title_text_field_switcher"),
+                  child: TextField(
+                    controller: controller,
+                    focusNode: focusNode,
+                    style: widget.style,
+                    maxLength: 24,
 
-                  maxLines: 1,
-                  decoration: InputDecoration(
-                    hint: Text(
-                      widget.hintText,
-                      style: widget.style,
-                      maxLines: 1,
+                    maxLines: 1,
+                    decoration: InputDecoration(
+                      hint: Text(
+                        widget.hintText,
+                        style: widget.style,
+                        maxLines: 1,
+                      ),
+                      counter: const SizedBox.shrink(),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.zero,
+                      isDense: true,
                     ),
-                    counter: const SizedBox.shrink(),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.zero,
-                    isDense: true,
+                    onSubmitted: (_) => _saveValue(),
+                    onTapOutside: (_) => _saveValue(),
                   ),
-                  onSubmitted: (_) => _saveValue(),
-                  onTapOutside: (_) => _saveValue(),
                 ),
               )
-              : GestureDetector(
-                behavior: HitTestBehavior.translucent,
-
-                onDoubleTap: _startEditing,
-                child: FusionAppText(
-                  text: currentValue,
-                  maxLine: 1,
-                  textOverflow: TextOverflow.ellipsis,
-                  style: widget.style,
+              : SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "title_text_field_switcher_display"),
+                child: GestureDetector(
+                  behavior: HitTestBehavior.translucent,
+                  onDoubleTap: _startEditing,
+                  child: FusionAppText(
+                    text: currentValue,
+                    maxLine: 1,
+                    textOverflow: TextOverflow.ellipsis,
+                    style: widget.style,
+                  ),
                 ),
               ),
     );
