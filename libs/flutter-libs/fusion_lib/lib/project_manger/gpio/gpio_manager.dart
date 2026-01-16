@@ -43,6 +43,20 @@ extension GpioManager on ProjectManager {
     return projectService!.getAllGPIOConfigs();
   }
 
+  List<GpioConfig> getGpiConfigs() {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getGpiConfigs();
+  }
+
+  List<GpioConfig> getGpoConfigs() {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+    return projectService!.getGpoConfigs();
+  }
+
   int getAvailableGpioPorts() {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
@@ -55,5 +69,18 @@ extension GpioManager on ProjectManager {
       throw Exception("Project service is not initialized.");
     }
     return projectService!.getTotalGpioPorts();
+  }
+
+  void reOrderGpio({required String gpioIdToMove, required String gpioAtNewIndexId}) {
+    if (projectService == null) {
+      throw Exception('No project is currently open');
+    }
+    Map<String, GpioConfig> reorderedList = projectService!.reOrderGpio(
+      gpioIdToMove: gpioIdToMove,
+      gpioAtNewIndexId: gpioAtNewIndexId,
+    );
+    projectService = projectService!.copyWith(
+      gpioRepository: projectService!.gpioConfigs.copyWith(reorderedList),
+    );
   }
 }

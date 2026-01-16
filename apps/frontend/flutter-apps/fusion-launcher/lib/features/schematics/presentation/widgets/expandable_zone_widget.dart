@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../../../../core/service_locator.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
-import 'add_speakers_menu.dart';
 import 'circuit_device_widget.dart';
 import 'create_new_location_widget.dart';
 import 'expandable_sub_zone_widgets.dart';
@@ -147,9 +147,23 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
             if (widget.subZones.isEmpty)
               SemanticHelper.container(
                 testId: SemanticHelper.createTestId(SemanticTypes.container, "add_speakers_menu_container_$index"),
-                child: AddSpeakersMenu(
-                  zoneId: widget.zoneId,
-                  onSpeakerAdded: onSpeakerAdded,
+                child: FusionArrowPopup(
+                  content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId),
+
+                  child: Row(
+                    children: <Widget>[
+                      const Icon(Icons.add, size: 10, color: Colors.black87),
+                      const SizedBox(width: 4),
+                      FusionAppText(
+                        text: "Speaker",
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          fontSize: 8,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.grey[800],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(width: 8),
@@ -217,8 +231,10 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                         if (incoming == null) return false;
                         // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                         // _projectViewModel.setSelectedDevice(circuitData.id, SelectedItemType.circuit);
-
-                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming.id).whereType<Speaker>().toList();
+                        if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
+                          return false;
+                        }
+                        final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                         final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
 
                         final Zone? incomingZone = _projectViewModel.getZoneForCircuit(circuitId: incoming.id);
@@ -258,6 +274,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                 child: CircuitDeviceWidget(
                                   index: index,
                                   deviceId: deviceId,
+                                  circuitModel: circuitData,
                                   circuitDeviceName: circuitData.name,
                                   assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                                   location: location,
@@ -282,7 +299,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                                 child: CircuitDeviceWidget(
                                   index: index,
                                   deviceId: deviceId,
-
+                                  circuitModel: circuitData,
                                   circuitDeviceName: circuitData.name,
                                   assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                                   location: location,
@@ -301,6 +318,7 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                           child: CircuitDeviceWidget(
                             index: index,
                             deviceId: deviceId,
+                            circuitModel: circuitData,
                             circuitDeviceName: circuitData.name,
                             assetImagePath: speakers.isNotEmpty ? speakers.first.assetImagePath : '',
                             location: location,
@@ -828,12 +846,8 @@ class _ExpandableZoneWidgetState extends State<ExpandableZoneWidget> {
                     if (locationName.trim().isNotEmpty && floorId.isNotEmpty) {
                       final ListeningArea newListeningArea = ListeningArea(
                         name: locationName.trim(),
-                        vertices: <Offset>[
-                          const Offset(0, 0),
-                          const Offset(100, 0),
-                          const Offset(100, 100),
-                          const Offset(0, 100),
-                        ],
+                        vertices: <Offset>[],
+                        isDrawn: false,
                       );
 
                       try {

@@ -4,7 +4,7 @@ import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import '../../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../../../core/service_locator.dart';
-import 'add_speakers_menu.dart';
+import '../../../projects/widget/building/speaker_selection_section/parts/select_speaker_popup.dart';
 import 'circuit_device_widget.dart';
 
 /// Separate widget for subzones with its own expansion state and full features
@@ -32,13 +32,14 @@ class ExpandableSubZoneWidget extends StatefulWidget {
 
 class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
   late ValueNotifier<bool> _isSubZoneExpanded;
+
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   bool _isHovered = false;
 
   @override
   void initState() {
     super.initState();
-    _isSubZoneExpanded = ValueNotifier<bool>(false);
+    _isSubZoneExpanded = ValueNotifier<bool>(true);
   }
 
   @override
@@ -93,11 +94,29 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           ),
                         ),
 
-                        /// Add device button
-                        AddSpeakersMenu(
-                          zoneId: widget.zoneId ?? "",
-                          subZoneId: widget.subZoneId,
-                          onSpeakerAdded: onSpeakerAdded,
+                        // /// Add device button
+                        // AddSpeakersMenu(
+                        //   zoneId: widget.zoneId ?? "",
+                        //   subZoneId: widget.subZoneId,
+                        //   onSpeakerAdded: onSpeakerAdded,
+                        // ),
+                        FusionArrowPopup(
+                          content: SpeakerQueryPopup(isFromBuildingPage: false, zoneId: widget.zoneId, subZoneId: widget.subZoneId),
+
+                          child: Row(
+                            children: <Widget>[
+                              const Icon(Icons.add, size: 10, color: Colors.black87),
+                              const SizedBox(width: 4),
+                              FusionAppText(
+                                text: "Speaker",
+                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w400,
+                                  color: Colors.grey[800],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                         const SizedBox(width: 8),
                         _buildKebabMenu(context),
@@ -163,6 +182,11 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                   /// Only accept if the incoming circuit has the same name but different ID
                   ///
                   if (incoming == null) return false;
+
+                  if (circuitData.addedInBuildingPage || incoming.addedInBuildingPage) {
+                    return false;
+                  }
+
                   // return incoming != null && incoming.name == circuitData.name && incoming.id != circuitData.id;
                   final List<Speaker> incomingSpeakers = _projectViewModel.getHardwareForCircuit(circuitId: incoming!.id).whereType<Speaker>().toList();
                   final List<Speaker> currentData = _projectViewModel.getHardwareForCircuit(circuitId: circuitData.id).whereType<Speaker>().toList();
@@ -199,7 +223,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           child: CircuitDeviceWidget(
                             index: index,
                             deviceId: deviceId,
-
+                            circuitModel: circuitData,
                             location: location,
                             speakers: speakers,
                             circuitDeviceName: circuitData.name,
@@ -234,7 +258,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                           width: 220,
                           child: CircuitDeviceWidget(
                             index: index,
-
+                            circuitModel: circuitData,
                             deviceId: deviceId,
                             location: location,
                             speakers: speakers,
@@ -256,6 +280,7 @@ class _ExpandableSubZoneWidgetState extends State<ExpandableSubZoneWidget> {
                       deviceId: deviceId,
                       location: location,
                       speakers: speakers,
+                      circuitModel: circuitData,
                       circuitDeviceName: circuitData.name,
                       assetImagePath: speakers.first.assetImagePath,
                       circuitDeviceCount: speakers.length,

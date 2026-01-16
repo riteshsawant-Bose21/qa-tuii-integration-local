@@ -27,11 +27,13 @@ class SnapshotList extends StatelessWidget {
   final Color? backgroundColor;
   final Function(String sceneId) onDelete;
   final Function(String sceneId)? onSelect;
+  final Function(String sceneId)? onDuplicate;
   final String? selectedSnapshotId;
   final Function(int oldIndex, int newIndex)? onReorder;
   final Function(String sceneId)? onDragStarted;
   final VoidCallback? onDragEnd;
   final String? draggingSnapshotId;
+  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
 
   const SnapshotList({
     super.key,
@@ -39,11 +41,13 @@ class SnapshotList extends StatelessWidget {
     required this.snapShotList,
     required this.onDelete,
     this.onSelect,
+    this.onDuplicate,
     this.selectedSnapshotId,
     this.onReorder,
     this.onDragStarted,
     this.onDragEnd,
     this.draggingSnapshotId,
+    this.onRenameSave,
   });
 
   @override
@@ -120,6 +124,11 @@ class SnapshotList extends StatelessWidget {
                         onSelect!(snapShotData.id);
                       }
                     },
+                    onDuplicate: () {
+                      if (onDuplicate != null) {
+                        onDuplicate!(snapShotData.id);
+                      }
+                    },
                   ),
                 ),
               ),
@@ -139,6 +148,11 @@ class SnapshotList extends StatelessWidget {
                     onSelect!(snapShotData.id);
                   }
                 },
+                onDuplicate: () {
+                  if (onDuplicate != null) {
+                    onDuplicate!(snapShotData.id);
+                  }
+                },
               ),
             ),
             child: SnapshotItemCard(
@@ -146,12 +160,24 @@ class SnapshotList extends StatelessWidget {
               snapShotData: snapShotData,
               isDragging: isDragging,
               isSelected: selectedSnapshotId == snapShotData.id,
+              onRenameSave: (String value, SnapshotsModel newSnapshot) {
+                if (value.isNotEmpty) {
+                  if (onRenameSave != null) {
+                    onRenameSave!.call(value, newSnapshot);
+                  }
+                }
+              },
               onDelete: () {
                 onDelete(snapShotData.id);
               },
               onTap: () {
                 if (onSelect != null) {
                   onSelect!(snapShotData.id);
+                }
+              },
+              onDuplicate: () {
+                if (onDuplicate != null) {
+                  onDuplicate!(snapShotData.id);
                 }
               },
             ),

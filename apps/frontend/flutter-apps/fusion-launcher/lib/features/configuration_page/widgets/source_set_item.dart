@@ -50,7 +50,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
   @override
   void initState() {
     super.initState();
-    _isSourcesSetExpanded = ValueNotifier<bool>(false);
+    _isSourcesSetExpanded = ValueNotifier<bool>(true);
   }
 
   @override

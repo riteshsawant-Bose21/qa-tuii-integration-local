@@ -15,6 +15,7 @@ class HardwareItemCard extends StatefulWidget {
   final String assetImagePath;
   final String? itemId;
   final String? location;
+  final String? equipmentLocation;
   final String? zoneName;
   final Color? zoneColor;
   final bool isSelected;
@@ -39,6 +40,7 @@ class HardwareItemCard extends StatefulWidget {
     this.zoneName,
     this.zoneColor,
     this.highlightQuery,
+    this.equipmentLocation,
   });
 
   @override
@@ -180,10 +182,13 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  FusionAppText(
-                                    text: widget.zoneName ?? "",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                                    maxLine: 1,
+                                  Flexible(
+                                    child: FusionAppText(
+                                      text: widget.zoneName ?? "",
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                      maxLine: 1,
+                                      textOverflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -228,14 +233,33 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                     ),
                                   ),
                                   const SizedBox(width: 6),
-                                  FusionAppText(
-                                    text: widget.location ?? "",
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
-                                    maxLine: 1,
+                                  Flexible(
+                                    child: FusionAppText(
+                                      text: widget.location ?? "",
+                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
+                                      maxLine: 1,
+                                      textOverflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ],
                               ),
                             ),
+                          ),
+                        )
+                      else if (((widget.location == null || widget.location == "Add location") && widget.zoneName == null) && widget.equipmentLocation != null)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            borderRadius: BorderRadius.circular(2),
+                            border: Border.all(
+                              color: Theme.of(context).colorScheme.greyDark,
+                              width: 1,
+                            ),
+                          ),
+                          child: FusionAppText(
+                            text: widget.equipmentLocation!,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 9),
                           ),
                         )
                       else

@@ -64,11 +64,11 @@ extension SceneManager on ProjectManager {
     projectService!.updateSceneActionItem(actionId: actionId, item: item);
   }
 
-  void updateSceneActionParam({required String actionId, required SceneParam param}) {
+  void updateSceneActionParam({required String actionId, required SceneParam param, String? eventId}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
-    projectService!.updateSceneActionParam(actionId: actionId, param: param);
+    projectService!.updateSceneActionParam(actionId: actionId, param: param, eventId: eventId);
   }
 
   void updateSceneActionValue({required String actionId, required SceneValue value}) {
@@ -85,12 +85,20 @@ extension SceneManager on ProjectManager {
     projectService!.removeSnapshots(sceneId);
   }
 
-  List<SceneActionType> getSceneActionTypes() {
+  List<SceneActionType> getSceneActionTypes({String? eventId, required bool isFromSnapshot}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
 
-    return projectService!.getSceneActionTypes();
+    return projectService!.getSceneActionTypes(eventId: eventId, isFromSnapshot: isFromSnapshot);
+  }
+
+  SceneSetModel? getSceneSetForSnapshot(String snapshotId) {
+    if (projectService == null) {
+      throw Exception("Project service is not initialized.");
+    }
+
+    return projectService!.getSceneSetForSnapshot(snapshotId);
   }
 
   List<SceneItemDropdown> getActionItemsByType(SceneActionType actionType) {
@@ -101,12 +109,12 @@ extension SceneManager on ProjectManager {
     return projectService!.getActionItemsByType(actionType);
   }
 
-  List<SceneParam> getParamsByActionTypeAndItem(SceneActionType actionType, SceneItem item) {
+  List<SceneParam> getParamsByActionTypeAndItem({required SceneActionType actionType, required SceneItem item, String? eventId}) {
     if (projectService == null) {
       throw Exception("Project service is not initialized.");
     }
 
-    return projectService!.getParamsByActionTypeAndItem(actionType, item);
+    return projectService!.getParamsByActionTypeAndItem(actionType: actionType, item: item, eventId: eventId);
   }
 
   List<SceneValueDropdown> getSceneValueDropdownItems(String actionId) {

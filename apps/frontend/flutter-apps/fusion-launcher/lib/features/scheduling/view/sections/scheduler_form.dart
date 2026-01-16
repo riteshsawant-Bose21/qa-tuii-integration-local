@@ -1,9 +1,9 @@
 import 'package:calendar_date_picker2/calendar_date_picker2.dart';
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/features/projects/widget/building/side_panel_widgets/schematic_properties.dart';
-import 'package:fusion_launcher/features/scheduling/view/widgets/fusion_segmented_button.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../../viewmodel/scheduler_form_viewmodel.dart';
@@ -16,6 +16,7 @@ class SchedulerForm extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
+      constraints: const BoxConstraints(maxWidth: 750),
       insetPadding: const EdgeInsets.symmetric(horizontal: 200, vertical: 100),
       child: ChangeNotifierProvider<SchedulerFormViewModel>(
         create:
@@ -23,7 +24,9 @@ class SchedulerForm extends StatelessWidget {
               viewModel: viewModel,
               initial: initial,
             ),
+
         child: Material(
+          color: context.colorScheme.white,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
@@ -169,175 +172,139 @@ class SchedulerForm extends StatelessWidget {
                                 children: <Widget>[
                                   FusionAppText(text: "Recurrence", style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w500)),
                                   const SizedBox(height: 8),
-                                  FusionSegmentedButton<RecurrenceType>(
-                                    value: viewModel.recurrenceType,
-                                    labels: <RecurrenceType, String>{
-                                      RecurrenceType.none: RecurrenceType.none.label,
-                                      RecurrenceType.daily: RecurrenceType.daily.label,
-                                      RecurrenceType.weekly: RecurrenceType.weekly.label,
+                                  RadioGroup<RecurrenceType>(
+                                    groupValue: viewModel.recurrenceType,
+                                    onChanged: (RecurrenceType? selected) {
+                                      if (selected != null) {
+                                        viewModel.recurrenceType = selected;
+                                      }
                                     },
-                                    onChanged: (RecurrenceType value) {
-                                      viewModel.recurrenceType = value;
-                                    },
-                                  ),
-                                ],
-                              ),
-
-                              SizedBox(
-                                height: 400,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: <Widget>[
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: <Widget>[
-                                          FusionAppText(
-                                            text: "Select Date Range",
-                                            style: context.textTheme.bodySmall?.copyWith(
-                                              fontWeight: FontWeight.w500,
+                                    child: Row(
+                                      children: <Widget>[
+                                        for (final RecurrenceType type in RecurrenceType.values)
+                                          Padding(
+                                            padding: const EdgeInsets.only(right: 12.0),
+                                            child: Row(
+                                              children: <Widget>[
+                                                Radio<RecurrenceType>(
+                                                  value: type,
+                                                  fillColor: WidgetStateColor.resolveWith((Set<WidgetState> states) => Colors.black),
+                                                ),
+                                                Text(
+                                                  type.label,
+                                                  style: context.textTheme.bodySmall,
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                          FormField<DateTime>(
-                                            validator: (DateTime? value) {
-                                              if (viewModel.startDate == null) {
-                                                return "Please select a start date";
-                                              }
-                                              if (viewModel.recurrenceType != RecurrenceType.none &&
-                                                  (viewModel.endDate == null || viewModel.endDate!.isBefore(viewModel.startDate!))) {
-                                                return "Please select a valid end date";
-                                              }
-                                              return null;
-                                            },
-                                            builder: (FormFieldState<dynamic> field) {
-                                              return Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: <Widget>[
-                                                  Container(
-                                                    decoration: BoxDecoration(
-                                                      border: Border.all(color: field.hasError ? Colors.red : Colors.transparent),
-                                                      borderRadius: BorderRadius.circular(14),
-                                                    ),
-                                                    child: CalendarDatePicker2(
-                                                      // key: ValueKey<RecurrenceType>(viewModel.recurrenceType),
-                                                      config: CalendarDatePicker2Config(
-                                                        calendarType:
-                                                            viewModel.recurrenceType == RecurrenceType.none
-                                                                ? CalendarDatePicker2Type.single
-                                                                : CalendarDatePicker2Type.range,
-
-                                                        selectedDayHighlightColor: Colors.black,
-                                                        daySplashColor: Colors.black12,
-                                                        firstDate: DateTime.now(), //.subtract(const Duration(hours: 24)),
-                                                        lastDate: DateTime.now().add(const Duration(days: 365)),
-                                                      ),
-                                                      value:
-                                                          viewModel.recurrenceType == RecurrenceType.none
-                                                              ? <DateTime?>[viewModel.startDate]
-                                                              : <DateTime?>[viewModel.startDate, viewModel.endDate],
-                                                      onValueChanged: (List<DateTime> dates) {
-                                                        if (viewModel.recurrenceType == RecurrenceType.none && dates.isNotEmpty) {
-                                                          viewModel.startDate = dates.first;
-                                                          viewModel.endDate = dates.first;
-                                                          return;
-                                                        }
-                                                        if (dates.length >= 2) {
-                                                          viewModel.startDate = dates.first;
-                                                          viewModel.endDate = dates.last;
-                                                        }
-                                                      },
-                                                    ),
-                                                  ),
-                                                  if (field.hasError)
-                                                    Padding(
-                                                      padding: const EdgeInsets.only(top: 8.0),
-                                                      child: Text(
-                                                        field.errorText!,
-                                                        style: TextStyle(
-                                                          color: Colors.red.shade700,
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                ],
-                                              );
-                                            },
-                                          ),
-                                        ],
-                                      ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 32),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: <Widget>[
-                                          Column(
-                                            children: <Widget>[
-                                              Row(
-                                                crossAxisAlignment: CrossAxisAlignment.end,
-                                                mainAxisAlignment: MainAxisAlignment.start,
-                                                spacing: 10,
-                                                children: <Widget>[
-                                                  _TimePicker(
-                                                    title: "Start",
-                                                    time: viewModel.startTime,
-                                                    onChanged: (TimeOfDay value) {
-                                                      viewModel.startTime = value;
-                                                    },
-                                                  ),
-                                                  // const SizedBox(height: 50, child: Icon(Icons.arrow_forward)),
-                                                  // _TimePicker(
-                                                  //   title: "End",
-                                                  //   time: viewModel.endTime,
-                                                  //   onChanged: (TimeOfDay value) {
-                                                  //     viewModel.endTime = value;
-                                                  //   },
-                                                  // ),
-                                                ],
-                                              ),
-                                              const SizedBox(height: 24),
-                                              switch (viewModel.recurrenceType) {
-                                                RecurrenceType.weekly => const _WeeklyDaySelection(),
-                                                _ => const SizedBox(),
-                                              },
-                                            ],
-                                          ),
-                                          // const Spacer(),
-                                          Row(
-                                            mainAxisAlignment: MainAxisAlignment.end,
-                                            children: <Widget>[
-                                              FusionOutlinedButton(
-                                                label: "Cancel",
-                                                onTap: () {
-                                                  Navigator.pop(context);
-                                                },
-                                              ),
-                                              const SizedBox(width: 12),
-                                              FusionButton(
-                                                label: "Done",
-                                                isActive: viewModel.canEnableSubmit,
-                                                onTap: () async {
-                                                  try {
-                                                    final bool value = await viewModel.submit();
-                                                    if (value) {
-                                                      Navigator.pop(context);
-                                                    }
-                                                  } catch (e) {
-                                                    FusionToast.error(context, message: e.toString());
-                                                  }
-                                                },
-                                              ),
-                                              const SizedBox(width: 12),
-                                            ],
-                                          ),
-                                        ],
+                                  ),
+                                  // FusionSegmentedButton<RecurrenceType>(
+                                  //   value: viewModel.recurrenceType,
+                                  //   labels: <RecurrenceType, String>{
+                                  //     RecurrenceType.none: RecurrenceType.none.label,
+                                  //     RecurrenceType.daily: RecurrenceType.daily.label,
+                                  //     RecurrenceType.weekly: RecurrenceType.weekly.label,
+                                  //   },
+                                  //   onChanged: (RecurrenceType value) {
+                                  //     viewModel.recurrenceType = value;
+                                  //   },
+                                  // ),
+                                ],
+                              ),
+                              // FusionAppText(
+                              //   text: "Select Date Range",
+                              //   style: context.textTheme.bodySmall?.copyWith(
+                              //     fontWeight: FontWeight.w500,
+                              //   ),
+                              // ),
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 200),
+                                alignment: Alignment.centerLeft,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  mainAxisAlignment: MainAxisAlignment.start,
+                                  children: <Widget>[
+                                    _DatePickerField(
+                                      label: "From",
+                                      selectedDate: viewModel.startDate,
+                                      onDateSelected: (DateTime date) {
+                                        viewModel.startDate = date;
+                                      },
+                                      validator: (DateTime? date) {
+                                        if (viewModel.startDate == null) {
+                                          return "Please select a start date";
+                                        }
+                                        return null;
+                                      },
+                                    ),
+                                    if (viewModel.recurrenceType != RecurrenceType.none) ...<Widget>[
+                                      const SizedBox(width: 12),
+                                      _DatePickerField(
+                                        validator: (DateTime? value) {
+                                          if (viewModel.endDate == null) {
+                                            return "Please select an end date";
+                                          }
+                                          if (viewModel.startDate != null && viewModel.endDate!.isBefore(viewModel.startDate!)) {
+                                            return "End date cannot be before start date";
+                                          }
+                                          return null;
+                                        },
+                                        label: "To",
+                                        selectedDate: viewModel.endDate,
+                                        minDate: viewModel.startDate,
+                                        onDateSelected: (DateTime date) {
+                                          viewModel.endDate = date;
+                                        },
                                       ),
+                                    ],
+                                    const SizedBox(width: 12),
+                                    _TimePicker(
+                                      title: "Start",
+                                      time: viewModel.startTime,
+                                      onChanged: (TimeOfDay value) {
+                                        viewModel.startTime = value;
+                                      },
                                     ),
                                   ],
                                 ),
                               ),
-
+                              AnimatedSize(
+                                duration: const Duration(milliseconds: 200),
+                                child: switch (viewModel.recurrenceType) {
+                                  RecurrenceType.weekly => const _WeeklyDaySelection(),
+                                  _ => const SizedBox(),
+                                },
+                              ),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: <Widget>[
+                                  FusionOutlinedButton(
+                                    label: "Cancel",
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  const SizedBox(width: 12),
+                                  FusionButton(
+                                    label: "Done",
+                                    isActive: viewModel.canEnableSubmit,
+                                    onTap: () async {
+                                      try {
+                                        final bool value = await viewModel.submit(initial);
+                                        if (value) {
+                                          Navigator.pop(context);
+                                        }
+                                      } catch (e) {
+                                        FusionToast.error(context, message: e.toString());
+                                      }
+                                    },
+                                  ),
+                                  const SizedBox(width: 12),
+                                ],
+                              ),
                               // const SizedBox(height: 24),
                             ],
                           ),
@@ -528,6 +495,110 @@ class _WeeklyDaySelection extends StatelessWidget {
                   ),
               ],
             ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _DatePickerField extends StatelessWidget {
+  const _DatePickerField({super.key, required this.label, this.selectedDate, this.onDateSelected, this.minDate, this.validator});
+  final String label;
+  final DateTime? selectedDate;
+  final DateTime? minDate;
+  final ValueChanged<DateTime>? onDateSelected;
+  final String? Function(DateTime?)? validator;
+
+  @override
+  Widget build(BuildContext context) {
+    return FormField<DateTime>(
+      validator: validator,
+      initialValue: selectedDate,
+      builder: (FormFieldState<DateTime> state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            FusionAppText(
+              text: label,
+              style: context.textTheme.bodySmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                border: Border.all(color: state.hasError ? Colors.red : Colors.grey),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              clipBehavior: Clip.hardEdge,
+              height: 50,
+              child: PopupMenuButton<dynamic>(
+                position: PopupMenuPosition.under,
+                tooltip: 'Select Date',
+                itemBuilder:
+                    (BuildContext context) => <PopupMenuEntry<dynamic>>[
+                      PopupMenuItem<dynamic>(
+                        enabled: false,
+                        padding: const EdgeInsets.all(0),
+                        child: SizedBox(
+                          width: 600,
+                          child: CalendarDatePicker2(
+                            // key: ValueKey<RecurrenceType>(viewModel.recurrenceType),
+                            config: CalendarDatePicker2Config(
+                              calendarType: CalendarDatePicker2Type.single,
+
+                              selectedDayHighlightColor: Colors.black,
+                              daySplashColor: Colors.black12,
+                              firstDate: minDate ?? DateTime.now(), //.subtract(const Duration(hours: 24)),
+                              lastDate: DateTime.now().add(const Duration(days: 365)),
+                            ),
+                            displayedMonthDate: selectedDate,
+                            value: <DateTime?>[selectedDate],
+                            onValueChanged: (List<DateTime> dates) {
+                              if (dates.isNotEmpty && onDateSelected != null) {
+                                onDateSelected!(dates.first);
+                                Navigator.of(context).pop();
+                              }
+                              // if (viewModel.recurrenceType == RecurrenceType.none && dates.isNotEmpty) {
+                              //   viewModel.startDate = dates.first;
+                              //   viewModel.endDate = dates.first;
+                              //   return;
+                              // }
+                              // if (dates.length >= 2) {
+                              //   viewModel.startDate = dates.first;
+                              //   viewModel.endDate = dates.last;
+                              // }
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                child: Container(
+                  // constraints: const BoxConstraints(maxWidth: 300),
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                  child: Row(
+                    spacing: 18,
+                    children: <Widget>[
+                      Text(
+                        selectedDate != null ? DateFormat('dd-MM-yyyy').format(selectedDate!) : "Select Date",
+                        style: context.textTheme.bodySmall,
+                      ),
+                      const Icon(Icons.calendar_month, color: Colors.black),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            if (state.hasError) ...<Widget>[
+              const SizedBox(height: 5),
+              Text(
+                state.errorText!,
+                style: context.textTheme.bodySmall?.copyWith(
+                  color: Colors.red,
+                ),
+              ),
+            ],
           ],
         );
       },

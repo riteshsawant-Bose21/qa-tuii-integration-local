@@ -160,6 +160,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final FormFieldValidator<String>? validator;
   final String? hintText;
+  final TextStyle? hintStyle;
   final double borderRadius;
   final Widget? prefix;
   final Widget? suffix;
@@ -174,6 +175,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
     this.keyboardType,
     this.validator,
     this.hintText,
+    this.hintStyle,
     this.borderRadius = 12,
     this.prefix,
     this.suffix,
@@ -220,7 +222,7 @@ class NeumorphicDarkTextField extends StatelessWidget {
               hintText: hintText,
               hoverColor: Colors.transparent,
               contentPadding: contentPadding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-              hintStyle: context.textTheme.labelLarge?.copyWith(color: Colors.grey),
+              hintStyle: hintStyle ?? context.textTheme.labelLarge?.copyWith(color: Colors.grey),
             ),
           ),
         ),
@@ -237,6 +239,8 @@ class NeumorphicDarkButton extends StatefulWidget {
   final double? height;
   final VoidCallback? onTap;
   final double borderRadius;
+  final Color? backgroundColor;
+
   const NeumorphicDarkButton({
     super.key,
     this.text,
@@ -245,6 +249,7 @@ class NeumorphicDarkButton extends StatefulWidget {
     this.onTap,
     this.width,
     this.height,
+    this.backgroundColor,
   });
 
   @override
@@ -287,7 +292,7 @@ class _NeumorphicDarkButtonState extends State<NeumorphicDarkButton> {
           borderRadius: BorderRadius.circular(widget.borderRadius),
           child: Container(
             decoration: BoxDecoration(
-              color: const Color(0xFF232523),
+              color: widget.backgroundColor ?? const Color(0xFF232523),
               borderRadius: BorderRadius.circular(widget.borderRadius),
             ),
             child: Center(

@@ -67,6 +67,7 @@ class SharedPreferencesHandler {
 enum SharedPreferenceKeys {
   appSettings, //TODO: need to rename this key
   themeMode,
+  lastProjectSyncTime,
 }
 
 extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
@@ -76,6 +77,8 @@ extension SharedPreferenceKeysExtension on SharedPreferenceKeys {
         return 'app_settings';
       case SharedPreferenceKeys.themeMode:
         return 'theme_mode';
+      case SharedPreferenceKeys.lastProjectSyncTime:
+        return 'last_project_sync_time';
     }
   }
 }

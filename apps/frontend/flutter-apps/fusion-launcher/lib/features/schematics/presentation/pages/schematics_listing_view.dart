@@ -84,6 +84,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
     return zoneColor;
   }
 
+  String? getEquipmentLocationForHardware(String hardwareId) {
+    return _projectViewModel.getEquipLocationForHardware(hardwareId: hardwareId)?.name;
+  }
+
   /// sources & endpoints result count
   int _sourcesEndpointsResultCount() {
     if (_sourcesEndpointsSearchQuery.isEmpty) {
@@ -262,11 +266,15 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                         SourceConnectionType.analogInput || SourceConnectionType.aes67input => PortType.analogOutput,
                         SourceConnectionType.bluetooth => PortType.bleOut,
                         SourceConnectionType.usb => PortType.usbOut,
+                        SourceConnectionType.audioJack => PortType.audioJackOutput,
+                        SourceConnectionType.xlr => PortType.xlrOutput,
+                        SourceConnectionType.hdmi => PortType.hdmiOut,
                       };
                       final Source source = Source(
                         name: item.name,
                         pos: null,
                         type: item.type,
+                        addedFromBuildingPage: false,
                         connectionType: connectType,
                         assetImagePath: item.assetPath,
                         locationEntity: LocationModel(
@@ -290,6 +298,9 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                               PortType.bleIn,
                             ],
                             SourceConnectionType.usb => <PortType>[PortType.usbIn],
+                            SourceConnectionType.audioJack => <PortType>[PortType.audioJackInput],
+                            SourceConnectionType.xlr => <PortType>[PortType.xlrInput],
+                            SourceConnectionType.hdmi => <PortType>[PortType.hdmiIn],
                           },
                           portPosition: PortPosition.topLeft,
                         ),
@@ -310,7 +321,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           listeningAreaId: areaId,
                           floorId: floorId,
                         ),
-                        pos: Offset.zero,
+                        isFromBuildingPage: false,
                       );
 
                       serviceLocator<ProjectViewModel>().addHardware(
@@ -386,38 +397,38 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                   ],
                   listeningAreas: _projectViewModel.listeningAreas,
                   selectedDeviceId: _projectViewModel.selectedDevice?.type == SelectedItemType.processor ? _projectViewModel.selectedDevice?.id : null,
-                  onTapAddDevice: (dynamic item, String areaId, String floorId) {
-                    print("Adding hardware of type: ${item.type}");
-
-                    if (item is ProductQueryModel) {
-                      final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
-                        item,
-                        locationEntity: LocationModel(
-                          listeningAreaId: areaId,
-                          floorId: floorId,
-                        ),
-                        pos: Offset.zero,
-                      );
-                      if (item.type == ProductType.dsps) {
-                        serviceLocator<ProjectViewModel>().addHardware(
-                          hardware: hardware,
-                        );
-                        FusionToast.success(
-                          context,
-                          message: "Processors \"${item.name}\" added",
-                        );
-                      } else {
-                        serviceLocator<ProjectViewModel>().addHardware(
-                          hardware: hardware,
-                        );
-                        FusionToast.success(
-                          context,
-                          message: "Amplifier \"${item.name}\" added",
-                        );
-                        return;
-                      }
-                    }
-                  },
+                  // onTapAddDevice: (dynamic item, String areaId, String floorId) {
+                  //   print("Adding hardware of type: ${item.type}");
+                  //
+                  //   if (item is ProductQueryModel) {
+                  //     final HardwareComponent hardware = serviceLocator<ProjectViewModel>().fromProductQueryModel(
+                  //       item,
+                  //       locationEntity: LocationModel(
+                  //         listeningAreaId: areaId,
+                  //         floorId: floorId,
+                  //       ),
+                  //       isFromBuildingPage: false,
+                  //     );
+                  //     if (item.type == ProductType.dsps) {
+                  //       serviceLocator<ProjectViewModel>().addHardware(
+                  //         hardware: hardware,
+                  //       );
+                  //       FusionToast.success(
+                  //         context,
+                  //         message: "Processors \"${item.name}\" added",
+                  //       );
+                  //     } else {
+                  //       serviceLocator<ProjectViewModel>().addHardware(
+                  //         hardware: hardware,
+                  //       );
+                  //       FusionToast.success(
+                  //         context,
+                  //         message: "Amplifier \"${item.name}\" added",
+                  //       );
+                  //       return;
+                  //     }
+                  //   }
+                  // },
                 ),
 
                 /// Speakers
@@ -472,7 +483,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           listeningAreaId: areaId,
                           floorId: floorId,
                         ),
-                        pos: Offset.zero,
+                        isFromBuildingPage: false,
                       );
 
                       serviceLocator<ProjectViewModel>().addHardware(
@@ -551,10 +562,10 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           floorId: floorId,
                         ),
                         name: item.name,
-                        pos: Offset.zero,
                         assetImagePath: item.assetPath,
                         price: item.price,
                         hardwareName: item.name,
+                        addedFromBuildingPage: false,
                       );
                       serviceLocator<ProjectViewModel>().addHardware(
                         hardware: hardwareRack,
@@ -569,8 +580,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                           listeningAreaId: areaId,
                           floorId: floorId,
                         ),
+                        addedFromBuildingPage: false,
                         name: item.name,
-                        pos: Offset.zero,
                         assetImagePath: item.assetPath,
                         price: item.price,
                         hardwareName: item.name,
@@ -636,6 +647,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(controller.id),
               zoneColor: getZoneColor(controller.id),
               location: getLocationName(controller.locationEntity.listeningAreaId) ?? "Add location",
+
+              equipmentLocation: getEquipmentLocationForHardware(controller.id),
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -707,6 +720,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(source.id),
               zoneColor: getZoneColor(source.id),
               location: getLocationName(source.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(source.id),
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -782,6 +796,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(endpoint.id),
               zoneColor: getZoneColor(endpoint.id),
               location: getLocationName(endpoint.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(endpoint.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -853,6 +869,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(processor.id),
               zoneColor: getZoneColor(processor.id),
               location: getLocationName(processor.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(processor.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -922,6 +940,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
               zoneName: getZoneName(amplifier.id),
               zoneColor: getZoneColor(amplifier.id),
               location: getLocationName(amplifier.locationEntity.listeningAreaId) ?? "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(amplifier.id),
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -995,6 +1014,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     hardwareRack.locationEntity.listeningAreaId,
                   ) ??
                   "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(hardwareRack.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -1069,6 +1090,8 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                     networkSwitch.locationEntity.listeningAreaId,
                   ) ??
                   "Add location",
+              equipmentLocation: getEquipmentLocationForHardware(networkSwitch.id),
+
               isSelected: isSelected,
               onTap:
                   () => _projectViewModel.setSelectedDevice(
@@ -1146,7 +1169,7 @@ class _SchematicsListingviewState extends State<SchematicsListingview> {
                 zoneName: zoneData.name,
                 zoneId: zoneData.id,
                 bgColor: zoneData.color,
-                initiallyExpanded: false,
+                initiallyExpanded: true,
                 zoneCircuits: _projectViewModel.getCircuitsInZone(zoneData.id),
                 subZones: _projectViewModel.getSubZonesForZone(
                   parentZoneId: zoneData.id,

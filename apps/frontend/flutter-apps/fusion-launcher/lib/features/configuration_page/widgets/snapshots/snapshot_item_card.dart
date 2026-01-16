@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../core/constants/assets_constants.dart';
@@ -10,6 +11,8 @@ class SnapshotItemCard extends StatefulWidget {
   final bool isSelected;
   final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final VoidCallback? onDuplicate;
+  final void Function(String value, SnapshotsModel newSnapshot)? onRenameSave;
   final int index;
 
   const SnapshotItemCard({
@@ -19,7 +22,9 @@ class SnapshotItemCard extends StatefulWidget {
     required this.snapShotData,
     this.onDelete,
     this.onTap,
-    required this.index, // Add this
+    this.onDuplicate,
+    required this.index,
+    this.onRenameSave,
   });
 
   @override
@@ -84,16 +89,26 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                 fit: BoxFit.contain,
               ),
               const SizedBox(width: 12),
+
+              /// Snapshot name with edit capability
               Expanded(
-                child: FusionAppText(
-                  text: widget.snapShotData.name,
-                  maxLine: 1,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
+                child: TitleTextFieldSwitcher(
+                  value: widget.snapShotData.name,
+                  hintText: "Enter snapshot name",
+                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
+                  save: (String value) {
+                    if (value.isNotEmpty) {
+                      if (widget.onRenameSave != null) {
+                        final SnapshotsModel newSnapshot = widget.snapShotData.copyWith(name: value);
+                        widget.onRenameSave!.call(value, newSnapshot);
+                      }
+                    }
+                  },
                 ),
               ),
 
               const SizedBox(width: 8),
-              if (!widget.isDragging)
+              if (!widget.isDragging) ...<Widget>[
                 Tooltip(
                   message: 'Delete Snapshot',
                   child: GestureDetector(
@@ -126,6 +141,24 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                     ),
                   ),
                 ),
+                const SizedBox(width: 4),
+                Tooltip(
+                  message: 'Duplicate Snapshot',
+                  child: GestureDetector(
+                    onTap: () {
+                      if (widget.onDuplicate != null) {
+                        widget.onDuplicate!();
+                      }
+                    },
+                    child: const FusionImage.asset(
+                      Assets.duplicateIcon,
+                      width: 16,
+                      height: 16,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

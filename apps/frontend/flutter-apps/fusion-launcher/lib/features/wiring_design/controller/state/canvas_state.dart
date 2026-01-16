@@ -34,7 +34,7 @@ extension CanvasStateMutation on CanvasState {
 
   CanvasState recenter(Offset center, Size size) {
     return IdleCanvasState(
-      offset: -center + Offset(size.width, size.height),
+      offset: -center * scale + Offset(size.width, size.height),
       scale: scale,
     );
   }

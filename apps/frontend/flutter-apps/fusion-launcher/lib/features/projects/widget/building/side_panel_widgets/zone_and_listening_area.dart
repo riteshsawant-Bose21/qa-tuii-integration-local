@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
+import 'package:fusion_launcher/features/create_zone_popup/view/create_zone_popup.dart';
+import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
+import 'package:fusion_lib/models/project_entities/controller.dart';
 
 import '../../../../../core/widgets/color_selector_popup.dart';
 
 class ZoneAndListeningAreaPanel extends StatefulWidget {
-  const ZoneAndListeningAreaPanel({super.key});
+  final FloorCanvasController floorCanvasController;
+
+  const ZoneAndListeningAreaPanel({super.key, required this.floorCanvasController});
 
   @override
   ZoneAndListeningAreaPanelState createState() => ZoneAndListeningAreaPanelState();
@@ -18,6 +24,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
   final Set<String> _expandedListeningAreas = <String>{};
   final Set<String> _expandedSubZones = <String>{};
   final Set<String> _expandedCircuitSections = <String>{};
+  final ProjectViewModel projectViewModel = serviceLocator<ProjectViewModel>();
 
   @override
   void initState() {
@@ -127,22 +134,22 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
           GuideShowcaseWrapper(
             step: GuideShowCaseSteps.addZone,
             onHighlightedSpotTap: (TapDownDetails details) => _addNewZone(),
-            child: OutlinedButton(
-              onPressed: () {
-                _addNewZone();
-              },
-              style: OutlinedButton.styleFrom(
-                side: const BorderSide(color: Colors.black54),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                minimumSize: const Size(0, 32),
-              ),
-              child: const FusionAppText(
-                text: '+ Add Zone',
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black87,
+            child: CreateZonePopup(
+              isFromBuildingPage: true,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: Colors.grey, width: 1),
+                ),
+                child: const FusionAppText(
+                  text: '+ Add Zone',
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black87,
+                  ),
                 ),
               ),
             ),
@@ -265,6 +272,8 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
 
                     // Show individual circuits directly in this zone ONLY if there are no subzones
                     if (subZones.isEmpty) ..._buildZoneCircuits(zone),
+
+                    _buildListeningAreaSectionForZone(zoneId: zone.id),
                     const SizedBox(height: 2),
                   ],
                 ),
@@ -626,6 +635,107 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     );
   }
 
+  Widget _buildListeningAreaSectionForZone({String? zoneId, String? subZoneId}) {
+    if (zoneId == null && subZoneId == null) {
+      return const SizedBox.shrink();
+    }
+    final List<ListeningArea> listeningAreas =
+        subZoneId != null
+            ? serviceLocator<ProjectViewModel>().getListeningAreasInSubZone(subZoneId: subZoneId)
+            : serviceLocator<ProjectViewModel>().getListeningAreasForZone(
+              zoneId: zoneId!,
+            );
+
+    final List<HardwareComponent> allHardware = <HardwareComponent>[];
+
+    for (ListeningArea area in listeningAreas) {
+      final List<HardwareComponent> hardwareForArea =
+          serviceLocator<ProjectViewModel>().getHardwareForListeningArea(listeningAreaId: area.id).where((HardwareComponent hw) => hw is! Speaker).toList();
+      allHardware.addAll(hardwareForArea);
+    }
+
+    if (allHardware.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        // Expandable Speakers Section
+        if (allHardware.isNotEmpty) ...<Widget>[
+          ...allHardware.map(
+            (HardwareComponent hardware) {
+              final int index = allHardware.indexOf(hardware);
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, "listening_area_hardware_$index"),
+                child: _buildHardwareItem(hardware),
+              );
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildHardwareItem(HardwareComponent hardware) {
+    return BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        final bool isSelected = serviceLocator<ProjectViewModel>().currentSelectedHardwareId == hardware.id;
+
+        return Container(
+          margin: const EdgeInsets.only(left: 24, top: 2),
+          decoration: BoxDecoration(
+            color: isSelected ? Colors.grey[200] : Colors.transparent,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: InkWell(
+            onTap: () {
+              serviceLocator<ProjectViewModel>().setCurrentSelectedHardware(hardware.id);
+              serviceLocator<ProjectViewModel>().setCurrentSelectedListeningArea(null);
+            },
+            borderRadius: BorderRadius.circular(4),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                children: <Widget>[
+                  Image.asset(
+                    hardware.assetImagePath,
+                    width: 14,
+                    height: 14,
+                  ),
+                  const SizedBox(width: 6),
+
+                  Expanded(
+                    child: TitleTextFieldSwitcher(
+                      value: hardware.name,
+                      style: Theme.of(context).textTheme.bodySmall!.copyWith(
+                        fontSize: 11,
+                        fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                        color: Colors.grey[700],
+                      ),
+                      save: (String value) {
+                        if (value.isNotEmpty) {
+                          if (hardware is Source) {
+                            final HardwareComponent updatedHw = hardware.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: updatedHw);
+                          } else if (hardware is FusionController) {
+                            final HardwareComponent updatedHw = hardware.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: updatedHw);
+                          }
+                        }
+                      },
+                      hintText: 'Enter source name',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   /// Build individual circuits for a zone as expandable items
   List<Widget> _buildZoneCircuits(Zone zone) {
     final List<CircuitModel> circuits = _getZoneCircuits(zone.id);
@@ -915,14 +1025,31 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                       height: 14,
                     ),
                     const SizedBox(width: 6),
+                    // Expanded(
+                    //   child: FusionAppText(
+                    //     text: speaker.name,
+                    //     style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    //       fontSize: 10,
+                    //       fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
+                    //       color: Colors.black87,
+                    //     ),
+                    //   ),
+                    // ),
                     Expanded(
-                      child: FusionAppText(
-                        text: speaker.name,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      child: TitleTextFieldSwitcher(
+                        value: speaker.name,
+                        hintText: "Speaker Name",
+                        style: Theme.of(context).textTheme.bodySmall!.copyWith(
                           fontSize: 10,
                           fontWeight: isSelected ? FontWeight.w500 : FontWeight.w400,
                           color: Colors.black87,
                         ),
+                        save: (String value) {
+                          if (value.isNotEmpty) {
+                            final HardwareComponent hardware = speaker.copyWith(name: value);
+                            projectViewModel.updateHardware(hardware: hardware);
+                          }
+                        },
                       ),
                     ),
                     // Remove from circuit action
@@ -1186,6 +1313,7 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
     final CircuitModel newCircuit = CircuitModel(
       name: '${speaker.hardwareName} ${existingCircuits.length + 1}',
       speakerSKU: speaker.speakerSKU,
+      addedInBuildingPage: true,
     );
 
     // Add the circuit to the project
@@ -1391,6 +1519,11 @@ class ZoneAndListeningAreaPanelState extends State<ZoneAndListeningAreaPanel> wi
                   children: <Widget>[
                     // Show individual circuits in subzones
                     ..._buildSubZoneCircuits(subZone),
+
+                    Container(
+                      margin: const EdgeInsets.only(left: 24, top: 1, right: 12, bottom: 1),
+                      child: _buildListeningAreaSectionForZone(subZoneId: subZone.id),
+                    ),
                   ],
                 ),
                 secondChild: const SizedBox.shrink(),

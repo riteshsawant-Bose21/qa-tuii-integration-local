@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
+import 'package:fusion_launcher/core/service_locator.dart';
+import 'package:fusion_launcher/core/utils/broadcast_controllers.dart';
 import 'package:fusion_launcher/features/scheduling/view/widgets/calender_view.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/buttons/fusion_text_button.dart';
 import 'package:intl/intl.dart';
 
+import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../state/scheduler_state.dart';
 import '../state/timeline_state.dart';
 import '../viewmodel/scheduler_viewmodel.dart';
 import '../viewmodel/timeline_viewmodel.dart';
 import 'sections/scheduler_form.dart';
-import 'widgets/status_chip.dart';
 
 part 'sections/scheduler_section.dart';
 part 'sections/timeline_section.dart';
@@ -62,14 +64,17 @@ class _SchedulingPageState extends State<SchedulingPage> {
                     style: context.textTheme.titleLarge,
                   ),
                 ),
-                const StatusChip(),
+                // const StatusChip(),
                 const Spacer(),
                 // OutlinedButton(onPressed: () {}, child: const Text("Share")),
-                FusionOutlinedButton(label: "Share", onTap: () {}),
+                // FusionOutlinedButton(label: "Share", onTap: () {}),
                 BlocBuilder<SchedulerViewmodel, SchedulerState>(
                   builder: (BuildContext context, SchedulerState state) {
-                    return FusionButton(
-                      label: "Create",
+                    return InkWell(
+                      child: const Icon(
+                        Icons.add,
+                        color: Colors.grey,
+                      ),
                       onTap: () {
                         SchedulerForm.show(
                           context,
@@ -79,6 +84,7 @@ class _SchedulingPageState extends State<SchedulingPage> {
                     );
                   },
                 ),
+                const SizedBox(width: 10),
               ],
             ),
           ),

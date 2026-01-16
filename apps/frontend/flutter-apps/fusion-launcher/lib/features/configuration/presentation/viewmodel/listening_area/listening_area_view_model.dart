@@ -128,6 +128,24 @@ extension ListeningAreaViewModel on ProjectViewModel {
     }
   }
 
+  List<ListeningArea> getPendingListeningAreaToDraw({required String floorId}) {
+    try {
+      return projectManager.getPendingListeningAreaToDraw(floorId: floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get pending listening areas to draw for floor: $e");
+      return <ListeningArea>[];
+    }
+  }
+
+  List<ListeningArea> getAllDrawnListeningAreasForFloor({required String floorId}) {
+    try {
+      return projectManager.getAllDrawnListeningAreasForFloor(floorId: floorId);
+    } catch (e) {
+      FusionLogger.log(tag: LogTag.project, message: "Failed to get drawn listening areas for floor: $e");
+      return <ListeningArea>[];
+    }
+  }
+
   List<ListeningArea> getAvailableListeningAreasForSubZone({required String parentZoneId, String? subZoneId}) {
     try {
       return projectManager.getAvailableListeningAreasForSubZone(subZoneId: subZoneId, parentZoneId: parentZoneId);
