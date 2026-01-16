@@ -315,7 +315,7 @@ func (s *Service) AssignUserToProject(ctx context.Context, projectID, userEmail 
 	}
 
 	// Get user ID by email
-	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail, logger)
 	if err != nil {
 		return nil, err // This will return "user not found" from the database service
 	}
@@ -365,7 +365,7 @@ func (s *Service) RemoveUserFromProject(ctx context.Context, projectID, userEmai
 	}
 
 	// Get user ID by email
-	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail)
+	userID, err := s.dbService.GetUserIDByEmail(ctx, userEmail, logger)
 	if err != nil {
 		return nil, err // This will return "user not found" from the database service
 	}
@@ -508,8 +508,8 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string, userAu
 }
 
 // ProjectExists checks if a project exists.
-func (s *Service) ProjectExists(ctx context.Context, projectID string) (bool, error) {
-	return s.dbService.ProjectExists(ctx, projectID)
+func (s *Service) ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error) {
+	return s.dbService.ProjectExists(ctx, projectID, logger)
 }
 
 // IsUserAssigned checks if a user is assigned to a project.

@@ -9,6 +9,9 @@ type APIConfig struct {
 	APIHost     string
 	APIPort     string
 	SwaggerHost string
+	Mode        string
+	LogLevel    string
+	LogDir      string
 }
 
 // APIConfig retrieves the API configuration from the store.
@@ -27,15 +30,36 @@ func (s *Service) APIConfig() (*APIConfig, error) {
 		return nil, fmt.Errorf("failed to get Swagger host: %w", err)
 	}
 
+	mode, err := s.store.ReqString(keyReleaseMode)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get release mode: %w", err)
+	}
+
+	logLevel, err := s.store.ReqString(keyLogLevel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get log level: %w", err)
+	}
+
+	logDir, err := s.store.ReqString(keyLogDir)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get log directory: %w", err)
+	}
+
 	return &APIConfig{
 		APIHost:     apiHost,
 		APIPort:     apiPort,
 		SwaggerHost: swaggerHost,
+		Mode:        mode,
+		LogLevel:    logLevel,
+		LogDir:      logDir,
 	}, nil
 }
 
 const (
 	keyAPIHost     string = "API_HOST"
 	keyAPIPort     string = "API_PORT"
+	keyReleaseMode string = "RELEASE_MODE"
+	keyLogLevel    string = "LOG_LEVEL"
+	keyLogDir      string = "LOG_DIR"
 	keySwaggerHost string = "SWAGGER_HOST"
 )

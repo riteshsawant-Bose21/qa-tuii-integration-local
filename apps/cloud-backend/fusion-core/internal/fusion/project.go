@@ -22,6 +22,6 @@ type Project interface {
 	UnlockProject(ctx context.Context, projectID string, userAuth types.UserAuthorizationResponse, logger *zap.Logger) error
 	GetProjectLockUserID(ctx context.Context, projectID string) (isLocked bool, lockedByUserID string, err error)
 	GetUserEmailByID(ctx context.Context, userID string) (string, error)
-	ProjectExists(ctx context.Context, projectID string) (bool, error)
+	ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error)
 	IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error)
 }

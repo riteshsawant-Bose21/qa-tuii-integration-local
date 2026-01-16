@@ -11,7 +11,8 @@ import (
 
 const RequestIDKey = "requestID"
 
-func RequestLoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
+// RequestLoggerMiddleware logs HTTP requests to the audit log
+func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// Generate a unique request ID
 		requestID := uuid.New().String()
@@ -26,11 +27,11 @@ func RequestLoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 		// Store request ID in context
 		c.Set(RequestIDKey, requestID)
 
-		// Create a logger with the request ID field
-		requestLogger := logger.With(zap.String("requestID", requestID))
+		// Create an audit logger with the request ID field
+		requestAuditLogger := auditLogger.With(zap.String("requestID", requestID))
 
-		// Store the logger in context for use in handlers
-		c.Set("logger", requestLogger)
+		// Store the audit logger in context for audit-related logging
+		c.Set("auditLogger", requestAuditLogger)
 
 		startTime := time.Now()
 
@@ -42,8 +43,9 @@ func RequestLoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 		path := c.Request.URL.Path
 		statusCode := c.Writer.Status()
 
-		// Build log fields
+		// Build audit log fields for request/response tracking
 		logFields := []zap.Field{
+			zap.String("type", "http_request"),
 			zap.String("method", method),
 			zap.String("path", path),
 			zap.String("clientIP", clientIP),
@@ -52,7 +54,7 @@ func RequestLoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			zap.Duration("duration", duration),
 		}
 
-		// Add user fields only if user is not nil
+		// Add user fields only if user is authenticated
 		if authExists {
 			logFields = append(logFields,
 				zap.String("userEmail", user.User.Email),
@@ -61,6 +63,26 @@ func RequestLoggerMiddleware(logger *zap.Logger) gin.HandlerFunc {
 			)
 		}
 
-		requestLogger.Info("Request completed", logFields...)
+		requestAuditLogger.Info("HTTP request completed", logFields...)
+	}
+}
+
+// ApplicationLoggerMiddleware makes the application logger available in gin context
+func ApplicationLoggerMiddleware(appLogger *zap.Logger) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get request ID from context (set by RequestLoggerMiddleware)
+		requestID, exists := c.Get(RequestIDKey)
+		if !exists {
+			requestID = uuid.New().String()
+		}
+
+		// Create application logger with request ID for correlation
+		requestAppLogger := appLogger.With(zap.String("requestID", requestID.(string)))
+
+		// Store the application logger in context for general application logging
+		c.Set("logger", requestAppLogger)
+		c.Set("appLogger", requestAppLogger)
+
+		c.Next()
 	}
 }

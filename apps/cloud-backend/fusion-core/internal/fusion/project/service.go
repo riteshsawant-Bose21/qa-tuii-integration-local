@@ -28,9 +28,9 @@ type DatabaseService interface {
 	AssignUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error
 	RemoveUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error
 	IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error)
-	ProjectExists(ctx context.Context, projectID string) (bool, error)
-	UserExists(ctx context.Context, userID string) (bool, error)
-	GetUserIDByEmail(ctx context.Context, email string) (string, error)
+	ProjectExists(ctx context.Context, projectID string, logger *zap.Logger) (bool, error)
+	UserExists(ctx context.Context, userID string, logger *zap.Logger) (bool, error)
+	GetUserIDByEmail(ctx context.Context, email string, logger *zap.Logger) (string, error)
 	StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error
 	UnstarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error
 	ArchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error
