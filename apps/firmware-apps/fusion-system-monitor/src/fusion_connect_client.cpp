@@ -58,7 +58,9 @@ enum fusion_cn_ctrl_cmd {
     FUSION_CN_CTRL_CMD_REMOVE_STREAM,
     FUSION_CN_CTRL_CMD_GET_METRICS,
     FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR,
-    FUSION_CN_CTRL_CMD_GET_PHC_STATUS
+    FUSION_CN_CTRL_CMD_GET_PHC_STATUS,
+    FUSION_CN_CTRL_CMD_SET_DEBUG,
+    FUSION_CN_CTRL_CMD_SET_ETH_IFACE
 };
 
 enum mgr_start_errno {
@@ -479,6 +481,26 @@ static bool nl_get_phc_status(NetlinkClient& c, fc_get_phc_status_reply* out) {
     return true;
 }
 
+static bool nl_set_debug(NetlinkClient& c, bool enable) {
+    fusion_cn_ctrl_msg reply{};
+    uint8_t v = enable ? 1 : 0;
+    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_DEBUG, &v, sizeof(v), &reply)) return false;
+    if (reply.err != 0) SPDLOG_ERROR("SET_DEBUG({}) err={}", (int)enable, reply.err);
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
+static bool nl_set_eth_iface(NetlinkClient& c, const std::string& iface) {
+    fusion_cn_ctrl_msg reply{};
+    if (iface.empty()) return false;
+    std::array<char, IFNAMSIZ> buf{};
+    std::strncpy(buf.data(), iface.c_str(), buf.size() - 1);
+    if (!c.send_message(FUSION_CN_CTRL_CMD_SET_ETH_IFACE, buf.data(), buf.size(), &reply)) return false;
+    if (reply.err != 0) SPDLOG_ERROR("SET_ETH_IFACE({}) err={}", iface, reply.err);
+    if (reply.data) free(reply.data);
+    return reply.err == 0;
+}
+
 static bool read_phc_ns(uint64_t *out_ns)
 {
     static int ptp_fd = -1;
@@ -679,9 +701,12 @@ private:
     std::map<std::string, fusion_cn_stream_config> fusion_connect_stream_map;
     std::map<std::string, fusion_cn_stream_config> aes67_stream_map;
     std::map<std::string, struct fc_stream_state> pending_streams;
-    std::string network_interface;
+    std::string enet_iface;
+    int period_ms;
+    bool debug_enabled;
+    bool debug_sent;
+    bool iface_sent;
     SAPAnnouncer sap_announcer;
-    uint32_t announce_counter;
 
     std::string audio_streams_update;
     bool ptp_sync_good;
@@ -693,15 +718,16 @@ private:
     std::chrono::steady_clock::time_point ptp_last_role_probe;
     std::chrono::steady_clock::time_point ptp_last_anchor;
     std::chrono::steady_clock::time_point ptp_last_status_poll;
-    std::chrono::steady_clock::time_point ip_last_probe;
-    bool ip_missing_logged;
+    std::chrono::steady_clock::time_point mgr_last_start_attempt;
+    int mgr_start_failures;
 
     bool is_source_stream(uint64_t stream_handle);
     int create_stream(fusion_cn_stream_config& config);
     int remove_stream(uint64_t stream_handle);
     void join_multicast_group(uint32_t multicast_ip);
     void audio_streams_update_func();
-    bool refresh_system_ip();
+    void maybe_start_manager();
+    void maybe_set_debug();
     void update_ptp_state();
     void maybe_set_phc_anchor();
 
@@ -712,19 +738,25 @@ MODULE_REGISTER(FusionConnectClient, "fusion_connect_client");
 
 FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &configuration)
     : bosepro::Module(configuration), mgr_started(false), device_id(""),
-      network_interface("lan1"), sap_announcer(""), announce_counter(0),
+      enet_iface("lan1"), period_ms(1000), debug_enabled(false),
+      debug_sent(false), iface_sent(false), sap_announcer(""),
       ptp_sync_good(false), ptp_anchor_pending(true), ptp_good_streak(0),
-      ptp_role_flag(-1), ptp_false_streak(0), ip_missing_logged(false) {
-    system_ip = get_system_ip(network_interface, false);
-    if (!system_ip.empty()) {
-        sap_announcer.setSystemIp(system_ip);
-    } else {
-        SPDLOG_ERROR("No valid system IP found at startup; will retry");
-    }
+      ptp_role_flag(-1), ptp_false_streak(0), mgr_start_failures(0) {
+    system_ip = "";
 
     if (!client.is_valid()) {
         SPDLOG_ERROR("Failed to initialize netlink client");
         return;
+    }
+
+    get_property("period_ms", period_ms);
+    get_property("enet_iface", enet_iface);
+    get_property("debug", debug_enabled);
+    if (period_ms <= 0) {
+        period_ms = 1000;
+    }
+    if (enet_iface.empty()) {
+        enet_iface = "lan1";
     }
 
     assign_parameter("audio_streams_update", &audio_streams_update, 
@@ -734,7 +766,7 @@ FusionConnectClient::FusionConnectClient(const bosepro::BlockConfiguration &conf
     ptp_last_role_probe = ptp_last_poll;
     ptp_last_anchor = ptp_last_poll - std::chrono::seconds(60);
     ptp_last_status_poll = ptp_last_poll - std::chrono::seconds(1);
-    ip_last_probe = ptp_last_poll - std::chrono::seconds(1);
+    mgr_last_start_attempt = ptp_last_poll - std::chrono::seconds(2);
 }
 
 static bool is_source_stream_by_name(const char *name) {
@@ -826,9 +858,9 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     ifa->ifa_flags     = 0;
     ifa->ifa_scope     = 0;
 
-    int ifindex = if_nametoindex(network_interface.c_str());
+    int ifindex = if_nametoindex(enet_iface.c_str());
     if (!ifindex) {
-        SPDLOG_ERROR("Failed to get interface index for {}: {}", network_interface, strerror(errno));
+        SPDLOG_ERROR("Failed to get interface index for {}: {}", enet_iface, strerror(errno));
         return;
     }
     ifa->ifa_index = ifindex;
@@ -855,7 +887,7 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     sockaddr_nl nladdr{};
     nladdr.nl_family = AF_NETLINK;
 
-    SPDLOG_DEBUG("Joining multicast group {} on interface {}", ip_to_string(multicast_ip), network_interface);
+    SPDLOG_DEBUG("Joining multicast group {} on interface {}", ip_to_string(multicast_ip), enet_iface);
 
     if (sendto(sock, buf.data(), nlh->nlmsg_len, 0, reinterpret_cast<sockaddr*>(&nladdr), sizeof(nladdr)) < 0) {
         SPDLOG_ERROR("Failed to send netlink message for IGMP join: {}", strerror(errno));
@@ -864,7 +896,7 @@ void FusionConnectClient::join_multicast_group(uint32_t multicast_ip) {
     }
 
     close(sock);
-    SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), network_interface);
+    SPDLOG_INFO("Successfully joined multicast group {} on interface {}", ip_to_string(multicast_ip), enet_iface);
 }
 
 void FusionConnectClient::audio_streams_update_func() {
@@ -876,7 +908,7 @@ void FusionConnectClient::audio_streams_update_func() {
     SPDLOG_DEBUG("Received audio_streams_update: {}", audio_streams_update);
 
     // --- Crucial pre-reqs -----------------------------------------------------
-    if (!refresh_system_ip()) {
+    if (system_ip.empty()) {
         SPDLOG_ERROR("Cannot process audio_streams_update: no system IP yet");
         return;
     }
@@ -1158,27 +1190,47 @@ void FusionConnectClient::audio_streams_update_func() {
     }
 }
 
-bool FusionConnectClient::refresh_system_ip()
+void FusionConnectClient::maybe_start_manager()
 {
-    if (!system_ip.empty()) return true;
-
     const auto now = std::chrono::steady_clock::now();
-    if (now - ip_last_probe < std::chrono::seconds(1)) return false;
-    ip_last_probe = now;
+    if (now - mgr_last_start_attempt < std::chrono::seconds(1)) return;
+    mgr_last_start_attempt = now;
 
-    system_ip = get_system_ip(network_interface, false);
-    if (system_ip.empty()) {
-        if (!ip_missing_logged) {
-            SPDLOG_ERROR("No valid system IP found; retrying");
-            ip_missing_logged = true;
+    if (!iface_sent) {
+        if (!nl_set_eth_iface(client, enet_iface)) {
+            SPDLOG_ERROR("Failed to set ETH iface '{}' before manager start", enet_iface);
+            return;
         }
-        return false;
+        iface_sent = true;
     }
 
-    sap_announcer.setSystemIp(system_ip);
-    ip_missing_logged = false;
-    SPDLOG_INFO("Detected system IP: {}", system_ip);
-    return true;
+    fusion_cn_ctrl_msg reply{};
+    if (!client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
+        mgr_start_failures++;
+        SPDLOG_ERROR("FC manager start: netlink send failed (attempt {})", mgr_start_failures);
+        return;
+    }
+
+    if (reply.err == MGR_START_OK || reply.err == -MGR_START_ERRNO_RUNNING) {
+        SPDLOG_INFO("FC manager started (err={})", reply.err);
+        mgr_started = true;
+        mgr_start_failures = 0;
+    } else {
+        mgr_start_failures++;
+        SPDLOG_ERROR("Failed to start FC manager: err={} (attempt {})", reply.err, mgr_start_failures);
+    }
+
+    if (reply.data) free(reply.data);
+}
+
+void FusionConnectClient::maybe_set_debug()
+{
+    if (debug_sent) return;
+    if (!nl_set_debug(client, debug_enabled)) {
+        SPDLOG_ERROR("Failed to set debug to {}", debug_enabled ? "true" : "false");
+        return;
+    }
+    debug_sent = true;
 }
 
 void FusionConnectClient::update_ptp_state()
@@ -1187,7 +1239,7 @@ void FusionConnectClient::update_ptp_state()
     constexpr long long OFFSET_OK_NS = 1000; // 1 us window
     const auto now = std::chrono::steady_clock::now();
 
-    if (now - ptp_last_poll < std::chrono::milliseconds(500)) return;
+    if (now - ptp_last_poll < std::chrono::milliseconds(period_ms)) return;
     ptp_last_poll = now;
 
     bool gm_present = false;
@@ -1281,22 +1333,19 @@ void FusionConnectClient::maybe_set_phc_anchor()
 }
 
 void FusionConnectClient::process() { 
-    if (!mgr_started) {
-        fusion_cn_ctrl_msg reply{};
-        if (client.send_message(FUSION_CN_CTRL_CMD_START_MANAGER, nullptr, 0, &reply)) {
-            if (reply.err == MGR_START_OK) {
-                SPDLOG_DEBUG("Successfully started FC manager");
-                mgr_started = true;
-            } else {
-                SPDLOG_ERROR("Failed to start FC manager: err={}", reply.err);
-            }
-        }
-        if (reply.data) free(reply.data);
-
-        return;
+    if (system_ip.empty()) {
+        system_ip = get_system_ip(enet_iface, false);
+        if (system_ip.empty()) return;
+        sap_announcer.setSystemIp(system_ip);
+        SPDLOG_INFO("Detected system IP: {}", system_ip);
     }
 
-    const bool have_ip = refresh_system_ip();
+    if (!mgr_started) {
+        maybe_start_manager();
+        if (!mgr_started) return;
+    }
+
+    maybe_set_debug();
     update_ptp_state();
     maybe_set_phc_anchor();
     
@@ -1366,9 +1415,11 @@ void FusionConnectClient::process() {
         }
     }
 
-    // Metrics every second
-    static uint32_t metrics_tick = 0;
-    if ((metrics_tick++ % 5) == 0) {
+    // Metrics every second (derived from period_ms)
+    static uint32_t metrics_elapsed_ms = 0;
+    metrics_elapsed_ms += static_cast<uint32_t>(period_ms);
+    if (metrics_elapsed_ms >= 1000) {
+        metrics_elapsed_ms -= 1000;
         std::vector<fusion_cn_metrics_record> recs;
         if (get_all_metrics(client, &recs)) {
             for (const auto &r : recs) {
@@ -1421,22 +1472,23 @@ void FusionConnectClient::process() {
         }
     }
 
-    // SAP announcements every 30 seconds
-    if (have_ip && (announce_counter++ % 30 == 0)) {
+    // SAP announcements every 30 seconds (derived from period_ms)
+    static uint32_t sap_elapsed_ms = 0;
+    sap_elapsed_ms += static_cast<uint32_t>(period_ms);
+    if (sap_elapsed_ms >= 30000) {
+        sap_elapsed_ms -= 30000;
         sap_announcer.announceAll();
     }
     // Handle deletion packets
-    if (have_ip) {
-        std::vector<std::string> to_delete;
-        for (const auto& pair : sap_announcer.getAnnouncements()) {
-            if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
-                sap_announcer.sendAnnouncement(pair.second);
-                to_delete.push_back(pair.first);
-            }
+    std::vector<std::string> to_delete;
+    for (const auto& pair : sap_announcer.getAnnouncements()) {
+        if (pair.second.is_deleted && pair.second.num_delete_pending > 0) {
+            sap_announcer.sendAnnouncement(pair.second);
+            to_delete.push_back(pair.first);
         }
-        for (const auto& stream_name : to_delete) {
-            sap_announcer.handleDeletion(stream_name);
-        }
+    }
+    for (const auto& stream_name : to_delete) {
+        sap_announcer.handleDeletion(stream_name);
     }
 }
 

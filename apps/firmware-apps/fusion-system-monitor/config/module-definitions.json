@@ -135,6 +135,23 @@
         },
         {
             "name": "fusion_connect_client",
+            "properties": [
+                {
+                    "name": "period_ms",
+                    "value_type": "integer",
+                    "default_value": 500
+                },
+                {
+                    "name": "enet_iface",
+                    "value_type": "string",
+                    "default_value": "lan1"
+                },
+                {
+                    "name": "debug",
+                    "value_type": "bool",
+                    "default_value": false
+                }
+            ],
             "parameters": [
                 {
                     "name": "audio_streams_update",

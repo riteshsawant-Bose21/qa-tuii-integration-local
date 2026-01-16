@@ -85,12 +85,16 @@
         {
             "name": "fusion_connect",
             "property_settings": [
-                { "name": "period_ms", "value": 100 }
+                { "name": "period_ms", "value": 500 }
             ],
             "blocks": [
                 {
                     "name": "fusion_connect_client",
                     "module": "fusion_connect_client",
+                    "property_settings": [
+                        { "name": "period_ms", "value": 500 },
+                        { "name": "enet_iface", "value": "lan1" }
+                    ],
                     "parameters": [
                         { "name": "audio_streams_update" }
                     ]

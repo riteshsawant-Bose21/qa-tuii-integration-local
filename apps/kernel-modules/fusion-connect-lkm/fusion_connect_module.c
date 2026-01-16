@@ -1,36 +1,59 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
+#include <linux/platform_device.h>
+#include <linux/of.h>
+#include <linux/if.h>
 #include "fusion_connect_manager.h"
 
-static char *eth_iface = "lan1";
-module_param(eth_iface, charp, 0444);
-MODULE_PARM_DESC(eth_iface, "Ethernet interface for FusionConnect traffic (default: lan1)");
+#define FUSION_CN_DEFAULT_IFACE "lan1"
 
-static bool debug = false;
-module_param(debug, bool, 0444);
-MODULE_PARM_DESC(debug, "Turn on debug printks (default: false)");
-
-static struct fusion_cn_manager mgr;
-
-static int __init fusion_cn_init(void)
+static int fusion_cn_probe(struct platform_device *pdev)
 {
-  int ret;
-  strscpy(mgr.netfilter.iface_name, eth_iface, IFNAMSIZ);
-  mgr.debug = mgr.rtp.debug = debug;
+    struct fusion_cn_manager *mgr;
+    int ret;
 
-  ret = fusion_cn_mgr_init(&mgr);
-  if (ret) printk(KERN_ERR"fusion_cn: Module init failed: %d\n", ret);
-  
-  return ret;
+    mgr = devm_kzalloc(&pdev->dev, sizeof(*mgr), GFP_KERNEL);
+    if (!mgr)
+        return -ENOMEM;
+
+    mgr->pdev = pdev;
+    strscpy(mgr->netfilter.iface_name, FUSION_CN_DEFAULT_IFACE, IFNAMSIZ);
+    mgr->debug = false;
+    mgr->rtp.debug = false;
+
+    ret = fusion_cn_mgr_init(mgr);
+    if (ret) {
+        dev_err(&pdev->dev, "fusion_cn init failed: %d\n", ret);
+        return ret;
+    }
+
+    platform_set_drvdata(pdev, mgr);
+    return 0;
 }
 
-static void __exit fusion_cn_exit(void)
+static void fusion_cn_remove(struct platform_device *pdev)
 {
-  fusion_cn_mgr_destroy(&mgr);
+    struct fusion_cn_manager *mgr = platform_get_drvdata(pdev);
+
+    if (mgr)
+        fusion_cn_mgr_destroy(mgr);
 }
 
-module_init(fusion_cn_init);
-module_exit(fusion_cn_exit);
+static const struct of_device_id fusion_cn_of_match[] = {
+    { .compatible = "bosepro,fusion-connect" },
+    { }
+};
+MODULE_DEVICE_TABLE(of, fusion_cn_of_match);
+
+static struct platform_driver fusion_cn_driver = {
+    .probe = fusion_cn_probe,
+    .remove = fusion_cn_remove,
+    .driver = {
+        .name = "fusion-connect",
+        .of_match_table = fusion_cn_of_match,
+    },
+};
+module_platform_driver(fusion_cn_driver);
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Bose Professional");

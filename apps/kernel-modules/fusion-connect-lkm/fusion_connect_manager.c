@@ -13,6 +13,7 @@
 #include <linux/smp.h>
 #include <linux/math64.h>
 #include <linux/netlink.h>
+#include <linux/if.h>
 #include <net/netlink.h>
 #include "fusion_connect_manager.h"
 #include "fusion_connect_metrics.h"
@@ -918,6 +919,48 @@ static int handle_get_phc_status(struct fusion_cn_manager *mgr,
     return 0;
 }
 
+static int handle_set_debug(struct fusion_cn_manager *mgr,
+                            struct fusion_cn_ctrl_msg *msg,
+                            struct fusion_cn_ctrl_msg *reply)
+{
+    u8 enable;
+
+    if (msg->data_size != sizeof(enable))
+        return reply->err = -EINVAL;
+
+    enable = *(const u8 *)msg->data;
+    mgr->debug = !!enable;
+    mgr->rtp.debug = mgr->debug;
+    if (mgr->alsa.alsa_chip)
+        mgr->alsa.alsa_chip->debug = mgr->debug;
+
+    reply->err = 0;
+    return 0;
+}
+
+static int handle_set_eth_iface(struct fusion_cn_manager *mgr,
+                                struct fusion_cn_ctrl_msg *msg,
+                                struct fusion_cn_ctrl_msg *reply)
+{
+    char iface[IFNAMSIZ];
+
+    if (!msg->data || msg->data_size <= 0 || msg->data_size > IFNAMSIZ)
+        return reply->err = -EINVAL;
+
+    if (atomic_read(&mgr->state.is_started))
+        return reply->err = -EBUSY;
+
+    memset(iface, 0, sizeof(iface));
+    memcpy(iface, msg->data, msg->data_size);
+
+    if (iface[0] == '\0')
+        return reply->err = -EINVAL;
+
+    strscpy(mgr->netfilter.iface_name, iface, IFNAMSIZ);
+    reply->err = 0;
+    return 0;
+}
+
 static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_START_MANAGER, handle_start },
     { FUSION_CN_CTRL_CMD_STOP_MANAGER,  handle_stop },
@@ -926,6 +969,8 @@ static const struct message_handler_entry message_handlers[] = {
     { FUSION_CN_CTRL_CMD_GET_METRICS,   handle_get_metrics },
     { FUSION_CN_CTRL_CMD_SET_PHC_ANCHOR, handle_set_phc_anchor },
     { FUSION_CN_CTRL_CMD_GET_PHC_STATUS, handle_get_phc_status },
+    { FUSION_CN_CTRL_CMD_SET_DEBUG, handle_set_debug },
+    { FUSION_CN_CTRL_CMD_SET_ETH_IFACE, handle_set_eth_iface },
     { 0, NULL }
 };
 
