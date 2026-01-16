@@ -17,16 +17,6 @@ func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 		// Generate a unique request ID
 		requestID := uuid.New().String()
 
-		var user *types.UserAuthorizationResponse
-
-		userAuth, authExists := c.Get("user_auth")
-		if authExists {
-			user = userAuth.(*types.UserAuthorizationResponse)
-		}
-
-		// Store request ID in context
-		c.Set(RequestIDKey, requestID)
-
 		// Create an audit logger with the request ID field
 		requestAuditLogger := auditLogger.With(zap.String("requestID", requestID))
 
@@ -36,6 +26,16 @@ func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 		startTime := time.Now()
 
 		c.Next()
+
+		var user *types.UserAuthorizationResponse
+
+		userAuth, authExists := c.Get("user_auth")
+		if authExists {
+			user = userAuth.(*types.UserAuthorizationResponse)
+		}
+
+		// Store request ID in context
+		c.Set(RequestIDKey, requestID)
 
 		duration := time.Since(startTime)
 		clientIP := c.ClientIP()
