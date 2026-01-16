@@ -18,17 +18,17 @@ import (
 )
 
 const (
-	testProjectID          = "123e4567-e89b-12d3-a456-426614174000"
-	testProjectName        = "Test Project"
-	testProjectDesc        = "Test Description"
-	testProjectVenue       = "Test Venue"
-	testProjectEnvType     = types.EnvironmentTypeIndoor
-	testProjectPhase       = types.ProjectPhaseProposal
-	testProjectApp         = "Test App"
-	testProjectAccountID   = "123"
-	testUserID1            = "user-123"
-	testUpdateProjectStmt  = "UPDATE \"project\""
-	testNonExistentID      = "non-existent"
+	testProjectID         = "123e4567-e89b-12d3-a456-426614174000"
+	testProjectName       = "Test Project"
+	testProjectDesc       = "Test Description"
+	testProjectVenue      = "Test Venue"
+	testProjectEnvType    = types.EnvironmentTypeIndoor
+	testProjectPhase      = types.ProjectPhaseProposal
+	testProjectApp        = "Test App"
+	testProjectAccountID  = "123"
+	testUserID1           = "user-123"
+	testUpdateProjectStmt = "UPDATE \"project\""
+	testNonExistentID     = "non-existent"
 )
 
 func setupTestDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock, *Service) {
@@ -101,7 +101,8 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnRows(returnRows)
 
-		id, err := service.Insert(ctx, project, testProjectAccountID, tx)
+		logger, _ := log.NewProduction()
+		id, err := service.Insert(ctx, project, testProjectAccountID, tx, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.Equal(t, testProjectID, id)
 
@@ -133,7 +134,8 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnRows(returnRows)
 
-		id, err := service.Insert(ctx, project, testProjectAccountID, tx)
+		logger, _ := log.NewProduction()
+		id, err := service.Insert(ctx, project, testProjectAccountID, tx, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.Equal(t, projectID, id)
 
@@ -144,8 +146,9 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectBegin()
 		tx, err := db.BeginTx(ctx, nil)
 		require.NoError(t, err)
+		logger, _ := log.NewProduction()
 		assert.Panics(t, func() {
-			_, _ = service.Insert(ctx, nil, testProjectAccountID, tx)
+			_, _ = service.Insert(ctx, nil, testProjectAccountID, tx, logger.JobSyncLog())
 		})
 	})
 
@@ -170,7 +173,8 @@ func TestServiceInsert(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project"`).
 			WillReturnError(assert.AnError)
 
-		id, err := service.Insert(ctx, project, testProjectAccountID, tx)
+		logger, _ := log.NewProduction()
+		id, err := service.Insert(ctx, project, testProjectAccountID, tx, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Empty(t, id)
 		assert.Contains(t, err.Error(), "failed to insert project")
@@ -223,7 +227,8 @@ func TestServiceSelectAll(t *testing.T) {
 		)
 		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN app_user u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
 
-		projects, err := service.SelectAll(ctx, queryParams, userAuth)
+		logger, _ := log.NewProduction()
+		projects, err := service.SelectAll(ctx, queryParams, userAuth, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.Len(t, projects, 1)
 		assert.Equal(t, testProjectID, projects[0].ID)
@@ -263,7 +268,8 @@ func TestServiceSelectAll(t *testing.T) {
 		)
 		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN app_user u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(projectRows)
 
-		projects, err := service.SelectAll(ctx, queryParams, userAuth)
+		logger, _ := log.NewProduction()
+		projects, err := service.SelectAll(ctx, queryParams, userAuth, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.Len(t, projects, 1)
 		assert.Equal(t, testProjectID, projects[0].ID)
@@ -296,7 +302,8 @@ func TestServiceSelectAll(t *testing.T) {
 		})
 		mock.ExpectQuery(`SELECT p\.id, p\.name, p\.description, p\.venue, p\.environment_type, p\.project_phase, p\.application, p\.budget_amount, p\.currency, p\.is_archived, p\.is_deleted, p\.locked_by_user_id, p\.created_at, p\.updated_at, pu\.is_starred, u\.email as locked_by_user_email FROM project p INNER JOIN project_user pu ON p\.id = pu\.project_id LEFT JOIN app_user u ON p\.locked_by_user_id = u\.id WHERE pu\.user_id = \$1 AND p\.is_archived = \$2 AND p\.is_deleted = \$3 ORDER BY p\.created_at ASC`).WillReturnRows(emptyRows)
 
-		projects, err := service.SelectAll(ctx, queryParams, userAuth)
+		logger, _ := log.NewProduction()
+		projects, err := service.SelectAll(ctx, queryParams, userAuth, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.Len(t, projects, 0)
 	})
@@ -325,7 +332,8 @@ func TestServiceGetProjectByID(t *testing.T) {
 
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).WillReturnRows(rows)
 
-		project, err := service.GetProjectByID(ctx, testProjectID)
+		logger, _ := log.NewProduction()
+		project, err := service.GetProjectByID(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NotNil(t, project)
 		assert.Equal(t, testProjectID, project.ID)
@@ -334,7 +342,8 @@ func TestServiceGetProjectByID(t *testing.T) {
 	t.Run("returns error when project not found", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).WillReturnError(sql.ErrNoRows)
 
-		project, err := service.GetProjectByID(ctx, testNonExistentID)
+		logger, _ := log.NewProduction()
+		project, err := service.GetProjectByID(ctx, testNonExistentID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Nil(t, project)
 		assert.Contains(t, err.Error(), "project not found")
@@ -343,7 +352,8 @@ func TestServiceGetProjectByID(t *testing.T) {
 	t.Run("returns error on database error", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).WillReturnError(assert.AnError)
 
-		project, err := service.GetProjectByID(ctx, testProjectID)
+		logger, _ := log.NewProduction()
+		project, err := service.GetProjectByID(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Nil(t, project)
 		assert.Contains(t, err.Error(), "failed to get project")
@@ -387,7 +397,8 @@ func TestServiceUpdate(t *testing.T) {
 
 		mock.ExpectExec(testUpdateProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.Update(ctx, projectRow, updateReq)
+		logger, _ := log.NewProduction()
+		err := service.Update(ctx, projectRow, updateReq, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -400,7 +411,8 @@ func TestServiceUpdate(t *testing.T) {
 
 		mock.ExpectExec(testUpdateProjectStmt).WillReturnError(sql.ErrNoRows)
 
-		err := service.Update(ctx, projectRow, &types.ProjectUpdateRequest{})
+		logger, _ := log.NewProduction()
+		err := service.Update(ctx, projectRow, &types.ProjectUpdateRequest{}, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 }
@@ -425,7 +437,8 @@ func TestServiceDelete(t *testing.T) {
 
 		mock.ExpectExec(testUpdateProjectStmt).WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.Delete(ctx, projectRow)
+		logger, _ := log.NewProduction()
+		err := service.Delete(ctx, projectRow, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -437,7 +450,8 @@ func TestServiceDelete(t *testing.T) {
 
 		mock.ExpectExec(testUpdateProjectStmt).WillReturnError(sql.ErrNoRows)
 
-		err := service.Delete(ctx, projectRow)
+		logger, _ := log.NewProduction()
+		err := service.Delete(ctx, projectRow, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -449,7 +463,8 @@ func TestServiceDelete(t *testing.T) {
 
 		mock.ExpectExec(testUpdateProjectStmt).WillReturnError(assert.AnError)
 
-		err := service.Delete(ctx, projectRow)
+		logger, _ := log.NewProduction()
+		err := service.Delete(ctx, projectRow, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to delete project")
 	})
@@ -469,7 +484,8 @@ func TestService_ArchiveUnarchiveProject(t *testing.T) {
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.ArchiveProject(ctx, testProjectID)
+		logger, _ := log.NewProduction()
+		err := service.ArchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -482,7 +498,8 @@ func TestService_ArchiveUnarchiveProject(t *testing.T) {
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnResult(sqlmock.NewResult(1, 1))
 
-		err := service.UnarchiveProject(ctx, testProjectID)
+		logger, _ := log.NewProduction()
+		err := service.UnarchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -495,7 +512,8 @@ func TestService_ArchiveUnarchiveProject(t *testing.T) {
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnError(errors.New("update failed"))
 
-		err := service.ArchiveProject(ctx, testProjectID)
+		logger, _ := log.NewProduction()
+		err := service.ArchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -508,7 +526,8 @@ func TestService_ArchiveUnarchiveProject(t *testing.T) {
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnError(errors.New("update failed"))
 
-		err := service.UnarchiveProject(ctx, testProjectID)
+		logger, _ := log.NewProduction()
+		err := service.UnarchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -521,12 +540,13 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	ctx := context.Background()
 	testUserID := "user-123"
 	testEmail := "user@example.com"
+	logger, _ := log.NewProduction()
 
 	t.Run("assign user success", func(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "is_starred"}).
 				AddRow(1, false))
-		err := service.AssignUser(ctx, testProjectID, testUserID)
+		err := service.AssignUser(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -534,7 +554,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("assign user duplicate key ignored", func(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project_user"`).
 			WillReturnError(errors.New("duplicate key value violates unique constraint"))
-		err := service.AssignUser(ctx, testProjectID, testUserID)
+		err := service.AssignUser(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -542,7 +562,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("remove user success", func(t *testing.T) {
 		mock.ExpectExec(`DELETE FROM "project_user"`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
-		err := service.RemoveUser(ctx, testProjectID, testUserID)
+		err := service.RemoveUser(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.NoError(t, mock.ExpectationsWereMet())
 	})
@@ -550,7 +570,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("is user assigned true", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "project_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(1))
-		exists, err := service.IsUserAssigned(ctx, testProjectID, testUserID)
+		exists, err := service.IsUserAssigned(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.True(t, exists)
 	})
@@ -558,7 +578,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("is user assigned false", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "project_user"`).
 			WillReturnRows(sqlmock.NewRows([]string{"count"}).AddRow(0))
-		exists, err := service.IsUserAssigned(ctx, testProjectID, testUserID)
+		exists, err := service.IsUserAssigned(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 		assert.False(t, exists)
 	})
@@ -622,7 +642,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(1, testProjectID, testUserID, false, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project_user"`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
-		err := service.StarProject(ctx, testProjectID, testUserID)
+		err := service.StarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -633,7 +653,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(1, testProjectID, testUserID, true, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project_user"`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
-		err := service.UnstarProject(ctx, testProjectID, testUserID)
+		err := service.UnstarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -644,7 +664,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, nil, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
-		err := service.LockProject(ctx, testProjectID, testUserID)
+		err := service.LockProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -655,7 +675,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, testUserID, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnResult(sqlmock.NewResult(0, 1))
-		err := service.UnlockProject(ctx, testProjectID)
+		err := service.UnlockProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -696,21 +716,21 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 	t.Run("assign user other error returns error", func(t *testing.T) {
 		mock.ExpectQuery(`INSERT INTO "project_user"`).
 			WillReturnError(errors.New("some other db error"))
-		err := service.AssignUser(ctx, testProjectID, testUserID)
+		err := service.AssignUser(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
 	t.Run("remove user failure", func(t *testing.T) {
 		mock.ExpectExec(`DELETE FROM "project_user"`).
 			WillReturnError(errors.New("delete failed"))
-		err := service.RemoveUser(ctx, testProjectID, testUserID)
+		err := service.RemoveUser(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
 	t.Run("is user assigned query error", func(t *testing.T) {
 		mock.ExpectQuery(`SELECT COUNT\(\*\) FROM "project_user"`).
 			WillReturnError(errors.New("count error"))
-		exists, err := service.IsUserAssigned(ctx, testProjectID, testUserID)
+		exists, err := service.IsUserAssigned(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 		assert.False(t, exists)
 	})
@@ -743,7 +763,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID, testUserID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "project_id", "user_id", "is_starred", "created_at", "updated_at"}).
 				AddRow(2, testProjectID, testUserID, true, time.Now(), time.Now()))
-		err := service.StarProject(ctx, testProjectID, testUserID)
+		err := service.StarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -751,7 +771,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project_user"\.\* FROM "project_user" WHERE \("project_user"\."project_id" = \$1\) AND \("project_user"\."user_id" = \$2\) LIMIT 1`).
 			WithArgs(testProjectID, testUserID).
 			WillReturnError(errors.New("select failed"))
-		err := service.StarProject(ctx, testProjectID, testUserID)
+		err := service.StarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -762,7 +782,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(3, testProjectID, testUserID, false, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project_user"`).
 			WillReturnError(errors.New("update failed"))
-		err := service.StarProject(ctx, testProjectID, testUserID)
+		err := service.StarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -771,7 +791,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID, testUserID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "project_id", "user_id", "is_starred", "created_at", "updated_at"}).
 				AddRow(4, testProjectID, testUserID, false, time.Now(), time.Now()))
-		err := service.UnstarProject(ctx, testProjectID, testUserID)
+		err := service.UnstarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -779,7 +799,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project_user"\.\* FROM "project_user" WHERE \("project_user"\."project_id" = \$1\) AND \("project_user"\."user_id" = \$2\) LIMIT 1`).
 			WithArgs(testProjectID, testUserID).
 			WillReturnError(errors.New("select failed"))
-		err := service.UnstarProject(ctx, testProjectID, testUserID)
+		err := service.UnstarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -790,7 +810,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(5, testProjectID, testUserID, true, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project_user"`).
 			WillReturnError(errors.New("update failed"))
-		err := service.UnstarProject(ctx, testProjectID, testUserID)
+		err := service.UnstarProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -799,7 +819,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", true, false, nil, time.Now(), time.Now()))
-		err := service.ArchiveProject(ctx, testProjectID)
+		err := service.ArchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -807,7 +827,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(sql.ErrNoRows)
-		err := service.ArchiveProject(ctx, testProjectID)
+		err := service.ArchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -815,7 +835,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(errors.New("fetch failed"))
-		err := service.ArchiveProject(ctx, testProjectID)
+		err := service.ArchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -824,7 +844,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, nil, time.Now(), time.Now()))
-		err := service.UnarchiveProject(ctx, testProjectID)
+		err := service.UnarchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -832,7 +852,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(sql.ErrNoRows)
-		err := service.UnarchiveProject(ctx, testProjectID)
+		err := service.UnarchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -840,7 +860,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(errors.New("fetch failed"))
-		err := service.UnarchiveProject(ctx, testProjectID)
+		err := service.UnarchiveProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -849,7 +869,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, testUserID, time.Now(), time.Now()))
-		err := service.LockProject(ctx, testProjectID, testUserID)
+		err := service.LockProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -859,7 +879,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, otherUser, time.Now(), time.Now()))
-		err := service.LockProject(ctx, testProjectID, testUserID)
+		err := service.LockProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -867,7 +887,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(sql.ErrNoRows)
-		err := service.LockProject(ctx, testProjectID, testUserID)
+		err := service.LockProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -875,7 +895,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(errors.New("fetch failed"))
-		err := service.LockProject(ctx, testProjectID, testUserID)
+		err := service.LockProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -886,7 +906,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, nil, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnError(errors.New("update failed"))
-		err := service.LockProject(ctx, testProjectID, testUserID)
+		err := service.LockProject(ctx, testProjectID, testUserID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -895,7 +915,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, nil, time.Now(), time.Now()))
-		err := service.UnlockProject(ctx, testProjectID)
+		err := service.UnlockProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.NoError(t, err)
 	})
 
@@ -905,7 +925,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 			WithArgs(testProjectID).
 			WillReturnRows(sqlmock.NewRows([]string{"id", "primary_owner_user_id", "name", "description", "venue", "environment_type", "project_phase", "application", "budget_amount", "currency", "is_archived", "is_deleted", "locked_by_user_id", "created_at", "updated_at"}).
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, otherUser, time.Now(), time.Now()))
-		err := service.UnlockProject(ctx, testProjectID)
+		err := service.UnlockProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -913,7 +933,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(sql.ErrNoRows)
-		err := service.UnlockProject(ctx, testProjectID)
+		err := service.UnlockProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -921,7 +941,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 		mock.ExpectQuery(`SELECT "project"\.\* FROM "project" WHERE \("project"\."id" = \$1\) LIMIT 1`).
 			WithArgs(testProjectID).
 			WillReturnError(errors.New("fetch failed"))
-		err := service.UnlockProject(ctx, testProjectID)
+		err := service.UnlockProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 
@@ -932,7 +952,7 @@ func TestService_UserStarLockFunctions(t *testing.T) {
 				AddRow(testProjectID, testProjectAccountID, testProjectName, testProjectDesc, testProjectVenue, string(testProjectEnvType), string(testProjectPhase), testProjectApp, 1000.0, "USD", false, false, testUserID, time.Now(), time.Now()))
 		mock.ExpectExec(`UPDATE "project"`).
 			WillReturnError(errors.New("update failed"))
-		err := service.UnlockProject(ctx, testProjectID)
+		err := service.UnlockProject(ctx, testProjectID, logger.JobSyncLog())
 		assert.Error(t, err)
 	})
 

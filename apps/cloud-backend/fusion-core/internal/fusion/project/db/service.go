@@ -60,7 +60,7 @@ func (s *Service) GetDB(ctx context.Context) customModel.DBWithTransactions {
 }
 
 // GetProjectByID retrieves a project by its ID.
-func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.Project, error) {
+func (s *Service) GetProjectByID(ctx context.Context, projectID string, logger *zap.Logger) (*model.Project, error) {
 	if projectID == "" {
 		return nil, errors.New("project ID cannot be empty")
 	}
@@ -70,7 +70,7 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, errors.New(types.ErrMsgProjectNotFound)
 		}
-		s.logger.Error("Failed to fetch project",
+		logger.Error("Failed to fetch project",
 			zap.Error(err),
 			zap.String("project_id", projectID))
 		return nil, fmt.Errorf("%s: %v", types.ErrMsgFailedToGetProject, err)
@@ -80,13 +80,13 @@ func (s *Service) GetProjectByID(ctx context.Context, projectID string) (*model.
 }
 
 // Insert inserts a new project into the database.
-func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx customModel.DBTxExecutor) (string, error) {
+func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateRequest, accountID string, tx customModel.DBTxExecutor, logger *zap.Logger) (string, error) {
 
 	// Create project record
 	now := time.Now()
 	projectRecord := &model.Project{
 		ID:                    project.ID,
-		PrimaryOwnerAccountID: null.NewString(accountID	, accountID != ""),
+		PrimaryOwnerAccountID: null.NewString(accountID, accountID != ""),
 		Name:                  null.NewString(project.Name, project.Name != ""),
 		Description:           null.NewString(project.Description, project.Description != ""),
 		Venue:                 null.NewString(project.Venue, project.Venue != ""),
@@ -105,7 +105,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 
 	// Insert project
 	if err := projectRecord.Insert(ctx, tx, boil.Infer()); err != nil {
-		s.logger.Error(types.ErrMsgFailedToInsertProject,
+		logger.Error(types.ErrMsgFailedToInsertProject,
 			zap.Error(err),
 			zap.String("project_id", project.ID),
 			zap.String("account_id", accountID))
@@ -116,7 +116,7 @@ func (s *Service) Insert(ctx context.Context, project *types.ProjectCreateReques
 }
 
 // InsertProjectUser inserts a new project user association into the database.
-func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx customModel.DBTxExecutor) error {
+func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID string, tx customModel.DBTxExecutor, logger *zap.Logger) error {
 
 	now := time.Now()
 	// Create project user association
@@ -129,7 +129,7 @@ func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID strin
 
 	// Insert project user association
 	if err := projectUser.Insert(ctx, tx, boil.Infer()); err != nil {
-		s.logger.Error(types.ErrMsgFailedToInsertProjectUser,
+		logger.Error(types.ErrMsgFailedToInsertProjectUser,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -140,7 +140,7 @@ func (s *Service) InsertProjectUser(ctx context.Context, projectID, userID strin
 }
 
 // SelectAll retrieves all projects from the database.
-func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse) ([]types.Project, error) {
+func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjectsParams, userAuth types.UserAuthorizationResponse, logger *zap.Logger) ([]types.Project, error) {
 
 	order := strings.ToUpper(queryParams.SortOrder)
 
@@ -177,7 +177,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	}
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToGetProjects,
+		logger.Error(types.ErrMsgFailedToGetProjects,
 			zap.Error(err),
 			zap.String("user_id", userAuth.User.ID),
 			zap.Bool("is_archived", queryParams.IsArchived),
@@ -221,7 +221,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 		)
 
 		if err != nil {
-			s.logger.Error(types.ErrMsgFailedToParseRow,
+			logger.Error(types.ErrMsgFailedToParseRow,
 				zap.Error(err))
 			return nil, errors.New(types.ErrMsgFailedToParseRow)
 		}
@@ -237,7 +237,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 	for _, projectWithMetadata := range projects {
 		project, err := newProject(&projectWithMetadata)
 		if err != nil {
-			s.logger.Error(types.ErrMsgFailedToParseRow,
+			logger.Error(types.ErrMsgFailedToParseRow,
 				zap.Error(err),
 				zap.String("project_id", projectWithMetadata.Project.ID))
 			return nil, errors.New(types.ErrMsgFailedToParseRow)
@@ -249,7 +249,7 @@ func (s *Service) SelectAll(ctx context.Context, queryParams *types.GetAllProjec
 }
 
 // Update updates an existing project in the database.
-func (s *Service) Update(ctx context.Context, projectRow *model.Project, project *types.ProjectUpdateRequest) error {
+func (s *Service) Update(ctx context.Context, projectRow *model.Project, project *types.ProjectUpdateRequest, logger *zap.Logger) error {
 
 	if projectRow.IsArchived {
 		return errors.New(types.ErrMsgProjectArchived)
@@ -291,7 +291,7 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 
 	_, err := projectRow.Update(ctx, s.db, boil.Infer())
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToUpdateProject,
+		logger.Error(types.ErrMsgFailedToUpdateProject,
 			zap.Error(err),
 			zap.String("project_id", projectRow.ID))
 		return fmt.Errorf("%s: %v", types.ErrMsgFailedToUpdateProject, err)
@@ -301,13 +301,13 @@ func (s *Service) Update(ctx context.Context, projectRow *model.Project, project
 }
 
 // Delete removes a project by its ID.
-func (s *Service) Delete(ctx context.Context, projectRow *model.Project) error {
+func (s *Service) Delete(ctx context.Context, projectRow *model.Project, logger *zap.Logger) error {
 
 	projectRow.IsDeleted = true
 	projectRow.UpdatedAt = time.Now()
 	_, err := projectRow.Update(ctx, s.db, boil.Infer())
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToDeleteProject,
+		logger.Error(types.ErrMsgFailedToDeleteProject,
 			zap.Error(err),
 			zap.String("project_id", projectRow.ID))
 		return errors.New(types.ErrMsgFailedToDeleteProject)
@@ -317,7 +317,7 @@ func (s *Service) Delete(ctx context.Context, projectRow *model.Project) error {
 }
 
 // AssignUser assigns a user to a project.
-func (s *Service) AssignUser(ctx context.Context, projectID, userID string) error {
+func (s *Service) AssignUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 
 	now := time.Now()
 	projectUser := &model.ProjectUser{
@@ -332,12 +332,12 @@ func (s *Service) AssignUser(ctx context.Context, projectID, userID string) erro
 		// Check if this is a duplicate key error (user already assigned)
 		if isDuplicateKeyError(err) {
 			// User already assigned, return success (idempotent behavior)
-			s.logger.Info("User already assigned to project",
+			logger.Info("User already assigned to project",
 				zap.String("project_id", projectID),
 				zap.String("user_id", userID))
 			return nil
 		}
-		s.logger.Error(types.ErrMsgFailedToAssignUser,
+		logger.Error(types.ErrMsgFailedToAssignUser,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -347,14 +347,14 @@ func (s *Service) AssignUser(ctx context.Context, projectID, userID string) erro
 }
 
 // RemoveUser removes a user from a project.
-func (s *Service) RemoveUser(ctx context.Context, projectID, userID string) error {
+func (s *Service) RemoveUser(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	_, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
 		model.ProjectUserWhere.UserID.EQ(userID),
 	).DeleteAll(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToRemoveUser,
+		logger.Error(types.ErrMsgFailedToRemoveUser,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -364,14 +364,14 @@ func (s *Service) RemoveUser(ctx context.Context, projectID, userID string) erro
 }
 
 // IsUserAssigned checks if a user is assigned to a project.
-func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string) (bool, error) {
+func (s *Service) IsUserAssigned(ctx context.Context, projectID, userID string, logger *zap.Logger) (bool, error) {
 	exists, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
 		model.ProjectUserWhere.UserID.EQ(userID),
 	).Exists(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedUserAssignmentCheck,
+		logger.Error(types.ErrMsgFailedUserAssignmentCheck,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -431,7 +431,7 @@ func (s *Service) GetUserIDByEmail(ctx context.Context, email string) (string, e
 
 // StarProject stars a project for a user.
 // Note: Assumes business layer has validated user assignment to project
-func (s *Service) StarProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) StarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	// Get the project user record
 	projectUser, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
@@ -439,7 +439,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 	).One(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToGetProjectUser,
+		logger.Error(types.ErrMsgFailedToGetProjectUser,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -457,7 +457,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 
 	// Update the record
 	if _, err := projectUser.Update(ctx, s.db, boil.Infer()); err != nil {
-		s.logger.Error(types.ErrMsgFailedToStarProject,
+		logger.Error(types.ErrMsgFailedToStarProject,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -469,7 +469,7 @@ func (s *Service) StarProject(ctx context.Context, projectID, userID string) err
 
 // UnstarProject unstars a project for a user.
 // Note: Assumes business layer has validated user assignment to project
-func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) UnstarProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	// Get the project user record
 	projectUser, err := model.ProjectUsers(
 		model.ProjectUserWhere.ProjectID.EQ(projectID),
@@ -477,7 +477,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 	).One(ctx, s.db)
 
 	if err != nil {
-		s.logger.Error(types.ErrMsgFailedToGetProjectUser,
+		logger.Error(types.ErrMsgFailedToGetProjectUser,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -495,7 +495,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 
 	// Update the record
 	if _, err := projectUser.Update(ctx, s.db, boil.Infer()); err != nil {
-		s.logger.Error(types.ErrMsgFailedToUnstarProject,
+		logger.Error(types.ErrMsgFailedToUnstarProject,
 			zap.Error(err),
 			zap.String("project_id", projectID),
 			zap.String("user_id", userID))
@@ -506,7 +506,7 @@ func (s *Service) UnstarProject(ctx context.Context, projectID, userID string) e
 }
 
 // ArchiveProject archives a project.
-func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
+func (s *Service) ArchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error {
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -530,6 +530,9 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
 
 	// Update the record
 	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		logger.Error(types.ErrMsgFailedToArchiveProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
 		return errors.New(types.ErrMsgFailedToArchiveProject)
 	}
 
@@ -537,7 +540,7 @@ func (s *Service) ArchiveProject(ctx context.Context, projectID string) error {
 }
 
 // UnarchiveProject unarchives a project.
-func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error {
+func (s *Service) UnarchiveProject(ctx context.Context, projectID string, logger *zap.Logger) error {
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -547,6 +550,9 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error 
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New(types.ErrMsgProjectNotFound)
 		}
+		logger.Error(types.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
 		return errors.New(types.ErrMsgFailedToGetProject)
 	}
 
@@ -561,6 +567,9 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error 
 
 	// Update the record
 	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		logger.Error(types.ErrMsgFailedToUnarchiveProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
 		return errors.New(types.ErrMsgFailedToUnarchiveProject)
 	}
 
@@ -568,7 +577,7 @@ func (s *Service) UnarchiveProject(ctx context.Context, projectID string) error 
 }
 
 // LockProject locks a project for a specific user.
-func (s *Service) LockProject(ctx context.Context, projectID, userID string) error {
+func (s *Service) LockProject(ctx context.Context, projectID, userID string, logger *zap.Logger) error {
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -578,6 +587,9 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New(types.ErrMsgProjectNotFound)
 		}
+		logger.Error(types.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
 		return errors.New(types.ErrMsgFailedToGetProject)
 	}
 
@@ -595,6 +607,10 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 
 	// Update the record
 	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		logger.Error(types.ErrMsgFailedToLockProject,
+			zap.Error(err),
+			zap.String("project_id", projectID),
+			zap.String("user_id", userID))
 		return errors.New(types.ErrMsgFailedToLockProject)
 	}
 
@@ -602,7 +618,7 @@ func (s *Service) LockProject(ctx context.Context, projectID, userID string) err
 }
 
 // UnlockProject unlocks a project for a specific user.
-func (s *Service) UnlockProject(ctx context.Context, projectID string) error {
+func (s *Service) UnlockProject(ctx context.Context, projectID string, logger *zap.Logger) error {
 	// Get the project record
 	project, err := model.Projects(
 		model.ProjectWhere.ID.EQ(projectID),
@@ -612,6 +628,9 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string) error {
 		if errors.Is(err, sql.ErrNoRows) {
 			return errors.New(types.ErrMsgProjectNotFound)
 		}
+		logger.Error(types.ErrMsgFailedToGetProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
 		return errors.New(types.ErrMsgFailedToGetProject)
 	}
 
@@ -626,6 +645,9 @@ func (s *Service) UnlockProject(ctx context.Context, projectID string) error {
 
 	// Update the record
 	if _, err := project.Update(ctx, s.db, boil.Infer()); err != nil {
+		logger.Error(types.ErrMsgFailedToUnlockProject,
+			zap.Error(err),
+			zap.String("project_id", projectID))
 		return errors.New(types.ErrMsgFailedToUnlockProject)
 	}
 

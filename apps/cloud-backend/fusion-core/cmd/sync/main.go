@@ -40,9 +40,6 @@ func main() {
 	region := flag.String("region", "", "AWS region (optional, uses config default)")
 	flag.Parse()
 
-	// Parse the flags
-	flag.Parse()
-
 	env := environment.New(environment.DefaultLoadLookuper)
 	logger.Info("Loading environment file", zap.String("file", *envFile))
 	if *envName == "local" {

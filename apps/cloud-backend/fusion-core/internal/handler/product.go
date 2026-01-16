@@ -30,7 +30,7 @@ func NewProductHandler(productSvc fusion.Product) *ProductHandler {
 //	@Accept			json
 //	@Produce		json
 //	@Success		200	{object}	types.ProductResponse	"Successful response with all products"
-//	@Failure		500	{object}	map[string]string																								"Internal server error"
+//	@Failure		500	{object}	types.InternalServerError "Internal server error"
 //	@Router			/products [get]
 func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 	products, err := a.product.GetAllProducts(c.Request.Context())
@@ -48,11 +48,11 @@ func (a *ProductHandler) GetAllProducts(c *gin.Context) {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			id	path		string																												true	"Product ID"
+//	@Param			id	path		string	true	"Product ID"
 //	@Success		200	{object}	types.SingleProductResponse	"Successful response with product details"
-//	@Failure		400	{object}	map[string]string																									"Bad request - Product ID is required"
-//	@Failure		404	{object}	map[string]string																									"Product not found"
-//	@Failure		500	{object}	map[string]string																									"Internal server error"
+//	@Failure		400 {object} 	types.BadRequestError "Bad request - Product ID is required"
+//	@Failure		404	{object}	types.NotFoundError "Product not found"
+//	@Failure		500	{object}	types.InternalServerError "Internal server error"
 //	@Router			/products/{id} [get]
 func (a *ProductHandler) GetProductByID(c *gin.Context) {
 	id := c.Param("id")
@@ -80,12 +80,13 @@ func (a *ProductHandler) GetProductByID(c *gin.Context) {
 //	@Tags			products
 //	@Accept			json
 //	@Produce		json
-//	@Param			id			path		string																										true	"Product ID"
-//	@Param			currency	query		string																										false	"Currency code (e.g., USD, EUR) to filter prices"
+//	@Param			id			path		string	true	"Product ID"
+//	@Param			currency	query		string	false	"Currency code (e.g., USD, EUR) to filter prices"
+//	@Param			variant		query		string	false	"Product variant to filter prices"
 //	@Success		200			{object}	types.PriceResponse	"Successful response with product prices"
-//	@Failure		400			{object}	map[string]string																							"Bad request - Product ID is required"
-//	@Failure		404			{object}	map[string]string																							"Product not found"
-//	@Failure		500			{object}	map[string]string																							"Internal server error"
+//	@Failure		400			{object}	types.BadRequestError "Bad request - Product ID is required"
+//	@Failure		404			{object}	types.NotFoundError "Product not found"
+//	@Failure		500			{object}	types.InternalServerError "Internal server error"
 //	@Router			/products/{id}/prices [get]
 func (a *ProductHandler) GetProductPrices(c *gin.Context) {
 	id := c.Param("id")
