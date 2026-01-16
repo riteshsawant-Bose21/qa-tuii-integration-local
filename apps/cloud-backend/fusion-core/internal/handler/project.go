@@ -1,10 +1,9 @@
 package handler
 
 import (
-	"net/http"
 	"strings"
 
-	"github com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	response "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/http"
@@ -42,7 +41,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 
@@ -67,7 +66,7 @@ func (h *ProjectHandler) CreateProject(ctx *gin.Context) {
 		return
 	}
 
-	res, err := h.project.CreateProject(ctx, &p, *user)
+	res, err := h.project.CreateProject(ctx, &p, *user, logger)
 
 	if err != nil {
 		if err.Error() == types.ErrMsgProjectAlreadyExists {
@@ -100,7 +99,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -165,7 +164,7 @@ func (h *ProjectHandler) GetAllProjects(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -202,7 +201,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 	p.ID = projectID
 
 	// Use authenticated update method which includes all validations
-	response, err := h.project.UpdateProject(ctx, &p, *user, logger)
+	res, err := h.project.UpdateProject(ctx, &p, *user, logger)
 	if err != nil {
 		// Check if it's a "not found" error
 		if err.Error() == types.ErrMsgProjectNotFound || err.Error() == types.ErrMsgSqlNoRows {
@@ -248,7 +247,7 @@ func (h *ProjectHandler) UpdateProject(ctx *gin.Context) {
 func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -309,7 +308,7 @@ func (h *ProjectHandler) DeleteProject(ctx *gin.Context) {
 func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -361,7 +360,7 @@ func (h *ProjectHandler) AssignUserToProject(ctx *gin.Context) {
 func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -420,7 +419,7 @@ func (h *ProjectHandler) RemoveUserFromProject(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -496,7 +495,7 @@ func (h *ProjectHandler) UpdateProjectStar(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
@@ -575,7 +574,7 @@ func (h *ProjectHandler) UpdateProjectArchive(ctx *gin.Context) {
 func (h *ProjectHandler) UpdateProjectLock(ctx *gin.Context) {
 	loggerFromContext, exists := ctx.Get("logger")
 	if !exists {
-		ctx.JSON(http.StatusInternalServerError, types.ErrorResponse{Message: types.ErrMsgInternalServerError})
+		response.InternalError(ctx)
 		return
 	}
 	logger := loggerFromContext.(*zap.Logger)
