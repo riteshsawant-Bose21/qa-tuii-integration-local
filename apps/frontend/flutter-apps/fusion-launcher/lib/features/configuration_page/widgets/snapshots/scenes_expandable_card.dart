@@ -222,7 +222,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                               onTap: () {
                                 _addNewSceneToSceneSet();
                               },
-                            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                              child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
                             ),
                           ),
                           const SizedBox(width: 8),

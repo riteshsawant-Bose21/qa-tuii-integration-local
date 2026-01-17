@@ -32,6 +32,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
   final GlobalKey _popupButtonKey = GlobalKey();
   final ScrollController _zonesScrollController = ScrollController();
+
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
 
   late double _sourcesHeight;
@@ -306,7 +307,15 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             color: Colors.transparent,
                             child: Opacity(
                               opacity: 0.8,
-                              child: Container(color: context.colorScheme.primaryWhite, width: 220, child: SourceItem(source: source, isDragging: true)),
+                              child: Container(
+                                color: context.colorScheme.primaryWhite,
+                                width: 220,
+                                child: SourceItem(
+                                  index: index,
+                                  source: source,
+                                  isDragging: true,
+                                ),
+                              ),
                             ),
                           ),
                           childWhenDragging: Opacity(
@@ -395,7 +404,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               child: SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
                 child: IconButton(
-                icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                  icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
                   onPressed: null,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -753,7 +762,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-              color: context.colorScheme.primaryWhite,
+                color: context.colorScheme.primaryWhite,
                 offset: const Offset(0, 35),
                 itemBuilder: (BuildContext context) {
                   return <PopupMenuEntry<String>>[
@@ -797,7 +806,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                             child: Icon(
                                               Icons.close,
                                               size: 16,
-                                        color: Theme.of(context).colorScheme.textPrimary,
+                                              color: Theme.of(context).colorScheme.textPrimary,
                                             ),
                                           ),
                                         ),
@@ -852,7 +861,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                         setPopupState(() {}); // Update popup state
                                                                         setState(() {}); // Update main widget state
                                                                       },
-                                                              activeColor: context.colorScheme.primaryBlack,
+                                                                      activeColor: context.colorScheme.primaryBlack,
                                                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                                       visualDensity: VisualDensity.compact,
                                                                       shape: const RoundedRectangleBorder(
@@ -916,14 +925,14 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                     ? "Select Sources"
                                     : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                              color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                             ),
                           ),
                         ),
                         Icon(
                           Icons.keyboard_arrow_down,
                           size: 20,
-                      color: context.colorScheme.primaryBlack,
+                          color: context.colorScheme.primaryBlack,
                         ),
                       ],
                     ),
@@ -951,7 +960,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                 Flexible(
                   child: FusionButton(
                     width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                     label: "Create",
                     isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,

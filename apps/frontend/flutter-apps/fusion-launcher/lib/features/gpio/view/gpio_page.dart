@@ -289,15 +289,15 @@ class GpioPage extends StatelessWidget {
                                       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                       thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                                         if (states.contains(WidgetState.selected)) {
-                                        return Theme.of(context).colorScheme.primaryWhite;
+                                          return Theme.of(context).colorScheme.primaryWhite;
                                         }
-                                      return context.colorScheme.primaryBlack;
+                                        return context.colorScheme.primaryBlack;
                                       }),
                                       trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                                         if (states.contains(WidgetState.selected)) {
-                                        return Theme.of(context).colorScheme.primaryBlack;
+                                          return Theme.of(context).colorScheme.primaryBlack;
                                         }
-                                      return context.colorScheme.primaryBlack;
+                                        return context.colorScheme.primaryBlack;
                                       }),
                                       trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                                     ),

@@ -57,7 +57,7 @@ class _EventItemCardState extends State<EventItemCard> {
               color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-              color: widget.isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
+                color: widget.isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
                 width: 1.0,
               ),
             ),

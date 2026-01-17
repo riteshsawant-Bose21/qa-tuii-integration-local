@@ -96,7 +96,7 @@ class EquipmentLocationSection extends StatelessWidget {
                         child: Icon(
                           LucideIcons.plus200,
                           size: 14,
-                        color: Theme.of(context).colorScheme.primaryBlack,
+                          color: Theme.of(context).colorScheme.primaryBlack,
                         ),
                       ),
                     ),

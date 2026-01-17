@@ -40,7 +40,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.primaryBlack,
+                      color: Theme.of(context).colorScheme.primaryBlack,
                       width: 1,
                     ),
                   ),
@@ -89,7 +89,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                     child: Icon(
                                       LucideIcons.plus200,
                                       size: 14,
-                                  color: Theme.of(context).colorScheme.textPrimary,
+                                      color: Theme.of(context).colorScheme.textPrimary,
                                     ),
                                   ),
                                 ),

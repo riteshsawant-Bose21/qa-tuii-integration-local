@@ -75,7 +75,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                 Icon(
                   isMute ? Icons.volume_off : Icons.volume_up,
                   size: 20,
-                color: context.colorScheme.primaryBlack,
+                  color: context.colorScheme.primaryBlack,
                 ),
                 const SizedBox(width: 8),
                 FusionAppText(
@@ -101,13 +101,13 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                     thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                     overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
                     trackHeight: 1,
-                  thumbColor: context.colorScheme.primaryBlack,
+                    thumbColor: context.colorScheme.primaryBlack,
                   ),
                   child: Slider(
                     value: currentValue,
                     padding: EdgeInsets.zero,
-                  activeColor: context.colorScheme.primaryBlack,
-                  inactiveColor: context.colorScheme.primaryBlack,
+                    activeColor: context.colorScheme.primaryBlack,
+                    inactiveColor: context.colorScheme.primaryBlack,
                     min: 0,
                     max: 100,
                     divisions: 100,
@@ -360,13 +360,13 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                       if (states.contains(WidgetState.selected)) {
                         return Theme.of(context).colorScheme.primaryWhite;
                       }
-                    return context.colorScheme.primaryBlack;
+                      return context.colorScheme.primaryBlack;
                     }),
                     trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
                       if (states.contains(WidgetState.selected)) {
                         return context.colorScheme.primaryBlack;
                       }
-                    return context.colorScheme.primaryBlack;
+                      return context.colorScheme.primaryBlack;
                     }),
                     trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
                     onChanged: (bool val) {
@@ -398,7 +398,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                       // enabled: isEnabled,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                      border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.primaryBlack)),
+                        border: OutlineInputBorder(borderSide: BorderSide(color: context.colorScheme.primaryBlack)),
                         isDense: true,
                         labelText: "Duration (ms)",
                         labelStyle: const TextStyle(fontSize: 10),

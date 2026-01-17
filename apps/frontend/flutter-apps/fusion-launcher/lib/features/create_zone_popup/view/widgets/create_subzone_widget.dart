@@ -88,7 +88,7 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                             testId: SemanticHelper.createTestId(SemanticTypes.button, "create_subzone_remove_button_$subZoneIndex"),
                             child: Icon(
                               Icons.close,
-                            color: context.colorScheme.primaryBlack,
+                              color: context.colorScheme.primaryBlack,
                               size: 16,
                             ),
                           ),
@@ -110,7 +110,7 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                     children: <Widget>[
                       Icon(
                         Icons.add,
-                      color: context.colorScheme.primaryBlack,
+                        color: context.colorScheme.primaryBlack,
                       ),
                       const SizedBox(width: 2),
                       Expanded(

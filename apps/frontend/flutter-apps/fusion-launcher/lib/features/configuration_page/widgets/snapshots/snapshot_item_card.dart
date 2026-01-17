@@ -63,7 +63,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                       : (_isHovered ? Colors.grey[200] : null),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
-              color: widget.isSelected ? context.colorScheme.primaryBlack : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
+                color: widget.isSelected ? context.colorScheme.primaryBlack : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
                 width: 1.0,
               ),
             ),

@@ -93,10 +93,10 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
           vertical: 6,
         ),
         decoration: BoxDecoration(
-        color: context.colorScheme.primaryWhite,
+          color: context.colorScheme.primaryWhite,
           // border bottom
           border: Border(
-          bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+            bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
           ),
         ),
         child: Row(

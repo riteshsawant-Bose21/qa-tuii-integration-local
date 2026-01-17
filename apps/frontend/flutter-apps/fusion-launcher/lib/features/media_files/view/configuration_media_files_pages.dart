@@ -85,7 +85,7 @@ class _TopBar extends StatelessWidget {
 
               decoration: BoxDecoration(
                 border: Border(
-                left: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
+                  left: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
                 ),
               ),
               child: Row(
@@ -161,7 +161,7 @@ class _MediaTable extends StatelessWidget {
                                       color: isSelected ? Colors.grey[200] : null,
                                       borderRadius: BorderRadius.circular(3),
                                       border: Border.all(
-                                      color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
+                                        color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
                                         width: 1.0,
                                       ),
                                     ),
@@ -323,7 +323,7 @@ class _PreviewPanel extends StatelessWidget {
                               testId: SemanticHelper.createTestId(SemanticTypes.button, "play_previous"),
                               child: _CircleButton(
                                 icon: Icons.fast_rewind_outlined,
-                              borderColor: colors.primaryBlack,
+                                borderColor: colors.primaryBlack,
                                 onTap: cubit.playPrevious,
                               ),
                             ),
@@ -331,7 +331,7 @@ class _PreviewPanel extends StatelessWidget {
                               testId: SemanticHelper.createTestId(SemanticTypes.button, "play_pause"),
                               child: _CircleButton(
                                 icon: state.isPlaying ? Icons.pause : Icons.play_arrow,
-                              borderColor: colors.primaryBlack,
+                                borderColor: colors.primaryBlack,
                                 onTap: cubit.playPause,
                               ),
                             ),
@@ -340,7 +340,7 @@ class _PreviewPanel extends StatelessWidget {
                               testId: SemanticHelper.createTestId(SemanticTypes.button, "play_next"),
                               child: _CircleButton(
                                 icon: Icons.fast_forward_outlined,
-                              borderColor: colors.primaryBlack,
+                                borderColor: colors.primaryBlack,
                                 onTap: cubit.playNext,
                               ),
                             ),
@@ -367,13 +367,13 @@ class _PreviewPanel extends StatelessWidget {
                           thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                           overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
                           trackHeight: 1,
-                        thumbColor: Theme.of(context).colorScheme.primaryBlack,
+                          thumbColor: Theme.of(context).colorScheme.primaryBlack,
                         ),
                         child: Slider(
                           value: state.currentPosition.inSeconds.toDouble(),
                           padding: EdgeInsets.zero,
-                        activeColor: context.colorScheme.primaryBlack,
-                        inactiveColor: context.colorScheme.primaryBlack,
+                          activeColor: context.colorScheme.primaryBlack,
+                          inactiveColor: context.colorScheme.primaryBlack,
                           min: 0,
                           max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
                           divisions: 100,

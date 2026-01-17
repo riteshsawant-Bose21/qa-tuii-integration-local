@@ -769,9 +769,9 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                       Expanded(
                         child: FusionAppText(
                           text:
-                          widget.selectedSources.isEmpty
-                              ? "Select Sources"
-                              : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                              widget.selectedSources.isEmpty
+                                  ? "Select Sources"
+                                  : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                           ),

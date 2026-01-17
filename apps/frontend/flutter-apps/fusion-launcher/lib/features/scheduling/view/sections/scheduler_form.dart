@@ -146,7 +146,7 @@ class SchedulerForm extends StatelessWidget {
                                                   border:
                                                       isSelected
                                                           ? Border.all(
-                                                        color: context.colorScheme.primaryBlack,
+                                                            color: context.colorScheme.primaryBlack,
                                                             width: 2,
                                                           )
                                                           : null,
@@ -160,7 +160,7 @@ class SchedulerForm extends StatelessWidget {
                                                           ),
                                                           child: Container(
                                                             decoration: BoxDecoration(
-                                                        color: context.colorScheme.primaryBlack.withOpacity(0.2),
+                                                              color: context.colorScheme.primaryBlack.withOpacity(0.2),
                                                               borderRadius: BorderRadius.circular(4),
                                                             ),
                                                             child: const Icon(

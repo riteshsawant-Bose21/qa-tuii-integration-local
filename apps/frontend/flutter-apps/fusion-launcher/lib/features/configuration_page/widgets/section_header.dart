@@ -20,7 +20,7 @@ class SectionHeader extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border(
-          bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+            bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
           ),
         ),
         child: Row(

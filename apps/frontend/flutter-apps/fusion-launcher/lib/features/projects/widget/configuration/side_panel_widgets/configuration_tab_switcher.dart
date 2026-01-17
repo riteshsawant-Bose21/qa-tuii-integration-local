@@ -84,9 +84,9 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                       decoration: BoxDecoration(
                         color:
                             isSelected
-                              ? context.colorScheme.primaryBlack
+                                ? context.colorScheme.primaryBlack
                                 : isHovered
-                              ? context.colorScheme.primaryBlack.withAlpha(50)
+                                ? context.colorScheme.primaryBlack.withAlpha(50)
                                 : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
