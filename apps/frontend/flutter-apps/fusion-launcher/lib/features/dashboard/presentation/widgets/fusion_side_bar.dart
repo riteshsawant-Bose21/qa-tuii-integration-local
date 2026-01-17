@@ -76,21 +76,24 @@ class _FusionSidebarState extends State<FusionSidebar> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: <Widget>[
-                        Badge(
-                          smallSize: 10, // ← tiny dot size
-                          alignment: Alignment.topRight,
-                          backgroundColor: FusionDarkColorPallette.green20,
-                          textColor: FusionDarkColorPallette.green20,
-                          padding: const EdgeInsets.only(),
-                          textStyle: const TextStyle(fontSize: 0),
-                          child: Container(
-                            height: 36,
-                            width: 36,
-                            decoration: BoxDecoration(
-                              color: FusionDarkColorPallette.dark80,
-                              borderRadius: BorderRadius.circular(8),
+                        SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_notification_button"),
+                          child: Badge(
+                            smallSize: 10, // ← tiny dot size
+                            alignment: Alignment.topRight,
+                            backgroundColor: FusionDarkColorPallette.green20,
+                            textColor: FusionDarkColorPallette.green20,
+                            padding: const EdgeInsets.only(),
+                            textStyle: const TextStyle(fontSize: 0),
+                            child: Container(
+                              height: 36,
+                              width: 36,
+                              decoration: BoxDecoration(
+                                color: FusionDarkColorPallette.dark80,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(LucideIcons.bell, size: 16),
                             ),
-                            child: const Icon(LucideIcons.bell, size: 16),
                           ),
                         ),
                       ],
@@ -167,14 +170,17 @@ class _FusionSidebarState extends State<FusionSidebar> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            const NeumorphicDarkTextField(
-                              hintText: 'Search',
-                              prefix: Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8),
-                                child: Icon(LucideIcons.search, size: 10),
+                            SemanticHelper.formControl(
+                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "dashboard_sidebar_search_input"),
+                              child: const NeumorphicDarkTextField(
+                                hintText: 'Search',
+                                prefix: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 8),
+                                  child: Icon(LucideIcons.search, size: 10),
+                                ),
+                                borderRadius: 8,
+                                contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                               ),
-                              borderRadius: 8,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                             ),
                             const SizedBox(height: 10),
 
@@ -321,20 +327,26 @@ class _FusionSidebarState extends State<FusionSidebar> {
           title: FusionAppText(text: "Sign Out", style: context.textTheme.titleMedium),
           content: const FusionAppText(text: "Are you sure you want to sign out?"),
           actions: <Widget>[
-            NeumorphicDarkButton(
-              onTap: () async {
-                await serviceLocator<AuthViewModel>().logout();
-              },
-              height: 32,
-              borderRadius: 8,
-              child: FusionAppText(text: "Sign Out", style: context.textTheme.labelMedium),
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_signout_button"),
+              child: NeumorphicDarkButton(
+                onTap: () async {
+                  await serviceLocator<AuthViewModel>().logout();
+                },
+                height: 32,
+                borderRadius: 8,
+                child: FusionAppText(text: "Sign Out", style: context.textTheme.labelMedium),
+              ),
             ),
             const SizedBox(height: 5),
-            NeumorphicDarkButton(
-              onTap: () => Navigator.pop(ctx),
-              height: 32,
-              borderRadius: 8,
-              child: FusionAppText(text: "Cancel", style: context.textTheme.labelMedium),
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "dashboard_sidebar_cancel_button"),
+              child: NeumorphicDarkButton(
+                onTap: () => Navigator.pop(ctx),
+                height: 32,
+                borderRadius: 8,
+                child: FusionAppText(text: "Cancel", style: context.textTheme.labelMedium),
+              ),
             ),
           ],
         );

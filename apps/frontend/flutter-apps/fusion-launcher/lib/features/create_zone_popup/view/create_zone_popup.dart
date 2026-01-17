@@ -76,13 +76,16 @@ class _NewWidgetState extends State<NewWidget> {
                           ),
                         ),
                       ),
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: Navigator.of(context).pop,
-                          child: const Padding(
-                            padding: EdgeInsets.all(2.0),
-                            child: Icon(LucideIcons.x200, size: 16),
+                      SemanticHelper.button(
+                        testId: SemanticHelper.createTestId(SemanticTypes.button, "create_zone_close_button"),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: Navigator.of(context).pop,
+                            child: const Padding(
+                              padding: EdgeInsets.all(2.0),
+                              child: Icon(LucideIcons.x200, size: 16),
+                            ),
                           ),
                         ),
                       ),
@@ -117,23 +120,24 @@ class _NewWidgetState extends State<NewWidget> {
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
-                                  child: TextFormField(
-                                    initialValue: zoneName,
-                                    onChanged: (String value) {
-                                      context.read<CreateZoneViewModel>().setZoneName(value);
-                                    },
-                                    decoration: InputDecoration(
-                                      hintText: 'Enter zone name',
-                                      hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                                      border: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      hoverColor: Colors.transparent,
-                                      errorBorder: InputBorder.none,
-                                      contentPadding: EdgeInsets.zero,
-                                      fillColor: Colors.transparent,
+                                  child: SemanticHelper.formControl(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_zone_name_input"),
+                                    child: TextFormField(
+                                      initialValue: zoneName,
+                                      onChanged: context.read<CreateZoneViewModel>().setZoneName,
+                                      decoration: InputDecoration(
+                                        hintText: 'Enter zone name',
+                                        hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
+                                        border: InputBorder.none,
+                                        focusedBorder: InputBorder.none,
+                                        enabledBorder: InputBorder.none,
+                                        hoverColor: Colors.transparent,
+                                        errorBorder: InputBorder.none,
+                                        contentPadding: EdgeInsets.zero,
+                                        fillColor: Colors.transparent,
+                                      ),
+                                      style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                                     ),
-                                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                                   ),
                                 ),
                               ],
@@ -167,13 +171,16 @@ class _NewWidgetState extends State<NewWidget> {
                                     onTap: () {
                                       context.read<CreateZoneViewModel>().setZoneColor(hexCode);
                                     },
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "zone_color_option_$index"),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: color,
+                                          borderRadius: BorderRadius.circular(4),
+                                          border: isSelected ? Border.all(color: Colors.white, width: 2) : null,
+                                        ),
+                                        child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
                                       ),
-                                      child: isSelected ? const Icon(Icons.check, color: Colors.white, size: 12) : null,
                                     ),
                                   );
                                 },

@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../domain/entities/audio_widget_entity.dart';
 

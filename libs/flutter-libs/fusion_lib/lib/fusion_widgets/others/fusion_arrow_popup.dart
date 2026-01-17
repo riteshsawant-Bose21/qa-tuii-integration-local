@@ -329,7 +329,10 @@ class _PopupRoute extends PopupRoute<void> {
                 width: targetRect.width,
                 height: targetRect.height,
                 child: IgnorePointer(
-                  child: childWidget,
+                  child: Material(
+                    color: Colors.transparent,
+                    child: childWidget,
+                  ),
                 ),
               ),
           ],

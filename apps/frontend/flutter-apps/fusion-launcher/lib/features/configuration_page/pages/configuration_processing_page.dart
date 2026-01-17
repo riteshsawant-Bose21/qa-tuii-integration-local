@@ -311,9 +311,13 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                           ),
                           childWhenDragging: Opacity(
                             opacity: 0.5,
-                            child: SourceItem(source: source, isDragging: true),
+                            child: SourceItem(index: index, source: source, isDragging: true),
                           ),
-                          child: SourceItem(source: source, isDragging: _draggingSourceId == source.id),
+                          child: SourceItem(
+                            index: index,
+                            source: source,
+                            isDragging: _draggingSourceId == source.id,
+                          ),
                         );
                       },
                     );
@@ -388,11 +392,14 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                   ),
                 ];
               },
-              child: IconButton(
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
+                child: IconButton(
                 icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
-                onPressed: null,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+                  onPressed: null,
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
               ),
             ),
           ),
@@ -675,261 +682,288 @@ class _SourceSetCreationWidget extends StatefulWidget {
 class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: context.colorScheme.primaryWhite,
-      width: 250,
-      padding: const EdgeInsets.all(12),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: <Widget>[
-          FusionAppText(
-            text: "Create source set",
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+    return SemanticHelper.container(
+      testId: SemanticHelper.createTestId(SemanticTypes.container, "source_set_creation_widget"),
+      child: Container(
+        color: context.colorScheme.primaryWhite,
+        width: 250,
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: <Widget>[
+            FusionAppText(
+              text: "Create source set",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          FusionAppText(
-            text: "Source Set Name",
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+            FusionAppText(
+              text: "Source Set Name",
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
-          /// Source Set Name Input
-          FusionTextField(
-            controller: widget.sourceSetNameController,
-            hintText: "Enter source set name",
-            decoration: FusionInputDecoration.fusionDense(
-              colorScheme: Theme.of(context).colorScheme,
-              hintText: 'Enter source set name',
-            ),
-            onChanged: (String value) {
-              setState(() {});
-            },
-          ),
-          const SizedBox(height: 12),
-
-          /// Source Selection Label
-          FusionAppText(
-            text: 'Select sources',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-
-          /// Source Selection Dropdown
-          Container(
-            height: 28,
-            decoration: BoxDecoration(
-              border: Border.all(color: Colors.grey[300]!),
-              borderRadius: BorderRadius.circular(4),
-            ),
-            child: PopupMenuButton<String>(
-              onCanceled: () {
-                // Handle popup close if needed
+            /// Source Set Name Input
+            FusionTextField(
+              controller: widget.sourceSetNameController,
+              hintText: "Enter source set name",
+              semanticFieldId: "source_set_name_input",
+              decoration: FusionInputDecoration.fusionDense(
+                colorScheme: Theme.of(context).colorScheme,
+                hintText: 'Enter source set name',
+              ),
+              onChanged: (String value) {
+                setState(() {});
               },
-              constraints: const BoxConstraints(
-                maxHeight: 500,
-                maxWidth: 240,
+            ),
+            const SizedBox(height: 12),
+
+            /// Source Selection Label
+            FusionAppText(
+              text: 'Select sources',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+            ),
+            const SizedBox(height: 8),
+
+            /// Source Selection Dropdown
+            Container(
+              height: 28,
+              decoration: BoxDecoration(
+                border: Border.all(color: Colors.grey[300]!),
+                borderRadius: BorderRadius.circular(4),
               ),
+              child: PopupMenuButton<String>(
+                onCanceled: () {
+                  // Handle popup close if needed
+                },
+                constraints: const BoxConstraints(
+                  maxHeight: 500,
+                  maxWidth: 240,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
               color: context.colorScheme.primaryWhite,
-              offset: const Offset(0, 35),
-              itemBuilder: (BuildContext context) {
-                return <PopupMenuEntry<String>>[
-                  PopupMenuItem<String>(
-                    enabled: false,
-                    padding: EdgeInsets.zero,
-                    child: StatefulBuilder(
-                      builder: (BuildContext context, StateSetter setPopupState) {
-                        return Container(
-                          width: 240,
-                          constraints: const BoxConstraints(maxHeight: 460),
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: <Widget>[
-                              /// Header with close button
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    bottom: BorderSide(color: Colors.grey[300]!),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: <Widget>[
-                                    FusionAppText(
-                                      text: "Select source",
-                                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
+                offset: const Offset(0, 35),
+                itemBuilder: (BuildContext context) {
+                  return <PopupMenuEntry<String>>[
+                    PopupMenuItem<String>(
+                      enabled: false,
+                      padding: EdgeInsets.zero,
+                      child: StatefulBuilder(
+                        builder: (BuildContext context, StateSetter setPopupState) {
+                          return SemanticHelper.container(
+                            testId: SemanticHelper.createTestId(SemanticTypes.container, "source_set_creation_widget"),
+                            child: Container(
+                              width: 240,
+                              constraints: const BoxConstraints(maxHeight: 460),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: <Widget>[
+                                  /// Header with close button
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      border: Border(
+                                        bottom: BorderSide(color: Colors.grey[300]!),
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.textPrimary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              /// Scrollable list of sources
-                              Flexible(
-                                child:
-                                    widget.availableSources.isNotEmpty
-                                        ? SingleChildScrollView(
-                                          physics: const ClampingScrollPhysics(),
-                                          child: Column(
-                                            children:
-                                                widget.availableSources.map<Widget>((Source source) {
-                                                  final bool isSelected = widget.selectedSources.any(
-                                                    (SelectedSource selectedSource) => selectedSource.id == source.id,
-                                                  );
-                                                  return InkWell(
-                                                    onTap: () {
-                                                      widget.onSourceChanged(source, !isSelected);
-                                                      setPopupState(() {});
-                                                      setState(() {});
-                                                    },
-                                                    child: Container(
-                                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
-                                                      color: Colors.transparent,
-                                                      child: Row(
-                                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                                        children: <Widget>[
-                                                          /// Checkbox for selection
-                                                          SizedBox(
-                                                            width: 14,
-                                                            height: 14,
-                                                            child: Checkbox(
-                                                              value: isSelected,
-                                                              onChanged: (bool? value) {
-                                                                widget.onSourceChanged(source, value ?? false);
-                                                                setPopupState(() {}); // Update popup state
-                                                                setState(() {}); // Update main widget state
-                                                              },
-                                                              activeColor: context.colorScheme.primaryBlack,
-                                                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                                              visualDensity: VisualDensity.compact,
-                                                              shape: const RoundedRectangleBorder(
-                                                                borderRadius: BorderRadius.zero,
-                                                                side: BorderSide(width: 0.5),
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          const SizedBox(width: 12),
-
-                                                          /// Source name
-                                                          Expanded(
-                                                            child: FusionAppText(
-                                                              text: source.name,
-                                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                                fontWeight: FontWeight.w500,
-                                                                fontSize: 10,
-                                                                color: Theme.of(context).textTheme.bodySmall?.color,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                  );
-                                                }).toList(),
+                                    child: Row(
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                      children: <Widget>[
+                                        FusionAppText(
+                                          text: "Select source",
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.w600,
                                           ),
-                                        )
-                                        : Padding(
-                                          padding: const EdgeInsets.all(12.0),
-                                          child: FusionAppText(
-                                            text: "No Source Available",
-                                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                              fontSize: 10,
+                                        ),
+                                        SemanticHelper.button(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.button, "select_source_close"),
+                                          child: InkWell(
+                                            onTap: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            child: Icon(
+                                              Icons.close,
+                                              size: 16,
+                                        color: Theme.of(context).colorScheme.textPrimary,
                                             ),
                                           ),
                                         ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  /// Scrollable list of sources
+                                  Flexible(
+                                    child:
+                                        widget.availableSources.isNotEmpty
+                                            ? SingleChildScrollView(
+                                              physics: const ClampingScrollPhysics(),
+                                              child: Column(
+                                                children:
+                                                    widget.availableSources.map<Widget>((Source source) {
+                                                      final bool isSelected = widget.selectedSources.any(
+                                                        (SelectedSource selectedSource) => selectedSource.id == source.id,
+                                                      );
+
+                                                      final int index = widget.selectedSources.indexWhere(
+                                                        (SelectedSource selectedSource) => selectedSource.id == source.id,
+                                                      );
+
+                                                      return SemanticHelper.button(
+                                                        testId: SemanticHelper.createTestId(SemanticTypes.button, "source_selection_checkbox_$index"),
+                                                        child: InkWell(
+                                                          onTap: () {
+                                                            widget.onSourceChanged(source, !isSelected);
+                                                            setPopupState(() {});
+                                                            setState(() {});
+                                                          },
+                                                          child: Container(
+                                                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+                                                            color: Colors.transparent,
+                                                            child: Row(
+                                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                              children: <Widget>[
+                                                                /// Checkbox for selection
+                                                                SizedBox(
+                                                                  width: 14,
+                                                                  height: 14,
+                                                                  child: SemanticHelper.button(
+                                                                    testId: SemanticHelper.createTestId(
+                                                                      SemanticTypes.button,
+                                                                      "sementic_source_selection_checkbox_$index",
+                                                                    ),
+                                                                    child: Checkbox(
+                                                                      value: isSelected,
+                                                                      onChanged: (bool? value) {
+                                                                        widget.onSourceChanged(source, value ?? false);
+                                                                        setPopupState(() {}); // Update popup state
+                                                                        setState(() {}); // Update main widget state
+                                                                      },
+                                                              activeColor: context.colorScheme.primaryBlack,
+                                                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                                                      visualDensity: VisualDensity.compact,
+                                                                      shape: const RoundedRectangleBorder(
+                                                                        borderRadius: BorderRadius.zero,
+                                                                        side: BorderSide(width: 0.5),
+                                                                      ),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                                const SizedBox(width: 12),
+
+                                                                /// Source name
+                                                                Expanded(
+                                                                  child: FusionAppText(
+                                                                    text: source.name,
+                                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                                      fontWeight: FontWeight.w500,
+                                                                      fontSize: 10,
+                                                                      color: Theme.of(context).textTheme.bodySmall?.color,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }).toList(),
+                                              ),
+                                            )
+                                            : Padding(
+                                              padding: const EdgeInsets.all(12.0),
+                                              child: FusionAppText(
+                                                text: "No Source Available",
+                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ];
-              },
-              child: Container(
-                height: 29,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: FusionAppText(
-                        text:
-                            widget.selectedSources.isEmpty
-                                ? "Select Sources"
-                                : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
-                        ),
+                            ),
+                          );
+                        },
                       ),
                     ),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 20,
+                  ];
+                },
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "source_set_creation_widget"),
+                  child: Container(
+                    height: 29,
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: <Widget>[
+                        Expanded(
+                          child: FusionAppText(
+                            text:
+                                widget.selectedSources.isEmpty
+                                    ? "Select Sources"
+                                    : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                            ),
+                          ),
+                        ),
+                        Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 20,
                       color: context.colorScheme.primaryBlack,
+                        ),
+                      ],
                     ),
-                  ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          const SizedBox(height: 12),
+            const SizedBox(height: 12),
 
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: <Widget>[
-              Flexible(
-                child: FusionOutlinedButton(
-                  width: double.infinity,
-                  label: "Cancel",
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
-                  onTap: () {
-                    widget.onCancel.call();
-                  },
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                Flexible(
+                  child: FusionOutlinedButton(
+                    width: double.infinity,
+                    label: "Cancel",
+                    textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10),
+                    onTap: () {
+                      widget.onCancel.call();
+                    },
+                  ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              Flexible(
-                child: FusionButton(
-                  width: double.infinity,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: FusionButton(
+                    width: double.infinity,
                   textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
-                  label: "Create",
-                  isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
-                  onTap: () {
-                    widget.onAddSourceSet.call();
-                  },
+                    label: "Create",
+                    isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,
+                    onTap: () {
+                      widget.onAddSourceSet.call();
+                    },
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ],
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }

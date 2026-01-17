@@ -66,9 +66,7 @@ class SpeakerQueryPopupState extends State<SpeakerQueryPopup> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
-            Expanded(
-              child: ProductQuerySpeakerList(searchController: searchController),
-            ),
+            Expanded(child: ProductQuerySpeakerList(searchController: searchController)),
             const SizedBox(width: 8),
             const Expanded(child: SpeakerListeningAreaProperties()),
           ],

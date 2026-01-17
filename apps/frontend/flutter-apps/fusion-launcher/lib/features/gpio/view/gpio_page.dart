@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_svg/svg.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
@@ -36,100 +35,106 @@ class GpioPage extends StatelessWidget {
               builder: (BuildContext context, GpioState state) {
                 return Column(
                   children: <Widget>[
-                    Container(
-                      color: Colors.grey[200]!,
-                      padding: const EdgeInsets.all(10.0),
-                      child: Row(
-                        spacing: 10,
-                        children: <Widget>[
-                          SvgPicture.asset('assets/icons/gpio/gpio.svg', width: 25, height: 25),
-                          Text(
-                            "GPIO",
-                            style: context.textTheme.titleMedium,
-                          ),
-                          const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(4),
-                              border: Border.all(color: Colors.black),
+                    SemanticHelper.container(
+                      testId: SemanticHelper.createTestId(SemanticTypes.container, "gpio_header"),
+                      child: Container(
+                        color: Colors.grey[200]!,
+                        padding: const EdgeInsets.all(10.0),
+                        child: Row(
+                          spacing: 10,
+                          children: <Widget>[
+                            SvgPicture.asset('assets/icons/gpio/gpio.svg', width: 25, height: 25),
+                            Text(
+                              "GPIO",
+                              style: context.textTheme.titleMedium,
                             ),
-                            child: Row(
-                              children: <Widget>[
-                                Text(
-                                  state.availableGPIOPorts < 0 ? "Need" : "Available",
-                                  style: context.textTheme.bodySmall,
-                                ),
-                                const SizedBox(width: 8),
-                                Container(
-                                  decoration: BoxDecoration(
-                                    color: state.availableGPIOPorts >= 0 ? Colors.black : Colors.red,
-                                    borderRadius: BorderRadius.circular(4),
+                            const Spacer(),
+                            Container(
+                              padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(4),
+                                border: Border.all(color: Colors.black),
+                              ),
+                              child: Row(
+                                children: <Widget>[
+                                  Text(
+                                    state.availableGPIOPorts < 0 ? "Need" : "Available",
+                                    style: context.textTheme.bodySmall,
                                   ),
-                                  padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
-                                  child: Text(
-                                    "${state.availableGPIOPorts.abs()}",
-                                    style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: state.availableGPIOPorts >= 0 ? Colors.black : Colors.red,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
+                                    child: Text(
+                                      "${state.availableGPIOPorts.abs()}",
+                                      style: context.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold, color: Colors.white),
+                                    ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
+                            const SizedBox(
+                              width: 10,
+                            ),
 
-                          InkWell(
-                            onTap: () {
-                              if (state.availableGPIOPorts <= 0) {
-                                showDialog(
-                                  context: context,
-                                  builder:
-                                      (_) => FusionDialog(
-                                        primaryButtonWidth: 120,
-                                        title: 'Not Enough GPIO Ports',
-                                        description: "You have used all available GPIO ports. Adding more GPIO needs more hardware resources.",
-                                        primaryButtonLabel: 'Add Anyways',
-                                        secondaryButtonLabel: 'Cancel',
-                                        onSecondaryPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        onPrimaryPressed: () {
-                                          Navigator.of(context).pop();
-                                          // GpioForm.show(context, context.read<GpioViewmodel>());
-                                          context.read<GpioViewmodel>().projectViewModel.addGPIOConfig(
-                                            config: GpioConfig(
-                                              name: "Gpio ${state.gpios.length}",
-                                              direction: GpioDirection.input,
-                                              invert: false,
-                                              status: false,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                );
-                                return;
-                              }
-                              context.read<GpioViewmodel>().projectViewModel.addGPIOConfig(
-                                config: GpioConfig(
-                                  name: "Gpio ${state.gpios.length}",
-                                  direction: GpioDirection.input,
-                                  invert: false,
-                                  status: false,
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "add_gpio_button"),
+                              child: InkWell(
+                                onTap: () {
+                                  if (state.availableGPIOPorts <= 0) {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (_) => FusionDialog(
+                                            primaryButtonWidth: 120,
+                                            title: 'Not Enough GPIO Ports',
+                                            description: "You have used all available GPIO ports. Adding more GPIO needs more hardware resources.",
+                                            primaryButtonLabel: 'Add Anyways',
+                                            secondaryButtonLabel: 'Cancel',
+                                            onSecondaryPressed: () {
+                                              Navigator.of(context).pop();
+                                            },
+                                            onPrimaryPressed: () {
+                                              Navigator.of(context).pop();
+                                              // GpioForm.show(context, context.read<GpioViewmodel>());
+                                              context.read<GpioViewmodel>().projectViewModel.addGPIOConfig(
+                                                config: GpioConfig(
+                                                  name: "Gpio ${state.gpios.length}",
+                                                  direction: GpioDirection.input,
+                                                  invert: false,
+                                                  status: false,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                    );
+                                    return;
+                                  }
+                                  context.read<GpioViewmodel>().projectViewModel.addGPIOConfig(
+                                    config: GpioConfig(
+                                      name: "Gpio ${state.gpios.length}",
+                                      direction: GpioDirection.input,
+                                      invert: false,
+                                      status: false,
+                                    ),
+                                  );
+                                  // GpioForm.show(context, context.read<GpioViewmodel>());
+                                },
+                                child: const Icon(
+                                  Icons.add,
+                                  color: Colors.grey,
                                 ),
-                              );
-                              // GpioForm.show(context, context.read<GpioViewmodel>());
-                            },
-                            child: const Icon(
-                              Icons.add,
-                              color: Colors.grey,
+                              ),
                             ),
-                          ),
-                          const SizedBox(
-                            width: 10,
-                          ),
-                        ],
+                            const SizedBox(
+                              width: 10,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     Expanded(
@@ -222,33 +227,43 @@ class GpioPage extends StatelessWidget {
                                 //   ),
                                 // ),
                                 switch (gpio.direction) {
-                                  GpioDirection.input => FusionDropdown<GpiAction>(
-                                    value: gpio.gpiAction,
-                                    display: (GpiAction action) => action.displayName,
-                                    hint: "Select Action",
-                                    items: GpiAction.values,
-                                    onChanged: (GpiAction? action) {
-                                      context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpiAction: action));
-                                    },
+                                  GpioDirection.input => SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "gpi_input_action_dropdown_$index"),
+                                    child: FusionDropdown<GpiAction>(
+                                      value: gpio.gpiAction,
+                                      display: (GpiAction action) => action.displayName,
+                                      hint: "Select Action",
+                                      items: GpiAction.values,
+                                      onChanged: (GpiAction? action) {
+                                        context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpiAction: action));
+                                      },
+                                    ),
                                   ),
-                                  GpioDirection.output => FusionDropdown<GpoAction>(
-                                    value: gpio.gpoAction,
-                                    display: (GpoAction action) => action.displayName,
-                                    hint: "Select Action",
-                                    items: GpoAction.values,
-                                    onChanged: (GpoAction? action) {
-                                      context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpoAction: action));
-                                    },
+                                  GpioDirection.output => SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "gpo_output_action_dropdown_$index"),
+                                    child: FusionDropdown<GpoAction>(
+                                      value: gpio.gpoAction,
+                                      display: (GpoAction action) => action.displayName,
+                                      hint: "Select Action",
+                                      items: GpoAction.values,
+                                      onChanged: (GpoAction? action) {
+                                        context.read<GpioViewmodel>().updateGpio(gpio.copyWith(gpoAction: action));
+                                      },
+                                    ),
                                   ),
                                 },
                                 if ((gpio.direction == GpioDirection.output && gpio.gpoAction == GpoAction.openCollector) ||
                                     (gpio.direction == GpioDirection.input && gpio.gpiAction == GpiAction.voltageTrigger))
-                                  Checkbox(
+                                  SemanticHelper.toggle(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.toggle, "gpio_invert_toggle_$index"),
                                     value: gpio.invert,
-                                    onChanged: (bool? value) {
-                                      context.read<GpioViewmodel>().updateGpio(gpio.copyWith(invert: value));
-                                    },
-                                    activeColor: Colors.black,
+                                    child: Checkbox(
+                                      value: gpio.invert,
+                                      onChanged: (bool? value) {
+                                        context.read<GpioViewmodel>().updateGpio(gpio.copyWith(invert: value));
+                                      },
+                                      activeColor: Colors.black,
+                                    ),
                                   )
                                 else
                                   const SizedBox(),
@@ -265,73 +280,82 @@ class GpioPage extends StatelessWidget {
                                   ),
 
                                 if (gpio.direction == GpioDirection.output)
-                                  Switch(
-                                    value: false,
-                                    onChanged: (_) {},
-                                    // activeThumbColor: Colors.black,
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                    thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                      if (states.contains(WidgetState.selected)) {
+                                  SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_output_status_switch_$index"),
+                                    child: Switch(
+                                      value: false,
+                                      onChanged: (_) {},
+                                      // activeThumbColor: Colors.black,
+                                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      thumbColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                        if (states.contains(WidgetState.selected)) {
                                         return Theme.of(context).colorScheme.primaryWhite;
-                                      }
+                                        }
                                       return context.colorScheme.primaryBlack;
-                                    }),
-                                    trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
-                                      if (states.contains(WidgetState.selected)) {
+                                      }),
+                                      trackColor: WidgetStateProperty.resolveWith<Color>((Set<WidgetState> states) {
+                                        if (states.contains(WidgetState.selected)) {
                                         return Theme.of(context).colorScheme.primaryBlack;
-                                      }
+                                        }
                                       return context.colorScheme.primaryBlack;
-                                    }),
-                                    trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                                      }),
+                                      trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                                    ),
                                   )
                                 else
                                   FusionButton(label: "Test", onTap: () {}),
 
                                 if (gpio.direction == GpioDirection.input)
-                                  InkWell(
-                                    onTap: () {
-                                      /// getEventsForGPI if existis this directly navigate to Configuration tab
-                                      final FusionEvent? eventsForGPI = serviceLocator<ProjectViewModel>().getEventsForGPI(
-                                        gpiId: gpio.id,
-                                      );
-                                      if (eventsForGPI != null) {
-                                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                                          /// Set the selected event ID to the existing event for this GPI
-                                          serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForGPI.id);
-                                        });
-                                      } else {
-                                        /// Add the event to the project
-                                        serviceLocator<ProjectViewModel>().addEventForGPI(
+                                  SemanticHelper.button(
+                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "gpio_input_configure_event_button_$index"),
+                                    child: InkWell(
+                                      onTap: () {
+                                        /// getEventsForGPI if existis this directly navigate to Configuration tab
+                                        final FusionEvent? eventsForGPI = serviceLocator<ProjectViewModel>().getEventsForGPI(
                                           gpiId: gpio.id,
                                         );
-                                      }
+                                        if (eventsForGPI != null) {
+                                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                                            /// Set the selected event ID to the existing event for this GPI
+                                            serviceLocator<ProjectViewModel>().setSelectedEventId(eventsForGPI.id);
+                                          });
+                                        } else {
+                                          /// Add the event to the project
+                                          serviceLocator<ProjectViewModel>().addEventForGPI(
+                                            gpiId: gpio.id,
+                                          );
+                                        }
 
-                                      /// Navigate to Configuration tab (index 3)
-                                      projectTabBroadcastController.add(3);
+                                        /// Navigate to Configuration tab (index 3)
+                                        projectTabBroadcastController.add(3);
 
-                                      /// Switch to Events sub-tab within Configuration
-                                      serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
-                                        ConfigurationMenuMode.events,
-                                      );
-                                    },
-                                    child: Center(
-                                      child: SvgPicture.asset(
-                                        "assets/icons/scheduler/run.svg",
-                                        width: 25,
-                                        height: 25,
+                                        /// Switch to Events sub-tab within Configuration
+                                        serviceLocator<ProjectViewModel>().setConfigurationMenuMode(
+                                          ConfigurationMenuMode.events,
+                                        );
+                                      },
+                                      child: Center(
+                                        child: SvgPicture.asset(
+                                          "assets/icons/scheduler/run.svg",
+                                          width: 25,
+                                          height: 25,
+                                        ),
                                       ),
                                     ),
                                   )
                                 else
                                   const SizedBox(),
 
-                                IconButton(
-                                  onPressed: () {
-                                    context.read<GpioViewmodel>().removeGpio(gpio);
-                                  },
-                                  icon: const Icon(
-                                    Icons.delete_outline,
-                                    color: Colors.grey,
+                                SemanticHelper.button(
+                                  testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_gpio_button_$index"),
+                                  child: IconButton(
+                                    onPressed: () {
+                                      context.read<GpioViewmodel>().removeGpio(gpio);
+                                    },
+                                    icon: const Icon(
+                                      Icons.delete_outline,
+                                      color: Colors.grey,
+                                    ),
                                   ),
                                 ),
                               ];

@@ -121,38 +121,44 @@ class _BuildingPageDronDownState<T> extends State<BuildingPageDronDown<T>> {
               ),
             ];
           },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
-            child: Row(
-              children: <Widget>[
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: Builder(
-                      builder: (BuildContext context) {
-                        if (widget.value != null) {
-                          return widget.labelBuilder(widget.value as T);
-                        } else {
-                          return FusionAppText(
-                            text: widget.hintText ?? 'Select',
-                            maxLine: 1,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                              color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
-                              fontWeight: FontWeight.normal,
-                              fontSize: 12,
-                            ),
-                          );
-                        }
-                      },
+          child: SemanticHelper.container(
+            testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}"),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4.0).copyWith(right: 8),
+              child: Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                      child: Builder(
+                        builder: (BuildContext context) {
+                          if (widget.value != null) {
+                            return widget.labelBuilder(widget.value as T);
+                          } else {
+                            return FusionAppText(
+                              text: widget.hintText ?? 'Select',
+                              maxLine: 1,
+                              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                                color: context.colorScheme.onSurface.withValues(alpha: widget.value == null ? 0.5 : 1.0),
+                                fontWeight: FontWeight.normal,
+                                fontSize: 12,
+                              ),
+                            );
+                          }
+                        },
+                      ),
                     ),
                   ),
-                ),
-                Icon(
-                  Icons.keyboard_arrow_down,
-                  color: Colors.grey[600],
-                  size: 16,
-                ),
-              ],
+                  SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "multi_section_dropdown_${widget.hintText}_arrow"),
+                    child: Icon(
+                      Icons.keyboard_arrow_down,
+                      color: Colors.grey[600],
+                      size: 16,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -35,112 +35,122 @@ class _EventItemCardState extends State<EventItemCard> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: widget.onTap,
-      child: MouseRegion(
-        onEnter: (_) {
-          if (!_isHovered) {
-            setState(() => _isHovered = true);
-          }
-        },
-        onExit: (_) {
-          if (_isHovered) {
-            setState(() => _isHovered = false);
-          }
-        },
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "event_item_card_${widget.index}"),
+      child: GestureDetector(
+        onTap: widget.onTap,
+        child: MouseRegion(
+          onEnter: (_) {
+            if (!_isHovered) {
+              setState(() => _isHovered = true);
+            }
+          },
+          onExit: (_) {
+            if (_isHovered) {
+              setState(() => _isHovered = false);
+            }
+          },
 
-        /// Card container
-        child: Container(
-          decoration: BoxDecoration(
-            color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(
+          /// Card container
+          child: Container(
+            decoration: BoxDecoration(
+              color: widget.isSelected ? Colors.grey[200] : (_isHovered ? Colors.grey[200] : null),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
               color: widget.isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
-              width: 1.0,
+                width: 1.0,
+              ),
             ),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-          child: Row(
-            children: <Widget>[
-              /// snapshot item draggable icon
-              ReorderableDragStartListener(
-                index: widget.index,
-                child: Opacity(
-                  opacity: 0.4,
-                  child: Icon(
-                    Icons.drag_handle,
-                    size: 16,
-                    color: Colors.grey[600],
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              children: <Widget>[
+                /// snapshot item draggable icon
+                ReorderableDragStartListener(
+                  index: widget.index,
+                  child: Opacity(
+                    opacity: 0.4,
+                    child: Icon(
+                      Icons.drag_handle,
+                      size: 16,
+                      color: Colors.grey[600],
+                    ),
                   ),
                 ),
-              ),
-              const SizedBox(width: 8),
-              const FusionImage.asset(
-                Assets.playIcon,
-                width: 24,
-                height: 24,
-                fit: BoxFit.contain,
-              ),
-              const SizedBox(width: 12),
-
-              Expanded(
-                child: TitleTextFieldSwitcher(
-                  value: widget.eventData.name,
-                  hintText: "Event name",
-                  style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
-                  save: (String value) {
-                    if (value.isNotEmpty) {
-                      final FusionEvent newSnapshot = widget.eventData.copyWith(name: value);
-                      widget.projectViewModel.updateEvent(event: newSnapshot);
-                    }
-                  },
+                const SizedBox(width: 8),
+                const FusionImage.asset(
+                  Assets.playIcon,
+                  width: 24,
+                  height: 24,
+                  fit: BoxFit.contain,
                 ),
-              ),
+                const SizedBox(width: 12),
 
-              const SizedBox(width: 8),
-              FusionSwitch(
-                value: widget.eventData.isEnabled,
-                onChanged: (bool value) {
-                  if (widget.onSwitchChanged != null) {
-                    widget.onSwitchChanged!(widget.eventData.id);
-                  }
-                },
-              ),
-              const SizedBox(width: 12),
-
-              Tooltip(
-                message: 'Delete Snapshot',
-                child: GestureDetector(
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder:
-                          (_) => FusionDialog(
-                            title: 'Delete Snapshot?',
-                            description: "This will remove '${widget.eventData.name}' from the Snapshot list.",
-                            primaryButtonLabel: 'Delete',
-                            secondaryButtonLabel: 'Cancel',
-                            onSecondaryPressed: () {
-                              Navigator.of(context).pop();
-                            },
-                            onPrimaryPressed: () {
-                              if (widget.onDelete != null) {
-                                widget.onDelete!();
-                                Navigator.of(context).pop();
-                              }
-                            },
-                          ),
-                    );
-                  },
-                  child: const FusionImage.asset(
-                    Assets.deleteIcon,
-                    width: 17,
-                    height: 17,
-                    fit: BoxFit.contain,
+                Expanded(
+                  child: TitleTextFieldSwitcher(
+                    value: widget.eventData.name,
+                    hintText: "Event name",
+                    style: Theme.of(context).textTheme.bodySmall!.copyWith(fontSize: 11),
+                    save: (String value) {
+                      if (value.isNotEmpty) {
+                        final FusionEvent newSnapshot = widget.eventData.copyWith(name: value);
+                        widget.projectViewModel.updateEvent(event: newSnapshot);
+                      }
+                    },
                   ),
                 ),
-              ),
-            ],
+
+                const SizedBox(width: 8),
+                SemanticHelper.toggle(
+                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "event_switch"),
+                  value: widget.eventData.isEnabled,
+                  child: FusionSwitch(
+                    value: widget.eventData.isEnabled,
+                    onChanged: (bool value) {
+                      if (widget.onSwitchChanged != null) {
+                        widget.onSwitchChanged!(widget.eventData.id);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+
+                Tooltip(
+                  message: 'Delete Snapshot',
+                  child: SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_snapshot"),
+                    child: GestureDetector(
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder:
+                              (_) => FusionDialog(
+                                title: 'Delete Snapshot?',
+                                description: "This will remove '${widget.eventData.name}' from the Snapshot list.",
+                                primaryButtonLabel: 'Delete',
+                                secondaryButtonLabel: 'Cancel',
+                                onSecondaryPressed: () {
+                                  Navigator.of(context).pop();
+                                },
+                                onPrimaryPressed: () {
+                                  if (widget.onDelete != null) {
+                                    widget.onDelete!();
+                                    Navigator.of(context).pop();
+                                  }
+                                },
+                              ),
+                        );
+                      },
+                      child: const FusionImage.asset(
+                        Assets.deleteIcon,
+                        width: 17,
+                        height: 17,
+                        fit: BoxFit.contain,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

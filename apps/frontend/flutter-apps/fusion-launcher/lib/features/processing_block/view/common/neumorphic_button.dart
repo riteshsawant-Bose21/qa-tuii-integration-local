@@ -43,30 +43,33 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => setState(() => _isPressed = true),
-      onTapCancel: () => setState(() => _isPressed = false),
-      onTapUp: (_) {
-        setState(() => _isPressed = false);
-        widget.onTap();
-      },
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(widget.borderRadius),
-        clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,
-        child: Container(
-          width: widget.width,
-          height: widget.height,
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: Colors.transparent,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
-            boxShadow: getNeumorphismBoxShadows(inner: _isPressed),
-          ),
-          child: FusionAppText(
-            text: widget.text,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              fontSize: 10,
-              color: widget.textColor,
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_button_${widget.text}"),
+      child: GestureDetector(
+        onTapDown: (_) => setState(() => _isPressed = true),
+        onTapCancel: () => setState(() => _isPressed = false),
+        onTapUp: (_) {
+          setState(() => _isPressed = false);
+          widget.onTap();
+        },
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,
+          child: Container(
+            width: widget.width,
+            height: widget.height,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(widget.borderRadius),
+              boxShadow: getNeumorphismBoxShadows(inner: _isPressed),
+            ),
+            child: FusionAppText(
+              text: widget.text,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                fontSize: 10,
+                color: widget.textColor,
+              ),
             ),
           ),
         ),

@@ -91,28 +91,31 @@ class _EventActionRowDataState extends State<EventActionRowData> {
         final bool isItemEnabled = action.actionType == null || itemList.isNotEmpty;
         final FusionEvent event = _projectViewModel.getEventById(widget.eventId);
 
-        return Container(
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          decoration: BoxDecoration(
+        return SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_row_data_${widget.index}"),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            decoration: BoxDecoration(
             color: colorScheme.primaryWhite,
             border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
-          ),
-          child: Row(
-            spacing: context.screenWidth * 0.01,
-            children: <Widget>[
-              _buildDragHandle(context),
-              _buildActionTypeDropdown(action),
-              _buildItemDropdown(action, itemList, isItemEnabled),
-              _buildParamDropdown(action, paramList),
-              (event.condition is! ValueChangeCondition)
-                  ? _buildValueWidget(action)
-                  : const Expanded(
-                    child: Center(
-                      child: FusionAppText(text: "--"),
+            ),
+            child: Row(
+              spacing: context.screenWidth * 0.01,
+              children: <Widget>[
+                _buildDragHandle(context),
+                _buildActionTypeDropdown(action),
+                _buildItemDropdown(action, itemList, isItemEnabled),
+                _buildParamDropdown(action, paramList),
+                (event.condition is! ValueChangeCondition)
+                    ? _buildValueWidget(action)
+                    : const Expanded(
+                      child: Center(
+                        child: FusionAppText(text: "--"),
+                      ),
                     ),
-                  ),
-              _buildActionButtons(),
-            ],
+                _buildActionButtons(),
+              ],
+            ),
           ),
         );
       },
@@ -134,12 +137,15 @@ class _EventActionRowDataState extends State<EventActionRowData> {
 
   Widget _buildActionTypeDropdown(SceneActionModel action) {
     return Expanded(
-      child: FusionDropdown<SceneActionType>(
-        value: action.actionType,
-        hint: "Select Action Type",
-        items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false, eventId: widget.eventId),
-        display: (SceneActionType e) => e.displayName,
-        onChanged: _updateActionType,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_type_${widget.index}"),
+        child: FusionDropdown<SceneActionType>(
+          value: action.actionType,
+          hint: "Select Action Type",
+          items: _projectViewModel.getSceneActionTypes(isFromSnapshot: false, eventId: widget.eventId),
+          display: (SceneActionType e) => e.displayName,
+          onChanged: _updateActionType,
+        ),
       ),
     );
   }
@@ -163,13 +169,16 @@ class _EventActionRowDataState extends State<EventActionRowData> {
             : "Select Action Item";
 
     return Expanded(
-      child: FusionDropdown<SceneItemDropdown>(
-        value: selected,
-        items: itemList,
-        hint: hint,
-        display: (SceneItemDropdown e) => e.name,
-        isEnabled: isEnabled,
-        onChanged: isEnabled ? _updateActionItem : null,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_item_${widget.index}"),
+        child: FusionDropdown<SceneItemDropdown>(
+          value: selected,
+          items: itemList,
+          hint: hint,
+          display: (SceneItemDropdown e) => e.name,
+          isEnabled: isEnabled,
+          onChanged: isEnabled ? _updateActionItem : null,
+        ),
       ),
     );
   }
@@ -184,12 +193,15 @@ class _EventActionRowDataState extends State<EventActionRowData> {
     }
 
     return Expanded(
-      child: FusionDropdown<SceneParam>(
-        hint: "Select Parameter",
-        value: selected,
-        items: paramList,
-        display: (SceneParam e) => e.label,
-        onChanged: _updateActionParam,
+      child: SemanticHelper.button(
+        testId: SemanticHelper.createTestId(SemanticTypes.button, "event_action_param_${widget.index}"),
+        child: FusionDropdown<SceneParam>(
+          hint: "Select Parameter",
+          value: selected,
+          items: paramList,
+          display: (SceneParam e) => e.label,
+          onChanged: _updateActionParam,
+        ),
       ),
     );
   }
@@ -243,23 +255,29 @@ class _EventActionRowDataState extends State<EventActionRowData> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: <Widget>[
-          GestureDetector(
-            onTap: _deleteAction,
-            child: const FusionImage.asset(
-              Assets.deleteIcon,
-              width: 20,
-              height: 20,
-              fit: BoxFit.contain,
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_event_action_${widget.index}"),
+            child: GestureDetector(
+              onTap: _deleteAction,
+              child: const FusionImage.asset(
+                Assets.deleteIcon,
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const SizedBox(width: 6),
-          GestureDetector(
-            onTap: _duplicateAction,
-            child: const FusionImage.asset(
-              Assets.duplicateIcon,
-              width: 20,
-              height: 20,
-              fit: BoxFit.contain,
+          SemanticHelper.button(
+            testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_event_action_${widget.index}"),
+            child: GestureDetector(
+              onTap: _duplicateAction,
+              child: const FusionImage.asset(
+                Assets.duplicateIcon,
+                width: 20,
+                height: 20,
+                fit: BoxFit.contain,
+              ),
             ),
           ),
         ],

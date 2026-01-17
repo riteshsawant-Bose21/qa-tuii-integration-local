@@ -28,8 +28,8 @@ class ConfigurationMediaFilesPage extends StatelessWidget {
                     Icon(Icons.error, color: Colors.red.shade700, size: 16),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: Text(
-                        state.errorMessage!,
+                      child: FusionAppText(
+                        text: state.errorMessage!,
                         style: TextStyle(
                           color: Colors.red.shade700,
                           fontSize: 12,
@@ -37,9 +37,12 @@ class ConfigurationMediaFilesPage extends StatelessWidget {
                         ),
                       ),
                     ),
-                    GestureDetector(
-                      onTap: () => context.read<MediaFilesViewModel>().clearError(),
-                      child: Icon(Icons.close, color: Colors.red.shade700, size: 16),
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "close_error_message"),
+                      child: GestureDetector(
+                        onTap: () => context.read<MediaFilesViewModel>().clearError(),
+                        child: Icon(Icons.close, color: Colors.red.shade700, size: 16),
+                      ),
                     ),
                   ],
                 ),
@@ -73,30 +76,33 @@ class _TopBar extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: <Widget>[
-        GestureDetector(
-          onTap: cubit.pickFiles,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        SemanticHelper.button(
+          testId: SemanticHelper.createTestId(SemanticTypes.button, "upload_media_files"),
+          child: GestureDetector(
+            onTap: cubit.pickFiles,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
 
-            decoration: BoxDecoration(
-              border: Border(
+              decoration: BoxDecoration(
+                border: Border(
                 left: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
+                ),
               ),
-            ),
-            child: Row(
-              children: <Widget>[
-                const Icon(Icons.upload, size: 18),
-                const SizedBox(
-                  width: 10,
-                ),
-                FusionAppText(
-                  text: "Upload",
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
+              child: Row(
+                children: <Widget>[
+                  const Icon(Icons.upload, size: 18),
+                  const SizedBox(
+                    width: 10,
                   ),
-                ),
-              ],
+                  FusionAppText(
+                    text: "Upload",
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
@@ -145,33 +151,36 @@ class _MediaTable extends StatelessWidget {
                               final MediaFileModel file = context.read<MediaFilesViewModel>().getAllFiles()[index];
                               final bool isSelected = state.selectedMediaFileId == file.id;
 
-                              return InkWell(
-                                onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
-                                child: Container(
-                                  margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
-                                  decoration: BoxDecoration(
-                                    color: isSelected ? Colors.grey[200] : null,
-                                    borderRadius: BorderRadius.circular(3),
-                                    border: Border.all(
+                              return SemanticHelper.button(
+                                testId: SemanticHelper.createTestId(SemanticTypes.button, "media_file_$index"),
+                                child: InkWell(
+                                  onTap: () => context.read<MediaFilesViewModel>().selectFile(file),
+                                  child: Container(
+                                    margin: const EdgeInsets.only(top: 8, left: 12, right: 12),
+                                    decoration: BoxDecoration(
+                                      color: isSelected ? Colors.grey[200] : null,
+                                      borderRadius: BorderRadius.circular(3),
+                                      border: Border.all(
                                       color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
-                                      width: 1.0,
-                                    ),
-                                  ),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  child: Row(
-                                    children: <Widget>[
-                                      Expanded(flex: 4, child: Text(file.name)),
-                                      Expanded(flex: 2, child: Text(file.size.toString())),
-                                      Expanded(flex: 2, child: Text(file.length.toString())),
-                                      Expanded(flex: 3, child: Text(file.date.toString())),
-
-                                      GestureDetector(
-                                        onTap: () {
-                                          context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
-                                        },
-                                        child: const Icon(Icons.delete_outline, size: 18),
+                                        width: 1.0,
                                       ),
-                                    ],
+                                    ),
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                    child: Row(
+                                      children: <Widget>[
+                                        Expanded(flex: 4, child: Text(file.name)),
+                                        Expanded(flex: 2, child: Text(file.size.toString())),
+                                        Expanded(flex: 2, child: Text(file.length.toString())),
+                                        Expanded(flex: 3, child: Text(file.date.toString())),
+
+                                        GestureDetector(
+                                          onTap: () {
+                                            context.read<MediaFilesViewModel>().deleteMediaFile(file.id);
+                                          },
+                                          child: const Icon(Icons.delete_outline, size: 18),
+                                        ),
+                                      ],
+                                    ),
                                   ),
                                 ),
                               );
@@ -310,21 +319,30 @@ class _PreviewPanel extends StatelessWidget {
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            _CircleButton(
-                              icon: Icons.fast_rewind_outlined,
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "play_previous"),
+                              child: _CircleButton(
+                                icon: Icons.fast_rewind_outlined,
                               borderColor: colors.primaryBlack,
-                              onTap: cubit.playPrevious,
+                                onTap: cubit.playPrevious,
+                              ),
                             ),
-                            _CircleButton(
-                              icon: state.isPlaying ? Icons.pause : Icons.play_arrow,
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "play_pause"),
+                              child: _CircleButton(
+                                icon: state.isPlaying ? Icons.pause : Icons.play_arrow,
                               borderColor: colors.primaryBlack,
-                              onTap: cubit.playPause,
+                                onTap: cubit.playPause,
+                              ),
                             ),
 
-                            _CircleButton(
-                              icon: Icons.fast_forward_outlined,
+                            SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "play_next"),
+                              child: _CircleButton(
+                                icon: Icons.fast_forward_outlined,
                               borderColor: colors.primaryBlack,
-                              onTap: cubit.playNext,
+                                onTap: cubit.playNext,
+                              ),
                             ),
                           ],
                         ),
@@ -342,25 +360,28 @@ class _PreviewPanel extends StatelessWidget {
                     ),
 
                     /// SLIDER
-                    SliderTheme(
-                      data: SliderTheme.of(context).copyWith(
-                        thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
-                        overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
-                        trackHeight: 1,
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "media_seek_slider"),
+                      child: SliderTheme(
+                        data: SliderTheme.of(context).copyWith(
+                          thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
+                          overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
+                          trackHeight: 1,
                         thumbColor: Theme.of(context).colorScheme.primaryBlack,
-                      ),
-                      child: Slider(
-                        value: state.currentPosition.inSeconds.toDouble(),
-                        padding: EdgeInsets.zero,
+                        ),
+                        child: Slider(
+                          value: state.currentPosition.inSeconds.toDouble(),
+                          padding: EdgeInsets.zero,
                         activeColor: context.colorScheme.primaryBlack,
                         inactiveColor: context.colorScheme.primaryBlack,
-                        min: 0,
-                        max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
-                        divisions: 100,
+                          min: 0,
+                          max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
+                          divisions: 100,
 
-                        onChanged: (double v) {
-                          cubit.seek(Duration(seconds: v.toInt()));
-                        },
+                          onChanged: (double v) {
+                            cubit.seek(Duration(seconds: v.toInt()));
+                          },
+                        ),
                       ),
                     ),
                   ],

@@ -72,45 +72,48 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
               return MouseRegion(
                 onEnter: (_) => setState(() => hoveredMode = mode),
                 onExit: (_) => setState(() => hoveredMode = null),
-                child: GestureDetector(
-                  onTap: () => widget.onModeChanged(mode),
-                  child: Container(
-                    height: 32,
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "configuration_tab_switcher_${mode.name}"),
+                  child: GestureDetector(
+                    onTap: () => widget.onModeChanged(mode),
+                    child: Container(
+                      height: 32,
 
-                    margin: const EdgeInsets.only(top: 4),
-                    padding: const EdgeInsets.only(right: 16, left: 16, bottom: 4, top: 4),
-                    decoration: BoxDecoration(
-                      color:
-                          isSelected
+                      margin: const EdgeInsets.only(top: 4),
+                      padding: const EdgeInsets.only(right: 16, left: 16, bottom: 4, top: 4),
+                      decoration: BoxDecoration(
+                        color:
+                            isSelected
                               ? context.colorScheme.primaryBlack
-                              : isHovered
+                                : isHovered
                               ? context.colorScheme.primaryBlack.withAlpha(50)
-                              : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: <Widget>[
-                        FusionImage.asset(
-                          config.assetsName,
-                          width: 24,
-                          height: 24,
-                        ),
-                        const SizedBox(width: 16),
-                        FusionAppText(
-                          text: config.label,
-                          maxLine: 1,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            fontSize: 11,
-                            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                            color:
-                                isSelected
-                                    ? context.colorScheme.onPrimaryContainer
-                                    : isHovered
-                                    ? context.colorScheme.onSurface.withOpacity(0.9)
-                                    : context.colorScheme.onSurface.withOpacity(0.7),
+                                : Colors.transparent,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: <Widget>[
+                          FusionImage.asset(
+                            config.assetsName,
+                            width: 24,
+                            height: 24,
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 16),
+                          FusionAppText(
+                            text: config.label,
+                            maxLine: 1,
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              color:
+                                  isSelected
+                                      ? context.colorScheme.onPrimaryContainer
+                                      : isHovered
+                                      ? context.colorScheme.onSurface.withOpacity(0.9)
+                                      : context.colorScheme.onSurface.withOpacity(0.7),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
