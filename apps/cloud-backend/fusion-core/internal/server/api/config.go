@@ -10,7 +10,7 @@ import (
 type APIconfig struct {
 	Server   *config.APIConfig
 	Postgres *config.Postgres
-	S3       *config.S3
+	S3       *config.S3Config
 	Auth0    *config.Auth0
 }
 
@@ -50,6 +50,6 @@ func NewAPIConfig(svc ConfigService) (*APIconfig, error) {
 type ConfigService interface {
 	APIConfig() (*config.APIConfig, error)
 	Postgres() (*config.Postgres, error)
-	S3() (*config.S3, error)
+	S3() (*config.S3Config, error)
 	Auth0() (*config.Auth0, error)
 }

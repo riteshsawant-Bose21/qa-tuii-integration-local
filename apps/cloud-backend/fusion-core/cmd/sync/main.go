@@ -122,7 +122,7 @@ func main() {
 
 	syncRequestRegion := *region
 	if syncRequestRegion == "" {
-		syncRequestRegion = syncCfg.AWS.Region
+		syncRequestRegion = syncCfg.S3.Region
 	}
 
 	syncRequest := &types.SyncRequest{
