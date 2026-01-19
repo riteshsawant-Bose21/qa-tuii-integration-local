@@ -132,14 +132,14 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         color:
                             widget.isDragHovered
                                 ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : (_isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight),
+                                : (_isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack),
                       ),
                       child: Row(
                         children: <Widget>[
                           /// Expand/collapse icon
                           Icon(
                             _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                            color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
+                            color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
                           ),
                           const SizedBox(width: 4),
 
@@ -288,7 +288,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     await showMenu<dynamic>(
       context: context,
       position: position,
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.primaryWhite,
       constraints: const BoxConstraints(maxHeight: 500, maxWidth: 250),
       items: <PopupMenuEntry<dynamic>>[
         PopupMenuItem<dynamic>(
@@ -337,7 +337,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext context, ProjectViewModelState state) {
         final List<Source> sourceList = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
         return Container(
-          color: Theme.of(context).colorScheme.greyLight.withAlpha(50),
+          color: context.colorScheme.primaryBlack.withAlpha(50),
           child: ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -369,7 +369,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   color: Colors.transparent,
                   child: Opacity(
                     opacity: 0.8,
-                    child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
+                    child: Container(color: context.colorScheme.primaryWhite, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
                   ),
                 ),
                 childWhenDragging: Opacity(
@@ -392,7 +392,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext ctx) {
         final ColorScheme scheme = Theme.of(ctx).colorScheme;
         return Dialog(
-          backgroundColor: scheme.white,
+          backgroundColor: scheme.primaryWhite,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ConstrainedBox(
@@ -434,7 +434,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           label: "Delete",
                           textStyle: Theme.of(ctx).textTheme.labelLarge?.copyWith(
                             fontSize: 11,
-                            color: scheme.fusionButtonTextColor,
+                            color: scheme.primary,
                           ),
                           isActive: true,
                           onTap: () {
@@ -481,7 +481,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.primaryWhite,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -548,7 +548,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: Theme.of(context).colorScheme.white,
+              color: context.colorScheme.primaryWhite,
               offset: const Offset(0, 35),
               itemBuilder: (BuildContext context) {
                 return <PopupMenuEntry<String>>[
@@ -588,7 +588,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                       child: Icon(
                                         Icons.close,
                                         size: 16,
-                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                        color: Theme.of(context).colorScheme.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -608,13 +608,13 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                 Container(
                                                   width: double.infinity,
                                                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                                  color: Theme.of(context).colorScheme.greyLight.withAlpha(40),
+                                                  color: context.colorScheme.primaryBlack.withAlpha(40),
                                                   child: FusionAppText(
                                                     text: "Selected (${widget.selectedSources.length})",
                                                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                       fontSize: 10,
                                                       fontWeight: FontWeight.w600,
-                                                      color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                                      color: Theme.of(context).colorScheme.textPrimary,
                                                     ),
                                                   ),
                                                 ),
@@ -645,7 +645,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                 setPopupState(() {});
                                                                 setState(() {});
                                                               },
-                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              activeColor: context.colorScheme.primaryBlack,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -701,7 +701,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                 setPopupState(() {});
                                                                 setState(() {});
                                                               },
-                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              activeColor: context.colorScheme.primaryBlack,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
@@ -756,14 +756,14 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                 ? "Select Sources"
                                 : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: widget.selectedSources.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                          color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                         ),
                       ),
                     ),
                     Icon(
                       Icons.keyboard_arrow_down,
                       size: 20,
-                      color: Theme.of(context).colorScheme.greyDark,
+                      color: context.colorScheme.primaryBlack,
                     ),
                   ],
                 ),
@@ -790,7 +790,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                   label: "Edit",
                   isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,

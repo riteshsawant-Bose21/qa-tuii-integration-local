@@ -94,8 +94,8 @@ class _EventActionRowDataState extends State<EventActionRowData> {
         return Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
           decoration: BoxDecoration(
-            color: colorScheme.white,
-            border: Border(bottom: BorderSide(color: colorScheme.grey)),
+            color: colorScheme.primaryWhite,
+            border: Border(bottom: BorderSide(color: colorScheme.elevation1)),
           ),
           child: Row(
             spacing: context.screenWidth * 0.01,

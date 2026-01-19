@@ -89,7 +89,7 @@ class FloorProperties extends StatelessWidget {
                             Icons.delete,
                             size: 15,
                           ),
-                          disabledColor: Theme.of(context).colorScheme.grey,
+                          disabledColor: context.colorScheme.primaryBlack,
 
                           onPressed:
                               viewModel.floors.length > 1
@@ -143,9 +143,9 @@ class FloorProperties extends StatelessWidget {
       offset: const Offset(50, 8),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 1,
       itemBuilder: (BuildContext context) {
         if (options == null || options.isEmpty) {
@@ -177,7 +177,7 @@ class FloorProperties extends StatelessWidget {
               text: label,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 fontSize: 11,
-                color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.textPrimary.withOpacity(0.5),
               ),
             ),
             // Right: Value + Arrow
@@ -198,7 +198,7 @@ class FloorProperties extends StatelessWidget {
                   Icon(
                     Icons.keyboard_arrow_down,
                     size: 16,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ],
               ),
@@ -225,7 +225,7 @@ class FloorProperties extends StatelessWidget {
             text: label,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               fontSize: 11,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.textPrimary.withOpacity(0.5),
             ),
           ),
 

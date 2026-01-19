@@ -28,7 +28,7 @@ class FusionDropdown<T> extends StatelessWidget {
       hint: FusionAppText(
         text: hint,
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: isEnabled ? Theme.of(context).colorScheme.greyDark.withAlpha(200) : Theme.of(context).colorScheme.greyDark.withAlpha(100),
+          color: isEnabled ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(100),
         ),
         maxLine: 1,
       ),
@@ -36,29 +36,29 @@ class FusionDropdown<T> extends StatelessWidget {
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(
-            color: isEnabled ? Theme.of(context).colorScheme.greyDark.withAlpha(200) : Theme.of(context).colorScheme.greyLight.withAlpha(100),
+            color: isEnabled ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(100),
           ),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(
-            color: isEnabled ? Theme.of(context).colorScheme.greyDark.withAlpha(200) : Theme.of(context).colorScheme.greyLight.withAlpha(100),
+            color: isEnabled ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(100),
           ),
         ),
         disabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(3),
           borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.greyLight.withAlpha(200),
+            color: context.colorScheme.primaryBlack.withAlpha(200),
           ),
         ),
         isDense: true,
         filled: true,
-        fillColor: isEnabled ? Theme.of(context).colorScheme.white : Theme.of(context).colorScheme.greyLight.withAlpha(100),
+        fillColor: isEnabled ? Theme.of(context).colorScheme.primaryWhite : context.colorScheme.primaryBlack.withAlpha(100),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
-      dropdownColor: Theme.of(context).colorScheme.white,
+      dropdownColor: Theme.of(context).colorScheme.primaryWhite,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-        color: isEnabled ? null : Theme.of(context).colorScheme.greyDark.withAlpha(100),
+        color: isEnabled ? null : context.colorScheme.primaryBlack.withAlpha(100),
       ),
       items:
           isEnabled

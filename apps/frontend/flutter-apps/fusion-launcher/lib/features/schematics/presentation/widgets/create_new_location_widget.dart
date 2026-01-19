@@ -110,13 +110,13 @@ class _CreateNewLocationWidgetState extends State<CreateNewLocationWidget> {
                       child: Container(
                         height: 26,
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
+                          color: Theme.of(context).colorScheme.primaryWhite,
                           border: Border.all(color: Colors.grey[300]!),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String>(
-                            dropdownColor: Theme.of(context).colorScheme.white,
+                            dropdownColor: context.colorScheme.primaryWhite,
                             hint: FusionAppText(
                               text: "Select floor",
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(

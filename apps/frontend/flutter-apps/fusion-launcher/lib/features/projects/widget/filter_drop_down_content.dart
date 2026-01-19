@@ -50,7 +50,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       constraints: const BoxConstraints(maxHeight: 450, minWidth: 200),
       child: SingleChildScrollView(
         child: Column(
@@ -61,8 +61,8 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.white,
-                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
+                color: Theme.of(context).colorScheme.primaryWhite,
+                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -261,7 +261,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                   ),
                   value: option,
                   groupValue: selectedOptions.isNotEmpty ? selectedOptions.first : null,
-                  activeColor: Theme.of(context).colorScheme.greyDark,
+                  activeColor: context.colorScheme.primaryBlack,
                   onChanged: (String? value) {
                     print("$title radio changed: $value");
                     final Set<String> newSelected = <String>{};
@@ -291,7 +291,7 @@ class _FilterDropdownContentState extends State<FilterDropdownContent> {
                     ),
                   ),
                   value: isSelected,
-                  activeColor: Theme.of(context).colorScheme.greyDark,
+                  activeColor: context.colorScheme.primaryBlack,
                   onChanged: (bool? checked) {
                     final Set<String> newSelected = Set<String>.from(selectedOptions);
                     if (checked == true) {

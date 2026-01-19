@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration/presentation/viewmodel/pr
 import 'package:fusion_launcher/features/projects/widget/building/speaker_selection_section/view_model/product_query_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../../../../core/service_locator.dart';
@@ -37,7 +38,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
               decoration: BoxDecoration(
                 border: Border(
                   bottom: BorderSide(
-                    color: Theme.of(context).colorScheme.dividerColor,
+                    color: Theme.of(context).colorScheme.primaryBlack,
                     width: 1,
                   ),
                 ),
@@ -84,7 +85,7 @@ class _SpeakerSelectionWidgetState extends State<SpeakerSelectionWidget> {
                                 child: Icon(
                                   LucideIcons.plus200,
                                   size: 14,
-                                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                  color: Theme.of(context).colorScheme.textPrimary,
                                 ),
                               ),
                               itemBuilder: (BuildContext context) {

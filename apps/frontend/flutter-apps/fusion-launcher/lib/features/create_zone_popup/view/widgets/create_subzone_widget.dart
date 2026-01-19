@@ -83,7 +83,7 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                           onTap: () => _removeSubzone(subZoneIndex),
                           child: Icon(
                             Icons.close,
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: context.colorScheme.primaryBlack,
                             size: 16,
                           ),
                         ),
@@ -102,7 +102,7 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                   children: <Widget>[
                     Icon(
                       Icons.add,
-                      color: Theme.of(context).colorScheme.greyDark,
+                      color: context.colorScheme.primaryBlack,
                     ),
                     const SizedBox(width: 2),
                     Expanded(

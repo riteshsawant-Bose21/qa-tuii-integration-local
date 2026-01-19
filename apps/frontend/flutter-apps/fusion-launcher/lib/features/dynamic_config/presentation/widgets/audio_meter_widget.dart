@@ -235,7 +235,7 @@ class AudioMeter extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).dividerColor,
+                        color: Theme.of(context).primaryBlack,
                       ),
                     )
                     : const SizedBox(height: 12),
@@ -243,7 +243,7 @@ class AudioMeter extends StatelessWidget {
                 Container(
                   height: label == null ? 4 : 6,
                   width: 1,
-                  color: label == null ? Theme.of(context).dividerColor.withValues(alpha: 0.5) : colors.tertiary,
+                  color: label == null ? Theme.of(context).primaryBlack.withValues(alpha: 0.5) : colors.tertiary,
                 ),
               ],
             ),
@@ -278,14 +278,14 @@ class AudioMeter extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).dividerColor,
+                        color: Theme.of(context).primaryBlack,
                       ),
                     )
                     : const SizedBox(width: 20),
                 Container(
                   width: label == null ? 4 : 6,
                   height: 1,
-                  color: label == null ? Theme.of(context).dividerColor.withValues(alpha: 0.5) : colors.tertiary,
+                  color: label == null ? Theme.of(context).primaryBlack.withValues(alpha: 0.5) : colors.tertiary,
                 ),
               ],
             ),

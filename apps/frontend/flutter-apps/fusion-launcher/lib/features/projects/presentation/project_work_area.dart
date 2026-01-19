@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -19,7 +20,8 @@ import 'package:fusion_lib/constants/test_keys.dart';
 import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -659,7 +661,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             //       child: IconButton(
             //         icon: Icon(
             //           Icons.arrow_back_ios,
-            //           color: Theme.of(context).colorScheme.white,
+            //           color: Theme.of(context).colorScheme.primaryWhite,
             //           size: 20,
             //         ),
             //         onPressed: () {
@@ -684,8 +686,8 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 Container(
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.white,
-                    border: Border.all(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                    color: Theme.of(context).colorScheme.primaryWhite,
+                    border: Border.all(color: Theme.of(context).colorScheme.primaryWhite, width: 1),
                   ),
                   child: Row(
                     children: <Widget>[
@@ -696,7 +698,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       Expanded(
                         child: TabBar(
                           labelColor: Colors.black87,
-                          unselectedLabelColor: Theme.of(context).colorScheme.grey,
+                          unselectedLabelColor: Theme.of(context).colorScheme.elevation1,
                           dividerColor: Colors.transparent,
                           controller: _tabController,
                           isScrollable: true,
@@ -736,7 +738,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                       //
                       //           decoration: BoxDecoration(
-                      //             color: Theme.of(context).colorScheme.white,
+                      //             color: Theme.of(context).colorScheme.primaryWhite,
                       //           ),
                       //           child: const FusionImage.asset(
                       //             "assets/images/return_icon.png",
@@ -768,7 +770,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
                       //
                       //           decoration: BoxDecoration(
-                      //             color: Theme.of(context).colorScheme.white,
+                      //             color: Theme.of(context).colorScheme.primaryWhite,
                       //           ),
                       //
                       //           child: Transform(
@@ -785,6 +787,34 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //     ),
                       //   ),
                       // ),
+                      /// Theme Change Icon Section (Debug Only)
+                      if (kDebugMode)
+                        Container(
+                          width: 56,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryWhite,
+                          ),
+                          child: ValueListenableBuilder<ThemeMode>(
+                            valueListenable: FusionThemeController.themeModeNotifier,
+                            builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
+                              return IconButton(
+                                icon: Icon(
+                                  themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryBlack,
+                                ),
+                                tooltip: themeMode == ThemeMode.dark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                                onPressed: () {
+                                  final bool isLight = FusionThemeController.themeModeNotifier.value == ThemeMode.light;
+                                  FusionThemeController.setThemeMode(
+                                    isLight ? ThemeMode.dark : ThemeMode.light,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
 
                       /// Save Icon Section
                       SemanticHelper.button(
@@ -794,13 +824,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           height: 48,
                           // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                           decoration: BoxDecoration(
-                            color: Theme.of(context).colorScheme.white,
+                            color: Theme.of(context).colorScheme.primaryWhite,
                           ),
                           child: IconButton(
                             icon: Icon(
                               Icons.save,
                               size: 24,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: Theme.of(context).colorScheme.primaryBlack,
                             ),
                             tooltip: 'Save project',
                             onPressed: () => _showProjectJsonDialog(context),
@@ -815,13 +845,13 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         height: 48,
                         // padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
+                          color: Theme.of(context).colorScheme.primaryWhite,
                         ),
                         child: IconButton(
                           icon: Icon(
                             LucideIcons.cloudUpload,
                             size: 24,
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: Theme.of(context).colorScheme.primaryWhite,
                           ),
                           tooltip: 'Upload project',
                           onPressed: () async {
@@ -845,7 +875,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //     height: 48,
                       //     padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                       //     decoration: BoxDecoration(
-                      //       color: Theme.of(context).colorScheme.white,
+                      //       color: Theme.of(context).colorScheme.primaryWhite,
                       //       // border horizontal
                       //       border: Border(
                       //         left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
@@ -858,7 +888,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //         child: Icon(
                       //           Icons.feedback_outlined,
                       //           size: 24,
-                      //           color: Theme.of(context).colorScheme.greyDark,
+                      //           color: Theme.of(context).colorScheme.primaryBlack,
                       //         ),
                       //         onTap: () async {
                       //           showDialog(
@@ -885,10 +915,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         height: 48,
                         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
+                          color: Theme.of(context).colorScheme.primaryWhite,
                           border: Border(
                             // left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                            right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                            right: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
                           ),
                         ),
                         child: Tooltip(
@@ -897,7 +927,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             child: Icon(
                               Icons.feedback_outlined,
                               size: 24,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: Theme.of(context).colorScheme.primaryBlack,
                             ),
                             onTap: () async {
                               handleExportLogs(context);
@@ -916,16 +946,16 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.white,
+                          color: Theme.of(context).colorScheme.primaryWhite,
                           border: Border(
-                            left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
-                            // right: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                            left: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
+                            // right: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
                           ),
                         ),
                         child: FusionAppText(
                           style: TextStyle(
                             fontSize: 12,
-                            color: Theme.of(context).colorScheme.greyDark,
+                            color: Theme.of(context).colorScheme.primaryBlack,
                             fontWeight: FontWeight.w400,
                           ),
                           text: "Build- $_appVersion",
@@ -957,10 +987,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.white,
+            color: Theme.of(context).colorScheme.primaryWhite,
             // border: Border(
             //   right: BorderSide(
-            //     color: Theme.of(context).colorScheme.dividerColor,
+            //     color: Theme.of(context).colorScheme.primaryBlack,
             //     width: 1,
             //   ),
             // ),
@@ -968,7 +998,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           child: IconButton(
             icon: Icon(
               Icons.arrow_back_ios,
-              color: Theme.of(context).colorScheme.greyDark,
+              color: Theme.of(context).colorScheme.primaryWhite,
               size: 20,
             ),
             onPressed: () {
@@ -987,10 +1017,10 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             width: 197,
             // Reduced width to account for back button
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.white,
+              color: Theme.of(context).colorScheme.primaryWhite,
               border: Border(
                 right: BorderSide(
-                  color: Theme.of(context).colorScheme.dividerColor,
+                  color: Theme.of(context).colorScheme.primaryBlack,
                   width: 1,
                 ),
               ),
@@ -1023,7 +1053,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       const SizedBox(height: 2),
                       FusionAppText(
                         text: "1.0.0",
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.greyDark),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.primaryBlack),
                       ),
                     ],
                   ),
@@ -1062,9 +1092,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
       position: position,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(6),
-        side: BorderSide(color: Theme.of(context).colorScheme.dividerColor),
+        side: BorderSide(color: Theme.of(context).colorScheme.primaryBlack),
       ),
-      color: Theme.of(context).colorScheme.white,
+      color: Theme.of(context).colorScheme.primaryWhite,
       elevation: 1,
       constraints: const BoxConstraints(minWidth: 189, maxWidth: 189),
       // Match container width
@@ -1102,32 +1132,32 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                         maxLength: 24,
                         autofocus: true,
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.fusionTextViewColor,
+                          color: Theme.of(context).colorScheme.textPrimary,
                           fontSize: 12,
                         ),
                         decoration: InputDecoration(
                           counterText: "",
                           hintText: 'Enter project name',
                           hintStyle: TextStyle(
-                            color: Theme.of(context).colorScheme.grey,
+                            color: Theme.of(context).colorScheme.primaryBlack,
                             fontSize: 12,
                           ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
                             borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.dividerColor,
+                              color: Theme.of(context).colorScheme.primaryBlack,
                             ),
                           ),
                           enabledBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
                             borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.dividerColor,
+                              color: Theme.of(context).colorScheme.primaryBlack,
                             ),
                           ),
                           focusedBorder: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(4),
                             borderSide: BorderSide(
-                              color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.fusionTextViewColor,
+                              color: _projectNameError != null ? Colors.red : Theme.of(context).colorScheme.textPrimary,
                             ),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
@@ -1189,7 +1219,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                           width: 84,
                           textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
                             fontSize: 10,
-                            color: Theme.of(context).colorScheme.fusionButtonTextColor,
+                            color: Theme.of(context).colorScheme.primaryBlack,
                           ),
 
                           label: "Edit Name",

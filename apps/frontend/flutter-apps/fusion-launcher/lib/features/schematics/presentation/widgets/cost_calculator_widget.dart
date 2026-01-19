@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
 import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
@@ -154,8 +153,8 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
         title: Row(
           children: <Widget>[
             Expanded(
-              child: FusionAppText(text:
-                title,
+              child: FusionAppText(
+                text: title,
                 style: const TextStyle(
                   fontSize: CostCalculatorScreen.fsRegular,
                   color: CostCalculatorScreen.primaryText,
@@ -165,8 +164,8 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
             Container(
               width: 40,
               alignment: Alignment.centerRight,
-              child: FusionAppText(text:
-                items.length.toString().padLeft(2, '0'),
+              child: FusionAppText(
+                text: items.length.toString().padLeft(2, '0'),
                 style: const TextStyle(
                   fontSize: CostCalculatorScreen.fsSmall,
                   color: CostCalculatorScreen.primaryText,
@@ -176,8 +175,8 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
             Container(
               width: 70,
               alignment: Alignment.centerRight,
-              child: FusionAppText(text:
-                '\$${items.totalPrice.toStringAsFixed(2)}',
+              child: FusionAppText(
+                text: '\$${items.totalPrice.toStringAsFixed(2)}',
                 style: const TextStyle(
                   fontSize: CostCalculatorScreen.fsRegular,
                   color: CostCalculatorScreen.primaryText,
@@ -225,7 +224,7 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
         initiallyExpanded: true, // Start expanded by default
         title: Row(
           children: <Widget>[
-            _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.fusionButtonColor),
+            _RotatingIcon(animation: _rotationAnimations[title] ?? _rotationAnimations.values.first, color: Theme.of(context).colorScheme.primary),
             const SizedBox(width: 4),
             Expanded(
               child: FusionAppText(
@@ -292,8 +291,8 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
             ),
           ),
           Expanded(
-            child: FusionAppText(text:
-              _getItemName(item),
+            child: FusionAppText(
+              text: _getItemName(item),
               style: const TextStyle(
                 fontSize: CostCalculatorScreen.fsSmall,
                 color: CostCalculatorScreen.primaryText,
@@ -304,8 +303,8 @@ class _CostCalculatorScreenState extends State<CostCalculatorScreen> with Ticker
           Container(
             width: 70,
             alignment: Alignment.centerRight,
-            child: FusionAppText(text:
-              '\$${_getItemPrice(item).toStringAsFixed(2)}',
+            child: FusionAppText(
+              text: '\$${_getItemPrice(item).toStringAsFixed(2)}',
               style: const TextStyle(
                 fontSize: CostCalculatorScreen.fsSmall,
                 color: CostCalculatorScreen.primaryText,

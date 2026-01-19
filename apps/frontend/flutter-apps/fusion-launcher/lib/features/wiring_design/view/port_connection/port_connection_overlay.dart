@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/component_db.dart';
 import 'package:fusion_launcher/features/wiring_design/controller/helpers/connection_methods_extension.dart';
 import 'package:fusion_launcher/features/wiring_design/model/model.dart';

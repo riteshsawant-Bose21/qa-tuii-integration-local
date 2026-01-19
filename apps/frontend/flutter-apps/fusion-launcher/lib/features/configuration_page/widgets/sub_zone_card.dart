@@ -94,9 +94,9 @@ class _SubZoneCardState extends State<SubZoneCard> {
         padding: const EdgeInsets.only(left: 12, right: 12),
         height: 32,
         decoration: BoxDecoration(
-          color: isHovered ? context.colorScheme.grey.withAlpha(200) : context.colorScheme.grey.withAlpha(110),
+          color: isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack.withAlpha(110),
           border: Border.all(
-            // color: /*isSelected ? Theme.of(context).colorScheme.greyDark :*/ Colors.transparent,
+            // color: /*isSelected ? context.colorScheme.primaryBlack :*/ Colors.transparent,
             color: Colors.transparent,
           ),
         ),
@@ -105,7 +105,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
             /// Expand/collapse icon
             Icon(
               expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-              color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
+              color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
             ),
             const SizedBox(width: 6),
 

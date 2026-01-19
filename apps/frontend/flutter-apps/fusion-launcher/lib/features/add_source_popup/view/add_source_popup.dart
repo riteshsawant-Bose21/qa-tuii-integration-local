@@ -8,6 +8,7 @@ import 'package:fusion_launcher/features/projects/widget/building/speaker_select
 import 'package:fusion_launcher/features/projects/widget/building/widgets/drop_down.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../view_model/add_source_viewmodel.dart';
@@ -54,7 +55,7 @@ class AddSourcePopup extends StatelessWidget {
                       child: FusionAppText(
                         text: 'ADD SOURCE',
                         style: context.textTheme.bodyMedium?.copyWith(
-                          color: context.colorScheme.white,
+                          color: context.colorScheme.primaryWhite,
                           fontWeight: FontWeight.w400,
                         ),
                       ),

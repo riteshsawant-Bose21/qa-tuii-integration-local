@@ -75,9 +75,9 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
               decoration: BoxDecoration(
                 color:
                     _isHovered
-                        ? Theme.of(context).colorScheme.grey.withOpacity(0.2)
-                        : (isSelected ? Theme.of(context).colorScheme.grey.withOpacity(0.3) : Theme.of(context).colorScheme.white),
-                border: Border.all(color: isSelected ? Colors.black : Theme.of(context).colorScheme.grey, width: 1),
+                        ? context.colorScheme.primaryBlack.withOpacity(0.2)
+                        : (isSelected ? context.colorScheme.primaryBlack.withOpacity(0.3) : Theme.of(context).colorScheme.primaryWhite),
+                border: Border.all(color: isSelected ? Colors.black : context.colorScheme.primaryBlack, width: 1),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -134,7 +134,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                                       decoration: BoxDecoration(
                                         color: _isHovered ? Colors.white.withOpacity(0.8) : (isSelected ? Colors.white.withOpacity(0.9) : Colors.white),
                                         border: Border.all(
-                                          color: Theme.of(context).colorScheme.grey,
+                                          color: context.colorScheme.primaryBlack,
                                           width: 1,
                                         ),
                                         borderRadius: BorderRadius.circular(2),
@@ -164,7 +164,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                       width: 20,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                        border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
                         borderRadius: BorderRadius.circular(2),
                       ),
                       child: FusionAppText(
@@ -201,7 +201,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             width: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+              border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
@@ -235,7 +235,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
             width: 20,
             alignment: Alignment.center,
             decoration: BoxDecoration(
-              border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+              border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
               borderRadius: BorderRadius.circular(2),
             ),
             child: FusionAppText(
@@ -262,7 +262,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
-          backgroundColor: Theme.of(context).colorScheme.white,
+          backgroundColor: context.colorScheme.primaryWhite,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -306,7 +306,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
 
                     Divider(
                       height: 12,
-                      color: Theme.of(context).colorScheme.grey,
+                      color: context.colorScheme.primaryBlack,
                     ),
                     const SizedBox(height: 6),
 
@@ -346,8 +346,8 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                               const SizedBox(height: 4),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.white,
-                                  border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                                  color: context.colorScheme.primaryWhite,
+                                  border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
@@ -390,7 +390,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                                           width: 20,
                                           alignment: Alignment.center,
                                           decoration: BoxDecoration(
-                                            border: Border.all(color: Theme.of(context).colorScheme.grey, width: 1),
+                                            border: Border.all(color: context.colorScheme.primaryBlack, width: 1),
                                             borderRadius: BorderRadius.circular(2),
                                           ),
                                           child: FusionAppText(
@@ -438,7 +438,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
       offset: const Offset(100, 20),
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.primaryWhite,
       menuPadding: EdgeInsets.zero,
       itemBuilder:
           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
@@ -453,7 +453,7 @@ class _CircuitDeviceWidgetState extends State<CircuitDeviceWidget> {
                 text: "Delete",
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
             ),

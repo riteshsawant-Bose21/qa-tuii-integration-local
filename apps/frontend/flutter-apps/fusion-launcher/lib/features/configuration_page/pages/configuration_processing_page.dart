@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_s
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/drag_divider.dart';
@@ -174,7 +175,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: context.colorScheme.elevation2,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -202,7 +203,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Build Input Panel
   Widget _buildInputPanel() {
     return Container(
-      color: Colors.white,
+      color: context.colorScheme.elevation2,
       child: Column(
         children: <Widget>[
           // const PanelHeader(title: 'INPUT'),
@@ -305,7 +306,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             color: Colors.transparent,
                             child: Opacity(
                               opacity: 0.8,
-                              child: Container(color: context.colorScheme.white, width: 220, child: SourceItem(source: source, isDragging: true)),
+                              child: Container(color: context.colorScheme.primaryWhite, width: 220, child: SourceItem(source: source, isDragging: true)),
                             ),
                           ),
                           childWhenDragging: Opacity(
@@ -342,7 +343,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: Theme.of(context).colorScheme.white,
+              color: context.colorScheme.primaryWhite,
               menuPadding: EdgeInsets.zero,
 
               itemBuilder: (BuildContext context) {
@@ -388,7 +389,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                 ];
               },
               child: IconButton(
-                icon: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
                 onPressed: null,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -422,7 +423,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
 
@@ -433,7 +434,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
                         ],
@@ -549,10 +550,10 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget _buildOutputPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
+        color: context.colorScheme.primaryWhite,
 
         border: Border(
-          left: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          left: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
         ),
       ),
       child: Column(
@@ -675,7 +676,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.primaryWhite,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -742,7 +743,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: Theme.of(context).colorScheme.white,
+              color: context.colorScheme.primaryWhite,
               offset: const Offset(0, 35),
               itemBuilder: (BuildContext context) {
                 return <PopupMenuEntry<String>>[
@@ -782,7 +783,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                       child: Icon(
                                         Icons.close,
                                         size: 16,
-                                        color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                        color: Theme.of(context).colorScheme.textPrimary,
                                       ),
                                     ),
                                   ],
@@ -824,7 +825,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                                 setPopupState(() {}); // Update popup state
                                                                 setState(() {}); // Update main widget state
                                                               },
-                                                              activeColor: Theme.of(context).colorScheme.greyDark,
+                                                              activeColor: context.colorScheme.primaryBlack,
                                                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                                                               visualDensity: VisualDensity.compact,
                                                               shape: const RoundedRectangleBorder(
@@ -883,14 +884,14 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                 ? "Select Sources"
                                 : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: widget.selectedSources.isEmpty ? Theme.of(context).colorScheme.greyDark : Theme.of(context).textTheme.bodySmall?.color,
+                          color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
                         ),
                       ),
                     ),
                     Icon(
                       Icons.keyboard_arrow_down,
                       size: 20,
-                      color: Theme.of(context).colorScheme.greyDark,
+                      color: context.colorScheme.primaryBlack,
                     ),
                   ],
                 ),
@@ -917,7 +918,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               Flexible(
                 child: FusionButton(
                   width: double.infinity,
-                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: Theme.of(context).colorScheme.fusionButtonTextColor),
+                  textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(fontSize: 10, color: context.colorScheme.primaryBlack),
 
                   label: "Create",
                   isActive: widget.sourceSetNameController.text.trim().isNotEmpty && widget.selectedSources.length >= 2,

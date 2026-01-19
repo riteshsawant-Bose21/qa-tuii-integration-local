@@ -228,7 +228,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                     width: 7,
                                     height: 16,
                                     decoration: BoxDecoration(
-                                      color: Theme.of(context).colorScheme.grey,
+                                      color: context.colorScheme.primaryBlack,
                                       borderRadius: BorderRadius.circular(2),
                                     ),
                                   ),
@@ -250,10 +250,10 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                           decoration: BoxDecoration(
-                            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                            color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : context.colorScheme.primaryWhite),
                             borderRadius: BorderRadius.circular(2),
                             border: Border.all(
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                               width: 1,
                             ),
                           ),
@@ -268,11 +268,10 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
                             decoration: BoxDecoration(
-                              color:
-                                  _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : Theme.of(context).colorScheme.white),
+                              color: _isHovered ? Colors.white.withOpacity(0.5) : (widget.isSelected ? Colors.transparent : context.colorScheme.primaryWhite),
                               borderRadius: BorderRadius.circular(2),
                               border: Border.all(
-                                color: Theme.of(context).colorScheme.greyDark,
+                                color: context.colorScheme.primaryBlack,
                                 width: 1,
                               ),
                             ),
@@ -297,7 +296,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                       offset: const Offset(0, 20),
                       padding: EdgeInsets.zero,
                       constraints: const BoxConstraints(maxHeight: 550, maxWidth: 140),
-                      color: Theme.of(context).colorScheme.white,
+                      color: context.colorScheme.primaryWhite,
                       menuPadding: EdgeInsets.zero,
                       itemBuilder:
                           (BuildContext context) => <PopupMenuEntry<ZoneMenuAction>>[
@@ -311,7 +310,7 @@ class _HardwareItemCardState extends State<HardwareItemCard> {
                                 text: "Delete",
                                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   fontSize: 12,
-                                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                                  color: Theme.of(context).colorScheme.textPrimary,
                                 ),
                               ),
                             ),

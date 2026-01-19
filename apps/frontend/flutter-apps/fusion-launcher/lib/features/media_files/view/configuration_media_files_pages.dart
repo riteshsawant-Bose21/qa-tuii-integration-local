@@ -4,6 +4,7 @@ import 'package:fusion_launcher/features/media_files/state/media_files_state.dar
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 
@@ -79,7 +80,7 @@ class _TopBar extends StatelessWidget {
 
             decoration: BoxDecoration(
               border: Border(
-                left: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1),
+                left: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1),
               ),
             ),
             child: Row(
@@ -152,7 +153,7 @@ class _MediaTable extends StatelessWidget {
                                     color: isSelected ? Colors.grey[200] : null,
                                     borderRadius: BorderRadius.circular(3),
                                     border: Border.all(
-                                      color: isSelected ? Theme.of(context).colorScheme.greyDark : Colors.transparent,
+                                      color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
                                       width: 1.0,
                                     ),
                                   ),
@@ -285,7 +286,7 @@ class _PreviewPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(
-                    color: colors.dividerColor,
+                    color: colors.primaryBlack,
                     width: 1.0,
                   ),
                 ),
@@ -311,18 +312,18 @@ class _PreviewPanel extends StatelessWidget {
                           children: <Widget>[
                             _CircleButton(
                               icon: Icons.fast_rewind_outlined,
-                              borderColor: colors.greyDark,
+                              borderColor: colors.primaryBlack,
                               onTap: cubit.playPrevious,
                             ),
                             _CircleButton(
                               icon: state.isPlaying ? Icons.pause : Icons.play_arrow,
-                              borderColor: colors.greyDark,
+                              borderColor: colors.primaryBlack,
                               onTap: cubit.playPause,
                             ),
 
                             _CircleButton(
                               icon: Icons.fast_forward_outlined,
-                              borderColor: colors.greyDark,
+                              borderColor: colors.primaryBlack,
                               onTap: cubit.playNext,
                             ),
                           ],
@@ -346,13 +347,13 @@ class _PreviewPanel extends StatelessWidget {
                         thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 6),
                         overlayShape: const RoundSliderOverlayShape(overlayRadius: 4),
                         trackHeight: 1,
-                        thumbColor: Theme.of(context).colorScheme.black,
+                        thumbColor: Theme.of(context).colorScheme.primaryBlack,
                       ),
                       child: Slider(
                         value: state.currentPosition.inSeconds.toDouble(),
                         padding: EdgeInsets.zero,
-                        activeColor: Theme.of(context).colorScheme.greyDark,
-                        inactiveColor: Theme.of(context).colorScheme.grey,
+                        activeColor: context.colorScheme.primaryBlack,
+                        inactiveColor: context.colorScheme.primaryBlack,
                         min: 0,
                         max: file.length!.inSeconds > 0 ? file.length!.inSeconds.toDouble() : 1,
                         divisions: 100,

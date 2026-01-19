@@ -7,6 +7,8 @@ export 'fusion_logger/fusion_logger.dart';
 export 'fusion_networking/fusion_networking.dart';
 export 'fusion_theme/color_pallette.dart';
 export 'fusion_theme/fusion_theme_app.dart';
+export 'fusion_theme/app_theme.dart';
+export 'fusion_theme/color_scheme.dart';
 export 'fusion_utils/app_enums.dart';
 export 'fusion_utils/fusion_utils.dart';
 export 'fusion_widgets/fusion_widgets.dart';

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_launcher/core/widgets/title_text_field_switcher.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
@@ -61,8 +61,7 @@ class _SnapshotItemCardState extends State<SnapshotItemCard> {
                     : (_isHovered ? Colors.grey[200] : null),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color:
-                  widget.isSelected ? Theme.of(context).colorScheme.greyDark : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
+              color: widget.isSelected ? context.colorScheme.primaryBlack : (widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent),
               width: 1.0,
             ),
           ),

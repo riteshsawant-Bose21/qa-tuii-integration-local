@@ -183,14 +183,14 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                         color:
                             isHovered
                                 ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : (_isHovered ? Theme.of(context).colorScheme.grey.withAlpha(200) : Theme.of(context).colorScheme.greyLight),
+                                : (_isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack),
                       ),
                       child: Row(
                         children: <Widget>[
                           /// Expand/collapse icon
                           Icon(
                             _isScenesExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                            color: Theme.of(context).colorScheme.fusionTextViewColor.withAlpha(90),
+                            color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
                           ),
                           const SizedBox(width: 4),
 
@@ -218,7 +218,7 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                             onTap: () {
                               _addNewSceneToSceneSet();
                             },
-                            child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
                           ),
                           const SizedBox(width: 8),
 

@@ -204,7 +204,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
 
               /// Add device icon
               title == "Sources"
-                  ? AddSourcePopup(isFromBuildingPage: false, child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark))
+                  ? AddSourcePopup(isFromBuildingPage: false, child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack))
                   : (title == "Endpoints" || title == "Fusion Devices" || title == "Amplifiers")
                   ? FusionArrowPopup(
                     content: EquipmentLocationDialog(
@@ -217,7 +217,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                               ? EQLDeviceType.endpoint
                               : EQLDeviceType.mixerAmp,
                     ),
-                    child: Icon(Icons.add_sharp, size: 16, color: Theme.of(context).colorScheme.greyDark),
+                    child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
                   )
                   : const SizedBox(),
             ],
@@ -305,7 +305,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
         decoration: BoxDecoration(
           color: widget.backgroundColor,
           border: Border(
-            right: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+            right: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
           ),
         ),
         child: Column(
@@ -320,7 +320,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                 decoration: BoxDecoration(
                   color: Colors.white,
                   border: Border(
-                    bottom: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+                    bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
                   ),
                 ),
                 child: AnimatedBuilder(
@@ -366,7 +366,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                     offset: Offset((1.0 - _searchAnimation.value) * 50, 0),
                                     child: Container(
                                       decoration: BoxDecoration(
-                                        color: Theme.of(context).colorScheme.greyLight,
+                                        color: context.colorScheme.primaryBlack,
                                         borderRadius: BorderRadius.circular(4),
                                       ),
                                       height: 36,
@@ -423,7 +423,7 @@ class _CommonDevicesSectionWidgetState extends State<CommonDevicesSectionWidget>
                                         ),
                                         child: Icon(
                                           isSearchVisible ? Icons.close_sharp : Icons.search_sharp,
-                                          color: Theme.of(context).colorScheme.greyDark,
+                                          color: context.colorScheme.primaryBlack,
                                           size: 17,
                                         ),
                                       ),

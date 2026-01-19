@@ -5,6 +5,7 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 import 'package:fusion_launcher/features/wiring_design/view/port_connection/port_connection_overlay.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import 'package:fusion_lib/models/project_entities/communication_ports.dart';
 import 'package:fusion_lib/models/project_entities/connections_model.dart';
 import 'package:fusion_lib/models/project_entities/hardware_component_model.dart';
@@ -108,15 +109,10 @@ class _DeviceListSection extends StatelessWidget {
                   ...device.inputPortsData,
                   ...device.outputPortsData,
                 ]) {
-                  final WiringConnectionModel? connections = wires
-                      .firstWhereOrNull(
-                        (WiringConnectionModel e) =>
-                            e.portId == port.id || e.targetPortId == port.id,
-                      );
-                  final String? otherPortId =
-                      (connections?.portId == port.id)
-                          ? connections?.targetPortId
-                          : connections?.portId;
+                  final WiringConnectionModel? connections = wires.firstWhereOrNull(
+                    (WiringConnectionModel e) => e.portId == port.id || e.targetPortId == port.id,
+                  );
+                  final String? otherPortId = (connections?.portId == port.id) ? connections?.targetPortId : connections?.portId;
                   if (connections != null) {
                     portData.add(
                       _PortData(
@@ -161,8 +157,7 @@ class _DeviceCard extends StatelessWidget {
   final List<_PortData> ports;
   @override
   Widget build(BuildContext context) {
-    final bool isSelected =
-        serviceLocator<ProjectViewModel>().selectedDevice?.id == id;
+    final bool isSelected = serviceLocator<ProjectViewModel>().selectedDevice?.id == id;
     return InkWell(
       onTap: () {
         serviceLocator<ProjectViewModel>().setSelectedDevice(
@@ -217,7 +212,7 @@ class _DeviceCard extends StatelessWidget {
                   ),
                   Icon(
                     Icons.link,
-                    color: context.colorScheme.grey,
+                    color: context.colorScheme.primaryBlack,
                   ),
                   Container(
                     decoration: BoxDecoration(

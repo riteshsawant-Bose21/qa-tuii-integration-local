@@ -21,10 +21,10 @@ class TriggerPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.white,
+        color: Theme.of(context).colorScheme.primaryWhite,
 
         border: Border(
-          left: BorderSide(width: 1, color: Theme.of(context).colorScheme.grey),
+          left: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
         ),
       ),
       child: Column(
@@ -58,7 +58,7 @@ class TriggerPanel extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -69,7 +69,7 @@ class TriggerPanel extends StatelessWidget {
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: Theme.of(context).colorScheme.greyDark,
+                              color: context.colorScheme.primaryBlack,
                             ),
                             textAlign: TextAlign.center,
                           ),

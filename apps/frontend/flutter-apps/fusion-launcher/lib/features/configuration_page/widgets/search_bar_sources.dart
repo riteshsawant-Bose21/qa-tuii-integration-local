@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fusion_launcher/core/theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 
 class SearchBarSources extends StatelessWidget {
@@ -111,7 +111,7 @@ class SearchBarSources extends StatelessWidget {
   }) {
     return PopupMenuButton<void>(
       tooltip: tooltip,
-      color: Theme.of(context).colorScheme.white,
+      color: context.colorScheme.primaryWhite,
       offset: const Offset(0, 30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),

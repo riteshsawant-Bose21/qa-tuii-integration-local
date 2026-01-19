@@ -23,7 +23,7 @@ class EventActionRowHeader extends StatelessWidget {
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
-                color: Theme.of(context).colorScheme.grey.withAlpha(100),
+                color: context.colorScheme.primaryBlack.withAlpha(100),
                 width: 1,
               ),
             ),
@@ -36,7 +36,7 @@ class EventActionRowHeader extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.w600,
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.fusionTextViewColor,
+                  color: Theme.of(context).colorScheme.textPrimary,
                 ),
               ),
 
@@ -88,7 +88,7 @@ class EventActionRowHeader extends StatelessWidget {
                   text: left.name,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ),
               ),
@@ -98,7 +98,7 @@ class EventActionRowHeader extends StatelessWidget {
                   text: right.name,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     fontSize: 13,
-                    color: Theme.of(context).colorScheme.fusionTextViewColor,
+                    color: Theme.of(context).colorScheme.textPrimary,
                   ),
                 ),
               ),
@@ -130,7 +130,7 @@ class EventActionRowHeader extends StatelessWidget {
         ),
         Container(
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-          color: Theme.of(context).colorScheme.grey.withAlpha(40),
+          color: context.colorScheme.primaryBlack.withAlpha(40),
           child: Row(
             spacing: screenWidth * 0.01,
 
@@ -167,7 +167,7 @@ class _HeaderCell extends StatelessWidget {
         style: Theme.of(context).textTheme.bodySmall?.copyWith(
           fontWeight: FontWeight.w600,
           fontSize: 13,
-          color: Theme.of(context).colorScheme.fusionTextViewColor,
+          color: Theme.of(context).colorScheme.textPrimary,
         ),
         maxLine: 1,
       ),

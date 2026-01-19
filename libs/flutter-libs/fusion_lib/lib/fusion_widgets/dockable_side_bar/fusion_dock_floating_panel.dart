@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../models/dock_item_config.dart';
 import '../../models/fusion_dock_item.dart';
@@ -66,9 +67,9 @@ class FloatingWidget extends StatelessWidget {
         width: item.width,
         height: item.height,
         decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.white,
+          color: context.colorScheme.primaryWhite,
           borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: Theme.of(context).colorScheme.dividerColor),
+          border: Border.all(color: Theme.of(context).colorScheme.primaryBlack),
         ),
         child: Stack(
           children: [
@@ -77,8 +78,8 @@ class FloatingWidget extends StatelessWidget {
               height: 32,
               padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.white,
-                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.dividerColor, width: 1)),
+                color: context.colorScheme.primaryWhite,
+                border: Border(bottom: BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1)),
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 
 import '../semantics/semantic_helper.dart';
@@ -141,8 +142,8 @@ class FusionOutlinedButton extends StatelessWidget {
                 borderRadius: BorderRadius.circular(borderRadius),
                 border: Border.all(
                   color: isActive
-                      ? activeBorderColor ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor
-                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.fusionOutlinedButtonColor.withOpacity(0.5),
+                      ? activeBorderColor ?? Theme.of(context).colorScheme.primaryBlack
+                      : activeBorderColor?.withOpacity(0.5) ?? Theme.of(context).colorScheme.primaryBlack.withOpacity(0.5),
                 ),
               ),
               child: isLoading

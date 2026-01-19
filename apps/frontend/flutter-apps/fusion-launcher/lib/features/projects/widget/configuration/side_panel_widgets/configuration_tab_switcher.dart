@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
+import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 
 import '../../../../../core/constants/assets_constants.dart';
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
@@ -58,7 +59,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
       decoration: BoxDecoration(
         // color: colorSche,
         border: Border(
-          right: BorderSide(color: context.colorScheme.dividerColor),
+          right: BorderSide(color: context.colorScheme.primaryBlack),
         ),
       ),
       child: Column(
@@ -81,9 +82,9 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                     decoration: BoxDecoration(
                       color:
                           isSelected
-                              ? context.colorScheme.greyLight
+                              ? context.colorScheme.primaryBlack
                               : isHovered
-                              ? context.colorScheme.greyLight.withAlpha(50)
+                              ? context.colorScheme.primaryBlack.withAlpha(50)
                               : Colors.transparent,
                       borderRadius: BorderRadius.circular(8),
                     ),
