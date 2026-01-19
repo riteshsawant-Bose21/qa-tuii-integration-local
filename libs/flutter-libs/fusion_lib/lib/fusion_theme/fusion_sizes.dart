@@ -28,4 +28,9 @@ class FusionSizes {
   static const double fontSize16 = 16.0;
   static const double fontSize24 = 24.0;
   static const double fontSize32 = 32.0;
+
+  static const double lineHeight8 = 8.0;
+  static const double lineHeight12 = 12.0;
+  static const double lineHeight16 = 16.0;
+  static const double lineHeight24 = 24.0;
 }
