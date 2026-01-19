@@ -18,7 +18,10 @@ func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 		requestID := uuid.New().String()
 
 		// Create an audit logger with the request ID field
-		requestAuditLogger := auditLogger.With(zap.String("requestID", requestID))
+		requestAuditLogger := auditLogger.With(zap.String(RequestIDKey, requestID))
+
+		// Store request ID in context
+		c.Set(RequestIDKey, requestID)
 
 		// Store the audit logger in context for audit-related logging
 		c.Set("auditLogger", requestAuditLogger)
@@ -33,9 +36,6 @@ func RequestLoggerMiddleware(auditLogger *zap.Logger) gin.HandlerFunc {
 		if authExists {
 			user = userAuth.(*types.UserAuthorizationResponse)
 		}
-
-		// Store request ID in context
-		c.Set(RequestIDKey, requestID)
 
 		duration := time.Since(startTime)
 		clientIP := c.ClientIP()
@@ -76,13 +76,33 @@ func ApplicationLoggerMiddleware(appLogger *zap.Logger) gin.HandlerFunc {
 			requestID = uuid.New().String()
 		}
 
+		startTime := time.Now()
+
 		// Create application logger with request ID for correlation
-		requestAppLogger := appLogger.With(zap.String("requestID", requestID.(string)))
+		appLogger := appLogger.With(zap.String("requestID", requestID.(string)))
 
 		// Store the application logger in context for general application logging
-		c.Set("logger", requestAppLogger)
-		c.Set("appLogger", requestAppLogger)
+		c.Set("logger", appLogger)
 
 		c.Next()
+
+		duration := time.Since(startTime)
+		clientIP := c.ClientIP()
+		method := c.Request.Method
+		path := c.Request.URL.Path
+		statusCode := c.Writer.Status()
+
+		// Build audit log fields for request/response tracking
+		logFields := []zap.Field{
+			zap.String("type", "http_request"),
+			zap.String("method", method),
+			zap.String("path", path),
+			zap.String("clientIP", clientIP),
+			zap.String("userAgent", c.Request.UserAgent()),
+			zap.Int("statusCode", statusCode),
+			zap.Duration("duration", duration),
+		}
+
+		appLogger.Info("HTTP request completed", logFields...)
 	}
 }
