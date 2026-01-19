@@ -1,8 +1,9 @@
 package api
 
 import (
-	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -26,6 +27,7 @@ func (a *API) registerRoutes() {
 	{
 		products.GET("", productHandler.GetAllProducts)
 		products.GET("/:id", productHandler.GetProductByID)
+		products.GET("/:id/prices", productHandler.GetProductPrices)
 	}
 
 	// Project routes with authentication and access control
@@ -39,12 +41,14 @@ func (a *API) registerRoutes() {
 		projects.Use(accessControl.GlobalAccessControlMiddleware())
 
 		projects.POST("", projectHandler.CreateProject)
-		projects.GET("/:id", projectHandler.GetProjectByID)
-		projects.GET("", projectHandler.GetAllProjects) // Optional: List all projects
-		projects.PATCH("/:id", projectHandler.UpdateProject)
-		projects.DELETE("/:id", projectHandler.DeleteProject)
-
-		projects.POST("/:id/sync", projectHandler.SyncProject) // New route for syncing a project
+		projects.GET("", projectHandler.GetAllProjects)
+		projects.PATCH("/:projectId", projectHandler.UpdateProject)
+		projects.DELETE("/:projectId", projectHandler.DeleteProject)
+		projects.PUT("/:projectId/users/:userEmail", projectHandler.AssignUserToProject)
+		projects.DELETE("/:projectId/users/:userEmail", projectHandler.RemoveUserFromProject)
+		projects.POST("/:projectId/star/:userId", projectHandler.UpdateProjectStar)
+		projects.POST("/:projectId/archive", projectHandler.UpdateProjectArchive)
+		projects.POST("/:projectId/lock", projectHandler.UpdateProjectLock)
 	}
 
 	// User routes with authentication
@@ -55,8 +59,8 @@ func (a *API) registerRoutes() {
 	user.Use(a.authMiddleware.Middleware())
 
 	{
-		user.GET("/me/authorization", userHandler.GetUserAuthorization)
-		user.GET("/me/profile", userHandler.GetUserProfileDetails)
+		user.GET("/authorization", userHandler.GetUserAuthorization)
+		user.GET("/profile", userHandler.GetUserProfile)
 	}
 
 	// user profile management routes (/user/profile/*)

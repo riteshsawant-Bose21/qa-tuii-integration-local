@@ -11,6 +11,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,10 +35,9 @@ type Config struct {
 
 // New returns a new API from the given services.
 func New(cfg *Config,
-	// productSvc fusion.Product,
-	// projectSvc fusion.Project,
+	productSvc fusion.Product,
+	project fusion.Project,
 	userSvc fusion.User,
-	userDBSvc *userdb.Service,
 ) (*API, error) {
 
 	if cfg.Mode == "release" {
@@ -52,13 +52,13 @@ func New(cfg *Config,
 	// engine.Use(ginLogger(logger)) // Custom logging middleware
 	engine.Use(corsMiddleware()) // CORS if needed
 
-	// if productSvc == nil {
-	// 	return nil, errors.New("missing product service")
-	// }
+	if productSvc == nil {
+		return nil, errors.New("missing product service")
+	}
 
-	// if projectSvc == nil {
-	// 	return nil, errors.New("missing project service")
-	// }
+	if project == nil {
+		return nil, errors.New("missing project service")
+	}
 
 	if userSvc == nil {
 		return nil, errors.New("missing user service")
@@ -75,10 +75,13 @@ func New(cfg *Config,
 	authMiddleware := middleware.NewAuth0Middleware(auth0Validator)
 
 	api := &API{
-		engine: engine,
-		// product:               productSvc,
-		// project:               projectSvc,
-		user:           userSvc,
+		engine:  engine,
+		product: productSvc,
+		project: project,
+		user:    userSvc,
+
+		// userDBService:         userDBSvc,
+		// roleManagementService: roleManagementSvc,
 		authMiddleware: authMiddleware,
 	}
 
@@ -122,6 +125,11 @@ func (s *API) shutdown() error {
 	defer cancel()
 
 	return s.server.Shutdown(ctx)
+}
+
+// Engine returns the underlying Gin engine for testing purposes
+func (s *API) Engine() *gin.Engine {
+	return s.engine
 }
 
 // corsMiddleware adds CORS headers

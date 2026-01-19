@@ -73,10 +73,6 @@ type StatusNotFoundForGetUserProfile struct {
 	Message string `json:"message" example:"User profile not found"`
 }
 
-type InternalServerError struct {
-	Message string `json:"message" example:"Internal server error"`
-}
-
 type StatusOkForCreateUserProfile struct {
 	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
 }

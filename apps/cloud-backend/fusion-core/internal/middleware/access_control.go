@@ -15,7 +15,7 @@ type PermissionLevel string
 
 const (
 	PermissionRead  PermissionLevel = "read"
-	PermissionWrite PermissionLevel = "write"
+	PermissionWrite PermissionLevel = "edit"
 	PermissionAdmin PermissionLevel = "admin"
 )
 
@@ -159,9 +159,9 @@ func (acc *AccessControlConfig) hasPermission(permissions map[string]string, fea
 func (acc *AccessControlConfig) isPermissionSufficient(userLevel string, requiredLevel PermissionLevel) bool {
 	// Define permission hierarchy
 	levelHierarchy := map[string]int{
-		"none":  0,
-		"read":  1,
-		"write": 2,
+		"none": 1,
+		"read": 2,
+		"edit": 3,
 	}
 
 	userLevelInt, userExists := levelHierarchy[strings.ToLower(userLevel)]
@@ -256,11 +256,4 @@ func (acc *AccessControlConfig) GlobalAccessControlMiddleware() gin.HandlerFunc 
 
 		c.Next()
 	}
-}
-
-// hasPermissionLevel is a helper function for testing that checks if a user permission
-// level is sufficient for the required level
-func hasPermissionLevel(userPermission string, requiredLevel PermissionLevel) bool {
-	acc := &AccessControlConfig{}
-	return acc.hasPermission(map[string]string{"test": userPermission}, "test", requiredLevel)
 }

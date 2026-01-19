@@ -19,7 +19,7 @@ type AuthStatusSuccessResponse struct {
 }
 
 // ErrorResponse represents an error API response
-type ErrorResponse struct {
+type ErrorResponse2 struct {
 	Message string `json:"message" example:"Invalid request parameters"`
 	Code    string `json:"code" example:"VALIDATION_ERROR"`
 }

@@ -7,6 +7,7 @@ type Postgres struct {
 	User     string
 	Password string
 	Database string
+	SSLMode  string
 }
 
 // Postgres retrieves the PostgreSQL configuration from the store.
@@ -36,12 +37,18 @@ func (p *Service) Postgres() (*Postgres, error) {
 		return nil, err
 	}
 
+	sslMode, err := p.store.ReqString(keyPostgresSSLMode)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Postgres{
 		Host:     host,
 		Port:     port,
 		User:     user,
 		Password: password,
 		Database: database,
+		SSLMode:  sslMode,
 	}, nil
 }
 
@@ -57,4 +64,5 @@ const (
 	keyPostgresUser     string = "POSTGRES_USER"
 	keyPostgresPass     string = "POSTGRES_PASS"
 	keyPostgresInstance string = "POSTGRES_INSTANCE"
+	keyPostgresSSLMode  string = "POSTGRES_SSL_MODE"
 )

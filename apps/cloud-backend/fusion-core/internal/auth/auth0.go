@@ -42,6 +42,7 @@ type Auth0Validator struct {
 	cacheMu   sync.RWMutex
 	cacheTime time.Time
 	cacheExp  time.Duration
+	fetchMu   sync.Mutex // Prevents concurrent JWKS fetches
 }
 
 // NewAuth0Validator creates a new Auth0 validator
@@ -55,16 +56,6 @@ func NewAuth0Validator(config Auth0Config) *Auth0Validator {
 
 // ValidateToken validates an Auth0 JWT token and returns the claims
 func (a *Auth0Validator) ValidateToken(tokenString string) (*jwt.MapClaims, error) {
-	// Check if token looks like a JWT (should have 3 parts separated by dots)
-	tokenParts := strings.Split(tokenString, ".")
-
-	if len(tokenParts) != 3 {
-		if len(tokenParts) == 5 {
-			return nil, fmt.Errorf("received JWE token (5 segments) but backend expects JWT token (3 segments). Please configure Auth0 to return JWT tokens instead of JWE tokens, or implement JWE decryption")
-		}
-		return nil, fmt.Errorf("token is not a valid JWT: expected 3 segments, got %d. This might be an opaque token or encrypted JWE token", len(tokenParts))
-	}
-
 	// Parse the token without verification first to get the kid
 	token, _, err := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
 	if err != nil {
@@ -125,14 +116,17 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 	}
 	a.cacheMu.RUnlock()
 
-	// Acquire write lock to prevent race conditions
-	a.cacheMu.Lock()
-	defer a.cacheMu.Unlock()
+	// Use a separate mutex to prevent concurrent JWKS fetches
+	a.fetchMu.Lock()
+	defer a.fetchMu.Unlock()
 
-	// Double-check if another goroutine cached the key while we were waiting for the lock
+	// Double-check: another goroutine might have updated the cache while we were waiting
+	a.cacheMu.RLock()
 	if key, exists := a.jwksCache[kid]; exists && time.Since(a.cacheTime) < a.cacheExp {
+		a.cacheMu.RUnlock()
 		return key, nil
 	}
+	a.cacheMu.RUnlock()
 
 	// Fetch JWKS from Auth0
 	jwks, err := a.fetchJWKS()
@@ -140,25 +134,26 @@ func (a *Auth0Validator) getPublicKey(kid string) (*rsa.PublicKey, error) {
 		return nil, err
 	}
 
-	// Find the key with matching kid
+	// Find the key with matching kid and cache all keys
+	var targetKey *rsa.PublicKey
+	a.cacheMu.Lock()
 	for _, key := range jwks.Keys {
-		if key.Kid == kid {
-			// Verify key type is RSA
-			if key.Kty != "RSA" {
-				return nil, fmt.Errorf("key with kid %s has unsupported key type: %s, expected RSA", kid, key.Kty)
-			}
-
+		if key.Kid != "" { // Cache all valid keys
 			publicKey, err := a.jwkToRSAPublicKey(key)
 			if err != nil {
-				return nil, err
+				continue // Skip invalid keys, don't fail the whole operation
 			}
-
-			// Cache the key
-			a.jwksCache[kid] = publicKey
-			a.cacheTime = time.Now()
-
-			return publicKey, nil
+			a.jwksCache[key.Kid] = publicKey
+			if key.Kid == kid {
+				targetKey = publicKey
+			}
 		}
+	}
+	a.cacheTime = time.Now() // Update cache time after successful fetch
+	a.cacheMu.Unlock()
+
+	if targetKey != nil {
+		return targetKey, nil
 	}
 
 	return nil, fmt.Errorf("key with kid %s not found", kid)
