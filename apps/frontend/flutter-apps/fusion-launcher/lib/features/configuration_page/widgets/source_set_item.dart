@@ -124,7 +124,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                       _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
                     },
                     child: Container(
-                      margin: const EdgeInsets.only(top: 8),
+                      margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
                       padding: const EdgeInsets.only(left: 12, right: 12),
                       height: 36,
                       decoration: BoxDecoration(
@@ -132,17 +132,18 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
                           width: 1.0,
                         ),
+                        borderRadius: BorderRadius.circular(6),
                         color:
                             widget.isDragHovered
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : (_isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack),
+                                ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                                : (_isHovered ? context.colorScheme.elevation2 : context.colorScheme.primaryBlack),
                       ),
                       child: Row(
                         children: <Widget>[
                           /// Expand/collapse icon
                           Icon(
                             _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                            color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
+                            color: Theme.of(context).colorScheme.iconWhite,
                           ),
                           const SizedBox(width: 4),
 
@@ -200,6 +201,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                       widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                       width: 22,
                                       height: 22,
+                                      assetColor: context.colorScheme.primaryWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -215,10 +217,11 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               onTap: () {
                                 ProcessingChainView.showForSourceSet(context, widget.sourceSet);
                               },
-                              child: const FusionImage.asset(
+                              child: FusionImage.asset(
                                 Assets.processingBlocksIcon,
                                 width: 18,
                                 height: 12,
+                                assetColor: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -229,22 +232,26 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             child: GestureDetector(
                               key: _addSourceIconKey,
                               onTap: _showEditSourceSetPopup,
-                              child: const FusionImage.asset(
+                              child: FusionImage.asset(
                                 Assets.addSourceIcon,
                                 width: 22,
                                 height: 22,
+                                assetColor: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),
                           ),
+                          const SizedBox(width: 4),
+
                           Tooltip(
                             message: 'Delete Source Set',
                             child: GestureDetector(
                               onTap: _confirmDeleteSourceSet,
-                              child: const FusionImage.asset(
+                              child: FusionImage.asset(
                                 Assets.deleteIcon,
                                 width: 17,
                                 height: 17,
+                                assetColor: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),

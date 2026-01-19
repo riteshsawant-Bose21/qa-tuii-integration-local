@@ -176,7 +176,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: context.colorScheme.elevation2,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -204,7 +204,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Build Input Panel
   Widget _buildInputPanel() {
     return Container(
-      color: Colors.white,
+      color: context.colorScheme.elevation1,
       child: Column(
         children: <Widget>[
           // const PanelHeader(title: 'INPUT'),
@@ -227,7 +227,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               setState(() {});
             },
           ),
-          const SizedBox(height: 8),
 
           /// Sources list with controlled height
           DragTarget<Source>(
@@ -249,6 +248,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
             builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered = candidateData.isNotEmpty;
               return Container(
+                padding: const EdgeInsets.all(10),
                 height: _sourcesHeight,
                 decoration: BoxDecoration(
                   color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
@@ -281,8 +281,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                         ),
                       );
                     }
-                    return ListView.builder(
+                    return ListView.separated(
                       itemCount: _filteredSources.length,
+                      separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 4),
                       itemBuilder: (BuildContext context, int index) {
                         final Source source = _filteredSources[index];
                         return Draggable<Source>(
@@ -439,7 +440,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
 
@@ -450,7 +450,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
                         ],
@@ -464,7 +463,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                     shrinkWrap: true,
                     proxyDecorator: (Widget child, int index, Animation<double> animation) {
                       return Material(
-                        color: Colors.white,
+                        color: context.colorScheme.primaryBlack,
                         child: SizedBox(
                           width: 220,
                           child: child,
