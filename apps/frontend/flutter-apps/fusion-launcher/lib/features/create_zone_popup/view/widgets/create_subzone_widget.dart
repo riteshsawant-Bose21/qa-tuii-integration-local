@@ -52,22 +52,25 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
-                            TextFormField(
-                              controller: _subZoneNameControllers[subZoneIndex],
-                              onChanged: (String value) => context.read<CreateZoneViewModel>().onSubzoneNameChanged(subZoneIndex, value),
-                              decoration: InputDecoration(
-                                hintText: 'Enter subzone name',
-                                hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                                border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
-                                hoverColor: Colors.transparent,
-                                contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-                                fillColor: context.colorScheme.surface,
-                                isDense: true,
+                            SemanticHelper.formControl(
+                              testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_subzone_name_input_$subZoneIndex"),
+                              child: TextFormField(
+                                controller: _subZoneNameControllers[subZoneIndex],
+                                onChanged: (String value) => context.read<CreateZoneViewModel>().onSubzoneNameChanged(subZoneIndex, value),
+                                decoration: InputDecoration(
+                                  hintText: 'Enter subzone name',
+                                  hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                  focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                  enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                  errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(4), borderSide: BorderSide.none),
+                                  hoverColor: Colors.transparent,
+                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+                                  fillColor: context.colorScheme.surface,
+                                  isDense: true,
+                                ),
+                                style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                               ),
-                              style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                             ),
                             const SizedBox(height: 4),
 
@@ -81,10 +84,13 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
                         cursor: SystemMouseCursors.click,
                         child: GestureDetector(
                           onTap: () => _removeSubzone(subZoneIndex),
-                          child: Icon(
-                            Icons.close,
-                            color: context.colorScheme.primaryBlack,
-                            size: 16,
+                          child: SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "create_subzone_remove_button_$subZoneIndex"),
+                            child: Icon(
+                              Icons.close,
+                              color: context.colorScheme.primaryBlack,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -94,27 +100,30 @@ class _CreateSubzoneWidgetState extends State<CreateSubzoneWidget> {
               }),
               const SizedBox(height: 12),
             ],
-            MouseRegion(
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: _addSubzone,
-                child: Row(
-                  children: <Widget>[
-                    Icon(
-                      Icons.add,
-                      color: context.colorScheme.primaryBlack,
-                    ),
-                    const SizedBox(width: 2),
-                    Expanded(
-                      child: FusionAppText(
-                        text: "Create Subzone",
-                        style: context.textTheme.bodySmall?.copyWith(
-                          color: context.colorScheme.onSurface,
-                          fontWeight: FontWeight.w400,
+            SemanticHelper.button(
+              testId: SemanticHelper.createTestId(SemanticTypes.button, "create_subzone_add_button"),
+              child: MouseRegion(
+                cursor: SystemMouseCursors.click,
+                child: GestureDetector(
+                  onTap: _addSubzone,
+                  child: Row(
+                    children: <Widget>[
+                      Icon(
+                        Icons.add,
+                        color: context.colorScheme.primaryBlack,
+                      ),
+                      const SizedBox(width: 2),
+                      Expanded(
+                        child: FusionAppText(
+                          text: "Create Subzone",
+                          style: context.textTheme.bodySmall?.copyWith(
+                            color: context.colorScheme.onSurface,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),

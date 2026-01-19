@@ -106,31 +106,37 @@ class _SchedulingPageState extends State<SchedulingPage> {
                   const SizedBox(
                     width: 20,
                   ),
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _currentPage = _PageType.scheduler;
-                      });
-                    },
-                    child: _TabHeader(
-                      title: "Scheduler",
-                      icon: 'assets/icons/scheduler/scheduler.svg',
-                      isSelected: _currentPage == _PageType.scheduler,
+                  SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_tab_button"),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _currentPage = _PageType.scheduler;
+                        });
+                      },
+                      child: _TabHeader(
+                        title: "Scheduler",
+                        icon: 'assets/icons/scheduler/scheduler.svg',
+                        isSelected: _currentPage == _PageType.scheduler,
+                      ),
                     ),
                   ),
                   const SizedBox(
                     width: 10,
                   ),
-                  InkWell(
-                    onTap: () {
-                      setState(() {
-                        _currentPage = _PageType.timeline;
-                      });
-                    },
-                    child: _TabHeader(
-                      title: "Timeline",
-                      icon: 'assets/icons/scheduler/timeline.svg',
-                      isSelected: _currentPage == _PageType.timeline,
+                  SemanticHelper.button(
+                    testId: SemanticHelper.createTestId(SemanticTypes.button, "timeline_tab_button"),
+                    child: InkWell(
+                      onTap: () {
+                        setState(() {
+                          _currentPage = _PageType.timeline;
+                        });
+                      },
+                      child: _TabHeader(
+                        title: "Timeline",
+                        icon: 'assets/icons/scheduler/timeline.svg',
+                        isSelected: _currentPage == _PageType.timeline,
+                      ),
                     ),
                   ),
                 ],
@@ -151,14 +157,17 @@ class _SchedulingPageState extends State<SchedulingPage> {
                             size: 20,
                             color: Colors.black,
                           ),
-                          suffixIcon: InkWell(
-                            onTap: () {
-                              context.read<SchedulerViewmodel>().idle();
-                            },
-                            child: const Icon(
-                              Icons.close,
-                              size: 20,
-                              color: Colors.black,
+                          suffixIcon: SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "search_close_button"),
+                            child: InkWell(
+                              onTap: () {
+                                context.read<SchedulerViewmodel>().idle();
+                              },
+                              child: const Icon(
+                                Icons.close,
+                                size: 20,
+                                color: Colors.black,
+                              ),
                             ),
                           ),
                           onChanged: (String query) {
@@ -169,13 +178,16 @@ class _SchedulingPageState extends State<SchedulingPage> {
                     }
                     return Row(
                       children: <Widget>[
-                        InkWell(
-                          onTap: () {
-                            BlocProvider.of<SchedulerViewmodel>(context).searchSchedules("");
-                          },
-                          child: const _ActionButton(
-                            title: "Search",
-                            icon: Icons.search,
+                        SemanticHelper.button(
+                          testId: SemanticHelper.createTestId(SemanticTypes.button, "search_button"),
+                          child: InkWell(
+                            onTap: () {
+                              BlocProvider.of<SchedulerViewmodel>(context).searchSchedules("");
+                            },
+                            child: const _ActionButton(
+                              title: "Search",
+                              icon: Icons.search,
+                            ),
                           ),
                         ),
                         // const _ActionButton(

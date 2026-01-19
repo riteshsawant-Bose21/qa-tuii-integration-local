@@ -110,29 +110,35 @@ class _NeumorphicTextWithPopupSliderButtonState extends State<NeumorphicTextWith
                         width: 60,
                         height: 200,
                         child: Center(
-                          child: VerticalSlider(
-                            value: widget.value ?? 0.0,
-                            min: -60,
-                            max: 12,
-                            intervalGap: 12,
-                            onChanged: (num value) {
-                              widget.onChanged?.call(
-                                value.toDouble(),
-                              );
-                            },
+                          child: SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_text_with_popup_slider_button"),
+                            child: VerticalSlider(
+                              value: widget.value ?? 0.0,
+                              min: -60,
+                              max: 12,
+                              intervalGap: 12,
+                              onChanged: (num value) {
+                                widget.onChanged?.call(
+                                  value.toDouble(),
+                                );
+                              },
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ];
                 },
-                child: AbsorbPointer(
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 2),
-                    child: Icon(
-                      Icons.keyboard_arrow_down,
-                      color: Colors.grey[600],
-                      size: 16,
+                child: SemanticHelper.button(
+                  testId: SemanticHelper.createTestId(SemanticTypes.button, "neumorphic_text_with_popup_slider_button"),
+                  child: AbsorbPointer(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 2),
+                      child: Icon(
+                        Icons.keyboard_arrow_down,
+                        color: Colors.grey[600],
+                        size: 16,
+                      ),
                     ),
                   ),
                 ),

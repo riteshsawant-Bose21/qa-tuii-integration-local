@@ -9,6 +9,8 @@ import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_toast.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/source_model.dart';
 import 'package:fusion_lib/models/project_entities/source_set_model.dart';
@@ -37,6 +39,7 @@ class SourceSetItem extends StatefulWidget {
 
 class _SourceSetItemState extends State<SourceSetItem> {
   late ValueNotifier<bool> _isSourcesSetExpanded;
+
   ProjectViewModel get _projectViewModel => serviceLocator<ProjectViewModel>();
   final TextEditingController _sourceSetNameController = TextEditingController();
   final List<SelectedSource> _selectedSources = <SelectedSource>[];
@@ -376,14 +379,22 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   color: Colors.transparent,
                   child: Opacity(
                     opacity: 0.8,
-                    child: Container(color: context.colorScheme.elevation1, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
+                    child: Container(
+                      color: context.colorScheme.elevation1,
+                      width: 220,
+                      child: SourceItem(
+                        index: index,
+                        source: sourceData,
+                        isDragging: true,
+                      ),
+                    ),
                   ),
                 ),
                 childWhenDragging: Opacity(
                   opacity: 0.5,
-                  child: SourceItem(source: sourceData, isDragging: true),
+                  child: SourceItem(index: index, source: sourceData, isDragging: true),
                 ),
-                child: SourceItem(sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
+                child: SourceItem(index: index, sourceSet: widget.sourceSet, source: sourceData, isDragging: _draggingSourceId == sourceData.id),
               );
             },
           ),
@@ -517,6 +528,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
           FusionTextField(
             controller: widget.sourceSetNameController,
             hintText: "Enter source set name",
+            semanticFieldId: "source_set_name_input",
             decoration: FusionInputDecoration.fusionDense(
               colorScheme: Theme.of(context).colorScheme,
               hintText: 'Enter source set name',
@@ -588,14 +600,17 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
-                                    InkWell(
-                                      onTap: () {
-                                        Navigator.of(context).pop();
-                                      },
-                                      child: Icon(
-                                        Icons.close,
-                                        size: 16,
-                                        color: Theme.of(context).colorScheme.textPrimary,
+                                    SemanticHelper.button(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.button, "source_set_name_dropdown_close_button"),
+                                      child: InkWell(
+                                        onTap: () {
+                                          Navigator.of(context).pop();
+                                        },
+                                        child: Icon(
+                                          Icons.close,
+                                          size: 16,
+                                          color: Theme.of(context).colorScheme.textPrimary,
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -634,7 +649,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                   );
                                                   return InkWell(
                                                     onTap: () {
-                                                      widget.onSourceChanged(source!, false);
+                                                      widget.onSourceChanged(source, false);
                                                       setPopupState(() {});
                                                       setState(() {});
                                                     },
@@ -648,7 +663,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                             child: Checkbox(
                                                               value: true,
                                                               onChanged: (bool? value) {
-                                                                widget.onSourceChanged(source!, false);
+                                                                widget.onSourceChanged(source, false);
                                                                 setPopupState(() {});
                                                                 setState(() {});
                                                               },
@@ -661,7 +676,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                                                           const SizedBox(width: 12),
                                                           Expanded(
                                                             child: FusionAppText(
-                                                              text: source?.name ?? sel.name,
+                                                              text: source.name ?? sel.name,
                                                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                                                 fontWeight: FontWeight.w500,
                                                                 fontSize: 10,
@@ -751,28 +766,31 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
                   ),
                 ];
               },
-              child: Container(
-                height: 29,
-                padding: const EdgeInsets.symmetric(horizontal: 8),
-                child: Row(
-                  children: <Widget>[
-                    Expanded(
-                      child: FusionAppText(
-                        text:
-                            widget.selectedSources.isEmpty
-                                ? "Select Sources"
-                                : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+              child: SemanticHelper.button(
+                testId: SemanticHelper.createTestId(SemanticTypes.button, "source_set_name_dropdown"),
+                child: Container(
+                  height: 29,
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Row(
+                    children: <Widget>[
+                      Expanded(
+                        child: FusionAppText(
+                          text:
+                              widget.selectedSources.isEmpty
+                                  ? "Select Sources"
+                                  : "${widget.selectedSources.length} source${widget.selectedSources.length > 1 ? 's' : ''} selected",
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: widget.selectedSources.isEmpty ? context.colorScheme.primaryBlack : Theme.of(context).textTheme.bodySmall?.color,
+                          ),
                         ),
                       ),
-                    ),
-                    Icon(
-                      Icons.keyboard_arrow_down,
-                      size: 20,
-                      color: context.colorScheme.primaryBlack,
-                    ),
-                  ],
+                      Icon(
+                        Icons.keyboard_arrow_down,
+                        size: 20,
+                        color: context.colorScheme.primaryBlack,
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),

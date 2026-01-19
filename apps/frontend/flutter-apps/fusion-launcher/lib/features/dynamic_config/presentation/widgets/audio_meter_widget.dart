@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
-import 'package:fusion_lib/fusion_logger/logger.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../domain/entities/audio_widget_entity.dart';
 
@@ -235,7 +235,7 @@ class AudioMeter extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryBlack,
+                        color: Theme.of(context).colorScheme.primaryBlack,
                       ),
                     )
                     : const SizedBox(height: 12),
@@ -243,7 +243,7 @@ class AudioMeter extends StatelessWidget {
                 Container(
                   height: label == null ? 4 : 6,
                   width: 1,
-                  color: label == null ? Theme.of(context).primaryBlack.withValues(alpha: 0.5) : colors.tertiary,
+                  color: label == null ? Theme.of(context).colorScheme.primaryBlack.withValues(alpha: 0.5) : colors.tertiary,
                 ),
               ],
             ),
@@ -278,14 +278,14 @@ class AudioMeter extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 8,
                         fontWeight: FontWeight.bold,
-                        color: Theme.of(context).primaryBlack,
+                        color: Theme.of(context).colorScheme.primaryBlack,
                       ),
                     )
                     : const SizedBox(width: 20),
                 Container(
                   width: label == null ? 4 : 6,
                   height: 1,
-                  color: label == null ? Theme.of(context).primaryBlack.withValues(alpha: 0.5) : colors.tertiary,
+                  color: label == null ? Theme.of(context).colorScheme.primaryBlack.withValues(alpha: 0.5) : colors.tertiary,
                 ),
               ],
             ),

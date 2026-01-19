@@ -82,57 +82,60 @@ class _SnapshotHeaderWidgetState extends State<SnapshotHeaderWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      height: 44,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 6,
-      ),
-      decoration: BoxDecoration(
-        color: context.colorScheme.elevation1,
-        // border bottom
-        border: Border(
-          bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+    return SemanticHelper.button(
+      testId: SemanticHelper.createTestId(SemanticTypes.button, "snapshot_header"),
+      child: Container(
+        height: 44,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 16,
+          vertical: 6,
         ),
-      ),
-      child: Row(
-        children: <Widget>[
-          const Icon(Icons.layers, size: 16),
-          const SizedBox(width: 10),
-          Expanded(
-            child:
-                _isEditing
-                    ? TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                      decoration: const InputDecoration(
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => _stopEditing(),
-                      onTapOutside: (_) => _stopEditing(),
-                    )
-                    : GestureDetector(
-                      onTap: _startEditing,
-                      child: FusionAppText(
-                        text: widget.snapshotName,
+        decoration: BoxDecoration(
+          color: context.colorScheme.elevation1,
+          // border bottom
+          border: Border(
+            bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+          ),
+        ),
+        child: Row(
+          children: <Widget>[
+            const Icon(Icons.layers, size: 16),
+            const SizedBox(width: 10),
+            Expanded(
+              child:
+                  _isEditing
+                      ? TextField(
+                        controller: _textController,
+                        focusNode: _focusNode,
                         style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
-                        maxLine: 1,
+                        decoration: const InputDecoration(
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.zero,
+                          isDense: true,
+                        ),
+                        onSubmitted: (_) => _stopEditing(),
+                        onTapOutside: (_) => _stopEditing(),
+                      )
+                      : GestureDetector(
+                        onTap: _startEditing,
+                        child: FusionAppText(
+                          text: widget.snapshotName,
+                          style: context.textTheme.bodyMedium?.copyWith(fontSize: 14, fontWeight: FontWeight.w700),
+                          maxLine: 1,
+                        ),
                       ),
-                    ),
-          ),
-          GestureDetector(
-            onTap: widget.onAdd,
-            child: const Icon(Icons.add, size: 16),
-          ),
-          const SizedBox(width: 12),
-          GestureDetector(
-            onTap: widget.onReorder,
-            child: const Icon(Icons.more_vert, size: 16),
-          ),
-        ],
+            ),
+            GestureDetector(
+              onTap: widget.onAdd,
+              child: const Icon(Icons.add, size: 16),
+            ),
+            const SizedBox(width: 12),
+            GestureDetector(
+              onTap: widget.onReorder,
+              child: const Icon(Icons.more_vert, size: 16),
+            ),
+          ],
+        ),
       ),
     );
   }

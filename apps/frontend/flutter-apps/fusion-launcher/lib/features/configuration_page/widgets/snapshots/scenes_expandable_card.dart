@@ -4,6 +4,8 @@ import 'package:fusion_launcher/features/configuration_page/widgets/snapshots/sn
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_dialog.dart';
 import 'package:fusion_lib/fusion_widgets/others/fusion_image.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 import 'package:fusion_lib/fusion_widgets/text_views/fusion_app_text.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/scene_set_model.dart';
 import 'package:fusion_lib/models/project_entities/non_processing/snapshot_model.dart';
@@ -214,59 +216,68 @@ class _ScenesExpandableCardState extends State<ScenesExpandableCard> {
                           const SizedBox(width: 8),
 
                           /// Add new scene button
-                          GestureDetector(
-                            onTap: () {
-                              _addNewSceneToSceneSet();
-                            },
-                            child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                          SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "add_scene_to_scene_set"),
+                            child: GestureDetector(
+                              onTap: () {
+                                _addNewSceneToSceneSet();
+                              },
+                              child: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                            ),
                           ),
                           const SizedBox(width: 8),
 
                           Tooltip(
                             message: 'Delete Scene Set',
-                            child: GestureDetector(
-                              onTap: () {
-                                showDialog(
-                                  context: context,
-                                  builder:
-                                      (_) => FusionDialog(
-                                        title: 'Delete Scenes?',
-                                        description:
-                                            "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
-                                        primaryButtonLabel: 'Delete',
-                                        secondaryButtonLabel: 'Cancel',
-                                        onSecondaryPressed: () {
-                                          Navigator.of(context).pop();
-                                        },
-                                        onPrimaryPressed: () {
-                                          widget.onSceneSetDelete(widget.sceneSetData.id);
-                                          Navigator.of(context).pop();
-                                        },
-                                      ),
-                                );
-                              },
-                              child: const FusionImage.asset(
-                                Assets.deleteIcon,
-                                width: 17,
-                                height: 17,
-                                fit: BoxFit.contain,
+                            child: SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "delete_scene_set"),
+                              child: GestureDetector(
+                                onTap: () {
+                                  showDialog(
+                                    context: context,
+                                    builder:
+                                        (_) => FusionDialog(
+                                          title: 'Delete Scenes?',
+                                          description:
+                                              "This will remove '${widget.sceneSetData.name}' from the Scenes. and all its associated snapshots will be deleted.",
+                                          primaryButtonLabel: 'Delete',
+                                          secondaryButtonLabel: 'Cancel',
+                                          onSecondaryPressed: () {
+                                            Navigator.of(context).pop();
+                                          },
+                                          onPrimaryPressed: () {
+                                            widget.onSceneSetDelete(widget.sceneSetData.id);
+                                            Navigator.of(context).pop();
+                                          },
+                                        ),
+                                  );
+                                },
+                                child: const FusionImage.asset(
+                                  Assets.deleteIcon,
+                                  width: 17,
+                                  height: 17,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 4),
                           Tooltip(
                             message: 'Duplicate Scene Set',
-                            child: GestureDetector(
-                              onTap: () {
-                                if (widget.onSceneSetDuplicate != null) {
-                                  widget.onSceneSetDuplicate!(widget.sceneSetData.id);
-                                }
-                              },
-                              child: const FusionImage.asset(
-                                Assets.duplicateIcon,
-                                width: 16,
-                                height: 16,
-                                fit: BoxFit.contain,
+                            child: SemanticHelper.button(
+                              testId: SemanticHelper.createTestId(SemanticTypes.button, "duplicate_scene_set"),
+                              child: GestureDetector(
+                                onTap: () {
+                                  if (widget.onSceneSetDuplicate != null) {
+                                    widget.onSceneSetDuplicate!(widget.sceneSetData.id);
+                                  }
+                                },
+                                child: const FusionImage.asset(
+                                  Assets.duplicateIcon,
+                                  width: 16,
+                                  height: 16,
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),

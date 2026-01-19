@@ -61,13 +61,16 @@ Widget _buildListeningAreaSelectionSection(
                               ),
                             ),
                           ),
-                          MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: Navigator.of(context).pop,
-                              child: const Padding(
-                                padding: EdgeInsets.all(2.0),
-                                child: Icon(LucideIcons.x200, size: 16),
+                          SemanticHelper.button(
+                            testId: SemanticHelper.createTestId(SemanticTypes.button, "select_listening_areas_close_button"),
+                            child: MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: Navigator.of(context).pop,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(2.0),
+                                  child: Icon(LucideIcons.x200, size: 16),
+                                ),
                               ),
                             ),
                           ),
@@ -108,46 +111,52 @@ Widget _buildListeningAreaSelectionSection(
 
                                       return GestureDetector(
                                         onTap: isAvailable ? () => onListeningAreaTap(isListeningAreaSelected, area, setPopupState) : null,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(12),
-                                          color: isAvailable ? Colors.transparent : Colors.grey.withOpacity(0.05),
-                                          child: Row(
-                                            children: <Widget>[
-                                              GestureDetector(
-                                                onTap: isAvailable ? () => onListeningAreaTap(isListeningAreaSelected, area, setPopupState) : null,
-                                                child: Icon(
-                                                  (isAvailable ? isListeningAreaSelected : true) ? Icons.check_box : Icons.check_box_outline_blank,
-                                                  size: 14,
-                                                  color: isAvailable && isAvailableToSelectOrDeselect ? context.colorScheme.onSurface : Colors.grey,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 12),
-
-                                              /// Area and zone names
-                                              Expanded(
-                                                child: FusionAppText(
-                                                  text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
-                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.w500,
-                                                    fontSize: 10,
-                                                    color:
-                                                        isAvailable && isAvailableToSelectOrDeselect
-                                                            ? Theme.of(context).textTheme.bodySmall?.color
-                                                            : Colors.grey[400],
+                                        child: SemanticHelper.container(
+                                          testId: SemanticHelper.createTestId(SemanticTypes.container, "select_listening_areas_item_$index"),
+                                          child: Container(
+                                            padding: const EdgeInsets.all(12),
+                                            color: isAvailable ? Colors.transparent : Colors.grey.withOpacity(0.05),
+                                            child: Row(
+                                              children: <Widget>[
+                                                GestureDetector(
+                                                  onTap: isAvailable ? () => onListeningAreaTap(isListeningAreaSelected, area, setPopupState) : null,
+                                                  child: SemanticHelper.button(
+                                                    testId: SemanticHelper.createTestId(SemanticTypes.button, "select_listening_areas_checkbox_$index"),
+                                                    child: Icon(
+                                                      (isAvailable ? isListeningAreaSelected : true) ? Icons.check_box : Icons.check_box_outline_blank,
+                                                      size: 14,
+                                                      color: isAvailable && isAvailableToSelectOrDeselect ? context.colorScheme.onSurface : Colors.grey,
+                                                    ),
                                                   ),
                                                 ),
-                                              ),
+                                                const SizedBox(width: 12),
 
-                                              /// Zone name
-                                              FusionAppText(
-                                                text: zoneName(area.id) ?? "No zone",
-                                                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                                  fontSize: 9,
-                                                  color: isAvailable ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.outline,
-                                                  fontWeight: FontWeight.w600,
+                                                /// Area and zone names
+                                                Expanded(
+                                                  child: FusionAppText(
+                                                    text: area.name.isNotEmpty ? "${floorName?.name}/${area.name}" : 'Unnamed Area',
+                                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                      fontWeight: FontWeight.w500,
+                                                      fontSize: 10,
+                                                      color:
+                                                          isAvailable && isAvailableToSelectOrDeselect
+                                                              ? Theme.of(context).textTheme.bodySmall?.color
+                                                              : Colors.grey[400],
+                                                    ),
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+
+                                                /// Zone name
+                                                FusionAppText(
+                                                  text: zoneName(area.id) ?? "No zone",
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    fontSize: 9,
+                                                    color: isAvailable ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.outline,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
                                           ),
                                         ),
                                       );

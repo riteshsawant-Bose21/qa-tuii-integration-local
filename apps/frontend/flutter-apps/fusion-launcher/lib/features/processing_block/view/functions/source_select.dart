@@ -66,155 +66,162 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
               borderRadius: const BorderRadius.all(Radius.circular(6)),
               child: Stack(
                 children: <Widget>[
-                  Container(
-                    color: Colors.black,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: <Widget>[
-                        const SizedBox(height: 35),
-                        Flexible(
-                          fit: FlexFit.loose,
-                          child: Container(
-                            color: Colors.white,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                // LEFT COLUMN (Reorderable List)
-                                Flexible(
-                                  child: SizedBox(
-                                    width: 350,
-                                    child: Column(
-                                      children: <Widget>[
-                                        Container(
-                                          height: 28,
-                                          width: double.infinity,
-                                          alignment: Alignment.center,
-                                          color: const Color(0xFFF5F5F5),
-                                          child: FusionAppText(
-                                            text: "SOURCE SELECT",
-                                            style: Theme.of(context).textTheme.labelSmall,
+                  SemanticHelper.container(
+                    testId: SemanticHelper.createTestId(SemanticTypes.container, "source_select_main_container"),
+                    child: Container(
+                      color: Colors.black,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: <Widget>[
+                          const SizedBox(height: 35),
+                          Flexible(
+                            fit: FlexFit.loose,
+                            child: Container(
+                              color: Colors.white,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: <Widget>[
+                                  // LEFT COLUMN (Reorderable List)
+                                  Flexible(
+                                    child: SizedBox(
+                                      width: 350,
+                                      child: Column(
+                                        children: <Widget>[
+                                          Container(
+                                            height: 28,
+                                            width: double.infinity,
+                                            alignment: Alignment.center,
+                                            color: const Color(0xFFF5F5F5),
+                                            child: FusionAppText(
+                                              text: "SOURCE SELECT",
+                                              style: Theme.of(context).textTheme.labelSmall,
+                                            ),
                                           ),
-                                        ),
-                                        const Divider(color: Colors.black12, height: 0),
-                                        Container(
-                                          margin: const EdgeInsets.symmetric(horizontal: 8),
-                                          padding: const EdgeInsets.all(8.0),
-                                          child: Row(
-                                            spacing: 10,
-                                            children: <Widget>[
-                                              Expanded(
-                                                flex: 2,
-                                                child: Center(
-                                                  child: FusionAppText(
-                                                    text: "Channels",
-                                                    textAlign: TextAlign.center,
-                                                    style: Theme.of(context).textTheme.labelSmall,
-                                                  ),
-                                                ),
-                                              ),
-                                              FusionAppText(
-                                                text: "Out",
-                                                style: Theme.of(context).textTheme.labelSmall,
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-
-                                        Expanded(
-                                          child: Builder(
-                                            builder: (BuildContext context) {
-                                              if (sources.isEmpty) {
-                                                return Center(
-                                                  child: FusionAppText(
-                                                    text: "No sources selected for this function",
-                                                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                                      color: Colors.grey,
+                                          const Divider(color: Colors.black12, height: 0),
+                                          Container(
+                                            margin: const EdgeInsets.symmetric(horizontal: 8),
+                                            padding: const EdgeInsets.all(8.0),
+                                            child: Row(
+                                              spacing: 10,
+                                              children: <Widget>[
+                                                Expanded(
+                                                  flex: 2,
+                                                  child: Center(
+                                                    child: FusionAppText(
+                                                      text: "Channels",
+                                                      textAlign: TextAlign.center,
+                                                      style: Theme.of(context).textTheme.labelSmall,
                                                     ),
                                                   ),
-                                                );
-                                              }
+                                                ),
+                                                FusionAppText(
+                                                  text: "Out",
+                                                  style: Theme.of(context).textTheme.labelSmall,
+                                                ),
+                                              ],
+                                            ),
+                                          ),
 
-                                              return ListView.builder(
-                                                padding: const EdgeInsets.symmetric(horizontal: 8),
-                                                physics: const ClampingScrollPhysics(),
-                                                itemCount: sources.length,
-                                                itemBuilder: (BuildContext context, int index) {
-                                                  final Source source = sources[index];
-
-                                                  final bool isSelected = source.id == zoneFunction?.selectedSourceId;
-
-                                                  return GestureDetector(
-                                                    onTap: () {
-                                                      projectViewModel.selectSourceForFunction(
-                                                        functionId: zoneFunction!.id,
-                                                        sourceId: source.id,
-                                                      );
-                                                    },
-                                                    child: Container(
-                                                      key: ValueKey<String>(source.id),
-                                                      margin: const EdgeInsets.symmetric(vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        border: Border.all(color: isSelected ? Colors.black54 : const Color(0xFFE5E5E5)),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                        color: Colors.white,
-                                                      ),
-                                                      child: Row(
-                                                        children: <Widget>[
-                                                          Flexible(
-                                                            child: Container(
-                                                              height: 28,
-                                                              margin: const EdgeInsets.all(4),
-                                                              alignment: Alignment.center,
-                                                              padding: const EdgeInsets.all(2),
-                                                              decoration: BoxDecoration(
-                                                                color: const Color(0xFFF5F5F5),
-                                                                borderRadius: BorderRadius.circular(4),
-                                                              ),
-                                                              child: FusionAppText(
-                                                                text: source.name,
-                                                                maxLine: 1,
-                                                                style: Theme.of(context).textTheme.labelSmall,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                          PBRadio(
-                                                            value: isSelected,
-                                                            size: const Size(28, 28),
-                                                            padding: const EdgeInsets.all(2),
-                                                            onChanged: (bool value) {
-                                                              projectViewModel.selectSourceForFunction(
-                                                                functionId: zoneFunction!.id,
-                                                                sourceId: source.id,
-                                                              );
-                                                            },
-                                                          ),
-
-                                                          const SizedBox(width: 5),
-                                                        ],
+                                          Expanded(
+                                            child: Builder(
+                                              builder: (BuildContext context) {
+                                                if (sources.isEmpty) {
+                                                  return Center(
+                                                    child: FusionAppText(
+                                                      text: "No sources selected for this function",
+                                                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                                        color: Colors.grey,
                                                       ),
                                                     ),
                                                   );
-                                                },
-                                              );
-                                            },
+                                                }
+
+                                                return ListView.builder(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                                  physics: const ClampingScrollPhysics(),
+                                                  itemCount: sources.length,
+                                                  itemBuilder: (BuildContext context, int index) {
+                                                    final Source source = sources[index];
+
+                                                    final bool isSelected = source.id == zoneFunction?.selectedSourceId;
+
+                                                    return GestureDetector(
+                                                      onTap: () {
+                                                        projectViewModel.selectSourceForFunction(
+                                                          functionId: zoneFunction!.id,
+                                                          sourceId: source.id,
+                                                        );
+                                                      },
+                                                      child: Container(
+                                                        key: ValueKey<String>(source.id),
+                                                        margin: const EdgeInsets.symmetric(vertical: 2),
+                                                        decoration: BoxDecoration(
+                                                          border: Border.all(color: isSelected ? Colors.black54 : const Color(0xFFE5E5E5)),
+                                                          borderRadius: BorderRadius.circular(4),
+                                                          color: Colors.white,
+                                                        ),
+                                                        child: Row(
+                                                          children: <Widget>[
+                                                            Flexible(
+                                                              child: Container(
+                                                                height: 28,
+                                                                margin: const EdgeInsets.all(4),
+                                                                alignment: Alignment.center,
+                                                                padding: const EdgeInsets.all(2),
+                                                                decoration: BoxDecoration(
+                                                                  color: const Color(0xFFF5F5F5),
+                                                                  borderRadius: BorderRadius.circular(4),
+                                                                ),
+                                                                child: FusionAppText(
+                                                                  text: source.name,
+                                                                  maxLine: 1,
+                                                                  style: Theme.of(context).textTheme.labelSmall,
+                                                                ),
+                                                              ),
+                                                            ),
+                                                            SemanticHelper.toggle(
+                                                              testId: SemanticHelper.createTestId(SemanticTypes.toggle, "source_select_radio_$index"),
+                                                              value: isSelected,
+                                                              child: PBRadio(
+                                                                value: isSelected,
+                                                                size: const Size(28, 28),
+                                                                padding: const EdgeInsets.all(2),
+                                                                onChanged: (bool value) {
+                                                                  projectViewModel.selectSourceForFunction(
+                                                                    functionId: zoneFunction!.id,
+                                                                    sourceId: source.id,
+                                                                  );
+                                                                },
+                                                              ),
+                                                            ),
+
+                                                            const SizedBox(width: 5),
+                                                          ],
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                );
+                                              },
+                                            ),
                                           ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const VerticalDivider(width: 1, color: Colors.black12),
+                                  const VerticalDivider(width: 1, color: Colors.black12),
 
-                                PrioritySelectionWidget(zoneId: widget.zoneID),
+                                  PrioritySelectionWidget(zoneId: widget.zoneID),
 
-                                // RIGHT COLUMN (Static)
-                                Flexible(child: ZoneControlSliderBuilder(zoneID: widget.zoneID)),
-                              ],
+                                  // RIGHT COLUMN (Static)
+                                  Flexible(child: ZoneControlSliderBuilder(zoneID: widget.zoneID)),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
 
@@ -239,19 +246,22 @@ class _SourceSelectZoneControlPanelState extends State<SourceSelectZoneControlPa
                   // CLOSE BUTTON
                   Positioned(
                     right: 0,
-                    child: Container(
-                      height: 35,
-                      color: Colors.black,
-                      alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
-                      child: MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: Navigator.of(context).pop,
-                          child: const Icon(
-                            Icons.close,
-                            color: Colors.white,
-                            size: 16,
+                    child: SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "source_select_close_button"),
+                      child: Container(
+                        height: 35,
+                        color: Colors.black,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: Navigator.of(context).pop,
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),

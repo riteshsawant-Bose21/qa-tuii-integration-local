@@ -38,19 +38,22 @@ class SchedulerForm extends StatelessWidget {
                     const SizedBox(
                       width: 10,
                     ),
-                    Text(
-                      initial == null ? "Create Schedule" : "Edit Schedule",
+                    FusionAppText(
+                      text: initial == null ? "Create Schedule" : "Edit Schedule",
                       style: context.textTheme.titleMedium?.copyWith(color: Colors.white),
                     ),
                     const Spacer(),
-                    IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        color: Colors.white,
+                    SemanticHelper.button(
+                      testId: SemanticHelper.createTestId(SemanticTypes.button, "scheduler_form_close_button"),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.close,
+                          color: Colors.white,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
                       ),
-                      onPressed: () {
-                        Navigator.of(context).pop();
-                      },
                     ),
                   ],
                 ),
@@ -114,53 +117,65 @@ class SchedulerForm extends StatelessWidget {
                                   /// Color Grid
                                   SizedBox(
                                     width: 400,
-                                    child: GridView.builder(
-                                      shrinkWrap: true,
-                                      physics: const NeverScrollableScrollPhysics(),
-                                      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                                        maxCrossAxisExtent: 20,
-                                        crossAxisSpacing: 12,
-                                        mainAxisSpacing: 12,
-                                      ),
-                                      itemCount: Zone.zoneColors.length,
-                                      itemBuilder: (BuildContext context, int index) {
-                                        final String hexCode = Zone.zoneColors[index];
-                                        final Color color = hexToColor(hexCode);
-                                        final bool isSelected = viewModel.color == hexCode;
+                                    child: SemanticHelper.container(
+                                      testId: SemanticHelper.createTestId(SemanticTypes.container, "scheduler_form_color_grid"),
+                                      child: GridView.builder(
+                                        shrinkWrap: true,
+                                        physics: const NeverScrollableScrollPhysics(),
+                                        gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                                          maxCrossAxisExtent: 20,
+                                          crossAxisSpacing: 12,
+                                          mainAxisSpacing: 12,
+                                        ),
+                                        itemCount: Zone.zoneColors.length,
+                                        itemBuilder: (BuildContext context, int index) {
+                                          final String hexCode = Zone.zoneColors[index];
+                                          final Color color = hexToColor(hexCode);
+                                          final bool isSelected = viewModel.color == hexCode;
 
-                                        return GestureDetector(
-                                          onTap: () {
-                                            viewModel.color = hexCode;
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              color: color,
-                                              borderRadius: BorderRadius.circular(4),
-                                              border:
-                                                  isSelected
-                                                      ? Border.all(
-                                                        color: context.colorScheme.primaryBlack,
-                                                        width: 2,
-                                                      )
-                                                      : null,
+                                          return SemanticHelper.container(
+                                            testId: SemanticHelper.createTestId(SemanticTypes.container, "scheduler_form_color_option_$index"),
+                                            child: GestureDetector(
+                                              onTap: () {
+                                                viewModel.color = hexCode;
+                                              },
+                                              child: Container(
+                                                decoration: BoxDecoration(
+                                                  color: color,
+                                                  borderRadius: BorderRadius.circular(4),
+                                                  border:
+                                                      isSelected
+                                                          ? Border.all(
+                                                            color: context.colorScheme.primaryBlack,
+                                                            width: 2,
+                                                          )
+                                                          : null,
+                                                ),
+                                                child:
+                                                    isSelected
+                                                        ? SemanticHelper.button(
+                                                          testId: SemanticHelper.createTestId(
+                                                            SemanticTypes.button,
+                                                            "scheduler_form_color_selected_icon_$index",
+                                                          ),
+                                                          child: Container(
+                                                            decoration: BoxDecoration(
+                                                              color: context.colorScheme.primaryBlack.withOpacity(0.2),
+                                                              borderRadius: BorderRadius.circular(4),
+                                                            ),
+                                                            child: const Icon(
+                                                              Icons.check,
+                                                              color: Colors.white,
+                                                              size: 16,
+                                                            ),
+                                                          ),
+                                                        )
+                                                        : null,
+                                              ),
                                             ),
-                                            child:
-                                                isSelected
-                                                    ? Container(
-                                                      decoration: BoxDecoration(
-                                                        color: context.colorScheme.primaryBlack.withOpacity(0.2),
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Icon(
-                                                        Icons.check,
-                                                        color: Colors.white,
-                                                        size: 16,
-                                                      ),
-                                                    )
-                                                    : null,
-                                          ),
-                                        );
-                                      },
+                                          );
+                                        },
+                                      ),
                                     ),
                                   ),
                                 ],

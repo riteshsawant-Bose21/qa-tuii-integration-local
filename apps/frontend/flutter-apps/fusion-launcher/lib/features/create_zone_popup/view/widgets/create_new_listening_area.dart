@@ -66,10 +66,14 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                     ),
                   ),
                 ),
-                Icon(
-                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                  size: 20,
-                  color: Colors.grey[600],
+                SemanticHelper.toggle(
+                  testId: SemanticHelper.createTestId(SemanticTypes.toggle, "create_new_listening_area_toggle"),
+                  value: _isExpanded,
+                  child: Icon(
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                    size: 20,
+                    color: Colors.grey[600],
+                  ),
                 ),
               ],
             ),
@@ -119,21 +123,24 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                 ),
                 const SizedBox(height: 4),
 
-                TextFormField(
-                  controller: listeningAreaNameController,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: 'Enter location name',
-                    hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
-                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    hoverColor: Colors.transparent,
-                    errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
-                    fillColor: context.colorScheme.surface,
+                SemanticHelper.formControl(
+                  testId: SemanticHelper.createTestId(SemanticTypes.textInput, "create_new_listening_area_input"),
+                  child: TextFormField(
+                    controller: listeningAreaNameController,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: 'Enter location name',
+                      hintStyle: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface.withAlpha(100)),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      hoverColor: Colors.transparent,
+                      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide.none),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+                      fillColor: context.colorScheme.surface,
+                    ),
+                    style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                   ),
-                  style: context.textTheme.bodySmall?.copyWith(color: context.colorScheme.onSurface),
                 ),
                 const SizedBox(height: 12),
 
@@ -145,6 +152,7 @@ class __CreateNewListeningAreaWidgetState extends State<_CreateNewListeningAreaW
                     height: 28,
                     width: 60,
                     label: "Add",
+                    accessIdentifier: "create_new_listening_area_add_button",
                     textStyle: context.textTheme.labelMedium?.copyWith(
                       color: context.colorScheme.surface,
                     ),

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_theme/app_theme.dart';
 import 'package:fusion_lib/fusion_widgets/form_fields/fusion_text_field.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
+import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 class SearchBarSources extends StatelessWidget {
   final TextEditingController searchController;
@@ -46,25 +48,29 @@ class SearchBarSources extends StatelessWidget {
                 children: <Widget>[
                   /// Search box
                   Expanded(
-                    child: FusionTextField(
-                      controller: searchController,
-                      hintText: 'Search sources',
-                      prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
-                      onChanged: (String value) {
-                        if (value.isEmpty) {
-                          onClearSearch?.call();
-                        }
-                        onSearchChanged?.call(value);
-                      },
-                      suffixIcon:
-                          searchController.text.isNotEmpty
-                              ? IconButton(
-                                icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
-                                onPressed: onClearSearch,
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              )
-                              : null,
+                    child: SemanticHelper.formControl(
+                      testId: SemanticHelper.createTestId(SemanticTypes.textInput, "search_bar_sources"),
+                      child: FusionTextField(
+                        controller: searchController,
+                        hintText: 'Search sources',
+
+                        prefixIcon: Icon(Icons.search, color: Colors.grey[400], size: 16),
+                        onChanged: (String value) {
+                          if (value.isEmpty) {
+                            onClearSearch?.call();
+                          }
+                          onSearchChanged?.call(value);
+                        },
+                        suffixIcon:
+                            searchController.text.isNotEmpty
+                                ? IconButton(
+                                  icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
+                                  onPressed: onClearSearch,
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                )
+                                : null,
+                      ),
                     ),
                   ),
 
