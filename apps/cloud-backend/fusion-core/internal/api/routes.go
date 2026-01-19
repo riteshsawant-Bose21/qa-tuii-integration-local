@@ -92,13 +92,6 @@ func (a *API) registerRoutes() {
 		users.PATCH("/:userID", userHandler.UpdateUser)
 	}
 
-	// Auth status endpoint
-	auth := v1.Group("/auth")
-	auth.Use(a.authMiddleware.Middleware())
-	{
-		auth.GET("/status", userHandler.CheckAuthStatus)
-	}
-
 	// Role Management routes for organization admins
 	roleManagementHandler := handler.NewRoleManagementHandler(a.user, a.roleManagementService)
 	organization := v1.Group("/organization")
