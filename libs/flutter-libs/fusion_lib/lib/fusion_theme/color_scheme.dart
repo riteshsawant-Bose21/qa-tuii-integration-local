@@ -207,9 +207,11 @@ extension ColorExtends on ColorScheme {
   static const Color _spl600L = Color(0xFFE8F3EE);
   static const Color _spl600D = Color(0xFF3E996E);
 
-  // Expressive Dark
-  static const Color _expressiveDark = Color(0xFF000000);
-  static const Color _expressiveLight = Color(0xFFFFFFFF);
+  // Expressive Dark mode
+  static const Color _expressiveShadowDarkD = Color(0xFF000000);
+  static const Color _expressiveShadowLightD = Color(0xFFFFFFFF);
+  static const Color _expressiveShadowDarkL = Color(0xFF000000);
+  static const Color _expressiveShadowLightL = Color(0xFFFFFFFF);
 
   /// Dark and light mode switch
   bool get isDarkMode => brightness == Brightness.dark;
@@ -350,6 +352,6 @@ extension ColorExtends on ColorScheme {
   ///
   /// Shadow Colors
   ///
-  Color get shadowDark => isDarkMode ? _expressiveDark : _expressiveLight;
-  Color get shadowLight => isDarkMode ? _expressiveLight : _expressiveDark;
+  Color get shadowDark => isDarkMode ? _expressiveShadowDarkD.withValues(alpha: 0.84) : _expressiveShadowDarkD.withValues(alpha: 0.14);
+  Color get shadowLight => isDarkMode ? _expressiveShadowLightD.withAlpha((0.1 * 255).toInt()) : _expressiveShadowLightL;
 }
