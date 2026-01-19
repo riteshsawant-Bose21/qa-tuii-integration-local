@@ -9,6 +9,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:fusion_launcher/core/spl_calculation/isolate_mace_calculation_manager.dart';
 import 'package:fusion_launcher/core/utils/fusion_utils.dart';
+import 'package:fusion_launcher/features/commission/presentation/pages/device_setup_wizard.dart';
 import 'package:fusion_launcher/features/configuration_page/pages/configuration_events.dart';
 import 'package:fusion_launcher/features/media_files/view/configuration_media_files_pages.dart';
 import 'package:fusion_launcher/features/media_files/viewModel/media_files_view_model.dart';
@@ -39,6 +40,8 @@ import '../../cloud_ui/presentation/pages/cloud_web_view.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../../configuration_page/pages/configuration_processing_page.dart';
 import '../../configuration_page/pages/configuration_snapshots.dart';
+import '../../control_dashboard/presentation/pages/fusion_control_dashboard.dart';
+import '../../devices/presentation/pages/fusion_devices_page.dart';
 import '../../gpio/view/gpio_page.dart';
 import '../../schematics/presentation/pages/schematics_page.dart';
 import '../../schematics/presentation/widgets/cost_calculator_widget.dart';
@@ -76,7 +79,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
   bool get isListingViewMode => _projectViewModel.currentProjectMode == ProjectMode.systemListingMode;
   String _appVersion = '1.0.0';
 
-  final List<Widget> _tabs = const <Widget>[
+  bool get isInDesignMode => !serviceLocator<ProjectViewModel>().isInControlMode;
+
+  final List<Widget> _designTabs = const <Widget>[
     Tab(text: 'Building'),
     Tab(text: 'Schematic'),
     Tab(text: 'Cost'),
@@ -84,16 +89,25 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     Tab(text: 'Cloud'),
   ];
 
-  late List<Widget> _tabWidgets;
+  final List<Widget> _controlTabs = const <Widget>[
+    Tab(text: 'Dashboard'),
+    Tab(text: 'Devices'),
+    Tab(text: 'Building'),
+    Tab(text: 'Configuration'),
+  ];
+
+  late List<Widget> _designWidgets;
+
+  late List<Widget> _controlWidgets;
+
+  List<Widget> get _currentTabs => isInDesignMode ? _designTabs : _controlTabs;
+
+  List<Widget> get _currentWidgets => isInDesignMode ? _designWidgets : _controlWidgets;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: _tabs.length,
-      vsync: this,
-      animationDuration: Duration.zero,
-    );
+    _initController();
     FusionLogger.log(
       message: "Opened Project ",
       tag: LogTag.project,
@@ -121,7 +135,23 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     _initAppVersion();
 
     // Initialize tab widgets to preserve state
-    _tabWidgets = _createTabWidgets();
+    _createTabWidgets();
+  }
+
+  void _initController() {
+    _tabController = TabController(
+      length: _currentTabs.length,
+      vsync: this,
+      animationDuration: Duration.zero,
+      initialIndex: 0, // Always reset to 0 when switching modes to avoid index out of bounds
+    );
+
+    // Since you are using IndexedStack, we need to rebuild when tab changes
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {});
+      }
+    });
   }
 
   Future<void> _initMace() async {
@@ -466,46 +496,94 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
     ];
   }
 
-  List<Widget> _createTabWidgets() {
-    return <Widget>[
-      /// Building tab
-      BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-        builder: (BuildContext context, ProjectViewModelState state) {
-          return FusionDockableArea(
-            tabKey: "building_tab",
-            showLeft: true,
-            showRight: true,
-            mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                return SemanticHelper.container(
-                  testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
-                  child: BuildingCanvas(
-                    splRangeController: _splRangeController,
-                    onSplStateChanged: (bool value) {
-                      if (value) {
-                        productsController.collapse();
-                        splController.expand();
-                      } else {
-                        splController.collapse();
-                      }
-                    },
-                    floorCanvasController: _floorCanvasController,
-                    onCalculateSpl: calculateSPL,
-                    splPanelData: _lastPanelData!,
-                    onProductSelected: () {
-                      productsController.expand();
-                    },
-                    onProductDeselected: () {
+  void _createTabWidgets() {
+    /// Building tab
+    final Widget buildingPage = BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+      builder: (BuildContext context, ProjectViewModelState state) {
+        return FusionDockableArea(
+          tabKey: "building_tab",
+          showLeft: true,
+          showRight: true,
+          mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return SemanticHelper.container(
+                testId: SemanticHelper.createTestId(SemanticTypes.container, FusionTestKeys.buildingCanvas),
+                child: BuildingCanvas(
+                  splRangeController: _splRangeController,
+                  onSplStateChanged: (bool value) {
+                    if (value) {
                       productsController.collapse();
-                    },
-                  ),
-                );
-              },
-            ),
-            dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
-          );
-        },
+                      splController.expand();
+                    } else {
+                      splController.collapse();
+                    }
+                  },
+                  floorCanvasController: _floorCanvasController,
+                  onCalculateSpl: calculateSPL,
+                  splPanelData: _lastPanelData!,
+                  onProductSelected: () {
+                    productsController.expand();
+                  },
+                  onProductDeselected: () {
+                    productsController.collapse();
+                  },
+                ),
+              );
+            },
+          ),
+          dockItemList: _createBuildingDockItems(serviceLocator<ProjectViewModel>().currentToolbarMode, _floorCanvasController),
+        );
+      },
+    );
+
+    /// Config tab without docking area
+    final Widget configurationPage = FusionDockableArea(
+      tabKey: "configuration_tab",
+      showLeft: true,
+      showRight: false,
+      mainArea: Theme(
+        data: ThemeData.light(),
+        child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            return switch (_projectViewModel.currentConfigurationMenuMode) {
+              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+              // add all othere
+              ConfigurationMenuMode.events => const ConfigurationEvents(),
+              ConfigurationMenuMode.gpio => const GpioPage(),
+              ConfigurationMenuMode.scheduling => const SchedulingPage(),
+              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+                create: (_) => MediaFilesViewModel(),
+                child: const ConfigurationMediaFilesPage(),
+              ),
+            };
+          },
+        ),
       ),
+
+      dockItemList: <DockItemConfig>[
+        DockItemConfig(
+          id: "1",
+          title: "FLOORS",
+          side: "left",
+          allowUndock: true,
+          isCollapsibleSection: false,
+          dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+            builder: (BuildContext context, ProjectViewModelState state) {
+              return ConfigurationTabSwitcher(
+                selectedMode: _projectViewModel.currentConfigurationMenuMode,
+                onModeChanged: (ConfigurationMenuMode mode) {
+                  _projectViewModel.setConfigurationMenuMode(mode);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+
+    _designWidgets = <Widget>[
+      buildingPage,
 
       /// Schematics tab
       BlocBuilder<ProjectViewModel, ProjectViewModelState>(
@@ -585,48 +663,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         dockItemList: <DockItemConfig>[],
       ),
 
-      /// Config tab without docking area
-      FusionDockableArea(
-        tabKey: "configuration_tab",
-        showLeft: true,
-        showRight: false,
-        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-          builder: (BuildContext context, ProjectViewModelState state) {
-            return switch (_projectViewModel.currentConfigurationMenuMode) {
-              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
-              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
-              // add all othere
-              ConfigurationMenuMode.events => const ConfigurationEvents(),
-              ConfigurationMenuMode.gpio => const GpioPage(),
-              ConfigurationMenuMode.scheduling => const SchedulingPage(),
-              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
-                create: (_) => MediaFilesViewModel(),
-                child: const ConfigurationMediaFilesPage(),
-              ),
-            };
-          },
-        ),
-
-        dockItemList: <DockItemConfig>[
-          DockItemConfig(
-            id: "1",
-            title: "FLOORS",
-            side: "left",
-            allowUndock: true,
-            isCollapsibleSection: false,
-            dockItemWidget: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-              builder: (BuildContext context, ProjectViewModelState state) {
-                return ConfigurationTabSwitcher(
-                  selectedMode: _projectViewModel.currentConfigurationMenuMode,
-                  onModeChanged: (ConfigurationMenuMode mode) {
-                    _projectViewModel.setConfigurationMenuMode(mode);
-                  },
-                );
-              },
-            ),
-          ),
-        ],
-      ),
+      configurationPage,
 
       /// Cloud tab without docking area
       const FusionDockableArea(
@@ -638,6 +675,24 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         ),
         dockItemList: <DockItemConfig>[],
       ),
+    ];
+
+    _controlWidgets = <Widget>[
+      serviceLocator<ProjectViewModel>().virtualIP == null
+          ? DeviceSetupWizard(
+            onFinish: () {
+              // After finishing device setup, navigate to Devices tab
+              _tabController.animateTo(1);
+              _createTabWidgets();
+            },
+          )
+          : const FusionControlDashboardPage(),
+
+      const FusionDevicesPage(),
+
+      buildingPage,
+
+      configurationPage,
     ];
   }
 
@@ -715,7 +770,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                             fontWeight: FontWeight.w400,
                           ),
                           labelPadding: const EdgeInsets.only(left: 32),
-                          tabs: _tabs,
+                          tabs: _currentTabs,
                         ),
                       ),
 
@@ -967,7 +1022,7 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                 Expanded(
                   child: IndexedStack(
                     index: _tabController.index,
-                    children: _tabWidgets,
+                    children: _currentWidgets,
                   ),
                 ),
               ],
