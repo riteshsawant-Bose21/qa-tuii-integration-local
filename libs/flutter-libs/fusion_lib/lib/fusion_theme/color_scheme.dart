@@ -352,6 +352,6 @@ extension ColorExtends on ColorScheme {
   ///
   /// Shadow Colors
   ///
-  Color get shadowDark => isDarkMode ? _expressiveShadowDarkD.withValues(alpha: 0.84) : _expressiveShadowDarkD.withValues(alpha: 0.14);
+  Color get shadowDark => isDarkMode ? _expressiveShadowDarkD.withValues(alpha: 0.5) : _expressiveShadowDarkD.withValues(alpha: 0.14);
   Color get shadowLight => isDarkMode ? _expressiveShadowLightD.withAlpha((0.1 * 255).toInt()) : _expressiveShadowLightL;
 }

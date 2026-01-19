@@ -17,7 +17,8 @@ class FusionContainer extends StatelessWidget {
   final Color? color;
   @override
   Widget build(BuildContext context) {
-    final container = Container(
+    final container = AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
       width: width,
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
