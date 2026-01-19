@@ -295,7 +295,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     await showMenu<dynamic>(
       context: context,
       position: position,
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       constraints: const BoxConstraints(maxHeight: 500, maxWidth: 250),
       items: <PopupMenuEntry<dynamic>>[
         PopupMenuItem<dynamic>(
@@ -376,7 +376,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   color: Colors.transparent,
                   child: Opacity(
                     opacity: 0.8,
-                    child: Container(color: context.colorScheme.primaryWhite, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
+                    child: Container(color: context.colorScheme.elevation1, width: 220, child: SourceItem(source: sourceData, isDragging: true)),
                   ),
                 ),
                 childWhenDragging: Opacity(
@@ -399,7 +399,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext ctx) {
         final ColorScheme scheme = Theme.of(ctx).colorScheme;
         return Dialog(
-          backgroundColor: scheme.primaryWhite,
+          backgroundColor: scheme.elevation1,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ConstrainedBox(
@@ -488,7 +488,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -555,7 +555,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: context.colorScheme.primaryWhite,
+              color: context.colorScheme.elevation1,
               offset: const Offset(0, 35),
               itemBuilder: (BuildContext context) {
                 return <PopupMenuEntry<String>>[

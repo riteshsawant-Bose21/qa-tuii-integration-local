@@ -556,10 +556,10 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget _buildOutputPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryWhite,
+        color: context.colorScheme.elevation1,
 
         border: Border(
-          left: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+          left: BorderSide(width: 1, color: context.colorScheme.strokeDark),
         ),
       ),
       child: Column(

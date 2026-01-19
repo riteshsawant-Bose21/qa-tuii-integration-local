@@ -19,7 +19,7 @@ class ActionList extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primaryWhite,
+        color: Theme.of(context).colorScheme.elevation1,
 
         border: Border(
           left: BorderSide(width: 1, color: context.colorScheme.primaryBlack),

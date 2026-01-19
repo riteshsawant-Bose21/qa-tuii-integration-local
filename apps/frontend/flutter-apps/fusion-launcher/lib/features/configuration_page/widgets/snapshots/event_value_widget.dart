@@ -274,7 +274,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                 if (states.contains(MaterialState.selected)) {
-                  return Theme.of(context).colorScheme.primaryWhite;
+                  return Theme.of(context).colorScheme.onPrimary;
                 }
                 return context.colorScheme.primaryBlack;
               }),
@@ -339,7 +339,7 @@ class _EventValueWidgetState extends State<EventValueWidget> {
                   materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   thumbColor: MaterialStateProperty.resolveWith<Color>((Set<MaterialState> states) {
                     if (states.contains(MaterialState.selected)) {
-                      return Theme.of(context).colorScheme.primaryWhite;
+                      return Theme.of(context).colorScheme.onPrimary;
                     }
                     return context.colorScheme.primaryBlack;
                   }),

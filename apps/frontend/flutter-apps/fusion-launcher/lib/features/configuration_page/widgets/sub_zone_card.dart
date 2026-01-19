@@ -202,7 +202,7 @@ class _SubZoneCardState extends State<SubZoneCard> {
 
     return Container(
       decoration: BoxDecoration(
-        color: isThisCircuitHovered ? Colors.grey[200] : null,
+        color: isThisCircuitHovered ? context.colorScheme.elevation2 : null,
         borderRadius: BorderRadius.circular(8),
       ),
       padding: const EdgeInsets.only(top: 4, bottom: 4, left: 10, right: 13),

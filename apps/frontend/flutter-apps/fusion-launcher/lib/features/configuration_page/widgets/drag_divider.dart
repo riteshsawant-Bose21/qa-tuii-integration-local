@@ -19,7 +19,7 @@ class DragDivider extends StatelessWidget {
               color: context.colorScheme.elevation3,
               boxShadow: <BoxShadow>[
                 BoxShadow(
-                  color: context.colorScheme.elevation3,
+                  color: context.colorScheme.strokeDark,
                   blurRadius: 1,
                 ),
               ],
