@@ -203,7 +203,7 @@ class _FusionSwitchState extends State<FusionSwitch> with SingleTickerProviderSt
                 // Thumb
                 Positioned(
                   left: 4 + thumbPosition, // 4px padding from left
-                  top: 4, // 4px padding from top
+                  top: 3, // 4px padding from top
                   child: AnimatedSize(
                     duration: const Duration(milliseconds: 100),
                     curve: Curves.elasticInOut,

@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_launcher/core/theme/app_theme.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_helper.dart';
-import 'package:fusion_lib/fusion_widgets/semantics/semantic_type.dart';
 
 import 'app_text_view.dart';
 
