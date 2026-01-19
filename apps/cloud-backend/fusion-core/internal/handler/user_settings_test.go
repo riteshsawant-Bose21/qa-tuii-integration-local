@@ -54,9 +54,9 @@ func TestGetUserSettings(t *testing.T) {
 			mockGetSettings: func(ctx context.Context, userID string) (*types.UserSettings, error) {
 				return nil, nil
 			},
-			expectedStatus: http.StatusUnauthorized,
+			expectedStatus: http.StatusBadRequest,
 			expectedBody: map[string]interface{}{
-				"error": "Invalid user ID format",
+				"message": "Invalid user ID format",
 			},
 		},
 		{
@@ -68,7 +68,7 @@ func TestGetUserSettings(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
-				"error": "User settings not found",
+				"message": "User settings not found",
 			},
 		},
 		{
@@ -80,7 +80,7 @@ func TestGetUserSettings(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
-				"error": "User settings not found",
+				"message": "User settings not found",
 			},
 		},
 		{
@@ -92,7 +92,7 @@ func TestGetUserSettings(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: map[string]interface{}{
-				"error": "Internal server error",
+				"message": "Internal server error",
 			},
 		},
 	}
@@ -306,7 +306,7 @@ func TestUpdateUserSettings(t *testing.T) {
 			if tt.expectedError != "" {
 				var response map[string]interface{}
 				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["error"].(string)
+				errMsg, ok := response["message"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}
@@ -408,7 +408,7 @@ func TestCreateUserSettings(t *testing.T) {
 			if tt.expectedError != "" {
 				var response map[string]interface{}
 				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["error"].(string)
+				errMsg, ok := response["message"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}

@@ -16,14 +16,14 @@ const (
 	UserDelete = "user.delete"
 
 	// User profile permissions
-	UserProfileRead   = "user.profile.read"
-	UserProfileCreate = "user.profile.create"
-	UserProfileUpdate = "user.profile.update"
+	UserProfileRead   = "users.profile.read"
+	UserProfileCreate = "users.profile.create"
+	UserProfileUpdate = "users.profile.update"
 
 	// User settings permissions
-	UserSettingsRead   = "user.settings.read"
-	UserSettingsCreate = "user.settings.create"
-	UserSettingsUpdate = "user.settings.update"
+	UserSettingsRead   = "users.settings.read"
+	UserSettingsCreate = "users.settings.create"
+	UserSettingsUpdate = "users.settings.update"
 
 	// Admin permissions
 	AdminFull = "admin"
@@ -64,17 +64,17 @@ func SetupProjectPermissions(acc *AccessControlConfig) {
 // SetupUserProfilePermissions configures access control permissions for user profile endpoints
 func SetupUserProfilePermissions(acc *AccessControlConfig) {
 	// User Profile endpoints
-	acc.RegisterPermission("GET", "/api/v1/user/profile", UserProfileRead, PermissionRead, "View user profile")
-	acc.RegisterPermission("POST", "/api/v1/user/profile", UserProfileCreate, PermissionWrite, "Create user profile")
-	acc.RegisterPermission("PUT", "/api/v1/user/profile/:profileID", UserProfileUpdate, PermissionWrite, "Update user profile")
+	acc.RegisterPermission("GET", "/api/v1/users/profile", UserProfileRead, PermissionRead, "View user profile")
+	acc.RegisterPermission("POST", "/api/v1/users/profile", UserProfileCreate, PermissionWrite, "Create user profile")
+	acc.RegisterPermission("PUT", "/api/v1/users/profile/:profileID", UserProfileUpdate, PermissionWrite, "Update user profile")
 }
 
 // SetupUserSettingsPermissions configures access control permissions for user settings endpoints
 func SetupUserSettingsPermissions(acc *AccessControlConfig) {
 	// User Settings endpoints
-	acc.RegisterPermission("GET", "/api/v1/user/settings", UserSettingsRead, PermissionRead, "View user settings")
-	acc.RegisterPermission("POST", "/api/v1/user/settings", UserSettingsCreate, PermissionWrite, "Create user settings")
-	acc.RegisterPermission("PUT", "/api/v1/user/settings/:settingsID", UserSettingsUpdate, PermissionWrite, "Update user settings")
+	acc.RegisterPermission("GET", "/api/v1/users/settings", UserSettingsRead, PermissionRead, "View user settings")
+	acc.RegisterPermission("POST", "/api/v1/users/settings", UserSettingsCreate, PermissionWrite, "Create user settings")
+	acc.RegisterPermission("PUT", "/api/v1/users/settings/:settingsID", UserSettingsUpdate, PermissionWrite, "Update user settings")
 }
 
 // SetupCommonPermissions configures common permission patterns

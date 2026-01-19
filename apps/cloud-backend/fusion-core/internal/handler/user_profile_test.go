@@ -55,7 +55,7 @@ func TestGetUserProfile(t *testing.T) {
 			mockGetProfile: nil, // Handler validates before calling service
 			expectedStatus: http.StatusBadRequest,
 			expectedBody: map[string]interface{}{
-				"error": "Invalid user ID format",
+				"message": "Invalid user ID format",
 			},
 		},
 		{
@@ -67,7 +67,7 @@ func TestGetUserProfile(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
-				"error": "User profile not found",
+				"message": "User profile not found",
 			},
 		},
 		{
@@ -79,7 +79,7 @@ func TestGetUserProfile(t *testing.T) {
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedBody: map[string]interface{}{
-				"error": "User profile not found",
+				"message": "User profile not found",
 			},
 		},
 		{
@@ -91,7 +91,7 @@ func TestGetUserProfile(t *testing.T) {
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: map[string]interface{}{
-				"error": "Internal server error",
+				"message": "Internal server error",
 			},
 		},
 	}
@@ -262,7 +262,7 @@ func TestCreateUserProfile(t *testing.T) {
 			if tt.expectedError != "" {
 				var response map[string]interface{}
 				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["error"].(string)
+				errMsg, ok := response["message"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}
@@ -426,7 +426,7 @@ func TestUpdateUserProfile(t *testing.T) {
 			if tt.expectedError != "" {
 				var response map[string]interface{}
 				json.Unmarshal(w.Body.Bytes(), &response)
-				errMsg, ok := response["error"].(string)
+				errMsg, ok := response["message"].(string)
 				assert.True(t, ok)
 				assert.Contains(t, errMsg, tt.expectedError)
 			}

@@ -60,7 +60,7 @@ func (a *API) registerRoutes() {
 
 	{
 		user.GET("/authorization", userHandler.GetUserAuthorization)
-		user.GET("/profile", userHandler.GetUserProfile)
+		// user.GET("/profile", userHandler.GetUserProfile)
 	}
 
 	// user profile management routes (/user/profile/*)

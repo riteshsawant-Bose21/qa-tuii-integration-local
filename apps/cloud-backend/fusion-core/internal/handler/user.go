@@ -232,9 +232,18 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 // @Failure 500 {object} types.StatusInternalServerError "Internal server error"
 // @Router /user/settings [get]
 func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Authentication required"})
+		return
+	}
 
-	userAuth, _ := ctx.Get("user_auth")
-	auth := userAuth.(*types.UserAuthorizationResponse)
+	auth, ok := userAuth.(*types.UserAuthorizationResponse)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Invalid authentication context"})
+		return
+	}
+
 	userID := auth.User.ID
 
 	settings, err := h.user.GetUserSettings(ctx, userID)
@@ -355,9 +364,18 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /user/profile [get]
 func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
+	userAuth, exists := ctx.Get("user_auth")
+	if !exists {
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Authentication required"})
+		return
+	}
 
-	userAuth, _ := ctx.Get("user_auth")
-	auth := userAuth.(*types.UserAuthorizationResponse)
+	auth, ok := userAuth.(*types.UserAuthorizationResponse)
+	if !ok {
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Invalid authentication context"})
+		return
+	}
+
 	userID := auth.User.ID
 
 	userProfile, err := h.user.GetUserProfile(ctx, userID)
