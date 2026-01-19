@@ -18,7 +18,7 @@ class SectionHeader extends StatelessWidget {
         decoration: BoxDecoration(
           color: context.colorScheme.elevation1,
           border: Border(
-            bottom: BorderSide(width: 1, color: context.colorScheme.strokeDark),
+            bottom: BorderSide(width: 1, color: context.colorScheme.elevation2),
           ),
         ),
         child: Row(

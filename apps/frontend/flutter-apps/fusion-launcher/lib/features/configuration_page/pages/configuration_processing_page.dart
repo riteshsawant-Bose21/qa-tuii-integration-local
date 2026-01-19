@@ -174,7 +174,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.elevation2,
+      backgroundColor: Theme.of(context).colorScheme.primaryBlack,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -202,10 +202,15 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Build Input Panel
   Widget _buildInputPanel(BuildContext context) {
     return Container(
-      color: context.colorScheme.elevation1,
+      clipBehavior: Clip.hardEdge,
+      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        border: Border.all(color: context.colorScheme.elevation2, width: 1),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      ),
       child: Column(
         children: <Widget>[
-          // const PanelHeader(title: 'INPUT'),
           const SectionHeader(
             title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
