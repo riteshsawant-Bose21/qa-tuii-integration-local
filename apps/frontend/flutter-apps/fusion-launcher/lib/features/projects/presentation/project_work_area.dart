@@ -680,14 +680,14 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
             //   ],
             //   title: const SizedBox(),
             // ),
+            backgroundColor: context.colorScheme.primaryBlack,
             body: Column(
               children: <Widget>[
                 /// Tab Bar Section
                 Container(
                   height: 48,
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primaryWhite,
-                    border: Border.all(color: Theme.of(context).colorScheme.primaryWhite, width: 1),
+                    border: Border.all(color: Theme.of(context).colorScheme.elevation2, width: 1),
                   ),
                   child: Row(
                     children: <Widget>[
@@ -987,13 +987,9 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primaryWhite,
-            // border: Border(
-            //   right: BorderSide(
-            //     color: Theme.of(context).colorScheme.primaryBlack,
-            //     width: 1,
-            //   ),
-            // ),
+            color: context.colorScheme.elevation1,
+            border: Border.all(color: context.colorScheme.elevation2, width: 1),
+            borderRadius: const BorderRadius.all(Radius.circular(8)),
           ),
           child: IconButton(
             icon: Icon(

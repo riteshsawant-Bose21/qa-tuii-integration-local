@@ -203,11 +203,11 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget _buildInputPanel(BuildContext context) {
     return Container(
       clipBehavior: Clip.hardEdge,
-      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
       decoration: BoxDecoration(
         color: context.colorScheme.elevation1,
         border: Border.all(color: context.colorScheme.elevation2, width: 1),
-        borderRadius: const BorderRadius.all(Radius.circular(16)),
+        borderRadius: const BorderRadius.all(Radius.circular(8)),
       ),
       child: Column(
         children: <Widget>[

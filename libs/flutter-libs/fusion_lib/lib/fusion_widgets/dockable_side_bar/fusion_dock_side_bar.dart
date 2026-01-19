@@ -46,12 +46,16 @@ class FusionDockSidebar extends StatelessWidget {
           child: Container(
             width: 240,
             height: double.infinity,
+            margin: const EdgeInsets.symmetric(horizontal: 1, vertical: 4),
+
             decoration: BoxDecoration(
-              color: hasIncomingData ? const Color(0xFF80C7FF) : context.colorScheme.primaryWhite,
-              border: Border(
-                right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
-                left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
-              ),
+              color: hasIncomingData ? const Color(0xFF80C7FF) : context.colorScheme.elevation1,
+              border: Border.all(color: context.colorScheme.elevation2, width: 1),
+              borderRadius: const BorderRadius.all(Radius.circular(8)),
+              // border: Border(
+              //   right: side == "left" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
+              //   left: side == "right" ? BorderSide(color: Theme.of(context).colorScheme.primaryBlack, width: 1) : BorderSide.none,
+              // ),
             ),
             child: ListView(
               physics: const ClampingScrollPhysics(),
