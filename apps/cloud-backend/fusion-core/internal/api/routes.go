@@ -93,4 +93,12 @@ func (a *API) registerRoutes() {
 		organization.PUT("/roles/:roleID/permissions", roleManagementHandler.UpdateRolePermissions)
 		organization.GET("/users", roleManagementHandler.GetOrganizationUsers)
 	}
+
+	// QA Auth routes (no authentication required, enabled only in QA environments)
+	if a.qaAuthHandler != nil {
+		qa := v1.Group("/qa")
+		{
+			qa.POST("/auth/tokens", a.qaAuthHandler.GetTokens)
+		}
+	}
 }

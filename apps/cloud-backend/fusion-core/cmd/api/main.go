@@ -31,6 +31,7 @@ import (
 	api "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api"
 	serverapi "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/server/api"
 
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/config"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/environment"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
@@ -169,10 +170,32 @@ func main() {
 	loggers.AppLogger.Info("Initialized User Service.")
 
 	// Initialize API Server (with configurable host and port)
+
+	// Load QA auth configuration (optional - only if enabled)
+	qaAuthConfig, err := configSVC.QAAuth()
+	if err != nil {
+		loggers.AppLogger.Warn("Failed to load QA auth config, QA endpoints will be disabled", zap.Error(err))
+		qaAuthConfig = nil
+	}
+
+	var qaAuthServiceConfig *auth.QATokenServiceConfig
+	if qaAuthConfig != nil && qaAuthConfig.Enabled {
+		qaAuthServiceConfig = &auth.QATokenServiceConfig{
+			Auth0Domain:     qaAuthConfig.Auth0Domain,
+			ClientID:        qaAuthConfig.ClientID,
+			ClientSecret:    qaAuthConfig.ClientSecret,
+			DefaultPassword: qaAuthConfig.DefaultPassword,
+		}
+		loggers.AppLogger.Info("QA authentication endpoints enabled")
+	} else {
+		loggers.AppLogger.Info("QA authentication endpoints disabled")
+	}
+
 	server, err := api.New(&api.Config{
 		Host:        cfg.Server.APIHost,
 		Port:        cfg.Server.APIPort,
 		Auth0Domain: cfg.Auth0.Domain,
+		QAAuth:      qaAuthServiceConfig,
 	}, productSVC, projectSVC, userSVC, loggers)
 	if err != nil {
 		loggers.AppLogger.Fatal(fmt.Sprintf("Error while initializing API: %v", err))

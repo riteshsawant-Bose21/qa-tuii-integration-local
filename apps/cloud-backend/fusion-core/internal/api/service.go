@@ -10,6 +10,7 @@ import (
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/auth"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion"
 	userdb "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/fusion/user/db"
+	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/handler"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/log"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/middleware"
 	"go.uber.org/zap"
@@ -26,6 +27,7 @@ type API struct {
 	user                  fusion.User
 	roleManagementService *userdb.RoleManagementService
 	authMiddleware        middleware.AuthMiddleware
+	qaAuthHandler         *handler.QAAuthHandler
 	appLog                *zap.Logger
 }
 
@@ -34,6 +36,7 @@ type Config struct {
 	Host        string
 	Port        string
 	Auth0Domain string
+	QAAuth      *auth.QATokenServiceConfig // QA authentication config (optional)
 }
 
 // New returns a new API from the given services.
@@ -80,12 +83,20 @@ func New(cfg *Config,
 	auth0Validator := auth.NewAuth0Validator(auth0Config)
 	authMiddleware := middleware.NewAuth0Middleware(auth0Validator)
 
+	// Initialize QA auth handler if config is provided
+	var qaAuthHandler *handler.QAAuthHandler
+	if cfg.QAAuth != nil {
+		qaTokenService := auth.NewQATokenService(*cfg.QAAuth)
+		qaAuthHandler = handler.NewQAAuthHandler(qaTokenService, true)
+	}
+
 	api := &API{
 		engine:         engine,
 		product:        productSvc,
 		project:        project,
 		user:           userSvc,
 		authMiddleware: authMiddleware,
+		qaAuthHandler:  qaAuthHandler,
 		appLog:         loggers.AppLogger,
 	}
 

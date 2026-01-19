@@ -27,3 +27,22 @@ type AuthContext struct {
 	Username string   `json:"username,omitempty" example:"john.doe"`
 	Roles    []string `json:"roles,omitempty"`
 }
+
+// QATokenRequest represents a request for QA authentication tokens
+type QATokenRequest struct {
+	Username string `json:"username" binding:"required" example:"test-user@company.com"`
+}
+
+// QATokenResponse represents the response containing Auth0 tokens
+type QATokenResponse struct {
+	AccessToken string `json:"access_token" example:"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	IDToken     string `json:"id_token" example:"eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..."`
+	TokenType   string `json:"token_type" example:"Bearer"`
+	ExpiresIn   int    `json:"expires_in" example:"86400"`
+}
+
+// QATokenSuccessResponse represents a successful QA token response
+type QATokenSuccessResponse struct {
+	Message string           `json:"message" example:"Tokens generated successfully"`
+	Data    *QATokenResponse `json:"data"`
+}
