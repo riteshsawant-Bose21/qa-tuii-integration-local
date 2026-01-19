@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/authentication/launcher_sign_in_page.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
-import 'package:fusion_launcher/features/dashboard/presentation/widgets/project_card.dart';
+import 'package:fusion_launcher/features/home/presentation/widgets/project_card.dart';
 import 'package:fusion_launcher/features/projects/view_model/project_sync_view_model.dart';
 import 'package:fusion_lib/fusion_building_view/floor_plan_calibrator.dart';
 import 'package:fusion_lib/fusion_lib.dart' hide FusionUtils;

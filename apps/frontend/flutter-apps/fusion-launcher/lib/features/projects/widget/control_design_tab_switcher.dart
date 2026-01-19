@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_launcher/core/service_locator.dart';
-import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_properties/project_properties_view_model.dart';
 import 'package:fusion_launcher/features/configuration/presentation/viewmodel/project_view_model.dart';
 
 class ControlDesignTabSwitcher extends StatefulWidget {
