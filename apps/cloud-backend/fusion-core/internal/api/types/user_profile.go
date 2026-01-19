@@ -69,7 +69,7 @@ const (
 	DefaultAppStartupBehaviourOther = "O"
 )
 
-type GetUserProfile_statusNotFound struct {
+type StatusNotFoundForGetUserProfile struct {
 	Message string `json:"message" example:"User profile not found"`
 }
 
@@ -77,18 +77,30 @@ type InternalServerError struct {
 	Message string `json:"message" example:"Internal server error"`
 }
 
-type CreateUserProfile_statusOk struct {
+type StatusOkForCreateUserProfile struct {
 	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
 }
 
-type CreateUserProfile_internalServerError struct {
+type InternalServerErrorForCreateUserProfile struct {
 	Message string `json:"message" example:"Failed to create user profile: "`
 }
 
-type UpdateUserProfile_statusOk struct {
+type StatusOkForUpdateUserProfile struct {
 	Message string `json:"message" example:"User profile updated successfully"`
 }
 
-type UpdateUserProfile_internalServerError struct {
+type InternalServerErrorForUpdateUserProfile struct {
 	Message string `json:"message" example:"Failed to update user profile: "`
+}
+
+type StatusBadRequestForCreateUserProfile struct {
+	Message string `json:"message" example:"user_id is required for creating profile"`
+}
+
+type StatusBadRequestForUpdateUserProfile struct {
+	Message string `json:"message" example:"Invalid JSON format: "`
+}
+
+type StatusNotFoundForUpdateUserProfile struct {
+	Message string `json:"message" example:"User profile not found"`
 }

@@ -3,10 +3,10 @@ package user
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/api/types"
-	jsonutil "github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/json"
 	"github.com/BoseProfessional/fusion-monorepo/apps/cloud-backend/fusion-core/internal/utils/ptr"
 	"github.com/google/uuid"
 )
@@ -58,14 +58,16 @@ func (s *Service) UpdateUserProfile(ctx context.Context, profileDetails *types.U
 	ptr.AssignIfNotNull(&existingProfile.NetsuiteCustomerID, profileDetails.NetsuiteCustomerID)
 
 	if profileDetails.PriceList != nil {
-		if err := jsonutil.ValidateJSONObject(*profileDetails.PriceList); err != nil {
+		var js map[string]interface{}
+		if err := json.Unmarshal(*profileDetails.PriceList, &js); err != nil {
 			return fmt.Errorf("price_list must be a valid JSON object")
 		}
 		existingProfile.PriceList = *profileDetails.PriceList
 	}
 
 	if profileDetails.LinkedProfiles != nil {
-		if err := jsonutil.ValidateJSONObject(*profileDetails.LinkedProfiles); err != nil {
+		var js map[string]interface{}
+		if err := json.Unmarshal(*profileDetails.LinkedProfiles, &js); err != nil {
 			return fmt.Errorf("linked_profiles must be a valid JSON object")
 		}
 		existingProfile.LinkedProfiles = *profileDetails.LinkedProfiles

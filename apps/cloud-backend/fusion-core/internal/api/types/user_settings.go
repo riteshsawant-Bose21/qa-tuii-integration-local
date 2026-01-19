@@ -28,18 +28,22 @@ type StatusNotFound struct {
 	Message string `json:"message" example:"User settings not found"`
 }
 
-type UpdateUserSettings_statusBadRequest struct {
+type StatusBadRequestForUpdateUserSettings struct {
 	Message string `json:"message" example:"id is required for updating settings"`
 }
 
-type StatusInternalServerError_UpdateUserSettings struct {
+type StatusInternalServerErrorForUpdateSettings struct {
 	Message string `json:"message" example:"Failed to update user settings: "`
 }
 
-type UpdateUserSettings_statusOk struct {
+type StatusOkForUpdateUserSettings struct {
 	Message string `json:"message" example:"User settings updated successfully"`
 }
 
-type CreateUserSettings_statusOk struct {
+type StatusOkForCreateUserSettings struct {
 	ID string `json:"id" example:"53437319-7a5b-4462-bc7c-9e7f9a057a1a"`
+}
+
+type StatusUnauthorized struct {
+	Message string `json:"message" example:"Authentication required"`
 }

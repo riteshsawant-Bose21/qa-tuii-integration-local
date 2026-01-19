@@ -64,8 +64,8 @@ func (s *Service) UpdateUserSettings(ctx context.Context, userSettings *types.Us
 	row := &model.UserSetting{
 		ID:       userSettings.ID,
 		UserID:   userSettings.UserID,
-		Language: null.StringFrom(userSettings.Language),
-		Theme:    null.StringFrom(userSettings.Theme),
+		Language: null.NewString(userSettings.Language, userSettings.Language != ""),
+		Theme:    null.NewString(userSettings.Theme, userSettings.Theme != ""),
 	}
 	_, err := row.Update(ctx, s.db, boil.Infer())
 	if err != nil {

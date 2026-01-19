@@ -268,18 +268,13 @@ func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
 	auth := userAuth.(*types.UserAuthorizationResponse)
 	userID := auth.User.ID
 
-	if _, err := uuid.Parse(userID); err != nil {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
 	settings, err := h.user.GetUserSettings(ctx, userID)
 	if err != nil {
 		if err.Error() == "user settings not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User settings not found"})
+			ctx.JSON(http.StatusNotFound, types.StatusNotFound{Message: "User settings not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		ctx.JSON(http.StatusInternalServerError, types.StatusInternalServerError{Message: "Internal server error"})
 		return
 	}
 	ctx.JSON(http.StatusOK, settings)
@@ -292,7 +287,7 @@ func (h *UserHandler) GetUserSettings(ctx *gin.Context) {
 // @Accept json
 // @Produce json
 // @Param settings body types.UserSettings true "User settings data"
-// @Success 201 {object} types.CreateUserSettings_statusOk "Successfully created user settings"
+// @Success 201 {object} types.StatusOkForCreateUserSettings "Successfully created user settings"
 // @Failure 400 {object} types.StatusBadRequest "Invalid request body"
 // @Failure 500 {object} types.StatusInternalServerError "Internal server error"
 // @Router /user/settings [post]
@@ -300,27 +295,27 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 	var settings types.UserSettings
 
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequest{Message: fmt.Sprintf("Invalid request body: %v", err)})
 		return
 	}
 
 	if settings.UserID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required for creating settings"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequest{Message: "user_id is required for creating settings"})
 		return
 	}
 
 	if _, err := uuid.Parse(settings.UserID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id format: must be a valid UUID"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequest{Message: "Invalid user_id format: must be a valid UUID"})
 		return
 	}
 
 	userSettingsID, err := h.user.CreateUserSettings(ctx, &settings)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user settings: %v", err)})
+		ctx.JSON(http.StatusInternalServerError, types.StatusInternalServerError{Message: fmt.Sprintf("Failed to create user settings: %v", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"id": userSettingsID})
+	ctx.JSON(http.StatusCreated, types.StatusOkForCreateUserSettings{ID: userSettingsID})
 }
 
 // UpdateUserSettings updates an existing user settings.
@@ -332,34 +327,34 @@ func (h *UserHandler) CreateUserSettings(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param profileID path string true "Profile ID"
 // @Param settings body types.UpdateUserSettingsRequest true "User settings data"
-// @Success 200 {object} types.UpdateUserSettings_statusOk "Successfully updated user settings"
-// @Failure 400 {object} types.UpdateUserSettings_statusBadRequest "Invalid request body"
+// @Success 200 {object} types.StatusOkForUpdateUserSettings "Successfully updated user settings"
+// @Failure 400 {object} types.StatusBadRequestForUpdateUserSettings "Invalid request body"
 // @Failure 404 {object} types.StatusNotFound "User settings not found"
-// @Failure 500 {object} types.StatusInternalServerError_UpdateUserSettings "Internal server error"
+// @Failure 500 {object} types.StatusInternalServerErrorForUpdateSettings "Internal server error"
 // @Router /user/settings/:settingsID [put]
 func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 	var settings types.UpdateUserSettingsRequest
 	settingsID := ctx.Param("settingsID")
 
 	if err := ctx.ShouldBindJSON(&settings); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid JSON format: %v", err)})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForUpdateUserSettings{Message: fmt.Sprintf("Invalid JSON format: %v", err)})
 		return
 	}
 
 	if _, err := uuid.Parse(settingsID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format: must be a valid UUID"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForUpdateUserSettings{Message: "Invalid ID format: must be a valid UUID"})
 		return
 	}
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Authentication required"})
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authentication context"})
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Invalid authentication context"})
 		return
 	}
 
@@ -367,14 +362,14 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 
 	if err := h.user.UpdateUserSettings(ctx, &settings, settingsID, authUserID); err != nil {
 		if err.Error() == "user settings not found" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User settings not found"})
+			ctx.JSON(http.StatusNotFound, types.StatusNotFound{Message: "User settings not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to update user settings: %v", err)})
+		ctx.JSON(http.StatusInternalServerError, types.StatusInternalServerError{Message: fmt.Sprintf("Failed to update user settings: %v", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "User settings updated successfully"})
+	ctx.JSON(http.StatusOK, types.StatusOkForUpdateUserSettings{Message: "User settings updated successfully"})
 }
 
 // === user Profile Handlers ===
@@ -387,7 +382,7 @@ func (h *UserHandler) UpdateUserSettings(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Success 200 {object} types.UserProfile "Successfully retrieved user profile"
-// @Failure 404 {object} types.GetUserProfile_statusNotFound "User profile not found / Invalid user ID format"
+// @Failure 404 {object} types.StatusNotFoundForGetUserProfile "User profile not found / Invalid user ID format"
 // @Failure 500 {object} types.InternalServerError "Internal server error"
 // @Router /user/profile [get]
 func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
@@ -396,18 +391,13 @@ func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 	auth := userAuth.(*types.UserAuthorizationResponse)
 	userID := auth.User.ID
 
-	if _, err := uuid.Parse(userID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user ID format"})
-		return
-	}
-
 	userProfile, err := h.user.GetUserProfile(ctx, userID)
 	if err != nil {
 		if err.Error() == "user profile not found" || err.Error() == "sql: no rows in result set" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User profile not found"})
+			ctx.JSON(http.StatusNotFound, types.StatusNotFoundForGetUserProfile{Message: "User profile not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		ctx.JSON(http.StatusInternalServerError, types.StatusInternalServerError{Message: "Internal server error"})
 		return
 	}
 	ctx.JSON(http.StatusOK, userProfile)
@@ -421,40 +411,40 @@ func (h *UserHandler) GetUserProfileDetails(ctx *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param profile body types.UserProfile true "User profile data"
-// @Success 201 {object} types.CreateUserProfile_statusOk "Successfully created user profile"
+// @Success 201 {object} types.StatusOkForCreateUserProfile "Successfully created user profile"
 // @Failure 400 {object} types.StatusBadRequest "Invalid request body"
-// @Failure 500 {object} types.CreateUserProfile_internalServerError "Internal server error"
+// @Failure 500 {object} types.InternalServerErrorForCreateUserProfile "Internal server error"
 // @Router /user/profile [post]
 func (h *UserHandler) CreateUserProfile(ctx *gin.Context) {
 	var profile types.UserProfile
 
 	if err := ctx.ShouldBindJSON(&profile); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid request body: %v", err)})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForCreateUserProfile{Message: fmt.Sprintf("Invalid request body: %v", err)})
 		return
 	}
 
 	if profile.UserID == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "user_id is required for creating profile"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForCreateUserProfile{Message: "user_id is required for creating profile"})
 		return
 	}
 
 	if _, err := uuid.Parse(profile.UserID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid user_id format: must be a valid UUID"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForCreateUserProfile{Message: "Invalid user_id format: must be a valid UUID"})
 		return
 	}
 
 	if profile.Email == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "email is required for creating profile"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForCreateUserProfile{Message: "email is required for creating profile"})
 		return
 	}
 
 	profileID, err := h.user.CreateUserProfile(ctx, &profile)
 	if err != nil {
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to create user profile: %v", err)})
+		ctx.JSON(http.StatusInternalServerError, types.InternalServerErrorForCreateUserProfile{Message: fmt.Sprintf("Failed to create user profile: %v", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusCreated, gin.H{"id": profileID})
+	ctx.JSON(http.StatusCreated, types.StatusOkForCreateUserProfile{ID: profileID})
 }
 
 // UpdateUserProfile updates an existing user profile.
@@ -466,9 +456,9 @@ func (h *UserHandler) CreateUserProfile(ctx *gin.Context) {
 // @Security BearerAuth
 // @Param profileID path string true "Profile ID"
 // @Param profile body types.UserProfileUpdateRequest true "User profile data"
-// @Success 200 {object} types.UpdateUserProfile_statusOk "Successfully updated user profile"
+// @Success 200 {object} types.StatusOkForUpdateUserProfile "Successfully updated user profile"
 // @Failure 400 {object} types.StatusBadRequest "Invalid request body"
-// @Failure 500 {object} types.UpdateUserProfile_internalServerError "Internal server error"
+// @Failure 500 {object} types.InternalServerErrorForUpdateUserProfile "Internal server error"
 // @Router /user/profile/:profileID [put]
 func (h *UserHandler) UpdateUserProfile(ctx *gin.Context) {
 	var profile types.UserProfileUpdateRequest
@@ -476,35 +466,35 @@ func (h *UserHandler) UpdateUserProfile(ctx *gin.Context) {
 	profileID := ctx.Param("profileID")
 
 	if err := ctx.ShouldBindJSON(&profile); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Invalid JSON format: %v", err)})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForUpdateUserProfile{Message: fmt.Sprintf("Invalid JSON format: %v", err)})
 		return
 	}
 
 	if _, err := uuid.Parse(profileID); err != nil {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid ID format: must be a valid UUID"})
+		ctx.JSON(http.StatusBadRequest, types.StatusBadRequestForUpdateUserProfile{Message: "Invalid ID format: must be a valid UUID"})
 		return
 	}
 
 	userAuth, exists := ctx.Get("user_auth")
 	if !exists {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Authentication required"})
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Authentication required"})
 		return
 	}
 
 	auth, ok := userAuth.(*types.UserAuthorizationResponse)
 	if !ok {
-		ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authentication context"})
+		ctx.JSON(http.StatusUnauthorized, types.StatusUnauthorized{Message: "Invalid authentication context"})
 		return
 	}
 
 	if err := h.user.UpdateUserProfile(ctx, &profile, profileID, auth.User.ID); err != nil {
 		if err.Error() == "user profile not found" {
-			ctx.JSON(http.StatusNotFound, gin.H{"error": "User profile not found"})
+			ctx.JSON(http.StatusNotFound, types.StatusNotFoundForUpdateUserProfile{Message: "User profile not found"})
 			return
 		}
-		ctx.JSON(http.StatusInternalServerError, gin.H{"error": fmt.Sprintf("Failed to update user profile: %v", err)})
+		ctx.JSON(http.StatusInternalServerError, types.InternalServerErrorForUpdateUserProfile{Message: fmt.Sprintf("Failed to update user profile: %v", err)})
 		return
 	}
 
-	ctx.JSON(http.StatusOK, gin.H{"message": "User profile updated successfully"})
+	ctx.JSON(http.StatusOK, types.StatusOkForUpdateUserProfile{Message: "User profile updated successfully"})
 }
