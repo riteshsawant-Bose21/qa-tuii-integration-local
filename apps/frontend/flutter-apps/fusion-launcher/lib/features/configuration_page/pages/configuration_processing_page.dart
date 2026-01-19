@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_sources.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/drag_divider.dart';
@@ -176,7 +174,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: context.colorScheme.elevation2,
+      backgroundColor: Theme.of(context).colorScheme.elevation2,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -184,14 +182,14 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           if (isWideScreen) {
             return Row(
               children: <Widget>[
-                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel()),
+                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel(context)),
                 Expanded(child: _buildOutputPanel()),
               ],
             );
           } else {
             return Column(
               children: <Widget>[
-                Expanded(flex: 1, child: _buildInputPanel()),
+                Expanded(flex: 1, child: _buildInputPanel(context)),
                 Expanded(flex: 2, child: _buildOutputPanel()),
               ],
             );
@@ -202,7 +200,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   }
 
   /// Build Input Panel
-  Widget _buildInputPanel() {
+  Widget _buildInputPanel(BuildContext context) {
     return Container(
       color: context.colorScheme.elevation1,
       child: Column(
@@ -314,15 +312,15 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 width: 220,
-                                child: SourceItem(index: index,source: source, isDragging: true),
+                                child: SourceItem(index: index, source: source, isDragging: true),
                               ),
                             ),
                           ),
                           childWhenDragging: Opacity(
                             opacity: 0.8,
-                            child: SourceItem(index: index,source: source, isDragging: true),
+                            child: SourceItem(index: index, source: source, isDragging: true),
                           ),
-                          child: SourceItem(index: index,source: source, isDragging: _draggingSourceId == source.id),
+                          child: SourceItem(index: index, source: source, isDragging: _draggingSourceId == source.id),
                         );
                       },
                     );

@@ -136,7 +136,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                         color:
                             widget.isDragHovered
                                 ? Theme.of(context).colorScheme.primary.withAlpha(50)
-                                : (_isHovered ? context.colorScheme.elevation2 : context.colorScheme.primaryBlack),
+                                : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                       ),
                       child: Row(
                         children: <Widget>[
@@ -347,7 +347,9 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext context, ProjectViewModelState state) {
         final List<Source> sourceList = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
         return Container(
-          color: context.colorScheme.primaryBlack.withAlpha(50),
+          padding: const EdgeInsets.only(top: 12, bottom: 12),
+          margin: const EdgeInsets.only(left: 12, right: 12),
+          color: context.colorScheme.elevation2.withAlpha(100),
           child: ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),

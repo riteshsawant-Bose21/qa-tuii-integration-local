@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-
 class SectionHeader extends StatelessWidget {
   final String title;
   final String? assetPath;

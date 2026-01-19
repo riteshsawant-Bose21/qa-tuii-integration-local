@@ -590,24 +590,21 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
         tabKey: "configuration_tab",
         showLeft: true,
         showRight: false,
-        mainArea: Theme(
-          data: ThemeData.light(),
-          child: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
-            builder: (BuildContext context, ProjectViewModelState state) {
-              return switch (_projectViewModel.currentConfigurationMenuMode) {
-                ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
-                ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
-                // add all othere
-                ConfigurationMenuMode.events => const ConfigurationEvents(),
-                ConfigurationMenuMode.gpio => const GpioPage(),
-                ConfigurationMenuMode.scheduling => const SchedulingPage(),
-                ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
-                  create: (_) => MediaFilesViewModel(),
-                  child: const ConfigurationMediaFilesPage(),
-                ),
-              };
-            },
-          ),
+        mainArea: BlocBuilder<ProjectViewModel, ProjectViewModelState>(
+          builder: (BuildContext context, ProjectViewModelState state) {
+            return switch (_projectViewModel.currentConfigurationMenuMode) {
+              ConfigurationMenuMode.processing => const ConfigurationProcessingPage(),
+              ConfigurationMenuMode.snapshots => const ConfigurationSnapshots(),
+              // add all othere
+              ConfigurationMenuMode.events => const ConfigurationEvents(),
+              ConfigurationMenuMode.gpio => const GpioPage(),
+              ConfigurationMenuMode.scheduling => const SchedulingPage(),
+              ConfigurationMenuMode.mediaFiles => BlocProvider<MediaFilesViewModel>(
+                create: (_) => MediaFilesViewModel(),
+                child: const ConfigurationMediaFilesPage(),
+              ),
+            };
+          },
         ),
 
         dockItemList: <DockItemConfig>[

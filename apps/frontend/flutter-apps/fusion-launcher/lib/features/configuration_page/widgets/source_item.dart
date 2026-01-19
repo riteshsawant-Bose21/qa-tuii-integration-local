@@ -85,14 +85,15 @@ class _SourceItemState extends State<SourceItem> {
               if (!widget.isDragging)
                 SemanticHelper.button(
                   testId: SemanticHelper.createTestId(SemanticTypes.button, "source_item_${widget.index}_processing"),
-                  child:  InkWell(
+                  child: InkWell(
                     onTap: () {
                       ProcessingChainView.showForSource(context, widget.source);
                     },
-                    child: const FusionImage.asset(
+                    child: FusionImage.asset(
                       Assets.processingBlocksFilledIcon,
                       width: 24,
                       height: 24,
+                      assetColor: context.colorScheme.primaryWhite,
                       fit: BoxFit.contain,
                     ),
                   ),
