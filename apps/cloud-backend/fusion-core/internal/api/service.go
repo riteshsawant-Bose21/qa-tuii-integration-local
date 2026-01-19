@@ -81,8 +81,6 @@ func New(cfg *Config,
 		project: project,
 		user:    userSvc,
 
-		// userDBService:         userDBSvc,
-		// roleManagementService: roleManagementSvc,
 		authMiddleware:        authMiddleware,
 	}
 

@@ -12,12 +12,6 @@ type UserSuccessResponse struct {
 	Data    *User  `json:"data"`
 }
 
-// AuthStatusSuccessResponse represents a successful auth status response
-type AuthStatusSuccessResponse struct {
-	Message string                 `json:"message" example:"Authentication status retrieved successfully"`
-	Data    map[string]interface{} `json:"data"`
-}
-
 // ErrorResponse represents an error API response
 type ErrorResponse2 struct {
 	Message string `json:"message" example:"Invalid request parameters"`

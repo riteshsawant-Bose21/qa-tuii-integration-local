@@ -214,34 +214,3 @@ func (h *UserHandler) UpdateUser(ctx *gin.Context) {
 
 	httputils.RespondWithUserSuccess(ctx, "User updated successfully", user)
 }
-
-// CheckAuthStatus checks if the current user is authenticated.
-// @Summary Check authentication status
-// @Description Check if the current user is properly authenticated and return basic status
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Security BearerAuth
-// @Success 200 {object} types.AuthStatusSuccessResponse "User is authenticated"
-// @Failure 401 {object} types.UnauthorizedResponse "User is not authenticated"
-// @Router /auth/status [get]
-func (h *UserHandler) CheckAuthStatus(ctx *gin.Context) {
-	// Get user email from JWT token (set by Auth0 middleware)
-	email, exists := ctx.Get("user_email")
-	if !exists {
-		authutils.RespondWithUnauthorized(ctx)
-		return
-	}
-
-	emailStr, ok := email.(string)
-	if !ok {
-		authutils.RespondWithInvalidToken(ctx)
-		return
-	}
-
-	authStatus := map[string]interface{}{
-		"authenticated": true,
-		"email":         emailStr,
-	}
-	httputils.RespondWithAuthStatusSuccess(ctx, "User is authenticated", authStatus)
-}
