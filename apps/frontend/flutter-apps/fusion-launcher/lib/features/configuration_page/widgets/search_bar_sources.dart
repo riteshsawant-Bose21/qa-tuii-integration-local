@@ -29,6 +29,7 @@ class SearchBarSources extends StatelessWidget {
       child: Container(
         clipBehavior: Clip.hardEdge,
         decoration: BoxDecoration(
+          color: context.colorScheme.elevation2,
           border:
               isFromActionList
                   ? null
@@ -40,7 +41,8 @@ class SearchBarSources extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
             /// Search + filter + sort row
-            SizedBox(
+            Container(
+              color: context.colorScheme.elevation2,
               height: 32,
               child: Row(
                 children: <Widget>[
@@ -117,7 +119,7 @@ class SearchBarSources extends StatelessWidget {
   }) {
     return PopupMenuButton<void>(
       tooltip: tooltip,
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       offset: const Offset(0, 30),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),

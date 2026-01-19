@@ -253,6 +253,11 @@ class FusionAppTheme {
         unselectedLabelColor: lightColorScheme.elevation1,
       ),
 
+      iconTheme: IconThemeData(
+        size: 20,
+        color: lightColorScheme.onSurface,
+      ),
+
       /// App bar styling with primary color background
       appBarTheme: AppBarTheme(
         backgroundColor: lightColorScheme.primaryColor,
@@ -380,7 +385,7 @@ class FusionAppTheme {
       ),
 
       iconTheme: IconThemeData(
-        size: 16,
+        size: 20,
         color: darkColorScheme.onSurface,
       ),
 

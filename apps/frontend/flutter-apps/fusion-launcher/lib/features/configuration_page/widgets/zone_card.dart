@@ -116,7 +116,7 @@ class _ZoneCardState extends State<ZoneCard> {
         decoration: BoxDecoration(
           color: isHovered ? widget.bgColor.withAlpha(80) : widget.bgColor.withAlpha(100),
           border: Border.all(
-            color: isSelected ? context.colorScheme.primaryBlack : Colors.transparent,
+            color: isSelected ? context.colorScheme.strokeLight : Colors.transparent,
           ),
         ),
         child: Row(
@@ -124,7 +124,7 @@ class _ZoneCardState extends State<ZoneCard> {
             /// Expand/collapse icon
             Icon(
               expanded ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-              color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
+              color: Theme.of(context).colorScheme.primaryWhite,
             ),
             const SizedBox(width: 4),
 
@@ -178,6 +178,7 @@ class _ZoneCardState extends State<ZoneCard> {
                     height: constrainedHeight,
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
+                      color: context.colorScheme.elevation1,
                       border: Border(
                         bottom: BorderSide(color: context.colorScheme.primaryBlack),
                       ),
@@ -397,7 +398,7 @@ class _ZoneCardState extends State<ZoneCard> {
                         ? Colors.red.withOpacity(0.9)
                         : canAccept
                         ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                        : context.colorScheme.primaryWhite,
+                        : context.colorScheme.elevation1,
                 itemBuilder: (BuildContext context) {
                   final List<PopupMenuEntry<String>> entries = <PopupMenuEntry<String>>[];
 
@@ -605,7 +606,7 @@ class _ZoneCardState extends State<ZoneCard> {
                             ? Colors.red.withOpacity(0.1)
                             : canAccept
                             ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                            : context.colorScheme.primaryWhite,
+                            : context.colorScheme.elevation1,
                     border: Border.all(
                       color:
                           cannotAccept
@@ -646,7 +647,7 @@ class _ZoneCardState extends State<ZoneCard> {
                           text: 'P$priorityIndex',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             fontSize: 8,
-                            color: context.colorScheme.primaryWhite,
+                            color: context.colorScheme.onPrimary,
                             fontWeight: FontWeight.w600,
                           ),
                           textAlign: TextAlign.center,
@@ -696,7 +697,7 @@ class _ZoneCardState extends State<ZoneCard> {
       offset: const Offset(0, 10),
       tooltip: isEdit ? "Edit Function" : "Add Function",
       padding: EdgeInsets.zero,
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       itemBuilder: (BuildContext context) {
         return ZoneFunctionsType.values.map((ZoneFunctionsType function) {
           return PopupMenuItem<ZoneFunctionsType>(
@@ -829,7 +830,7 @@ class _ZoneCardState extends State<ZoneCard> {
       offset: const Offset(0, 25),
       tooltip: "Select Sources",
       padding: EdgeInsets.zero,
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       itemBuilder: (BuildContext context) {
         /// Temporary selections mirror existing selections
         final List<String> tempSelectedSources = currentZoneSources.map((Source e) => e.id).toList();
@@ -1116,7 +1117,7 @@ class _ZoneCardState extends State<ZoneCard> {
                       text: _projectViewModel.getSourceCountInZone(zoneId: widget.zoneId).toString(),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         fontSize: 8,
-                        color: context.colorScheme.primaryWhite,
+                        color: context.colorScheme.onPrimary,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -1135,6 +1136,7 @@ class _ZoneCardState extends State<ZoneCard> {
 
     return Container(
       decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
         border: Border(
           bottom: BorderSide(color: context.colorScheme.primaryBlack),
         ),

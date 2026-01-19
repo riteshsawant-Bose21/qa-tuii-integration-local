@@ -3,8 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/search_bar_sources.dart';
 import 'package:fusion_launcher/features/configuration_page/widgets/section_header.dart';
 import 'package:fusion_lib/fusion_lib.dart';
-import 'package:fusion_lib/fusion_theme/app_theme.dart';
-import 'package:fusion_lib/fusion_theme/color_scheme.dart';
 import '../../../core/service_locator.dart';
 import '../../configuration/presentation/viewmodel/project_view_model.dart';
 import '../widgets/drag_divider.dart';
@@ -176,7 +174,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: Theme.of(context).colorScheme.primaryBlack,
       body: LayoutBuilder(
         builder: (BuildContext context, BoxConstraints constraints) {
           final bool isWideScreen = constraints.maxWidth > 600;
@@ -184,14 +182,14 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
           if (isWideScreen) {
             return Row(
               children: <Widget>[
-                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel()),
+                SizedBox(width: constraints.maxWidth * 0.3, child: _buildInputPanel(context)),
                 Expanded(child: _buildOutputPanel()),
               ],
             );
           } else {
             return Column(
               children: <Widget>[
-                Expanded(flex: 1, child: _buildInputPanel()),
+                Expanded(flex: 1, child: _buildInputPanel(context)),
                 Expanded(flex: 2, child: _buildOutputPanel()),
               ],
             );
@@ -202,12 +200,17 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   }
 
   /// Build Input Panel
-  Widget _buildInputPanel() {
+  Widget _buildInputPanel(BuildContext context) {
     return Container(
-      color: Colors.white,
+      clipBehavior: Clip.hardEdge,
+      margin: const EdgeInsets.symmetric(horizontal: 2, vertical: 6),
+      decoration: BoxDecoration(
+        color: context.colorScheme.elevation1,
+        border: Border.all(color: context.colorScheme.elevation2, width: 1),
+        borderRadius: const BorderRadius.all(Radius.circular(16)),
+      ),
       child: Column(
         children: <Widget>[
-          // const PanelHeader(title: 'INPUT'),
           const SectionHeader(
             title: 'Sources',
             assetPath: 'assets/images/source_icon.png',
@@ -227,7 +230,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               setState(() {});
             },
           ),
-          const SizedBox(height: 8),
 
           /// Sources list with controlled height
           DragTarget<Source>(
@@ -249,6 +251,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
             builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered = candidateData.isNotEmpty;
               return Container(
+                padding: const EdgeInsets.all(10),
                 height: _sourcesHeight,
                 decoration: BoxDecoration(
                   color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
@@ -281,8 +284,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                         ),
                       );
                     }
-                    return ListView.builder(
+                    return ListView.separated(
                       itemCount: _filteredSources.length,
+                      separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 4),
                       itemBuilder: (BuildContext context, int index) {
                         final Source source = _filteredSources[index];
                         return Draggable<Source>(
@@ -308,25 +312,20 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             child: Opacity(
                               opacity: 0.8,
                               child: Container(
-                                color: context.colorScheme.primaryWhite,
-                                width: 220,
-                                child: SourceItem(
-                                  index: index,
-                                  source: source,
-                                  isDragging: true,
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.primary.withAlpha(150),
+                                  borderRadius: BorderRadius.circular(8),
                                 ),
+                                width: 220,
+                                child: SourceItem(index: index, source: source, isDragging: true),
                               ),
                             ),
                           ),
                           childWhenDragging: Opacity(
-                            opacity: 0.5,
+                            opacity: 0.8,
                             child: SourceItem(index: index, source: source, isDragging: true),
                           ),
-                          child: SourceItem(
-                            index: index,
-                            source: source,
-                            isDragging: _draggingSourceId == source.id,
-                          ),
+                          child: SourceItem(index: index, source: source, isDragging: _draggingSourceId == source.id),
                         );
                       },
                     );
@@ -404,7 +403,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               child: SemanticHelper.button(
                 testId: SemanticHelper.createTestId(SemanticTypes.button, "add_source_button"),
                 child: IconButton(
-                  icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                  icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
                   onPressed: null,
                   padding: EdgeInsets.zero,
                   constraints: const BoxConstraints(),
@@ -439,7 +438,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
 
@@ -450,7 +448,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
                         ],
@@ -464,7 +461,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                     shrinkWrap: true,
                     proxyDecorator: (Widget child, int index, Animation<double> animation) {
                       return Material(
-                        color: Colors.white,
+                        color: context.colorScheme.primaryBlack,
                         child: SizedBox(
                           width: 220,
                           child: child,
@@ -566,10 +563,10 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   Widget _buildOutputPanel() {
     return Container(
       decoration: BoxDecoration(
-        color: context.colorScheme.primaryWhite,
+        color: context.colorScheme.elevation1,
 
         border: Border(
-          left: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+          left: BorderSide(width: 1, color: context.colorScheme.strokeDark),
         ),
       ),
       child: Column(
@@ -694,7 +691,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
     return SemanticHelper.container(
       testId: SemanticHelper.createTestId(SemanticTypes.container, "source_set_creation_widget"),
       child: Container(
-        color: context.colorScheme.primaryWhite,
+        color: context.colorScheme.elevation1,
         width: 250,
         padding: const EdgeInsets.all(12),
         child: Column(

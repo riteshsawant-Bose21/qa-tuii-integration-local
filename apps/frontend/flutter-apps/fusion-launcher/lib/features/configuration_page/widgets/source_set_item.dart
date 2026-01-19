@@ -124,7 +124,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                       _isSourcesSetExpanded.value = !_isSourcesSetExpanded.value;
                     },
                     child: Container(
-                      margin: const EdgeInsets.only(top: 8),
+                      margin: const EdgeInsets.only(top: 8, left: 8, right: 8),
                       padding: const EdgeInsets.only(left: 12, right: 12),
                       height: 36,
                       decoration: BoxDecoration(
@@ -132,17 +132,18 @@ class _SourceSetItemState extends State<SourceSetItem> {
                           color: widget.isDragHovered ? Theme.of(context).colorScheme.primary : Colors.transparent,
                           width: 1.0,
                         ),
+                        borderRadius: BorderRadius.circular(6),
                         color:
                             widget.isDragHovered
-                                ? Theme.of(context).colorScheme.primary.withOpacity(0.1)
-                                : (_isHovered ? context.colorScheme.primaryBlack.withAlpha(200) : context.colorScheme.primaryBlack),
+                                ? Theme.of(context).colorScheme.primary.withAlpha(50)
+                                : (_isHovered ? context.colorScheme.elevation3 : context.colorScheme.elevation2),
                       ),
                       child: Row(
                         children: <Widget>[
                           /// Expand/collapse icon
                           Icon(
                             _isSourcesSetExpanded.value ? Icons.arrow_drop_up_rounded : Icons.arrow_drop_down_rounded,
-                            color: Theme.of(context).colorScheme.textPrimary.withAlpha(90),
+                            color: Theme.of(context).colorScheme.iconWhite,
                           ),
                           const SizedBox(width: 4),
 
@@ -200,6 +201,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                                       widget.sourceSet.isLinked ? Assets.unLinkIcon : Assets.linkIcon,
                                       width: 22,
                                       height: 22,
+                                      assetColor: context.colorScheme.primaryWhite,
                                       fit: BoxFit.contain,
                                     ),
                                   ),
@@ -215,10 +217,11 @@ class _SourceSetItemState extends State<SourceSetItem> {
                               onTap: () {
                                 ProcessingChainView.showForSourceSet(context, widget.sourceSet);
                               },
-                              child: const FusionImage.asset(
+                              child: FusionImage.asset(
                                 Assets.processingBlocksIcon,
                                 width: 18,
                                 height: 12,
+                                assetColor: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -229,22 +232,26 @@ class _SourceSetItemState extends State<SourceSetItem> {
                             child: GestureDetector(
                               key: _addSourceIconKey,
                               onTap: _showEditSourceSetPopup,
-                              child: const FusionImage.asset(
+                              child: FusionImage.asset(
                                 Assets.addSourceIcon,
                                 width: 22,
                                 height: 22,
+                                assetColor: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),
                           ),
+                          const SizedBox(width: 4),
+
                           Tooltip(
                             message: 'Delete Source Set',
                             child: GestureDetector(
                               onTap: _confirmDeleteSourceSet,
-                              child: const FusionImage.asset(
+                              child: FusionImage.asset(
                                 Assets.deleteIcon,
                                 width: 17,
                                 height: 17,
+                                assetColor: context.colorScheme.primaryWhite,
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -291,7 +298,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
     await showMenu<dynamic>(
       context: context,
       position: position,
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       constraints: const BoxConstraints(maxHeight: 500, maxWidth: 250),
       items: <PopupMenuEntry<dynamic>>[
         PopupMenuItem<dynamic>(
@@ -340,7 +347,9 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext context, ProjectViewModelState state) {
         final List<Source> sourceList = _projectViewModel.getSourcesInSourceSet(sourceSetId: widget.sourceSet.id);
         return Container(
-          color: context.colorScheme.primaryBlack.withAlpha(50),
+          padding: const EdgeInsets.only(top: 12, bottom: 12),
+          margin: const EdgeInsets.only(left: 12, right: 12),
+          color: context.colorScheme.elevation2.withAlpha(100),
           child: ReorderableListView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -373,7 +382,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
                   child: Opacity(
                     opacity: 0.8,
                     child: Container(
-                      color: context.colorScheme.primaryWhite,
+                      color: context.colorScheme.elevation1,
                       width: 220,
                       child: SourceItem(
                         index: index,
@@ -403,7 +412,7 @@ class _SourceSetItemState extends State<SourceSetItem> {
       builder: (BuildContext ctx) {
         final ColorScheme scheme = Theme.of(ctx).colorScheme;
         return Dialog(
-          backgroundColor: scheme.primaryWhite,
+          backgroundColor: scheme.elevation1,
           insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ConstrainedBox(
@@ -492,7 +501,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -560,7 +569,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(8),
               ),
-              color: context.colorScheme.primaryWhite,
+              color: context.colorScheme.elevation1,
               offset: const Offset(0, 35),
               itemBuilder: (BuildContext context) {
                 return <PopupMenuEntry<String>>[

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
@@ -21,6 +22,7 @@ import 'package:fusion_lib/fusion_building_view/floor_canvas_controller.dart';
 import 'package:fusion_lib/fusion_building_view/spl_range_controller.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 import 'package:fusion_lib/fusion_theme/color_scheme.dart';
+import 'package:fusion_lib/fusion_theme/fusion_theme_notifier.dart';
 import 'package:fusion_lib/models/dock_item_config.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -840,6 +842,34 @@ class _ProjectWorkAreaState extends State<ProjectWorkArea> with SingleTickerProv
                       //     ),
                       //   ),
                       // ),
+                      /// Theme Change Icon Section (Debug Only)
+                      if (kDebugMode)
+                        Container(
+                          width: 56,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primaryWhite,
+                          ),
+                          child: ValueListenableBuilder<ThemeMode>(
+                            valueListenable: FusionThemeController.themeModeNotifier,
+                            builder: (BuildContext context, ThemeMode themeMode, Widget? child) {
+                              return IconButton(
+                                icon: Icon(
+                                  themeMode == ThemeMode.dark ? Icons.light_mode : Icons.dark_mode,
+                                  size: 24,
+                                  color: Theme.of(context).colorScheme.primaryBlack,
+                                ),
+                                tooltip: themeMode == ThemeMode.dark ? 'Switch to Light Mode' : 'Switch to Dark Mode',
+                                onPressed: () {
+                                  final bool isLight = FusionThemeController.themeModeNotifier.value == ThemeMode.light;
+                                  FusionThemeController.setThemeMode(
+                                    isLight ? ThemeMode.dark : ThemeMode.light,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
 
                       /// Save Icon Section
                       SemanticHelper.button(

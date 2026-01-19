@@ -53,10 +53,10 @@ class FusionDropdown<T> extends StatelessWidget {
         ),
         isDense: true,
         filled: true,
-        fillColor: isEnabled ? Theme.of(context).colorScheme.primaryWhite : context.colorScheme.primaryBlack.withAlpha(100),
+        fillColor: isEnabled ? Theme.of(context).colorScheme.elevation1 : context.colorScheme.primaryBlack.withAlpha(100),
         contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       ),
-      dropdownColor: Theme.of(context).colorScheme.primaryWhite,
+      dropdownColor: Theme.of(context).colorScheme.elevation1,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: isEnabled ? null : context.colorScheme.primaryBlack.withAlpha(100),
       ),

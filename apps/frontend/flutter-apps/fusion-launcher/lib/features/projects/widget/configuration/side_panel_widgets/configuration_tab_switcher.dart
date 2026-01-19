@@ -56,12 +56,7 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
   Widget build(BuildContext context) {
     return Container(
       width: 240,
-      decoration: BoxDecoration(
-        // color: colorSche,
-        border: Border(
-          right: BorderSide(color: context.colorScheme.primaryBlack),
-        ),
-      ),
+
       child: Column(
         children:
             ConfigurationMenuMode.values.map((ConfigurationMenuMode mode) {
@@ -79,14 +74,14 @@ class _ConfigurationTabSwitcherState extends State<ConfigurationTabSwitcher> {
                     child: Container(
                       height: 32,
 
-                      margin: const EdgeInsets.only(top: 4),
+                      margin: const EdgeInsets.all(10),
                       padding: const EdgeInsets.only(right: 16, left: 16, bottom: 4, top: 4),
                       decoration: BoxDecoration(
                         color:
                             isSelected
-                                ? context.colorScheme.primaryBlack
+                                ? context.colorScheme.elevation3
                                 : isHovered
-                                ? context.colorScheme.primaryBlack.withAlpha(50)
+                                ? context.colorScheme.elevation2
                                 : Colors.transparent,
                         borderRadius: BorderRadius.circular(8),
                       ),
