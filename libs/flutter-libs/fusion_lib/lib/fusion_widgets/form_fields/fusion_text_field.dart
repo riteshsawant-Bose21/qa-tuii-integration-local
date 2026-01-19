@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fusion_lib/fusion_lib.dart';
 
 /// A customizable and reusable text field for the Fusion design system.
 ///
@@ -103,6 +104,8 @@ class FusionTextField extends StatelessWidget {
       prefixIcon: prefixIcon,
       suffixIcon: suffixIcon,
       counterText: '',
+      fillColor: theme.colorScheme.elevation1,
+      filled: true,
       border: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       enabledBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),
       focusedBorder: border ?? const OutlineInputBorder(borderSide: BorderSide(color: Colors.transparent)),

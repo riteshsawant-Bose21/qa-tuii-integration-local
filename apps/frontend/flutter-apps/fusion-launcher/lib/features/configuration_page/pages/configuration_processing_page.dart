@@ -203,7 +203,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
   /// Build Input Panel
   Widget _buildInputPanel() {
     return Container(
-      color: context.colorScheme.elevation2,
+      color: context.colorScheme.elevation1,
       child: Column(
         children: <Widget>[
           // const PanelHeader(title: 'INPUT'),
@@ -226,7 +226,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
               setState(() {});
             },
           ),
-          const SizedBox(height: 8),
 
           /// Sources list with controlled height
           DragTarget<Source>(
@@ -248,6 +247,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
             builder: (BuildContext context, List<Source?> candidateData, List<dynamic> rejectedData) {
               final bool isHovered = candidateData.isNotEmpty;
               return Container(
+                padding: const EdgeInsets.all(10),
                 height: _sourcesHeight,
                 decoration: BoxDecoration(
                   color: isHovered ? Theme.of(context).colorScheme.primary.withOpacity(0.1) : Colors.transparent,
@@ -280,8 +280,9 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                         ),
                       );
                     }
-                    return ListView.builder(
+                    return ListView.separated(
                       itemCount: _filteredSources.length,
+                      separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 4),
                       itemBuilder: (BuildContext context, int index) {
                         final Source source = _filteredSources[index];
                         return Draggable<Source>(
@@ -306,11 +307,18 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             color: Colors.transparent,
                             child: Opacity(
                               opacity: 0.8,
-                              child: Container(color: context.colorScheme.primaryWhite, width: 220, child: SourceItem(source: source, isDragging: true)),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: context.colorScheme.primary.withAlpha(150),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                width: 220,
+                                child: SourceItem(source: source, isDragging: true),
+                              ),
                             ),
                           ),
                           childWhenDragging: Opacity(
-                            opacity: 0.5,
+                            opacity: 0.8,
                             child: SourceItem(source: source, isDragging: true),
                           ),
                           child: SourceItem(source: source, isDragging: _draggingSourceId == source.id),
@@ -389,7 +397,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                 ];
               },
               child: IconButton(
-                icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryBlack),
+                icon: Icon(Icons.add_sharp, size: 16, color: context.colorScheme.primaryWhite),
                 onPressed: null,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
@@ -423,7 +431,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
 
@@ -434,7 +441,6 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               fontSize: 10,
                               fontWeight: FontWeight.w400,
-                              color: context.colorScheme.primaryBlack,
                             ),
                           ),
                         ],
@@ -448,7 +454,7 @@ class _ConfigurationProcessingPageState extends State<ConfigurationProcessingPag
                     shrinkWrap: true,
                     proxyDecorator: (Widget child, int index, Animation<double> animation) {
                       return Material(
-                        color: Colors.white,
+                        color: context.colorScheme.primaryBlack,
                         child: SizedBox(
                           width: 220,
                           child: child,
@@ -676,7 +682,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: context.colorScheme.primaryWhite,
+      color: context.colorScheme.elevation1,
       width: 250,
       padding: const EdgeInsets.all(12),
       child: Column(
@@ -706,7 +712,7 @@ class _SourceSetCreationWidgetState extends State<_SourceSetCreationWidget> {
             controller: widget.sourceSetNameController,
             hintText: "Enter source set name",
             decoration: FusionInputDecoration.fusionDense(
-              colorScheme: Theme.of(context).colorScheme,
+              colorScheme: context.colorScheme,
               hintText: 'Enter source set name',
             ),
             onChanged: (String value) {

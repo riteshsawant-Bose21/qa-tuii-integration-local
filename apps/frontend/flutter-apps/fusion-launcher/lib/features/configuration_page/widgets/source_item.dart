@@ -38,11 +38,11 @@ class _SourceItemState extends State<SourceItem> {
       },
       child: Container(
         decoration: BoxDecoration(
-          color: widget.isDragging ? Theme.of(context).colorScheme.primary.withOpacity(0.15) : (_isHovered ? Colors.grey[200] : null),
+          color: widget.isDragging ? Theme.of(context).colorScheme.primary.withAlpha(150) : (_isHovered ? context.colorScheme.elevation2 : null),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: widget.isDragging ? Theme.of(context).colorScheme.primary : Colors.transparent, width: 1.0),
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
         child: Row(
           children: <Widget>[
             if (widget.sourceSet != null)
@@ -70,6 +70,7 @@ class _SourceItemState extends State<SourceItem> {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(fontSize: 11),
               ),
             ),
+            // todo : add configuration icon back in when source configuration is supported (ex:media player)
             // const FusionImage.asset(
             //   Assets.configurationFilledIcon,
             //   width: 24,

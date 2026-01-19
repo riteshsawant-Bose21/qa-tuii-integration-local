@@ -15,22 +15,22 @@ class SectionHeader extends StatelessWidget {
       height: 44,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.colorScheme.elevation1,
         border: Border(
-          bottom: BorderSide(width: 1, color: context.colorScheme.primaryBlack),
+          bottom: BorderSide(width: 1, color: context.colorScheme.strokeLight),
         ),
       ),
       child: Row(
         children: <Widget>[
-          if (assetPath != null && assetPath!.isNotEmpty) ...<Widget>[
-            FusionImage.asset(
-              assetPath,
-              width: 24,
-              height: 24,
-            ),
-            const SizedBox(width: 8),
-          ],
-
+          // if (assetPath != null && assetPath!.isNotEmpty) ...<Widget>[
+          //   FusionImage.asset(
+          //     assetPath,
+          //     width: 24,
+          //     height: 24,
+          //
+          //   ),
+          //   const SizedBox(width: 8),
+          // ],
           Expanded(
             child: FusionAppText(
               text: title,

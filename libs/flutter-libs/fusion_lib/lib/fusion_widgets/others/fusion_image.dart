@@ -76,6 +76,9 @@ class FusionImage extends StatelessWidget {
   /// Whether the image should be circular.
   final bool isCircle;
 
+  /// Optional color to apply to asset images.
+  final Color? assetColor;
+
   /// Creates a [FusionImage] that loads from a network URL.
   const FusionImage.network(
     this.imageUrl, {
@@ -86,31 +89,59 @@ class FusionImage extends StatelessWidget {
     this.height,
     this.fit = BoxFit.cover,
     this.borderRadius,
+    this.assetColor,
   }) : file = null,
        asset = null,
        isCircle = false;
 
   /// Creates a [FusionImage] that loads from a local file.
-  const FusionImage.file(this.file, {super.key, this.width, this.height, this.fit = BoxFit.cover, this.borderRadius, this.placeholder, this.errorBuilder})
-    : imageUrl = null,
-      asset = null,
-      isCircle = false;
+  const FusionImage.file(
+    this.file, {
+    super.key,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholder,
+    this.errorBuilder,
+    this.assetColor,
+  }) : imageUrl = null,
+       asset = null,
+       isCircle = false;
 
   /// Creates a [FusionImage] that loads from an asset.
-  const FusionImage.asset(this.asset, {super.key, this.width, this.height, this.fit = BoxFit.cover, this.borderRadius, this.placeholder, this.errorBuilder})
-    : file = null,
-      imageUrl = null,
-      isCircle = false;
+  const FusionImage.asset(
+    this.asset, {
+    super.key,
+    this.width,
+    this.height,
+    this.fit = BoxFit.cover,
+    this.borderRadius,
+    this.placeholder,
+    this.errorBuilder,
+    this.assetColor,
+  }) : file = null,
+       imageUrl = null,
+       isCircle = false;
 
   /// Creates a circular [FusionImage].
   ///
   /// Can be used with either [imageUrl], [file], or [asset].
   /// You must provide exactly **one source**.
-  const FusionImage.circle({super.key, this.imageUrl, this.file, this.asset, this.placeholder, this.errorBuilder, double? size, this.fit = BoxFit.cover})
-    : width = size,
-      height = size,
-      borderRadius = null,
-      isCircle = true;
+  const FusionImage.circle({
+    super.key,
+    this.imageUrl,
+    this.file,
+    this.asset,
+    this.placeholder,
+    this.errorBuilder,
+    double? size,
+    this.fit = BoxFit.cover,
+    this.assetColor,
+  }) : width = size,
+       height = size,
+       borderRadius = null,
+       isCircle = true;
 
   @override
   Widget build(BuildContext context) {
@@ -165,6 +196,7 @@ class FusionImage extends StatelessWidget {
         width: width,
         height: height,
         fit: fit,
+        color: assetColor,
         errorBuilder: (context, error, stackTrace) {
           if (errorBuilder != null) {
             return errorBuilder!(context, error, stackTrace);
