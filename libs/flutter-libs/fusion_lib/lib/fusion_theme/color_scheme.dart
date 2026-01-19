@@ -207,6 +207,10 @@ extension ColorExtends on ColorScheme {
   static const Color _spl600L = Color(0xFFE8F3EE);
   static const Color _spl600D = Color(0xFF3E996E);
 
+  // Expressive Dark
+  static const Color _expressiveDark = Color(0xFF000000);
+  static const Color _expressiveLight = Color(0xFFFFFFFF);
+
   // Commission Colors
   static const Color _cardDarkL = const Color(0xFF111111);
   static const Color _cardDarkD = const Color(0xFFFFFFFF);
@@ -357,4 +361,10 @@ extension ColorExtends on ColorScheme {
   Color get portOverlayTitle => Color(0xFF929292);
 
   Color get green => Color(0xFF78B899);
+
+  ///
+  /// Shadow Colors
+  ///
+  Color get shadowDark => isDarkMode ? _expressiveDark : _expressiveLight;
+  Color get shadowLight => isDarkMode ? _expressiveLight : _expressiveDark;
 }
