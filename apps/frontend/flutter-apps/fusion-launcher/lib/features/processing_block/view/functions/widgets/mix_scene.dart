@@ -3,7 +3,6 @@ import 'package:fusion_launcher/core/service_locator.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
 import '../../../../configuration/presentation/viewmodel/project_view_model.dart';
-import '../../common/neumorphic_button.dart';
 import 'neumorphic_popup_button.dart';
 
 class MixScenes extends StatefulWidget {
@@ -103,7 +102,7 @@ class _MixScenesState extends State<MixScenes> {
             ValueListenableBuilder<bool>(
               valueListenable: isNewMixSceneNameNotifier,
               builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
-                return NeumorphicButton(
+                return FusionNeumorphicButton(
                   text: isNewMixSceneName ? "STORE" : "UPDATE",
                   width: 72,
                   height: 28,
@@ -120,7 +119,7 @@ class _MixScenesState extends State<MixScenes> {
             ValueListenableBuilder<bool>(
               valueListenable: isNewMixSceneNameNotifier,
               builder: (BuildContext context, bool isNewMixSceneName, Widget? child) {
-                return NeumorphicButton(
+                return FusionNeumorphicButton(
                   text: "DELETE",
                   width: 72,
                   height: 28,

@@ -9,17 +9,23 @@ class FusionContainer extends StatelessWidget {
     required this.child,
     this.raised = false,
     this.color,
+    this.height,
+    this.alignment,
   });
   final double? width;
+  final double? height;
   final double borderRadius;
   final Widget child;
   final bool raised;
   final Color? color;
+  final AlignmentGeometry? alignment;
   @override
   Widget build(BuildContext context) {
     final container = AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       width: width,
+      height: height,
+      alignment: alignment,
       margin: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         // color: context.colorScheme.shadowDark,

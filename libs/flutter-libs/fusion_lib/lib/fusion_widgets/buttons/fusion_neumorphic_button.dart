@@ -1,22 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:fusion_lib/fusion_lib.dart';
 
-List<BoxShadow> getNeumorphismBoxShadows({bool inner = false, Color? color}) {
-  color ??= const Color(0xFFF5F5F5);
-  return <BoxShadow>[
-    if (inner) ...<BoxShadow>[
-      const BoxShadow(color: Colors.black12, blurRadius: 0),
-      // const BoxShadow(color: Colors.white, spreadRadius: -2, offset: Offset(2, 2)),
-      BoxShadow(color: color, blurRadius: 4, offset: const Offset(3, 3)),
-    ] else ...<BoxShadow>[
-      const BoxShadow(color: Colors.black12, blurRadius: 2, offset: Offset(2, 2)),
-      const BoxShadow(color: Colors.white, blurRadius: 2, offset: Offset(-2, -2)),
-      BoxShadow(color: color),
-    ],
-  ];
-}
 
-class NeumorphicButton extends StatefulWidget {
+
+class FusionNeumorphicButton extends StatefulWidget {
   final String text;
   final double width;
   final double height;
@@ -24,21 +11,21 @@ class NeumorphicButton extends StatefulWidget {
   final VoidCallback onTap;
   final Color textColor;
 
-  const NeumorphicButton({
+  const FusionNeumorphicButton({
     super.key,
     required this.text,
     required this.width,
     required this.height,
     required this.onTap,
-    this.borderRadius = 10,
+    this.borderRadius = 12,
     this.textColor = Colors.black,
   });
 
   @override
-  State<NeumorphicButton> createState() => _NeumorphicButtonState();
+  State<FusionNeumorphicButton> createState() => _FusionNeumorphicButtonState();
 }
 
-class _NeumorphicButtonState extends State<NeumorphicButton> {
+class _FusionNeumorphicButtonState extends State<FusionNeumorphicButton> {
   bool _isPressed = false;
 
   @override
@@ -55,15 +42,17 @@ class _NeumorphicButtonState extends State<NeumorphicButton> {
         child: ClipRRect(
           borderRadius: BorderRadius.circular(widget.borderRadius),
           clipBehavior: _isPressed ? Clip.hardEdge : Clip.none,
-          child: Container(
+          child: FusionContainer(
             width: widget.width,
-            height: widget.height,
-            alignment: Alignment.center,
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(widget.borderRadius),
-              boxShadow: getNeumorphismBoxShadows(inner: _isPressed),
-            ),
+            raised: !_isPressed,
+            borderRadius: widget.borderRadius,
+            // height: widget.height,
+            // alignment: Alignment.center,
+            // decoration: BoxDecoration(
+            //   color: Colors.transparent,
+            //   borderRadius: BorderRadius.circular(widget.borderRadius),
+            //   boxShadow: getNeumorphismBoxShadows(inner: _isPressed),
+            // ),
             child: FusionAppText(
               text: widget.text,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
