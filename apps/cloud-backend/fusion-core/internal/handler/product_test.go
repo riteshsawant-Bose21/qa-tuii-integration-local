@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.uber.org/zap"
 )
 
 // MockProductService is a mock implementation of the Product interface
@@ -22,24 +23,24 @@ type MockProductService struct {
 	mock.Mock
 }
 
-func (m *MockProductService) GetAllProducts(ctx context.Context) (*types.ProductResponse, error) {
-	args := m.Called(ctx)
+func (m *MockProductService) GetAllProducts(ctx context.Context, logger *zap.Logger) (*types.ProductResponse, error) {
+	args := m.Called(ctx, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*types.ProductResponse), args.Error(1)
 }
 
-func (m *MockProductService) GetProductByID(ctx context.Context, id string) (*types.SingleProductResponse, error) {
-	args := m.Called(ctx, id)
+func (m *MockProductService) GetProductByID(ctx context.Context, id string, logger *zap.Logger) (*types.SingleProductResponse, error) {
+	args := m.Called(ctx, id, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
 	return args.Get(0).(*types.SingleProductResponse), args.Error(1)
 }
 
-func (m *MockProductService) GetProductPrices(ctx context.Context, id string, currency string, variant string) (*types.PriceResponse, error) {
-	args := m.Called(ctx, id, currency, variant)
+func (m *MockProductService) GetProductPrices(ctx context.Context, id string, currency string, variant string, logger *zap.Logger) (*types.PriceResponse, error) {
+	args := m.Called(ctx, id, currency, variant, logger)
 	if args.Get(0) == nil {
 		return nil, args.Error(1)
 	}
@@ -135,6 +136,10 @@ func createTestContext(method, url string, params map[string]string) (*gin.Conte
 		c.Params = append(c.Params, gin.Param{Key: key, Value: value})
 	}
 
+	// Add a logger to the context as expected by the handlers
+	logger, _ := zap.NewDevelopment()
+	c.Set("logger", logger)
+
 	return c, w
 }
 
@@ -176,7 +181,7 @@ func TestGetAllProducts(t *testing.T) {
 						},
 					},
 				}
-				m.On("GetAllProducts", mock.Anything).Return(expectedResponse, nil)
+				m.On("GetAllProducts", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
@@ -193,7 +198,7 @@ func TestGetAllProducts(t *testing.T) {
 				expectedResponse := &types.ProductResponse{
 					Version: "1.0",
 				}
-				m.On("GetAllProducts", mock.Anything).Return(expectedResponse, nil)
+				m.On("GetAllProducts", mock.Anything, mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.ProductResponse) {
@@ -209,7 +214,7 @@ func TestGetAllProducts(t *testing.T) {
 		{
 			name: "service returns error",
 			setupMock: func(m *MockProductService) {
-				m.On("GetAllProducts", mock.Anything).Return(nil, errors.New(productServiceError))
+				m.On("GetAllProducts", mock.Anything, mock.Anything).Return(nil, errors.New(productServiceError))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  productServiceError,
@@ -268,7 +273,7 @@ func TestGetProductByID(t *testing.T) {
 						IsFusionCompatible: true,
 					},
 				}
-				m.On("GetProductByID", mock.Anything, testProductID).Return(expectedResponse, nil)
+				m.On("GetProductByID", mock.Anything, testProductID, mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.SingleProductResponse) {
@@ -293,7 +298,7 @@ func TestGetProductByID(t *testing.T) {
 						IsFusionCompatible: true,
 					},
 				}
-				m.On("GetProductByID", mock.Anything, "dsp-456").Return(expectedResponse, nil)
+				m.On("GetProductByID", mock.Anything, "dsp-456", mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.SingleProductResponse) {
@@ -314,7 +319,7 @@ func TestGetProductByID(t *testing.T) {
 			name:      "product not found",
 			productID: "non-existent-id",
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductByID", mock.Anything, "non-existent-id").Return(nil, errorspkg.ErrProductNotFound)
+				m.On("GetProductByID", mock.Anything, "non-existent-id", mock.Anything).Return(nil, errorspkg.ErrProductNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedError:  productNotFoundMsg,
@@ -323,7 +328,7 @@ func TestGetProductByID(t *testing.T) {
 			name:      "service returns generic error",
 			productID: testProductID,
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductByID", mock.Anything, testProductID).Return(nil, errors.New(productServiceError))
+				m.On("GetProductByID", mock.Anything, testProductID, mock.Anything).Return(nil, errors.New(productServiceError))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  internalServerMsg,
@@ -392,7 +397,7 @@ func TestGetProductPrices(t *testing.T) {
 						},
 					},
 				}
-				m.On("GetProductPrices", mock.Anything, testProductID, testCurrency, testVariant).Return(expectedResponse, nil)
+				m.On("GetProductPrices", mock.Anything, testProductID, testCurrency, testVariant, mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.PriceResponse) {
@@ -426,7 +431,7 @@ func TestGetProductPrices(t *testing.T) {
 						},
 					},
 				}
-				m.On("GetProductPrices", mock.Anything, testProductID, "", "").Return(expectedResponse, nil)
+				m.On("GetProductPrices", mock.Anything, testProductID, "", "", mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.PriceResponse) {
@@ -458,7 +463,7 @@ func TestGetProductPrices(t *testing.T) {
 					},
 				}
 				// Expect the service to be called with uppercase currency
-				m.On("GetProductPrices", mock.Anything, testProductID, "EUR", "").Return(expectedResponse, nil)
+				m.On("GetProductPrices", mock.Anything, testProductID, "EUR", "", mock.Anything).Return(expectedResponse, nil)
 			},
 			expectedStatus: http.StatusOK,
 			validateResponse: func(t *testing.T, resp *types.PriceResponse) {
@@ -476,7 +481,7 @@ func TestGetProductPrices(t *testing.T) {
 			name:      "product not found",
 			productID: "non-existent-id",
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductPrices", mock.Anything, "non-existent-id", "", "").Return(nil, errorspkg.ErrProductNotFound)
+				m.On("GetProductPrices", mock.Anything, "non-existent-id", "", "", mock.Anything).Return(nil, errorspkg.ErrProductNotFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedError:  noPricesFoundMsg,
@@ -485,7 +490,7 @@ func TestGetProductPrices(t *testing.T) {
 			name:      "no prices found for product",
 			productID: testProductID,
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductPrices", mock.Anything, testProductID, "", "").Return(nil, errorspkg.ErrNoPricesFound)
+				m.On("GetProductPrices", mock.Anything, testProductID, "", "", mock.Anything).Return(nil, errorspkg.ErrNoPricesFound)
 			},
 			expectedStatus: http.StatusNotFound,
 			expectedError:  noPricesFoundMsg,
@@ -494,7 +499,7 @@ func TestGetProductPrices(t *testing.T) {
 			name:      "service returns generic error",
 			productID: testProductID,
 			setupMock: func(m *MockProductService) {
-				m.On("GetProductPrices", mock.Anything, testProductID, "", "").Return(nil, errors.New(productServiceError))
+				m.On("GetProductPrices", mock.Anything, testProductID, "", "", mock.Anything).Return(nil, errors.New(productServiceError))
 			},
 			expectedStatus: http.StatusInternalServerError,
 			expectedError:  internalServerMsg,
@@ -572,7 +577,7 @@ func TestGetProductPrices_EdgeCases(t *testing.T) {
 			Prices:    []types.PriceDetail{{Currency: "USD", Price: 100.0}},
 		}
 
-		mockService.On("GetProductPrices", mock.Anything, productID, "", "").Return(expectedResponse, nil)
+		mockService.On("GetProductPrices", mock.Anything, productID, "", "", mock.Anything).Return(expectedResponse, nil)
 
 		handler := NewProductHandler(mockService)
 		params := map[string]string{"id": productID}
@@ -595,7 +600,7 @@ func TestGetProductPrices_EdgeCases(t *testing.T) {
 			Prices:    []types.PriceDetail{{Currency: longCurrency, Price: 100.0}},
 		}
 
-		mockService.On("GetProductPrices", mock.Anything, productID, longCurrency, "").Return(expectedResponse, nil)
+		mockService.On("GetProductPrices", mock.Anything, productID, longCurrency, "", mock.Anything).Return(expectedResponse, nil)
 
 		handler := NewProductHandler(mockService)
 		params := map[string]string{"id": productID}
@@ -620,7 +625,7 @@ func TestProductHandler_Integration(t *testing.T) {
 			Version: "1.0",
 			Speaker: []types.ProductItemResponse{{ProductID: 123, ModelName: "Speaker 1"}},
 		}
-		mockService.On("GetAllProducts", mock.Anything).Return(allProductsResp, nil)
+		mockService.On("GetAllProducts", mock.Anything, mock.Anything).Return(allProductsResp, nil)
 
 		c1, w1 := createTestContext("GET", "/products", nil)
 		handler.GetAllProducts(c1)
@@ -631,7 +636,7 @@ func TestProductHandler_Integration(t *testing.T) {
 			Version: "1.0",
 			Speaker: &types.ProductItemResponse{ProductID: 123, ModelName: "Speaker 1"},
 		}
-		mockService.On("GetProductByID", mock.Anything, "123").Return(singleProductResp, nil)
+		mockService.On("GetProductByID", mock.Anything, "123", mock.Anything).Return(singleProductResp, nil)
 
 		c2, w2 := createTestContext("GET", "/products/123", map[string]string{"id": "123"})
 		handler.GetProductByID(c2)
@@ -643,7 +648,7 @@ func TestProductHandler_Integration(t *testing.T) {
 			ProductID: 123,
 			Prices:    []types.PriceDetail{{Currency: "USD", Price: 999.99}},
 		}
-		mockService.On("GetProductPrices", mock.Anything, "123", "", "").Return(priceResp, nil)
+		mockService.On("GetProductPrices", mock.Anything, "123", "", "", mock.Anything).Return(priceResp, nil)
 
 		c3, w3 := createTestContext("GET", "/products/123/prices", map[string]string{"id": "123"})
 		handler.GetProductPrices(c3)

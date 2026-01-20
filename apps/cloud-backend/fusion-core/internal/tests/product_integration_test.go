@@ -236,6 +236,13 @@ func (suite *ProductIntegrationTestSuite) createTestRouter(productSVC *product.S
 	// Add middleware for testing
 	router.Use(gin.Recovery())
 
+	// Add logger middleware to provide logger in gin context
+	router.Use(func(c *gin.Context) {
+		logger, _ := zap.NewDevelopment()
+		c.Set("logger", logger)
+		c.Next()
+	})
+
 	// Setup routes
 	suite.setupRoutes(router, productSVC)
 

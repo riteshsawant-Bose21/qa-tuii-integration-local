@@ -31,35 +31,35 @@ type Service struct {
 // DatabaseService defines the interface for database operations related to products and sync.
 type DatabaseService interface {
 	// Product query operations
-	SelectByID(ctx context.Context, id string, version string) (*types.SingleProductResponse, error)
-	SelectAll(ctx context.Context, version string) (*types.ProductResponse, error)
-	GetPricesByProductID(ctx context.Context, productID int, currency string, variant string) (*types.PriceResponse, error)
-	GetLatestSyncVersion(ctx context.Context, syncType string) (string, error)
+	SelectByID(ctx context.Context, id string, version string, logger *zap.Logger) (*types.SingleProductResponse, error)
+	SelectAll(ctx context.Context, version string, logger *zap.Logger) (*types.ProductResponse, error)
+	GetPricesByProductID(ctx context.Context, productID int, currency string, variant string, logger *zap.Logger) (*types.PriceResponse, error)
+	GetLatestSyncVersion(ctx context.Context, syncType string, logger *zap.Logger) (string, error)
 
 	// Product sync operations
-	Insert(ctx context.Context, product *types.DBProduct) error
-	Upsert(ctx context.Context, product *types.DBProduct) error
-	InsertBatch(ctx context.Context, products []*types.DBProduct) error
-	InsertWithRetry(ctx context.Context, product *types.DBProduct, maxRetries int, retryDelay time.Duration) error
-	LookupProductIDBySKU(ctx context.Context, sku int) (int, bool, error)
-	BatchLookupExistingProductIDs(ctx context.Context, productIDs []int) (map[int]bool, error)
-	GetProductTimestamps(ctx context.Context, productIDs []int) (map[int]*int64, error)
-	GetExistingProduct(ctx context.Context, productID int) (*types.DBProduct, error)
+	Insert(ctx context.Context, product *types.DBProduct, logger *zap.Logger) error
+	Upsert(ctx context.Context, product *types.DBProduct, logger *zap.Logger) error
+	InsertBatch(ctx context.Context, products []*types.DBProduct, logger *zap.Logger) error
+	InsertWithRetry(ctx context.Context, product *types.DBProduct, maxRetries int, retryDelay time.Duration, logger *zap.Logger) error
+	LookupProductIDBySKU(ctx context.Context, sku int, logger *zap.Logger) (int, bool, error)
+	BatchLookupExistingProductIDs(ctx context.Context, productIDs []int, logger *zap.Logger) (map[int]bool, error)
+	GetProductTimestamps(ctx context.Context, productIDs []int, logger *zap.Logger) (map[int]*int64, error)
+	GetExistingProduct(ctx context.Context, productID int, logger *zap.Logger) (*types.DBProduct, error)
 
 	// Price operations
-	UpsertPrice(ctx context.Context, price *types.DBPrice) error
-	UpsertBatch(ctx context.Context, prices []*types.DBPrice) error
-	InsertPriceBatch(ctx context.Context, prices []*types.DBPrice) error
-	GetPriceByProductID(ctx context.Context, productID int) (*types.DBPrice, error)
-	GetPriceTimestamps(ctx context.Context, priceKeys []types.PriceKey) (map[types.PriceKey]*int64, error)
+	UpsertPrice(ctx context.Context, price *types.DBPrice, logger *zap.Logger) error
+	UpsertBatch(ctx context.Context, prices []*types.DBPrice, logger *zap.Logger) error
+	InsertPriceBatch(ctx context.Context, prices []*types.DBPrice, logger *zap.Logger) error
+	GetPriceByProductID(ctx context.Context, productID int, logger *zap.Logger) (*types.DBPrice, error)
+	GetPriceTimestamps(ctx context.Context, priceKeys []types.PriceKey, logger *zap.Logger) (map[types.PriceKey]*int64, error)
 
 	// Job operations
-	Create(ctx context.Context, syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string) (string, error)
-	UpdateStatus(ctx context.Context, jobID, status string, startedAt *time.Time, errorMsg *string) error
-	UpdateWithResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
-	UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error
-	GetByID(ctx context.Context, jobID string) (*types.SyncJobResult, error)
-	StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errors.ErrorCollector) error
+	Create(ctx context.Context, syncOperation, syncType, version, sourcePath, s3Bucket, s3Key string, logger *zap.Logger) (string, error)
+	UpdateStatus(ctx context.Context, jobID, status string, startedAt *time.Time, errorMsg *string, logger *zap.Logger) error
+	UpdateWithResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string, logger *zap.Logger) error
+	UpdateStatusAndResults(ctx context.Context, jobID, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string, logger *zap.Logger) error
+	GetByID(ctx context.Context, jobID string, logger *zap.Logger) (*types.SyncJobResult, error)
+	StoreValidationErrors(ctx context.Context, jobID string, errorCollector *errors.ErrorCollector, logger *zap.Logger) error
 }
 
 // NewService creates a new product service.
@@ -145,7 +145,7 @@ func (s *Service) CreateJob(ctx context.Context, job *types.DBSyncJob) (string, 
 	}
 
 	// Use the database service to create the job with all parameters
-	jobID, err := s.dbService.Create(ctx, syncOperation, syncType, version, sourcePath, s3Bucket, s3Key)
+	jobID, err := s.dbService.Create(ctx, syncOperation, syncType, version, sourcePath, s3Bucket, s3Key, s.logger)
 	if err != nil {
 		return "", err
 	}
@@ -155,12 +155,12 @@ func (s *Service) CreateJob(ctx context.Context, job *types.DBSyncJob) (string, 
 
 // UpdateJobStatus updates the status of a job
 func (s *Service) UpdateJobStatus(ctx context.Context, jobID string, status string, startedAt *time.Time, errorMsg *string) error {
-	return s.dbService.UpdateStatus(ctx, jobID, status, startedAt, errorMsg)
+	return s.dbService.UpdateStatus(ctx, jobID, status, startedAt, errorMsg, s.logger)
 }
 
 // UpdateStatusAndResults updates job status and results atomically
 func (s *Service) UpdateStatusAndResults(ctx context.Context, jobID string, status string, totalItems, successful, failed int, validationWarnings []string, errorMsg *string) error {
-	return s.dbService.UpdateWithResults(ctx, jobID, status, totalItems, successful, failed, validationWarnings, errorMsg)
+	return s.dbService.UpdateWithResults(ctx, jobID, status, totalItems, successful, failed, validationWarnings, errorMsg, s.logger)
 }
 
 // Execute performs the complete sync operation from start to finish
@@ -397,7 +397,7 @@ func (s *Service) SyncProducts(ctx context.Context, jsonData []byte, jobID strin
 		productIDs[i] = product.ProductID
 	}
 
-	existingTimestamps, err := s.dbService.GetProductTimestamps(ctx, productIDs)
+	existingTimestamps, err := s.dbService.GetProductTimestamps(ctx, productIDs, s.logger)
 	if err != nil {
 		// Log warning but continue with full sync
 		result.ValidationWarnings = append(result.ValidationWarnings, fmt.Sprintf("Failed to get existing timestamps: %v", err))
@@ -764,7 +764,7 @@ func (s *Service) validateSyncFields(product types.Product) []string {
 
 	// Only validate essential fields needed for sync
 	if product.ProductID == 0 {
-		warnings = append(warnings, fmt.Sprintf("Product missing required ID"))
+		warnings = append(warnings, "Product missing required ID")
 	}
 
 	if product.ModelName == "" {
@@ -851,7 +851,7 @@ func (s *Service) processBatch(ctx context.Context, products []types.Product, pr
 
 	// Process valid products in a single batch transaction
 	if len(validProducts) > 0 {
-		if err := s.dbService.InsertBatch(ctx, validProducts); err != nil {
+		if err := s.dbService.InsertBatch(ctx, validProducts, s.logger); err != nil {
 			// If batch fails, fall back to individual processing with retry
 			for _, dbProduct := range validProducts {
 				if err := s.upsertProductWithRetry(dbProduct, 3); err != nil {
@@ -873,7 +873,7 @@ func (s *Service) processBatch(ctx context.Context, products []types.Product, pr
 // upsertProductWithRetry upserts a product with retry logic
 func (s *Service) upsertProductWithRetry(product *types.DBProduct, maxRetries int) error {
 	for i := 0; i < maxRetries; i++ {
-		if err := s.dbService.Upsert(context.Background(), product); err != nil {
+		if err := s.dbService.Upsert(context.Background(), product, s.logger); err != nil {
 			if i == maxRetries-1 {
 				return err
 			}
@@ -1118,7 +1118,7 @@ func (s *Service) DetectChangedPricesByTimestamp(ctx context.Context, prices []v
 	}
 
 	// Batch query existing timestamps
-	dbTimestamps, err := s.dbService.GetPriceTimestamps(ctx, priceKeys)
+	dbTimestamps, err := s.dbService.GetPriceTimestamps(ctx, priceKeys, logger)
 	if err != nil {
 		logger.Warn("Failed to get database price timestamps, processing all prices", zap.Error(err))
 		return prices, nil // Fallback to processing all prices
@@ -1396,7 +1396,7 @@ func (s *Service) processPricesBatch(ctx context.Context, prices []validation.Pr
 		productIDs[i] = price.ProductID
 	}
 
-	existingProducts, err := s.dbService.BatchLookupExistingProductIDs(ctx, productIDs)
+	existingProducts, err := s.dbService.BatchLookupExistingProductIDs(ctx, productIDs, logger)
 	if err != nil {
 		logger.Warn("Failed to batch lookup product IDs, will skip product existence validation", zap.Error(err))
 		existingProducts = make(map[int]bool) // Empty map - will skip existence check
@@ -1466,11 +1466,11 @@ func (s *Service) processPricesBatch(ctx context.Context, prices []validation.Pr
 		}
 		batch := newPricesOnly[i:end]
 
-		if err := s.dbService.InsertPriceBatch(ctx, batch); err != nil {
+		if err := s.dbService.InsertPriceBatch(ctx, batch, s.logger); err != nil {
 			// If batch insert fails, try individual inserts
 			logger.Warn("Batch insert failed, falling back to individual inserts", zap.Error(err))
 			for _, dbPrice := range batch {
-				if err := s.dbService.UpsertPrice(ctx, dbPrice); err != nil {
+				if err := s.dbService.UpsertPrice(ctx, dbPrice, s.logger); err != nil {
 					result.Failed++
 					result.Errors = append(result.Errors, fmt.Sprintf("Failed to insert price for product %d: %v", dbPrice.ProductID, err))
 				} else {
